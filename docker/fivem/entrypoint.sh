@@ -8,8 +8,7 @@ if [ -f /config-mount/server.cfg.template ]; then
     -e "s|__MYSQL_CONNECTION_STRING__|${MYSQL_CONN}|g" \
     /config-mount/server.cfg.template > /config/server.cfg
   echo "[sunsetmp] server.cfg generated"
-else
-  echo "[sunsetmp] WARN: missing /config-mount/server.cfg.template"
 fi
 
-exec /docker-entrypoint.sh "$@"
+export NO_DEFAULT_CONFIG=1
+exec /sbin/tini -- /usr/bin/entrypoint +exec /config/server.cfg
