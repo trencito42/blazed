@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════════
+#  SUNSETMP — FiveM RPG (production / Docker)
+# ═══════════════════════════════════════════════════════════════
+
+endpoint_add_tcp "0.0.0.0:30120"
+endpoint_add_udp "0.0.0.0:30120"
+
+sv_hostname "SunsetMP | RPG Roleplay"
+sets sv_projectName "SunsetMP"
+sets sv_projectDesc "Un univers RPG unic — trăiește povestea ta la apus."
+sets tags "roleplay, rpg, romanian, sunsetmp"
+sets locale "ro-RO"
+
+sv_maxclients 48
+sv_enforceGameBuild 3095
+
+# Setat la runtime din env (docker/entrypoint.sh)
+set mysql_connection_string "__MYSQL_CONNECTION_STRING__"
+
+# ═══ RESURSE ═══
+
+ensure sunset_loadscreen
+ensure oxmysql
+ensure sunset_core
+ensure sunset_ui
+ensure sunset_characters
+ensure sunset_spawn
+ensure sunset_vehicles
+ensure sunset_hud
+ensure sunset_admin
+ensure sunset_scoreboard
+ensure sunset_chat
+ensure sunset_menu
+
+add_ace group.admin command allow
+add_ace group.admin command.quit deny

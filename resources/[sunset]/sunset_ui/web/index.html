@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunsetMP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/scoreboard.css">
+    <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="css/menu.css">
+</head>
+<body>
+    <div id="notifications" class="notifications"></div>
+
+    <!-- CHARACTER SCREENS -->
+    <div id="app" class="app hidden">
+        <img class="app-bg" src="assets/bg.png" alt="">
+        <div class="app-overlay"></div>
+        <section id="screen-characters" class="screen hidden">
+            <div class="panel panel--left">
+                <img class="panel-logo" src="assets/logo.png" alt="SunsetMP">
+                <p class="panel-user" id="player-name"></p>
+                <div class="slots" id="characters-list"></div>
+                <button class="btn" id="btn-create-char">+ Personaj nou</button>
+            </div>
+        </section>
+        <section id="screen-create" class="screen hidden">
+            <div class="panel panel--center">
+                <button class="link-back" id="btn-back-select">← Înapoi</button>
+                <h2 class="panel-title">Personaj nou</h2>
+                <form id="create-form" class="form">
+                    <div class="row">
+                        <label class="field"><span>Prenume</span><input type="text" id="firstname" maxlength="32" required></label>
+                        <label class="field"><span>Nume</span><input type="text" id="lastname" maxlength="32" required></label>
+                    </div>
+                    <div class="row">
+                        <label class="field"><span>Data nașterii</span><input type="date" id="dateofbirth" required></label>
+                        <label class="field"><span>Naționalitate</span><select id="nationality"></select></label>
+                    </div>
+                    <div class="field">
+                        <span>Gen</span>
+                        <div class="toggle" id="gender-picker">
+                            <button type="button" class="toggle__btn active" data-gender="0">Bărbat</button>
+                            <button type="button" class="toggle__btn" data-gender="1">Femeie</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn--primary">Confirmă</button>
+                </form>
+            </div>
+        </section>
+        <section id="screen-loading" class="screen screen--loading hidden">
+            <img class="panel-logo panel-logo--sm" src="assets/logo.png" alt="">
+            <div class="loading-bar"><div class="loading-bar__fill" id="loading-fill"></div></div>
+            <p class="loading-text" id="loading-text">Se încarcă...</p>
+        </section>
+    </div>
+
+    <!-- RPG HUD -->
+    <div id="hud" class="hud hidden">
+        <!-- Top Left -->
+        <div class="hud-tl">
+            <img class="hud-logo" src="assets/logo.png" alt="">
+            <div class="hud-badges">
+                <span class="badge" id="hud-id">ID: 0</span>
+                <span class="badge badge--payday">⏱ PAYDAY <span id="hud-payday">00:00</span></span>
+            </div>
+        </div>
+
+        <!-- Top Right -->
+        <div class="hud-tr">
+            <div class="stat-row">
+                <svg class="ico ico--hp" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <div class="stat-bar"><div class="stat-bar__fill stat-bar__fill--hp" id="hud-health"></div></div>
+                <span class="stat-val" id="hud-health-val">100</span>
+            </div>
+            <div class="stat-row">
+                <svg class="ico ico--armor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                <div class="stat-bar"><div class="stat-bar__fill stat-bar__fill--armor" id="hud-armor"></div></div>
+                <span class="stat-val" id="hud-armor-val">0</span>
+            </div>
+            <div class="stat-row stat-row--money">
+                <svg class="ico ico--money" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.59 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+                <span class="money-val" id="hud-cash">$0</span>
+            </div>
+            <div class="stat-row stat-row--time">
+                <svg class="ico ico--clock" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                <span id="hud-time">00:00</span>
+            </div>
+        </div>
+
+        <!-- Bottom Left — Location -->
+        <div class="hud-bl">
+            <div class="loc-box">
+                <span class="loc-street" id="hud-street">—</span>
+                <span class="loc-zone" id="hud-zone">Los Santos</span>
+            </div>
+        </div>
+
+        <!-- Vehicle bar -->
+        <div class="hud-bc hidden" id="hud-vehicle-bar">
+            <div class="veh-slot" id="slot-lock">
+                <div class="veh-slot__icon"><img src="assets/icons/icon_lock.webp" alt="Lock"></div>
+                <span class="veh-slot__key">N</span>
+            </div>
+            <div class="veh-slot" id="slot-seatbelt">
+                <div class="veh-slot__icon"><img src="assets/icons/icon_buckle.webp" alt="Seatbelt"></div>
+                <span class="veh-slot__key">K</span>
+            </div>
+            <div class="veh-slot" id="slot-lights">
+                <div class="veh-slot__icon veh-slot__icon--lights">
+                    <img class="ico-lights-off" src="assets/icons/icon_lights_off.webp" alt="Lights off">
+                    <img class="ico-lights-low" src="assets/icons/icon_lights_1.webp" alt="Low beams">
+                    <img class="ico-lights-high" src="assets/icons/icon_lights_2.webp" alt="High beams">
+                </div>
+                <span class="veh-slot__key">H</span>
+            </div>
+            <div class="veh-slot" id="slot-engine">
+                <div class="veh-slot__icon"><img src="assets/icons/icon_engine.webp" alt="Engine"></div>
+                <span class="veh-slot__key">2</span>
+            </div>
+            <div class="veh-slot" id="slot-fuel">
+                <div class="veh-slot__icon"><img src="assets/icons/icon_fuel.webp" alt="Fuel"></div>
+                <span class="veh-slot__key" id="hud-fuel-pct">100%</span>
+            </div>
+        </div>
+
+        <!-- Speedometer -->
+        <div class="hud-br hidden" id="hud-speedo">
+            <svg class="speedo-svg" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="88" class="speedo-track" transform="rotate(135 100 100)" stroke-dasharray="414" stroke-dashoffset="103"/>
+                <circle cx="100" cy="100" r="88" class="speedo-speed-arc" id="speedo-speed" transform="rotate(135 100 100)" stroke-dasharray="414" stroke-dashoffset="414"/>
+                <circle cx="100" cy="100" r="72" class="speedo-rpm-arc" id="speedo-rpm" transform="rotate(135 100 100)" stroke-dasharray="340" stroke-dashoffset="340"/>
+            </svg>
+            <div class="speedo-inner">
+                <span class="speedo-gear" id="hud-gear">N</span>
+                <span class="speedo-speed" id="hud-speed">0</span>
+                <span class="speedo-unit">KM/H</span>
+                <div class="speedo-footer">
+                    <span class="speedo-engine" id="hud-engine-hp">ENG 100%</span>
+                    <span class="speedo-fuel" id="hud-fuel-mini">FUEL 100%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCOREBOARD (Tab) -->
+    <div id="scoreboard" class="scoreboard hidden">
+        <div class="sb-panel">
+            <div class="sb-header">
+                <img class="sb-logo" src="assets/logo.png" alt="">
+                <div class="sb-tabs">
+                    <span class="sb-tab active" id="sb-tab-players">PLAYERS</span>
+                </div>
+                <div class="sb-server">
+                    <span class="sb-server-name">SunsetMP</span>
+                    <span class="sb-count" id="sb-count">0/48</span>
+                </div>
+            </div>
+            <div class="sb-table-wrap">
+                <table class="sb-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>PLAYER</th>
+                            <th>PING</th>
+                            <th>JOB</th>
+                            <th>LVL</th>
+                            <th>MONEY</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sb-body"></tbody>
+                </table>
+            </div>
+            <div class="sb-footer">
+                <span><i class="dot dot--admin"></i> Admin</span>
+                <span><i class="dot dot--mod"></i> Moderator</span>
+                <span><i class="dot dot--player"></i> Player</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAT -->
+    <div id="chat" class="chat">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-wrap hidden" id="chat-input-wrap">
+            <input type="text" class="chat-input" id="chat-input" placeholder="Scrie un mesaj... (/comandă pentru comenzi)" maxlength="256">
+        </div>
+    </div>
+
+    <!-- PLAYER MENU (M) -->
+    <div id="menu" class="menu hidden">
+        <div class="menu-panel">
+            <div class="menu-header">
+                <img class="menu-logo" src="assets/logo.png" alt="">
+                <div class="menu-player">
+                    <h2 id="menu-name">—</h2>
+                    <span id="menu-id">ID: 0</span>
+                </div>
+            </div>
+            <div class="menu-body">
+                <div class="menu-card">
+                    <h3>Status</h3>
+                    <div class="menu-stat"><span class="menu-stat__label">Health</span><span class="menu-stat__val" id="menu-health-val">100%</span></div>
+                    <div class="menu-bar"><div class="menu-bar__fill menu-bar__fill--hp" id="menu-health" style="width:100%"></div></div>
+                    <div class="menu-stat"><span class="menu-stat__label">Armor</span><span class="menu-stat__val" id="menu-armor-val">0%</span></div>
+                    <div class="menu-bar"><div class="menu-bar__fill menu-bar__fill--armor" id="menu-armor" style="width:0%"></div></div>
+                    <div class="menu-stat"><span class="menu-stat__label">Hunger</span><span class="menu-stat__val" id="menu-hunger-val">100%</span></div>
+                    <div class="menu-bar"><div class="menu-bar__fill menu-bar__fill--hunger" id="menu-hunger" style="width:100%"></div></div>
+                    <div class="menu-stat"><span class="menu-stat__label">Thirst</span><span class="menu-stat__val" id="menu-thirst-val">100%</span></div>
+                    <div class="menu-bar"><div class="menu-bar__fill menu-bar__fill--thirst" id="menu-thirst" style="width:100%"></div></div>
+                </div>
+                <div class="menu-card">
+                    <h3>Financiar</h3>
+                    <div class="menu-stat"><span class="menu-stat__label">Cash</span><span class="menu-stat__val menu-stat__val--green" id="menu-cash">$0</span></div>
+                    <div class="menu-stat"><span class="menu-stat__label">Bancă</span><span class="menu-stat__val menu-stat__val--green" id="menu-bank">$0</span></div>
+                    <h3 style="margin-top:14px">Identitate</h3>
+                    <div class="menu-stat"><span class="menu-stat__label">Job</span><span class="menu-stat__val" id="menu-job">—</span></div>
+                    <div class="menu-stat"><span class="menu-stat__label">Facțiune</span><span class="menu-stat__val" id="menu-faction">—</span></div>
+                    <div class="menu-stat"><span class="menu-stat__label">Payday</span><span class="menu-stat__val menu-stat__val--orange" id="menu-payday">—</span></div>
+                </div>
+            </div>
+            <div class="menu-footer">Apasă M sau ESC pentru a închide</div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/hud.js"></script>
+    <script src="js/scoreboard.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+</html>

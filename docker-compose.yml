@@ -1,0 +1,54 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}
+      MARIADB_USER: ${MARIADB_USER:-sunset}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 40s
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    networks:
+      - sunsetmp
+
+  fivem:
+    build:
+      context: ./docker/fivem
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "${FIVEM_PORT:-30120}:30120/tcp"
+      - "${FIVEM_PORT:-30120}:30120/udp"
+      - "${TXADMIN_PORT:-40120}:40120/tcp"
+    environment:
+      LICENSE_KEY: ${LICENSE_KEY:?set LICENSE_KEY}
+      NO_DEFAULT_CONFIG: "1"
+      MARIADB_USER: ${MARIADB_USER:-sunset}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}
+    volumes:
+      - ./config:/config-mount:ro
+      - ./resources:/config/resources:ro
+      - fivem_txdata:/txData
+    tty: true
+    stdin_open: true
+    networks:
+      - sunsetmp
+
+networks:
+  sunsetmp:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  fivem_txdata:

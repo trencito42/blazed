@@ -1,0 +1,87 @@
+/* ═══ PLAYER MENU (M) ═══ */
+.menu {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.25);
+    pointer-events: auto;
+    font-family: 'Inter', sans-serif;
+}
+
+.menu-panel {
+    width: min(720px, 94vw);
+    background: rgba(8, 6, 14, 0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+
+.menu-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.menu-logo { width: 70px; }
+
+.menu-player h2 { font-size: 16px; font-weight: 700; color: #fff; }
+.menu-player span { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+.menu-body { padding: 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.menu-card {
+    padding: 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 4px;
+}
+
+.menu-card h3 {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.menu-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.menu-stat__label { color: rgba(255,255,255,0.5); }
+.menu-stat__val { font-weight: 600; color: #fff; }
+.menu-stat__val--green { color: #6cdc6a; }
+.menu-stat__val--orange { color: #e85d2a; }
+
+.menu-bar {
+    height: 4px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.menu-bar__fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.menu-bar__fill--hp { background: #e05555; }
+.menu-bar__fill--armor { background: #9b6dd7; }
+.menu-bar__fill--hunger { background: #e8a82a; }
+.menu-bar__fill--thirst { background: #48a8e8; }
+
+.menu-footer {
+    padding: 10px 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+}

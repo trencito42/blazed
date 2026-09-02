@@ -1,0 +1,226 @@
+/* ═══ RPG HUD ═══ */
+.hud {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    font-family: 'Inter', sans-serif;
+}
+
+.hud.scoreboard-open .hud-tr,
+.hud.scoreboard-open .hud-tl { opacity: 0; }
+
+/* ── Top Left ── */
+.hud-tl {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: opacity 0.2s;
+}
+
+.hud-logo { width: 100px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+
+.hud-badges { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+
+.badge {
+    padding: 3px 8px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.65);
+    text-transform: uppercase;
+}
+
+.badge--payday { color: #e85d2a; }
+
+/* ── Top Right ── */
+.hud-tr {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-end;
+    transition: opacity 0.2s;
+}
+
+.stat-row { display: flex; align-items: center; gap: 6px; }
+.ico { width: 14px; height: 14px; fill: currentColor; }
+.ico--hp { color: #e05555; }
+.ico--armor { color: #9b6dd7; }
+.ico--money { color: #6cdc6a; }
+.ico--clock { color: rgba(255,255,255,0.45); }
+
+.stat-bar {
+    width: 80px; height: 3px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 1px; overflow: hidden;
+}
+
+.stat-bar__fill { height: 100%; transition: width 0.15s; }
+.stat-bar__fill--hp { background: #e05555; }
+.stat-bar__fill--armor { background: #9b6dd7; }
+
+.stat-val { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.75); min-width: 20px; text-align: right; }
+.money-val { font-size: 13px; font-weight: 700; color: #6cdc6a; }
+.stat-row--time span { font-size: 11px; color: rgba(255,255,255,0.5); }
+
+/* ── Location — dreapta minimap-ului ── */
+.hud-bl {
+    position: absolute;
+    left: 295px;
+    bottom: 28px;
+}
+
+.loc-box {
+    padding: 6px 12px;
+    background: rgba(0,0,0,0.55);
+    border-left: 2px solid #e85d2a;
+}
+
+.loc-street { display: block; font-size: 12px; font-weight: 600; color: #fff; }
+.loc-zone { display: block; font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── Vehicle bar — esports style ── */
+.hud-bc {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 4px;
+}
+
+.veh-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 44px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    opacity: 0.4;
+    transition: all 0.15s;
+}
+
+.veh-slot.active { opacity: 1; background: rgba(255,255,255,0.05); }
+.veh-slot.warn.active { filter: brightness(1.1); }
+
+.veh-slot__icon {
+    width: 28px;
+    height: 28px;
+    position: relative;
+    filter: grayscale(1) brightness(0.55);
+    transition: filter 0.15s, opacity 0.15s;
+}
+
+.veh-slot.active .veh-slot__icon { filter: none; opacity: 1; }
+.veh-slot.warn.active .veh-slot__icon { filter: hue-rotate(-20deg) saturate(1.4); }
+
+.veh-slot__icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.veh-slot__icon--lights img { position: absolute; inset: 0; opacity: 0; }
+.veh-slot__icon--lights .ico-lights-off { opacity: 1; }
+.veh-slot.lights-low .veh-slot__icon--lights .ico-lights-off { opacity: 0; }
+.veh-slot.lights-low .veh-slot__icon--lights .ico-lights-low { opacity: 1; }
+.veh-slot.lights-high .veh-slot__icon--lights .ico-lights-off { opacity: 0; }
+.veh-slot.lights-high .veh-slot__icon--lights .ico-lights-high { opacity: 1; }
+.veh-slot.lights-low.active .veh-slot__icon,
+.veh-slot.lights-high.active .veh-slot__icon { filter: none; }
+
+.veh-slot__key {
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: 'Inter', monospace;
+}
+
+.veh-slot.active .veh-slot__key { color: #e85d2a; background: rgba(232,93,42,0.15); }
+
+/* ── Speedometer esports ── */
+.hud-br {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 200px;
+    height: 200px;
+}
+
+.speedo-svg { width: 100%; height: 100%; }
+
+.speedo-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 6; }
+.speedo-speed-arc {
+    fill: none; stroke: #e85d2a; stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 414;
+    stroke-dashoffset: 414;
+    transform-origin: center;
+    transform: rotate(135deg);
+    transition: stroke-dashoffset 0.1s;
+}
+.speedo-rpm-arc {
+    fill: none; stroke: rgba(255,255,255,0.25); stroke-width: 2;
+    stroke-dasharray: 340;
+    stroke-dashoffset: 340;
+    transform-origin: center;
+    transform: rotate(135deg);
+    transition: stroke-dashoffset 0.1s;
+}
+
+.speedo-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 10px;
+}
+
+.speedo-gear {
+    font-size: 13px; font-weight: 800; color: #e85d2a;
+    background: rgba(232,93,42,0.15);
+    padding: 2px 8px; border-radius: 2px;
+    margin-bottom: 2px;
+}
+
+.speedo-speed {
+    font-size: 42px; font-weight: 800; color: #fff;
+    line-height: 1; font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(232,93,42,0.3);
+}
+
+.speedo-unit { font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 0.15em; }
+
+.speedo-footer {
+    display: flex; gap: 12px; margin-top: 8px;
+    font-size: 8px; font-weight: 600; letter-spacing: 0.05em;
+}
+
+.speedo-engine { color: #6cdc6a; }
+.speedo-fuel { color: rgba(255,255,255,0.45); }
+
+.hud-br.hidden, .hud-bc.hidden { display: none; }
+
+@media (max-width: 1280px) {
+    .hud-bl { left: 260px; bottom: 22px; }
+}

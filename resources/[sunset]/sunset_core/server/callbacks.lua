@@ -1,0 +1,1 @@
+-- Callback registry (implemented in main.lua)

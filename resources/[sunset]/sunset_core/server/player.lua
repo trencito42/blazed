@@ -1,0 +1,1 @@
+-- Player module placeholder for future extensions (economy, permissions, etc.)

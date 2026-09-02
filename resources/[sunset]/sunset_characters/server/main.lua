@@ -1,0 +1,1 @@
+-- Server-side character events (handled by sunset_core callbacks)

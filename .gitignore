@@ -1,0 +1,33 @@
+# FiveM runtime (local dev only — Docker folosește spritsail/fivem)
+cache/
+crashes/
+citizen/
+*.log
+*.dll
+*.exe
+*.sym
+*.7z
+*.crt
+*.key
+components.json
+
+# Local assets duplicate (sunt în resources/)
+/icon_*.webp
+/sunset_logo.png
+/sunset_loading.png
+
+# Secrets
+.env
+server.cfg
+server.local.cfg
+SETUP.local.md
+
+# Node / IDE
+node_modules/
+dist/
+.DS_Store
+.vscode/
+.idea/
+
+# Database local
+*.db
