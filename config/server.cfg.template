@@ -15,6 +15,7 @@ sv_maxclients 48
 sv_enforceGameBuild 3095
 
 # Setat la runtime din env (docker/entrypoint.sh)
+sv_licenseKey "__LICENSE_KEY__"
 set mysql_connection_string "__MYSQL_CONNECTION_STRING__"
 
 # ═══ RESURSE ═══

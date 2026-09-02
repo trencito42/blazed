@@ -33,6 +33,7 @@ services:
     environment:
       LICENSE_KEY: ${LICENSE_KEY:?set LICENSE_KEY}
       NO_DEFAULT_CONFIG: "1"
+      NO_LICENSE_KEY: "1"
       MARIADB_USER: ${MARIADB_USER:-sunset}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}

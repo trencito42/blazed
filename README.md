@@ -4,6 +4,26 @@ Server FiveM RPG custom (framework propriu, UI Sunset, HUD, chat SAMP-style, adm
 
 ## Deploy pe Coolify (VPS)
 
+Repo public: **https://github.com/trencito42/blazed**
+
+### Update rapid pe VPS (SSH)
+
+```bash
+cd /data/coolify/services/b0n1oc2fcrzbgdco838ezm1i
+export LICENSE_KEY="cfxk_..."
+export MARIADB_ROOT_PASSWORD="..."
+export MARIADB_PASSWORD="..."
+./deploy.sh
+```
+
+Sau prima dată (clone public, fără credențiale Git):
+
+```bash
+cd /data/coolify/services/b0n1oc2fcrzbgdco838ezm1i
+GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://github.com/trencito42/blazed.git .
+chmod +x deploy.sh && ./deploy.sh
+```
+
 ### 1. Environment variables (obligatorii)
 
 | Variabilă | Descriere |
