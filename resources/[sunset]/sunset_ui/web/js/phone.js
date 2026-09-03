@@ -64,7 +64,12 @@ const Phone = {
         this.renderThreads();
         this.renderContacts();
         this.renderBank();
-        if (this.chatTarget) this.renderChat(this.chatTarget);
+        if (this.chatTarget) {
+            this.chatTarget.online = this.isContactOnline(this.chatTarget.charId);
+            const sub = $('#phone-chat-subtitle');
+            if (sub) sub.textContent = this.chatTarget.online ? 'Online' : 'Will deliver when online';
+            this.renderChat(this.chatTarget);
+        }
     },
 
     goHome() {
@@ -105,7 +110,7 @@ const Phone = {
                 name: otherName,
                 preview: '',
                 messages: [],
-                serverId: null,
+                online: false,
             };
             if (!existing.preview) existing.preview = m.message;
             existing.messages.push(m);
@@ -113,18 +118,19 @@ const Phone = {
         });
 
         (d.contacts || []).forEach((c) => {
-            const key = String(c.characterId || c.serverId);
+            const key = String(c.characterId);
+            if (!key || key === 'undefined') return;
             if (!threads.has(key)) {
                 threads.set(key, {
                     charId: c.characterId,
                     name: c.name,
                     preview: 'No messages yet',
                     messages: [],
-                    serverId: c.serverId,
+                    online: true,
                 });
             } else {
                 const t = threads.get(key);
-                t.serverId = c.serverId;
+                t.online = true;
                 t.name = c.name || t.name;
             }
         });
@@ -136,11 +142,8 @@ const Phone = {
         });
     },
 
-    findServerId(name, charId) {
-        const contact = (this.data?.contacts || []).find(
-            (c) => c.serverId && (c.name === name || c.characterId === charId)
-        );
-        return contact?.serverId || null;
+    isContactOnline(charId) {
+        return (this.data?.contacts || []).some((c) => c.characterId === charId);
     },
 
     renderThreads() {
@@ -168,7 +171,7 @@ const Phone = {
             btn.addEventListener('click', () => this.openChat({
                 name: t.name,
                 charId: t.charId,
-                serverId: t.serverId || this.findServerId(t.name, t.charId),
+                online: this.isContactOnline(t.charId),
             }));
             list.appendChild(btn);
         });
@@ -199,7 +202,7 @@ const Phone = {
             btn.addEventListener('click', () => this.openChat({
                 name: c.name,
                 charId: c.characterId,
-                serverId: c.serverId,
+                online: true,
             }));
             list.appendChild(btn);
         });
@@ -207,7 +210,10 @@ const Phone = {
 
     openChat(target) {
         this.chatTarget = target;
+        const online = this.isContactOnline(target.charId);
         $('#phone-chat-title').textContent = target.name || 'Chat';
+        const sub = $('#phone-chat-subtitle');
+        if (sub) sub.textContent = online ? 'Online' : 'Will deliver when online';
         this.renderChat(target);
         this.showView('chat');
     },
@@ -243,14 +249,12 @@ const Phone = {
     sendMessage() {
         const input = $('#phone-chat-input');
         const message = (input?.value || '').trim();
-        if (!message || !this.chatTarget?.serverId) {
-            if (!this.chatTarget?.serverId) {
-                notify('Player is offline', 'error');
-            }
+        if (!message || !this.chatTarget?.charId) {
+            if (!this.chatTarget?.charId) notify('Invalid contact', 'error');
             return;
         }
         post('phoneSend', {
-            targetId: this.chatTarget.serverId,
+            targetCharacterId: this.chatTarget.charId,
             message,
         });
         if (input) input.value = '';

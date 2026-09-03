@@ -1,3 +1,14 @@
+local function findSourceByCharacterId(characterId)
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local c = exports.sunset_core:GetCharacter(src)
+        if c and c.id == characterId then
+            return src
+        end
+    end
+    return nil
+end
+
 exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil end
@@ -12,15 +23,18 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
         ORDER BY m.id DESC LIMIT 50
     ]], { char.id, char.id }) or {}
 
+    local onlineByChar = {}
     local players = {}
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         local c = exports.sunset_core:GetCharacter(src)
         if c and c.id ~= char.id then
+            onlineByChar[c.id] = src
             players[#players + 1] = {
                 serverId = src,
                 characterId = c.id,
                 name = exports.sunset_core:GetPlayerDisplayName(src),
+                online = true,
             }
         end
     end
@@ -33,25 +47,33 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
         bank = char.bank or 0,
         messages = messages,
         contacts = players,
+        onlineByChar = onlineByChar,
     }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, targetId, message)
+exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, targetCharacterId, message)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
-    targetId = tonumber(targetId)
-    message = tostring(message or ''):sub(1, 256)
-    if not targetId or message == '' then return nil, 'Invalid message' end
 
-    local targetChar = exports.sunset_core:GetCharacter(targetId)
-    if not targetChar then return nil, 'Player not online' end
+    targetCharacterId = tonumber(targetCharacterId)
+    message = tostring(message or ''):sub(1, 256)
+    if not targetCharacterId or message == '' then return nil, 'Invalid message' end
+    if targetCharacterId == char.id then return nil, 'Invalid recipient' end
+
+    local exists = MySQL.scalar.await('SELECT id FROM characters WHERE id = ?', { targetCharacterId })
+    if not exists then return nil, 'Player not found' end
 
     MySQL.insert.await(
         'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
-        { char.id, targetChar.id, message }
+        { char.id, targetCharacterId, message }
     )
 
-    TriggerClientEvent('sunset:client:notify', targetId, 'New message from ' .. exports.sunset_core:GetPlayerDisplayName(source), 'info')
-    TriggerClientEvent('sunset:client:phoneMessage', targetId)
+    local targetSource = findSourceByCharacterId(targetCharacterId)
+    if targetSource then
+        TriggerClientEvent('sunset:client:notify', targetSource,
+            'New message from ' .. exports.sunset_core:GetPlayerDisplayName(source), 'info')
+        TriggerClientEvent('sunset:client:phoneMessage', targetSource)
+    end
+
     return true
 end)

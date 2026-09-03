@@ -54,7 +54,7 @@ end)
 AddEventHandler('sunset:nui:phoneSend', function(data)
     CreateThread(function()
         local ok, err = pcall(function()
-            Sunset.AwaitCallback('sunset:phoneSend', tonumber(data.targetId), data.message)
+            Sunset.AwaitCallback('sunset:phoneSend', tonumber(data.targetCharacterId), data.message)
         end)
         if not ok then
             exports.sunset_ui:Notify(tostring(err) or 'Could not send', 'error')
