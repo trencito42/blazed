@@ -155,8 +155,8 @@ local function startGarbage()
                             attachBag()
                             updateObjective(cfg, newData)
                             JC.notify('Take the bag to the back of your truck', 'info')
-                        elseif err2 then
-                            JC.notify(err2, 'error')
+                        else
+                            JC.notify(err2 or 'Could not pick up trash from the bin', 'error')
                         end
                     end
                 end
@@ -171,7 +171,8 @@ local function startGarbage()
                         and IsControlJustPressed(0, 38) then
                         busy = true
                         JC.playAnim('anim@heists@narcotics@trash', 'drop_front', 2000)
-                        local newData, err2 = Sunset.AwaitCallback('sunset:jobs:garbage:dumpBin')
+                        local truckNetId = NetworkGetNetworkIdFromEntity(truck)
+                        local newData, err2 = Sunset.AwaitCallback('sunset:jobs:garbage:dumpBin', truckNetId)
                         busy = false
                         if newData then
                             detachBag()
@@ -188,8 +189,8 @@ local function startGarbage()
                                 local nextBin = newData.bins and newData.bins[newData.binIndex or 1]
                                 pointToBin(cfg, nextBin, 'Trash Bin ' .. tostring(newData.binIndex or 1))
                             end
-                        elseif err2 then
-                            JC.notify(err2, 'error')
+                        else
+                            JC.notify(err2 or 'Could not dump the bag at your truck', 'error')
                         end
                     end
                 else

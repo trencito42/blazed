@@ -12,25 +12,39 @@ local function shuffleBins(bins, count)
     return out
 end
 
-local function getSessionVehicle(source)
-    local session = SunsetJobs_GetSession(source)
-    if not session or not session.vehicleNetId then return nil end
-    local entity = NetworkGetEntityFromNetworkId(session.vehicleNetId)
+local function resolveWorkTruck(session, cfg, vehicleNetId)
+    if not session or not cfg then return nil end
+
+    local netId = tonumber(vehicleNetId) or session.vehicleNetId
+    if not netId then return nil end
+
+    local entity = NetworkGetEntityFromNetworkId(netId)
     if not entity or entity == 0 or not DoesEntityExist(entity) then return nil end
+    if GetEntityModel(entity) ~= joaat(cfg.truckModel) then return nil end
+
+    session.vehicleNetId = netId
     return entity
 end
 
+-- GetOffsetFromEntityInWorldCoords is client-only in FiveM; use heading math on server.
 local function getTruckRearCoords(entity, offsetY)
-    local rear = GetOffsetFromEntityInWorldCoords(entity, 0.0, offsetY or -4.5, 0.0)
-    return vector3(rear.x, rear.y, rear.z)
+    local coords = GetEntityCoords(entity)
+    local heading = math.rad(GetEntityHeading(entity))
+    local off = offsetY or -4.5
+    local forwardX = -math.sin(heading)
+    local forwardY = math.cos(heading)
+    return vector3(
+        coords.x + forwardX * off,
+        coords.y + forwardY * off,
+        coords.z
+    )
 end
 
-local function validateTruckRear(source, cfg)
-    local entity = getSessionVehicle(source)
+local function validateTruckRear(source, cfg, vehicleNetId)
+    local session = SunsetJobs_GetSession(source)
+    local entity = resolveWorkTruck(session, cfg, vehicleNetId)
     if not entity then return false, 'Your assigned trash truck must be nearby' end
-    if GetEntityModel(entity) ~= joaat(cfg.truckModel) then
-        return false, 'Your assigned trash truck must be nearby'
-    end
+
     local rear = getTruckRearCoords(entity, cfg.truckRearOffset or -4.5)
     if not SunsetJobs_ValidateCoords(source, rear, cfg.dumpRadius or 3.5) then
         return false, 'Go to the back of your trash truck'
@@ -74,15 +88,17 @@ exports.sunset_core:RegisterCallback('sunset:jobs:garbage:pickupBin', function(s
     return session.data
 end)
 
-exports.sunset_core:RegisterCallback('sunset:jobs:garbage:dumpBin', function(source)
+exports.sunset_core:RegisterCallback('sunset:jobs:garbage:dumpBin', function(source, vehicleNetId)
     local session, err = SunsetJobs_RequireSession(source, 'garbage', { 'ACTIVE' })
-    if not session then return nil, err end
+    if not session then return nil, err or 'No active garbage shift' end
     if session.data.stage ~= 'collecting' then return nil, 'Unload at depot first' end
     if not session.data.carrying then return nil, 'Pick up trash from the bin first' end
 
     local cfg = Sunset.GetJobConfig('garbage')
-    local ok, truckErr = validateTruckRear(source, cfg)
-    if not ok then return nil, truckErr end
+    if not cfg then return nil, 'Garbage job is not configured' end
+
+    local ok, truckErr = validateTruckRear(source, cfg, vehicleNetId)
+    if not ok then return nil, truckErr or 'Go to the back of your trash truck' end
 
     session.data.carrying = false
     session.data.collected = (session.data.collected or 0) + 1
