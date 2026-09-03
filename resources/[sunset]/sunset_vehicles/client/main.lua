@@ -8,6 +8,28 @@ local protectedVehicles = {}
 local lastBodyHealth = 1000.0
 local lastVehSpeed = 0.0
 
+-- GTA fuel natives use liters (0..fPetrolTankVolume), not 0–100%. We track percent for HUD/DB.
+local function getNativeTankVolume(veh)
+    if not veh or veh == 0 then return 60.0 end
+    local vol = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fPetrolTankVolume')
+    if vol and vol > 0.01 then return vol end
+    return Sunset.GetVehicleTankCapacityLiters(GetVehicleClass(veh))
+end
+
+local function readFuelPercent(veh)
+    if not veh or veh == 0 then return fuel end
+    local cap = getNativeTankVolume(veh)
+    if cap <= 0 then return 0 end
+    return math.max(0, math.min(100, GetVehicleFuelLevel(veh) / cap * 100.0))
+end
+
+local function writeFuelPercent(veh, percent)
+    if not veh or veh == 0 then return end
+    local cap = getNativeTankVolume(veh)
+    local liters = math.max(0, math.min(cap, (tonumber(percent) or 0) / 100.0 * cap))
+    SetVehicleFuelLevel(veh, liters)
+end
+
 -- RP-friendly ejection: hard crashes only (not every bump)
 local EJECT_PARAMS = { 48.0, 52.0, 17.0, 1200.0 }
 local NO_EJECT_PARAMS = { 10000.0, 10000.0, 17.0, 0.0 }
@@ -194,11 +216,8 @@ CreateThread(function()
         if veh ~= 0 and isDriver() then
             if veh ~= currentVeh then
                 currentVeh = veh
-                fuel = GetVehicleFuelLevel(veh)
-                if fuel < 0 or fuel > 100 then
-                    fuel = math.max(0, math.min(100, fuel))
-                end
-                SetVehicleFuelLevel(veh, fuel)
+                fuel = readFuelPercent(veh)
+                writeFuelPercent(veh, fuel)
                 lastBodyHealth = GetVehicleBodyHealth(veh)
                 lastVehSpeed = GetEntitySpeed(veh)
                 local _, lightsOn, highbeams = GetVehicleLightsState(veh)
@@ -212,9 +231,9 @@ CreateThread(function()
             local drain = computeFuelDrain(veh)
             if drain > 0 then
                 fuel = math.max(0, fuel - drain)
-                SetVehicleFuelLevel(veh, fuel)
+                writeFuelPercent(veh, fuel)
             end
-            if fuel <= 0 then SetVehicleEngineOn(veh, false, true, true) end
+            if fuel <= 0.05 then SetVehicleEngineOn(veh, false, false, true) end
             Wait(1000)
         else
             currentVeh = 0
@@ -435,7 +454,7 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     SetVehRadioStation(vehicle, 'OFF')
     SetVehicleDirtLevel(vehicle, 0.0)
     SetVehiclePetrolTankHealth(vehicle, 1000.0)
-    SetVehicleFuelLevel(vehicle, vehFuel)
+    writeFuelPercent(vehicle, vehFuel)
     SetVehicleEngineHealth(vehicle, vehEngine)
     SetVehicleBodyHealth(vehicle, vehBody)
     local engineOn = vehFuel > 0 and vehEngine > 250.0
@@ -517,7 +536,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
 
         if entity then
             props.model = GetEntityModel(entity)
-            vehFuel = GetVehicleFuelLevel(entity)
+            vehFuel = readFuelPercent(entity)
             vehEngine = GetVehicleEngineHealth(entity)
             vehBody = GetVehicleBodyHealth(entity)
         end
@@ -606,9 +625,7 @@ end)
 local function setFuelLevel(veh, level)
     level = math.max(0.0, math.min(100.0, tonumber(level) or 0))
     fuel = level
-    if veh and veh ~= 0 then
-        SetVehicleFuelLevel(veh, level)
-    end
+    writeFuelPercent(veh, level)
 end
 
 exports('SetFuelLevel', setFuelLevel)
@@ -653,10 +670,7 @@ RegisterNetEvent('sunset:client:useGasCan', function()
         if IsPedInAnyVehicle(ped, false) and GetPedInVehicleSeat(veh, -1) == ped then
             fuelPct = exports.sunset_vehicles:GetFuelLevel() or fuel
         else
-            fuelPct = GetVehicleFuelLevel(veh)
-            if fuelPct < 0 or fuelPct > 100 then
-                fuelPct = fuel
-            end
+            fuelPct = readFuelPercent(veh)
         end
         local tankLiters = Sunset.PercentToTankLiters(fuelPct, vehicleClass)
 
@@ -666,6 +680,7 @@ RegisterNetEvent('sunset:client:useGasCan', function()
             return
         end
 
+        SetVehiclePetrolTankHealth(veh, 1000.0)
         setFuelLevel(veh, result.vehicleFuel or fuelPct)
 
         local poured = result.transferredLiters or 0

@@ -30,7 +30,7 @@ RegisterNetEvent('sunset:admin:spawnVehicle', function(model)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
     SetPedIntoVehicle(ped, veh, -1)
     SetModelAsNoLongerNeeded(hash)
-    SetVehicleFuelLevel(veh, 100.0)
+    exports.sunset_vehicles:SetFuelLevel(veh, 100.0)
 end)
 
 RegisterNetEvent('sunset:admin:deleteVehicle', function()
