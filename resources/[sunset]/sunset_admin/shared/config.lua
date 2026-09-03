@@ -24,4 +24,5 @@ SunsetAdmin.Commands = {
     announce = 3,
     setadmin = 5,
     coords = 2,
+    hudexport = 3,
 }

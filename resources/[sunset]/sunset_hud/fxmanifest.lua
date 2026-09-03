@@ -20,6 +20,14 @@ client_scripts {
     'client/main.lua',
 }
 
+server_scripts {
+    'server/main.lua',
+}
+
+files {
+    'hud_layout_default.json',
+}
+
 exports {
     'GetPaydaySeconds',
     'GetWantedLevel',
@@ -30,4 +38,5 @@ dependencies {
     'sunset_core',
     'sunset_ui',
     'sunset_vehicles',
+    'sunset_admin',
 }

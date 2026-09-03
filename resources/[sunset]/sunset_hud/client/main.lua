@@ -1,5 +1,6 @@
 local nextPaydayLabel = '--:--'
 local serverTimeLabel = '00:00'
+local defaultLayoutCache = nil
 
 local function nui(action, data)
     exports.sunset_ui:Send(action, data or {})
@@ -28,7 +29,34 @@ local function formatPayday()
     return nextPaydayLabel
 end
 
+local function loadDefaultHudLayout()
+    if defaultLayoutCache then return defaultLayoutCache end
+    local raw = LoadResourceFile(GetCurrentResourceName(), 'hud_layout_default.json')
+    if raw and raw ~= '' then
+        local ok, data = pcall(json.decode, raw)
+        if ok and type(data) == 'table' then
+            defaultLayoutCache = data
+            return data
+        end
+    end
+    return nil
+end
+
+local function hasPersonalHudLayout()
+    local raw = GetResourceKvpString('sunset_hud_layout')
+    return raw ~= nil and raw ~= ''
+end
+
 local function getHudLayout()
+    local raw = GetResourceKvpString('sunset_hud_layout')
+    if raw and raw ~= '' then
+        local ok, data = pcall(json.decode, raw)
+        if ok then return data end
+    end
+    return loadDefaultHudLayout()
+end
+
+local function readSavedHudLayout()
     local raw = GetResourceKvpString('sunset_hud_layout')
     if not raw or raw == '' then return nil end
     local ok, data = pcall(json.decode, raw)
@@ -93,6 +121,16 @@ local function buildHudData()
     end
 
     return data
+end
+
+local function refreshHudLayout(layout)
+    if not hudActive then return end
+    nui('showHud', {
+        playerId = GetPlayerServerId(PlayerId()),
+        layout = layout or getHudLayout(),
+    })
+    local data = buildHudData()
+    if data then nui('updateHud', data) end
 end
 
 local function activateHud(character)
@@ -185,6 +223,35 @@ RegisterCommand('hudedit', function()
     if not hudActive then return end
     exports.sunset_ui:Send('hudEditToggle', {})
 end, false)
+
+RegisterCommand('hudexport', function(_, args)
+    local layout = readSavedHudLayout()
+    if not layout then
+        exports.sunset_ui:Notify('Save your HUD first: /hudedit then Enter', 'error')
+        return
+    end
+    local applyAll = args[1] == 'all'
+    TriggerServerEvent('sunset:server:hudExport', layout, applyAll)
+end, false)
+
+RegisterCommand('hudreset', function()
+    DeleteResourceKvp('sunset_hud_layout')
+    refreshHudLayout(getHudLayout())
+    exports.sunset_ui:Notify('HUD reset to server default', 'success')
+end, false)
+
+RegisterNetEvent('sunset:client:hudDefaultUpdated', function(layout, applyAll)
+    if type(layout) ~= 'table' then return end
+    defaultLayoutCache = layout
+    if applyAll then
+        SetResourceKvp('sunset_hud_layout', json.encode(layout))
+        refreshHudLayout(layout)
+        return
+    end
+    if not hasPersonalHudLayout() then
+        refreshHudLayout(layout)
+    end
+end)
 
 RegisterNetEvent('sunset:client:serverTime', function(data)
     if not data then return end
