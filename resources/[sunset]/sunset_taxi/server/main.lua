@@ -648,8 +648,8 @@ AddEventHandler('sunset:server:characterSelected', function(source)
     DriverAvailable[source] = true
 end)
 
-AddEventHandler('sunset:server:jobChanged', function(source, job)
-    if job == Sunset.Taxi.factionId then
+AddEventHandler('sunset:server:factionChanged', function(source, factionId)
+    if factionId == Sunset.Taxi.factionId then
         DriverAvailable[source] = true
     else
         DriverAvailable[source] = nil

@@ -138,7 +138,7 @@ function Sunset.SetFaction(source, factionId, grade)
         { char.job or 'unemployed', char.job_grade or 0, json.encode(char.metadata), char.id }
     )
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
-    TriggerEvent('sunset:server:jobChanged', source, factionId or 'none', grade or 0)
+    TriggerEvent('sunset:server:factionChanged', source, factionId, grade or 0)
     return true
 end
 

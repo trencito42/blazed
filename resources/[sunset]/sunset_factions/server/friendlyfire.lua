@@ -14,7 +14,7 @@ AddEventHandler('sunset:server:characterSelected', function(source)
     syncCombatState(source)
 end)
 
-AddEventHandler('sunset:server:jobChanged', function(source)
+AddEventHandler('sunset:server:factionChanged', function(source)
     syncCombatState(source)
 end)
 

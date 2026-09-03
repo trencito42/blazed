@@ -28,6 +28,7 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
     rate.count = rate.count + 1
     if rate.count > 30 then
         print(('^3[SunsetMP]^7 Callback flood blocked from %s'):format(source))
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, 'Too many requests — wait a moment')
         return
     end
     if not Callbacks[name] then

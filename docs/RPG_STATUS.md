@@ -16,6 +16,9 @@
 - Fixed `sunset_help` loading without the core shared data it consumes. LSFD can now use `/firecalls` to synchronize and route to existing incidents, or `/firestart` to request a rate-limited incident when none is active.
 - Civilian employment and faction membership are independent: `/quitjob` now resigns only the civilian job at the Job Center; `/leavefaction` and `/quitgroup` remove only faction membership. Command-name collisions across dispatch, emotes, garages and medical actions were removed.
 - Payday now adds the civilian-job salary and eligible on-duty faction salary instead of allowing faction membership to mask the civilian salary; the notification shows both components.
+- Civilian job changes and faction changes now use separate runtime events. Taking or quitting a civilian job no longer forces faction duty off, and joining/leaving a faction no longer impersonates a civilian job change.
+- Core callback throttling always sends an explicit error response, preventing an awaiting client/NUI action from hanging when the limit is reached.
+- Dispatch persistence uses an explicit SQL `NULL` branch for unassigned calls, avoiding sparse Lua parameter arrays and oxmysql null-argument runtime errors.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 
@@ -35,7 +38,7 @@ Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 | LSPD citations / MDC | COMPLETE | Ticket amounts from server config only |
 | LSPD backup | COMPLETE | `/backup` + `/cbackup` via `sunset_dispatch` police_backup |
 | EMS downed / stabilize / revive | COMPLETE | Distance + downed checks; medic dispatch auto-complete |
-| Fire rescue | PARTIAL | Vehicle-fire incident loop and rescue perms work; no hose/building fire system |
+| Fire rescue | PARTIAL | Randomized vehicle-fire incidents, manual incident request, dispatch/GPS and rescue permissions work; no hose/building fire system |
 | Taxi phone rides | COMPLETE | DB persistence, meter, idle timeout enforced |
 | Taxi manual `/fare` | COMPLETE | Proximity-validated server charge |
 | Unified service dispatch | COMPLETE | taxi/medic/fire/mechanic/police_backup |
@@ -79,7 +82,7 @@ Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 
 ## Remaining PARTIAL Items
 
-- Faction LSFD: no fire hose / incident missions
+- Faction LSFD: randomized vehicle-fire incidents are playable; no fire hose or building-fire simulation
 - Faction mechanic: no dispatch accept for faction mechanics (civilian path complete)
 - Offline faction roster / MDC offline lookup by name
 - `sunset_ui` summon panel styling (event wired)

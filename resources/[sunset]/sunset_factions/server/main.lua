@@ -399,9 +399,9 @@ AddEventHandler('sunset:server:characterSelected', function(source)
     TriggerClientEvent('sunset:client:dutyState', source, false, nil)
 end)
 
-AddEventHandler('sunset:server:jobChanged', function(source, job)
+AddEventHandler('sunset:server:factionChanged', function(source, factionId)
     FactionCore.setOnDuty(source, false)
-    TriggerClientEvent('sunset:client:dutyState', source, false, job)
+    TriggerClientEvent('sunset:client:dutyState', source, false, factionId)
 end)
 
 function GetDutyState(source)

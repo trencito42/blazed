@@ -100,7 +100,22 @@ end
 
 local function persistStatus(callId, status, responderCharId)
     local terminal = Sunset.Dispatch.IsTerminalState(status)
-    if terminal then
+    -- Lua arrays cannot safely contain a nil parameter between other values.
+    -- oxmysql receives a sparse array as a null native argument, so use an
+    -- explicit SQL NULL branch whenever a call has no responder.
+    if not responderCharId and terminal then
+        MySQL.update.await([[
+            UPDATE service_calls
+            SET status = ?, responder_character_id = NULL, completed_at = NOW()
+            WHERE id = ?
+        ]], { status, callId })
+    elseif not responderCharId then
+        MySQL.update.await([[
+            UPDATE service_calls
+            SET status = ?, responder_character_id = NULL
+            WHERE id = ?
+        ]], { status, callId })
+    elseif terminal then
         MySQL.update.await([[
             UPDATE service_calls
             SET status = ?, responder_character_id = ?, completed_at = NOW()
