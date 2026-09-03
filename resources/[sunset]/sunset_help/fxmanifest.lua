@@ -10,7 +10,10 @@ shared_scripts {
     '@sunset_admin/shared/config.lua',
 }
 
-client_scripts { 'client/main.lua' }
+client_scripts {
+    '@sunset_core/client/callbacks.lua',
+    'client/main.lua',
+}
 server_scripts { 'server/main.lua' }
 
 dependencies {
