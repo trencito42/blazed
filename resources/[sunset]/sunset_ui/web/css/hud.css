@@ -8,8 +8,7 @@
 }
 
 .hud.scoreboard-open .hud-tr,
-.hud.scoreboard-open .hud-tl,
-.hud.scoreboard-open .hud-top-right { opacity: 0; }
+.hud.scoreboard-open .hud-tl { opacity: 0; }
 
 /* ── Top Left ── */
 .hud-tl {
@@ -40,25 +39,16 @@
 
 .badge--payday { color: #e85d2a; }
 
-/* ── Top Right cluster ── */
-.hud-top-right {
+/* ── Top Right ── */
+.hud-tr {
     position: absolute;
     top: 12px;
     right: 22px;
     display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    transition: opacity 0.2s;
-}
-
-.hud-tr {
-    position: relative;
-    top: auto;
-    right: auto;
-    display: flex;
     flex-direction: column;
     gap: 5px;
     align-items: flex-end;
+    transition: opacity 0.2s;
 }
 
 .hud-wanted {
@@ -91,8 +81,6 @@
 }
 
 /* ── Top Right (legacy override removed) ── */
-.hud-tr--standalone { display: none; }
-
 .stat-row { display: flex; align-items: center; gap: 6px; }
 .ico { width: 14px; height: 14px; fill: currentColor; }
 .ico--hp { color: #e05555; }
@@ -198,20 +186,19 @@
 
 .veh-slot.active .veh-slot__key { color: #e85d2a; background: rgba(232,93,42,0.15); }
 
-/* ── Speedometer — Forza Horizon style (top-right) ── */
+/* ── Speedometer — Forza Horizon style (jos-dreapta) ── */
 .fh-speedo {
-    --fh-size: 148px;
+    --fh-size: 220px;
     --fh-arc-len: 434;
     --fh-rpm-len: 358;
     --fh-max-speed: 320;
 
-    position: relative;
-    bottom: auto;
-    right: auto;
+    position: absolute;
+    bottom: 18px;
+    right: 22px;
     width: var(--fh-size);
-    height: calc(var(--fh-size) + 20px);
-    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.4));
-    flex-shrink: 0;
+    height: calc(var(--fh-size) + 28px);
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45));
 }
 
 .fh-speedo__svg {
@@ -312,7 +299,7 @@
 
 .fh-speedo__speed {
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 38px;
+    font-size: 54px;
     font-weight: 700;
     line-height: 0.92;
     color: #fff;
@@ -457,11 +444,12 @@
 }
 
 @media (max-width: 1280px) {
-    .hud-top-right { right: 14px; top: 10px; gap: 10px; }
-    .fh-speedo { --fh-size: 128px; }
-    .fh-speedo__speed { font-size: 32px; }
-}
+    .fh-speedo {
+        --fh-size: 200px;
+        bottom: 14px;
+        right: 14px;
+    }
 
-@media (max-width: 1280px) {
+    .fh-speedo__speed { font-size: 48px; }
     .hud-bl { left: 260px; bottom: 22px; }
 }

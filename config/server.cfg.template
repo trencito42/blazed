@@ -16,7 +16,7 @@ sv_enforceGameBuild 3095
 
 # Obligatoriu pentru conectare jucători
 set onesync on
-set onesync_population true
+set onesync_population false
 
 # Setat la runtime din env (docker/entrypoint.sh)
 sv_licenseKey "__LICENSE_KEY__"
