@@ -76,8 +76,8 @@ const Overlays = {
         $('#job-objective-title').textContent = data?.title || data?.objective || '—';
         const desc = $('#job-objective-desc');
         if (desc) {
-            desc.textContent = data?.description || data?.hint || '';
-            desc.classList.toggle('hidden', !(data?.description || data?.hint));
+            desc.textContent = data?.description || data?.subtitle || data?.hint || '';
+            desc.classList.toggle('hidden', !(data?.description || data?.subtitle || data?.hint));
         }
 
         const progress = data?.progress;

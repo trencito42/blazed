@@ -97,6 +97,7 @@ function JobClient.spawnVehicle(model, spawn, warp)
 
     SetVehicleNumberPlateText(veh, 'JOB' .. math.random(100, 999))
     SetEntityAsMissionEntity(veh, true, true)
+    Entity(veh).state:set('sunsetProtectedVehicle', true, true)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
     SetVehicleNeedsToBeHotwired(veh, false)
     SetVehRadioStation(veh, 'OFF')
@@ -114,6 +115,8 @@ function JobClient.attachTrailer(truck, trailerModel, spawn)
     local trailer = CreateVehicle(thash, s.x, s.y, s.z, s.w or 0.0, true, false)
     if trailer == 0 then return nil end
     SetEntityAsMissionEntity(trailer, true, true)
+    Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
+    SetVehicleHasBeenOwnedByPlayer(trailer, true)
     AttachVehicleToTrailer(truck, trailer, 1.0)
     JobClient.vehicles[#JobClient.vehicles + 1] = trailer
     SetModelAsNoLongerNeeded(thash)

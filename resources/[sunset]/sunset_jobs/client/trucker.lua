@@ -22,6 +22,7 @@ local function startTrucker()
 
     JC.setWaypoint(data.pickup)
     JC.addBlip(vector3(data.pickup.x, data.pickup.y, data.pickup.z), { sprite = 478, color = 5 }, 'Cargo Pickup')
+    JC.showObjective('Collect cargo', 'Drive the truck and trailer to ' .. (data.label or 'the pickup'), 0)
     JC.notify('Drive to pickup: ' .. (data.label or ''), 'info')
 
     CreateThread(function()
@@ -39,6 +40,7 @@ local function startTrucker()
                         JC.clearBlips()
                         JC.addBlip(vector3(data.delivery.x, data.delivery.y, data.delivery.z), { sprite = 478, color = 2 }, 'Delivery')
                         JC.setWaypoint(data.delivery)
+                        JC.showObjective('Deliver cargo', 'Follow the GPS to the delivery point', 50)
                         JC.notify('Cargo loaded — deliver to destination', 'success')
                     end
                 end
@@ -52,6 +54,7 @@ local function startTrucker()
                         JC.clearBlips()
                         JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
                         JC.setWaypoint(cfg.depot.coords)
+                        JC.showObjective('Return the truck', 'Take the truck and trailer back to the depot', 90)
                         JC.notify(('Delivered! +$%s — return truck to depot'):format(result.pay or 0), 'success')
                     elseif err2 then
                         JC.notify(err2, 'error')

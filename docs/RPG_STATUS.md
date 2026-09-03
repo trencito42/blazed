@@ -21,6 +21,8 @@
 - Dispatch persistence uses an explicit SQL `NULL` branch for unassigned calls, avoiding sparse Lua parameter arrays and oxmysql null-argument runtime errors.
 - Fire incident vehicles are protected from the traffic cleanup system and keep their local entity/fire handles across server updates; cleanup now removes both vehicle and script fire correctly.
 - TAB and the mouse wheel are restored for weapon selection. The player list is now held with F10 under a fresh key mapping, avoiding persisted TAB bindings from the old command.
+- World cleanup now deletes only GTA ambient population entities, never script/network/mission vehicles or peds. All civilian work vehicles and trailers are also explicitly protected.
+- Trucker work now shows a persistent mission objective with pickup, delivery and depot-return stages; objective subtitles are rendered correctly by NUI.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 

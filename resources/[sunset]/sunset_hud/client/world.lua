@@ -124,8 +124,11 @@ CreateThread(function()
 
         for _, veh in ipairs(GetGamePool('CVehicle')) do
             if DoesEntityExist(veh) and not isProtectedVehicle(veh) then
+                -- Only remove GTA ambient population. Script/network/mission
+                -- vehicles (population type 0 or >= 6) belong to gameplay.
+                local populationType = GetEntityPopulationType(veh)
                 local driver = GetPedInVehicleSeat(veh, -1)
-                if driver == 0 or not isPlayerPed(driver) then
+                if populationType >= 1 and populationType <= 5 and (driver == 0 or not isPlayerPed(driver)) then
                     local vCoords = GetEntityCoords(veh)
                     if #(vCoords - coords) < 350.0 then
                         SetEntityAsMissionEntity(veh, true, true)
@@ -137,8 +140,9 @@ CreateThread(function()
 
         for _, npc in ipairs(GetGamePool('CPed')) do
             if DoesEntityExist(npc) and not isPlayerPed(npc) and npc ~= ped then
+                local populationType = GetEntityPopulationType(npc)
                 local nCoords = GetEntityCoords(npc)
-                if #(nCoords - coords) < 250.0 then
+                if populationType >= 1 and populationType <= 5 and #(nCoords - coords) < 250.0 then
                     SetEntityAsMissionEntity(npc, true, true)
                     DeletePed(npc)
                 end
