@@ -24,10 +24,14 @@ SETUP.local.md
 
 # Node / IDE
 node_modules/
-dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Build output (except oxmysql release binary required on server)
+dist/
+!resources/oxmysql/dist/
+!resources/oxmysql/dist/**
 
 # Database local
 *.db
