@@ -6,10 +6,10 @@ Sunset.Config = {
     DefaultSpawn = vector4(-1037.58, -2737.58, 20.17, 328.0),
     StartingCash = 500,
     StartingBank = 2500,
-    Debug = true,
+    Debug = false,
 
     -- Economy
-    PaydayInterval = 45 * 60, -- seconds
+    PaydayInterval = 60 * 60, -- hourly SA:MP-style payday
     TaxRate = 0.05, -- 5% on bank payday deposits
 
     -- Survival

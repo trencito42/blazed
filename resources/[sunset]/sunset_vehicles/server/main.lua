@@ -248,21 +248,3 @@ RegisterCommand('givecar', function(source, args)
     )
     TriggerClientEvent('sunset:client:notify', target, 'You received a vehicle: ' .. model, 'success')
 end, true)
-
-local function openGarageMenu(source)
-    local char = exports.sunset_core:GetCharacter(source)
-    if not char then return end
-    local vehicles = MySQL.query.await(
-        'SELECT id, plate, model, stored, garage, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE character_id = ?',
-        { char.id }
-    ) or {}
-    TriggerClientEvent('sunset:client:garageMenu', source, vehicles)
-end
-
-RegisterCommand('garage', function(source)
-    openGarageMenu(source)
-end, false)
-
-RegisterCommand('v', function(source)
-    openGarageMenu(source)
-end, false)

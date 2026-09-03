@@ -23,3 +23,10 @@ AddEventHandler('sunset:nui:jobCenterClose', function()
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('jobCenterHide', {})
 end)
+
+RegisterCommand('quitjob', function()
+    CreateThread(function()
+        local ok, err = Sunset.AwaitCallback('sunset:quitCivilianJob')
+        if not ok then exports.sunset_ui:Notify(err or 'Could not quit civilian job', 'error') end
+    end)
+end, false)

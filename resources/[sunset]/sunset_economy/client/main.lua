@@ -4,8 +4,12 @@ RegisterNetEvent('sunset:client:serverTime', function(data)
     if data and data.nextPayday then nextPaydayLabel = data.nextPayday end
 end)
 
-RegisterNetEvent('sunset:client:payday', function(net, tax)
-    exports.sunset_ui:Notify(('Payday: +$%s (tax: $%s)'):format(net, tax), 'success', 6000)
+RegisterNetEvent('sunset:client:payday', function(net, tax, breakdown)
+    breakdown = type(breakdown) == 'table' and breakdown or {}
+    local details = ''
+    if (breakdown.civilian or 0) > 0 then details = details .. (' | job $%s'):format(breakdown.civilian) end
+    if (breakdown.faction or 0) > 0 then details = details .. (' | faction $%s'):format(breakdown.faction) end
+    exports.sunset_ui:Notify(('Payday: +$%s (tax: $%s)%s'):format(net, tax, details), 'success', 8000)
 end)
 
 exports('GetNextPayday', function() return nextPaydayLabel end)

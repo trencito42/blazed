@@ -135,7 +135,7 @@ RegisterCommand('leavefaction', function()
     end
 end, false)
 
-RegisterCommand('quitjob', function()
+RegisterCommand('quitgroup', function()
     ExecuteCommand('leavefaction')
 end, false)
 

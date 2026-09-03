@@ -53,10 +53,6 @@ RegisterCommand('stopemote', function()
     stopEmote()
 end, false)
 
-RegisterCommand('cancel', function()
-    stopEmote()
-end, false)
-
 AddEventHandler('sunset:nui:emotePlay', function(data)
     playEmote(data.emote)
     exports.sunset_ui:SetFocus(false, false)

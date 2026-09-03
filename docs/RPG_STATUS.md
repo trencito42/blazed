@@ -14,6 +14,8 @@
 - Live-log verification found and fixed a faction friendly-fire state crash (`OnDuty` was an undefined global), a missing shared profile dependency in `sunset_fire`, and a defensive character-id fallback in inventory loading.
 - Fixed the Lua reserved-word key for the `/goto` help description, which prevented the shared help registry from loading on FXServer.
 - Fixed `sunset_help` loading without the core shared data it consumes. LSFD can now use `/firecalls` to synchronize and route to existing incidents, or `/firestart` to request a rate-limited incident when none is active.
+- Civilian employment and faction membership are independent: `/quitjob` now resigns only the civilian job at the Job Center; `/leavefaction` and `/quitgroup` remove only faction membership. Command-name collisions across dispatch, emotes, garages and medical actions were removed.
+- Payday now adds the civilian-job salary and eligible on-duty faction salary instead of allowing faction membership to mask the civilian salary; the notification shows both components.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 

@@ -21,6 +21,32 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     return true
 end)
 
+exports.sunset_core:RegisterCallback('sunset:quitCivilianJob', function(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character loaded' end
+
+    local currentJob = select(1, Sunset.GetCharacterJob(char))
+    if not currentJob or currentJob == 'unemployed' then return nil, 'You do not have a civilian job' end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil, 'Player position unavailable' end
+    local coords = GetEntityCoords(ped)
+    local nearCenter = false
+    for _, center in pairs(Sunset.JobCenters or {}) do
+        if center.coords and #(coords - center.coords) <= 8.0 then
+            nearCenter = true
+            break
+        end
+    end
+    if not nearCenter then return nil, 'Go to the Job Center to quit your civilian job' end
+
+    if SunsetJobs_ClearSession then SunsetJobs_ClearSession(source, 'CANCELLED', 'Civilian job resigned') end
+    if not exports.sunset_core:SetJob(source, 'unemployed', 0) then return nil, 'Could not quit civilian job' end
+    TriggerClientEvent('sunset:client:notify', source,
+        'Civilian job resigned. Your faction membership is unchanged.', 'success')
+    return true
+end)
+
 local function resolvePlayer(source, arg)
     local target = tonumber(arg)
     if target and GetPlayerName(target) then return target end

@@ -1,35 +1,41 @@
 local lastPaydayHour = -1
 
 local function getSalary(char, source)
-    local factionId, grade = Sunset.GetCharacterFaction(char)
-    if factionId then
-        local faction = Sunset.Factions[factionId]
-        if faction and faction.duty and not exports.sunset_factions:IsOnDuty(source) then
-            return 0
-        end
-        local row = faction and faction.grades[grade or 0]
-        return row and row.salary or 0
-    end
+    local civilianSalary = 0
+    local factionSalary = 0
 
     local jobId, jobGrade = Sunset.GetCharacterJob(char)
     local job = Sunset.CivilianJobs[jobId] or Sunset.Jobs[jobId]
-    if not job then return 0 end
-    local row = job.grades[jobGrade or 0]
-    return row and row.salary or 0
+    local jobRow = job and job.grades[jobGrade or 0]
+    civilianSalary = jobRow and tonumber(jobRow.salary) or 0
+
+    local factionId, grade = Sunset.GetCharacterFaction(char)
+    if factionId then
+        local faction = Sunset.Factions[factionId]
+        if not faction or not faction.duty or exports.sunset_factions:IsOnDuty(source) then
+            local row = faction and faction.grades[grade or 0]
+            factionSalary = row and tonumber(row.salary) or 0
+        end
+    end
+    return civilianSalary + factionSalary, civilianSalary, factionSalary
 end
 
 local function processPayday(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
 
-    local salary = getSalary(char, source)
+    local salary, civilianSalary, factionSalary = getSalary(char, source)
     if salary <= 0 then return end
 
     local tax = math.floor(salary * (Sunset.Config.TaxRate or 0))
     local net = salary - tax
     exports.sunset_core:AddMoney(source, 'bank', net, 'payday')
     exports.sunset_core:AddXP(source, 50)
-    TriggerClientEvent('sunset:client:payday', source, net, tax)
+    TriggerClientEvent('sunset:client:payday', source, net, tax, {
+        civilian = civilianSalary,
+        faction = factionSalary,
+        gross = salary,
+    })
 end
 
 local function broadcastTime()

@@ -49,6 +49,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/quitjob', desc = 'Quit civilian job at Job Center' },
     { cmd = '/faction', desc = 'Faction rank, salary, and your commands' },
     { cmd = '/leavefaction', desc = 'Leave your faction (job stays)' },
+    { cmd = '/quitgroup', desc = 'Alias for /leavefaction (civilian job stays)' },
     { cmd = '/duty', desc = 'Toggle on/off duty at faction HQ' },
     { cmd = '/f [message]', desc = 'Faction chat' },
     { cmd = '/service [type] [msg]', desc = 'Request taxi, medic, fire, or mechanic' },
