@@ -14,11 +14,20 @@ sets locale "ro-RO"
 sv_maxclients 48
 sv_enforceGameBuild 3095
 
+# Obligatoriu pentru conectare jucători
+set onesync on
+set onesync_population true
+
 # Setat la runtime din env (docker/entrypoint.sh)
 sv_licenseKey "__LICENSE_KEY__"
 set mysql_connection_string "__MYSQL_CONNECTION_STRING__"
 
-# ═══ RESURSE ═══
+# ═══ RESURSE SYSTEM (GTA default — necesare pentru connect) ═══
+ensure mapmanager
+ensure sessionmanager
+ensure hardcap
+
+# ═══ RESURSE SUNSET ═══
 
 ensure sunset_loadscreen
 ensure oxmysql

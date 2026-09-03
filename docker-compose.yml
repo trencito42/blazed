@@ -39,8 +39,9 @@ services:
       MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}
     volumes:
       - ./config:/config-mount:ro
-      - ./resources:/config/resources:ro
+      - ./resources:/config/resources-custom:ro
       - fivem_txdata:/txData
+      - fivem_config:/config
     tty: true
     stdin_open: true
     networks:
@@ -53,3 +54,4 @@ networks:
 volumes:
   mariadb_data:
   fivem_txdata:
+  fivem_config:
