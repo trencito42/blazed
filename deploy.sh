@@ -2,18 +2,29 @@
 # Deploy / update SunsetMP pe VPS (rulează din folderul serviciului Coolify)
 set -e
 
-REPO="${REPO:-https://github.com/trencito42/blazed.git}"
+REPO="${REPO:-https://github.com/trencito42/blazed}"
 BRANCH="${BRANCH:-main}"
+DIR="$(pwd)"
 
-if [ -d .git ]; then
-  GIT_TERMINAL_PROMPT=0 git fetch origin "$BRANCH"
-  GIT_TERMINAL_PROMPT=0 git reset --hard "origin/$BRANCH"
-else
-  GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "$BRANCH" "$REPO" .
-fi
+pull_repo() {
+  if [ -d .git ]; then
+    if GIT_TERMINAL_PROMPT=0 git fetch origin "$BRANCH" 2>/dev/null; then
+      GIT_TERMINAL_PROMPT=0 git reset --hard "origin/$BRANCH"
+      return 0
+    fi
+  fi
+
+  echo "[deploy] git failed — using GitHub ZIP (repo public)"
+  curl -fsSL -o /tmp/blazed.zip "${REPO}/archive/refs/heads/${BRANCH}.zip"
+  rm -rf /tmp/blazed-main
+  unzip -qo /tmp/blazed.zip -d /tmp
+  cp -a /tmp/blazed-main/. "$DIR/"
+}
+
+pull_repo
 
 chmod -R a+rX config docker resources sql
-sed -i 's/\r$//' docker/fivem/entrypoint.sh
+sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh
 chmod +x docker/fivem/entrypoint.sh deploy.sh
 
 docker compose build fivem
