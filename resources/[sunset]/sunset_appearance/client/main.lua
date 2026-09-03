@@ -1,4 +1,5 @@
 local editing = false
+local saving = false
 local pendingChar = nil
 local currentAppearance = nil
 local studioCam = nil
@@ -153,6 +154,7 @@ end
 
 local function openEditor(char)
     if editing then return end
+    saving = false
     pendingChar = char
     char.gender = char.gender or 0
 
@@ -217,25 +219,55 @@ AddEventHandler('sunset:nui:appearanceGender', function(data)
     pushEditorUi(pendingChar)
 end)
 
-AddEventHandler('sunset:nui:appearanceSave', function()
-    if not pendingChar or not currentAppearance then return end
-
-    Sunset.AwaitCallback('sunset:saveAppearance', currentAppearance, pendingChar.gender)
-    pendingChar.appearance = currentAppearance
-    pendingChar.gender = pendingChar.gender or 0
-
+local function finishAppearanceAndSpawn(char)
     editing = false
+    saving = false
     studioCenter = nil
     destroyStudio()
+
+    local ped = PlayerPedId()
+    SetEntityCollision(ped, true, true)
+    FreezeEntityPosition(ped, false)
+
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('appearanceHide', {})
-
-    local char = pendingChar
-    pendingChar = nil
-    currentAppearance = nil
-
     exports.sunset_ui:Show('loading')
+
     TriggerEvent('sunset:client:spawnCharacter', char)
+end
+
+AddEventHandler('sunset:nui:appearanceSave', function()
+    if not editing or saving or not pendingChar or not currentAppearance then return end
+
+    saving = true
+    exports.sunset_ui:Send('appearanceSaving', {})
+
+    CreateThread(function()
+        local ok, err = pcall(function()
+            Sunset.AwaitCallback(
+                'sunset:saveAppearance',
+                currentAppearance,
+                pendingChar.gender,
+                pendingChar.id
+            )
+        end)
+
+        if not ok then
+            saving = false
+            exports.sunset_ui:Send('appearanceSaveFailed', {})
+            exports.sunset_ui:Notify(tostring(err) or 'Could not save appearance', 'error')
+            return
+        end
+
+        pendingChar.appearance = currentAppearance
+        pendingChar.gender = pendingChar.gender or 0
+
+        local char = pendingChar
+        pendingChar = nil
+        currentAppearance = nil
+
+        finishAppearanceAndSpawn(char)
+    end)
 end)
 
 function ApplyAppearance(ped, appearance, gender)

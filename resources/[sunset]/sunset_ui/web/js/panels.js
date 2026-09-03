@@ -311,11 +311,22 @@ const Panels = {
         $('#appearance-cam-feet').onclick = () => { post('appearanceCamera', { mode: 'feet' }); setCamActive('feet'); };
         $('#appearance-rot-left').onclick = () => post('appearanceRotate', { direction: 'left' });
         $('#appearance-rot-right').onclick = () => post('appearanceRotate', { direction: 'right' });
-        $('#appearance-save').onclick = () => post('appearanceSave', {});
+        $('#appearance-save').onclick = () => {
+            const btn = $('#appearance-save');
+            if (btn?.disabled) return;
+            post('appearanceSave', {});
+        };
     },
 
     hideAppearance() {
         $('#appearance-studio')?.classList.add('hidden');
+    },
+
+    setAppearanceSaving(isSaving) {
+        const btn = $('#appearance-save');
+        if (!btn) return;
+        btn.disabled = isSaving;
+        btn.textContent = isSaving ? 'SAVING...' : 'CONFIRM & PLAY';
     },
 };
 

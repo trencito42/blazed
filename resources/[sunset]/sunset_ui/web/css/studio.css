@@ -285,6 +285,6 @@
     margin-top: auto;
 }
 
-.studio-save:hover {
+.studio-save:hover:not(:disabled) {
     filter: brightness(1.05);
 }

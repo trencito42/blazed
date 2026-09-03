@@ -1,10 +1,13 @@
 local spawned = false
+local spawning = false
 
 local function applyAppearance(ped, appearance)
     if not appearance or not next(appearance) then return end
 end
 
 local function spawnPlayer(char)
+    spawning = true
+
     local pos = char.position or {}
     local x = pos.x or Sunset.Config.DefaultSpawn.x
     local y = pos.y or Sunset.Config.DefaultSpawn.y
@@ -23,6 +26,8 @@ local function spawnPlayer(char)
 
     local ped = PlayerPedId()
     SetPedDefaultComponentVariation(ped)
+    SetEntityCollision(ped, true, true)
+
     if char.appearance and next(char.appearance) then
         if GetResourceState('sunset_appearance') == 'started' then
             exports.sunset_appearance:ApplyAppearance(ped, char.appearance, char.gender)
@@ -42,13 +47,16 @@ local function spawnPlayer(char)
     FreezeEntityPosition(ped, false)
     SetEntityVisible(ped, true, false)
     spawned = true
+    spawning = false
 
     TriggerEvent('sunset:client:characterFlowComplete')
     TriggerEvent('sunset:client:playerSpawned', char)
 end
 
 AddEventHandler('sunset:client:spawnCharacter', function(char)
-    spawnPlayer(char)
+    CreateThread(function()
+        spawnPlayer(char)
+    end)
 end)
 
 local function resumeIfAlreadySpawned()
@@ -75,7 +83,7 @@ end)
 
 CreateThread(function()
     while not spawned do
-        if GetResourceState('sunset_appearance') == 'started' and exports.sunset_appearance:IsEditing() then
+        if spawning or (GetResourceState('sunset_appearance') == 'started' and exports.sunset_appearance:IsEditing()) then
             Wait(200)
         else
             local ped = PlayerPedId()

@@ -27,4 +27,7 @@ files {
     'data/besttorso_female.json',
 }
 
-server_scripts { 'server/main.lua' }
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server/main.lua',
+}

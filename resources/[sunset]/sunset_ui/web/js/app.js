@@ -250,6 +250,12 @@ window.addEventListener('message', (event) => {
         case 'appearanceHide':
             if (window.Panels) Panels.hideAppearance();
             break;
+        case 'appearanceSaving':
+            if (window.Panels) Panels.setAppearanceSaving(true);
+            break;
+        case 'appearanceSaveFailed':
+            if (window.Panels) Panels.setAppearanceSaving(false);
+            break;
 
         case 'authHide':
             if (window.Panels) {

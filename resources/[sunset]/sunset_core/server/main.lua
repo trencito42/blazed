@@ -21,8 +21,19 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
         TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, 'Callback not found: ' .. name)
         return
     end
-    local result, err = Callbacks[name](source, ...)
-    TriggerClientEvent('sunset:client:callbackResponse', source, requestId, result, err)
+
+    local ok, packed = pcall(function(...)
+        local result, err = Callbacks[name](source, ...)
+        return { result = result, err = err }
+    end, ...)
+
+    if not ok then
+        print(('^1[SunsetMP]^7 Callback error (%s): %s'):format(name, tostring(packed)))
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, tostring(packed))
+        return
+    end
+
+    TriggerClientEvent('sunset:client:callbackResponse', source, requestId, packed.result, packed.err)
 end)
 
 -- ═══ SESSION ═══
@@ -195,6 +206,11 @@ RegisterNetEvent('sunset:server:setCharacter', function(charData)
     charData = Sunset.DecodeCharacter(charData)
     Players[source].character = charData
     TriggerClientEvent('sunset:client:characterLoaded', source, charData)
+end)
+
+AddEventHandler('sunset:server:setActiveCharacter', function(source, charData)
+    if not Players[source] or not charData then return end
+    Players[source].character = Sunset.DecodeCharacter(charData)
 end)
 
 CreateThread(function()
