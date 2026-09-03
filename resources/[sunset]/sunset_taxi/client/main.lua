@@ -54,9 +54,17 @@ end
 
 local function refreshPhoneTaxi()
     CreateThread(function()
-        local data = Sunset.AwaitCallback('sunset:getTaxiAppData')
+        local data, err = Sunset.AwaitCallback('sunset:getTaxiAppData')
         if data then
             exports.sunset_ui:Send('taxiUpdate', data)
+        else
+            exports.sunset_ui:Send('taxiUpdate', {
+                appName = Sunset.Taxi and Sunset.Taxi.appName or 'Downtown Cab',
+                destinations = {},
+                playerPos = nil,
+                error = err or 'Could not load taxi app',
+            })
+            notify(err or 'Could not load taxi app', 'error')
         end
     end)
 end

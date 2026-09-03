@@ -16,7 +16,6 @@ shared_scripts {
 dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_inventory', 'sunset_death', 'sunset_appearance' }
 
 client_scripts {
-    '@sunset_appearance/client/appearance_lib.lua',
     '@sunset_core/client/callbacks.lua',
     'client/loadout.lua',
     'client/main.lua',

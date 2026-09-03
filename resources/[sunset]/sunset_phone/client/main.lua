@@ -77,7 +77,17 @@ local function openPhone()
             Wait(200)
         end
 
-        local data = Sunset.AwaitCallback('sunset:getPhoneData') or {}
+        local char = exports.sunset_core:GetCharacter()
+        if char then
+            TriggerServerEvent('sunset:server:setCharacter', char)
+        end
+
+        local data, err = Sunset.AwaitCallback('sunset:getPhoneData')
+        if not data then
+            exports.sunset_ui:Notify(err or 'Could not load phone data', 'error')
+            return
+        end
+
         phoneOpen = true
         DisablePlayerFiring(PlayerId(), true)
         playPhoneSound('open')

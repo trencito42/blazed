@@ -60,8 +60,8 @@ function ClearFactionLoadout()
     local ped = PlayerPedId()
     removeDutyWeapons(ped)
     SetPedArmour(ped, 0)
-    if char and char.appearance and SunsetAppearance then
-        SunsetAppearance.apply(ped, char.appearance, char.gender or 0)
+    if char and char.appearance and GetResourceState('sunset_appearance') == 'started' then
+        exports.sunset_appearance:ApplyAppearance(ped, char.appearance, char.gender or 0)
     end
 end
 

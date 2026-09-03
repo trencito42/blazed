@@ -3,6 +3,8 @@ local locked = false
 local lightMode = 0 -- 0 off, 1 low, 2 high
 local currentVeh = 0
 local fuel = 100.0
+local spawnedOwnedVehicle = nil
+local protectedVehicles = {}
 
 local function getVeh()
     local ped = PlayerPedId()
@@ -188,21 +190,7 @@ end)
 
 exports('GetVehicleState', GetVehicleState)
 
-exports('IsPlateInWorld', function(plate)
-    return findVehicleByPlate(plate) ~= nil
-end)
-
-exports('IsProtectedVehicle', function(veh)
-    if not veh or veh == 0 then return false end
-    if protectedVehicles[veh] then return true end
-    if spawnedOwnedVehicle and spawnedOwnedVehicle == veh then return true end
-    return false
-end)
-
 -- ═══ OWNED VEHICLES / GARAGE ═══
-
-local spawnedOwnedVehicle = nil
-local protectedVehicles = {}
 
 local function markProtected(veh)
     if veh and veh ~= 0 then
@@ -262,6 +250,17 @@ local function findVehicleByPlate(plate)
 
     return nil
 end
+
+exports('IsPlateInWorld', function(plate)
+    return findVehicleByPlate(plate) ~= nil
+end)
+
+exports('IsProtectedVehicle', function(veh)
+    if not veh or veh == 0 then return false end
+    if protectedVehicles[veh] then return true end
+    if spawnedOwnedVehicle and spawnedOwnedVehicle == veh then return true end
+    return false
+end)
 
 local function deleteVehicleByPlate(plate)
     local veh = findVehicleByPlate(plate)

@@ -206,6 +206,8 @@ const Phone = {
     openApp(app) {
         if (app === 'taxi') {
             this.showView('taxi');
+            this.taxiData = this.taxiData || null;
+            this.renderTaxi();
             post('taxiRefresh', {});
             return;
         }
@@ -273,7 +275,8 @@ const Phone = {
     },
 
     isContactOnline(charId) {
-        return (this.data?.contacts || []).some((c) => c.characterId === charId);
+        const id = Number(charId);
+        return (this.data?.contacts || []).some((c) => Number(c.characterId) === id);
     },
 
     renderThreads() {
@@ -425,9 +428,13 @@ const Phone = {
     },
 
     updateTaxi(payload) {
+        if (payload === null || payload === undefined) {
+            if (this.screen === 'taxi') this.renderTaxi();
+            return;
+        }
         this.taxiData = payload || this.taxiData;
         if (this.screen !== 'taxi') return;
-        if (this.taxiMode === 'map' && window.TaxiPhoneMap?.map) {
+        if (this.taxiMode === 'map' && window.TaxiPhoneMap?.map && this.taxiData) {
             TaxiPhoneMap.update(this.taxiData?.playerPos, this.taxiDest);
             return;
         }
@@ -538,7 +545,13 @@ const Phone = {
         const title = $('#phone-taxi-title');
         if (!body) return;
 
-        const d = this.taxiData || {};
+        const d = this.taxiData;
+        if (!d || !d.destinations) {
+            body.innerHTML = `<p class="phone-empty">${d?.error || 'Loading cab app...'}</p>`;
+            if (title) title.textContent = 'Downtown Cab';
+            return;
+        }
+
         if (title) title.textContent = d.appName || 'Downtown Cab';
 
         const ride = d.activeRide;

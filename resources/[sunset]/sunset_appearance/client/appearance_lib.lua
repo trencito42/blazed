@@ -172,8 +172,10 @@ function SunsetAppearance.normalize(raw, gender)
 end
 
 function SunsetAppearance.resolveTorso(ped, gender, top, topTexture)
-    local torso, tex = TorsoData.getBestTorso(gender, top, topTexture or 0)
-    if torso then return torso, tex or 0 end
+    if TorsoData and TorsoData.getBestTorso then
+        local torso, tex = TorsoData.getBestTorso(gender, top, topTexture or 0)
+        if torso then return torso, tex or 0 end
+    end
     return gender == 1 and 14 or 15, 0
 end
 
