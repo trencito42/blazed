@@ -11,6 +11,7 @@ shared_scripts {
     '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/profile.lua',
     '@sunset_core/shared/factions.lua',
+    '@sunset_core/shared/police.lua',
 }
 
 dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_inventory', 'sunset_death', 'sunset_appearance' }
@@ -18,12 +19,16 @@ dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_inventory', '
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/loadout.lua',
+    'client/friendlyfire.lua',
+    'client/police.lua',
     'client/main.lua',
 }
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/police.lua',
+    'server/friendlyfire.lua',
 }
 
-exports { 'IsOnDuty', 'GetDutyState', 'HasFactionPerm' }
+exports { 'IsOnDuty', 'GetDutyState', 'HasFactionPerm', 'IsCuffed', 'GetWantedState' }

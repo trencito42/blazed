@@ -82,7 +82,7 @@ Sunset.CraftingRecipes = {
         inputs = { cloth = 1 },
         output = { item = 'bandage', count = 2 },
         faction = 'police',
-        minGrade = 1,
+        minGrade = 0,
     },
     ems_bandage = {
         label = 'Medical Bandage',

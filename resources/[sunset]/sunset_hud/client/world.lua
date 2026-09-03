@@ -9,6 +9,10 @@ exports('SetWantedLevel', function(level)
     customWanted = math.max(0, math.min(5, tonumber(level) or 0))
 end)
 
+RegisterNetEvent('sunset:client:wantedUpdate', function(level, reason)
+    customWanted = math.max(0, math.min(5, tonumber(level) or 0))
+end)
+
 local function vehicleHasPlayerOccupant(veh)
     if veh == 0 or not DoesEntityExist(veh) then return false end
     local maxSeats = GetVehicleModelNumberOfSeats(GetEntityModel(veh))

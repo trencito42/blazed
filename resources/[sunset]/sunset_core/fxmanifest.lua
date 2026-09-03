@@ -13,6 +13,7 @@ shared_scripts {
     'shared/profile.lua',
     'shared/factions.lua',
     'shared/crafting.lua',
+    'shared/police.lua',
     'shared/utils.lua',
     'shared/items.lua',
     'shared/password.lua',

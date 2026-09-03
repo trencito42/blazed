@@ -41,6 +41,7 @@ local function setDuty(source, state)
     local factionId = select(1, getFactionOf(char))
     TriggerClientEvent('sunset:client:dutyState', source, OnDuty[source], factionId)
     TriggerEvent('sunset:server:taxiDutySync', source, OnDuty[source])
+    if SyncPlayerCombatState then SyncPlayerCombatState(source) end
 end
 
 exports.sunset_core:RegisterCallback('sunset:toggleDuty', function(source)
@@ -351,19 +352,31 @@ RegisterNetEvent('sunset:server:factionCmd', function(cmd, ...)
     local source = source
     local args = { ... }
     if cmd == 'cuff' then
-        if not hasPerm(source, 'cuff') then return end
-        local target = tonumber(args[1])
-        if target and GetPlayerName(target) then
-            Cuffed[target] = true
-            TriggerClientEvent('sunset:faction:cuff', target)
+        if not hasPerm(source, 'cuff') then
+            TriggerClientEvent('sunset:client:notify', source, 'Not on duty or no permission', 'error')
+            return
         end
+        local target = tonumber(args[1])
+        if not target or not GetPlayerName(target) then
+            TriggerClientEvent('sunset:client:notify', source, 'Player not found', 'error')
+            return
+        end
+        Cuffed[target] = true
+        TriggerClientEvent('sunset:faction:cuff', target)
+        TriggerClientEvent('sunset:client:notify', source, 'Suspect restrained', 'success')
     elseif cmd == 'uncuff' then
-        if not hasPerm(source, 'uncuff') then return end
-        local target = tonumber(args[1])
-        if target and GetPlayerName(target) then
-            Cuffed[target] = nil
-            TriggerClientEvent('sunset:faction:uncuff', target)
+        if not hasPerm(source, 'uncuff') then
+            TriggerClientEvent('sunset:client:notify', source, 'Not on duty or no permission', 'error')
+            return
         end
+        local target = tonumber(args[1])
+        if not target or not GetPlayerName(target) then
+            TriggerClientEvent('sunset:client:notify', source, 'Player not found', 'error')
+            return
+        end
+        Cuffed[target] = nil
+        TriggerClientEvent('sunset:faction:uncuff', target)
+        TriggerClientEvent('sunset:client:notify', source, 'Restraints removed', 'success')
     end
 end)
 

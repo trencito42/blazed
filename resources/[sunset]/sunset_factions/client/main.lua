@@ -155,20 +155,6 @@ RegisterCommand('uncuff', function(_, args)
     TriggerServerEvent('sunset:server:factionCmd', 'uncuff', target)
 end, false)
 
-RegisterNetEvent('sunset:faction:cuff', function()
-    local ped = PlayerPedId()
-    isCuffed = true
-    FreezeEntityPosition(ped, true)
-    exports.sunset_ui:Notify('You have been restrained', 'error')
-end)
-
-RegisterNetEvent('sunset:faction:uncuff', function()
-    local ped = PlayerPedId()
-    isCuffed = false
-    FreezeEntityPosition(ped, false)
-    exports.sunset_ui:Notify('Restraints removed', 'success')
-end)
-
 RegisterCommand('repairveh', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:mechanicRepair', tonumber(args[1]))
     if ok then exports.sunset_ui:Notify('Vehicle repaired', 'success')
@@ -348,6 +334,10 @@ local PD_HELP = {
     '/pdgarage — Spawn patrol car at MRPD garage',
     '[E] at MRPD garage marker — same as /pdgarage',
     '[E] at LSPD Armory inside MRPD — craft bandages (on duty)',
+    '/su [id] [reason] — Set wanted (type /su for reason codes)',
+    '/so [id] — Summon suspect (must be nearby)',
+    '/wanted — List active wanted players',
+    '/arrest [id] — Arrest restrained suspect',
     '/cuff [id] — Restrain suspect',
     '/uncuff [id] — Release (Sergeant+)',
     '/fine [id] [amount] [reason] — Citation (Officer+)',
@@ -380,5 +370,4 @@ AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     clearIllegalBlip()
     deleteFleetVehicle()
-    if isCuffed then FreezeEntityPosition(PlayerPedId(), false) end
 end)

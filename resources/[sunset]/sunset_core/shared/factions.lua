@@ -265,6 +265,10 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
     if jobId == 'police' then
         list[#list + 1] = { cmd = '/pdgarage', desc = 'Spawn MRPD patrol vehicle (on duty)' }
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }
+        list[#list + 1] = { cmd = '/su [id] [reason]', desc = 'Set wanted level on suspect' }
+        list[#list + 1] = { cmd = '/so [id]', desc = 'Summon nearby suspect' }
+        list[#list + 1] = { cmd = '/wanted', desc = 'List active wanted players' }
+        list[#list + 1] = { cmd = '/arrest [id]', desc = 'Arrest restrained suspect' }
     end
     return list
 end

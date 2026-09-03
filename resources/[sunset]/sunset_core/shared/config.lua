@@ -34,6 +34,10 @@ Sunset.Config = {
     FuelPricePerPercent = 1.75,
     FuelFillRatePerSec = 0.22,
     FuelPumpReach = 4.2,
+
+    -- Combat
+    FriendlyFire = true,            -- players can damage other players (PvP)
+    FactionFriendlyFire = false,    -- same faction members immune when both on duty
 }
 
 Sunset.Jobs = {
