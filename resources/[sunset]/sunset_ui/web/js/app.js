@@ -180,6 +180,18 @@ window.addEventListener('message', (event) => {
         case 'atmHide':
             if (window.Panels) Panels.hideAtm();
             break;
+        case 'mdcShow':
+            if (window.Panels) Panels.showMdc(data || event.data.data);
+            break;
+        case 'mdcHide':
+            if (window.Panels) Panels.hideMdc();
+            break;
+        case 'ticketShow':
+            if (window.Panels) Panels.showTicket();
+            break;
+        case 'ticketHide':
+            if (window.Panels) Panels.hideTicket();
+            break;
         case 'garageShow':
             if (window.Panels) Panels.showGarage(data || event.data.data);
             break;

@@ -6,6 +6,7 @@ Sunset.Factions = {
     police = {
         label = 'LSPD',
         type = 'legal',
+        factionType = 'law_enforcement',
         description = 'Los Santos Police Department — patrol, enforce the law, and protect citizens.',
         society = 'police',
         duty = true,
@@ -52,16 +53,17 @@ Sunset.Factions = {
             },
         },
         grades = {
-            [0] = { label = 'Cadet', salary = 400, perms = { cuff = true } },
-            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, fine = true } },
-            [2] = { label = 'Sergeant', salary = 700, perms = { cuff = true, uncuff = true, fine = true, invite = true } },
-            [3] = { label = 'Lieutenant', salary = 900, perms = { cuff = true, uncuff = true, fine = true, invite = true } },
-            [4] = { label = 'Chief', salary = 1200, perms = { cuff = true, uncuff = true, fine = true, invite = true, promote = true } },
+            [0] = { label = 'Cadet', salary = 400, perms = { cuff = true, escort = true, frisk = true, members = true } },
+            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, escort = true, frisk = true, fine = true, ticket = true, mdc = true, megaphone = true, members = true } },
+            [2] = { label = 'Sergeant', salary = 700, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, invite = true, members = true } },
+            [3] = { label = 'Lieutenant', salary = 900, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, invite = true, giverank = true, fwarn = true, fmotd = true, members = true } },
+            [4] = { label = 'Chief', salary = 1200, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, invite = true, promote = true, giverank = true, uninvite = true, fwarn = true, fmotd = true, members = true } },
         },
     },
     medic = {
         label = 'Pillbox EMS',
         type = 'legal',
+        factionType = 'ems',
         description = 'Emergency medical services — heal, revive, and stabilize patients at Pillbox.',
         society = 'medic',
         duty = true,
@@ -87,6 +89,7 @@ Sunset.Factions = {
     taxi = {
         label = 'Downtown Cab Co.',
         type = 'legal',
+        factionType = 'transport',
         description = 'City taxi service — pick up passengers via the Downtown Cab phone app or manual fares.',
         society = 'taxi',
         duty = true,
@@ -111,6 +114,7 @@ Sunset.Factions = {
     mechanic = {
         label = 'LS Customs',
         type = 'legal',
+        factionType = 'mechanic',
         description = 'Vehicle repair shop — fix cars at HQ or on the road for other players.',
         society = 'mechanic',
         duty = true,
@@ -135,6 +139,7 @@ Sunset.Factions = {
     lsfd = {
         label = 'LS Fire Department',
         type = 'legal',
+        factionType = 'fire_rescue',
         description = 'Fire and rescue — field stabilization and extraction. Revive at Engineer rank and above.',
         society = 'lsfd',
         duty = true,
@@ -160,6 +165,7 @@ Sunset.Factions = {
     sunset_cartel = {
         label = 'Sunset Cartel',
         type = 'illegal',
+        factionType = 'criminal_org',
         description = 'Organized crime — craft at the lab, move product, stay off the radar.',
         society = 'sunset_cartel',
         duty = true,
@@ -179,6 +185,7 @@ Sunset.Factions = {
     night_syndicate = {
         label = 'Night Syndicate',
         type = 'illegal',
+        factionType = 'criminal_org',
         description = 'Street syndicate — weapons bench, fencing stolen goods, crew operations.',
         society = 'night_syndicate',
         duty = true,
@@ -246,12 +253,6 @@ function Sunset.GetFactionGrade(jobId, grade)
     return f.grades[grade or 0]
 end
 
-function Sunset.HasFactionPerm(jobId, grade, perm)
-    local g = Sunset.GetFactionGrade(jobId, grade)
-    if not g or not g.perms then return false end
-    return g.perms[perm] == true
-end
-
 function Sunset.GetFactionCommandsForGrade(jobId, grade)
     local list = {}
     for _, row in ipairs(Sunset.FactionCommandCatalog or {}) do
@@ -262,13 +263,31 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
     list[#list + 1] = { cmd = '/duty', desc = 'Toggle on/off shift' }
     list[#list + 1] = { cmd = '/f [message]', desc = 'Faction radio chat' }
     list[#list + 1] = { cmd = '/leavefaction', desc = 'Leave your faction' }
-    if jobId == 'police' then
+    if Sunset.FactionTypeMatches(jobId, 'law_enforcement') then
         list[#list + 1] = { cmd = '/pdgarage', desc = 'Spawn MRPD patrol vehicle (on duty)' }
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }
         list[#list + 1] = { cmd = '/su [id] [reason]', desc = 'Set wanted level on suspect' }
         list[#list + 1] = { cmd = '/so [id]', desc = 'Summon nearby suspect' }
         list[#list + 1] = { cmd = '/wanted', desc = 'List active wanted players' }
         list[#list + 1] = { cmd = '/arrest [id]', desc = 'Arrest restrained suspect' }
+        list[#list + 1] = { cmd = '/escort [id]', desc = 'Drag/escort restrained suspect' }
+        list[#list + 1] = { cmd = '/putinveh [id]', desc = 'Place suspect in your vehicle' }
+        list[#list + 1] = { cmd = '/takeout [id]', desc = 'Remove suspect from vehicle' }
+        list[#list + 1] = { cmd = '/frisk [id]', desc = 'Search suspect inventory' }
+        list[#list + 1] = { cmd = '/ticket', desc = 'Issue citation (UI)' }
+        list[#list + 1] = { cmd = '/mdc', desc = 'Mobile data terminal' }
+        list[#list + 1] = { cmd = '/m [message]', desc = 'Megaphone (nearby)' }
+        list[#list + 1] = { cmd = '/backup', desc = 'Request LSPD backup' }
+    end
+    if Sunset.HasFactionPerm(jobId, grade, 'fmotd') or Sunset.HasFactionPerm(jobId, grade, 'invite') then
+        list[#list + 1] = { cmd = '/fmembers', desc = 'List online faction members' }
+        list[#list + 1] = { cmd = '/fmotd [message]', desc = 'Set faction message of the day' }
+    end
+    if Sunset.HasFactionPerm(jobId, grade, 'fwarn') then
+        list[#list + 1] = { cmd = '/fwarn [id] [reason]', desc = 'Issue faction warning' }
+    end
+    if Sunset.HasFactionPerm(jobId, grade, 'uninvite') then
+        list[#list + 1] = { cmd = '/funinvite [id]', desc = 'Remove member from faction' }
     end
     return list
 end

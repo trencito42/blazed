@@ -474,6 +474,29 @@
         </div>
     </div>
 
+    <!-- MDC -->
+    <div id="mdc" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide">
+            <h2>MDC — Mobile Data Terminal</h2>
+            <ul class="panel-list" id="mdc-list"></ul>
+            <button type="button" class="panel-close" id="mdc-close">Close</button>
+        </div>
+    </div>
+
+    <!-- TICKET -->
+    <div id="ticket" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2>Issue Citation</h2>
+            <label class="field"><span>Target ID</span><input type="number" id="ticket-target" min="1"></label>
+            <label class="field"><span>Amount ($)</span><input type="number" id="ticket-amount" min="1" value="250"></label>
+            <label class="field"><span>Reason</span><input type="text" id="ticket-reason" maxlength="128" placeholder="Traffic violation"></label>
+            <div class="btn-row">
+                <button type="button" class="btn btn--primary" id="ticket-issue">ISSUE CITATION</button>
+            </div>
+            <button type="button" class="panel-close" id="ticket-close">Close</button>
+        </div>
+    </div>
+
     <!-- GARAGE -->
     <div id="garage" class="overlay-panel hidden">
         <div class="overlay-panel__box overlay-panel__box--wide overlay-panel__box--garage">

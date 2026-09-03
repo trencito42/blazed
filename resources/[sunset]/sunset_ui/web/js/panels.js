@@ -22,6 +22,15 @@ const Panels = {
         $('#inventory-close')?.addEventListener('click', () => post('inventoryClose'));
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
         $('#atm-close')?.addEventListener('click', () => post('atmClose'));
+        $('#mdc-close')?.addEventListener('click', () => post('mdcClose'));
+        $('#ticket-close')?.addEventListener('click', () => post('ticketClose'));
+        $('#ticket-issue')?.addEventListener('click', () => {
+            post('ticketIssue', {
+                targetId: Number($('#ticket-target')?.value || 0),
+                amount: Number($('#ticket-amount')?.value || 0),
+                reason: $('#ticket-reason')?.value || '',
+            });
+        });
         $('#garage-close')?.addEventListener('click', () => post('garageClose'));
         $('#properties-close')?.addEventListener('click', () => post('propertiesClose'));
         $('#emotes-close')?.addEventListener('click', () => post('emotesClose'));
@@ -89,6 +98,37 @@ const Panels = {
 
     showAtm() { this.init(); $('#atm')?.classList.remove('hidden'); },
     hideAtm() { $('#atm')?.classList.add('hidden'); },
+
+    showMdc(data) {
+        this.init();
+        const list = $('#mdc-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const rows = data?.wanted || [];
+        if (rows.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = 'No active wanted players online';
+            list.appendChild(li);
+        } else {
+            rows.forEach((row) => {
+                const li = document.createElement('li');
+                const mins = Math.ceil((row.remainingSec || 0) / 60);
+                li.innerHTML = `<span>#${row.id} ${row.name} — ★${row.level} ${row.reason || '—'} (${mins}m left)</span>`;
+                list.appendChild(li);
+            });
+        }
+        $('#mdc')?.classList.remove('hidden');
+    },
+    hideMdc() { $('#mdc')?.classList.add('hidden'); },
+
+    showTicket() {
+        this.init();
+        $('#ticket-target').value = '';
+        $('#ticket-amount').value = '250';
+        $('#ticket-reason').value = '';
+        $('#ticket')?.classList.remove('hidden');
+    },
+    hideTicket() { $('#ticket')?.classList.add('hidden'); },
 
     showGarage(data) {
         this.init();

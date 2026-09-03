@@ -184,12 +184,66 @@ RegisterCommand('arrest', function(_, args)
     if not ok then exports.sunset_ui:Notify(err or 'Arrest failed', 'error') end
 end, false)
 
+RegisterCommand('backup', function()
+    local ok, err = Sunset.AwaitCallback('sunset:policeBackup')
+    if ok then exports.sunset_ui:Notify(('Backup request sent to %d units'):format(ok), 'success')
+    else exports.sunset_ui:Notify(err or 'Backup failed', 'error') end
+end, false)
+
+RegisterCommand('mdc', function()
+    local list, err = Sunset.AwaitCallback('sunset:policeWantedList')
+    if not list then return exports.sunset_ui:Notify(err or 'MDC unavailable', 'error') end
+    exports.sunset_ui:Send('mdcShow', { wanted = list })
+    exports.sunset_ui:SetFocus(true, true)
+end, false)
+
+RegisterCommand('ticket', function()
+    exports.sunset_ui:Send('ticketShow', {})
+    exports.sunset_ui:SetFocus(true, true)
+end, false)
+
+RegisterNetEvent('sunset:police:backupBlip', function(coords, officerId)
+    if not coords then return end
+    local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
+    SetBlipSprite(blip, 161)
+    SetBlipColour(blip, 3)
+    SetBlipScale(blip, 1.1)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName(('Backup #%d'):format(officerId or 0))
+    EndTextCommandSetBlipName(blip)
+    SetTimeout(60000, function()
+        if DoesBlipExist(blip) then RemoveBlip(blip) end
+    end)
+end)
+
+AddEventHandler('sunset:nui:ticketIssue', function(data)
+    exports.sunset_ui:SetFocus(false, false)
+    local ok, err = Sunset.AwaitCallback('sunset:policeFine', tonumber(data.targetId), tonumber(data.amount), data.reason or '')
+    if ok then exports.sunset_ui:Notify('Citation issued', 'success')
+    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end)
+
+AddEventHandler('sunset:nui:ticketClose', function()
+    exports.sunset_ui:SetFocus(false, false)
+end)
+
+AddEventHandler('sunset:nui:mdcClose', function()
+    exports.sunset_ui:SetFocus(false, false)
+end)
+
 CreateThread(function()
     Wait(3500)
     TriggerEvent('chat:addSuggestion', '/su', 'Set wanted level (LSPD)', { { name = 'id' }, { name = 'reason_code' } })
     TriggerEvent('chat:addSuggestion', '/so', 'Summon suspect nearby (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/wanted', 'List active wanted players (LSPD)')
     TriggerEvent('chat:addSuggestion', '/arrest', 'Arrest restrained suspect (LSPD)', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/backup', 'Request LSPD backup')
+    TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
+    TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)')
+    TriggerEvent('chat:addSuggestion', '/m', 'Megaphone', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/handsup', 'Toggle hands up')
+    TriggerEvent('chat:addSuggestion', '/escort', 'Escort restrained suspect', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/frisk', 'Frisk suspect', { { name = 'id' } })
 end)
 
 exports('IsCuffedLocal', function() return isCuffed end)

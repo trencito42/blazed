@@ -146,13 +146,15 @@ end, false)
 RegisterCommand('cuff', function(_, args)
     local target = tonumber(args[1])
     if not target then return exports.sunset_ui:Notify('Usage: /cuff [id]', 'error') end
-    TriggerServerEvent('sunset:server:factionCmd', 'cuff', target)
+    local ok, err = Sunset.AwaitCallback('sunset:detentionCuff', target)
+    if not ok then exports.sunset_ui:Notify(err or 'Failed', 'error') end
 end, false)
 
 RegisterCommand('uncuff', function(_, args)
     local target = tonumber(args[1])
     if not target then return exports.sunset_ui:Notify('Usage: /uncuff [id]', 'error') end
-    TriggerServerEvent('sunset:server:factionCmd', 'uncuff', target)
+    local ok, err = Sunset.AwaitCallback('sunset:detentionUncuff', target)
+    if not ok then exports.sunset_ui:Notify(err or 'Failed', 'error') end
 end, false)
 
 RegisterCommand('repairveh', function(_, args)
@@ -187,6 +189,51 @@ RegisterCommand('fpromote', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:factionPromote', tonumber(args[1]), tonumber(args[2]))
     if ok then exports.sunset_ui:Notify('Member promoted', 'success')
     else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end, false)
+
+RegisterCommand('fgiverank', function(_, args)
+    local ok, err = Sunset.AwaitCallback('sunset:factionGiveRank', tonumber(args[1]), tonumber(args[2]))
+    if ok then exports.sunset_ui:Notify('Rank updated', 'success')
+    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end, false)
+
+RegisterCommand('funinvite', function(_, args)
+    local ok, err = Sunset.AwaitCallback('sunset:factionUninvite', tonumber(args[1]))
+    if ok then exports.sunset_ui:Notify('Member removed', 'success')
+    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end, false)
+
+RegisterCommand('fwarn', function(_, args)
+    local target = tonumber(args[1])
+    local reason = table.concat(args, ' ', 2)
+    if not target or reason == '' then return exports.sunset_ui:Notify('Usage: /fwarn [id] [reason]', 'error') end
+    local ok, err = Sunset.AwaitCallback('sunset:factionWarn', target, reason)
+    if ok then exports.sunset_ui:Notify('Warning issued', 'success')
+    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end, false)
+
+RegisterCommand('fmotd', function(_, args)
+    local msg = table.concat(args, ' ')
+    if msg == '' then return exports.sunset_ui:Notify('Usage: /fmotd [message]', 'error') end
+    local ok, err = Sunset.AwaitCallback('sunset:factionSetMotd', msg)
+    if ok then exports.sunset_ui:Notify('Faction MOTD updated', 'success')
+    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end, false)
+
+RegisterCommand('fmembers', function()
+    local data, err = Sunset.AwaitCallback('sunset:factionMembers')
+    if not data then return exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    local chat = function(line)
+        exports.sunset_ui:Send('chatMessage', { id = 0, name = 'FACTION', message = line, time = '' })
+    end
+    chat('=== Faction Members (online) ===')
+    if data.motd and data.motd ~= '' then chat('MOTD: ' .. data.motd) end
+    for _, m in ipairs(data.members or {}) do
+        chat(('#%d %s — %s%s%s'):format(
+            m.id, m.name, m.gradeLabel,
+            m.onDuty and ' [ON DUTY]' or '',
+            m.leader and ' [LEADER]' or ''))
+    end
 end, false)
 
 RegisterCommand('sellpouch', function()
@@ -313,8 +360,15 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/leavefaction', 'Leave your job/faction')
     TriggerEvent('chat:addSuggestion', '/quitjob', 'Same as /leavefaction')
     TriggerEvent('chat:addSuggestion', '/f', 'Faction chat', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/r', 'On-duty faction radio', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/d', 'Law enforcement dispatch', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/gov', 'Government channel', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/finvite', 'Recruit player', { { name = 'id' } })
-    TriggerEvent('chat:addSuggestion', '/fpromote', 'Promote member', { { name = 'id' }, { name = 'grade' } })
+    TriggerEvent('chat:addSuggestion', '/funinvite', 'Remove member', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/fgiverank', 'Set member rank', { { name = 'id' }, { name = 'grade' } })
+    TriggerEvent('chat:addSuggestion', '/fwarn', 'Faction warning', { { name = 'id' }, { name = 'reason' } })
+    TriggerEvent('chat:addSuggestion', '/fmembers', 'List online faction members')
+    TriggerEvent('chat:addSuggestion', '/fmotd', 'Set faction MOTD', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/fine', 'Issue fine (PD)', { { name = 'id' }, { name = 'amount' }, { name = 'reason' } })
     TriggerEvent('chat:addSuggestion', '/cuff', 'Cuff player (PD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/uncuff', 'Uncuff player (PD)', { { name = 'id' } })
@@ -354,8 +408,9 @@ end, false)
 
 RegisterCommand('pdgarage', function()
     local char = exports.sunset_core:GetCharacter()
-    if not char or Sunset.GetCharacterFaction(char) ~= 'police' then
-        return exports.sunset_ui:Notify('You must be LSPD', 'error')
+    local factionId = char and Sunset.GetCharacterFaction(char)
+    if not factionId or not Sunset.FactionTypeMatches(factionId, 'law_enforcement') then
+        return exports.sunset_ui:Notify('You must be law enforcement', 'error')
     end
     if not exports.sunset_factions:IsOnDuty() then
         return exports.sunset_ui:Notify('Go on duty first (/duty at MRPD)', 'error')

@@ -10,6 +10,7 @@ shared_scripts {
     '@sunset_core/shared/config.lua',
     '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/profile.lua',
+    '@sunset_core/shared/faction_core.lua',
     '@sunset_core/shared/factions.lua',
     '@sunset_core/shared/police.lua',
 }
@@ -20,13 +21,18 @@ client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/loadout.lua',
     'client/friendlyfire.lua',
+    'client/detention.lua',
     'client/police.lua',
     'client/main.lua',
 }
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    'server/core.lua',
+    'server/detention.lua',
     'server/main.lua',
+    'server/chat.lua',
+    'server/leaders.lua',
     'server/police.lua',
     'server/friendlyfire.lua',
 }

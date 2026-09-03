@@ -1,33 +1,7 @@
 local Wanted = {}
 
-local function getChar(source)
-    return exports.sunset_core:GetCharacter(source)
-end
-
-local function getFactionOf(char)
-    return Sunset.GetCharacterFaction(char)
-end
-
-local function isPoliceOnDuty(source)
-    if not OnDuty[source] then return false end
-    local char = getChar(source)
-    if not char then return false end
-    return getFactionOf(char) == 'police'
-end
-
-local function playerCoords(source)
-    local ped = GetPlayerPed(source)
-    if not ped or ped == 0 then return nil end
-    return GetEntityCoords(ped)
-end
-
-local function distBetween(a, b)
-    if not a or not b then return 9999.0 end
-    return #(a - b)
-end
-
 local function notify(source, msg, typ)
-    TriggerClientEvent('sunset:client:notify', source, msg, typ or 'info')
+    FactionCore.notify(source, msg, typ or 'info')
 end
 
 local function syncWanted(targetId, level, reason)
@@ -52,18 +26,13 @@ local function clearWanted(targetId)
     syncWanted(targetId, 0, '')
 end
 
-function IsCuffed(source)
-    return Cuffed[source] == true
-end
-exports('IsCuffed', IsCuffed)
-
 function GetWantedState(source)
     return Wanted[source]
 end
 exports('GetWantedState', GetWantedState)
 
 exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, targetId, reasonCode)
-    if not isPoliceOnDuty(source) then return nil, 'You must be on-duty LSPD' end
+    if not FactionCore.hasPerm(source, 'wanted') then return nil, 'You must be on-duty law enforcement' end
 
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
@@ -87,25 +56,27 @@ exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, 
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeSummon', function(source, targetId)
-    if not isPoliceOnDuty(source) then return nil, 'You must be on-duty LSPD' end
+    if not FactionCore.isLawEnforcement(source) then return nil, 'You must be on-duty law enforcement' end
 
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
 
     local range = Sunset.Police and Sunset.Police.summonRange or 125.0
-    local officerPos = playerCoords(source)
-    local targetPos = playerCoords(targetId)
-    if distBetween(officerPos, targetPos) > range then
+    local officerPos = FactionCore.playerCoords(source)
+    local targetPos = FactionCore.playerCoords(targetId)
+    if FactionCore.distBetween(officerPos, targetPos) > range then
         return nil, ('You must be within %dm of the suspect'):format(math.floor(range))
     end
 
-    notify(targetId, 'You are being summoned by LSPD — stop and comply', 'warning', 10000)
+    notify(targetId, 'You are being summoned by law enforcement — stop and comply', 'warning', 10000)
     notify(source, ('Summoned player #%d'):format(targetId), 'success')
     return true
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeWantedList', function(source)
-    if not isPoliceOnDuty(source) then return nil, 'You must be on-duty LSPD' end
+    if not FactionCore.hasPerm(source, 'mdc') and not FactionCore.isLawEnforcement(source) then
+        return nil, 'You must be on-duty law enforcement'
+    end
 
     local list = {}
     for _, id in ipairs(GetPlayers()) do
@@ -128,20 +99,20 @@ exports.sunset_core:RegisterCallback('sunset:policeWantedList', function(source)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeArrest', function(source, targetId)
-    if not isPoliceOnDuty(source) then return nil, 'You must be on-duty LSPD' end
+    if not FactionCore.hasPerm(source, 'arrest') then return nil, 'You must be on-duty law enforcement' end
 
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
-    if not Cuffed[targetId] then return nil, 'Suspect must be restrained first (/cuff)' end
+    if not Detention.isCuffed(targetId) then return nil, 'Suspect must be restrained first (/cuff)' end
 
-    local officerPos = playerCoords(source)
-    local targetPos = playerCoords(targetId)
+    local officerPos = FactionCore.playerCoords(source)
+    local targetPos = FactionCore.playerCoords(targetId)
     local arrestRange = Sunset.Police and Sunset.Police.arrestRange or 5.0
-    local nearOfficer = distBetween(officerPos, targetPos) <= arrestRange
+    local nearOfficer = FactionCore.distBetween(officerPos, targetPos) <= arrestRange
 
     local atPdJail = false
     if Sunset.Police and Sunset.Police.pdJailPoint and targetPos then
-        atPdJail = distBetween(targetPos, Sunset.Police.pdJailPoint) <= (Sunset.Police.jailRadius or 12.0)
+        atPdJail = FactionCore.distBetween(targetPos, Sunset.Police.pdJailPoint) <= (Sunset.Police.jailRadius or 12.0)
     end
 
     if not nearOfficer and not atPdJail then
@@ -153,9 +124,10 @@ exports.sunset_core:RegisterCallback('sunset:policeArrest', function(source, tar
     local minutes = w and w.jailMinutes or 2
     local bounty = (Sunset.Police and Sunset.Police.bounties[level]) or 100
 
-    Cuffed[targetId] = nil
+    Detention.setCuffed(targetId, false)
     clearWanted(targetId)
     TriggerClientEvent('sunset:faction:uncuff', targetId)
+    TriggerClientEvent('sunset:detention:sync', -1, targetId, { cuffed = false, escorted = false })
 
     local jail = Sunset.Police and Sunset.Police.jailCoords
     TriggerClientEvent('sunset:police:jail', targetId, minutes, {
@@ -169,7 +141,7 @@ exports.sunset_core:RegisterCallback('sunset:policeArrest', function(source, tar
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeReasons', function(source)
-    if not isPoliceOnDuty(source) then return nil end
+    if not FactionCore.isLawEnforcement(source) then return nil end
     local list = {}
     for code, row in pairs(Sunset.Police.reasons or {}) do
         list[#list + 1] = {
@@ -181,6 +153,24 @@ exports.sunset_core:RegisterCallback('sunset:policeReasons', function(source)
     end
     table.sort(list, function(a, b) return a.stars < b.stars end)
     return list
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source)
+    if not FactionCore.hasPerm(source, 'backup') then return nil, 'No permission' end
+    local pos = FactionCore.playerCoords(source)
+    local name = exports.sunset_core:GetPlayerDisplayName(source)
+    local sent = 0
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src ~= source and FactionCore.isLawEnforcement(src) then
+            TriggerClientEvent('sunset:client:notify', src,
+                ('BACKUP requested by %s (#%d)'):format(name, source), 'warning', 12000)
+            TriggerClientEvent('sunset:police:backupBlip', src, { x = pos.x, y = pos.y, z = pos.z }, source)
+            sent = sent + 1
+        end
+    end
+    if sent < 1 then return nil, 'No on-duty units available' end
+    return sent
 end)
 
 CreateThread(function()
@@ -207,6 +197,5 @@ CreateThread(function()
 end)
 
 AddEventHandler('playerDropped', function()
-    local src = source
-    Wanted[src] = nil
+    Wanted[source] = nil
 end)

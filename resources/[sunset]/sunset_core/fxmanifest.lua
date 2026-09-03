@@ -11,6 +11,7 @@ shared_scripts {
     'shared/config.lua',
     'shared/jobs_civilian.lua',
     'shared/profile.lua',
+    'shared/faction_core.lua',
     'shared/factions.lua',
     'shared/crafting.lua',
     'shared/police.lua',
