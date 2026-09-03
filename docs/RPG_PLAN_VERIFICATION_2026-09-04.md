@@ -1,7 +1,7 @@
 # RPG plan verification — jobs, departments and factions
 
-**Verified:** 2026-09-04  
-**Baseline:** `614c4f9` plus the current audit fixes  
+**Verified:** 2026-09-04
+**Baseline:** `614c4f9` plus the current audit fixes
 **Method:** code-path verification from configuration → manifest → client entrypoint → server callback → persistence/reward/dispatch outcome. Previous status documents were treated as untrusted.
 
 ## Civilian jobs

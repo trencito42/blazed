@@ -1,7 +1,7 @@
 # SunsetMP final RPG code audit
 
-**Audit date:** 2026-09-03  
-**Inspected baseline:** `614c4f9` on `main`  
+**Audit date:** 2026-09-03
+**Inspected baseline:** `614c4f9` on `main`
 **Scope:** runtime loading, core/auth, factions, Police/EMS/Fire/Taxi, dispatch, civilian jobs, persistence, progression, M menu/NUI, and exposed client-to-server boundaries.
 
 ## Executive result
