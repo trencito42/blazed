@@ -18,7 +18,14 @@ pull_repo() {
   curl -fsSL -o /tmp/blazed.zip "${REPO}/archive/refs/heads/${BRANCH}.zip?$(date +%s)"
   rm -rf /tmp/blazed-main
   unzip -qo /tmp/blazed.zip -d /tmp
-  rsync -a --delete /tmp/blazed-main/ "$DIR/"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete /tmp/blazed-main/ "$DIR/"
+  else
+    rm -rf /tmp/blazed-deploy
+    mkdir -p /tmp/blazed-deploy
+    cp -a /tmp/blazed-main/. /tmp/blazed-deploy/
+    cp -a /tmp/blazed-deploy/. "$DIR/"
+  fi
 }
 
 pull_repo
