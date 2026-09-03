@@ -16,6 +16,7 @@ forward('characterBack')
 forward('chatSend')
 forward('chatClose')
 forward('menuClose')
+forward('menuAction')
 
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)
