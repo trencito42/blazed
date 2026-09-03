@@ -45,7 +45,7 @@ function AddItem(source, item, count, slot, metadata)
     local newWeight = calcWeight(inv) + getItemWeight(item, count)
     if newWeight > Sunset.Config.MaxWeight then return false end
 
-    metadata = metadata or (item == 'gas_can' and { fuel = 0 } or nil)
+    metadata = metadata or (item == 'gas_can' and { liters = 0 } or nil)
 
     for _, row in ipairs(inv) do
         if row.item == item and (not slot or row.slot == slot) and not metadata then
@@ -115,10 +115,21 @@ local function findInventoryRow(source, item)
     return nil
 end
 
-local function getGasCanFuel(row)
+local function getGasCanMaxLiters()
+    local def = Sunset.Items and Sunset.Items.gas_can
+    return (def and def.maxLiters) or 20
+end
+
+local function getGasCanLiters(row)
     if not row then return 0 end
+    local maxLiters = getGasCanMaxLiters()
+    if row.metadata and row.metadata.liters ~= nil then
+        return math.max(0, math.min(maxLiters, tonumber(row.metadata.liters) or 0))
+    end
+    -- Legacy: metadata.fuel was 0–100% of can capacity
     if row.metadata and row.metadata.fuel ~= nil then
-        return math.max(0, math.min(100, tonumber(row.metadata.fuel) or 0))
+        local pct = math.max(0, math.min(100, tonumber(row.metadata.fuel) or 0))
+        return (pct / 100.0) * maxLiters
     end
     return 0
 end
@@ -166,8 +177,14 @@ exports('RemoveItem', RemoveItem)
 exports('HasItem', HasItem)
 exports('UseItem', UseItem)
 exports('SetItemMetadata', SetItemMetadata)
+exports('GetGasCanLiters', function(source)
+    return getGasCanLiters(findInventoryRow(source, 'gas_can'))
+end)
 exports('GetGasCanFuel', function(source)
-    return getGasCanFuel(findInventoryRow(source, 'gas_can'))
+    local liters = getGasCanLiters(findInventoryRow(source, 'gas_can'))
+    local maxLiters = getGasCanMaxLiters()
+    if maxLiters <= 0 then return 0 end
+    return (liters / maxLiters) * 100.0
 end)
 
 exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
@@ -178,6 +195,10 @@ end)
 exports.sunset_core:RegisterCallback('sunset:useItem', function(source, item)
     if UseItem(source, item) then return true end
     return nil, 'Cannot use item'
+end)
+
+exports.sunset_core:RegisterCallback('sunset:getGasCanLiters', function(source)
+    return getGasCanLiters(findInventoryRow(source, 'gas_can'))
 end)
 
 exports.sunset_core:RegisterCallback('sunset:inventoryHasItem', function(source, item)

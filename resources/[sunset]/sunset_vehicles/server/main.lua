@@ -233,19 +233,20 @@ exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(sou
     return { newFuel = toFuel, cost = cost, liters = added }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targetFuel)
+exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targetLiters)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
     if not exports.sunset_inventory:HasItem(source, 'gas_can', 1) then
         return nil, 'You need a gas can'
     end
 
-    local current = exports.sunset_inventory:GetGasCanFuel(source) or 0
-    targetFuel = math.max(current, math.min(100, tonumber(targetFuel) or 100))
-    local added = targetFuel - current
+    local maxLiters = Sunset.GetGasCanMaxLiters()
+    local current = exports.sunset_inventory:GetGasCanLiters(source) or 0
+    targetLiters = math.max(current, math.min(maxLiters, tonumber(targetLiters) or maxLiters))
+    local added = targetLiters - current
     if added <= 0.05 then return nil, 'Gas can is already full' end
 
-    local pricePer = Sunset.Config.FuelPricePerPercent or 1.75
+    local pricePer = Sunset.Config.FuelPricePerLiter or 2.92
     local cost = math.ceil(added * pricePer)
     if not exports.sunset_core:RemoveMoney(source, 'cash', cost, 'gas_can_fill') then
         if not exports.sunset_core:RemoveMoney(source, 'bank', cost, 'gas_can_fill') then
@@ -253,50 +254,73 @@ exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targe
         end
     end
 
-    if not exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { fuel = targetFuel }) then
+    if not exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { liters = targetLiters }) then
         exports.sunset_core:AddMoney(source, 'cash', cost, 'gas_can_refund')
         return nil, 'Could not fill gas can'
     end
 
-    return { fuel = targetFuel, cost = cost, added = added }
+    return { liters = targetLiters, maxLiters = maxLiters, cost = cost, added = added }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(source, plate, vehFuel)
+exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(source, plate, vehFuel, vehicleClass)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
     if not exports.sunset_inventory:HasItem(source, 'gas_can', 1) then
         return nil, 'You need a gas can'
     end
 
-    local canFuel = exports.sunset_inventory:GetGasCanFuel(source) or 0
-    if canFuel <= 0 then return nil, 'Gas can is empty — fill it at a pump' end
+    plate = normalizePlate(plate)
+    if plate == '' then return nil, 'Invalid vehicle' end
+
+    local owned = MySQL.scalar.await(
+        'SELECT id FROM vehicles WHERE plate = ? AND character_id = ? LIMIT 1',
+        { plate, char.id }
+    )
+    if not owned then return nil, 'This is not your vehicle' end
+
+    local canLiters = exports.sunset_inventory:GetGasCanLiters(source) or 0
+    local maxLiters = Sunset.GetGasCanMaxLiters()
+    if canLiters <= 0.05 then return nil, 'Gas can is empty — fill it at a pump' end
 
     vehFuel = tonumber(vehFuel) or 0
     if vehFuel >= 99.5 then return nil, 'Vehicle tank is already full' end
 
-    local transfer = math.min(canFuel, 100.0 - vehFuel)
-    if transfer <= 0 then return nil, 'Nothing to transfer' end
+    local tankCapacity = Sunset.GetVehicleTankCapacityLiters(tonumber(vehicleClass) or 1)
+    if tankCapacity <= 0 then return nil, 'This vehicle has no fuel tank' end
 
-    local newVehFuel = vehFuel + transfer
-    local newCanFuel = canFuel - transfer
+    local currentTankLiters = (vehFuel / 100.0) * tankCapacity
+    local roomLiters = tankCapacity - currentTankLiters
+    if roomLiters <= 0.05 then return nil, 'Vehicle tank is already full' end
 
-    plate = (plate or ''):gsub('%s+', ''):upper()
-    if plate ~= '' then
-        pcall(function()
-            MySQL.update.await(
-                'UPDATE vehicles SET fuel = ? WHERE plate = ? AND character_id = ?',
-                { newVehFuel, plate, char.id }
-            )
-        end)
-    end
+    local transferLiters = math.min(canLiters, roomLiters)
+    if transferLiters <= 0.05 then return nil, 'Nothing to transfer' end
 
-    if newCanFuel <= 0.5 then
+    local addedPercent = (transferLiters / tankCapacity) * 100.0
+    local fromFuel = vehFuel
+    local newVehFuel = math.min(100.0, vehFuel + addedPercent)
+    local newCanLiters = canLiters - transferLiters
+
+    pcall(function()
+        MySQL.update.await(
+            'UPDATE vehicles SET fuel = ? WHERE plate = ? AND character_id = ?',
+            { newVehFuel, plate, char.id }
+        )
+    end)
+
+    if newCanLiters <= 0.1 then
         exports.sunset_inventory:RemoveItem(source, 'gas_can', 1)
     else
-        exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { fuel = newCanFuel })
+        exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { liters = newCanLiters })
     end
 
-    return { vehicleFuel = newVehFuel, canFuel = newCanFuel, transferred = transfer }
+    return {
+        vehicleFuel = newVehFuel,
+        fromFuel = fromFuel,
+        canLiters = newCanLiters,
+        maxLiters = maxLiters,
+        transferredLiters = transferLiters,
+        tankCapacity = tankCapacity,
+    }
 end)
 
 RegisterCommand('givecar', function(source, args)

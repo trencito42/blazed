@@ -105,8 +105,19 @@ const Panels = {
         list.innerHTML = '';
         (data.items || []).forEach((row) => {
             const def = row.item || 'unknown';
+            let label = def;
+            if (def === 'gas_can' && row.metadata) {
+                const maxL = 20;
+                let liters = Number(row.metadata.liters);
+                if (Number.isNaN(liters) && row.metadata.fuel != null) {
+                    liters = (Number(row.metadata.fuel) / 100) * maxL;
+                }
+                if (!Number.isNaN(liters)) {
+                    label = `gas_can (${liters.toFixed(1)}/${maxL} L)`;
+                }
+            }
             const li = document.createElement('li');
-            li.innerHTML = `<span>${def} x${row.count}</span><button data-item="${def}">USE</button>`;
+            li.innerHTML = `<span>${label} x${row.count}</span><button data-item="${def}">USE</button>`;
             li.querySelector('button')?.addEventListener('click', () => post('inventoryUse', { item: def }));
             list.appendChild(li);
         });

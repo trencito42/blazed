@@ -41,7 +41,7 @@ const FuelPump = (() => {
         if (els.station()) els.station().textContent = data.station || 'Gas Station';
         if (els.liters()) els.liters().textContent = formatLiters(liters);
         if (els.cost()) els.cost().textContent = formatMoney(cost);
-        if (els.tank()) els.tank().textContent = `${Math.round(fuel)}%`;
+        if (els.tank()) els.tank().textContent = data.tankLabel || `${Math.round(fuel)}%`;
         if (els.fill()) els.fill().style.width = `${Math.max(0, Math.min(100, fuel))}%`;
     }
 

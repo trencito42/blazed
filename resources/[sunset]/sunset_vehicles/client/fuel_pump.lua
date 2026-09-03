@@ -1,7 +1,8 @@
 local refueling = false
 local fillingCan = false
 local sessionStartFuel = 0.0
-local canStartFuel = 0.0
+local canSessionStartLiters = 0.0
+local canCurrentLiters = 0.0
 local sessionStation = nil
 local sessionVeh = 0
 local pumpHintShown = false
@@ -35,6 +36,19 @@ end
 
 local function pricePerPercent()
     return Sunset.Config.FuelPricePerPercent or 1.75
+end
+
+local function pricePerLiter()
+    return Sunset.Config.FuelPricePerLiter or 2.92
+end
+
+local function maxCanLiters()
+    return Sunset.GetGasCanMaxLiters()
+end
+
+local function canFillRateLiters()
+    local maxLiters = maxCanLiters()
+    return (Sunset.Config.FuelFillRatePerSec or 0.22) / 100.0 * maxLiters
 end
 
 local function fillRate()
@@ -75,24 +89,26 @@ local function findNearestPumpOnFoot()
     return findNearestPump(GetEntityCoords(PlayerPedId()))
 end
 
-local function showPumpUi(station, startFuel)
+local function showPumpUi(station, startFuel, tankLabel)
     exports.sunset_ui:Send('fuelPumpShow', {
         station = station.label or 'Gas Station',
-        pricePerLiter = pricePerPercent(),
+        pricePerLiter = fillingCan and pricePerLiter() or pricePerPercent(),
         startFuel = startFuel,
         fuel = startFuel,
         liters = 0,
         cost = 0,
+        tankLabel = tankLabel,
     })
 end
 
-local function updatePumpUi(station, fuel, liters, cost)
+local function updatePumpUi(station, fuel, liters, cost, tankLabel)
     exports.sunset_ui:Send('fuelPumpUpdate', {
         station = station and station.label or 'Gas Station',
         fuel = fuel,
         liters = liters,
         cost = cost,
-        pricePerLiter = pricePerPercent(),
+        pricePerLiter = fillingCan and pricePerLiter() or pricePerPercent(),
+        tankLabel = tankLabel,
     })
 end
 
@@ -156,31 +172,41 @@ local function startRefuel(station)
     SetVehicleEngineOn(veh, false, true, true)
 end
 
-local function finishCanFill(endFuel)
+local function finishCanFill(endLiters)
     fillingCan = false
     hidePumpUi()
 
-    if endFuel <= canStartFuel + 0.05 then
+    if endLiters <= canSessionStartLiters + 0.05 then
         notify('Gas can fill cancelled', 'warning')
         return
     end
 
-    local result, err = Sunset.AwaitCallback('sunset:fillGasCan', endFuel)
+    local result, err = Sunset.AwaitCallback('sunset:fillGasCan', endLiters)
     if not result then
         notify(err or 'Payment failed', 'error')
         return
     end
 
-    notify(('Gas can filled to %d%% — paid $%s'):format(
-        math.floor(result.fuel or endFuel), result.cost or 0), 'success')
+    local maxLiters = result.maxLiters or maxCanLiters()
+    notify(('Gas can: %.1f/%.0f L — paid $%s'):format(
+        result.liters or endLiters, maxLiters, result.cost or 0), 'success')
 end
 
 local function startCanFill(station)
+    local currentLiters = Sunset.AwaitCallback('sunset:getGasCanLiters') or 0
+    local maxLiters = maxCanLiters()
+    if currentLiters >= maxLiters - 0.05 then
+        notify('Gas can is already full', 'info')
+        return
+    end
+
     fillingCan = true
     waitForCanRelease = true
-    canStartFuel = 0.0
+    canSessionStartLiters = currentLiters
+    canCurrentLiters = currentLiters
     sessionStation = station
-    showPumpUi(station, canStartFuel)
+    local pct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0
+    showPumpUi(station, pct, ('%.1f/%.0f L'):format(currentLiters, maxLiters))
 end
 
 CreateThread(function()
@@ -305,16 +331,20 @@ CreateThread(function()
                 fillingCan = false
                 hidePumpUi()
             elseif not IsControlPressed(0, 38) then
-                finishCanFill(canStartFuel)
+                finishCanFill(canCurrentLiters)
             else
                 local dt = GetFrameTime()
-                local added = fillRate() * dt
-                canStartFuel = math.min(100.0, canStartFuel + added)
-                local cost = math.floor(canStartFuel * pricePerPercent() * 100) / 100
-                updatePumpUi(sessionStation, canStartFuel, canStartFuel, cost)
-                if canStartFuel >= 99.95 then
-                    canStartFuel = 100.0
-                    finishCanFill(100.0)
+                local maxLiters = maxCanLiters()
+                local added = canFillRateLiters() * dt
+                canCurrentLiters = math.min(maxLiters, canCurrentLiters + added)
+                local sessionAdded = canCurrentLiters - canSessionStartLiters
+                local cost = math.floor(sessionAdded * pricePerLiter() * 100) / 100
+                local pct = maxLiters > 0 and (canCurrentLiters / maxLiters) * 100.0 or 0
+                updatePumpUi(sessionStation, pct, sessionAdded, cost,
+                    ('%.1f/%.0f L'):format(canCurrentLiters, maxLiters))
+                if canCurrentLiters >= maxLiters - 0.05 then
+                    canCurrentLiters = maxLiters
+                    finishCanFill(maxLiters)
                 end
             end
             Wait(0)

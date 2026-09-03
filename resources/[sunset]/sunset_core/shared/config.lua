@@ -30,8 +30,9 @@ Sunset.Config = {
     -- Save
     SaveInterval = 60, -- seconds
 
-    -- Fuel ($ per 1% tank)
+    -- Fuel ($ per 1% tank; $ per liter for gas can fills at pump)
     FuelPricePerPercent = 1.75,
+    FuelPricePerLiter = 2.92,
     FuelFillRatePerSec = 0.22,
     FuelPumpReach = 4.2,
 

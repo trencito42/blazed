@@ -5,6 +5,32 @@ Sunset.VehicleProfiles = {
     -- Base fuel drain per second when moving (scaled by RPM + speed)
     fuelBase = 0.0035,
 
+    -- Tank capacity in liters (used for gas-can pour math; DB fuel stays 0–100%)
+    classTankCapacityLiters = {
+        [0] = 45,   -- Compacts
+        [1] = 60,   -- Sedans
+        [2] = 80,   -- SUVs
+        [3] = 55,   -- Coupes
+        [4] = 70,   -- Muscle
+        [5] = 65,   -- Sports Classics
+        [6] = 60,   -- Sports
+        [7] = 55,   -- Super
+        [8] = 18,   -- Motorcycles
+        [9] = 75,   -- Off-road
+        [10] = 120, -- Industrial
+        [11] = 70,  -- Utility
+        [12] = 90,  -- Vans
+        [13] = 0,   -- Cycles
+        [14] = 200, -- Boats
+        [15] = 150, -- Helicopters
+        [16] = 300, -- Planes
+        [17] = 65,  -- Service
+        [18] = 80,  -- Emergency
+        [19] = 100, -- Military
+        [20] = 150, -- Commercial
+        [21] = 0,   -- Trains
+    },
+
     classFuel = {
         [0] = 0.82,  -- Compacts
         [1] = 1.00,  -- Sedans
@@ -66,6 +92,18 @@ Sunset.VehicleProfiles = {
         towtruck = { engine = 0.72, body = 0.68 },
     },
 }
+
+function Sunset.GetGasCanMaxLiters()
+    local def = Sunset.Items and Sunset.Items.gas_can
+    return (def and def.maxLiters) or 20
+end
+
+function Sunset.GetVehicleTankCapacityLiters(vehicleClass)
+    local caps = Sunset.VehicleProfiles.classTankCapacityLiters or {}
+    local cap = caps[vehicleClass]
+    if cap and cap > 0 then return cap end
+    return caps[1] or 60
+end
 
 function Sunset.GetVehicleFuelMultiplier(modelHash, vehicleClass)
     local profiles = Sunset.VehicleProfiles

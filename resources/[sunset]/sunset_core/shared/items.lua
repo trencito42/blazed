@@ -18,7 +18,7 @@ Sunset.Items = {
     gunpowder = { label = 'Gunpowder', weight = 0.2, usable = false },
     sealed_pouch = { label = 'Sealed Pouch', weight = 0.15, usable = true, stress = -15 },
     shiv = { label = 'Shiv', weight = 0.3, usable = false, weapon = 'WEAPON_SWITCHBLADE' },
-    gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxFuel = 100 },
+    gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxLiters = 20 },
     ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false },
 }
 

@@ -617,39 +617,65 @@ exports('GetFuelLevel', function()
     return fuel
 end)
 
-local function getNearbyVehicle(maxDist)
+local function getGasCanTargetVehicle()
     local ped = PlayerPedId()
     if IsPedInAnyVehicle(ped, false) then
-        return GetVehiclePedIsIn(ped, false)
+        local veh = GetVehiclePedIsIn(ped, false)
+        if GetPedInVehicleSeat(veh, -1) ~= ped then
+            return nil, 'Only the driver can use a gas can inside the vehicle'
+        end
+        return veh
     end
+
     local coords = GetEntityCoords(ped)
-    local veh = GetClosestVehicle(coords.x, coords.y, coords.z, maxDist or 4.0, 0, 71)
+    local veh = GetClosestVehicle(coords.x, coords.y, coords.z, 4.5, 0, 71)
     if veh ~= 0 and DoesEntityExist(veh) then return veh end
-    return 0
+    return nil, 'Stand next to your vehicle to use the gas can'
 end
 
 RegisterNetEvent('sunset:client:useGasCan', function()
     CreateThread(function()
-        local veh = getNearbyVehicle(4.5)
-        if veh == 0 then
-            notify('Stand next to your vehicle to use the gas can', 'error')
+        pcall(function() exports.sunset_inventory:Close() end)
+
+        local veh, err = getGasCanTargetVehicle()
+        if not veh then
+            notify(err or 'No vehicle nearby', 'error')
             return
         end
 
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
-        local currentFuel = GetVehicleFuelLevel(veh)
-        if currentFuel < 0 or currentFuel > 100 then
-            currentFuel = fuel
+        local ped = PlayerPedId()
+        local currentFuel
+        if IsPedInAnyVehicle(ped, false) and GetPedInVehicleSeat(veh, -1) == ped then
+            currentFuel = exports.sunset_vehicles:GetFuelLevel() or fuel
+        else
+            currentFuel = GetVehicleFuelLevel(veh)
+            if currentFuel < 0 or currentFuel > 100 then
+                currentFuel = fuel
+            end
         end
 
-        local result, err = Sunset.AwaitCallback('sunset:useGasCanOnVehicle', plate, currentFuel)
+        local vehicleClass = GetVehicleClass(veh)
+        local result, useErr = Sunset.AwaitCallback('sunset:useGasCanOnVehicle', plate, currentFuel, vehicleClass)
         if not result then
-            notify(err or 'Could not use gas can', 'error')
+            notify(useErr or 'Could not use gas can', 'error')
             return
         end
 
         setFuelLevel(veh, result.vehicleFuel or currentFuel)
-        notify(('Poured fuel into vehicle — tank now %d%%'):format(
-            math.floor(result.vehicleFuel or currentFuel)), 'success')
+
+        local fromPct = math.floor(result.fromFuel or currentFuel)
+        local toPct = math.floor(result.vehicleFuel or currentFuel)
+        local poured = result.transferredLiters or 0
+        local maxLiters = result.maxLiters or Sunset.GetGasCanMaxLiters()
+        local canLeft = result.canLiters or 0
+
+        if canLeft <= 0.1 then
+            notify(('Added %.1fL to vehicle (%d%% → %d%%) — gas can empty'):format(
+                poured, fromPct, toPct), 'success')
+        else
+            notify(('Added %.1fL to vehicle (%d%% → %d%%) — Gas can: %.1f/%.0f L'):format(
+                poured, fromPct, toPct, canLeft, maxLiters), 'success')
+        end
     end)
 end)
