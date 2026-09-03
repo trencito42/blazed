@@ -1,6 +1,7 @@
 local Incidents = {}
 local incidentSeq = 0
 local LastExtinguish = {}
+local LastIncidentRequest = 0
 
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
@@ -45,10 +46,10 @@ local function serializeIncident(inc)
 end
 
 local function spawnIncident()
-    if countActive() >= (Sunset.Fire.maxActiveIncidents or 3) then return end
+    if countActive() >= (Sunset.Fire.maxActiveIncidents or 3) then return nil end
 
     local points = Sunset.Fire.spawnPoints or {}
-    if #points < 1 then return end
+    if #points < 1 then return nil end
     local spawn = points[math.random(1, #points)]
     local models = Sunset.Fire.vehicleModels or { 'sultan' }
     local model = models[math.random(1, #models)]
@@ -79,6 +80,7 @@ local function spawnIncident()
 
     broadcastFirefighters('sunset:fire:newIncident', serializeIncident(inc))
     TriggerEvent('sunset:fire:incidentSpawned', inc.id)
+    return serializeIncident(inc)
 end
 
 local function completeIncident(incidentId, source)
@@ -118,6 +120,7 @@ local function completeIncident(incidentId, source)
 end
 
 exports.sunset_core:RegisterCallback('sunset:fireGetIncidents', function(source)
+    if not isFirefighter(source) then return nil, 'Must be on duty as LSFD' end
     local list = {}
     for _, inc in pairs(Incidents) do
         if inc.status == 'active' then
@@ -126,6 +129,25 @@ exports.sunset_core:RegisterCallback('sunset:fireGetIncidents', function(source)
     end
     table.sort(list, function(a, b) return a.id < b.id end)
     return list
+end)
+
+exports.sunset_core:RegisterCallback('sunset:fireRequestIncident', function(source)
+    if not isFirefighter(source) then return nil, 'Must be on duty as LSFD' end
+
+    local list = {}
+    for _, inc in pairs(Incidents) do
+        if inc.status == 'active' then list[#list + 1] = serializeIncident(inc) end
+    end
+    if #list > 0 then return { existing = true, incidents = list } end
+
+    local now = os.time()
+    if now - LastIncidentRequest < 600 then
+        return nil, ('No new incident available for %d seconds'):format(600 - (now - LastIncidentRequest))
+    end
+    local incident = spawnIncident()
+    if not incident then return nil, 'Could not create a fire incident' end
+    LastIncidentRequest = now
+    return { existing = false, incidents = { incident } }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:fireExtinguish', function(source, incidentId, amount)

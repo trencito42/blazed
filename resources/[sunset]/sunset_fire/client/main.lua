@@ -19,6 +19,7 @@ local function ensureExtinguisher()
 end
 
 local function spawnIncidentVehicle(inc)
+    if inc.vehicle and DoesEntityExist(inc.vehicle) then return inc.vehicle end
     local model = joaat(inc.vehicleModel or 'sultan')
     RequestModel(model)
     local timeout = GetGameTimer() + 8000
@@ -57,6 +58,22 @@ local function cleanupIncident(incidentId)
         DeleteVehicle(inc.vehicle)
     end
     incidents[incidentId] = nil
+end
+
+local function syncIncidents(list, routeFirst)
+    local active = {}
+    for _, inc in ipairs(list or {}) do
+        active[inc.id] = true
+        incidents[inc.id] = inc
+        spawnIncidentVehicle(inc)
+    end
+    for id in pairs(incidents) do
+        if not active[id] then cleanupIncident(id) end
+    end
+    if routeFirst and list and list[1] then
+        SetNewWaypoint(list[1].coords.x, list[1].coords.y)
+        notify(('GPS set to fire incident #%s'):format(list[1].id), 'success')
+    end
 end
 
 RegisterNetEvent('sunset:fire:newIncident', function(inc)
@@ -127,12 +144,23 @@ end)
 
 RegisterCommand('firecalls', function()
     CreateThread(function()
-        local list = Sunset.AwaitCallback('sunset:fireGetIncidents')
-        if not list or #list < 1 then return notify('No active fire incidents', 'info') end
+        local list, err = Sunset.AwaitCallback('sunset:fireGetIncidents')
+        if not list then return notify(err or 'Could not load fire incidents', 'error') end
+        if #list < 1 then return notify('No active fire incidents — use /firestart', 'info') end
+        syncIncidents(list, true)
         for _, inc in ipairs(list) do
             notify(('#%s — %s (%s%% remaining)'):format(
                 inc.id, inc.label, math.floor((inc.fireHealth / inc.maxHealth) * 100)), 'info', 6000)
         end
+    end)
+end, false)
+
+RegisterCommand('firestart', function()
+    CreateThread(function()
+        local result, err = Sunset.AwaitCallback('sunset:fireRequestIncident')
+        if not result then return notify(err or 'Could not request incident', 'error') end
+        syncIncidents(result.incidents or {}, true)
+        notify(result.existing and 'Existing LSFD incident loaded' or 'New LSFD incident dispatched', 'warning')
     end)
 end, false)
 

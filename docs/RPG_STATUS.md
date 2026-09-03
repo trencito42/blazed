@@ -13,6 +13,7 @@
 - The custom HUD intentionally reports km/h (`m/s * 3.6`). Many GTA vehicle dashboard textures are mph: 141 km/h is approximately 88 mph, which explains the apparent gauge discrepancy.
 - Live-log verification found and fixed a faction friendly-fire state crash (`OnDuty` was an undefined global), a missing shared profile dependency in `sunset_fire`, and a defensive character-id fallback in inventory loading.
 - Fixed the Lua reserved-word key for the `/goto` help description, which prevented the shared help registry from loading on FXServer.
+- Fixed `sunset_help` loading without the core shared data it consumes. LSFD can now use `/firecalls` to synchronize and route to existing incidents, or `/firestart` to request a rate-limited incident when none is active.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 

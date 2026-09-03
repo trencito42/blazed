@@ -8,6 +8,14 @@ version '2.0.0'
 
 shared_scripts {
     '@sunset_admin/shared/config.lua',
+    '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/jobs_civilian.lua',
+    '@sunset_core/shared/jobs_config.lua',
+    '@sunset_core/shared/profile.lua',
+    '@sunset_core/shared/faction_core.lua',
+    '@sunset_core/shared/factions.lua',
+    '@sunset_core/shared/dispatch.lua',
+    '@sunset_core/shared/help_registry.lua',
 }
 
 client_scripts {

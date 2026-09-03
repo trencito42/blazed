@@ -66,5 +66,6 @@ Sunset.HelpDispatchEntries = {
 }
 
 Sunset.HelpFireEntries = {
-    { cmd = '/firecalls', desc = 'List active fire incidents' },
+    { cmd = '/firecalls', desc = 'List and route to active fire incidents' },
+    { cmd = '/firestart', desc = 'Request an LSFD incident when none is active' },
 }
