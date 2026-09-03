@@ -52,11 +52,12 @@ const Panels = {
 
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            const panels = ['#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills', '#help'];
+            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills', '#help'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
                     const map = {
+                        '#shop': 'shopClose',
                         '#mdc': 'mdcClose',
                         '#ticket': 'ticketClose',
                         '#servicecalls': 'serviceCallsClose',
@@ -127,20 +128,93 @@ const Panels = {
 
     hideInventory() { $('#inventory')?.classList.add('hidden'); },
 
+    _shopCategoryLabels: {
+        all: 'All',
+        food: 'Food',
+        drinks: 'Drinks',
+        medical: 'Medical',
+        supplies: 'Supplies',
+        materials: 'Materials',
+        tools: 'Tools',
+        ammo: 'Ammo',
+        misc: 'Misc',
+    },
+
     showShop(data) {
         this.init();
         const shop = data.shop || {};
+        const items = shop.items || [];
+        this._shopData = data;
+
         $('#shop-title').textContent = shop.label || 'Shop';
-        const list = $('#shop-list');
-        list.innerHTML = '';
-        (shop.items || []).forEach((row) => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${row.item} — $${row.price}</span><button>BUY</button>`;
-            li.querySelector('button')?.addEventListener('click', () => {
-                post('shopBuy', { shopId: data.shopId, item: row.item, amount: 1 });
-            });
-            list.appendChild(li);
+        const sub = $('#shop-subtitle');
+        if (sub) sub.textContent = `${items.length} item${items.length === 1 ? '' : 's'} available`;
+
+        const categories = ['all'];
+        const seen = new Set();
+        items.forEach((row) => {
+            const cat = row.category || 'misc';
+            if (!seen.has(cat)) {
+                seen.add(cat);
+                categories.push(cat);
+            }
         });
+
+        const tabs = $('#shop-categories');
+        const grid = $('#shop-grid');
+        if (!tabs || !grid) return;
+
+        const renderItems = (filter) => {
+            grid.innerHTML = '';
+            const filtered = filter === 'all'
+                ? items
+                : items.filter((row) => (row.category || 'misc') === filter);
+
+            if (!filtered.length) {
+                grid.innerHTML = '<p class="shop-empty">No items in this category</p>';
+                return;
+            }
+
+            filtered.forEach((row) => {
+                const card = document.createElement('article');
+                card.className = 'shop-card';
+                const weight = row.weight != null ? `${Number(row.weight).toFixed(1)} kg` : '';
+                card.innerHTML = `
+                    <div class="shop-card__icon" aria-hidden="true">${row.icon || '📦'}</div>
+                    <div class="shop-card__body">
+                        <span class="shop-card__name">${row.label || row.item}</span>
+                        ${weight ? `<span class="shop-card__meta">${weight}</span>` : ''}
+                        <span class="shop-card__price">${formatMoney(row.price)}</span>
+                    </div>
+                    <button type="button" class="shop-card__buy">BUY</button>`;
+                card.querySelector('.shop-card__buy')?.addEventListener('click', () => {
+                    post('shopBuy', { shopId: data.shopId, item: row.item, amount: 1 });
+                });
+                grid.appendChild(card);
+            });
+        };
+
+        tabs.innerHTML = '';
+        categories.forEach((cat, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `shop-tab${idx === 0 ? ' is-active' : ''}`;
+            btn.dataset.category = cat;
+            btn.textContent = this._shopCategoryLabels[cat] || cat;
+            btn.addEventListener('click', () => {
+                $$('.shop-tab').forEach((el) => el.classList.toggle('is-active', el === btn));
+                renderItems(cat);
+            });
+            tabs.appendChild(btn);
+        });
+
+        if (categories.length <= 2) {
+            tabs.classList.add('hidden');
+        } else {
+            tabs.classList.remove('hidden');
+        }
+
+        renderItems('all');
         $('#shop')?.classList.remove('hidden');
     },
 

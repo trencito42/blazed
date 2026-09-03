@@ -14,9 +14,28 @@ end)
 
 exports('GetNextPayday', function() return nextPaydayLabel end)
 
+local function enrichShop(shop)
+    local items = {}
+    for _, row in ipairs(shop.items or {}) do
+        local def = Sunset.Items[row.item] or {}
+        items[#items + 1] = {
+            item = row.item,
+            price = row.price,
+            label = def.label or row.item,
+            category = def.category or 'misc',
+            icon = def.icon or '📦',
+            weight = def.weight,
+        }
+    end
+    return {
+        label = shop.label,
+        items = items,
+    }
+end
+
 AddEventHandler('sunset:world:openShop', function(shopId, shop)
     if IsNuiFocused() then return end
-    exports.sunset_ui:Send('shopShow', { shopId = shopId, shop = shop })
+    exports.sunset_ui:Send('shopShow', { shopId = shopId, shop = enrichShop(shop) })
     exports.sunset_ui:SetFocus(true, true)
 end)
 

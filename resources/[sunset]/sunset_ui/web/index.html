@@ -510,10 +510,17 @@
 
     <!-- SHOP -->
     <div id="shop" class="overlay-panel hidden">
-        <div class="overlay-panel__box">
-            <h2 id="shop-title">Shop</h2>
-            <ul class="panel-list" id="shop-list"></ul>
-            <button type="button" class="panel-close" id="shop-close">Close</button>
+        <div class="overlay-panel__box overlay-panel__box--shop">
+            <div class="shop-header">
+                <div>
+                    <h2 id="shop-title">Shop</h2>
+                    <p class="shop-subtitle" id="shop-subtitle">Browse &amp; buy</p>
+                </div>
+                <span class="shop-badge">OPEN 24/7</span>
+            </div>
+            <div class="shop-categories" id="shop-categories"></div>
+            <div class="shop-grid" id="shop-grid"></div>
+            <button type="button" class="panel-close" id="shop-close">Close (ESC)</button>
         </div>
     </div>
 
