@@ -4,6 +4,8 @@ local currentAppearance = nil
 local studioCam = nil
 local pedHeading = 180.0
 local cameraMode = 'full'
+local studioCenter = nil
+local FIXED_CAM_BEARING = 0.0 -- camera stays fixed in world; ped spins on spot
 
 Sunset = Sunset or {}
 
@@ -34,19 +36,26 @@ local function setupCamera(ped, mode)
     cameraMode = mode
     local preset = CAMERA_PRESETS[mode] or CAMERA_PRESETS.full
 
-    if studioCam then DestroyCam(studioCam, false) end
-    studioCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    if not studioCam then
+        studioCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    end
 
-    local coords = GetEntityCoords(ped)
-    local heading = math.rad(pedHeading)
-    local camX = coords.x - math.sin(heading) * preset.dist
-    local camY = coords.y + math.cos(heading) * preset.dist
+    local center = studioCenter or GetEntityCoords(ped)
+    local bearing = math.rad(FIXED_CAM_BEARING)
+    local camX = center.x - math.sin(bearing) * preset.dist
+    local camY = center.y + math.cos(bearing) * preset.dist
 
-    SetCamCoord(studioCam, camX, camY, coords.z + preset.z)
-    PointCamAtCoord(studioCam, coords.x, coords.y, coords.z + preset.aim)
+    SetCamCoord(studioCam, camX, camY, center.z + preset.z)
+    PointCamAtCoord(studioCam, center.x, center.y, center.z + preset.aim)
     SetCamFov(studioCam, preset.fov)
     SetCamActive(studioCam, true)
     RenderScriptCams(true, false, 0, true, true)
+end
+
+local function rotatePed(delta)
+    local ped = PlayerPedId()
+    pedHeading = (pedHeading + delta) % 360.0
+    SetEntityHeading(ped, pedHeading)
 end
 
 local function loadFreemodePed(char)
@@ -117,6 +126,7 @@ local function enterStudio(char, skipFade)
     local studio = getStudioCoords()
     local ped = PlayerPedId()
     pedHeading = studio.w
+    studioCenter = vector3(studio.x, studio.y, studio.z)
     cameraMode = 'full'
 
     SetEntityCoordsNoOffset(ped, studio.x, studio.y, studio.z, false, false, false)
@@ -159,14 +169,10 @@ CreateThread(function()
             local ped = PlayerPedId()
             SetEntityVisible(ped, true, false)
             if IsControlPressed(0, 34) or IsControlPressed(0, 174) then
-                pedHeading = pedHeading - 1.8
-                SetEntityHeading(ped, pedHeading)
-                setupCamera(ped, cameraMode)
+                rotatePed(-1.8)
             end
             if IsControlPressed(0, 35) or IsControlPressed(0, 175) then
-                pedHeading = pedHeading + 1.8
-                SetEntityHeading(ped, pedHeading)
-                setupCamera(ped, cameraMode)
+                rotatePed(1.8)
             end
             DisableControlAction(0, 1, true)
             DisableControlAction(0, 2, true)
@@ -199,11 +205,8 @@ AddEventHandler('sunset:nui:appearanceCamera', function(data)
 end)
 
 AddEventHandler('sunset:nui:appearanceRotate', function(data)
-    local ped = PlayerPedId()
     local delta = (data.direction == 'left') and -15.0 or 15.0
-    pedHeading = pedHeading + delta
-    SetEntityHeading(ped, pedHeading)
-    setupCamera(ped, cameraMode)
+    rotatePed(delta)
 end)
 
 AddEventHandler('sunset:nui:appearanceGender', function(data)
@@ -222,6 +225,7 @@ AddEventHandler('sunset:nui:appearanceSave', function()
     pendingChar.gender = pendingChar.gender or 0
 
     editing = false
+    studioCenter = nil
     destroyStudio()
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('appearanceHide', {})

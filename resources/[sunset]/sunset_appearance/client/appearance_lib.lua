@@ -2,14 +2,40 @@ SunsetAppearance = SunsetAppearance or {}
 
 local OVERLAY_OFF = 255
 
-local function deepCopy(tbl)
-    if type(tbl) ~= 'table' then return tbl end
-    local out = {}
-    for k, v in pairs(tbl) do out[k] = deepCopy(v) end
-    return out
+local function clampDrawable(ped, slot, drawable)
+    local maxDraw = GetNumberOfPedDrawableVariations(ped, slot) - 1
+    if maxDraw < 0 then return 0 end
+    return math.max(0, math.min(math.floor(drawable or 0), maxDraw))
 end
 
-function SunsetAppearance.default(_gender)
+local function isDrawableUsable(ped, slot, drawable)
+    if drawable < 0 then return false end
+    if drawable > GetNumberOfPedDrawableVariations(ped, slot) - 1 then return false end
+    return GetNumberOfPedTextureVariations(ped, slot, drawable) > 0
+end
+
+local function nearestUsableDrawable(ped, slot, drawable)
+    local maxDraw = GetNumberOfPedDrawableVariations(ped, slot) - 1
+    if maxDraw < 0 then return 0 end
+    drawable = clampDrawable(ped, slot, drawable)
+    if isDrawableUsable(ped, slot, drawable) then return drawable end
+    for d = drawable, maxDraw do
+        if isDrawableUsable(ped, slot, d) then return d end
+    end
+    for d = drawable, 0, -1 do
+        if isDrawableUsable(ped, slot, d) then return d end
+    end
+    return 0
+end
+
+local function setComponentSafe(ped, slot, drawable)
+    drawable = nearestUsableDrawable(ped, slot, drawable)
+    SetPedComponentVariation(ped, slot, drawable, 0, 2)
+    return drawable
+end
+
+function SunsetAppearance.default(gender)
+    local isFemale = gender == 1
     return {
         version = 2,
         headBlend = {
@@ -19,15 +45,15 @@ function SunsetAppearance.default(_gender)
         },
         hair = { drawable = 0, texture = 0, color = 0, highlight = 0 },
         overlays = {
-            ['1'] = { index = 0, opacity = 1.0, color = 0 },
-            ['2'] = { index = 0, opacity = 1.0, color = 0 },
+            ['1'] = { index = 0, opacity = 0.0, color = 0 },
+            ['2'] = { index = 0, opacity = 0.0, color = 0 },
         },
         components = {
-            ['3'] = { drawable = 0, texture = 0 },
-            ['4'] = { drawable = 0, texture = 0 },
-            ['6'] = { drawable = 0, texture = 0 },
-            ['8'] = { drawable = 0, texture = 0 },
-            ['11'] = { drawable = 0, texture = 0 },
+            ['3'] = { drawable = isFemale and 14 or 15, texture = 0 },
+            ['4'] = { drawable = isFemale and 0 or 0, texture = 0 },
+            ['6'] = { drawable = 1, texture = 0 },
+            ['8'] = { drawable = 15, texture = 0 },
+            ['11'] = { drawable = 15, texture = 0 },
         },
     }
 end
@@ -51,9 +77,8 @@ function SunsetAppearance.normalize(raw, gender)
         end
         if raw.components then
             for k, v in pairs(raw.components) do
-                out.components[k] = out.components[k] or { drawable = 0, texture = 0 }
-                if type(v) == 'table' then
-                    out.components[k].drawable = v.drawable or 0
+                if out.components[k] and type(v) == 'table' then
+                    out.components[k].drawable = v.drawable or out.components[k].drawable
                     out.components[k].texture = v.texture or 0
                 end
             end
@@ -61,7 +86,6 @@ function SunsetAppearance.normalize(raw, gender)
         return out
     end
 
-    -- v1 migration: only numeric component keys
     for i = 0, 11 do
         local comp = raw[tostring(i)] or raw[i]
         if comp and out.components[tostring(i)] then
@@ -76,6 +100,54 @@ function SunsetAppearance.normalize(raw, gender)
     return out
 end
 
+function SunsetAppearance.resolveTorso(ped, gender, top, undershirt)
+    local isFemale = gender == 1
+    local candidates
+
+    if top == 0 and (undershirt or 0) == 0 then
+        candidates = isFemale and { 15, 14, 3, 0 } or { 15, 0, 1, 4 }
+    elseif top == 0 then
+        candidates = isFemale and { 3, 14, 15, 0 } or { 15, 3, 4, 0 }
+    else
+        candidates = isFemale and { 14, 3, 6, 11, 2, 0 } or { 15, 4, 1, 6, 11, 3, 0 }
+    end
+
+    for _, torso in ipairs(candidates) do
+        if isDrawableUsable(ped, 3, torso) then
+            return torso
+        end
+    end
+    return isFemale and 14 or 15
+end
+
+function SunsetAppearance.syncTorso(appearance, ped, gender)
+    local top = appearance.components['11'].drawable or 0
+    local undershirt = appearance.components['8'].drawable or 0
+    appearance.components['3'].drawable = SunsetAppearance.resolveTorso(ped, gender, top, undershirt)
+    return appearance
+end
+
+function SunsetAppearance.applyClothes(ped, appearance, gender)
+    appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+
+    local order = { 4, 6, 8, 11, 3 }
+    for _, slot in ipairs(order) do
+        local comp = appearance.components[tostring(slot)]
+        if comp then
+            comp.drawable = setComponentSafe(ped, slot, comp.drawable or 0)
+            comp.texture = 0
+        end
+    end
+
+  -- Re-apply top after torso so jacket layer stays visible
+    local top = appearance.components['11']
+    if top then
+        top.drawable = setComponentSafe(ped, 11, top.drawable)
+    end
+
+    return appearance
+end
+
 function SunsetAppearance.apply(ped, appearance, gender)
     appearance = SunsetAppearance.normalize(appearance, gender)
     local hb = appearance.headBlend
@@ -88,22 +160,17 @@ function SunsetAppearance.apply(ped, appearance, gender)
         false
     )
 
-    for id, comp in pairs(appearance.components) do
-        local slot = tonumber(id)
-        if slot and comp then
-            SetPedComponentVariation(ped, slot, comp.drawable or 0, comp.texture or 0, 0)
-        end
-    end
+    appearance = SunsetAppearance.applyClothes(ped, appearance, gender)
 
     local hair = appearance.hair
-    SetPedComponentVariation(ped, 2, hair.drawable or 0, hair.texture or 0, 0)
+    hair.drawable = setComponentSafe(ped, 2, hair.drawable or 0)
     SetPedHairColor(ped, hair.color or 0, hair.highlight or 0)
 
     for id, ov in pairs(appearance.overlays or {}) do
         local overlayId = tonumber(id)
         if not overlayId then goto continue end
-        local index = ov.index
-        if index == nil or index == OVERLAY_OFF then
+        local index = ov.index or 0
+        if index <= 0 then
             SetPedHeadOverlay(ped, overlayId, 255, 0.0)
         else
             SetPedHeadOverlay(ped, overlayId, index, ov.opacity or 1.0)
@@ -115,86 +182,31 @@ function SunsetAppearance.apply(ped, appearance, gender)
     return appearance
 end
 
-function SunsetAppearance.extractFromPed(ped, gender)
-    local data = SunsetAppearance.default(gender)
-    data.headBlend.shapeFirst, data.headBlend.shapeSecond, data.headBlend.shapeThird,
-        data.headBlend.skinFirst, data.headBlend.skinSecond, data.headBlend.skinThird,
-        data.headBlend.shapeMix, data.headBlend.skinMix, data.headBlend.thirdMix
-        = GetPedHeadBlendData(ped)
-
-    data.hair.drawable = GetPedDrawableVariation(ped, 2)
-    data.hair.texture = GetPedTextureVariation(ped, 2)
-  local color, highlight = GetPedHairColor(ped)
-    data.hair.color = color or 0
-    data.hair.highlight = highlight or 0
-
-    for _, slot in ipairs({ 3, 4, 6, 8, 11 }) do
-        data.components[tostring(slot)] = {
-            drawable = GetPedDrawableVariation(ped, slot),
-            texture = GetPedTextureVariation(ped, slot),
-        }
-    end
-
-    for overlayId = 1, 2 do
-        local idx = GetPedHeadOverlayValue(ped, overlayId)
-        local _, opacity = GetPedHeadOverlay(ped, overlayId)
-        data.overlays[tostring(overlayId)] = {
-            index = idx,
-            opacity = opacity or 1.0,
-            color = 0,
-        }
-    end
-
-    return data
+local function drawableMax(ped, slot)
+    local max = GetNumberOfPedDrawableVariations(ped, slot) - 1
+    return math.max(0, max)
 end
 
 function SunsetAppearance.buildEditor(ped, appearance, gender)
     appearance = SunsetAppearance.normalize(appearance, gender)
+    appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
     local fields = {}
 
     local function add(field) fields[#fields + 1] = field end
 
-    add({
-        type = 'skinTone', label = 'Skin Tone', min = 0, max = 45,
-        value = appearance.headBlend.skinFirst or 0, camera = 'face',
-    })
-    add({
-        type = 'shapeFirst', label = 'Face Shape A', min = 0, max = 45,
-        value = appearance.headBlend.shapeFirst or 0, camera = 'face',
-    })
-    add({
-        type = 'shapeSecond', label = 'Face Shape B', min = 0, max = 45,
-        value = appearance.headBlend.shapeSecond or 0, camera = 'face',
-    })
-    add({
-        type = 'shapeMix', label = 'Face Mix', min = 0, max = 100,
-        value = math.floor((appearance.headBlend.shapeMix or 0.5) * 100), camera = 'face',
-    })
-
-    add({
-        type = 'hairStyle', label = 'Hair Style', min = 0,
-        max = math.max(0, GetNumberOfPedDrawableVariations(ped, 2) - 1),
-        value = appearance.hair.drawable or 0, camera = 'face',
-    })
-    add({
-        type = 'hairColor', label = 'Hair Color', min = 0, max = 63,
-        value = appearance.hair.color or 0, camera = 'face',
-    })
+    add({ type = 'skinTone', label = 'Skin Tone', min = 0, max = 45, value = appearance.headBlend.skinFirst or 0, camera = 'face' })
+    add({ type = 'shapeFirst', label = 'Face Shape A', min = 0, max = 45, value = appearance.headBlend.shapeFirst or 0, camera = 'face' })
+    add({ type = 'shapeSecond', label = 'Face Shape B', min = 0, max = 45, value = appearance.headBlend.shapeSecond or 0, camera = 'face' })
+    add({ type = 'shapeMix', label = 'Face Mix', min = 0, max = 100, value = math.floor((appearance.headBlend.shapeMix or 0.5) * 100), camera = 'face' })
+    add({ type = 'hairStyle', label = 'Hair Style', min = 0, max = drawableMax(ped, 2), value = appearance.hair.drawable or 0, camera = 'face' })
+    add({ type = 'hairColor', label = 'Hair Color', min = 0, max = 63, value = appearance.hair.color or 0, camera = 'face' })
 
     if gender ~= 1 then
-        local beardMax = math.max(0, GetNumHeadOverlayValues(ped, 1) - 1)
-        add({
-            type = 'beard', label = 'Beard', min = 0, max = beardMax,
-            value = appearance.overlays['1'].index or 0, camera = 'face',
-        })
-        add({
-            type = 'beardColor', label = 'Beard Color', min = 0, max = 63,
-            value = appearance.overlays['1'].color or 0, camera = 'face',
-        })
+        add({ type = 'beard', label = 'Beard', min = 0, max = math.max(0, GetNumHeadOverlayValues(ped, 1) - 1), value = appearance.overlays['1'].index or 0, camera = 'face' })
+        add({ type = 'beardColor', label = 'Beard Color', min = 0, max = 63, value = appearance.overlays['1'].color or 0, camera = 'face' })
     end
 
     local clothes = {
-        { 3, 'Arms / Torso', 'full' },
         { 8, 'Undershirt', 'full' },
         { 11, 'Top / Jacket', 'full' },
         { 4, 'Pants', 'full' },
@@ -206,7 +218,7 @@ function SunsetAppearance.buildEditor(ped, appearance, gender)
         local comp = appearance.components[tostring(slot)] or { drawable = 0 }
         add({
             type = 'component', component = slot, label = label,
-            min = 0, max = math.max(0, GetNumberOfPedDrawableVariations(ped, slot) - 1),
+            min = 0, max = drawableMax(ped, slot),
             value = comp.drawable or 0, camera = cam,
         })
     end
@@ -249,4 +261,9 @@ function SunsetAppearance.applyField(ped, appearance, gender, change)
 
     SunsetAppearance.apply(ped, appearance, gender)
     return appearance
+end
+
+function SunsetAppearance.maxDrawable(ped, slot, appearance, gender)
+    appearance = SunsetAppearance.normalize(appearance, gender)
+    return drawableMax(ped, slot)
 end
