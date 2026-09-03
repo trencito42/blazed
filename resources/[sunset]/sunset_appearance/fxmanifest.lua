@@ -10,6 +10,7 @@ dependencies { 'sunset_core', 'sunset_ui' }
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/utils.lua',
 }
 
 exports { 'IsEditing' }

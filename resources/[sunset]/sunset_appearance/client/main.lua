@@ -3,9 +3,13 @@ local pendingChar = nil
 local studioCam = nil
 local pedHeading = 180.0
 
+Sunset = Sunset or {}
+
+local FALLBACK_STUDIO = vector4(-1037.58, -2737.58, 20.17, 328.0)
+
 local function getStudioCoords()
-    local spawn = Sunset.Config.DefaultSpawn
-    return vector4(spawn.x, spawn.y, spawn.z, spawn.w or 180.0)
+    local spawn = (Sunset.Config and Sunset.Config.DefaultSpawn) or FALLBACK_STUDIO
+    return vector4(spawn.x, spawn.y, spawn.z, spawn.w or 328.0)
 end
 
 local function applyAppearance(ped, appearance)
