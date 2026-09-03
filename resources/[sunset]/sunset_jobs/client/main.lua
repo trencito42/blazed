@@ -11,7 +11,9 @@ end)
 AddEventHandler('sunset:nui:jobCenterHire', function(data)
     local ok, err = Sunset.AwaitCallback('sunset:hireJob', data.jobId)
     if ok then
-        exports.sunset_ui:Notify('You are now employed as ' .. (data.jobLabel or data.jobId), 'success')
+        if data.jobId ~= 'unemployed' then
+            exports.sunset_ui:Notify('You are now employed as ' .. (data.jobLabel or data.jobId), 'success')
+        end
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('jobCenterHide', {})
     else

@@ -59,7 +59,7 @@ Sunset.JobsConfig = {
         label = 'Courier',
         help = 'Pick up packages at the warehouse and deliver them on foot.',
         warehouse = {
-            coords = vector3(78.45, 112.22, 81.17),
+            coords = vector3(69.51, 127.86, 79.20),
             blip = { sprite = 478, color = 3, scale = 0.85 },
         },
         deliveries = {

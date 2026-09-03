@@ -616,3 +616,40 @@ exports('SetFuelLevel', setFuelLevel)
 exports('GetFuelLevel', function()
     return fuel
 end)
+
+local function getNearbyVehicle(maxDist)
+    local ped = PlayerPedId()
+    if IsPedInAnyVehicle(ped, false) then
+        return GetVehiclePedIsIn(ped, false)
+    end
+    local coords = GetEntityCoords(ped)
+    local veh = GetClosestVehicle(coords.x, coords.y, coords.z, maxDist or 4.0, 0, 71)
+    if veh ~= 0 and DoesEntityExist(veh) then return veh end
+    return 0
+end
+
+RegisterNetEvent('sunset:client:useGasCan', function()
+    CreateThread(function()
+        local veh = getNearbyVehicle(4.5)
+        if veh == 0 then
+            notify('Stand next to your vehicle to use the gas can', 'error')
+            return
+        end
+
+        local plate = normalizePlate(GetVehicleNumberPlateText(veh))
+        local currentFuel = GetVehicleFuelLevel(veh)
+        if currentFuel < 0 or currentFuel > 100 then
+            currentFuel = fuel
+        end
+
+        local result, err = Sunset.AwaitCallback('sunset:useGasCanOnVehicle', plate, currentFuel)
+        if not result then
+            notify(err or 'Could not use gas can', 'error')
+            return
+        end
+
+        setFuelLevel(veh, result.vehicleFuel or currentFuel)
+        notify(('Poured fuel into vehicle — tank now %d%%'):format(
+            math.floor(result.vehicleFuel or currentFuel)), 'success')
+    end)
+end)

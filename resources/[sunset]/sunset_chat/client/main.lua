@@ -78,6 +78,5 @@ CreateThread(function()
     while true do
         Wait(0)
         SetTextChatEnabled(false)
-        HideHudComponentThisFrame(19)
     end
 end)

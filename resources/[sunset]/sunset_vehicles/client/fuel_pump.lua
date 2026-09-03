@@ -1,9 +1,13 @@
 local refueling = false
+local fillingCan = false
 local sessionStartFuel = 0.0
+local canStartFuel = 0.0
 local sessionStation = nil
 local sessionVeh = 0
 local pumpHintShown = false
+local canHintShown = false
 local waitForUseRelease = false
+local waitForCanRelease = false
 
 local function notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
@@ -41,10 +45,7 @@ local function pumpReach()
     return Sunset.Config.FuelPumpReach or 4.2
 end
 
-local function findNearestPump()
-    local veh = getDriverVehicle()
-    if veh == 0 then return nil, nil end
-    local coords = GetEntityCoords(veh)
+local function findNearestPump(coords)
     local bestStation, bestPump, bestDist = nil, nil, pumpReach() + 1.0
 
     for _, station in ipairs(Sunset.GasStations or {}) do
@@ -61,6 +62,17 @@ local function findNearestPump()
 
     if bestStation then return bestStation, bestPump end
     return nil, nil
+end
+
+local function findNearestPumpForVehicle()
+    local veh = getDriverVehicle()
+    if veh == 0 then return nil, nil end
+    return findNearestPump(GetEntityCoords(veh))
+end
+
+local function findNearestPumpOnFoot()
+    if IsPedInAnyVehicle(PlayerPedId(), false) then return nil, nil end
+    return findNearestPump(GetEntityCoords(PlayerPedId()))
 end
 
 local function showPumpUi(station, startFuel)
@@ -144,11 +156,38 @@ local function startRefuel(station)
     SetVehicleEngineOn(veh, false, true, true)
 end
 
+local function finishCanFill(endFuel)
+    fillingCan = false
+    hidePumpUi()
+
+    if endFuel <= canStartFuel + 0.05 then
+        notify('Gas can fill cancelled', 'warning')
+        return
+    end
+
+    local result, err = Sunset.AwaitCallback('sunset:fillGasCan', endFuel)
+    if not result then
+        notify(err or 'Payment failed', 'error')
+        return
+    end
+
+    notify(('Gas can filled to %d%% — paid $%s'):format(
+        math.floor(result.fuel or endFuel), result.cost or 0), 'success')
+end
+
+local function startCanFill(station)
+    fillingCan = true
+    waitForCanRelease = true
+    canStartFuel = 0.0
+    sessionStation = station
+    showPumpUi(station, canStartFuel)
+end
+
 CreateThread(function()
     while true do
         local veh = getDriverVehicle()
-        if veh ~= 0 and not refueling and not IsNuiFocused() then
-            local station, pump = findNearestPump()
+        if veh ~= 0 and not refueling and not fillingCan and not IsNuiFocused() then
+            local station, pump = findNearestPumpForVehicle()
             if station and pump then
                 DrawMarker(1, pump.x, pump.y, pump.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     1.4, 1.4, 0.6, 46, 204, 113, 160, false, false, 2, false, nil, nil, false)
@@ -175,11 +214,59 @@ CreateThread(function()
                 end
                 Wait(350)
             end
-        elseif refueling then
+        elseif refueling or fillingCan then
             Wait(0)
         else
             if pumpHintShown then
                 pumpHintShown = false
+                if GetResourceState('ox_lib') == 'started' then
+                    exports.ox_lib:hideTextUI()
+                end
+            end
+            Wait(450)
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if not refueling and not fillingCan and not IsNuiFocused() and not IsPedInAnyVehicle(PlayerPedId(), false) then
+            local station, pump = findNearestPumpOnFoot()
+            if station and pump then
+                DrawMarker(1, pump.x, pump.y, pump.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    1.4, 1.4, 0.6, 255, 180, 0, 160, false, false, 2, false, nil, nil, false)
+
+                if not canHintShown then
+                    canHintShown = true
+                    if GetResourceState('ox_lib') == 'started' then
+                        exports.ox_lib:showTextUI('Hold [E] with gas can — release to stop', { position = 'bottom-center' })
+                    end
+                end
+
+                if not IsControlPressed(0, 38) then
+                    waitForCanRelease = false
+                elseif not waitForCanRelease then
+                    local hasCan = Sunset.AwaitCallback('sunset:inventoryHasItem', 'gas_can')
+                    if hasCan then
+                        startCanFill(station)
+                    else
+                        notify('Buy a gas can at a 24/7 store first', 'error')
+                        waitForCanRelease = true
+                    end
+                end
+                Wait(0)
+            else
+                if canHintShown then
+                    canHintShown = false
+                    if GetResourceState('ox_lib') == 'started' then
+                        exports.ox_lib:hideTextUI()
+                    end
+                end
+                Wait(350)
+            end
+        else
+            if canHintShown then
+                canHintShown = false
                 if GetResourceState('ox_lib') == 'started' then
                     exports.ox_lib:hideTextUI()
                 end
@@ -213,6 +300,24 @@ CreateThread(function()
                 end
             end
             Wait(0)
+        elseif fillingCan then
+            if IsPedInAnyVehicle(PlayerPedId(), false) then
+                fillingCan = false
+                hidePumpUi()
+            elseif not IsControlPressed(0, 38) then
+                finishCanFill(canStartFuel)
+            else
+                local dt = GetFrameTime()
+                local added = fillRate() * dt
+                canStartFuel = math.min(100.0, canStartFuel + added)
+                local cost = math.floor(canStartFuel * pricePerPercent() * 100) / 100
+                updatePumpUi(sessionStation, canStartFuel, canStartFuel, cost)
+                if canStartFuel >= 99.95 then
+                    canStartFuel = 100.0
+                    finishCanFill(100.0)
+                end
+            end
+            Wait(0)
         else
             Wait(200)
         end
@@ -221,7 +326,14 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    if refueling then cancelRefuel() else hidePumpUi() end
+    if refueling then
+        cancelRefuel()
+    elseif fillingCan then
+        fillingCan = false
+        hidePumpUi()
+    else
+        hidePumpUi()
+    end
     if GetResourceState('ox_lib') == 'started' then
         exports.ox_lib:hideTextUI()
     end

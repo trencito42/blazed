@@ -11,7 +11,9 @@
 | `fisherman` | **Complete** | $120/hr | `/work` — fishing minigame, sell at pier |
 | `mechanic` | **Complete** | $140/hr | `/work` — on duty, `/service mechanic` dispatch hook, vehicle repair |
 
-Hire at Job Center (City Hall) or admin `/setjob`. Use `/jobs` for the NUI panel, `/jobhelp` for tips, `/skills` for per-job XP.
+Hire at Job Center (City Hall) or admin `/setjob`. Hiring **Unemployed** at the Job Center quits your civilian job. `/quitjob` and the M menu **Quit civilian job** button use the same server path. Use `/jobs` for the NUI panel, `/jobhelp` for tips, `/skills` for per-job XP.
+
+When hired, GPS is set to that job's work location. `/work` sets GPS to the next objective for each active shift.
 
 ### Job Core
 
@@ -26,7 +28,7 @@ Hire at Job Center (City Hall) or admin `/setjob`. Use `/jobs` for the NUI panel
 |-----|------|
 | Trucker | Docks depot → spawn Phantom + trailer → pickup → delivery → return truck |
 | Garbage | Depot → trash truck → collect bins (animation) → full truck → unload |
-| Courier | Warehouse → carry package → deliver addresses → repeat |
+| Courier | Warehouse loading dock → carry package → deliver addresses → repeat |
 | Fisherman | Fishing spots → minigame catch → sell at pier buyer |
 | Mechanic | Go on duty → receive `/service mechanic` dispatch via `sunset_dispatch` → accept (E) → repair nearby vehicle |
 
@@ -42,6 +44,10 @@ Factions are hired at HQ, not Job Center. See [FACTIONS.md](./FACTIONS.md).
 | LSFD | Heal/revive (rank-gated) — **minimal** |
 | Mechanic (faction) | HQ repair + `/repairveh` — **basic** (separate from civilian roadside mechanic) |
 | Gangs | HQ sell/fence — **basic** |
+
+## Fuel recovery
+
+Buy a **gas can** at any 24/7 store. At a gas pump on foot, hold **E** to fill the can (paid by the liter). Use the can from inventory while standing next to your vehicle to pour fuel into the tank.
 
 ## Commands
 

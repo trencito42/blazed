@@ -1,5 +1,14 @@
 local JC = Sunset.JobClient
 
+local function pointToDelivery(cfg, target, label)
+    if not target then return end
+    local pos = vector3(target.coords.x, target.coords.y, target.coords.z)
+    JC.clearBlips()
+    JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Courier Warehouse')
+    JC.addBlip(pos, { sprite = 478, color = 3, scale = 0.85 }, label or 'Delivery')
+    JC.setWaypoint(pos)
+end
+
 local function startCourier()
     local data, err = Sunset.AwaitCallback('sunset:jobs:courier:start')
     if not data then
@@ -12,7 +21,7 @@ local function startCourier()
     JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Courier Warehouse')
     JC.sessionData = data
     JC.setWaypoint(cfg.warehouse.coords)
-    JC.notify('Go to the warehouse to pick up packages', 'info')
+    JC.notify('Go to the warehouse loading dock to pick up packages', 'info')
 
     CreateThread(function()
         local busy = false
@@ -21,7 +30,7 @@ local function startCourier()
 
             if stage == 'pickup' or (stage == 'delivering' and not JC.sessionData.hasPackage) then
                 JC.drawMarker(cfg.warehouse.coords, 255, 180, 0)
-                if JC.isNear(cfg.warehouse.coords, cfg.pickupRadius) and not busy then
+                if JC.isNear(cfg.warehouse.coords, cfg.pickupRadius) and not busy and not IsPedInAnyVehicle(PlayerPedId(), false) then
                     busy = true
                     JC.playAnim('anim@heists@box_carry@', 'idle', 2000)
                     local ok, newData = Sunset.AwaitCallback('sunset:jobs:courier:pickup')
@@ -31,10 +40,7 @@ local function startCourier()
                         local idx = newData.deliveryIndex or 1
                         local target = newData.deliveries[idx]
                         if target then
-                            JC.clearBlips()
-                            JC.addBlip(vector3(target.coords.x, target.coords.y, target.coords.z),
-                                { sprite = 478, color = 3 }, 'Delivery: ' .. (target.label or ''))
-                            JC.setWaypoint(target.coords)
+                            pointToDelivery(cfg, target, 'Delivery: ' .. (target.label or ''))
                             JC.notify('Deliver to ' .. (target.label or 'address'), 'info')
                         end
                     end
@@ -45,7 +51,7 @@ local function startCourier()
                 if target then
                     local pos = vector3(target.coords.x, target.coords.y, target.coords.z)
                     JC.drawMarker(pos, 46, 204, 113)
-                    if JC.isNear(pos, cfg.deliveryRadius) and not busy then
+                    if JC.isNear(pos, cfg.deliveryRadius) and not busy and not IsPedInAnyVehicle(PlayerPedId(), false) then
                         busy = true
                         JC.playAnim('anim@heists@box_carry@', 'idle', 2000)
                         local result, err2 = Sunset.AwaitCallback('sunset:jobs:courier:deliver')
@@ -58,7 +64,7 @@ local function startCourier()
                             elseif result.data then
                                 JC.sessionData = result.data
                                 JC.clearBlips()
-                                JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Warehouse')
+                                JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Courier Warehouse')
                                 JC.setWaypoint(cfg.warehouse.coords)
                                 JC.notify('Return to warehouse for next package', 'info')
                             end

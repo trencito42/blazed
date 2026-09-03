@@ -178,6 +178,49 @@ function JobClient.cleanup()
     JobClient.threadActive = false
 end
 
+function JobClient.getWorkLocation(jobId)
+    local cfg = Sunset.GetJobConfig(jobId)
+    if not cfg then return nil end
+    if cfg.depot and cfg.depot.coords then return cfg.depot.coords end
+    if cfg.warehouse and cfg.warehouse.coords then return cfg.warehouse.coords end
+    if cfg.spots and cfg.spots[1] and cfg.spots[1].coords then return cfg.spots[1].coords end
+    return nil
+end
+
+function JobClient.waypointToJob(jobId)
+    local coords = JobClient.getWorkLocation(jobId)
+    if coords then
+        JobClient.setWaypoint(coords)
+        return true
+    end
+    return false
+end
+
+function JobClient.setRouteTarget(coords, preset, label, keepDepotBlip)
+    if not keepDepotBlip then
+        JobClient.clearBlips()
+    end
+    if coords then
+        JobClient.addBlip(coords, preset or { sprite = 1, color = 5 }, label or 'Objective')
+        JobClient.setWaypoint(coords)
+    end
+end
+
+function JobClient.syncSessionState()
+    local data = Sunset.AwaitCallback('sunset:jobs:getPanelData')
+    if not data then return false end
+    if data.session and data.session.jobId then
+        JobClient.jobId = data.session.jobId
+        JobClient.state = data.session.state or 'ACTIVE'
+        JobClient.sessionData = data.session.data
+        return true
+    end
+    if JobClient.state ~= 'IDLE' then
+        JobClient.cleanup()
+    end
+    return false
+end
+
 function JobClient.getCharacterJob()
     local char = Sunset.Character or {}
     return select(1, Sunset.GetCharacterJob(char))
@@ -205,6 +248,13 @@ RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId, state, reason)
         JobClient.notify(reason or 'Shift failed', 'error')
     elseif state == 'CANCELLED' then
         JobClient.notify(reason or 'Shift cancelled', 'info')
+    end
+end)
+
+RegisterNetEvent('sunset:jobs:waypointToWork', function(jobId)
+    if JobClient.waypointToJob(jobId) then
+        local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
+        JobClient.notify('GPS set to ' .. label .. ' work location', 'info')
     end
 end)
 

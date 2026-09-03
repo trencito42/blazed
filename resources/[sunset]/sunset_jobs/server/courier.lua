@@ -20,7 +20,6 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:jobs:courier:start', function(source)
     local cfg = Sunset.GetJobConfig('courier')
-    if not SunsetJobs_ValidateCoords(source, cfg.warehouse.coords, 8.0) then return nil, 'Go to the courier warehouse to start work' end
     local queue = buildDeliveryQueue(cfg)
 
     local session, err = SunsetJobs_StartSession(source, 'courier', {

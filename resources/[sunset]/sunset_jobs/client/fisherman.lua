@@ -27,6 +27,9 @@ local function startFisherman()
     end
     JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, 'Fish Buyer')
     JC.sessionData = data
+    if cfg.spots and cfg.spots[1] then
+        JC.setWaypoint(cfg.spots[1].coords)
+    end
     JC.notify('Fish at marked spots, then sell at the pier buyer', 'info')
 
     CreateThread(function()

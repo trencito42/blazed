@@ -1,5 +1,14 @@
 local JC = Sunset.JobClient
 
+local function pointToBin(cfg, bin, label)
+    if not bin then return end
+    local pos = vector3(bin.x, bin.y, bin.z)
+    JC.clearBlips()
+    JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Garbage Depot')
+    JC.addBlip(pos, { sprite = 318, color = 2, scale = 0.8 }, label or 'Trash Bin')
+    JC.setWaypoint(pos)
+end
+
 local function startGarbage()
     local data, err = Sunset.AwaitCallback('sunset:jobs:garbage:start')
     if not data then
@@ -19,6 +28,13 @@ local function startGarbage()
     JC.registerVehiclesWithServer()
     JC.monitorVehicles()
     JC.sessionData = data
+
+    local firstBin = data.bins and data.bins[data.binIndex or 1]
+    if firstBin then
+        pointToBin(cfg, firstBin, 'Trash Bin 1')
+    else
+        JC.setWaypoint(cfg.depot.coords)
+    end
     JC.notify('Collect bins on your route — truck capacity: ' .. (data.capacity or 8), 'info')
 
     CreateThread(function()
@@ -41,8 +57,13 @@ local function startGarbage()
                             JC.sessionData = newData
                             JC.notify(('Collected (%d/%d)'):format(newData.collected, newData.capacity), 'success')
                             if newData.stage == 'return_unload' then
+                                JC.clearBlips()
+                                JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Garbage Depot')
                                 JC.setWaypoint(cfg.depot.unload or cfg.depot.coords)
                                 JC.notify('Truck full — return to depot to unload', 'info')
+                            else
+                                local nextBin = newData.bins and newData.bins[newData.binIndex or 1]
+                                pointToBin(cfg, nextBin, 'Trash Bin ' .. tostring(newData.binIndex or 1))
                             end
                         end
                     end

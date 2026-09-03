@@ -237,6 +237,13 @@ AddEventHandler('sunset:nui:menuJobAction', function(data)
             else
                 exports.sunset_ui:Notify(err or 'Failed', 'error')
             end
+        elseif data.action == 'quit_civilian' then
+            local ok, err = Sunset.AwaitCallback('sunset:quitCivilianJob')
+            if ok then
+                closeMenu()
+            else
+                exports.sunset_ui:Notify(err or 'Could not quit civilian job', 'error')
+            end
         elseif data.action == 'faction' then
             closeMenu()
             Wait(100)

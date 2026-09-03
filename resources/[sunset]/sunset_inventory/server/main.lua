@@ -35,7 +35,7 @@ function GetInventory(source)
     return Inventories[char.id]
 end
 
-function AddItem(source, item, count, slot)
+function AddItem(source, item, count, slot, metadata)
     local char = exports.sunset_core:GetCharacter(source)
     if not char or not Sunset.Items[item] then return false end
     count = math.floor(count or 1)
@@ -45,8 +45,10 @@ function AddItem(source, item, count, slot)
     local newWeight = calcWeight(inv) + getItemWeight(item, count)
     if newWeight > Sunset.Config.MaxWeight then return false end
 
+    metadata = metadata or (item == 'gas_can' and { fuel = 0 } or nil)
+
     for _, row in ipairs(inv) do
-        if row.item == item and (not slot or row.slot == slot) then
+        if row.item == item and (not slot or row.slot == slot) and not metadata then
             row.count = row.count + count
             MySQL.update.await('UPDATE character_inventory SET count = ? WHERE id = ?', { row.count, row.id })
             TriggerClientEvent('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
@@ -65,10 +67,10 @@ function AddItem(source, item, count, slot)
     if not freeSlot then return false end
 
     local id = MySQL.insert.await(
-        'INSERT INTO character_inventory (character_id, item, count, slot) VALUES (?, ?, ?, ?)',
-        { char.id, item, count, freeSlot }
+        'INSERT INTO character_inventory (character_id, item, count, slot, metadata) VALUES (?, ?, ?, ?, ?)',
+        { char.id, item, count, freeSlot, metadata and json.encode(metadata) or nil }
     )
-    inv[#inv + 1] = { id = id, item = item, count = count, slot = freeSlot, metadata = nil }
+    inv[#inv + 1] = { id = id, item = item, count = count, slot = freeSlot, metadata = metadata }
     TriggerClientEvent('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
     return true
 end
@@ -105,9 +107,43 @@ function HasItem(source, item, count)
     return false
 end
 
+local function findInventoryRow(source, item)
+    local inv = GetInventory(source)
+    for _, row in ipairs(inv) do
+        if row.item == item then return row end
+    end
+    return nil
+end
+
+local function getGasCanFuel(row)
+    if not row then return 0 end
+    if row.metadata and row.metadata.fuel ~= nil then
+        return math.max(0, math.min(100, tonumber(row.metadata.fuel) or 0))
+    end
+    return 0
+end
+
+function SetItemMetadata(source, item, metadata)
+    local row = findInventoryRow(source, item)
+    if not row then return false end
+    row.metadata = metadata or {}
+    MySQL.update.await('UPDATE character_inventory SET metadata = ? WHERE id = ?', {
+        json.encode(row.metadata), row.id,
+    })
+    local inv = GetInventory(source)
+    TriggerClientEvent('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
+    return true
+end
+
 function UseItem(source, item)
     local def = Sunset.Items[item]
     if not def or not def.usable then return false end
+
+    if item == 'gas_can' then
+        TriggerClientEvent('sunset:client:useGasCan', source)
+        return true
+    end
+
     if not RemoveItem(source, item, 1) then return false end
 
     local char = exports.sunset_core:GetCharacter(source)
@@ -129,6 +165,10 @@ exports('AddItem', AddItem)
 exports('RemoveItem', RemoveItem)
 exports('HasItem', HasItem)
 exports('UseItem', UseItem)
+exports('SetItemMetadata', SetItemMetadata)
+exports('GetGasCanFuel', function(source)
+    return getGasCanFuel(findInventoryRow(source, 'gas_can'))
+end)
 
 exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
     local inv = GetInventory(source)
@@ -138,6 +178,10 @@ end)
 exports.sunset_core:RegisterCallback('sunset:useItem', function(source, item)
     if UseItem(source, item) then return true end
     return nil, 'Cannot use item'
+end)
+
+exports.sunset_core:RegisterCallback('sunset:inventoryHasItem', function(source, item)
+    return HasItem(source, item, 1)
 end)
 
 AddEventHandler('sunset:server:characterSelected', function(source, charId)

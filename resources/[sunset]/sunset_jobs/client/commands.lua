@@ -40,8 +40,12 @@ end
 
 local function startWork()
     if JC.state ~= 'IDLE' then
-        JC.notify('Already on a shift — finish or /work cancel', 'error')
-        return
+        if not JC.syncSessionState() then
+            -- stale client state cleared
+        elseif JC.state ~= 'IDLE' then
+            JC.notify('Already on a shift — finish or /work cancel', 'error')
+            return
+        end
     end
 
     local jobId = JC.getCharacterJob()
@@ -71,6 +75,7 @@ RegisterCommand('work', function(_, args)
             Sunset.AwaitCallback('sunset:jobs:cancelWork')
         end
         JC.cleanup()
+        JC.hideObjective()
         JC.notify('Shift cancelled', 'info')
         return
     end
@@ -127,6 +132,12 @@ TriggerEvent('chat:addSuggestion', '/jobhelp', 'Help for your current job')
 TriggerEvent('chat:addSuggestion', '/skills', 'Show job skill levels')
 
 CreateThread(function()
+    local depotLabels = {
+        trucker = 'Trucker Depot',
+        garbage = 'Garbage Depot',
+        courier = 'Courier Warehouse',
+        mechanic = 'Mechanic Depot',
+    }
     for jobId, cfg in pairs(Sunset.JobsConfig or {}) do
         local depot = cfg.depot or cfg.warehouse
         if depot and depot.coords and depot.blip then
@@ -136,7 +147,7 @@ CreateThread(function()
             SetBlipScale(blip, depot.blip.scale or 0.7)
             SetBlipAsShortRange(blip, true)
             BeginTextCommandSetBlipName('STRING')
-            AddTextComponentSubstringPlayerName((Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId) .. ' Depot')
+            AddTextComponentSubstringPlayerName(depotLabels[jobId] or ((cfg.label or jobId) .. ' Work'))
             EndTextCommandSetBlipName(blip)
         end
     end

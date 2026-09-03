@@ -219,6 +219,9 @@ const Menu = {
                 actions += `<button type="button" class="menu-job-btn" data-j-action="faction">Faction info</button>`;
                 actions += `<button type="button" class="menu-job-btn menu-job-btn--danger" data-j-action="leave">Leave faction</button>`;
             }
+            if (!unemployed) {
+                actions += `<button type="button" class="menu-job-btn menu-job-btn--danger" data-j-action="quit_civilian">Quit civilian job</button>`;
+            }
         } else {
             actions = `<p class="menu-mgmt-empty">Get a <strong>civilian job</strong> at the Job Center, or join a <strong>faction</strong> at HQ on the map (LSPD, EMS, Taxi...).</p>`;
         }

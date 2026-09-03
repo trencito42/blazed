@@ -17,7 +17,8 @@ Sunset.Items = {
     chemicals = { label = 'Chemicals', weight = 0.3, usable = false },
     gunpowder = { label = 'Gunpowder', weight = 0.2, usable = false },
     sealed_pouch = { label = 'Sealed Pouch', weight = 0.15, usable = true, stress = -15 },
-    shiv = { label = 'Shiv', weight = 0.3, usable = false },
+    shiv = { label = 'Shiv', weight = 0.3, usable = false, weapon = 'WEAPON_SWITCHBLADE' },
+    gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxFuel = 100 },
     ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false },
 }
 
@@ -35,6 +36,7 @@ Sunset.Shops = {
             { item = 'plastic', price = 8 },
             { item = 'cloth', price = 10 },
             { item = 'chemicals', price = 35 },
+            { item = 'gas_can', price = 45 },
         },
     },
     ammunation = {

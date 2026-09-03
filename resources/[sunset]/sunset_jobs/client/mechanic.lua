@@ -73,6 +73,7 @@ local function startMechanic()
     JC.clearBlips()
     JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Mechanic Depot')
     JC.sessionData = data
+    JC.setWaypoint(cfg.depot.coords)
     JC.notify('On duty — accept /service mechanic calls. Stand near a vehicle and press E to repair.', 'success')
 
     CreateThread(function()
