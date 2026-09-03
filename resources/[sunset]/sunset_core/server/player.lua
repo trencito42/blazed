@@ -98,6 +98,7 @@ function Sunset.SetJob(source, job, grade)
     char.job = job
     char.job_grade = grade or 0
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    TriggerEvent('sunset:server:jobChanged', source, job, grade or 0)
     return true
 end
 

@@ -1,3 +1,5 @@
+Sunset = Sunset or {}
+
 local PendingCallbacks = {}
 local RequestId = 0
 

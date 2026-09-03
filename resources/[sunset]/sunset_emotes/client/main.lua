@@ -13,6 +13,11 @@ local Emotes = {
 
 local playing = false
 
+local function stopEmote()
+    ClearPedTasks(PlayerPedId())
+    playing = false
+end
+
 local function playEmote(name)
     local emote = Emotes[name]
     if not emote then return exports.sunset_ui:Notify('Unknown emote: ' .. name, 'error') end
@@ -27,7 +32,16 @@ local function playEmote(name)
 end
 
 RegisterCommand('e', function(_, args)
-    playEmote(args[1] or 'wave')
+    local name = args[1]
+    if not name or name == '' then
+        playEmote('wave')
+        return
+    end
+    if name == 'cancel' or name == 'stop' or name == 'c' then
+        stopEmote()
+        return
+    end
+    playEmote(name)
 end, false)
 
 RegisterCommand('emotes', function()
@@ -36,8 +50,11 @@ RegisterCommand('emotes', function()
 end, false)
 
 RegisterCommand('stopemote', function()
-    ClearPedTasks(PlayerPedId())
-    playing = false
+    stopEmote()
+end, false)
+
+RegisterCommand('cancel', function()
+    stopEmote()
 end, false)
 
 AddEventHandler('sunset:nui:emotePlay', function(data)

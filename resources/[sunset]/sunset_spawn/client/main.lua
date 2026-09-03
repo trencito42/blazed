@@ -71,9 +71,13 @@ end)
 
 CreateThread(function()
     while not spawned do
-        local ped = PlayerPedId()
-        SetEntityVisible(ped, false, false)
-        FreezeEntityPosition(ped, true)
-        Wait(500)
+        if GetResourceState('sunset_appearance') == 'started' and exports.sunset_appearance:IsEditing() then
+            Wait(200)
+        else
+            local ped = PlayerPedId()
+            SetEntityVisible(ped, false, false)
+            FreezeEntityPosition(ped, true)
+            Wait(500)
+        end
     end
 end)

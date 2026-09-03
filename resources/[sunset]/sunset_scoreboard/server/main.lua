@@ -19,7 +19,7 @@ CreateThread(function()
 
             table.insert(list, {
                 id = src,
-                name = char and (char.firstname .. ' ' .. char.lastname) or GetPlayerName(src),
+                name = exports.sunset_core:GetPlayerDisplayName(src),
                 ping = GetPlayerPing(src),
                 job = jobLabel,
                 money = char and char.cash or 0,

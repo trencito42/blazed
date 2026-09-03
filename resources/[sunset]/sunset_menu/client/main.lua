@@ -31,16 +31,22 @@ local function buildMenuData()
     local xp = extras.xp or char.xp or 0
     local xpMax = math.max(5000, level * 5000)
 
+    local playerData = exports.sunset_core:GetPlayer()
+    local displayName = playerData and playerData.name
+        or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
+
+    local playerData = exports.sunset_core:GetPlayer()
+
     return {
         id = GetPlayerServerId(PlayerId()),
-        name = char.firstname .. ' ' .. char.lastname,
+        name = displayName,
         rank = playtimeMin >= 3000 and 'LOYAL PLAYER' or 'PLAYER',
         level = level,
         xp = xp % xpMax,
         xpMax = xpMax,
         cash = char.cash,
         bank = char.bank,
-        premium = char.metadata and char.metadata.premium or 0,
+        premium = extras.premium or (playerData and playerData.premium) or 0,
         job = job and job.label or 'Unemployed',
         faction = char.job or 'unemployed',
         health = math.max(0, math.min(100, health)),
@@ -109,11 +115,9 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         return
     end
     if data.action == 'documents' or data.action == 'licenses' then
-        exports.sunset_ui:Notify('Open inventory — ID items are in your inventory', 'info')
         return
     end
     if data.action == 'phone' then
-        exports.sunset_ui:Notify('Phone — coming soon', 'info')
         return
     end
     if data.action == 'statistics' then

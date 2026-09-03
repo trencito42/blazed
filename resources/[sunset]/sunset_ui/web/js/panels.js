@@ -43,11 +43,12 @@ const Panels = {
 
     showAuth() {
         this.init();
-        $('#auth')?.classList.remove('hidden');
         this.setAuthTab('login');
     },
 
-    hideAuth() { $('#auth')?.classList.add('hidden'); },
+    hideAuth() {
+        $('#screen-auth')?.classList.add('hidden');
+    },
 
     showInventory(data) {
         this.init();
@@ -147,6 +148,152 @@ const Panels = {
     },
 
     hideClothing() { $('#clothing')?.classList.add('hidden'); },
+
+    showPhone(data) {
+        this.init();
+        $('#phone-myname').textContent = data.myName ? `— ${data.myName}` : '';
+        const list = $('#phone-messages');
+        list.innerHTML = '';
+        (data.messages || []).forEach((m) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>[${m.sender_character_id === data.myCharacterId ? 'You' : (m.sender_name || 'Player')}] ${m.message}</span>`;
+            list.appendChild(li);
+        });
+        $('#phone-close').onclick = () => post('phoneClose');
+        $('#phone-send').onclick = () => post('phoneSend', {
+            targetId: Number($('#phone-target')?.value || 0),
+            message: $('#phone-message')?.value || '',
+        });
+        $('#phone')?.classList.remove('hidden');
+    },
+    hidePhone() { $('#phone')?.classList.add('hidden'); },
+    updatePhone(data) { this.showPhone(data); },
+
+    showDocuments(data) {
+        this.init();
+        const body = $('#documents-body');
+        const title = $('#documents-title');
+        title.textContent = data.kind === 'licenses' ? 'Licenses' : 'ID Card';
+        let html = '';
+        if (data.id && data.kind !== 'licenses') {
+            html += `<p><strong>Name:</strong> ${data.id.name}</p>`;
+            html += `<p><strong>DOB:</strong> ${data.id.dob}</p>`;
+            html += `<p><strong>Nationality:</strong> ${data.id.nationality}</p>`;
+            html += `<p><strong>Account:</strong> ${data.id.account}</p>`;
+            html += `<p><strong>CID:</strong> ${data.id.cid}</p>`;
+        }
+        if (data.licenses && data.licenses.length) {
+            html += '<h3 style="margin-top:12px">Licenses</h3><ul>';
+            data.licenses.forEach((l) => { html += `<li>${l.license_type} — ${l.issued_at || ''}</li>`; });
+            html += '</ul>';
+        } else if (data.kind === 'licenses') {
+            html += '<p>No licenses on record.</p>';
+        }
+        body.innerHTML = html;
+        $('#documents-close').onclick = () => post('documentsClose');
+        $('#documents')?.classList.remove('hidden');
+    },
+    hideDocuments() { $('#documents')?.classList.add('hidden'); },
+
+    showJobCenter(data) {
+        this.init();
+        $('#jobcenter-title').textContent = data.label || 'Job Center';
+        const list = $('#jobcenter-list');
+        list.innerHTML = '';
+        (data.jobs || []).forEach((job) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${job.label}</span><button>HIRE</button>`;
+            li.querySelector('button')?.addEventListener('click', () => post('jobCenterHire', {
+                jobId: job.id, jobLabel: job.label,
+            }));
+            list.appendChild(li);
+        });
+        $('#jobcenter-close').onclick = () => post('jobCenterClose');
+        $('#jobcenter')?.classList.remove('hidden');
+    },
+    hideJobCenter() { $('#jobcenter')?.classList.add('hidden'); },
+
+    showCrafting(data) {
+        this.init();
+        this._craftStation = data.stationId;
+        $('#crafting-title').textContent = data.stationLabel || 'Crafting';
+        const list = $('#crafting-list');
+        list.innerHTML = '';
+        (data.recipes || []).forEach((recipe) => {
+            const li = document.createElement('li');
+            const needs = (recipe.inputList || []).map((row) => `${row.label} x${row.count}`).join(', ');
+            const outLabel = recipe.outputLabel || recipe.output?.item || '?';
+            const outCount = recipe.output?.count || 1;
+            li.innerHTML = `<div class="craft-row"><strong>${recipe.label}</strong><span class="craft-meta">${needs || '—'} → ${outLabel} x${outCount}</span><button>CRAFT</button></div>`;
+            li.querySelector('button')?.addEventListener('click', () => post('craftingCraft', {
+                stationId: this._craftStation,
+                recipeId: recipe.id,
+            }));
+            list.appendChild(li);
+        });
+        if (!(data.recipes || []).length) {
+            list.innerHTML = '<li><span>No recipes available here.</span></li>';
+        }
+        $('#crafting-close').onclick = () => post('craftingClose');
+        $('#crafting')?.classList.remove('hidden');
+    },
+    updateCrafting(data) { this.showCrafting(data); },
+    hideCrafting() { $('#crafting')?.classList.add('hidden'); },
+
+    showAppearance(data) {
+        this.init();
+        this._appearance = {};
+        this._renderAppearance(data);
+        $('#appearance-studio')?.classList.remove('hidden');
+    },
+
+    updateAppearance(data) {
+        this._appearance = {};
+        this._renderAppearance(data);
+    },
+
+    _renderAppearance(data) {
+        const gender = Number(data?.gender) || 0;
+        $$('#appearance-gender .studio-gender__btn').forEach((btn) => {
+            btn.classList.toggle('is-active', Number(btn.dataset.gender) === gender);
+        });
+
+        const wrap = $('#appearance-sliders');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        (data.components || []).forEach((c) => {
+            const row = document.createElement('div');
+            row.className = 'studio-row';
+            const saved = this._appearance[c.id]?.drawable ?? 0;
+            row.innerHTML = `
+                <div class="studio-row__head">
+                    <span>${c.label}</span>
+                    <span class="studio-row__val" data-val="${c.id}">${saved} / ${c.max}</span>
+                </div>
+                <input type="range" min="0" max="${c.max}" value="${saved}" data-comp="${c.id}">`;
+            const input = row.querySelector('input');
+            const valEl = row.querySelector(`[data-val="${c.id}"]`);
+            input.addEventListener('input', () => {
+                const comp = Number(input.dataset.comp);
+                const drawable = Number(input.value);
+                valEl.textContent = `${drawable} / ${c.max}`;
+                this._appearance[comp] = { drawable, texture: 0 };
+                post('appearancePreview', { component: comp, drawable, texture: 0 });
+            });
+            wrap.appendChild(row);
+        });
+
+        $$('#appearance-gender .studio-gender__btn').forEach((btn) => {
+            btn.onclick = () => post('appearanceGender', { gender: Number(btn.dataset.gender) });
+        });
+        $('#appearance-rot-left').onclick = () => post('appearanceRotate', { direction: 'left' });
+        $('#appearance-rot-right').onclick = () => post('appearanceRotate', { direction: 'right' });
+        $('#appearance-save').onclick = () => post('appearanceSave', { appearance: this._appearance });
+    },
+
+    hideAppearance() {
+        $('#appearance-studio')?.classList.add('hidden');
+    },
 };
 
 window.Panels = Panels;

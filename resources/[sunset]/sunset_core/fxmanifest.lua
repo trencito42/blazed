@@ -9,6 +9,8 @@ version '1.0.0'
 
 shared_scripts {
     'shared/config.lua',
+    'shared/factions.lua',
+    'shared/crafting.lua',
     'shared/utils.lua',
     'shared/items.lua',
     'shared/password.lua',
@@ -35,6 +37,7 @@ exports {
 server_exports {
     'GetPlayer',
     'GetCharacter',
+    'GetPlayerDisplayName',
     'RegisterCallback',
     'SaveCharacter',
     'AddMoney',

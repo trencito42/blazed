@@ -10,6 +10,12 @@ end
 local function processPayday(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
+
+    local faction = Sunset.Factions and Sunset.Factions[char.job]
+    if faction and faction.duty and not exports.sunset_factions:IsOnDuty(source) then
+        return
+    end
+
     local salary = getSalary(char)
     if salary <= 0 then return end
 

@@ -1,4 +1,5 @@
 local inShop = false
+local insideProperty = nil
 
 local function openClothing()
     inShop = true
@@ -11,6 +12,16 @@ local function openBarber()
     exports.sunset_ui:Send('clothingShow', { type = 'barber' })
     exports.sunset_ui:SetFocus(true, true)
 end
+
+AddEventHandler('sunset:world:openClothing', function()
+    if IsNuiFocused() then return end
+    openClothing()
+end)
+
+AddEventHandler('sunset:world:openBarber', function()
+    if IsNuiFocused() then return end
+    openBarber()
+end)
 
 AddEventHandler('sunset:nui:clothingApply', function(data)
     local ped = PlayerPedId()
@@ -26,36 +37,4 @@ AddEventHandler('sunset:nui:clothingClose', function()
     inShop = false
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('clothingHide', {})
-end)
-
-CreateThread(function()
-    while true do
-        local coords = GetEntityCoords(PlayerPedId())
-        local near = false
-        for _, shop in ipairs(Sunset.ClothingShops) do
-            if #(coords - shop) < 2.5 then
-                BeginTextCommandDisplayHelp('STRING')
-                AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ — Clothing Store')
-                EndTextCommandDisplayHelp(0, false, true, -1)
-                if IsControlJustReleased(0, 38) then openClothing() end
-                near = true
-                Wait(0)
-                break
-            end
-        end
-        if not near then
-            for _, shop in ipairs(Sunset.BarberShops) do
-                if #(coords - shop) < 2.5 then
-                    BeginTextCommandDisplayHelp('STRING')
-                    AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ — Barber')
-                    EndTextCommandDisplayHelp(0, false, true, -1)
-                    if IsControlJustReleased(0, 38) then openBarber() end
-                    near = true
-                    Wait(0)
-                    break
-                end
-            end
-        end
-        if not near then Wait(500) end
-    end
 end)

@@ -11,6 +11,11 @@ pull_repo() {
   if [ -f .env ]; then
     ENV_BACKUP="$(mktemp)"
     cp .env "$ENV_BACKUP"
+    cp .env .env.persist
+  elif [ -f .env.persist ]; then
+    cp .env.persist .env
+    ENV_BACKUP="$(mktemp)"
+    cp .env "$ENV_BACKUP"
   fi
 
   if [ -d .git ]; then
@@ -18,6 +23,7 @@ pull_repo() {
       GIT_TERMINAL_PROMPT=0 git reset --hard "origin/$BRANCH"
       if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
         cp "$ENV_BACKUP" .env
+        cp "$ENV_BACKUP" .env.persist
         rm -f "$ENV_BACKUP"
       fi
       return 0
@@ -39,6 +45,7 @@ pull_repo() {
 
   if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
     cp "$ENV_BACKUP" .env
+    cp "$ENV_BACKUP" .env.persist
     rm -f "$ENV_BACKUP"
   fi
 }
@@ -56,6 +63,17 @@ docker compose up -d --force-recreate fivem
 # Run SQL migrations (idempotent where possible)
 if [ -f sql/03-foundation.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/03-foundation.sql 2>/dev/null || true
+fi
+if [ -f sql/04-features.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/04-features.sql 2>/dev/null || true
+fi
+if [ -f sql/05-factions-crafting.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/05-factions-crafting.sql 2>/dev/null || true
+fi
+
+# Optional deps (ox_lib, pma-voice)
+if [ -f scripts/install-deps.sh ]; then
+  sh scripts/install-deps.sh 2>/dev/null || true
 fi
 
 echo "Done. Connect: F8 -> connect $(curl -s ifconfig.me 2>/dev/null || echo YOUR_IP):30120"

@@ -13,9 +13,12 @@
     pointer-events: auto;
 }
 
+body.chat-ui-open .chat,
+body.chat-ui-open .chat-messages,
+body.chat-ui-open .chat-msg,
 .chat.chat-open .chat-messages {
-    user-select: text;
-    -webkit-user-select: text;
+    user-select: text !important;
+    -webkit-user-select: text !important;
     pointer-events: auto;
 }
 

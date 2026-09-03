@@ -11,6 +11,14 @@ Sunset.Items = {
     bandage = { label = 'Bandage', weight = 0.1, usable = true, heal = 25 },
     cigarette = { label = 'Cigarette', weight = 0.05, usable = true, stress = -10 },
     lockpick = { label = 'Lockpick', weight = 0.2, usable = true },
+    metal_scrap = { label = 'Metal Scrap', weight = 0.5, usable = false },
+    plastic = { label = 'Plastic', weight = 0.15, usable = false },
+    cloth = { label = 'Cloth', weight = 0.1, usable = false },
+    chemicals = { label = 'Chemicals', weight = 0.3, usable = false },
+    gunpowder = { label = 'Gunpowder', weight = 0.2, usable = false },
+    sealed_pouch = { label = 'Sealed Pouch', weight = 0.15, usable = true, stress = -15 },
+    shiv = { label = 'Shiv', weight = 0.3, usable = false },
+    ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false },
 }
 
 Sunset.Shops = {
@@ -23,6 +31,10 @@ Sunset.Shops = {
             { item = 'burger', price = 15 },
             { item = 'bandage', price = 25 },
             { item = 'cigarette', price = 12 },
+            { item = 'metal_scrap', price = 15 },
+            { item = 'plastic', price = 8 },
+            { item = 'cloth', price = 10 },
+            { item = 'chemicals', price = 35 },
         },
     },
     ammunation = {
@@ -31,6 +43,7 @@ Sunset.Shops = {
         items = {
             { item = 'repairkit', price = 150 },
             { item = 'lockpick', price = 75 },
+            { item = 'gunpowder', price = 45 },
         },
     },
 }
@@ -63,4 +76,28 @@ Sunset.ClothingShops = {
 Sunset.BarberShops = {
     vector3(-814.31, -183.82, 37.57),
     vector3(136.78, -1708.40, 29.29),
+}
+
+Sunset.JobCenters = {
+    cityhall = {
+        label = 'Job Center',
+        coords = vector3(-265.04, -963.62, 31.22),
+        blip = { sprite = 407, color = 2, scale = 0.85 },
+        jobs = {
+            { id = 'unemployed', label = 'Unemployed' },
+            { id = 'taxi', label = 'Taxi Driver' },
+            { id = 'mechanic', label = 'Mechanic' },
+        },
+    },
+}
+
+-- Blip presets for world map
+Sunset.WorldBlips = {
+    shop = { sprite = 52, color = 2, scale = 0.75 },
+    atm = { sprite = 108, color = 2, scale = 0.65 },
+    garage = { sprite = 357, color = 3, scale = 0.75 },
+    clothing = { sprite = 73, color = 47, scale = 0.7 },
+    barber = { sprite = 71, color = 47, scale = 0.7 },
+    property = { sprite = 40, color = 5, scale = 0.75 },
+    jobcenter = { sprite = 407, color = 2, scale = 0.85 },
 }

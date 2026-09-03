@@ -2,7 +2,7 @@ Sunset = Sunset or {}
 
 Sunset.Config = {
     ServerName = 'SunsetMP',
-    MaxCharacters = 3,
+    MaxCharacters = 1,
     DefaultSpawn = vector4(-1037.58, -2737.58, 20.17, 328.0),
     StartingCash = 500,
     StartingBank = 2500,
@@ -31,11 +31,7 @@ Sunset.Config = {
 }
 
 Sunset.Jobs = {
-    unemployed = { label = 'Unemployed', grades = { [0] = { label = 'Freelancer', salary = 0 } } },
-    taxi = { label = 'Taxi Driver', grades = { [0] = { label = 'Driver', salary = 150 } } },
-    mechanic = { label = 'Mechanic', grades = { [0] = { label = 'Apprentice', salary = 200 } } },
-    police = { label = 'Police', grades = { [0] = { label = 'Cadet', salary = 350 } } },
-    medic = { label = 'EMS', grades = { [0] = { label = 'Paramedic', salary = 300 } } },
+    unemployed = { label = 'Unemployed', type = 'civilian', grades = { [0] = { label = 'Freelancer', salary = 0, perms = {} } } },
 }
 
 Sunset.Nationalities = {

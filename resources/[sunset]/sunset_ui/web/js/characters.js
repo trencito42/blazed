@@ -55,17 +55,35 @@ const Characters = {
         return el;
     },
 
-    initCreate() {
+    initCreate(data = {}) {
         this.selectedGender = 0;
+        this.firstLogin = data.firstLogin === true;
 
         const sel = $('#nationality');
         sel.innerHTML = '';
-        this.nationalities.forEach(n => {
+        (data.nationalities || this.nationalities).forEach(n => {
             const opt = document.createElement('option');
             opt.value = n;
             opt.textContent = n;
             sel.appendChild(opt);
         });
+
+        const suggested = (data.suggestedName || '').trim();
+        if (suggested) {
+            const parts = suggested.split(/[\s_]+/);
+            $('#firstname').value = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+            $('#lastname').value = parts[1]
+                ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1)
+                : 'Player';
+        } else {
+            $('#firstname').value = '';
+            $('#lastname').value = '';
+        }
+
+        const backBtn = $('#btn-back-select');
+        if (backBtn) {
+            backBtn.style.display = this.firstLogin ? 'none' : '';
+        }
 
         $$('.toggle__btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.gender === '0');

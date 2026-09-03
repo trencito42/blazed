@@ -67,6 +67,7 @@
     font-size: 13px;
 }
 .panel-list button {
+    flex-shrink: 0;
     background: rgba(255,140,0,0.15);
     border: 1px solid rgba(255,140,0,0.35);
     color: #ff8c00;
@@ -75,6 +76,31 @@
     font-size: 11px;
     font-weight: 600;
     cursor: default;
+}
+
+.craft-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.craft-row strong { font-size: 14px; }
+
+.craft-meta {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.35;
+}
+
+.panel-list li:has(.craft-row) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.panel-list li:has(.craft-row) button {
+    align-self: flex-end;
 }
 .panel-close {
     margin-top: 16px;

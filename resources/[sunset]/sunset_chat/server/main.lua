@@ -3,7 +3,7 @@ RegisterNetEvent('sunset:chat:send', function(message)
     if not message or #message > 256 then return end
 
     local char = exports.sunset_core:GetCharacter(src)
-    local name = char and (char.firstname .. ' ' .. char.lastname) or GetPlayerName(src)
+    local name = exports.sunset_core:GetPlayerDisplayName(src)
     local id = src
 
     TriggerClientEvent('sunset:chat:message', -1, {
@@ -19,7 +19,7 @@ RegisterCommand('me', function(source, args)
     local msg = table.concat(args, ' ')
     if msg == '' then return end
     local char = exports.sunset_core:GetCharacter(source)
-    local name = char and (char.firstname .. ' ' .. char.lastname) or GetPlayerName(source)
+    local name = exports.sunset_core:GetPlayerDisplayName(source)
     TriggerClientEvent('sunset:chat:message', -1, {
         id = source,
         name = '* ' .. name,

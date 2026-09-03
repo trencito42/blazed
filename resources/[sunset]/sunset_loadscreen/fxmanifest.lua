@@ -8,6 +8,7 @@ version '1.1.0'
 
 loadscreen 'index.html'
 loadscreen_manual_shutdown 'yes'
+loadscreen_hide_busyspinner 'yes'
 loadscreen_cursor 'no'
 
 files {

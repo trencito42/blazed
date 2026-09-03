@@ -139,15 +139,39 @@ RegisterCommand('announce', function(source, args)
     TriggerClientEvent('sunset:client:notify', -1, msg, 'warning')
 end, false)
 
--- /setadmin [id] [level]
+-- /setadmin [id|username] [level]
 RegisterCommand('setadmin', function(source, args)
     if source ~= 0 and not hasPerm(source, 'setadmin') then return notify(source, 'Fără permisiune', 'error') end
-    local target = getTarget(source, args[1])
-    if not target then return end
+
+    local arg1 = args[1]
     local level = tonumber(args[2]) or 1
-    local license = Sunset.GetIdentifier(target, 'license')
-    SetAdmin(license, level, GetPlayerName(target), source == 0 and 'console' or GetPlayerName(source))
-    notify(source ~= 0 and source or target, 'Admin setat level ' .. level, 'success')
+    if not arg1 then
+        notify(source ~= 0 and source or 0, 'Usage: /setadmin [id|username] [level]', 'error')
+        return
+    end
+
+    local target = tonumber(arg1)
+    if target and GetPlayerName(target) then
+        local license = Sunset.GetIdentifier(target, 'license')
+        SetAdmin(license, level, GetPlayerName(target), source == 0 and 'console' or GetPlayerName(source))
+        notify(source ~= 0 and source or target, 'Admin setat level ' .. level, 'success')
+        return
+    end
+
+    local account = MySQL.single.await('SELECT id, username FROM accounts WHERE LOWER(username) = LOWER(?)', { arg1 })
+    if not account then return notify(source ~= 0 and source or 0, 'Account not found', 'error') end
+
+    MySQL.update.await('UPDATE accounts SET admin_level = ? WHERE id = ?', { level, account.id })
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local player = exports.sunset_core:GetPlayer(src)
+        if player and player.account_id == account.id then
+            player.admin_level = level
+            loadAdmin(src)
+            notify(src, 'Your admin level is now ' .. level, 'success')
+        end
+    end
+    if source ~= 0 then notify(source, 'Admin set for account ' .. account.username, 'success') end
 end, false)
 
 -- /coords

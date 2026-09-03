@@ -89,15 +89,16 @@ window.addEventListener('message', (event) => {
             showApp(true);
             showHud(false);
             App.data = data || {};
-            if (screen === 'auth' && window.Panels) {
-                Panels.showAuth();
+            if (screen === 'auth') {
+                showScreen('auth');
+                if (window.Panels) Panels.showAuth();
                 return;
             }
             showScreen(screen);
             if (screen === 'characters' && window.Characters) {
                 Characters.init(data);
             }
-            if (screen === 'create' && window.Characters) {
+        if (screen === 'create' && window.Characters) {
                 Characters.initCreate(data);
             }
             if (screen === 'loading') {
@@ -204,8 +205,53 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideClothing();
             break;
 
+        case 'phoneShow':
+            if (window.Panels) Panels.showPhone(data || event.data.data);
+            break;
+        case 'phoneUpdate':
+            if (window.Panels) Panels.updatePhone(data || event.data.data);
+            break;
+        case 'phoneHide':
+            if (window.Panels) Panels.hidePhone();
+            break;
+        case 'documentsShow':
+            if (window.Panels) Panels.showDocuments(data || event.data.data);
+            break;
+        case 'documentsHide':
+            if (window.Panels) Panels.hideDocuments();
+            break;
+        case 'jobCenterShow':
+            if (window.Panels) Panels.showJobCenter(data || event.data.data);
+            break;
+        case 'jobCenterHide':
+            if (window.Panels) Panels.hideJobCenter();
+            break;
+        case 'craftingShow':
+            if (window.Panels) Panels.showCrafting(data || event.data.data);
+            break;
+        case 'craftingUpdate':
+            if (window.Panels) Panels.updateCrafting(data || event.data.data);
+            break;
+        case 'craftingHide':
+            if (window.Panels) Panels.hideCrafting();
+            break;
+        case 'appearanceShow':
+            showApp(false);
+            showHud(false);
+            if (window.Panels) Panels.showAppearance(data || event.data.data);
+            break;
+        case 'appearanceUpdate':
+            if (window.Panels) Panels.updateAppearance(data || event.data.data);
+            break;
+        case 'appearanceHide':
+            if (window.Panels) Panels.hideAppearance();
+            break;
+
         case 'authHide':
-            if (window.Panels) Panels.hideAuth();
+            if (window.Panels) {
+                Panels.hideAuth();
+                showApp(false);
+            }
             break;
 
         case 'hudEditToggle':

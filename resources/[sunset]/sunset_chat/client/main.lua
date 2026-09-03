@@ -72,15 +72,7 @@ AddEventHandler('sunset:client:playerSpawned', function()
     })
 end)
 
-CreateThread(function()
-    while true do
-        if chatOpen then
-            DisableAllControlActions(0)
-            EnableControlAction(0, 249, true) -- push to talk
-        end
-        Wait(chatOpen and 0 or 500)
-    end
-end)
+-- NUI focus handles input; do not DisableAllControlActions here (breaks chat keys/copy).
 
 CreateThread(function()
     while true do

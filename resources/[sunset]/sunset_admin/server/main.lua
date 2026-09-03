@@ -19,15 +19,28 @@ function GetAdminLevel(source)
 end
 exports('GetAdminLevel', GetAdminLevel)
 
-local function loadAdmin(source)
+function loadAdmin(source)
     local license = getLicense(source)
     if not license then return end
 
+    local level = 0
     local row = MySQL.single.await('SELECT level FROM admins WHERE license = ?', { license })
-    if row then
-        Admins[license] = row.level
-        TriggerClientEvent('sunset:client:setAdmin', source, row.level)
-        print(('^2[SunsetAdmin]^7 %s loaded as level %d'):format(GetPlayerName(source), row.level))
+    if row then level = row.level end
+
+    local player = exports.sunset_core:GetPlayer(source)
+    if player and player.account_id then
+        local account = MySQL.single.await('SELECT admin_level FROM accounts WHERE id = ?', { player.account_id })
+        if account and tonumber(account.admin_level) then
+            level = math.max(level, tonumber(account.admin_level))
+        end
+    elseif player and player.admin_level then
+        level = math.max(level, player.admin_level)
+    end
+
+    if level > 0 then
+        Admins[license] = level
+        TriggerClientEvent('sunset:client:setAdmin', source, level)
+        print(('^2[SunsetAdmin]^7 %s loaded as level %d'):format(GetPlayerName(source), level))
     end
 end
 

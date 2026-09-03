@@ -22,9 +22,9 @@ function Hide()
 end
 exports('Hide', Hide)
 
-function SetFocus(hasFocus, hasCursor)
+function SetFocus(hasFocus, hasCursor, keepInput)
     SetNuiFocus(hasFocus, hasCursor == true)
-    SetNuiFocusKeepInput(false)
+    SetNuiFocusKeepInput(keepInput == true)
 end
 exports('SetFocus', SetFocus)
 

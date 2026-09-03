@@ -1,6 +1,4 @@
 local nextPaydayLabel = '--:--'
-local nearShop = nil
-local nearAtm = false
 
 RegisterNetEvent('sunset:client:serverTime', function(data)
     if data and data.nextPayday then nextPaydayLabel = data.nextPayday end
@@ -12,53 +10,16 @@ end)
 
 exports('GetNextPayday', function() return nextPaydayLabel end)
 
-CreateThread(function()
-    while true do
-        local ped = PlayerPedId()
-        local coords = GetEntityCoords(ped)
-        nearShop = nil
-        nearAtm = false
-
-        for id, shop in pairs(Sunset.Shops) do
-            if #(coords - shop.coords) < 2.5 then
-                nearShop = id
-                break
-            end
-        end
-
-        for _, atm in ipairs(Sunset.ATMs) do
-            if #(coords - atm) < 2.0 then nearAtm = true break end
-        end
-
-        Wait(500)
-    end
+AddEventHandler('sunset:world:openShop', function(shopId, shop)
+    if IsNuiFocused() then return end
+    exports.sunset_ui:Send('shopShow', { shopId = shopId, shop = shop })
+    exports.sunset_ui:SetFocus(true, true)
 end)
 
-CreateThread(function()
-    while true do
-        if nearShop then
-            local shop = Sunset.Shops[nearShop]
-            BeginTextCommandDisplayHelp('STRING')
-            AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ to open ' .. shop.label)
-            EndTextCommandDisplayHelp(0, false, true, -1)
-            if IsControlJustReleased(0, 38) then
-                exports.sunset_ui:Send('shopShow', { shopId = nearShop, shop = shop })
-                exports.sunset_ui:SetFocus(true, true)
-            end
-            Wait(0)
-        elseif nearAtm then
-            BeginTextCommandDisplayHelp('STRING')
-            AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ to use ATM')
-            EndTextCommandDisplayHelp(0, false, true, -1)
-            if IsControlJustReleased(0, 38) then
-                exports.sunset_ui:Send('atmShow', {})
-                exports.sunset_ui:SetFocus(true, true)
-            end
-            Wait(0)
-        else
-            Wait(500)
-        end
-    end
+AddEventHandler('sunset:world:openAtm', function()
+    if IsNuiFocused() then return end
+    exports.sunset_ui:Send('atmShow', {})
+    exports.sunset_ui:SetFocus(true, true)
 end)
 
 AddEventHandler('sunset:nui:shopBuy', function(data)

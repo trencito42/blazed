@@ -45,11 +45,15 @@ local function buildHudData()
     local healthPct = maxHealth > 0 and (health / maxHealth) * 100 or 0
     local street, zone = getStreetName()
 
+    local playerData = exports.sunset_core:GetPlayer()
+    local displayName = playerData and playerData.name
+        or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
+
     local data = {
         playerId = GetPlayerServerId(PlayerId()),
         cash = char.cash,
         bank = char.bank,
-        name = char.firstname .. ' ' .. char.lastname,
+        name = displayName,
         job = getJobLabel(char.job),
         health = healthPct,
         armor = GetPedArmour(ped),

@@ -3,6 +3,9 @@ local function formatLogin(ts)
     if type(ts) == 'number' then
         return os.date('%d.%m.%Y %H:%M', ts)
     end
+    if type(ts) == 'table' and ts.year then
+        return ('%02d.%02d.%04d %02d:%02d'):format(ts.day, ts.month, ts.year, ts.hour or 0, ts.min or 0)
+    end
     local s = tostring(ts)
     local y, mo, d, h, mi = s:match('(%d+)-(%d+)-(%d+)[ T](%d+):(%d+)')
     if y then return ('%s.%s.%s %s:%s'):format(d, mo, y, h, mi) end
@@ -44,6 +47,7 @@ exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
         playtime = totalPlaytime,
         playtimeFormatted = ('%dH %dM'):format(math.floor(totalPlaytime / 60), totalPlaytime % 60),
         lastLogin = formatLogin(char.last_played_before or char.last_played),
+        premium = player.premium_points or 0,
         nextPayday = getNextPaydayTime(),
         serverTime = os.date('%H:%M'),
         vehicleCount = vehicles,

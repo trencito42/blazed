@@ -28,7 +28,11 @@ local function notify(msg, type)
 end
 
 local function blocked()
-    return IsNuiFocused() or IsPauseMenuActive()
+    if IsNuiFocused() or IsPauseMenuActive() then return true end
+    local ok, open = pcall(function()
+        return exports.sunset_chat:IsChatOpen()
+    end)
+    return ok and open == true
 end
 
 local function driverOnly()
@@ -225,26 +229,16 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
     notify('Vehicle stored', 'success')
 end)
 
-CreateThread(function()
-    while true do
-        local ped = PlayerPedId()
-        local coords = GetEntityCoords(ped)
-        for id, garage in pairs(Sunset.Garages) do
-            if #(coords - garage.store) < 3.0 then
-                BeginTextCommandDisplayHelp('STRING')
-                AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ to store vehicle | /garage to open garage')
-                EndTextCommandDisplayHelp(0, false, true, -1)
-                if IsControlJustReleased(0, 38) and getVeh() ~= 0 then
-                    TriggerServerEvent('sunset:server:vehicleStored', GetVehicleNumberPlateText(getVeh()):gsub('%s+', ''), {}, fuel, GetVehicleEngineHealth(getVeh()), GetVehicleBodyHealth(getVeh()), id)
-                    DeleteVehicle(getVeh())
-                    notify('Vehicle stored', 'success')
-                end
-                Wait(0)
-                goto continue
-            end
-        end
-        Wait(500)
-        ::continue::
+AddEventHandler('sunset:world:garageStore', function(garageId)
+    local veh = getVeh()
+    if veh == 0 or not isDriver() then
+        notify('You must be driving your vehicle to store it', 'error')
+        return
     end
+    local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
+    TriggerServerEvent('sunset:server:vehicleStored', plate, { model = GetEntityModel(veh) }, fuel,
+        GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId)
+    DeleteVehicle(veh)
+    notify('Vehicle stored', 'success')
 end)
 

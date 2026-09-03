@@ -25,6 +25,7 @@ const Chat = {
         const wrap = $('#chat-input-wrap');
         const input = $('#chat-input');
         if (open) {
+            document.body.classList.add('chat-ui-open');
             chat.classList.add('chat-open');
             wrap.classList.remove('hidden');
             setTimeout(() => {
@@ -32,6 +33,7 @@ const Chat = {
                 input.setSelectionRange(input.value.length, input.value.length);
             }, 50);
         } else {
+            document.body.classList.remove('chat-ui-open');
             chat.classList.remove('chat-open');
             wrap.classList.add('hidden');
             input.value = '';

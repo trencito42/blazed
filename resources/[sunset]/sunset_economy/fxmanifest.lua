@@ -6,9 +6,13 @@ name 'sunset_economy'
 description 'Payday, shops, ATM'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_inventory', 'sunset_ui' }
+dependencies { 'sunset_core', 'sunset_inventory', 'sunset_ui', 'sunset_world', 'sunset_factions' }
 
-shared_scripts { '@sunset_core/shared/config.lua', '@sunset_core/shared/items.lua' }
+shared_scripts {
+    '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/factions.lua',
+    '@sunset_core/shared/items.lua',
+}
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
@@ -16,6 +20,7 @@ server_scripts {
 }
 
 client_scripts {
+    '@sunset_core/client/callbacks.lua',
     'client/main.lua',
 }
 

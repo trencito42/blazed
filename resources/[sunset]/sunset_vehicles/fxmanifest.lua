@@ -12,6 +12,7 @@ shared_scripts {
 }
 
 client_scripts {
+    '@sunset_core/client/callbacks.lua',
     'client/main.lua',
 }
 
@@ -20,7 +21,7 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_ui', 'sunset_core' }
+dependencies { 'sunset_ui', 'sunset_core', 'sunset_world' }
 
 exports {
     'GetVehicleState',
