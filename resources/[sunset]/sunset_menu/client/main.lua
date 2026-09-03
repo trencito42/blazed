@@ -7,16 +7,17 @@ local function formatPlaytime(minutes)
     return ('%dH %dM'):format(h, m)
 end
 
+-- os.* is not available on FiveM client; parse DB timestamps as strings only.
 local function formatLastLogin(ts)
     if not ts or ts == '' then return '—' end
-    if type(ts) == 'number' then
-        return os.date('%d.%m.%Y %H:%M', ts)
-    end
-    local y, mo, d, h, mi = ts:match('(%d+)-(%d+)-(%d+)[ T](%d+):(%d+)')
+    local s = tostring(ts)
+    local y, mo, d, h, mi = s:match('(%d+)-(%d+)-(%d+)[ T](%d+):(%d+)')
     if y then
         return ('%s.%s.%s %s:%s'):format(d, mo, y, h, mi)
     end
-    return tostring(ts)
+    local d2, mo2, y2, h2, mi2 = s:match('(%d+)%.(%d+)%.(%d+) (%d+):(%d+)')
+    if y2 then return s end
+    return s
 end
 
 local function buildMenuData()
@@ -72,11 +73,20 @@ local function buildMenuData()
 end
 
 local function toggleMenu(show)
-    menuOpen = show
-    exports.sunset_ui:SetFocus(show, show)
     if show then
-        exports.sunset_ui:Send('menuShow', buildMenuData())
+        local ok, data = pcall(buildMenuData)
+        if not ok or not data then
+            menuOpen = false
+            exports.sunset_ui:SetFocus(false, false)
+            exports.sunset_ui:Notify('Could not open menu', 'error')
+            return
+        end
+        menuOpen = true
+        exports.sunset_ui:SetFocus(true, true)
+        exports.sunset_ui:Send('menuShow', data)
     else
+        menuOpen = false
+        exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('menuHide', {})
     end
 end
@@ -106,8 +116,10 @@ end)
 CreateThread(function()
     while true do
         if menuOpen then
-            local data = buildMenuData()
-            if data then exports.sunset_ui:Send('menuUpdate', data) end
+            local ok, data = pcall(buildMenuData)
+            if ok and data then
+                exports.sunset_ui:Send('menuUpdate', data)
+            end
             Wait(500)
         else
             Wait(1000)
