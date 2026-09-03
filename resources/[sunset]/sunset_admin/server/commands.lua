@@ -141,6 +141,56 @@ RegisterCommand('ban', function(source, args)
     if source ~= 0 then notify(source, 'Player banned', 'success') end
 end, false)
 
+local function resolveUnbanLicense(source, arg)
+    if not arg or arg == '' then
+        if source ~= 0 then
+            notify(source, 'Usage: /unban [player id or license:xxx]', 'error')
+        else
+            print('[Sunset] Usage: /unban [player id or license:xxx]')
+        end
+        return nil
+    end
+
+    if string.sub(arg, 1, 8) == 'license:' then
+        return arg
+    end
+
+    local target = resolvePlayer(source, arg)
+    if target then
+        return Sunset.GetIdentifier(target, 'license')
+    end
+
+    if source ~= 0 then
+        local ids = onlineIds()
+        local hint = #ids > 0 and (' Online: ' .. table.concat(ids, ', ')) or ' No one online. Use license:xxx for offline players.'
+        notify(source, 'Invalid player (ID: ' .. tostring(arg) .. ').' .. hint, 'error')
+    else
+        print('[Sunset] Invalid player or use license:xxx')
+    end
+    return nil
+end
+
+-- /unban [id|license:xxx]
+RegisterCommand('unban', function(source, args)
+    if source ~= 0 and not hasPerm(source, 'unban') then return notify(source, 'No permission', 'error') end
+    local license = resolveUnbanLicense(source, args[1])
+    if not license then return end
+
+    local removed = MySQL.update.await('DELETE FROM bans WHERE license = ?', { license })
+    local adminName = source == 0 and 'console' or GetPlayerName(source)
+
+    if removed and removed > 0 then
+        print(('^2[SunsetAdmin]^7 %s unbanned %s (%d row(s))'):format(adminName, license, removed))
+        if source ~= 0 then notify(source, 'Player unbanned', 'success') end
+    else
+        if source ~= 0 then
+            notify(source, 'No ban found for that license', 'error')
+        else
+            print('[Sunset] No ban found for ' .. license)
+        end
+    end
+end, false)
+
 -- /tp [id] sau /tp x y z
 RegisterCommand('tp', function(source, args)
     if source == 0 then return end
