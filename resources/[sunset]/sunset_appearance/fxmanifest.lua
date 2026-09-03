@@ -13,10 +13,11 @@ shared_scripts {
     '@sunset_core/shared/utils.lua',
 }
 
-exports { 'IsEditing' }
+exports { 'IsEditing', 'ApplyAppearance' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
+    'client/appearance_lib.lua',
     'client/main.lua',
 }
 

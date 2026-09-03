@@ -244,6 +244,9 @@ window.addEventListener('message', (event) => {
         case 'appearanceUpdate':
             if (window.Panels) Panels.updateAppearance(data || event.data.data);
             break;
+        case 'appearanceCamera':
+            if (window.Panels) Panels.setAppearanceCamera((data || event.data.data)?.camera);
+            break;
         case 'appearanceHide':
             if (window.Panels) Panels.hideAppearance();
             break;

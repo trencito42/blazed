@@ -242,14 +242,18 @@ const Panels = {
 
     showAppearance(data) {
         this.init();
-        this._appearance = {};
         this._renderAppearance(data);
         $('#appearance-studio')?.classList.remove('hidden');
     },
 
     updateAppearance(data) {
-        this._appearance = {};
         this._renderAppearance(data);
+    },
+
+    setAppearanceCamera(mode) {
+        ['full', 'face', 'feet'].forEach((m) => {
+            $(`#appearance-cam-${m}`)?.classList.toggle('is-active', m === mode);
+        });
     },
 
     _renderAppearance(data) {
@@ -261,24 +265,32 @@ const Panels = {
         const wrap = $('#appearance-sliders');
         if (!wrap) return;
         wrap.innerHTML = '';
-        (data.components || []).forEach((c) => {
+
+        (data.fields || []).forEach((field) => {
             const row = document.createElement('div');
             row.className = 'studio-row';
-            const saved = this._appearance[c.id]?.drawable ?? 0;
+            const val = field.value ?? 0;
             row.innerHTML = `
                 <div class="studio-row__head">
-                    <span>${c.label}</span>
-                    <span class="studio-row__val" data-val="${c.id}">${saved} / ${c.max}</span>
+                    <span>${field.label}</span>
+                    <span class="studio-row__val">${val} / ${field.max}</span>
                 </div>
-                <input type="range" min="0" max="${c.max}" value="${saved}" data-comp="${c.id}">`;
+                <input type="range" min="${field.min}" max="${field.max}" value="${val}">`;
             const input = row.querySelector('input');
-            const valEl = row.querySelector(`[data-val="${c.id}"]`);
-            input.addEventListener('input', () => {
-                const comp = Number(input.dataset.comp);
-                const drawable = Number(input.value);
-                valEl.textContent = `${drawable} / ${c.max}`;
-                this._appearance[comp] = { drawable, texture: 0 };
-                post('appearancePreview', { component: comp, drawable, texture: 0 });
+            const valEl = row.querySelector('.studio-row__val');
+            const sendChange = () => {
+                const value = Number(input.value);
+                valEl.textContent = `${value} / ${field.max}`;
+                post('appearanceChange', {
+                    type: field.type,
+                    component: field.component,
+                    value,
+                    camera: field.camera,
+                });
+            };
+            input.addEventListener('input', sendChange);
+            input.addEventListener('focus', () => {
+                if (field.camera) post('appearanceCamera', { mode: field.camera });
             });
             wrap.appendChild(row);
         });
@@ -286,9 +298,20 @@ const Panels = {
         $$('#appearance-gender .studio-gender__btn').forEach((btn) => {
             btn.onclick = () => post('appearanceGender', { gender: Number(btn.dataset.gender) });
         });
+
+        const setCamActive = (mode) => {
+            ['full', 'face', 'feet'].forEach((m) => {
+                $(`#appearance-cam-${m}`)?.classList.toggle('is-active', m === mode);
+            });
+        };
+        setCamActive(data.camera || 'full');
+
+        $('#appearance-cam-full').onclick = () => { post('appearanceCamera', { mode: 'full' }); setCamActive('full'); };
+        $('#appearance-cam-face').onclick = () => { post('appearanceCamera', { mode: 'face' }); setCamActive('face'); };
+        $('#appearance-cam-feet').onclick = () => { post('appearanceCamera', { mode: 'feet' }); setCamActive('feet'); };
         $('#appearance-rot-left').onclick = () => post('appearanceRotate', { direction: 'left' });
         $('#appearance-rot-right').onclick = () => post('appearanceRotate', { direction: 'right' });
-        $('#appearance-save').onclick = () => post('appearanceSave', { appearance: this._appearance });
+        $('#appearance-save').onclick = () => post('appearanceSave', {});
     },
 
     hideAppearance() {

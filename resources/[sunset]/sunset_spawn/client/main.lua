@@ -23,7 +23,11 @@ local function spawnPlayer(char)
 
     local ped = PlayerPedId()
     SetPedDefaultComponentVariation(ped)
-    applyAppearance(ped, char.appearance)
+    if char.appearance and next(char.appearance) then
+        if GetResourceState('sunset_appearance') == 'started' then
+            exports.sunset_appearance:ApplyAppearance(ped, char.appearance, char.gender)
+        end
+    end
 
     SetEntityCoordsNoOffset(ped, x, y, z, false, false, false)
     SetEntityHeading(ped, w)

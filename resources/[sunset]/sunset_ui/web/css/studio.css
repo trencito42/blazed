@@ -265,9 +265,10 @@
     cursor: default;
 }
 
-.studio-rotate button:hover {
-    border-color: rgba(255, 140, 0, 0.4);
+.studio-rotate button.is-active {
+    border-color: rgba(255, 140, 0, 0.55);
     color: #ff8c00;
+    background: rgba(255, 140, 0, 0.12);
 }
 
 .studio-save {

@@ -1,28 +1,23 @@
 local editing = false
 local pendingChar = nil
+local currentAppearance = nil
 local studioCam = nil
 local pedHeading = 180.0
+local cameraMode = 'full'
 
 Sunset = Sunset or {}
 
 local FALLBACK_STUDIO = vector4(-1037.58, -2737.58, 20.17, 328.0)
 
+local CAMERA_PRESETS = {
+    full = { dist = 3.6, z = 0.05, aim = 0.02, fov = 48.0 },
+    face = { dist = 1.05, z = 0.68, aim = 0.62, fov = 32.0 },
+    feet = { dist = 2.4, z = -0.72, aim = -0.62, fov = 42.0 },
+}
+
 local function getStudioCoords()
     local spawn = (Sunset.Config and Sunset.Config.DefaultSpawn) or FALLBACK_STUDIO
     return vector4(spawn.x, spawn.y, spawn.z, spawn.w or 328.0)
-end
-
-local function applyAppearance(ped, appearance)
-    if not appearance then return end
-    for i = 0, 11 do
-        local comp = appearance[tostring(i)] or appearance[i]
-        if comp then
-            SetPedComponentVariation(ped, i, comp.drawable or 0, comp.texture or 0, 0)
-        end
-    end
-    if appearance.hair then
-        SetPedComponentVariation(ped, 2, appearance.hair.drawable or 0, appearance.hair.texture or 0, 0)
-    end
 end
 
 local function destroyStudio()
@@ -34,19 +29,22 @@ local function destroyStudio()
     ClearFocus()
 end
 
-local function setupCamera(ped)
+local function setupCamera(ped, mode)
+    mode = mode or cameraMode or 'full'
+    cameraMode = mode
+    local preset = CAMERA_PRESETS[mode] or CAMERA_PRESETS.full
+
     if studioCam then DestroyCam(studioCam, false) end
     studioCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
 
     local coords = GetEntityCoords(ped)
     local heading = math.rad(pedHeading)
-    local dist = 2.35
-    local camX = coords.x - math.sin(heading) * dist
-    local camY = coords.y + math.cos(heading) * dist
+    local camX = coords.x - math.sin(heading) * preset.dist
+    local camY = coords.y + math.cos(heading) * preset.dist
 
-    SetCamCoord(studioCam, camX, camY, coords.z + 0.62)
-    PointCamAtCoord(studioCam, coords.x, coords.y, coords.z + 0.58)
-    SetCamFov(studioCam, 38.0)
+    SetCamCoord(studioCam, camX, camY, coords.z + preset.z)
+    PointCamAtCoord(studioCam, coords.x, coords.y, coords.z + preset.aim)
+    SetCamFov(studioCam, preset.fov)
     SetCamActive(studioCam, true)
     RenderScriptCams(true, false, 0, true, true)
 end
@@ -64,21 +62,10 @@ local function loadFreemodePed(char)
 
     local ped = PlayerPedId()
     SetPedDefaultComponentVariation(ped)
-    if char.appearance and next(char.appearance) then
-        applyAppearance(ped, char.appearance)
-    end
-    return true
-end
 
-local function buildComponentList(ped)
-    return {
-        { id = 0, label = 'Face', max = GetNumberOfPedDrawableVariations(ped, 0) - 1 },
-        { id = 2, label = 'Hair', max = GetNumberOfPedDrawableVariations(ped, 2) - 1 },
-        { id = 3, label = 'Torso', max = GetNumberOfPedDrawableVariations(ped, 3) - 1 },
-        { id = 4, label = 'Legs', max = GetNumberOfPedDrawableVariations(ped, 4) - 1 },
-        { id = 6, label = 'Shoes', max = GetNumberOfPedDrawableVariations(ped, 6) - 1 },
-        { id = 11, label = 'Top', max = GetNumberOfPedDrawableVariations(ped, 11) - 1 },
-    }
+    currentAppearance = SunsetAppearance.normalize(char.appearance, char.gender or 0)
+    SunsetAppearance.apply(ped, currentAppearance, char.gender or 0)
+    return true
 end
 
 local function waitForWorldAt(x, y, z, ped)
@@ -100,6 +87,17 @@ local function waitForWorldAt(x, y, z, ped)
     end
 end
 
+local function pushEditorUi(char)
+    local ped = PlayerPedId()
+    local fields, appearance = SunsetAppearance.buildEditor(ped, currentAppearance, char.gender or 0)
+    currentAppearance = appearance
+    exports.sunset_ui:Send('appearanceShow', {
+        gender = char.gender or 0,
+        fields = fields,
+        camera = cameraMode,
+    })
+end
+
 local function enterStudio(char, skipFade)
     if not skipFade then
         DoScreenFadeOut(400)
@@ -119,6 +117,7 @@ local function enterStudio(char, skipFade)
     local studio = getStudioCoords()
     local ped = PlayerPedId()
     pedHeading = studio.w
+    cameraMode = 'full'
 
     SetEntityCoordsNoOffset(ped, studio.x, studio.y, studio.z, false, false, false)
     SetEntityHeading(ped, pedHeading)
@@ -132,7 +131,7 @@ local function enterStudio(char, skipFade)
     ClearPedTasksImmediately(ped)
     SetEntityCollision(ped, false, false)
 
-    setupCamera(ped)
+    setupCamera(ped, 'full')
     DisplayRadar(false)
     NetworkOverrideClockTime(20, 30, 0)
     SetWeatherTypeNowPersist('CLEAR')
@@ -150,11 +149,7 @@ local function openEditor(char)
     if not enterStudio(char, false) then return end
 
     editing = true
-
-    exports.sunset_ui:Send('appearanceShow', {
-        gender = char.gender,
-        components = buildComponentList(PlayerPedId()),
-    })
+    pushEditorUi(char)
     exports.sunset_ui:SetFocus(true, true, true)
 end
 
@@ -166,12 +161,12 @@ CreateThread(function()
             if IsControlPressed(0, 34) or IsControlPressed(0, 174) then
                 pedHeading = pedHeading - 1.8
                 SetEntityHeading(ped, pedHeading)
-                setupCamera(ped)
+                setupCamera(ped, cameraMode)
             end
             if IsControlPressed(0, 35) or IsControlPressed(0, 175) then
                 pedHeading = pedHeading + 1.8
                 SetEntityHeading(ped, pedHeading)
-                setupCamera(ped)
+                setupCamera(ped, cameraMode)
             end
             DisableControlAction(0, 1, true)
             DisableControlAction(0, 2, true)
@@ -188,9 +183,19 @@ AddEventHandler('sunset:client:appearanceRequired', function(char)
     openEditor(char)
 end)
 
-AddEventHandler('sunset:nui:appearancePreview', function(data)
-    local ped = PlayerPedId()
-    SetPedComponentVariation(ped, data.component, data.drawable or 0, data.texture or 0, 0)
+AddEventHandler('sunset:nui:appearanceChange', function(data)
+    if not editing or not pendingChar or not currentAppearance then return end
+    currentAppearance = SunsetAppearance.applyField(PlayerPedId(), currentAppearance, pendingChar.gender or 0, data)
+    if data.camera then
+        setupCamera(PlayerPedId(), data.camera)
+        exports.sunset_ui:Send('appearanceCamera', { camera = data.camera })
+    end
+end)
+
+AddEventHandler('sunset:nui:appearanceCamera', function(data)
+    if not editing then return end
+    setupCamera(PlayerPedId(), data.mode or 'full')
+    exports.sunset_ui:Send('appearanceCamera', { camera = cameraMode })
 end)
 
 AddEventHandler('sunset:nui:appearanceRotate', function(data)
@@ -198,25 +203,22 @@ AddEventHandler('sunset:nui:appearanceRotate', function(data)
     local delta = (data.direction == 'left') and -15.0 or 15.0
     pedHeading = pedHeading + delta
     SetEntityHeading(ped, pedHeading)
-    setupCamera(ped)
+    setupCamera(ped, cameraMode)
 end)
 
 AddEventHandler('sunset:nui:appearanceGender', function(data)
     if not pendingChar or not editing then return end
     pendingChar.gender = tonumber(data.gender) or 0
+    currentAppearance = SunsetAppearance.default(pendingChar.gender)
     enterStudio(pendingChar, true)
-    exports.sunset_ui:Send('appearanceUpdate', {
-        gender = pendingChar.gender,
-        components = buildComponentList(PlayerPedId()),
-    })
+    pushEditorUi(pendingChar)
 end)
 
-AddEventHandler('sunset:nui:appearanceSave', function(data)
-    if not pendingChar then return end
+AddEventHandler('sunset:nui:appearanceSave', function()
+    if not pendingChar or not currentAppearance then return end
 
-    local appearance = data.appearance or {}
-    Sunset.AwaitCallback('sunset:saveAppearance', appearance, pendingChar.gender)
-    pendingChar.appearance = appearance
+    Sunset.AwaitCallback('sunset:saveAppearance', currentAppearance, pendingChar.gender)
+    pendingChar.appearance = currentAppearance
     pendingChar.gender = pendingChar.gender or 0
 
     editing = false
@@ -226,17 +228,31 @@ AddEventHandler('sunset:nui:appearanceSave', function(data)
 
     local char = pendingChar
     pendingChar = nil
+    currentAppearance = nil
 
     exports.sunset_ui:Show('loading')
     TriggerEvent('sunset:client:spawnCharacter', char)
 end)
 
-exports('IsEditing', function()
-    return editing
-end)
+function ApplyAppearance(ped, appearance, gender)
+    SunsetAppearance.apply(ped, appearance, gender or 0)
+end
+exports('ApplyAppearance', ApplyAppearance)
+exports('IsEditing', function() return editing end)
 
 AddEventHandler('sunset:client:playerSpawned', function(char)
     if char and char.appearance then
-        applyAppearance(PlayerPedId(), char.appearance)
+        SunsetAppearance.apply(PlayerPedId(), char.appearance, char.gender or 0)
     end
 end)
+
+RegisterCommand('relook', function()
+    if editing then return end
+    local char = exports.sunset_core:GetCharacter()
+    if not char then
+        exports.sunset_ui:Notify('No character loaded', 'error')
+        return
+    end
+    openEditor(char)
+end, false)
+TriggerEvent('chat:addSuggestion', '/relook', 'Re-open character appearance editor')
