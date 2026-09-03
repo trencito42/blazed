@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/panels.css">
     <link rel="stylesheet" href="css/studio.css">
+    <link rel="stylesheet" href="css/phone.css">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -473,17 +474,124 @@
         </div>
     </div>
 
-    <!-- PHONE -->
-    <div id="phone" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide">
-            <h2>Phone <span id="phone-myname" style="font-size:12px;color:#aaa"></span></h2>
-            <div class="phone-compose">
-                <input type="number" id="phone-target" placeholder="Player ID" min="1">
-                <input type="text" id="phone-message" placeholder="Message..." maxlength="256">
-                <button type="button" class="btn btn--primary" id="phone-send">SEND</button>
+    <!-- iPHONE -->
+    <div id="phone-device" class="phone-device hidden">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="phone-wallpaper"></div>
+                <div class="phone-status">
+                    <span id="phone-time">12:00</span>
+                    <div class="phone-notch"></div>
+                    <div class="phone-status-icons">
+                        <span>5G</span>
+                        <span>🔋</span>
+                    </div>
+                </div>
+
+                <div class="phone-content">
+                    <!-- Home -->
+                    <div class="phone-view is-active" data-view="home">
+                        <div class="phone-home-grid">
+                            <button type="button" class="phone-app-icon" data-phone-app="messages">
+                                <div class="phone-app-icon__img phone-app-icon__img--messages">💬</div>
+                                <span>Messages</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="contacts">
+                                <div class="phone-app-icon__img phone-app-icon__img--contacts">👤</div>
+                                <span>Contacts</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="bank">
+                                <div class="phone-app-icon__img phone-app-icon__img--bank">💳</div>
+                                <span>Bank</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="settings">
+                                <div class="phone-app-icon__img phone-app-icon__img--settings">⚙️</div>
+                                <span>Settings</span>
+                            </button>
+                        </div>
+                        <div class="phone-dock">
+                            <button type="button" class="phone-app-icon" data-phone-app="messages">
+                                <div class="phone-app-icon__img phone-app-icon__img--messages">💬</div>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="contacts">
+                                <div class="phone-app-icon__img phone-app-icon__img--contacts">👤</div>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="bank">
+                                <div class="phone-app-icon__img phone-app-icon__img--bank">💳</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="phone-view phone-threads" data-view="messages">
+                        <div class="phone-appbar">
+                            <button type="button" class="phone-back" id="phone-back-messages">‹ Home</button>
+                            <h3>Messages</h3>
+                        </div>
+                        <div class="phone-scroll" id="phone-thread-list"></div>
+                    </div>
+
+                    <!-- Chat -->
+                    <div class="phone-view phone-chat" data-view="chat">
+                        <div class="phone-appbar">
+                            <button type="button" class="phone-back" id="phone-back-chat">‹ Back</button>
+                            <h3 id="phone-chat-title">Chat</h3>
+                        </div>
+                        <div class="phone-chat__messages" id="phone-chat-messages"></div>
+                        <div class="phone-chat__compose">
+                            <input type="text" id="phone-chat-input" placeholder="iMessage" maxlength="256" autocomplete="off">
+                            <button type="button" id="phone-chat-send">↑</button>
+                        </div>
+                    </div>
+
+                    <!-- Contacts -->
+                    <div class="phone-view phone-contacts" data-view="contacts">
+                        <div class="phone-appbar">
+                            <button type="button" class="phone-back" id="phone-back-contacts">‹ Home</button>
+                            <h3>Contacts</h3>
+                        </div>
+                        <div class="phone-scroll" id="phone-contact-list"></div>
+                    </div>
+
+                    <!-- Bank -->
+                    <div class="phone-view" data-view="bank">
+                        <div class="phone-appbar phone-appbar--light">
+                            <button type="button" class="phone-back" id="phone-back-bank">‹ Home</button>
+                            <h3>Bank</h3>
+                        </div>
+                        <div class="phone-scroll phone-bank">
+                            <div class="phone-bank-card">
+                                <div class="phone-bank-card__label">Total Balance</div>
+                                <div class="phone-bank-card__amount" id="phone-bank-total">$0</div>
+                                <div class="phone-bank-card__label">Sunset Bank</div>
+                            </div>
+                            <div class="phone-bank-row"><span>Cash</span><strong id="phone-bank-cash">$0</strong></div>
+                            <div class="phone-bank-row"><span>Bank Account</span><strong id="phone-bank-bank">$0</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div class="phone-view phone-settings" data-view="settings">
+                        <div class="phone-appbar">
+                            <button type="button" class="phone-back" id="phone-back-settings">‹ Home</button>
+                            <h3>Settings</h3>
+                        </div>
+                        <div class="phone-scroll">
+                            <div class="phone-settings-profile">
+                                <div class="phone-settings-profile__avatar" id="phone-settings-avatar">T</div>
+                                <div>
+                                    <div id="phone-settings-name" style="font-size:20px;font-weight:600;color:#fff">Player</div>
+                                    <div id="phone-settings-id" style="font-size:13px;color:rgba(255,255,255,0.5)">ID</div>
+                                </div>
+                            </div>
+                            <div class="phone-settings-row">SunsetMP Phone<span>iOS-style RP phone</span></div>
+                            <div class="phone-settings-row">Close<span>Press P or swipe home bar</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="phone-home-indicator" id="phone-home-indicator" title="Home"></div>
             </div>
-            <ul class="panel-list" id="phone-messages"></ul>
-            <button type="button" class="panel-close" id="phone-close">Close (P)</button>
         </div>
     </div>
 
@@ -550,6 +658,7 @@
     <script src="js/scoreboard.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/menu.js"></script>
+    <script src="js/phone.js"></script>
     <script src="js/panels.js"></script>
 </body>
 </html>

@@ -19,6 +19,7 @@ files {
     'web/css/menu.css',
     'web/css/panels.css',
     'web/css/studio.css',
+    'web/css/phone.css',
     'web/js/*.js',
     'web/assets/**/*',
 }

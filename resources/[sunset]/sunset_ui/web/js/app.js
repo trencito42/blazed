@@ -206,13 +206,13 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'phoneShow':
-            if (window.Panels) Panels.showPhone(data || event.data.data);
+            if (window.Phone) Phone.show(data || event.data.data);
             break;
         case 'phoneUpdate':
-            if (window.Panels) Panels.updatePhone(data || event.data.data);
+            if (window.Phone) Phone.update(data || event.data.data);
             break;
         case 'phoneHide':
-            if (window.Panels) Panels.hidePhone();
+            if (window.Phone) Phone.hide();
             break;
         case 'documentsShow':
             if (window.Panels) Panels.showDocuments(data || event.data.data);

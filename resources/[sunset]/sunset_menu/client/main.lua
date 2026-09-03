@@ -118,6 +118,11 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         return
     end
     if data.action == 'phone' then
+        closeMenu()
+        CreateThread(function()
+            Wait(150)
+            exports.sunset_phone:Open()
+        end)
         return
     end
     if data.action == 'statistics' then

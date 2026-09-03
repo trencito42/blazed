@@ -149,26 +149,6 @@ const Panels = {
 
     hideClothing() { $('#clothing')?.classList.add('hidden'); },
 
-    showPhone(data) {
-        this.init();
-        $('#phone-myname').textContent = data.myName ? `— ${data.myName}` : '';
-        const list = $('#phone-messages');
-        list.innerHTML = '';
-        (data.messages || []).forEach((m) => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>[${m.sender_character_id === data.myCharacterId ? 'You' : (m.sender_name || 'Player')}] ${m.message}</span>`;
-            list.appendChild(li);
-        });
-        $('#phone-close').onclick = () => post('phoneClose');
-        $('#phone-send').onclick = () => post('phoneSend', {
-            targetId: Number($('#phone-target')?.value || 0),
-            message: $('#phone-message')?.value || '',
-        });
-        $('#phone')?.classList.remove('hidden');
-    },
-    hidePhone() { $('#phone')?.classList.add('hidden'); },
-    updatePhone(data) { this.showPhone(data); },
-
     showDocuments(data) {
         this.init();
         const body = $('#documents-body');

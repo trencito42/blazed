@@ -9,17 +9,17 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
         LEFT JOIN characters sc ON sc.id = m.sender_character_id
         LEFT JOIN characters rc ON rc.id = m.receiver_character_id
         WHERE m.sender_character_id = ? OR m.receiver_character_id = ?
-        ORDER BY m.id DESC LIMIT 30
+        ORDER BY m.id DESC LIMIT 50
     ]], { char.id, char.id }) or {}
 
     local players = {}
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         local c = exports.sunset_core:GetCharacter(src)
-        local p = exports.sunset_core:GetPlayer(src)
-        if c and p and c.id ~= char.id then
+        if c and c.id ~= char.id then
             players[#players + 1] = {
                 serverId = src,
+                characterId = c.id,
                 name = exports.sunset_core:GetPlayerDisplayName(src),
             }
         end
@@ -29,6 +29,8 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
         myId = source,
         myCharacterId = char.id,
         myName = exports.sunset_core:GetPlayerDisplayName(source),
+        cash = char.cash or 0,
+        bank = char.bank or 0,
         messages = messages,
         contacts = players,
     }
@@ -49,6 +51,7 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
         { char.id, targetChar.id, message }
     )
 
-    TriggerClientEvent('sunset:client:notify', targetId, 'New phone message from ' .. exports.sunset_core:GetPlayerDisplayName(source), 'info')
+    TriggerClientEvent('sunset:client:notify', targetId, 'New message from ' .. exports.sunset_core:GetPlayerDisplayName(source), 'info')
+    TriggerClientEvent('sunset:client:phoneMessage', targetId)
     return true
 end)
