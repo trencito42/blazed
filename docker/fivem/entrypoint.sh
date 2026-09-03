@@ -25,7 +25,7 @@ if [ -d /opt/cfx-server-data/resources ]; then
   cp -rn /opt/cfx-server-data/resources/* /config/resources/ 2>/dev/null || true
 fi
 if [ -d /config/resources-custom ]; then
-  cp -rn /config/resources-custom/* /config/resources/ 2>/dev/null || true
+  cp -rf /config/resources-custom/* /config/resources/ 2>/dev/null || true
 fi
 echo "[sunsetmp] resources merged"
 

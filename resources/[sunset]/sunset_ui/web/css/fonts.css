@@ -1,0 +1,35 @@
+@font-face {
+    font-family: 'SunsetHUD';
+    src: url('../assets/fonts/pricedown.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+.hud,
+.fh-speedo,
+.hud-tr,
+.hud-editor-bar,
+.hud-wanted,
+.loc-box {
+    font-family: 'SunsetHUD', 'Inter', sans-serif;
+}
+
+.fh-speedo__speed,
+.fh-speedo__gear,
+.fh-speedo__unit,
+.fh-tick-label,
+.fh-stat__label,
+.fh-stat__val,
+.hud-wanted__level,
+.money-val,
+.badge,
+.loc-street {
+    font-family: 'SunsetHUD', 'Barlow Condensed', 'Inter', sans-serif;
+}
+
+.stat-val,
+.stat-row--time span {
+    font-family: 'SunsetHUD', 'Inter', sans-serif;
+    letter-spacing: 0.02em;
+}

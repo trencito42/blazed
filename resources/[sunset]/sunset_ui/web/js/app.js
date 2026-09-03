@@ -109,6 +109,7 @@ window.addEventListener('message', (event) => {
             showHud(true);
             const hudData = data || {};
             if (hudData.playerId && window.Scoreboard) Scoreboard.myId = hudData.playerId;
+            if (window.HudEditor && hudData.layout) HudEditor.apply(hudData.layout);
             if (window.Hud) Hud.update(hudData);
             break;
 
@@ -147,6 +148,10 @@ window.addEventListener('message', (event) => {
 
         case 'menuHide':
             if (window.Menu) Menu.hide();
+            break;
+
+        case 'hudEditToggle':
+            if (window.HudEditor) HudEditor.toggle();
             break;
 
         case 'notify':

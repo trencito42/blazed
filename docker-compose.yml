@@ -26,6 +26,12 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:30120/info.json | grep -q enhancedHostSupport"]
+      start_period: 120s
+      interval: 30s
+      timeout: 10s
+      retries: 5
     ports:
       - "${FIVEM_PORT:-30120}:30120/tcp"
       - "${FIVEM_PORT:-30120}:30120/udp"

@@ -12,18 +12,39 @@ local function getVeh()
     return 0
 end
 
+local function isDriver()
+    local veh = getVeh()
+    return veh ~= 0 and GetPedInVehicleSeat(veh, -1) == PlayerPedId()
+end
+
+local function isPassenger()
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then return false end
+    return GetPedInVehicleSeat(GetVehiclePedIsIn(ped, false), -1) ~= ped
+end
+
 local function notify(msg, type)
     exports.sunset_ui:Notify(msg, type or 'info')
 end
 
+local function driverOnly()
+    if isPassenger() then
+        notify('Doar șoferul poate face asta', 'error')
+        return false
+    end
+    return true
+end
+
 local function syncLockState(veh)
     if veh == 0 then return end
-  local state = GetVehicleDoorLockStatus(veh)
+    local state = GetVehicleDoorLockStatus(veh)
     locked = state == 2 or state == 3 or state == 4
 end
 
 -- ═══ LOCK (N) ═══
 RegisterCommand('sunset_lock', function()
+    if isPassenger() then return notify('Doar șoferul poate face asta', 'error') end
+
     local ped = PlayerPedId()
     local veh = getVeh()
     if veh == 0 then
@@ -40,7 +61,7 @@ RegisterKeyMapping('sunset_lock', 'Încuie mașina', 'keyboard', 'N')
 
 -- ═══ SEATBELT (K) ═══
 RegisterCommand('sunset_seatbelt', function()
-    if getVeh() == 0 then return end
+    if not isDriver() then return end
     seatbelt = not seatbelt
     notify(seatbelt and 'Centură ON' or 'Centură OFF', seatbelt and 'success' or 'warning')
 end, false)
@@ -48,6 +69,7 @@ RegisterKeyMapping('sunset_seatbelt', 'Centură', 'keyboard', 'K')
 
 -- ═══ ENGINE (2) ═══
 RegisterCommand('sunset_engine', function()
+    if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end
     local on = not GetIsVehicleEngineRunning(veh)
@@ -58,6 +80,7 @@ RegisterKeyMapping('sunset_engine', 'Motor on/off', 'keyboard', '2')
 
 -- ═══ LIGHTS (H) — off → low → high ═══
 RegisterCommand('sunset_lights', function()
+    if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end
 
@@ -83,12 +106,10 @@ CreateThread(function()
             local veh = GetVehiclePedIsIn(ped, false)
             syncLockState(veh)
 
-            SetPedConfigFlag(ped, 32, seatbelt)
-            if seatbelt then
-                SetFlyThroughWindscreenParams(10000.0, 10000.0, 17.0, 0.0)
-            else
-                SetFlyThroughWindscreenParams(35.0, 40.0, 17.0, 2000.0)
-            end
+            -- Fără ejectare prin geam (centura rămâne RP/visual)
+            SetPedConfigFlag(ped, 32, false)
+            SetFlyThroughWindscreenParams(10000.0, 10000.0, 17.0, 0.0)
+
             Wait(0)
         else
             seatbelt = false
@@ -101,7 +122,7 @@ end)
 CreateThread(function()
     while true do
         local veh = getVeh()
-        if veh ~= 0 and GetPedInVehicleSeat(veh, -1) == PlayerPedId() then
+        if veh ~= 0 and isDriver() then
             if veh ~= currentVeh then
                 currentVeh = veh
                 fuel = GetVehicleFuelLevel(veh)
@@ -127,7 +148,7 @@ end)
 
 function GetVehicleState()
     local veh = getVeh()
-    if veh == 0 then return nil end
+    if veh == 0 or not isDriver() then return nil end
 
     local speed = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
     local gear = GetVehicleCurrentGear(veh)

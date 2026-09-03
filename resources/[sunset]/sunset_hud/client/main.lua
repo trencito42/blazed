@@ -29,6 +29,14 @@ local function formatPayday(seconds)
     return ('%02d:%02d'):format(math.floor(seconds / 60), seconds % 60)
 end
 
+local function getHudLayout()
+    local raw = GetResourceKvpString('sunset_hud_layout')
+    if not raw or raw == '' then return nil end
+    local ok, data = pcall(json.decode, raw)
+    if ok then return data end
+    return nil
+end
+
 local function buildHudData()
     if not char then return nil end
 
@@ -51,6 +59,7 @@ local function buildHudData()
         street = street,
         zone = zone,
         inVehicle = false,
+        wanted = exports['sunset_hud']:GetWantedLevel(),
     }
 
     local vehState = nil
@@ -78,7 +87,10 @@ local function activateHud(character)
     char = character
     hudActive = true
     if paydayTimer <= 0 then paydayTimer = 42 * 60 + 18 end
-    nui('showHud', { playerId = GetPlayerServerId(PlayerId()) })
+    nui('showHud', {
+        playerId = GetPlayerServerId(PlayerId()),
+        layout = getHudLayout(),
+    })
     local data = buildHudData()
     if data then nui('updateHud', data) end
 end
@@ -157,8 +169,24 @@ CreateThread(function()
             HideHudComponentThisFrame(13)
             HideHudComponentThisFrame(17)
             HideHudComponentThisFrame(20)
+            HideHudComponentThisFrame(21) -- wanted stars
             DisplayAmmoThisFrame(false)
         end
         Wait(0)
     end
+end)
+
+RegisterCommand('hudedit', function()
+    if not hudActive then return end
+    exports.sunset_ui:Send('hudEditToggle', {})
+end, false)
+
+AddEventHandler('sunset:nui:hudEditSave', function(data)
+    if type(data) ~= 'table' then return end
+    SetResourceKvp('sunset_hud_layout', json.encode(data))
+    exports.sunset_ui:Notify('Poziție HUD salvată', 'success')
+end)
+
+AddEventHandler('sunset:nui:hudEditClose', function()
+    exports.sunset_ui:SetFocus(false, false)
 end)

@@ -10,10 +10,21 @@ end
 local function getTarget(source, id)
     local target = tonumber(id)
     if not target or not GetPlayerName(target) then
-        notify(source, 'Jucător invalid', 'error')
+        if source ~= 0 then notify(source, 'Jucător invalid (ID: ' .. tostring(id) .. ')', 'error') end
         return nil
     end
     return target
+end
+
+local function resolveTarget(source, idArg)
+    if idArg then
+        return getTarget(source, idArg)
+    end
+    if source == 0 then
+        print('[Sunset] Trebuie specificat un ID jucător')
+        return nil
+    end
+    return source
 end
 
 -- /kick [id] [motiv]
@@ -90,20 +101,20 @@ end, false)
 RegisterCommand('heal', function(source, args)
     if source == 0 then return end
     if not hasPerm(source, 'heal') then return notify(source, 'Fără permisiune', 'error') end
-    local target = args[1] and getTarget(source, args[1]) or source
+    local target = resolveTarget(source, args[1])
     if not target then return end
     TriggerClientEvent('sunset:admin:heal', target)
-    notify(source, 'Heal aplicat', 'success')
+    notify(source, 'Heal aplicat pe ' .. GetPlayerName(target) .. ' (ID ' .. target .. ')', 'success')
 end, false)
 
 -- /revive [id]
 RegisterCommand('revive', function(source, args)
     if source == 0 then return end
     if not hasPerm(source, 'revive') then return notify(source, 'Fără permisiune', 'error') end
-    local target = args[1] and getTarget(source, args[1]) or source
+    local target = resolveTarget(source, args[1])
     if not target then return end
     TriggerClientEvent('sunset:admin:revive', target)
-    notify(source, 'Revive aplicat', 'success')
+    notify(source, 'Revive aplicat pe ' .. GetPlayerName(target) .. ' (ID ' .. target .. ')', 'success')
 end, false)
 
 -- /noclip

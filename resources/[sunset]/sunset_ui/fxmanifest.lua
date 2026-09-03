@@ -12,6 +12,7 @@ ui_page 'web/index.html'
 files {
     'web/index.html',
     'web/css/style.css',
+    'web/css/fonts.css',
     'web/css/hud.css',
     'web/css/scoreboard.css',
     'web/css/chat.css',

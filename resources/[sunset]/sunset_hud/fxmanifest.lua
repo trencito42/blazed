@@ -13,11 +13,14 @@ shared_scripts {
 }
 
 client_scripts {
+    'client/world.lua',
     'client/main.lua',
 }
 
 exports {
     'GetPaydaySeconds',
+    'GetWantedLevel',
+    'SetWantedLevel',
 }
 
 dependencies {
