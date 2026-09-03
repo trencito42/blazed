@@ -5,7 +5,7 @@ Sunset.VehicleProfiles = {
     -- Base fuel drain per second when moving (scaled by RPM + speed)
     fuelBase = 0.0035,
 
-    -- Tank capacity in liters (used for gas-can pour math; DB fuel stays 0–100%)
+    -- Tank capacity in liters (gas-can pour + display; vehicles.fuel column stays 0–100% for HUD/pump)
     classTankCapacityLiters = {
         [0] = 45,   -- Compacts
         [1] = 60,   -- Sedans
@@ -103,6 +103,17 @@ function Sunset.GetVehicleTankCapacityLiters(vehicleClass)
     local cap = caps[vehicleClass]
     if cap and cap > 0 then return cap end
     return caps[1] or 60
+end
+
+function Sunset.PercentToTankLiters(percent, vehicleClass)
+    local cap = Sunset.GetVehicleTankCapacityLiters(vehicleClass)
+    return math.max(0, math.min(cap, (tonumber(percent) or 0) / 100.0 * cap))
+end
+
+function Sunset.TankLitersToPercent(liters, vehicleClass)
+    local cap = Sunset.GetVehicleTankCapacityLiters(vehicleClass)
+    if cap <= 0 then return 0 end
+    return math.max(0, math.min(100, (tonumber(liters) or 0) / cap * 100.0))
 end
 
 function Sunset.GetVehicleFuelMultiplier(modelHash, vehicleClass)

@@ -14,6 +14,27 @@ local function normalizePlate(plate)
     return type(plate) == 'string' and plate:gsub('%s+', ''):upper() or ''
 end
 
+local function plateTextMatches(a, b)
+    a = normalizePlate(a)
+    b = normalizePlate(b)
+    if a == '' or b == '' then return false end
+    if a == b then return true end
+    return a:find(b, 1, true) ~= nil or b:find(a, 1, true) ~= nil
+end
+
+local function findOwnedVehicle(charId, plate)
+    local rows = MySQL.query.await(
+        'SELECT id, plate FROM vehicles WHERE character_id = ?',
+        { charId }
+    ) or {}
+    for _, row in ipairs(rows) do
+        if plateTextMatches(row.plate, plate) then
+            return row
+        end
+    end
+    return nil
+end
+
 local function findDrivenVehicle(source, plate)
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil end
@@ -262,7 +283,7 @@ exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targe
     return { liters = targetLiters, maxLiters = maxLiters, cost = cost, added = added }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(source, plate, vehFuel, vehicleClass)
+exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(source, plate, tankLiters, vehicleClass)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
     if not exports.sunset_inventory:HasItem(source, 'gas_can', 1) then
@@ -272,38 +293,35 @@ exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(sourc
     plate = normalizePlate(plate)
     if plate == '' then return nil, 'Invalid vehicle' end
 
-    local owned = MySQL.scalar.await(
-        'SELECT id FROM vehicles WHERE plate = ? AND character_id = ? LIMIT 1',
-        { plate, char.id }
-    )
+    local owned = findOwnedVehicle(char.id, plate)
     if not owned then return nil, 'This is not your vehicle' end
 
     local canLiters = exports.sunset_inventory:GetGasCanLiters(source) or 0
-    local maxLiters = Sunset.GetGasCanMaxLiters()
+    local maxCanLiters = Sunset.GetGasCanMaxLiters()
     if canLiters <= 0.05 then return nil, 'Gas can is empty — fill it at a pump' end
 
-    vehFuel = tonumber(vehFuel) or 0
-    if vehFuel >= 99.5 then return nil, 'Vehicle tank is already full' end
-
-    local tankCapacity = Sunset.GetVehicleTankCapacityLiters(tonumber(vehicleClass) or 1)
+    vehicleClass = tonumber(vehicleClass) or 1
+    local tankCapacity = Sunset.GetVehicleTankCapacityLiters(vehicleClass)
     if tankCapacity <= 0 then return nil, 'This vehicle has no fuel tank' end
 
-    local currentTankLiters = (vehFuel / 100.0) * tankCapacity
+    local currentTankLiters = math.max(0, math.min(tankCapacity, tonumber(tankLiters) or 0))
+    if currentTankLiters >= tankCapacity - 0.05 then
+        return nil, 'Vehicle tank is already full'
+    end
+
     local roomLiters = tankCapacity - currentTankLiters
-    if roomLiters <= 0.05 then return nil, 'Vehicle tank is already full' end
-
     local transferLiters = math.min(canLiters, roomLiters)
-    if transferLiters <= 0.05 then return nil, 'Nothing to transfer' end
+    if transferLiters <= 0.05 then return nil, 'Vehicle tank is already full' end
 
-    local addedPercent = (transferLiters / tankCapacity) * 100.0
-    local fromFuel = vehFuel
-    local newVehFuel = math.min(100.0, vehFuel + addedPercent)
+    local fromTankLiters = currentTankLiters
+    local newTankLiters = currentTankLiters + transferLiters
     local newCanLiters = canLiters - transferLiters
+    local vehicleFuelPercent = Sunset.TankLitersToPercent(newTankLiters, vehicleClass)
 
     pcall(function()
         MySQL.update.await(
-            'UPDATE vehicles SET fuel = ? WHERE plate = ? AND character_id = ?',
-            { newVehFuel, plate, char.id }
+            'UPDATE vehicles SET fuel = ? WHERE id = ? AND character_id = ?',
+            { vehicleFuelPercent, owned.id, char.id }
         )
     end)
 
@@ -314,12 +332,13 @@ exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(sourc
     end
 
     return {
-        vehicleFuel = newVehFuel,
-        fromFuel = fromFuel,
-        canLiters = newCanLiters,
-        maxLiters = maxLiters,
-        transferredLiters = transferLiters,
+        vehicleFuel = vehicleFuelPercent,
+        fromTankLiters = fromTankLiters,
+        tankLiters = newTankLiters,
         tankCapacity = tankCapacity,
+        transferredLiters = transferLiters,
+        canLiters = newCanLiters,
+        maxCanLiters = maxCanLiters,
     }
 end)
 

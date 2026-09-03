@@ -636,6 +636,7 @@ end
 RegisterNetEvent('sunset:client:useGasCan', function()
     CreateThread(function()
         pcall(function() exports.sunset_inventory:Close() end)
+        Wait(100)
 
         local veh, err = getGasCanTargetVehicle()
         if not veh then
@@ -645,37 +646,41 @@ RegisterNetEvent('sunset:client:useGasCan', function()
 
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
         local ped = PlayerPedId()
-        local currentFuel
+        local vehicleClass = GetVehicleClass(veh)
+        local tankCapacity = Sunset.GetVehicleTankCapacityLiters(vehicleClass)
+
+        local fuelPct
         if IsPedInAnyVehicle(ped, false) and GetPedInVehicleSeat(veh, -1) == ped then
-            currentFuel = exports.sunset_vehicles:GetFuelLevel() or fuel
+            fuelPct = exports.sunset_vehicles:GetFuelLevel() or fuel
         else
-            currentFuel = GetVehicleFuelLevel(veh)
-            if currentFuel < 0 or currentFuel > 100 then
-                currentFuel = fuel
+            fuelPct = GetVehicleFuelLevel(veh)
+            if fuelPct < 0 or fuelPct > 100 then
+                fuelPct = fuel
             end
         end
+        local tankLiters = Sunset.PercentToTankLiters(fuelPct, vehicleClass)
 
-        local vehicleClass = GetVehicleClass(veh)
-        local result, useErr = Sunset.AwaitCallback('sunset:useGasCanOnVehicle', plate, currentFuel, vehicleClass)
+        local result, useErr = Sunset.AwaitCallback('sunset:useGasCanOnVehicle', plate, tankLiters, vehicleClass)
         if not result then
             notify(useErr or 'Could not use gas can', 'error')
             return
         end
 
-        setFuelLevel(veh, result.vehicleFuel or currentFuel)
+        setFuelLevel(veh, result.vehicleFuel or fuelPct)
 
-        local fromPct = math.floor(result.fromFuel or currentFuel)
-        local toPct = math.floor(result.vehicleFuel or currentFuel)
         local poured = result.transferredLiters or 0
-        local maxLiters = result.maxLiters or Sunset.GetGasCanMaxLiters()
-        local canLeft = result.canLiters or 0
+        local fromL = result.fromTankLiters or tankLiters
+        local toL = result.tankLiters or (tankLiters + poured)
+        local cap = result.tankCapacity or tankCapacity
+        local maxCan = result.maxCanLiters or Sunset.GetGasCanMaxLiters()
+        local canLeft = result.canLiters
 
-        if canLeft <= 0.1 then
-            notify(('Added %.1fL to vehicle (%d%% → %d%%) — gas can empty'):format(
-                poured, fromPct, toPct), 'success')
+        if canLeft == nil or canLeft <= 0.1 then
+            notify(('Added %.0fL to vehicle (%.0fL → %.0fL / %.0fL)'):format(
+                poured, fromL, toL, cap), 'success')
         else
-            notify(('Added %.1fL to vehicle (%d%% → %d%%) — Gas can: %.1f/%.0f L'):format(
-                poured, fromPct, toPct, canLeft, maxLiters), 'success')
+            notify(('Added %.0fL to vehicle (%.0fL → %.0fL / %.0fL) — Gas can: %.0f/%.0f L'):format(
+                poured, fromL, toL, cap, canLeft, maxCan), 'success')
         end
     end)
 end)

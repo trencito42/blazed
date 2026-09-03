@@ -113,7 +113,7 @@ const Panels = {
                     liters = (Number(row.metadata.fuel) / 100) * maxL;
                 }
                 if (!Number.isNaN(liters)) {
-                    label = `gas_can (${liters.toFixed(1)}/${maxL} L)`;
+                    label = `Gas Can (${Math.round(liters)}/${maxL} L)`;
                 }
             }
             const li = document.createElement('li');

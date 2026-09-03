@@ -28,6 +28,10 @@ AddEventHandler('sunset:nui:inventoryClose', function()
     closeInventory()
 end)
 
+RegisterNetEvent('sunset:client:inventoryForceClose', function()
+    closeInventory()
+end)
+
 AddEventHandler('sunset:nui:inventoryUse', function(data)
     local ok, err = Sunset.AwaitCallback('sunset:useItem', data.item)
     if not ok then exports.sunset_ui:Notify(err or 'Cannot use item', 'error') end

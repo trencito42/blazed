@@ -151,6 +151,7 @@ function UseItem(source, item)
     if not def or not def.usable then return false end
 
     if item == 'gas_can' then
+        TriggerClientEvent('sunset:client:inventoryForceClose', source)
         TriggerClientEvent('sunset:client:useGasCan', source)
         return true
     end
@@ -179,12 +180,6 @@ exports('UseItem', UseItem)
 exports('SetItemMetadata', SetItemMetadata)
 exports('GetGasCanLiters', function(source)
     return getGasCanLiters(findInventoryRow(source, 'gas_can'))
-end)
-exports('GetGasCanFuel', function(source)
-    local liters = getGasCanLiters(findInventoryRow(source, 'gas_can'))
-    local maxLiters = getGasCanMaxLiters()
-    if maxLiters <= 0 then return 0 end
-    return (liters / maxLiters) * 100.0
 end)
 
 exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)

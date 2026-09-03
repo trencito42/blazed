@@ -188,7 +188,7 @@ local function finishCanFill(endLiters)
     end
 
     local maxLiters = result.maxLiters or maxCanLiters()
-    notify(('Gas can: %.1f/%.0f L — paid $%s'):format(
+    notify(('Gas can: %.0f/%.0f L — paid $%s'):format(
         result.liters or endLiters, maxLiters, result.cost or 0), 'success')
 end
 
