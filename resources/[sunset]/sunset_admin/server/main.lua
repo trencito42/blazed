@@ -48,7 +48,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     local src = source
     deferrals.defer()
     Wait(0)
-    deferrals.update('Verificăm contul...')
+    deferrals.update('Checking account...')
 
     local license = getLicense(src)
     if not license then
@@ -62,7 +62,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     )
 
     if ban then
-        deferrals.done('Ești banat: ' .. ban.reason)
+        deferrals.done('You are banned: ' .. ban.reason)
         return
     end
 

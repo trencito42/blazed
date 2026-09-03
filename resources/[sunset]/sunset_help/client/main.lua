@@ -1,38 +1,27 @@
 local HelpLines = {
     '=== SunsetMP Help ===',
-    '/help or /comanda — Show this list',
-    'M — Player menu (ESC to close)',
-    'I — Inventory',
-    'T — Chat',
-    'TAB — Scoreboard',
-    '/e [name] — Play emote (wave, dance, sit, wank, etc.)',
-    '/e cancel — Stop current emote',
-    '/emotes — Emote menu',
-    'X — Stop emote',
-    'P — Phone',
-    '/documents — ID card | /licenses — Licenses',
-    '/setjob [id|username] [job] [grade] — Admin set job',
-    '=== Factions (5 legal + 2 mafii) ===',
-    'LSPD, EMS, Taxi, LS Customs, LS Fire — blip pe hartă, [E] la HQ',
-    'Sunset Cartel, Night Syndicate — HQ ascuns (fără blip public)',
-    '[E] la HQ — join faction | din nou — /duty ON/OFF',
-    '/duty — Toggle shift | /faction — Info job',
-    '/leavefaction — Părăsește facțiunea',
-    '/f [mesaj] — Chat facțiune',
-    '/finvite [id] — Recrutează (rank cu permisiune)',
-    'PD: /fine [id] [sumă] [motiv] | /cuff [id]',
-    'EMS/LSFD: /heal [id] | /revive [id]',
-    'Mechanic: /repairveh [id]',
-    'Taxi: /fare [id] [sumă]',
-    '=== Crafting ===',
-    'Workbench public (blip) — bandaje, lockpick, repair kit',
-    'LSPD Armory, Cartel Lab, Syndicate Workshop — la HQ',
-    'Job Center, shops, ATMs, garages — blips on map, [E] at marker',
-    '/garage — Your vehicles',
-    '/properties — Property list',
-    '/inventory — Open inventory',
-    'E — Interact (shops, ATM, properties, garage, HQ, crafting)',
-    'N — Lock vehicle | K — Seatbelt | H — Lights | 2 — Engine',
+    '/help — Show this list',
+    'M — Player menu | I — Inventory | P — Phone | TAB — Scoreboard',
+    '=== JOBS vs FACTIONS (SAMP-style) ===',
+    'JOB (civilian) — Job Center: Trucker, Fisherman, Unemployed',
+    'FACTION — Join at HQ on map: LSPD, EMS, Taxi, Mechanic, Fire, Gangs',
+    'You can have a JOB and a FACTION at the same time.',
+    'Example: Job = Trucker, Faction = LSPD',
+    '=== Payday & XP ===',
+    'Payday every hour at :00 server time — paid to BANK',
+    'Faction salary: must be ON DUTY (/duty at HQ)',
+    'Civilian job salary: paid even off duty',
+    'XP: earned while playing (+50 each payday, +2/min active)',
+    'Level up at 5000 XP per level (shown in M menu)',
+    '=== Factions ===',
+    '[E] at HQ — join faction | again — /duty toggle',
+    '/faction — rank, salary, your commands',
+    '/leavefaction — leave faction (job stays)',
+    '/f [msg] — Faction chat',
+    'LSPD: /pd — full police help | /pdgarage — patrol car',
+    'Gas stations — drive in, [E] refuel',
+    '/v — personal vehicles garage',
+    'E — interact everywhere (shops, ATM, HQ, crafting)',
 }
 
 local function showHelp()
@@ -50,9 +39,4 @@ RegisterCommand('help', function()
     showHelp()
 end, false)
 
-RegisterCommand('comanda', function()
-    showHelp()
-end, false)
-
 TriggerEvent('chat:addSuggestion', '/help', 'Show available commands')
-TriggerEvent('chat:addSuggestion', '/comanda', 'Lista comenzi (help)')

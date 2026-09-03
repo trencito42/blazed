@@ -12,7 +12,7 @@ CreateThread(function()
                 adminLevel = exports.sunset_admin:GetAdminLevel(src)
             end)
 
-            local jobLabel = 'Șomer'
+            local jobLabel = 'Unemployed'
             if char and Sunset.Jobs[char.job] then
                 jobLabel = Sunset.Jobs[char.job].label
             end

@@ -9,6 +9,35 @@ exports('SetWantedLevel', function(level)
     customWanted = math.max(0, math.min(5, tonumber(level) or 0))
 end)
 
+local function vehicleHasPlayerOccupant(veh)
+    if veh == 0 or not DoesEntityExist(veh) then return false end
+    local maxSeats = GetVehicleModelNumberOfSeats(GetEntityModel(veh))
+    for seat = -1, maxSeats - 2 do
+        local occupant = GetPedInVehicleSeat(veh, seat)
+        if occupant ~= 0 and IsPedAPlayer(occupant) then
+            return true
+        end
+    end
+    return false
+end
+
+local function vehicleWasPlayerOwned(veh)
+    local ok, result = pcall(function()
+        return GetVehicleHasBeenOwnedByPlayer(veh)
+    end)
+    return ok and result == true
+end
+
+local function isProtectedVehicle(veh)
+    if veh == 0 or not DoesEntityExist(veh) then return true end
+    if vehicleHasPlayerOccupant(veh) then return true end
+    if vehicleWasPlayerOwned(veh) then return true end
+    local ok, protected = pcall(function()
+        return exports.sunset_vehicles:IsProtectedVehicle(veh)
+    end)
+    return ok and protected == true
+end
+
 local function isPlayerPed(ped)
     if ped == 0 or not DoesEntityExist(ped) then return false end
     if IsPedAPlayer(ped) then return true end
@@ -67,7 +96,7 @@ CreateThread(function()
         RemoveVehiclesFromGeneratorsInArea(coords.x - 500.0, coords.y - 500.0, coords.z - 100.0, coords.x + 500.0, coords.y + 500.0, coords.z + 100.0, 0)
 
         for _, veh in ipairs(GetGamePool('CVehicle')) do
-            if DoesEntityExist(veh) and not IsPedAPlayer(GetPedInVehicleSeat(veh, -1)) then
+            if DoesEntityExist(veh) and not isProtectedVehicle(veh) then
                 local driver = GetPedInVehicleSeat(veh, -1)
                 if driver == 0 or not isPlayerPed(driver) then
                     local vCoords = GetEntityCoords(veh)

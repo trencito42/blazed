@@ -6,7 +6,10 @@ name 'sunset_menu'
 description 'Player menu (M)'
 version '1.0.0'
 
-shared_scripts { '@sunset_core/shared/config.lua' }
+shared_scripts {
+    '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/factions.lua',
+}
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
@@ -17,4 +20,4 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone', 'sunset_vehicles' }

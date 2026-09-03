@@ -14,6 +14,7 @@ shared_scripts {
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/main.lua',
+    'client/fuel_pump.lua',
 }
 
 server_scripts {
@@ -25,4 +26,8 @@ dependencies { 'sunset_ui', 'sunset_core', 'sunset_world' }
 
 exports {
     'GetVehicleState',
+    'IsPlateInWorld',
+    'IsProtectedVehicle',
+    'SetFuelLevel',
+    'GetFuelLevel',
 }

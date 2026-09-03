@@ -26,6 +26,16 @@ RegisterNetEvent('sunset:client:characterLoaded', function(charData)
     TriggerEvent('sunset:client:onCharacterLoaded', charData)
 end)
 
+RegisterNetEvent('sunset:client:updateCharacter', function(charData)
+    if not charData then return end
+    if Sunset.Character then
+        for k, v in pairs(charData) do Sunset.Character[k] = v end
+    else
+        Sunset.Character = charData
+    end
+    TriggerEvent('sunset:client:onCharacterUpdated', charData)
+end)
+
 function GetPlayerData()
     return Sunset.Player
 end

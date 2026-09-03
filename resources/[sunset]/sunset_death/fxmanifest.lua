@@ -6,7 +6,7 @@ name 'sunset_death'
 description 'Death and respawn'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_ui' }
+dependencies { 'sunset_core', 'sunset_ui', 'oxmysql' }
 
 shared_scripts { '@sunset_core/shared/config.lua' }
 

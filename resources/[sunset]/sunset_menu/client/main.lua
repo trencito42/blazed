@@ -1,14 +1,64 @@
 local menuOpen = false
+local cachedMugshot = nil
+local mugshotAt = 0
+
+local function captureMugshot()
+    if cachedMugshot and (GetGameTimer() - mugshotAt) < 45000 then
+        return cachedMugshot
+    end
+
+    local ped = PlayerPedId()
+    local handle = RegisterPedheadshot(ped)
+    local timeout = GetGameTimer() + 2500
+    while (not IsPedheadshotReady(handle) or not IsPedheadshotValid(handle)) and GetGameTimer() < timeout do
+        Wait(10)
+    end
+
+    if not IsPedheadshotValid(handle) then
+        UnregisterPedheadshot(handle)
+        return nil
+    end
+
+    local txd = GetPedheadshotTxdString(handle)
+    UnregisterPedheadshot(handle)
+    cachedMugshot = ('https://nui-img/%s/%s'):format(txd, txd)
+    mugshotAt = GetGameTimer()
+    return cachedMugshot
+end
 
 local function controlsBlocked()
     return IsNuiFocused() or IsPauseMenuActive()
+end
+
+local function fetchMenuExtras()
+    local ok, data = pcall(function()
+        return Sunset.AwaitCallback('sunset:getMenuData')
+    end)
+    if ok and type(data) == 'table' then return data end
+    return {}
 end
 
 local function buildMenuData()
     local char = exports.sunset_core:GetCharacter()
     if not char then return nil end
 
-    local extras = Sunset.AwaitCallback('sunset:getMenuData') or {}
+    local extras = fetchMenuExtras()
+
+    pcall(function()
+        local ped = PlayerPedId()
+        local currentPlate = nil
+        if IsPedInAnyVehicle(ped, false) then
+            currentPlate = (GetVehicleNumberPlateText(GetVehiclePedIsIn(ped, false)) or ''):gsub('%s+', ''):upper()
+        end
+        for _, v in ipairs(extras.vehicles or {}) do
+            local plate = (v.plate or ''):gsub('%s+', ''):upper()
+            if currentPlate ~= '' and plate ~= '' and (currentPlate == plate or currentPlate:find(plate, 1, true) or plate:find(currentPlate, 1, true)) then
+                v.inWorld = true
+            else
+                v.inWorld = exports.sunset_vehicles:IsPlateInWorld(v.plate)
+            end
+        end
+    end)
 
     local ped = PlayerPedId()
     local maxHp = GetEntityMaxHealth(ped) - 100
@@ -35,8 +85,6 @@ local function buildMenuData()
     local displayName = playerData and playerData.name
         or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
 
-    local playerData = exports.sunset_core:GetPlayer()
-
     return {
         id = GetPlayerServerId(PlayerId()),
         name = displayName,
@@ -47,7 +95,19 @@ local function buildMenuData()
         cash = char.cash,
         bank = char.bank,
         premium = extras.premium or (playerData and playerData.premium) or 0,
-        job = job and job.label or 'Unemployed',
+        job = extras.jobLabel or (job and job.label) or 'Unemployed',
+        jobId = extras.jobId or char.job or 'unemployed',
+        jobGrade = extras.jobGrade or char.job_grade or 0,
+        jobGradeLabel = extras.jobGradeLabel or '—',
+        jobSalary = extras.jobSalary or 0,
+        factionId = extras.factionId,
+        factionLabel = extras.factionLabel,
+        factionGrade = extras.factionGrade,
+        factionGradeLabel = extras.factionGradeLabel,
+        factionSalary = extras.factionSalary,
+        jobType = extras.jobType or 'civilian',
+        hasDuty = extras.hasDuty == true,
+        onDuty = extras.onDuty == true,
         faction = char.job or 'unemployed',
         health = math.max(0, math.min(100, health)),
         armor = math.max(0, math.min(100, GetPedArmour(ped))),
@@ -63,8 +123,11 @@ local function buildMenuData()
         payday = extras.nextPayday or '—',
         serverTime = extras.serverTime or '—',
         vehicleCount = extras.vehicleCount or 0,
+        vehicles = extras.vehicles or {},
         propertyCount = extras.propertyCount or 0,
         homeLabel = extras.homeLabel or 'None',
+        avatar = captureMugshot(),
+        cid = char.id,
     }
 end
 
@@ -76,14 +139,14 @@ local function openMenu()
         return
     end
     menuOpen = true
-    exports.sunset_ui:SetFocus(true, true)
+    exports.sunset_ui:SetFocus(true, true, false)
     exports.sunset_ui:Send('menuShow', data)
 end
 
 local function closeMenu()
     if not menuOpen then return end
     menuOpen = false
-    exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('menuHide', {})
 end
 
@@ -115,6 +178,7 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         return
     end
     if data.action == 'documents' or data.action == 'licenses' then
+        closeMenu()
         return
     end
     if data.action == 'phone' then
@@ -134,6 +198,40 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         ), 'info')
         return
     end
+end)
+
+AddEventHandler('sunset:nui:menuVehicleAction', function(data)
+    if not data or not data.action then return end
+    CreateThread(function()
+        if data.action == 'spawn' then
+            local ok, err = Sunset.AwaitCallback('sunset:spawnVehicle', tonumber(data.vehicleId))
+            if ok then
+                closeMenu()
+            else
+                exports.sunset_ui:Notify(err or 'Could not spawn', 'error')
+            end
+        elseif data.action == 'store' then
+            TriggerEvent('sunset:nui:garageStore', { vehicleId = tonumber(data.vehicleId) })
+        elseif data.action == 'gps' then
+            TriggerEvent('sunset:nui:garageLocate', { plate = data.plate })
+        end
+    end)
+end)
+
+AddEventHandler('sunset:nui:menuJobAction', function(data)
+    if not data or not data.action then return end
+    CreateThread(function()
+        if data.action == 'duty' then
+            local state, err = Sunset.AwaitCallback('sunset:toggleDuty')
+            if state == nil then exports.sunset_ui:Notify(err or 'Cannot toggle duty', 'error') end
+        elseif data.action == 'leave' then
+            local ok, err = Sunset.AwaitCallback('sunset:leaveFaction')
+            if ok then exports.sunset_ui:Notify('You left your faction', 'warning')
+            else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+        elseif data.action == 'faction' then
+            ExecuteCommand('faction')
+        end
+    end)
 end)
 
 CreateThread(function()

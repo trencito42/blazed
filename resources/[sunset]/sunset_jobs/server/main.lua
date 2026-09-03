@@ -1,9 +1,23 @@
 exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
-    if not Sunset.Jobs[jobId] then return nil, 'Invalid job' end
+    if not Sunset.CivilianJobs[jobId] then return nil, 'Invalid job — factions join at HQ (LSPD, EMS, etc.)' end
 
-    exports.sunset_core:SetJob(source, jobId, 0)
+    local currentJob = select(1, Sunset.GetCharacterJob(char))
+    if currentJob ~= 'unemployed' and currentJob ~= jobId then
+        local current = Sunset.CivilianJobs[currentJob]
+        return nil, ('You already work as %s.'):format(current and current.label or currentJob)
+    end
+    if currentJob == jobId then
+        return nil, 'You already have this job'
+    end
+
+    if not exports.sunset_core:SetJob(source, jobId, 0) then
+        return nil, 'Could not set job'
+    end
+
+    TriggerClientEvent('sunset:client:notify', source,
+        'Job set: ' .. (Sunset.CivilianJobs[jobId].label or jobId), 'success')
     return true
 end)
 
@@ -44,13 +58,17 @@ RegisterCommand('setjob', function(source, args)
         return
     end
 
-    if not Sunset.Jobs[jobId] then
+    if not Sunset.Jobs[jobId] and not Sunset.CivilianJobs[jobId] then
         local msg = 'Invalid job: ' .. jobId
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
         return
     end
 
-    exports.sunset_core:SetJob(target, jobId, grade)
+    if Sunset.Factions[jobId] then
+        exports.sunset_core:SetFaction(target, jobId, grade)
+    else
+        exports.sunset_core:SetJob(target, jobId, grade)
+    end
     local label = Sunset.Jobs[jobId].label
     TriggerClientEvent('sunset:client:notify', target, 'Job set to ' .. label, 'success')
     if source ~= 0 then

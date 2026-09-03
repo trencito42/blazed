@@ -78,11 +78,10 @@
     inset: 0;
     z-index: 0;
     background:
-        radial-gradient(ellipse 90% 70% at 15% 20%, rgba(255, 55, 95, 0.55), transparent 50%),
-        radial-gradient(ellipse 80% 60% at 85% 15%, rgba(255, 149, 0, 0.45), transparent 45%),
-        radial-gradient(ellipse 70% 55% at 70% 85%, rgba(88, 86, 214, 0.5), transparent 50%),
-        radial-gradient(ellipse 60% 50% at 20% 75%, rgba(52, 199, 89, 0.35), transparent 45%),
-        linear-gradient(180deg, #1a0a2e 0%, #0f0f1a 40%, #050508 100%);
+        radial-gradient(ellipse 70% 55% at 25% 18%, rgba(255, 45, 85, 0.4), transparent 55%),
+        radial-gradient(ellipse 60% 50% at 78% 22%, rgba(255, 159, 10, 0.35), transparent 50%),
+        radial-gradient(ellipse 55% 45% at 62% 78%, rgba(10, 132, 255, 0.35), transparent 50%),
+        linear-gradient(160deg, #12081f 0%, #0a0a12 45%, #050508 100%);
 }
 
 .phone-wallpaper--app {
@@ -157,11 +156,11 @@
 
 /* ── Home screen ── */
 .phone-view[data-view="home"] {
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .phone-home-top {
-    padding: 8px 22px 0;
+    padding: 4px 24px 0;
 }
 
 .phone-home-date {
@@ -174,8 +173,8 @@
 .phone-home-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 22px 8px;
-    padding: 20px 20px 0;
+    gap: 20px 4px;
+    padding: 28px 22px 0;
 }
 
 .phone-app-icon {
@@ -241,6 +240,340 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.phone-app-icon__img--taxi {
+    background: linear-gradient(180deg, #ffd60a 0%, #ff9f0a 100%);
+}
+
+.phone-app-icon__img--taxi svg {
+    fill: #1c1c1e;
+}
+
+/* ── Downtown Cab app ── */
+.phone-taxi {
+    background: #0a0a0a;
+}
+
+.ios-nav--taxi {
+    background: linear-gradient(180deg, rgba(20, 20, 0, 0.95) 0%, transparent 100%);
+}
+
+.ios-large-title--taxi {
+    color: #ffd60a;
+}
+
+.phone-taxi__body {
+    padding: 0 16px 24px;
+}
+
+.phone-taxi-card {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 214, 10, 0.15);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.phone-taxi-card--active {
+    border-color: rgba(255, 214, 10, 0.35);
+    background: rgba(255, 214, 10, 0.08);
+}
+
+.phone-taxi-card__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffd60a;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.phone-taxi-select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 15px;
+    margin-bottom: 14px;
+}
+
+.phone-taxi-estimate {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.phone-taxi-estimate div {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.phone-taxi-estimate span {
+    display: block;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 4px;
+}
+
+.phone-taxi-estimate strong {
+    font-size: 16px;
+    color: #fff;
+}
+
+.phone-taxi-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.phone-taxi-btn:disabled {
+    opacity: 0.45;
+}
+
+.phone-taxi-btn--primary {
+    background: linear-gradient(180deg, #ffd60a 0%, #ff9f0a 100%);
+    border-color: transparent;
+    color: #1c1c1e;
+}
+
+.phone-taxi-hint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.45;
+    margin: 0;
+}
+
+.phone-taxi-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.phone-taxi-switch {
+    min-width: 52px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.phone-taxi-switch.is-on {
+    background: #34c759;
+    color: #fff;
+}
+
+.phone-taxi-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 8px 0 10px;
+}
+
+.phone-taxi-offer {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.phone-taxi-offer__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.phone-taxi-fare {
+    color: #ffd60a;
+    font-weight: 700;
+}
+
+.phone-taxi-offer__route {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.phone-taxi-offer__meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 10px;
+}
+
+.phone-taxi-status {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.phone-taxi-status--pending { color: #ff9f0a; }
+.phone-taxi-status--accepted { color: #64d2ff; }
+.phone-taxi-status--in_progress { color: #34c759; }
+
+.phone-taxi-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 14px;
+}
+
+.phone-taxi-row span {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.phone-taxi-modes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.phone-taxi-modes--two {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.phone-taxi-mode {
+    padding: 8px 6px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.phone-taxi-mode.is-active {
+    border-color: rgba(255, 214, 10, 0.45);
+    background: rgba(255, 214, 10, 0.12);
+    color: #ffd60a;
+}
+
+.phone-taxi-panel.hidden { display: none; }
+
+.phone-taxi-map {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 214, 10, 0.2);
+    background: #1facff;
+}
+
+.phone-taxi-map__leaflet {
+    width: 100%;
+    height: 100%;
+}
+
+.phone-taxi-map__leaflet .leaflet-container {
+    width: 100%;
+    height: 100%;
+    background: #1facff;
+    font-family: inherit;
+}
+
+.phone-taxi-map-marker {
+    width: 14px !important;
+    height: 14px !important;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+
+.phone-taxi-map-marker--you {
+    background: #0a84ff;
+}
+
+.phone-taxi-map-marker--dest {
+    background: #ffd60a;
+}
+
+.phone-taxi-map__img,
+.phone-taxi-map__grid,
+.phone-taxi-map__you,
+.phone-taxi-map__pin {
+    display: none !important;
+}
+
+.phone-taxi-search {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 14px;
+}
+
+.phone-taxi-places {
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phone-taxi-place {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    text-align: left;
+}
+
+.phone-taxi-place__name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.phone-taxi-place__cat {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+}
+
+.phone-taxi-dest-summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0 4px;
+    font-size: 13px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 12px;
+}
+
+.phone-taxi-dest-summary span {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.phone-taxi-dest-summary strong {
+    color: #ffd60a;
+    text-align: right;
+    max-width: 58%;
 }
 
 .phone-dock {
@@ -780,4 +1113,33 @@
 .phone-home-zone.is-dragging .phone-home-indicator {
     transition: none;
     opacity: 0.7;
+}
+
+.phone-taxi-estimate--stats {
+    margin: 10px 0 6px;
+    font-size: 12px;
+}
+
+.phone-taxi-tips {
+    margin-top: 12px;
+}
+
+.phone-taxi-tips > span {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 8px;
+}
+
+.phone-taxi-tip-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.phone-taxi-btn--tip {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 10px;
+    font-size: 13px;
 }

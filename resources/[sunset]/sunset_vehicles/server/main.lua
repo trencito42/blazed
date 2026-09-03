@@ -17,22 +17,64 @@ exports.sunset_core:RegisterCallback('sunset:getVehicles', function(source)
     ) or {}
 end)
 
+local function normalizeStored(val)
+    if val == true or val == 1 or val == '1' then return 1 end
+    if val == false or val == 0 or val == '0' then return 0 end
+    local n = tonumber(val)
+    if n == 1 then return 1 end
+    if n == 0 then return 0 end
+    return 1
+end
+
 exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, vehicleId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
 
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return nil, 'Invalid vehicle' end
+
     local veh = MySQL.single.await(
-        'SELECT * FROM vehicles WHERE id = ? AND character_id = ? AND stored = 1',
+        'SELECT * FROM vehicles WHERE id = ? AND character_id = ?',
         { vehicleId, char.id }
     )
-    if not veh then return nil, 'Vehicle not available' end
+    if not veh then return nil, 'Vehicle not found' end
+
+    local stored = normalizeStored(veh.stored)
+    local outPlates = {}
+
+    if stored == 1 then
+        outPlates = MySQL.query.await(
+            'SELECT plate FROM vehicles WHERE character_id = ? AND stored = 0',
+            { char.id }
+        ) or {}
+        MySQL.update.await('UPDATE vehicles SET stored = 1 WHERE character_id = ? AND stored = 0', { char.id })
+        MySQL.update.await('UPDATE vehicles SET stored = 0 WHERE id = ?', { veh.id })
+    elseif stored == 0 then
+        outPlates = { { plate = veh.plate } }
+    else
+        return nil, 'Vehicle not available'
+    end
 
     local garage = Sunset.Garages[veh.garage or 'legion'] or Sunset.Garages.legion
-    local spawn = garage.spawn
+    if not garage or not garage.spawn then
+        return nil, 'Garage spawn not configured'
+    end
 
-    MySQL.update.await('UPDATE vehicles SET stored = 0 WHERE id = ?', { veh.id })
-    TriggerClientEvent('sunset:client:spawnOwnedVehicle', source, veh, spawn)
+    TriggerClientEvent('sunset:client:cleanupOwnedVehicles', source, outPlates)
+    TriggerClientEvent('sunset:client:spawnOwnedVehicle', source, veh, {
+        nearPlayer = true,
+        fresh = stored == 1,
+    })
     return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:getVehicleById', function(source, vehicleId)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil end
+    return MySQL.single.await(
+        'SELECT id, plate, model, fuel, engine, body, stored, garage FROM vehicles WHERE id = ? AND character_id = ?',
+        { vehicleId, char.id }
+    )
 end)
 
 exports.sunset_core:RegisterCallback('sunset:storeVehicle', function(source, garageId)
@@ -43,7 +85,7 @@ exports.sunset_core:RegisterCallback('sunset:storeVehicle', function(source, gar
     return true
 end)
 
-RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuel, engine, body, garageId)
+RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuelLevel, engine, body, garageId)
     local source = source
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
@@ -54,12 +96,45 @@ RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuel, eng
     ]], {
         garageId or 'legion',
         json.encode(props or {}),
-        fuel or 100,
+        fuelLevel or 100,
         engine or 1000,
         body or 1000,
         plate,
         char.id,
     })
+end)
+
+exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(source, fromFuel, toFuel, plate)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character' end
+
+    fromFuel = tonumber(fromFuel) or 0
+    toFuel = tonumber(toFuel) or 0
+    if toFuel <= fromFuel + 0.05 then return nil, 'Nothing to pay for' end
+    if toFuel > 100 then toFuel = 100 end
+
+    local added = toFuel - fromFuel
+    local pricePer = Sunset.Config.FuelPricePerPercent or 1.75
+    local cost = math.ceil(added * pricePer)
+    if cost < 1 then return nil, 'Amount too small' end
+
+    if not exports.sunset_core:RemoveMoney(source, 'cash', cost, 'fuel') then
+        if not exports.sunset_core:RemoveMoney(source, 'bank', cost, 'fuel') then
+            return nil, ('Not enough money ($%s needed)'):format(cost)
+        end
+    end
+
+    plate = (plate or ''):gsub('%s+', ''):upper()
+    if plate ~= '' then
+        pcall(function()
+            MySQL.update.await(
+                'UPDATE vehicles SET fuel = ? WHERE plate = ? AND character_id = ?',
+                { toFuel, plate, char.id }
+            )
+        end)
+    end
+
+    return { newFuel = toFuel, cost = cost, liters = added }
 end)
 
 RegisterCommand('givecar', function(source, args)
@@ -78,7 +153,7 @@ RegisterCommand('givecar', function(source, args)
     TriggerClientEvent('sunset:client:notify', target, 'You received a vehicle: ' .. model, 'success')
 end, true)
 
-RegisterCommand('garage', function(source)
+local function openGarageMenu(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
     local vehicles = MySQL.query.await(
@@ -86,4 +161,12 @@ RegisterCommand('garage', function(source)
         { char.id }
     ) or {}
     TriggerClientEvent('sunset:client:garageMenu', source, vehicles)
+end
+
+RegisterCommand('garage', function(source)
+    openGarageMenu(source)
+end, false)
+
+RegisterCommand('v', function(source)
+    openGarageMenu(source)
 end, false)

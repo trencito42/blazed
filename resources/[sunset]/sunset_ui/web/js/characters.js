@@ -33,7 +33,7 @@ const Characters = {
         el.className = 'slot';
 
         const lastPlayed = char.last_played
-            ? new Date(char.last_played).toLocaleDateString('ro-RO')
+            ? new Date(char.last_played).toLocaleDateString('en-US')
             : '—';
 
         el.innerHTML = `

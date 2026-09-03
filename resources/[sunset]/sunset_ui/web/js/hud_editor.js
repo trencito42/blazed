@@ -44,7 +44,7 @@ const HudEditor = {
             el.classList.toggle('hud-panel--selected', el.dataset.hudPanel === id);
         });
         const label = $('#hud-editor-label');
-        if (label) label.textContent = `Selectat: ${id} — săgeți pentru mutare`;
+        if (label) label.textContent = `Selected: ${id} — arrow keys to move`;
     },
 
     move(dx, dy) {

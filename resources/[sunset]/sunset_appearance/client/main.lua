@@ -30,6 +30,7 @@ local function destroyStudio()
         studioCam = nil
     end
     ClearFocus()
+    SetFocusEntity(PlayerPedId())
 end
 
 local function setupCamera(ped, mode)

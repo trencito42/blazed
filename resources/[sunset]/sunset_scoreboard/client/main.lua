@@ -22,7 +22,7 @@ RegisterCommand('-sunset_scoreboard', function()
     toggleScoreboard(false)
 end, false)
 
-RegisterKeyMapping('+sunset_scoreboard', 'Scoreboard (lista jucători)', 'keyboard', 'TAB')
+RegisterKeyMapping('+sunset_scoreboard', 'Scoreboard (player list)', 'keyboard', 'TAB')
 
 CreateThread(function()
     while true do

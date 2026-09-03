@@ -66,7 +66,7 @@ RegisterCommand('sunset_lock', function()
     SetVehicleDoorsLocked(veh, locked and 2 or 1)
     notify(locked and 'Locked' or 'Unlocked', locked and 'success' or 'info')
 end, false)
-RegisterKeyMapping('sunset_lock', 'Încuie mașina', 'keyboard', 'N')
+RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'N')
 
 -- ═══ SEATBELT (K) ═══
 RegisterCommand('sunset_seatbelt', function()
@@ -85,7 +85,7 @@ RegisterCommand('sunset_engine', function()
     if veh == 0 then return end
     local on = not GetIsVehicleEngineRunning(veh)
     SetVehicleEngineOn(veh, on, false, true)
-    notify(on and 'Motor pornit' or 'Motor oprit', 'info')
+    notify(on and 'Engine on' or 'Engine off', 'info')
 end, false)
 RegisterKeyMapping('sunset_engine', 'Motor on/off', 'keyboard', '2')
 
@@ -109,7 +109,7 @@ RegisterCommand('sunset_lights', function()
         SetVehicleFullbeam(veh, true)
     end
 end, false)
-RegisterKeyMapping('sunset_lights', 'Faruri', 'keyboard', 'H')
+RegisterKeyMapping('sunset_lights', 'Vehicle lights', 'keyboard', 'H')
 
 CreateThread(function()
     while true do
@@ -138,7 +138,10 @@ CreateThread(function()
             if veh ~= currentVeh then
                 currentVeh = veh
                 fuel = GetVehicleFuelLevel(veh)
-                if fuel <= 0 then fuel = 100.0 end
+                if fuel <= 0 or fuel > 100 then
+                    fuel = 100.0
+                end
+                SetVehicleFuelLevel(veh, fuel)
                 local _, lightsOn, highbeams = GetVehicleLightsState(veh)
                 if highbeams == 1 then lightMode = 2
                 elseif lightsOn == 1 then lightMode = 1
@@ -185,31 +188,255 @@ end)
 
 exports('GetVehicleState', GetVehicleState)
 
+exports('IsPlateInWorld', function(plate)
+    return findVehicleByPlate(plate) ~= nil
+end)
+
+exports('IsProtectedVehicle', function(veh)
+    if not veh or veh == 0 then return false end
+    if protectedVehicles[veh] then return true end
+    if spawnedOwnedVehicle and spawnedOwnedVehicle == veh then return true end
+    return false
+end)
+
 -- ═══ OWNED VEHICLES / GARAGE ═══
 
-RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawn)
-    local model = joaat(vehData.model)
-    RequestModel(model)
-    while not HasModelLoaded(model) do Wait(10) end
+local spawnedOwnedVehicle = nil
+local protectedVehicles = {}
 
-    local vehicle = CreateVehicle(model, spawn.x, spawn.y, spawn.z, spawn.w, true, false)
+local function markProtected(veh)
+    if veh and veh ~= 0 then
+        protectedVehicles[veh] = true
+    end
+end
+
+local function unmarkProtected(veh)
+    if veh then protectedVehicles[veh] = nil end
+end
+
+local function normalizePlate(plate)
+    return (plate or ''):gsub('%s+', ''):upper()
+end
+
+local function deleteVehicleEntity(veh)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    unmarkProtected(veh)
+    SetEntityAsMissionEntity(veh, true, true)
+    DeleteVehicle(veh)
+    if DoesEntityExist(veh) then
+        DeleteEntity(veh)
+    end
+end
+
+local function plateTextMatches(vehPlate, target)
+    local a = normalizePlate(vehPlate)
+    local b = normalizePlate(target)
+    if a == '' or b == '' then return false end
+    if a == b then return true end
+    return a:find(b, 1, true) ~= nil or b:find(a, 1, true) ~= nil
+end
+
+local function findVehicleByPlate(plate)
+    local target = normalizePlate(plate)
+    if target == '' then return nil end
+
+    local ped = PlayerPedId()
+    if IsPedInAnyVehicle(ped, false) then
+        local current = GetVehiclePedIsIn(ped, false)
+        if plateTextMatches(GetVehicleNumberPlateText(current), target) then
+            return current
+        end
+    end
+
+    if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
+        if plateTextMatches(GetVehicleNumberPlateText(spawnedOwnedVehicle), target) then
+            return spawnedOwnedVehicle
+        end
+    end
+
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if plateTextMatches(GetVehicleNumberPlateText(veh), target) then
+            return veh
+        end
+    end
+
+    return nil
+end
+
+local function deleteVehicleByPlate(plate)
+    local veh = findVehicleByPlate(plate)
+    if not veh then return end
+    deleteVehicleEntity(veh)
+    if spawnedOwnedVehicle == veh then
+        spawnedOwnedVehicle = nil
+    end
+end
+
+RegisterNetEvent('sunset:client:cleanupOwnedVehicles', function(plates)
+    if spawnedOwnedVehicle then
+        deleteVehicleEntity(spawnedOwnedVehicle)
+        spawnedOwnedVehicle = nil
+    end
+    for _, row in ipairs(plates or {}) do
+        deleteVehicleByPlate(row.plate or row)
+    end
+end)
+
+local function normalizeVehicleStats(vehData, fresh)
+    local fuel = tonumber(vehData.fuel)
+    local engine = tonumber(vehData.engine)
+    local body = tonumber(vehData.body)
+
+    if fresh or not fuel or fuel <= 0 or fuel > 100 then fuel = 100.0 end
+    if fresh or not engine or engine < 300 or engine > 1000 then engine = 1000.0 end
+    if fresh or not body or body < 300 or body > 1000 then body = 1000.0 end
+
+    return fuel, engine, body
+end
+
+local function getSpawnPoint(opts)
+    if opts and opts.nearPlayer then
+        local ped = PlayerPedId()
+        local coords = GetEntityCoords(ped)
+        local heading = GetEntityHeading(ped)
+        local forward = GetEntityForwardVector(ped)
+        local x = coords.x + forward.x * 4.5
+        local y = coords.y + forward.y * 4.5
+        local z = coords.z
+        local found, groundZ = GetGroundZFor_3dCoord(x, y, z + 2.0, false)
+        if found then z = groundZ + 0.15 end
+        return x, y, z, heading
+    end
+
+    local spawn = opts or {}
+    return spawn.x, spawn.y, spawn.z, spawn.w or spawn.h or 0.0
+end
+
+RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
+    deleteVehicleByPlate(vehData.plate)
+    Wait(200)
+
+    local model = joaat(vehData.model)
+    if not IsModelInCdimage(model) or not IsModelAVehicle(model) then
+        notify('Invalid vehicle model: ' .. tostring(vehData.model), 'error')
+        return
+    end
+
+    RequestModel(model)
+    local timeout = GetGameTimer() + 8000
+    while not HasModelLoaded(model) do
+        if GetGameTimer() > timeout then
+            notify('Failed to load vehicle model', 'error')
+            return
+        end
+        Wait(10)
+    end
+
+    local fresh = spawnOpts and spawnOpts.fresh == true
+    local vehFuel, vehEngine, vehBody = normalizeVehicleStats(vehData, fresh)
+    local sx, sy, sz, heading = getSpawnPoint(spawnOpts)
+    RequestCollisionAtCoord(sx, sy, sz)
+
+    local vehicle = 0
+    for i = 0, 4 do
+        local ox = (i % 2 == 0) and (i * 2.2) or (-i * 2.2)
+        local oy = math.floor(i / 2) * 2.2
+        vehicle = CreateVehicle(model, sx + ox, sy + oy, sz, heading, true, false)
+        if vehicle ~= 0 then break end
+        Wait(50)
+    end
+
+    if vehicle == 0 then
+        SetModelAsNoLongerNeeded(model)
+        notify('Could not spawn vehicle — move to open space', 'error')
+        return
+    end
+
     SetVehicleNumberPlateText(vehicle, vehData.plate)
     SetEntityAsMissionEntity(vehicle, true, true)
-    SetVehicleFuelLevel(vehicle, vehData.fuel or 100.0)
-    SetVehicleEngineHealth(vehicle, vehData.engine or 1000.0)
-    SetVehicleBodyHealth(vehicle, vehData.body or 1000.0)
-    TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
+    SetVehicleHasBeenOwnedByPlayer(vehicle, true)
+    SetVehicleNeedsToBeHotwired(vehicle, false)
+    SetVehRadioStation(vehicle, 'OFF')
+    SetVehicleFixed(vehicle)
+    SetVehicleDeformationFixed(vehicle)
+    SetVehicleDirtLevel(vehicle, 0.0)
+    SetVehiclePetrolTankHealth(vehicle, 1000.0)
+    SetVehicleFuelLevel(vehicle, vehFuel)
+    SetVehicleEngineHealth(vehicle, vehEngine)
+    SetVehicleBodyHealth(vehicle, vehBody)
+    SetVehicleEngineOn(vehicle, true, true, false)
     SetModelAsNoLongerNeeded(model)
-    notify('Vehicle spawned: ' .. vehData.plate, 'success')
+
+    spawnedOwnedVehicle = vehicle
+    markProtected(vehicle)
+    fuel = vehFuel
+    currentVeh = 0
+    notify(('Vehicle spawned nearby: %s (fuel %d%%)'):format(vehData.plate, math.floor(vehFuel)), 'success')
 end)
 
 RegisterNetEvent('sunset:client:garageMenu', function(vehicles)
+    for _, v in ipairs(vehicles or {}) do
+        v.inWorld = findVehicleByPlate(v.plate) ~= nil
+    end
     exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
-    exports.sunset_ui:SetFocus(true, true)
+    exports.sunset_ui:SetFocus(true, true, false)
 end)
 
 AddEventHandler('sunset:nui:garageSpawn', function(data)
-    Sunset.AwaitCallback('sunset:spawnVehicle', data.vehicleId)
+    CreateThread(function()
+        local ok, err = Sunset.AwaitCallback('sunset:spawnVehicle', data.vehicleId)
+        if not ok then
+            notify(err or 'Could not spawn vehicle', 'error')
+        end
+        exports.sunset_ui:SetFocus(false, false)
+        exports.sunset_ui:Send('garageHide', {})
+    end)
+end)
+
+AddEventHandler('sunset:nui:garageStore', function(data)
+    CreateThread(function()
+        local vehData = Sunset.AwaitCallback('sunset:getVehicleById', data.vehicleId)
+        if not vehData then
+            notify('Vehicle not found', 'error')
+            return
+        end
+        if vehData.stored == 1 then
+            notify('Already in garage', 'info')
+            return
+        end
+
+        local entity = findVehicleByPlate(vehData.plate)
+        local props = { model = joaat(vehData.model) }
+        local vehFuel = vehData.fuel or 100.0
+        local vehEngine = vehData.engine or 1000.0
+        local vehBody = vehData.body or 1000.0
+
+        if entity then
+            props.model = GetEntityModel(entity)
+            vehFuel = GetVehicleFuelLevel(entity)
+            vehEngine = GetVehicleEngineHealth(entity)
+            vehBody = GetVehicleBodyHealth(entity)
+            deleteVehicleEntity(entity)
+            if spawnedOwnedVehicle == entity then spawnedOwnedVehicle = nil end
+        end
+
+        local plate = normalizePlate(vehData.plate)
+        TriggerServerEvent('sunset:server:vehicleStored', plate, props, vehFuel, vehEngine, vehBody, vehData.garage or 'legion')
+        notify('Vehicle stored in garage', 'success')
+        exports.sunset_ui:SetFocus(false, false)
+        exports.sunset_ui:Send('garageHide', {})
+    end)
+end)
+
+AddEventHandler('sunset:nui:garageLocate', function(data)
+    local entity = findVehicleByPlate(data.plate)
+    if not entity then
+        notify('Vehicle not found in the world', 'error')
+        return
+    end
+    local coords = GetEntityCoords(entity)
+    SetNewWaypoint(coords.x, coords.y)
+    notify('GPS set to ' .. normalizePlate(data.plate), 'success')
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('garageHide', {})
 end)
@@ -225,7 +452,8 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
     local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
     local props = { model = GetEntityModel(veh) }
     TriggerServerEvent('sunset:server:vehicleStored', plate, props, fuel, GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId)
-    DeleteVehicle(veh)
+    deleteVehicleEntity(veh)
+    if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
     notify('Vehicle stored', 'success')
 end)
 
@@ -238,7 +466,22 @@ AddEventHandler('sunset:world:garageStore', function(garageId)
     local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
     TriggerServerEvent('sunset:server:vehicleStored', plate, { model = GetEntityModel(veh) }, fuel,
         GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId)
-    DeleteVehicle(veh)
+    deleteVehicleEntity(veh)
+    if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
     notify('Vehicle stored', 'success')
+end)
+
+local function setFuelLevel(veh, level)
+    level = math.max(0.0, math.min(100.0, tonumber(level) or 0))
+    fuel = level
+    if veh and veh ~= 0 then
+        SetVehicleFuelLevel(veh, level)
+    end
+end
+
+exports('SetFuelLevel', setFuelLevel)
+
+exports('GetFuelLevel', function()
+    return fuel
 end)
 

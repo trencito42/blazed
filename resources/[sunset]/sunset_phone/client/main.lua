@@ -1,16 +1,67 @@
 local phoneOpen = false
+local phoneProp = nil
+local PHONE_MODEL = `prop_amb_phone`
+
+local function playPhoneSound(name)
+    if name == 'open' then
+        PlaySoundFrontend(-1, 'Pin_Good', 'Phone_SoundSet_Michael', true)
+    else
+        PlaySoundFrontend(-1, 'Put_Away', 'Phone_SoundSet_Michael', true)
+    end
+end
+
+local function loadAnimDict(dict)
+    RequestAnimDict(dict)
+    local timeout = GetGameTimer() + 3000
+    while not HasAnimDictLoaded(dict) do
+        if GetGameTimer() > timeout then return false end
+        Wait(10)
+    end
+    return true
+end
+
+local function attachPhoneProp(ped)
+    if phoneProp and DoesEntityExist(phoneProp) then return end
+
+    RequestModel(PHONE_MODEL)
+    local timeout = GetGameTimer() + 3000
+    while not HasModelLoaded(PHONE_MODEL) do
+        if GetGameTimer() > timeout then return end
+        Wait(10)
+    end
+
+    local coords = GetEntityCoords(ped)
+    phoneProp = CreateObject(PHONE_MODEL, coords.x, coords.y, coords.z + 0.2, true, true, false)
+    SetEntityCollision(phoneProp, false, false)
+    local bone = GetPedBoneIndex(ped, 28422)
+    AttachEntityToEntity(phoneProp, ped, bone, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, true, false, false, 2, true)
+    SetModelAsNoLongerNeeded(PHONE_MODEL)
+end
+
+local function removePhoneProp()
+    if phoneProp and DoesEntityExist(phoneProp) then
+        DeleteEntity(phoneProp)
+    end
+    phoneProp = nil
+end
 
 local function playPhoneAnim(open)
     local ped = PlayerPedId()
     local dict = 'cellphone@'
+
     if open then
-        RequestAnimDict(dict)
-        local t = GetGameTimer() + 2000
-        while not HasAnimDictLoaded(dict) and GetGameTimer() < t do Wait(10) end
-        if HasAnimDictLoaded(dict) then
-            TaskPlayAnim(ped, dict, 'cellphone_text_in', 3.0, -1, -1, 50, 0, false, false, false)
-        end
+        if not loadAnimDict(dict) then return end
+        TaskPlayAnim(ped, dict, 'cellphone_text_in', 3.0, -1, -1, 50, 0, false, false, false)
+        Wait(400)
+        attachPhoneProp(ped)
+        TaskPlayAnim(ped, dict, 'cellphone_text_read_base', 3.0, 3.0, -1, 49, 0, false, false, false)
     else
+        if loadAnimDict(dict) then
+            TaskPlayAnim(ped, dict, 'cellphone_text_out', 3.0, -1, -1, 50, 0, false, false, false)
+            Wait(300)
+        end
+        removePhoneProp()
+        StopAnimTask(ped, dict, 'cellphone_text_read_base', 1.0)
         StopAnimTask(ped, dict, 'cellphone_text_in', 1.0)
         StopAnimTask(ped, dict, 'cellphone_text_out', 1.0)
     end
@@ -28,15 +79,18 @@ local function openPhone()
 
         local data = Sunset.AwaitCallback('sunset:getPhoneData') or {}
         phoneOpen = true
+        DisablePlayerFiring(PlayerId(), true)
+        playPhoneSound('open')
         playPhoneAnim(true)
         exports.sunset_ui:Send('phoneShow', data)
-        exports.sunset_ui:SetFocus(true, true, true)
+        exports.sunset_ui:SetFocus(true, true, false)
     end)
 end
 
 local function closePhone()
     if not phoneOpen then return end
     phoneOpen = false
+    playPhoneSound('close')
     playPhoneAnim(false)
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('phoneHide', {})
@@ -79,6 +133,40 @@ AddEventHandler('sunset:nui:menuAction', function(data)
     if data and data.action == 'phone' then
         openPhone()
     end
+end)
+
+CreateThread(function()
+    while true do
+        if phoneOpen then
+            DisableControlAction(0, 24, true)  -- attack
+            DisableControlAction(0, 25, true)  -- aim
+            DisableControlAction(0, 47, true)  -- weapon
+            DisableControlAction(0, 58, true)
+            DisableControlAction(0, 140, true) -- melee
+            DisableControlAction(0, 141, true)
+            DisableControlAction(0, 142, true)
+            DisableControlAction(0, 143, true)
+            DisableControlAction(0, 257, true)
+            DisableControlAction(0, 263, true)
+            DisableControlAction(0, 264, true)
+            DisablePlayerFiring(PlayerId(), true)
+
+            local ped = PlayerPedId()
+            if not IsEntityPlayingAnim(ped, 'cellphone@', 'cellphone_text_read_base', 3) then
+                if loadAnimDict('cellphone@') then
+                    TaskPlayAnim(ped, 'cellphone@', 'cellphone_text_read_base', 3.0, 3.0, -1, 49, 0, false, false, false)
+                end
+            end
+            Wait(0)
+        else
+            Wait(400)
+        end
+    end
+end)
+
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    removePhoneProp()
 end)
 
 exports('Open', openPhone)

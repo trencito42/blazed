@@ -70,6 +70,9 @@ fi
 if [ -f sql/05-factions-crafting.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/05-factions-crafting.sql 2>/dev/null || true
 fi
+if [ -f sql/06-taxi.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/06-taxi.sql 2>/dev/null || true
+fi
 
 # Optional deps (ox_lib, pma-voice)
 if [ -f scripts/install-deps.sh ]; then

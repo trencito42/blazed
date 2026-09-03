@@ -8,6 +8,7 @@ local function decodeChar(char)
     char.stress = tonumber(char.stress) or 0
     char.level = tonumber(char.level) or 1
     char.xp = tonumber(char.xp) or 0
+    char = Sunset.MigrateCharacterProfile(char)
     return char
 end
 
@@ -94,11 +95,62 @@ end
 
 function Sunset.SetJob(source, job, grade)
     local char = Sunset.GetCharacter(source)
-    if not char or not Sunset.Jobs[job] then return false end
+    if not char then return false end
+    if Sunset.Factions[job] then return false end
+    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then return false end
+
     char.job = job
     char.job_grade = grade or 0
+    MySQL.update.await(
+        'UPDATE characters SET job = ?, job_grade = ? WHERE id = ?',
+        { char.job, char.job_grade, char.id }
+    )
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     TriggerEvent('sunset:server:jobChanged', source, job, grade or 0)
+    return true
+end
+
+function Sunset.SetFaction(source, factionId, grade)
+    local char = Sunset.GetCharacter(source)
+    if not char then return false end
+
+    char.metadata = char.metadata or {}
+    if not factionId or factionId == 'none' then
+        char.metadata.faction = nil
+        char.metadata.faction_grade = nil
+    else
+        if not Sunset.Factions[factionId] then return false end
+        char.metadata.faction = factionId
+        char.metadata.faction_grade = grade or 0
+        if Sunset.Factions[char.job] then
+            char.job = 'unemployed'
+            char.job_grade = 0
+        end
+    end
+
+    MySQL.update.await(
+        'UPDATE characters SET job = ?, job_grade = ?, metadata = ? WHERE id = ?',
+        { char.job or 'unemployed', char.job_grade or 0, json.encode(char.metadata), char.id }
+    )
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    TriggerEvent('sunset:server:jobChanged', source, factionId or 'none', grade or 0)
+    return true
+end
+
+function Sunset.AddXP(source, amount)
+    local char = Sunset.GetCharacter(source)
+    if not char or not amount or amount <= 0 then return false end
+
+    char.xp = (char.xp or 0) + amount
+    local xpMax = math.max(5000, (char.level or 1) * 5000)
+    while char.xp >= xpMax do
+        char.xp = char.xp - xpMax
+        char.level = (char.level or 1) + 1
+        xpMax = math.max(5000, char.level * 5000)
+        TriggerClientEvent('sunset:client:notify', source, ('Level up! You are now level %d'):format(char.level), 'success', 6000)
+    end
+
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
 end
 
@@ -125,4 +177,6 @@ exports('AddMoney', Sunset.AddMoney)
 exports('RemoveMoney', Sunset.RemoveMoney)
 exports('GetMoney', Sunset.GetMoney)
 exports('SetJob', Sunset.SetJob)
+exports('SetFaction', Sunset.SetFaction)
+exports('AddXP', Sunset.AddXP)
 exports('GetSpawnPosition', Sunset.GetSpawnPosition)

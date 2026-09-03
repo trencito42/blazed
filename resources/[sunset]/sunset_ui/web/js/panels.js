@@ -94,18 +94,66 @@ const Panels = {
         this.init();
         const list = $('#garage-list');
         list.innerHTML = '';
+        list.className = 'menu-vehicle-grid';
+
+        const vehicleImage = (model) => {
+            const m = (model || 'sultan').toLowerCase().replace(/[^a-z0-9_]/g, '');
+            return `https://docs.fivem.net/vehicles/${m}.webp`;
+        };
+
+        const addBtn = (parent, label, className, onClick) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.className = `menu-vcard__btn ${className || ''}`;
+            btn.addEventListener('click', onClick);
+            parent.appendChild(btn);
+        };
+
         (data.vehicles || []).forEach((v) => {
+            const stored = v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1;
+            const inWorld = v.inWorld === true;
+            const status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
+            const statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
+            const model = (v.model || 'vehicle').toUpperCase();
+
             const li = document.createElement('li');
-            const status = v.stored == 1 ? 'stored' : 'out';
-            li.innerHTML = `<span>${v.model} [${v.plate}] — ${status}</span>`;
-            if (v.stored == 1) {
-                const btn = document.createElement('button');
-                btn.textContent = 'SPAWN';
-                btn.addEventListener('click', () => post('garageSpawn', { vehicleId: v.id }));
-                li.appendChild(btn);
+            li.className = 'menu-vcard';
+            li.innerHTML = `
+                <div class="menu-vcard__img-wrap">
+                    <img class="menu-vcard__img" src="${vehicleImage(v.model)}" alt="${model}" loading="lazy"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="menu-vcard__img-fallback" style="display:none">${model.charAt(0)}</div>
+                </div>
+                <div class="menu-vcard__body">
+                    <div class="menu-vcard__top">
+                        <strong>${model}</strong>
+                        <span class="menu-vcard__status menu-vcard__status--${statusClass}">${status}</span>
+                    </div>
+                    <div class="menu-vcard__plate">${v.plate}</div>
+                    <div class="menu-vcard__meta">${v.garage || 'legion'}</div>
+                    <div class="menu-vcard__actions"></div>
+                </div>`;
+
+            const actions = li.querySelector('.menu-vcard__actions');
+            if (stored) {
+                addBtn(actions, 'Spawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
+            } else if (inWorld) {
+                addBtn(actions, 'GPS', '', () => post('garageLocate', { plate: v.plate }));
+                addBtn(actions, 'Store', 'menu-vcard__btn--primary', () => post('garageStore', { vehicleId: v.id }));
+            } else {
+                addBtn(actions, 'Respawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
+                addBtn(actions, 'Store', '', () => post('garageStore', { vehicleId: v.id }));
             }
+
             list.appendChild(li);
         });
+
+        if (!(data.vehicles || []).length) {
+            list.className = 'panel-list';
+            list.innerHTML = '<li class="garage-empty">You have no vehicles. Plates are assigned when you receive a car.</li>';
+        }
+
         $('#garage')?.classList.remove('hidden');
     },
 
@@ -143,7 +191,104 @@ const Panels = {
 
     showClothing(data) {
         this.init();
-        $('#clothing-title').textContent = data.type === 'barber' ? 'Barber' : 'Clothing';
+        const type = data.type || 'clothing';
+        this.clothingType = type;
+        const options = $('#clothing-options');
+        const hint = $('#clothing-hint');
+        if (!options) return;
+        options.innerHTML = '';
+
+        $('#clothing-title').textContent = type === 'barber' ? 'Barber' : 'Clothing';
+
+        if (type === 'barber') {
+            if (hint) hint.textContent = 'Alege coafura. $50 per schimbare.';
+            if (this.barberHair == null) this.barberHair = 0;
+
+            const picker = document.createElement('div');
+            picker.className = 'clothing-picker';
+            picker.innerHTML = `
+                <button type="button" class="btn" id="barber-prev">◀</button>
+                <span id="barber-label">Hair #0</span>
+                <button type="button" class="btn" id="barber-next">▶</button>`;
+            options.appendChild(picker);
+
+            const apply = document.createElement('button');
+            apply.type = 'button';
+            apply.className = 'btn btn--primary clothing-apply';
+            apply.textContent = 'Apply — $50';
+            options.appendChild(apply);
+
+            const label = () => {
+                const el = $('#barber-label');
+                if (el) el.textContent = `Hair #${this.barberHair}`;
+            };
+            const preview = () => post('clothingPreview', { type: 'barber', hair: this.barberHair });
+
+            picker.querySelector('#barber-prev')?.addEventListener('click', () => {
+                this.barberHair = Math.max(0, this.barberHair - 1);
+                label();
+                preview();
+            });
+            picker.querySelector('#barber-next')?.addEventListener('click', () => {
+                this.barberHair = Math.min(36, this.barberHair + 1);
+                label();
+                preview();
+            });
+            apply.addEventListener('click', () => {
+                post('clothingApply', { type: 'barber', hair: this.barberHair, pay: true });
+            });
+            label();
+            preview();
+        } else {
+            if (hint) hint.textContent = 'Alege haina (torso). $50 per schimbare.';
+            if (this.clothingDrawable == null) this.clothingDrawable = 0;
+
+            const picker = document.createElement('div');
+            picker.className = 'clothing-picker';
+            picker.innerHTML = `
+                <button type="button" class="btn" id="cloth-prev">◀</button>
+                <span id="cloth-label">Outfit #0</span>
+                <button type="button" class="btn" id="cloth-next">▶</button>`;
+            options.appendChild(picker);
+
+            const apply = document.createElement('button');
+            apply.type = 'button';
+            apply.className = 'btn btn--primary clothing-apply';
+            apply.textContent = 'Apply — $50';
+            options.appendChild(apply);
+
+            const label = () => {
+                const el = $('#cloth-label');
+                if (el) el.textContent = `Outfit #${this.clothingDrawable}`;
+            };
+            const preview = () => post('clothingPreview', {
+                type: 'clothing',
+                component: 11,
+                drawable: this.clothingDrawable,
+            });
+
+            picker.querySelector('#cloth-prev')?.addEventListener('click', () => {
+                this.clothingDrawable = Math.max(0, this.clothingDrawable - 1);
+                label();
+                preview();
+            });
+            picker.querySelector('#cloth-next')?.addEventListener('click', () => {
+                this.clothingDrawable = Math.min(40, this.clothingDrawable + 1);
+                label();
+                preview();
+            });
+            apply.addEventListener('click', () => {
+                post('clothingApply', {
+                    type: 'clothing',
+                    component: 11,
+                    drawable: this.clothingDrawable,
+                    pay: true,
+                });
+            });
+            label();
+            preview();
+        }
+
         $('#clothing')?.classList.remove('hidden');
     },
 

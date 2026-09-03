@@ -57,6 +57,30 @@
 .overlay-panel .btn--primary { background: #ff8c00; color: #111; }
 .overlay-panel .btn--ghost { background: rgba(255,255,255,0.08); color: #fff; }
 
+.clothing-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.clothing-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.clothing-picker span {
+    min-width: 90px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.clothing-apply {
+    width: 100%;
+}
+
 .panel-list { list-style: none; padding: 0; margin: 0; }
 .panel-list li {
     display: flex;
@@ -102,6 +126,99 @@
 .panel-list li:has(.craft-row) button {
     align-self: flex-end;
 }
+
+.garage-hint {
+    margin: -4px 0 12px;
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.4;
+}
+
+.garage-item {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px;
+    padding: 12px 0 !important;
+}
+
+.garage-item__info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.garage-item__model {
+    font-size: 14px;
+    text-transform: capitalize;
+}
+
+.garage-item__plate {
+    font-size: 12px;
+    color: #ccc;
+    font-family: monospace;
+}
+
+.garage-item__status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.garage-item__status--stored {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.garage-item__status--out {
+    background: rgba(255, 140, 0, 0.15);
+    color: #ff8c00;
+}
+
+.garage-item__status--missing {
+    background: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+}
+
+.garage-item__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.garage-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
+}
+
+.garage-btn--primary {
+    background: rgba(255, 140, 0, 0.15) !important;
+    border-color: rgba(255, 140, 0, 0.35) !important;
+    color: #ff8c00 !important;
+}
+
+.garage-empty {
+    justify-content: center !important;
+    color: #888;
+    border: none !important;
+}
+
+.overlay-panel__box--garage {
+    max-width: 920px;
+}
+
+.overlay-panel__box--garage .menu-vehicle-grid {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.overlay-panel__box--garage .menu-vcard {
+    list-style: none;
+}
+
 .panel-close {
     margin-top: 16px;
     width: 100%;

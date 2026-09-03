@@ -176,7 +176,7 @@ local function createDefaultAccountCharacter(player)
         INSERT INTO characters (player_id, slot, firstname, lastname, dateofbirth, gender, nationality, cash, bank, position, appearance)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ]], {
-        player.id, 1, accountName, '', '1990-01-01', 0, 'Romanian',
+        player.id, 1, accountName, '', '1990-01-01', 0, 'American',
         Sunset.Config.StartingCash, Sunset.Config.StartingBank,
         json.encode({ x = spawn.x, y = spawn.y, z = spawn.z, w = spawn.w }),
         json.encode({}),
@@ -192,6 +192,13 @@ local function loadCharacterForPlayer(source, player, charId)
     if not char then return nil end
 
     char = Sunset.DecodeCharacter(char)
+    if char._profileMigrated then
+        MySQL.update.await(
+            'UPDATE characters SET job = ?, job_grade = ?, metadata = ? WHERE id = ?',
+            { char.job or 'unemployed', char.job_grade or 0, json.encode(char.metadata or {}), charId }
+        )
+        char._profileMigrated = nil
+    end
     char = syncCharacterAccountName(char, player.name)
     char.last_played_before = char.last_played
     MySQL.update.await('UPDATE characters SET last_played = NOW() WHERE id = ?', { charId })
@@ -223,6 +230,13 @@ CreateThread(function()
                     MySQL.update.await('UPDATE players SET playtime = playtime + ? WHERE id = ?', { mins, player.id })
                     player.playtime = (tonumber(player.playtime) or 0) + mins
                     player.sessionStart = os.time()
+                    if player.character then
+                        Sunset.AddXP(src, math.max(5, mins * 2))
+                        if player.character._profileMigrated then
+                            Sunset.SaveCharacter(src)
+                            player.character._profileMigrated = nil
+                        end
+                    end
                 end
             end
         end
@@ -276,7 +290,7 @@ RegisterCallback('sunset:createCharacter', function(source, data)
     data.lastname = ''
     data.dateofbirth = data.dateofbirth or '1990-01-01'
     data.gender = data.gender or 0
-    data.nationality = data.nationality or 'Romanian'
+    data.nationality = data.nationality or 'American'
 
     local slot = data.slot or (count + 1)
     local spawn = Sunset.Config.DefaultSpawn

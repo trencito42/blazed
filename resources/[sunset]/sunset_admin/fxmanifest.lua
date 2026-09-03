@@ -22,4 +22,4 @@ client_scripts {
     'client/main.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_death', 'sunset_factions' }

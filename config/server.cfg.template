@@ -12,7 +12,7 @@ sets tags "rpg, sunsetmp, english"
 sets locale "en-US"
 
 sv_maxclients 48
-sv_enforceGameBuild 3095
+sv_enforceGameBuild 3258
 
 set onesync on
 set onesync_population false
@@ -60,6 +60,7 @@ ensure sunset_properties
 ensure sunset_emotes
 ensure sunset_clothing
 ensure sunset_phone
+ensure sunset_taxi
 ensure sunset_documents
 ensure sunset_jobs
 ensure sunset_hud

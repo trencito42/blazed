@@ -19,15 +19,12 @@ RegisterNetEvent('sunset:client:callbackResponse', function(requestId, result, e
     end
 end)
 
--- Promise-style for internal use
+-- Promise-style for internal use — always returns result, err (never throws)
 function Sunset.AwaitCallback(name, ...)
     local p = promise.new()
     TriggerCallback(name, function(result, err)
-        if err then
-            p:reject(err)
-        else
-            p:resolve(result)
-        end
+        p:resolve({ result = result, err = err })
     end, ...)
-    return Citizen.Await(p)
+    local packed = Citizen.Await(p)
+    return packed.result, packed.err
 end

@@ -25,9 +25,15 @@ Sunset.Config = {
     -- Death
     RespawnDelay = 5000, -- ms
     HospitalBill = 250,
+    HospitalSpawn = vector4(311.18, -592.49, 43.28, 70.0), -- Pillbox
 
     -- Save
     SaveInterval = 60, -- seconds
+
+    -- Fuel ($ per 1% tank)
+    FuelPricePerPercent = 1.75,
+    FuelFillRatePerSec = 0.22,
+    FuelPumpReach = 4.2,
 }
 
 Sunset.Jobs = {

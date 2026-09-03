@@ -1,27 +1,34 @@
 local lastPaydayHour = -1
 
-local function getSalary(char)
-    local job = Sunset.Jobs[char.job]
+local function getSalary(char, source)
+    local factionId, grade = Sunset.GetCharacterFaction(char)
+    if factionId then
+        local faction = Sunset.Factions[factionId]
+        if faction and faction.duty and not exports.sunset_factions:IsOnDuty(source) then
+            return 0
+        end
+        local row = faction and faction.grades[grade or 0]
+        return row and row.salary or 0
+    end
+
+    local jobId, jobGrade = Sunset.GetCharacterJob(char)
+    local job = Sunset.CivilianJobs[jobId] or Sunset.Jobs[jobId]
     if not job then return 0 end
-    local grade = job.grades[char.job_grade or 0]
-    return grade and grade.salary or 0
+    local row = job.grades[jobGrade or 0]
+    return row and row.salary or 0
 end
 
 local function processPayday(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
 
-    local faction = Sunset.Factions and Sunset.Factions[char.job]
-    if faction and faction.duty and not exports.sunset_factions:IsOnDuty(source) then
-        return
-    end
-
-    local salary = getSalary(char)
+    local salary = getSalary(char, source)
     if salary <= 0 then return end
 
     local tax = math.floor(salary * (Sunset.Config.TaxRate or 0))
     local net = salary - tax
     exports.sunset_core:AddMoney(source, 'bank', net, 'payday')
+    exports.sunset_core:AddXP(source, 50)
     TriggerClientEvent('sunset:client:payday', source, net, tax)
 end
 

@@ -214,6 +214,15 @@ window.addEventListener('message', (event) => {
         case 'phoneHide':
             if (window.Phone) Phone.hide();
             break;
+        case 'taxiUpdate':
+            if (window.Phone) Phone.updateTaxi(data || event.data.data);
+            break;
+        case 'taxiEstimate':
+            if (window.Phone) Phone.setTaxiEstimate(data || event.data.data);
+            break;
+        case 'taxiPickResult':
+            if (window.Phone) Phone.onTaxiPick(data || event.data.data);
+            break;
         case 'documentsShow':
             if (window.Panels) Panels.showDocuments(data || event.data.data);
             break;
@@ -274,6 +283,16 @@ window.addEventListener('message', (event) => {
 
         case 'progress':
             progressBar(label, duration);
+            break;
+
+        case 'fuelPumpShow':
+            if (window.FuelPump) FuelPump.show(data || event.data.data);
+            break;
+        case 'fuelPumpUpdate':
+            if (window.FuelPump) FuelPump.update(data || event.data.data);
+            break;
+        case 'fuelPumpHide':
+            if (window.FuelPump) FuelPump.hide();
             break;
     }
 });

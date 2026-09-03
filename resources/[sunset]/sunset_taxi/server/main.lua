@@ -1,0 +1,466 @@
+local Rides = {}
+local rideSeq = 0
+local DriverAvailable = {}
+local DriverSessionStats = {}
+
+local function getChar(source)
+    return exports.sunset_core:GetCharacter(source)
+end
+
+local function findSourceByCharacterId(characterId)
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local c = getChar(src)
+        if c and c.id == characterId then
+            return src
+        end
+    end
+    return nil
+end
+
+local function isTaxiDriver(source)
+    local char = getChar(source)
+    if not char then return false end
+    local factionId = Sunset.GetCharacterFaction(char)
+    if factionId ~= Sunset.Taxi.factionId then return false end
+    return exports.sunset_factions:IsOnDuty(source)
+end
+
+local function encodeCoords(coords)
+    return {
+        x = coords.x or coords[1] or 0.0,
+        y = coords.y or coords[2] or 0.0,
+        z = coords.z or coords[3] or 0.0,
+    }
+end
+
+local function rideForPassenger(charId)
+    for _, ride in pairs(Rides) do
+        if ride.passengerCharId == charId and ride.status ~= 'completed' and ride.status ~= 'cancelled' then
+            return ride
+        end
+    end
+end
+
+local function rideForDriver(charId)
+    for _, ride in pairs(Rides) do
+        if ride.driverCharId == charId and ride.status ~= 'completed' and ride.status ~= 'cancelled' then
+            return ride
+        end
+    end
+end
+
+local function serializeRide(ride, viewerSource)
+    if not ride then return nil end
+    local viewerChar = getChar(viewerSource)
+    local out = {
+        id = ride.id,
+        status = ride.status,
+        fare = ride.fare,
+        distanceKm = ride.distanceKm,
+        pickup = ride.pickup,
+        destination = ride.destination,
+        passengerName = ride.passengerName,
+        driverName = ride.driverName,
+        createdAt = ride.createdAt,
+        isPassenger = viewerChar and viewerChar.id == ride.passengerCharId,
+        isDriver = viewerChar and viewerChar.id == ride.driverCharId,
+    }
+    return out
+end
+
+local function pushTaxiUpdate(source)
+    TriggerClientEvent('sunset:client:taxiRefresh', source)
+end
+
+local function broadcastDrivers(event, payload)
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if isTaxiDriver(src) and DriverAvailable[src] ~= false then
+            TriggerClientEvent(event, src, payload)
+        end
+    end
+end
+
+local function addSociety(amount)
+    local cut = math.floor(amount or 0)
+    if cut <= 0 then return end
+    pcall(function()
+        MySQL.update.await('UPDATE societies SET balance = balance + ? WHERE name = ?', { cut, 'taxi' })
+    end)
+end
+
+local function getDriverStats(charId)
+    local session = DriverSessionStats[charId] or { rides = 0, earnings = 0 }
+    local todayRides, todayEarnings = 0, 0
+    pcall(function()
+        local row = MySQL.single.await([[
+            SELECT COUNT(*) AS rides, COALESCE(SUM(fare), 0) AS earnings
+            FROM taxi_rides
+            WHERE driver_character_id = ? AND status = 'completed' AND DATE(completed_at) = CURDATE()
+        ]], { charId })
+        if row then
+            todayRides = tonumber(row.rides) or 0
+            todayEarnings = tonumber(row.earnings) or 0
+        end
+    end)
+    return {
+        sessionRides = session.rides or 0,
+        sessionEarnings = session.earnings or 0,
+        todayRides = todayRides,
+        todayEarnings = todayEarnings,
+    }
+end
+
+local function buildAppData(source)
+    local char = getChar(source)
+    if not char then return nil end
+
+    local destinations = {}
+    for _, dest in ipairs(Sunset.Taxi.BuildAllDestinations()) do
+        local c = dest.coords
+        destinations[#destinations + 1] = {
+            id = dest.id,
+            label = dest.label,
+            category = dest.category,
+            x = c.x,
+            y = c.y,
+        }
+    end
+
+    local ped = GetPlayerPed(source)
+    local pcoords = GetEntityCoords(ped)
+
+    local data = {
+        appName = Sunset.Taxi.appName,
+        appShort = Sunset.Taxi.appShort,
+        isDriver = Sunset.GetCharacterFaction(char) == Sunset.Taxi.factionId,
+        onDuty = isTaxiDriver(source),
+        driverAvailable = DriverAvailable[source] ~= false,
+        destinations = destinations,
+        mapBounds = Sunset.Taxi.mapBounds,
+        playerPos = { x = pcoords.x, y = pcoords.y },
+        activeRide = nil,
+        pendingOffers = {},
+        pricing = {
+            base = Sunset.Taxi.baseFare,
+            perKm = Sunset.Taxi.perKm,
+            min = Sunset.Taxi.minFare,
+            companyCut = math.floor((Sunset.Taxi.companyCut or 0.12) * 100),
+        },
+        tipOptions = Sunset.Taxi.tipOptions or { 25, 50, 100 },
+    }
+
+    if Sunset.GetCharacterFaction(char) == Sunset.Taxi.factionId then
+        data.driverStats = getDriverStats(char.id)
+    end
+
+    local active = rideForPassenger(char.id) or rideForDriver(char.id)
+    data.activeRide = serializeRide(active, source)
+
+    if isTaxiDriver(source) and DriverAvailable[source] ~= false then
+        local offers = {}
+        for _, ride in pairs(Rides) do
+            if ride.status == 'pending' and not ride.driverCharId then
+                offers[#offers + 1] = serializeRide(ride, source)
+            end
+        end
+        table.sort(offers, function(a, b) return (a.id or 0) < (b.id or 0) end)
+        data.pendingOffers = offers
+    end
+
+    return data
+end
+
+exports.sunset_core:RegisterCallback('sunset:getTaxiAppData', function(source)
+    return buildAppData(source)
+end)
+
+local function startRide(source, pickup, destination, destLabel)
+    local char = getChar(source)
+    if not char then return nil, 'No character' end
+    if isTaxiDriver(source) then return nil, 'Go off duty to request a ride' end
+    if rideForPassenger(char.id) then return nil, 'You already have an active ride' end
+
+    pickup = encodeCoords(pickup)
+    destination = encodeCoords(destination)
+    local fare, km = Sunset.TaxiEstimateFare(pickup, destination)
+    local label = destLabel or 'Custom destination'
+
+    rideSeq = rideSeq + 1
+    local ride = {
+        id = rideSeq,
+        passengerSource = source,
+        passengerCharId = char.id,
+        passengerName = exports.sunset_core:GetPlayerDisplayName(source),
+        driverSource = nil,
+        driverCharId = nil,
+        driverName = nil,
+        pickup = pickup,
+        destination = { x = destination.x, y = destination.y, z = destination.z, label = label },
+        fare = fare,
+        distanceKm = km,
+        status = 'pending',
+        createdAt = os.time(),
+    }
+    Rides[ride.id] = ride
+
+    broadcastDrivers('sunset:client:taxiNewOffer', serializeRide(ride, source))
+    TriggerClientEvent('sunset:client:notify', source,
+        ('Ride requested — $%s to %s. Waiting for a driver...'):format(fare, label), 'success')
+
+    SetTimeout((Sunset.Taxi.requestTimeout or 300) * 1000, function()
+        local current = Rides[ride.id]
+        if current and current.status == 'pending' then
+            current.status = 'cancelled'
+            local pSrc = findSourceByCharacterId(current.passengerCharId)
+            if pSrc then
+                TriggerClientEvent('sunset:client:notify', pSrc, 'No drivers accepted your ride', 'error')
+                pushTaxiUpdate(pSrc)
+            end
+            broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
+        end
+    end)
+
+    return serializeRide(ride, source)
+end
+
+local function estimateRide(pickup, destination, destLabel)
+    pickup = encodeCoords(pickup)
+    destination = encodeCoords(destination)
+    local fare, km = Sunset.TaxiEstimateFare(pickup, destination)
+    return {
+        fare = fare,
+        distanceKm = km,
+        label = destLabel or 'Custom destination',
+        destination = destination,
+    }
+end
+
+exports.sunset_core:RegisterCallback('sunset:taxiEstimate', function(source, destinationId, pickup)
+    pickup = pickup or {}
+    local destRow = Sunset.Taxi.FindDestination(destinationId)
+    if not destRow then return nil, 'Invalid destination' end
+    return estimateRide(pickup, destRow.coords, destRow.label)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiEstimateCoords', function(source, pickup, destination)
+    if not destination or not destination.x then return nil, 'Invalid destination' end
+    return estimateRide(pickup, destination, destination.label)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiRequestRide', function(source, destinationId, pickup)
+    pickup = pickup or encodeCoords(GetEntityCoords(GetPlayerPed(source)))
+    local destRow = Sunset.Taxi.FindDestination(destinationId)
+    if not destRow then return nil, 'Pick a destination' end
+    return startRide(source, pickup, destRow.coords, destRow.label)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiRequestRideCoords', function(source, pickup, destination)
+    if not destination or not destination.x then return nil, 'Pick a destination on the map' end
+    pickup = pickup or encodeCoords(GetEntityCoords(GetPlayerPed(source)))
+    return startRide(source, pickup, destination, destination.label)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiAcceptRide', function(source, rideId)
+    if not isTaxiDriver(source) then return nil, 'You must be on duty as a taxi driver' end
+    if DriverAvailable[source] == false then return nil, 'Turn on availability in the Cab app' end
+
+    local char = getChar(source)
+    if not char then return nil, 'No character' end
+    if rideForDriver(char.id) then return nil, 'Finish your current ride first' end
+
+    rideId = tonumber(rideId)
+    local ride = Rides[rideId]
+    if not ride or ride.status ~= 'pending' then return nil, 'Ride no longer available' end
+
+    ride.status = 'accepted'
+    ride.driverSource = source
+    ride.driverCharId = char.id
+    ride.driverName = exports.sunset_core:GetPlayerDisplayName(source)
+
+    local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
+    if passengerSrc then
+        TriggerClientEvent('sunset:client:notify', passengerSrc,
+            ('Driver %s is on the way — $%s'):format(ride.driverName, ride.fare), 'success')
+        pushTaxiUpdate(passengerSrc)
+    end
+
+    broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
+    TriggerClientEvent('sunset:client:taxiRideAccepted', source, serializeRide(ride, source))
+    return serializeRide(ride, source)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiCancelRide', function(source)
+    local char = getChar(source)
+    if not char then return nil, 'No character' end
+
+    local ride = rideForPassenger(char.id) or rideForDriver(char.id)
+    if not ride then return nil, 'No active ride' end
+    if ride.status == 'in_progress' then return nil, 'Cannot cancel during trip' end
+
+    ride.status = 'cancelled'
+
+    local otherSrc
+    if ride.passengerCharId == char.id then
+        otherSrc = ride.driverSource
+    else
+        otherSrc = findSourceByCharacterId(ride.passengerCharId)
+    end
+
+    if otherSrc then
+        TriggerClientEvent('sunset:client:notify', otherSrc, 'Ride was cancelled', 'warning')
+        pushTaxiUpdate(otherSrc)
+        TriggerClientEvent('sunset:client:taxiRideEnded', otherSrc)
+    end
+
+    broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiPickupPassenger', function(source)
+    local char = getChar(source)
+    if not char then return nil, 'No character' end
+    local ride = rideForDriver(char.id)
+    if not ride or ride.status ~= 'accepted' then return nil, 'No passenger to pick up' end
+
+    ride.status = 'in_progress'
+    local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
+    if passengerSrc then
+        TriggerClientEvent('sunset:client:notify', passengerSrc, 'You are on your way!', 'info')
+        pushTaxiUpdate(passengerSrc)
+    end
+
+    TriggerClientEvent('sunset:client:taxiRideInProgress', source, serializeRide(ride, source))
+    return serializeRide(ride, source)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
+    local char = getChar(source)
+    if not char then return nil, 'No character' end
+    local ride = rideForDriver(char.id)
+    if not ride or ride.status ~= 'in_progress' then return nil, 'No trip in progress' end
+
+    local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
+    if not passengerSrc then
+        ride.status = 'cancelled'
+        return nil, 'Passenger is offline'
+    end
+
+    local amount = ride.fare or Sunset.Taxi.minFare
+    local cutRate = Sunset.Taxi.companyCut or 0.12
+    local companyCut = math.floor(amount * cutRate)
+    local driverPay = amount - companyCut
+
+    if not exports.sunset_core:RemoveMoney(passengerSrc, 'cash', amount, 'taxi_ride') then
+        if not exports.sunset_core:RemoveMoney(passengerSrc, 'bank', amount, 'taxi_ride') then
+            return nil, 'Passenger cannot pay'
+        end
+    end
+
+    exports.sunset_core:AddMoney(source, 'cash', driverPay, 'taxi_ride')
+    addSociety(companyCut)
+    ride.status = 'completed'
+
+    local session = DriverSessionStats[char.id] or { rides = 0, earnings = 0 }
+    session.rides = (session.rides or 0) + 1
+    session.earnings = (session.earnings or 0) + driverPay
+    DriverSessionStats[char.id] = session
+
+    TriggerClientEvent('sunset:client:notify', passengerSrc, ('Trip complete — paid $%s'):format(amount), 'info')
+    TriggerClientEvent('sunset:client:notify', source, ('Fare collected: $%s (you earned $%s)'):format(amount, driverPay), 'success')
+    TriggerClientEvent('sunset:client:taxiRideEnded', source)
+    TriggerClientEvent('sunset:client:taxiRideEnded', passengerSrc)
+    pushTaxiUpdate(passengerSrc)
+    pushTaxiUpdate(source)
+
+    pcall(function()
+        MySQL.insert.await([[
+            INSERT INTO taxi_rides (passenger_character_id, driver_character_id, pickup, destination, fare, status, completed_at)
+            VALUES (?, ?, ?, ?, ?, 'completed', NOW())
+        ]], {
+            ride.passengerCharId,
+            ride.driverCharId,
+            json.encode(ride.pickup),
+            json.encode(ride.destination),
+            amount,
+        })
+    end)
+
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiSetAvailable', function(source, available)
+    if not isTaxiDriver(source) then return nil, 'Not on duty' end
+    DriverAvailable[source] = available == true
+    return DriverAvailable[source]
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiTip', function(source, amount)
+    local char = getChar(source)
+    if not char then return nil, 'No character' end
+    local ride = rideForPassenger(char.id)
+    if not ride or ride.status ~= 'in_progress' then return nil, 'No trip in progress' end
+    if not ride.driverCharId then return nil, 'No driver assigned' end
+
+    amount = math.floor(tonumber(amount) or 0)
+    if amount < 1 then return nil, 'Invalid tip' end
+
+    if not exports.sunset_core:RemoveMoney(source, 'cash', amount, 'taxi_tip') then
+        if not exports.sunset_core:RemoveMoney(source, 'bank', amount, 'taxi_tip') then
+            return nil, 'Not enough money'
+        end
+    end
+
+    local driverSrc = ride.driverSource or findSourceByCharacterId(ride.driverCharId)
+    if driverSrc then
+        exports.sunset_core:AddMoney(driverSrc, 'cash', amount, 'taxi_tip')
+        TriggerClientEvent('sunset:client:notify', driverSrc, ('Tip received: $%s'):format(amount), 'success')
+    end
+    return true
+end)
+
+AddEventHandler('playerDropped', function()
+    local source = source
+    DriverAvailable[source] = nil
+    local char = getChar(source)
+    if not char then return end
+
+    local ride = rideForPassenger(char.id) or rideForDriver(char.id)
+    if not ride then return end
+    if ride.status == 'completed' or ride.status == 'cancelled' then return end
+
+    ride.status = 'cancelled'
+    local otherSrc
+    if ride.passengerCharId == char.id then
+        otherSrc = ride.driverSource
+    else
+        otherSrc = findSourceByCharacterId(ride.passengerCharId)
+    end
+    if otherSrc then
+        TriggerClientEvent('sunset:client:notify', otherSrc, 'Ride ended — player disconnected', 'warning')
+        TriggerClientEvent('sunset:client:taxiRideEnded', otherSrc)
+        pushTaxiUpdate(otherSrc)
+    end
+    broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
+end)
+
+AddEventHandler('sunset:server:characterSelected', function(source)
+    DriverAvailable[source] = true
+end)
+
+AddEventHandler('sunset:server:jobChanged', function(source, job)
+    if job == Sunset.Taxi.factionId then
+        DriverAvailable[source] = true
+    else
+        DriverAvailable[source] = nil
+    end
+end)
+
+AddEventHandler('sunset:server:taxiDutySync', function(source, onDuty)
+    if onDuty then
+        DriverAvailable[source] = true
+    else
+        DriverAvailable[source] = nil
+    end
+end)

@@ -68,6 +68,90 @@ Sunset.Garages = {
     },
 }
 
+Sunset.GasStations = {
+    {
+        label = 'LTD Gasoline - Legion',
+        coords = vector3(265.65, -1261.28, 29.14),
+        pumps = {
+            vector4(264.92, -1254.32, 29.14, 90.0),
+            vector4(264.92, -1260.98, 29.14, 90.0),
+            vector4(264.92, -1267.64, 29.14, 90.0),
+        },
+    },
+    {
+        label = 'Ron Gas - Grove St',
+        coords = vector3(-70.21, -1761.79, 29.53),
+        pumps = {
+            vector4(-63.61, -1767.94, 29.12, 270.0),
+            vector4(-61.18, -1760.46, 29.16, 270.0),
+        },
+    },
+    {
+        label = 'Xero Gas - Mirror Park',
+        coords = vector3(1208.61, -1402.29, 35.22),
+        pumps = {
+            vector4(1204.84, -1400.85, 35.22, 90.0),
+            vector4(1207.12, -1398.04, 35.22, 90.0),
+        },
+    },
+    {
+        label = 'LTD Gasoline - Vinewood',
+        coords = vector3(621.07, 269.52, 103.09),
+        pumps = {
+            vector4(625.71, 269.95, 103.09, 270.0),
+            vector4(618.42, 269.12, 103.09, 270.0),
+        },
+    },
+    {
+        label = 'Ron Gas - Paleto',
+        coords = vector3(179.86, 6602.85, 31.86),
+        pumps = {
+            vector4(186.29, 6606.38, 32.05, 180.0),
+            vector4(179.10, 6604.87, 32.05, 180.0),
+        },
+    },
+    {
+        label = 'Xero Gas - Sandy Shores',
+        coords = vector3(2005.01, 3774.20, 32.18),
+        pumps = {
+            vector4(2001.52, 3772.28, 32.18, 120.0),
+            vector4(2006.31, 3774.85, 32.18, 300.0),
+        },
+    },
+    {
+        label = 'LTD Gasoline - Route 68',
+        coords = vector3(1039.34, 2671.78, 39.55),
+        pumps = {
+            vector4(1035.42, 2674.08, 39.55, 0.0),
+            vector4(1042.14, 2674.55, 39.55, 0.0),
+        },
+    },
+    {
+        label = 'Ron Gas - Great Ocean',
+        coords = vector3(-2554.85, 2334.40, 33.06),
+        pumps = {
+            vector4(-2552.14, 2334.48, 33.06, 240.0),
+            vector4(-2558.92, 2336.01, 33.06, 60.0),
+        },
+    },
+    {
+        label = 'Xero Gas - LSIA',
+        coords = vector3(-724.62, -935.16, 19.21),
+        pumps = {
+            vector4(-721.14, -938.86, 19.02, 0.0),
+            vector4(-728.56, -938.86, 19.02, 0.0),
+        },
+    },
+    {
+        label = 'LTD Gasoline - Del Perro',
+        coords = vector3(-1437.62, -276.74, 46.21),
+        pumps = {
+            vector4(-1435.12, -284.68, 46.21, 130.0),
+            vector4(-1444.52, -274.22, 46.21, 310.0),
+        },
+    },
+}
+
 Sunset.ClothingShops = {
     vector3(72.25, -1399.10, 29.38),
     vector3(-703.78, -152.26, 37.42),
@@ -85,8 +169,8 @@ Sunset.JobCenters = {
         blip = { sprite = 407, color = 2, scale = 0.85 },
         jobs = {
             { id = 'unemployed', label = 'Unemployed' },
-            { id = 'taxi', label = 'Taxi Driver' },
-            { id = 'mechanic', label = 'Mechanic' },
+            { id = 'trucker', label = 'Trucker' },
+            { id = 'fisherman', label = 'Fisherman' },
         },
     },
 }
@@ -100,4 +184,5 @@ Sunset.WorldBlips = {
     barber = { sprite = 71, color = 47, scale = 0.7 },
     property = { sprite = 40, color = 5, scale = 0.75 },
     jobcenter = { sprite = 407, color = 2, scale = 0.85 },
+    gas = { sprite = 361, color = 1, scale = 0.75 },
 }

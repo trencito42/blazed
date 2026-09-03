@@ -8,13 +8,17 @@ version '1.0.0'
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/jobs_civilian.lua',
+    '@sunset_core/shared/profile.lua',
     '@sunset_core/shared/factions.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_inventory' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_inventory', 'sunset_death', 'sunset_appearance' }
 
 client_scripts {
+    '@sunset_appearance/client/appearance_lib.lua',
     '@sunset_core/client/callbacks.lua',
+    'client/loadout.lua',
     'client/main.lua',
 }
 
@@ -23,4 +27,4 @@ server_scripts {
     'server/main.lua',
 }
 
-exports { 'IsOnDuty', 'GetDutyState' }
+exports { 'IsOnDuty', 'GetDutyState', 'HasFactionPerm' }

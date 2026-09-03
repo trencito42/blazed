@@ -9,6 +9,8 @@ version '1.0.0'
 
 shared_scripts {
     'shared/config.lua',
+    'shared/jobs_civilian.lua',
+    'shared/profile.lua',
     'shared/factions.lua',
     'shared/crafting.lua',
     'shared/utils.lua',
@@ -44,5 +46,7 @@ server_exports {
     'RemoveMoney',
     'GetMoney',
     'SetJob',
+    'SetFaction',
+    'AddXP',
     'GetSpawnPosition',
 }

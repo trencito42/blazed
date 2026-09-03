@@ -20,7 +20,9 @@ files {
     'web/css/panels.css',
     'web/css/studio.css',
     'web/css/phone.css',
+    'web/css/fuel_pump.css',
     'web/js/*.js',
+    'web/vendor/**/*',
     'web/assets/**/*',
 }
 

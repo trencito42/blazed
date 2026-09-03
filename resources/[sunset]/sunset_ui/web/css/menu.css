@@ -149,6 +149,16 @@
 
 .menu-panel-view.is-active { display: grid; }
 
+.menu-panel-view[data-panel="player"] {
+    grid-template-columns: 0.9fr 1.2fr 1fr;
+}
+
+.menu-col--profile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
 .menu-col {
     padding: 22px 24px;
     border-right: 1px solid var(--menu-border);
@@ -164,24 +174,62 @@
     color: var(--menu-muted);
 }
 
-/* ── Profile ── */
-.menu-profile {
+/* ── Profile / ID card ── */
+.menu-idcard {
     display: flex;
+    flex-direction: column;
     gap: 14px;
-    align-items: flex-start;
+}
+
+.menu-idcard__photo-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 160px;
+    margin: 0 auto;
+}
+
+.menu-idcard__badge {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.55);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .menu-avatar {
-    width: 78px;
-    height: 78px;
-    flex-shrink: 0;
-    border-radius: 6px;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: 8px;
     background:
         linear-gradient(145deg, rgba(255, 140, 0, 0.12), rgba(255, 255, 255, 0.04)),
         rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 140, 0, 0.35);
     background-size: cover;
-    background-position: center top;
+    background-position: center 15%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.25);
+    overflow: hidden;
+}
+
+.menu-profile__meta {
+    text-align: center;
+}
+
+.menu-profile__cid {
+    margin: 0 0 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.06em;
 }
 
 .menu-profile__name {
@@ -371,6 +419,291 @@
 
 .menu-placeholder__row strong { color: #fff; font-weight: 700; }
 
+/* ── Vehicle / Job management tabs ── */
+.menu-mgmt {
+    grid-column: 1 / -1;
+    padding: 20px 24px 28px;
+    min-height: 380px;
+}
+
+.menu-mgmt__head h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--menu-orange);
+}
+
+.menu-mgmt__head p {
+    margin: 0 0 18px;
+    font-size: 12px;
+    color: var(--menu-muted);
+    line-height: 1.45;
+}
+
+.menu-mgmt-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--menu-muted);
+    font-size: 13px;
+}
+
+.menu-mgmt-empty span {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.menu-vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+.menu-vcard {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.menu-vcard__img-wrap {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.35);
+    min-height: 72px;
+}
+
+.menu-vcard__img {
+    width: 100%;
+    height: 72px;
+    object-fit: cover;
+    display: block;
+}
+
+.menu-vcard__img-fallback {
+    width: 100%;
+    height: 72px;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--menu-orange);
+}
+
+.menu-vcard__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.menu-vcard__top strong {
+    font-size: 13px;
+    letter-spacing: 0.04em;
+}
+
+.menu-vcard__status {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+}
+
+.menu-vcard__status--stored {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.menu-vcard__status--out {
+    background: rgba(255, 140, 0, 0.15);
+    color: var(--menu-orange);
+}
+
+.menu-vcard__status--missing {
+    background: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+}
+
+.menu-vcard__plate {
+    margin-top: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: #fff;
+    letter-spacing: 0.08em;
+}
+
+.menu-vcard__meta {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--menu-muted);
+}
+
+.menu-vcard__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.menu-vcard__btn {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: #ddd;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.menu-vcard__btn--primary {
+    border-color: rgba(255, 140, 0, 0.4);
+    background: rgba(255, 140, 0, 0.12);
+    color: var(--menu-orange);
+}
+
+.menu-job-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 16px;
+}
+
+.menu-job-card {
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.menu-job-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.menu-job-card__label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--menu-muted);
+    margin-bottom: 4px;
+}
+
+.menu-job-card h4 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.menu-job-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.08em;
+}
+
+.menu-job-badge--on {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.menu-job-badge--off {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--menu-muted);
+}
+
+.menu-job-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.menu-job-stats div {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.menu-job-stats span {
+    display: block;
+    font-size: 10px;
+    color: var(--menu-muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+.menu-job-stats strong {
+    font-size: 14px;
+    color: #fff;
+}
+
+.menu-job-side__box {
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.2);
+    margin-bottom: 12px;
+}
+
+.menu-job-side__box h5 {
+    margin: 0 0 10px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--menu-orange);
+}
+
+.menu-job-side__box ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 12px;
+    color: var(--menu-muted);
+    line-height: 1.5;
+}
+
+.menu-job-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.menu-job-btn {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #eee;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.menu-job-btn--primary {
+    border-color: rgba(255, 140, 0, 0.35);
+    color: var(--menu-orange);
+    background: rgba(255, 140, 0, 0.1);
+}
+
+.menu-job-btn--danger {
+    border-color: rgba(255, 69, 58, 0.3);
+    color: #ff453a;
+}
+
+.menu-job-btn--cab {
+    border-color: rgba(255, 214, 10, 0.35);
+    color: #ffd60a;
+    background: rgba(255, 214, 10, 0.08);
+}
+
 /* ── Bottom status bar ── */
 .menu-statusbar {
     display: flex;
@@ -436,4 +769,6 @@
     }
 
     .menu-col { border-right: none; border-bottom: 1px solid var(--menu-border); }
+
+    .menu-job-layout { grid-template-columns: 1fr; }
 }

@@ -1,5 +1,7 @@
 const Phone = {
     data: null,
+    taxiData: null,
+    taxiEstimate: null,
     screen: 'home',
     chatTarget: null,
 
@@ -31,6 +33,10 @@ const Phone = {
             this.goHome();
         });
         $('#phone-back-settings')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.goHome();
+        });
+        $('#phone-back-taxi')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.goHome();
         });
@@ -198,6 +204,11 @@ const Phone = {
     },
 
     openApp(app) {
+        if (app === 'taxi') {
+            this.showView('taxi');
+            post('taxiRefresh', {});
+            return;
+        }
         this.showView(app);
     },
 
@@ -411,6 +422,259 @@ const Phone = {
         $('#phone-settings-id').textContent = `Player ID ${d.myId || '—'}`;
         const avatar = $('#phone-settings-avatar');
         if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
+    },
+
+    updateTaxi(payload) {
+        this.taxiData = payload || this.taxiData;
+        if (this.screen !== 'taxi') return;
+        if (this.taxiMode === 'map' && window.TaxiPhoneMap?.map) {
+            TaxiPhoneMap.update(this.taxiData?.playerPos, this.taxiDest);
+            return;
+        }
+        this.renderTaxi();
+    },
+
+    taxiDest: null,
+    taxiMode: 'map',
+    taxiSearch: '',
+
+    mountTaxiLeafletMap(d) {
+        const el = $('#phone-taxi-leaflet');
+        if (!el || !window.TaxiPhoneMap) return;
+        TaxiPhoneMap.mount(el, {
+            player: d?.playerPos,
+            destination: this.taxiDest,
+            onPick: (x, y) => post('taxiPickMap', { x, y }),
+        });
+    },
+
+    onTaxiPick(dest) {
+        if (!dest) return;
+        this.taxiDest = dest;
+        const labelEl = $('#phone-taxi-dest-label');
+        if (labelEl) labelEl.textContent = dest.label || 'Selected pin';
+        const requestBtn = $('#phone-taxi-request');
+        if (requestBtn) requestBtn.disabled = false;
+        if (window.TaxiPhoneMap?.map) TaxiPhoneMap.setDestination(dest.x, dest.y);
+        this.estimateTaxiDest();
+    },
+
+    estimateTaxiDest() {
+        if (!this.taxiDest) return;
+        if (this.taxiDest.destinationId) {
+            post('taxiEstimate', { destinationId: this.taxiDest.destinationId });
+        } else {
+            post('taxiEstimate', { destination: this.taxiDest });
+        }
+    },
+
+    requestTaxiDest() {
+        if (!this.taxiDest) return;
+        if (this.taxiDest.destinationId) {
+            post('taxiRequestRide', { destinationId: this.taxiDest.destinationId });
+        } else {
+            post('taxiRequestRide', { destination: this.taxiDest });
+        }
+    },
+
+    renderTaxiPassengerBooking(d) {
+        if (this.taxiMode === 'gps') this.taxiMode = 'map';
+        const mode = this.taxiMode || 'map';
+        const places = d.destinations || [];
+        const q = (this.taxiSearch || '').toLowerCase();
+        const filtered = places.filter((p) => !q || p.label.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q));
+
+        return `
+            <div class="phone-taxi-card">
+                <div class="phone-taxi-card__label">Where to?</div>
+                <div class="phone-taxi-modes phone-taxi-modes--two">
+                    <button type="button" class="phone-taxi-mode ${mode === 'map' ? 'is-active' : ''}" data-taxi-mode="map">Map</button>
+                    <button type="button" class="phone-taxi-mode ${mode === 'list' ? 'is-active' : ''}" data-taxi-mode="list">Places</button>
+                </div>
+
+                <div class="phone-taxi-panel ${mode === 'map' ? '' : 'hidden'}" data-panel="map">
+                    <p class="phone-taxi-hint">Tap the map to set your destination. Yellow pin = where you want to go.</p>
+                    <div class="phone-taxi-map" id="phone-taxi-map">
+                        <div class="phone-taxi-map__leaflet" id="phone-taxi-leaflet"></div>
+                    </div>
+                </div>
+
+                <div class="phone-taxi-panel ${mode === 'list' ? '' : 'hidden'}" data-panel="list">
+                    <input type="search" class="phone-taxi-search" id="phone-taxi-search" placeholder="Search: garage, hospital, taxi, shop..." value="${this.taxiSearch || ''}">
+                    <div class="phone-taxi-places" id="phone-taxi-places">
+                        ${filtered.slice(0, 40).map((p) => `
+                            <button type="button" class="phone-taxi-place" data-place-id="${p.id}">
+                                <span class="phone-taxi-place__name">${p.label}</span>
+                                <span class="phone-taxi-place__cat">${p.category || ''}</span>
+                            </button>`).join('')}
+                        ${filtered.length > 40 ? `<p class="phone-taxi-hint">${filtered.length - 40} more — refine search</p>` : ''}
+                        ${!filtered.length ? '<p class="phone-taxi-hint">No places found</p>' : ''}
+                    </div>
+                </div>
+
+                <div class="phone-taxi-dest-summary">
+                    <span>Destination</span>
+                    <strong id="phone-taxi-dest-label">${this.taxiDest?.label || 'Not selected'}</strong>
+                </div>
+                <div class="phone-taxi-estimate">
+                    <div><span>Distance</span><strong id="phone-taxi-distance">—</strong></div>
+                    <div><span>Estimated fare</span><strong id="phone-taxi-fare">—</strong></div>
+                </div>
+                <button type="button" class="phone-taxi-btn phone-taxi-btn--primary" id="phone-taxi-request" ${this.taxiDest ? '' : 'disabled'}>Request cab</button>
+            </div>
+            <p class="phone-taxi-hint">Pickup is your current location. Drivers accept rides in the same app.</p>`;
+    },
+
+    setTaxiEstimate(payload) {
+        this.taxiEstimate = payload;
+        const fareEl = $('#phone-taxi-fare');
+        const distEl = $('#phone-taxi-distance');
+        if (fareEl && payload) fareEl.textContent = this.formatMoney(payload.fare);
+        if (distEl && payload) distEl.textContent = `${(payload.distanceKm || 0).toFixed(1)} km`;
+    },
+
+    renderTaxi() {
+        const body = $('#phone-taxi-body');
+        const title = $('#phone-taxi-title');
+        if (!body) return;
+
+        const d = this.taxiData || {};
+        if (title) title.textContent = d.appName || 'Downtown Cab';
+
+        const ride = d.activeRide;
+        const isDriver = d.isDriver && d.onDuty;
+        let html = '';
+
+        if (isDriver) {
+            const stats = d.driverStats || {};
+            html += `<div class="phone-taxi-card">
+                <div class="phone-taxi-card__label">Driver mode</div>
+                <div class="phone-taxi-toggle">
+                    <span>Available for rides</span>
+                    <button type="button" class="phone-taxi-switch ${d.driverAvailable ? 'is-on' : ''}" id="phone-taxi-available-toggle">${d.driverAvailable ? 'ON' : 'OFF'}</button>
+                </div>
+                <div class="phone-taxi-estimate phone-taxi-estimate--stats">
+                    <div><span>Today</span><strong>${stats.todayRides || 0} rides · ${this.formatMoney(stats.todayEarnings || 0)}</strong></div>
+                    <div><span>This shift</span><strong>${stats.sessionRides || 0} rides · ${this.formatMoney(stats.sessionEarnings || 0)}</strong></div>
+                </div>
+                <p class="phone-taxi-hint">Spawn a cab at the depot marker, then accept rides here. Company keeps ${d.pricing?.companyCut || 12}%.</p>
+            </div>`;
+
+            if (ride) {
+                html += this.renderActiveRideCard(ride, true);
+            } else {
+                const offers = d.pendingOffers || [];
+                if (offers.length) {
+                    html += `<div class="phone-taxi-section-title">Incoming requests</div>`;
+                    offers.forEach((offer) => {
+                        html += `<div class="phone-taxi-offer">
+                            <div class="phone-taxi-offer__top">
+                                <strong>${offer.passengerName || 'Passenger'}</strong>
+                                <span class="phone-taxi-fare">${this.formatMoney(offer.fare)}</span>
+                            </div>
+                            <div class="phone-taxi-offer__route">→ ${offer.destination?.label || 'Destination'}</div>
+                            <div class="phone-taxi-offer__meta">${(offer.distanceKm || 0).toFixed(1)} km</div>
+                            <button type="button" class="phone-taxi-btn phone-taxi-btn--primary" data-taxi-accept="${offer.id}">Accept ride</button>
+                        </div>`;
+                    });
+                } else {
+                    html += `<p class="phone-empty">No ride requests right now.<br>Stay available and wait for passengers.</p>`;
+                }
+            }
+        } else if (ride) {
+            html += this.renderActiveRideCard(ride, false);
+        } else {
+            html += this.renderTaxiPassengerBooking(d);
+        }
+
+        if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+        body.innerHTML = html;
+        this.bindTaxiEvents(d, ride, isDriver);
+        if (!isDriver && !ride && this.taxiMode === 'map') {
+            this.mountTaxiLeafletMap(d);
+        }
+        if (this.taxiEstimate) this.setTaxiEstimate(this.taxiEstimate);
+    },
+
+    renderActiveRideCard(ride, isDriver) {
+        const statusLabels = {
+            pending: 'Looking for a driver...',
+            accepted: isDriver ? 'Go pick up passenger' : 'Driver on the way',
+            in_progress: 'Trip in progress',
+            completed: 'Completed',
+            cancelled: 'Cancelled',
+        };
+        let actions = '';
+        if (isDriver) {
+            if (ride.status === 'accepted') {
+                actions = `<button type="button" class="phone-taxi-btn phone-taxi-btn--primary" id="phone-taxi-pickup">Passenger picked up</button>
+                           <button type="button" class="phone-taxi-btn" id="phone-taxi-cancel">Cancel ride</button>`;
+            } else if (ride.status === 'in_progress') {
+                actions = `<button type="button" class="phone-taxi-btn phone-taxi-btn--primary" id="phone-taxi-complete">Complete trip & charge</button>`;
+            }
+        } else if (ride.status === 'pending' || ride.status === 'accepted') {
+            actions = `<button type="button" class="phone-taxi-btn" id="phone-taxi-cancel">Cancel ride</button>`;
+        } else if (!isDriver && ride.status === 'in_progress') {
+            const tips = (this.taxiData?.tipOptions || [25, 50, 100]).map((amt) =>
+                `<button type="button" class="phone-taxi-btn phone-taxi-btn--tip" data-taxi-tip="${amt}">Tip $${amt}</button>`
+            ).join('');
+            actions = `<div class="phone-taxi-tips"><span>Tip your driver</span><div class="phone-taxi-tip-row">${tips}</div></div>`;
+        }
+
+        return `<div class="phone-taxi-card phone-taxi-card--active">
+            <div class="phone-taxi-status phone-taxi-status--${ride.status}">${statusLabels[ride.status] || ride.status}</div>
+            <div class="phone-taxi-row"><span>Destination</span><strong>${ride.destination?.label || '—'}</strong></div>
+            <div class="phone-taxi-row"><span>Fare</span><strong>${this.formatMoney(ride.fare)}</strong></div>
+            ${ride.driverName ? `<div class="phone-taxi-row"><span>Driver</span><strong>${ride.driverName}</strong></div>` : ''}
+            ${ride.passengerName && isDriver ? `<div class="phone-taxi-row"><span>Passenger</span><strong>${ride.passengerName}</strong></div>` : ''}
+            ${actions}
+        </div>`;
+    },
+
+    bindTaxiEvents(d, ride, isDriver) {
+        $('#phone-taxi-available-toggle')?.addEventListener('click', () => {
+            const on = !d.driverAvailable;
+            post('taxiSetAvailable', { available: on });
+        });
+
+        $$('[data-taxi-accept]').forEach((btn) => {
+            btn.addEventListener('click', () => post('taxiAcceptRide', { rideId: Number(btn.dataset.taxiAccept) }));
+        });
+
+        $('#phone-taxi-cancel')?.addEventListener('click', () => post('taxiCancelRide', {}));
+        $('#phone-taxi-pickup')?.addEventListener('click', () => post('taxiPickup', {}));
+        $('#phone-taxi-complete')?.addEventListener('click', () => post('taxiComplete', {}));
+
+        $$('[data-taxi-tip]').forEach((btn) => {
+            btn.addEventListener('click', () => post('taxiTip', { amount: Number(btn.dataset.taxiTip) }));
+        });
+
+        $$('[data-taxi-mode]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+                this.taxiMode = btn.dataset.taxiMode;
+                this.renderTaxi();
+            });
+        });
+
+        const search = $('#phone-taxi-search');
+        if (search) {
+            search.addEventListener('input', () => {
+                this.taxiSearch = search.value;
+                this.renderTaxi();
+                const s2 = $('#phone-taxi-search');
+                if (s2) {
+                    s2.focus();
+                    s2.setSelectionRange(s2.value.length, s2.value.length);
+                }
+            });
+        }
+
+        $$('[data-place-id]').forEach((btn) => {
+            btn.addEventListener('click', () => post('taxiPickPlace', { destinationId: btn.dataset.placeId }));
+        });
+
+        $('#phone-taxi-request')?.addEventListener('click', () => this.requestTaxiDest());
     },
 };
 
