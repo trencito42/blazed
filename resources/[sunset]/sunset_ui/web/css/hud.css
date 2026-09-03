@@ -36,35 +36,32 @@
 .hud-player-badge {
     display: flex;
     align-items: baseline;
-    gap: 7px;
-    padding: 5px 14px 5px 11px;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.52) 100%);
-    border-left: 3px solid #e85d2a;
-    border-radius: 0 4px 4px 0;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
-    max-width: 260px;
+    gap: 6px;
+    max-width: 280px;
 }
 
 .hud-player-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.92);
-    letter-spacing: 0.02em;
+    font-family: 'Pricedown', 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.95);
+    letter-spacing: 0.03em;
+    line-height: 1;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 170px;
+    max-width: 190px;
 }
 
 .hud-player-id {
     font-family: 'Pricedown', 'Inter', sans-serif;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: normal;
     color: #e85d2a;
     letter-spacing: 0.03em;
     line-height: 1;
-    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
     flex-shrink: 0;
 }
 
@@ -239,7 +236,7 @@
 
 /* ── Speedometer — Forza Horizon style (jos-dreapta) ── */
 .fh-speedo {
-    --fh-size: 220px;
+    --fh-size: 190px;
     --fh-arc-len: 434;
     --fh-rpm-len: 358;
     --fh-max-speed: 320;
@@ -350,13 +347,13 @@
 
 .fh-speedo__speed {
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 54px;
+    font-size: 60px;
     font-weight: 700;
-    line-height: 0.92;
+    line-height: 0.9;
     color: #fff;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
-    text-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+    text-shadow: 0 0 24px rgba(255, 255, 255, 0.2), 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .fh-speedo__unit {
@@ -410,10 +407,10 @@
 .fh-speedo__stats {
     position: absolute;
     left: 50%;
-    top: calc(var(--fh-size) - 38px);
+    top: calc(var(--fh-size) - 44px);
     transform: translateX(-50%);
     display: flex;
-    gap: 18px;
+    gap: 20px;
     pointer-events: none;
 }
 
@@ -426,18 +423,19 @@
 
 .fh-stat__label {
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 7px;
+    font-size: 8px;
     font-weight: 600;
     letter-spacing: 0.14em;
-    color: rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.32);
 }
 
 .fh-stat__val {
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 11px;
+    font-size: 17px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(255, 255, 255, 0.88);
     font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
 }
 
 .fh-stat--fuel .fh-stat__val { color: rgba(255, 255, 255, 0.65); }
@@ -496,12 +494,15 @@
 
 @media (max-width: 1280px) {
     .fh-speedo {
-        --fh-size: 200px;
+        --fh-size: 170px;
         bottom: 14px;
         right: 14px;
     }
 
-    .fh-speedo__speed { font-size: 48px; }
+    .fh-speedo__speed { font-size: 52px; }
+    .fh-stat__val { font-size: 15px; }
+    .hud-player-name,
+    .hud-player-id { font-size: 20px; }
     .hud-bl { left: 260px; bottom: 22px; }
     .hud-logo-wrap { bottom: 198px; left: 14px; }
     .hud-logo { width: 72px; }
