@@ -392,7 +392,7 @@ exports.sunset_core:RegisterCallback('sunset:taxiEstimateCoords', function(sourc
 end)
 
 exports.sunset_core:RegisterCallback('sunset:taxiRequestRide', function(source, destinationId, pickup)
-    pickup = pickup or encodeCoords(GetEntityCoords(GetPlayerPed(source)))
+    pickup = encodeCoords(GetEntityCoords(GetPlayerPed(source)))
     local destRow = Sunset.Taxi.FindDestination(destinationId)
     if not destRow then return nil, 'Pick a destination' end
     return startRide(source, pickup, destRow.coords, destRow.label)
@@ -400,7 +400,7 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:taxiRequestRideCoords', function(source, pickup, destination)
     if not destination or not destination.x then return nil, 'Pick a destination on the map' end
-    pickup = pickup or encodeCoords(GetEntityCoords(GetPlayerPed(source)))
+    pickup = encodeCoords(GetEntityCoords(GetPlayerPed(source)))
     return startRide(source, pickup, destination, destination.label)
 end)
 
@@ -418,18 +418,17 @@ exports.sunset_core:RegisterCallback('sunset:taxiAcceptRide', function(source, r
     rideId = tonumber(rideId)
     local ride = Rides[rideId]
     if not ride or ride.status ~= 'pending' then return nil, 'Ride no longer available' end
+    local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
+    if not passengerSrc then return nil, 'Passenger is offline' end
 
     ride.status = 'accepted'
     ride.driverSource = source
     ride.driverCharId = char.id
     ride.driverName = exports.sunset_core:GetPlayerDisplayName(source)
 
-    local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
-    if passengerSrc then
-        TriggerClientEvent('sunset:client:notify', passengerSrc,
-            ('Driver %s is on the way — $%s'):format(ride.driverName, ride.fare), 'success')
-        pushTaxiUpdate(passengerSrc)
-    end
+    TriggerClientEvent('sunset:client:notify', passengerSrc,
+        ('Driver %s is on the way — $%s'):format(ride.driverName, ride.fare), 'success')
+    pushTaxiUpdate(passengerSrc)
 
     broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
     TriggerClientEvent('sunset:client:taxiRideAccepted', source, serializeRide(ride, source))
@@ -492,12 +491,19 @@ exports.sunset_core:RegisterCallback('sunset:taxiPickupPassenger', function(sour
         end
     end
 
-    ride.status = 'in_progress'
     local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
-    if passengerSrc then
-        TriggerClientEvent('sunset:client:notify', passengerSrc, 'You are on your way!', 'info')
-        pushTaxiUpdate(passengerSrc)
+    if not passengerSrc then return nil, 'Passenger is offline' end
+    local passengerPed = GetPlayerPed(passengerSrc)
+    local driverPed = GetPlayerPed(source)
+    local taxiVehicle = driverPed and GetVehiclePedIsIn(driverPed, false) or 0
+    if not passengerPed or passengerPed == 0 or taxiVehicle == 0
+        or GetVehiclePedIsIn(passengerPed, false) ~= taxiVehicle then
+        return nil, 'Passenger must be inside your cab'
     end
+
+    ride.status = 'in_progress'
+    TriggerClientEvent('sunset:client:notify', passengerSrc, 'You are on your way!', 'info')
+    pushTaxiUpdate(passengerSrc)
 
     startMeter(ride)
     if ride.dispatchCallId then
@@ -697,4 +703,3 @@ AddEventHandler('sunset:dispatch:callAccepted', function(callId, callType, provi
             ('Driver %s accepted your taxi call'):format(ride.driverName), 'success')
     end
 end)
-

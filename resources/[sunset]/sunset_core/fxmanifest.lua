@@ -55,4 +55,5 @@ server_exports {
     'SetFaction',
     'AddXP',
     'GetSpawnPosition',
+    'CompleteAuthentication',
 }

@@ -1,6 +1,7 @@
 local Players = {}
 local Callbacks = {}
 local Sessions = {}
+local CallbackRate = {}
 
 Sunset.GetPlayer = function(source) return Players[source] end
 Sunset.GetCharacter = function(source)
@@ -17,6 +18,18 @@ exports('RegisterCallback', RegisterCallback)
 
 RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
     local source = source
+    if type(name) ~= 'string' or #name > 80 or type(requestId) ~= 'number' then return end
+    local now = GetGameTimer()
+    local rate = CallbackRate[source]
+    if not rate or now - rate.window >= 1000 then
+        rate = { window = now, count = 0 }
+        CallbackRate[source] = rate
+    end
+    rate.count = rate.count + 1
+    if rate.count > 30 then
+        print(('^3[SunsetMP]^7 Callback flood blocked from %s'):format(source))
+        return
+    end
     if not Callbacks[name] then
         TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, 'Callback not found: ' .. name)
         return
@@ -55,15 +68,19 @@ RegisterNetEvent('sunset:server:playerLoaded', function()
     Sunset.Debug('Session ready:', source)
 end)
 
-RegisterNetEvent('sunset:server:authSuccess', function(accountId, username)
-    local source = source
+local function completeAuthentication(source, accountId, username)
     local session = Sessions[source]
-    if not session then return end
+    if not session or session.authenticated then return false end
+
+    accountId = tonumber(accountId)
+    if not accountId or type(username) ~= 'string' or username == '' then return false end
 
     local account = MySQL.single.await(
-        'SELECT premium_points, admin_level FROM accounts WHERE id = ?',
+        'SELECT id, username, premium_points, admin_level FROM accounts WHERE id = ?',
         { accountId }
     )
+    if not account then return false end
+    username = account.username
 
     local license = session.license
     local player = MySQL.single.await('SELECT * FROM players WHERE account_id = ?', { accountId })
@@ -116,7 +133,10 @@ RegisterNetEvent('sunset:server:authSuccess', function(accountId, username)
         playtime = tonumber(player.playtime) or 0,
     })
     Sunset.Debug('Player authenticated:', source, username)
-end)
+    return true
+end
+
+exports('CompleteAuthentication', completeAuthentication)
 
 -- ═══ EXPORTS ═══
 
@@ -207,12 +227,13 @@ local function loadCharacterForPlayer(source, player, charId)
     return char
 end
 
-RegisterNetEvent('sunset:server:setCharacter', function(charData)
+-- Character selection is performed by server callbacks. Never accept a complete
+-- character object from a client: it contains money, job, faction and progression.
+RegisterNetEvent('sunset:server:characterSpawned', function(characterId)
     local source = source
-    if not Players[source] then return end
-    charData = Sunset.DecodeCharacter(charData)
-    Players[source].character = charData
-    TriggerClientEvent('sunset:client:characterLoaded', source, charData)
+    local char = Players[source] and Players[source].character
+    if not char or tonumber(characterId) ~= tonumber(char.id) then return end
+    TriggerClientEvent('sunset:client:characterLoaded', source, char)
 end)
 
 AddEventHandler('sunset:server:setActiveCharacter', function(source, charData)
@@ -257,6 +278,7 @@ AddEventHandler('playerDropped', function()
     end
     Players[source] = nil
     Sessions[source] = nil
+    CallbackRate[source] = nil
 end)
 
 -- ═══ CHARACTER CALLBACKS ═══

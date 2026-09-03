@@ -3,6 +3,7 @@ local sessionStartFuel = 0.0
 local sessionStation = nil
 local sessionVeh = 0
 local pumpHintShown = false
+local waitForUseRelease = false
 
 local function notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
@@ -135,6 +136,7 @@ local function startRefuel(station)
     end
 
     refueling = true
+    waitForUseRelease = true
     sessionStartFuel = current
     sessionStation = station
     sessionVeh = veh
@@ -158,7 +160,9 @@ CreateThread(function()
                     end
                 end
 
-                if IsControlPressed(0, 38) then
+                if not IsControlPressed(0, 38) then
+                    waitForUseRelease = false
+                elseif not waitForUseRelease then
                     startRefuel(station)
                 end
                 Wait(0)

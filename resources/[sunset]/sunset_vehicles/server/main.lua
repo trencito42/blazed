@@ -8,6 +8,27 @@ local function generatePlate()
     return plate
 end
 
+local StoreRate = {}
+
+local function normalizePlate(plate)
+    return type(plate) == 'string' and plate:gsub('%s+', ''):upper() or ''
+end
+
+local function findDrivenVehicle(source, plate)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil end
+    local playerCoords = GetEntityCoords(ped)
+    for _, vehicle in ipairs(GetAllVehicles()) do
+        if normalizePlate(GetVehicleNumberPlateText(vehicle)) == plate then
+            local coords = GetEntityCoords(vehicle)
+            if #(playerCoords - coords) <= 12.0 and GetPedInVehicleSeat(vehicle, -1) == ped then
+                return vehicle
+            end
+        end
+    end
+    return nil
+end
+
 local function hasParkedPosition(veh)
     return veh
         and veh.parked_x ~= nil
@@ -114,10 +135,36 @@ exports.sunset_core:RegisterCallback('sunset:storeVehicle', function(source, gar
     return true
 end)
 
-RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuelLevel, engine, body, garageId, parked)
-    local source = source
+local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageId, parked)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return end
+    if not char then return nil, 'No character' end
+
+    local now = GetGameTimer()
+    if now - (StoreRate[source] or 0) < 1500 then return nil, 'Please wait before storing again' end
+    StoreRate[source] = now
+
+    plate = normalizePlate(plate)
+    if plate == '' or #plate > 8 or type(props) ~= 'table' then return nil, 'Invalid vehicle data' end
+    local encodedProps = json.encode(props)
+    if #encodedProps > 32768 then return nil, 'Vehicle data is too large' end
+
+    local owned = MySQL.single.await(
+        'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?',
+        { plate, char.id }
+    )
+    if not owned then return nil, 'This vehicle is not owned by your character' end
+
+    local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+    if vehicle == 0 or not DoesEntityExist(vehicle)
+        or normalizePlate(GetVehicleNumberPlateText(vehicle)) ~= plate
+        or GetPedInVehicleSeat(vehicle, -1) ~= GetPlayerPed(source) then
+        vehicle = findDrivenVehicle(source, plate)
+    end
+    if not vehicle then return nil, 'You must be driving this owned vehicle' end
+
+    fuelLevel = math.max(0, math.min(100, tonumber(fuelLevel) or 0))
+    local engine = math.max(-4000, math.min(1000, GetVehicleEngineHealth(vehicle)))
+    local body = math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
 
     local px, py, pz, ph = nil, nil, nil, nil
     if type(parked) == 'table' then
@@ -127,20 +174,30 @@ RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuelLevel
         ph = tonumber(parked.h) or tonumber(parked.w)
     end
 
-    MySQL.update.await([[
+    local changed = MySQL.update.await([[
         UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?,
             parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?
         WHERE plate = ? AND character_id = ?
     ]], {
         garageId or 'legion',
-        json.encode(props or {}),
-        fuelLevel or 100,
-        engine or 1000,
-        body or 1000,
+        encodedProps,
+        fuelLevel,
+        engine,
+        body,
         px, py, pz, ph,
         plate,
         char.id,
     })
+    if not changed or changed < 1 then return nil, 'Vehicle could not be stored' end
+    return true
+end
+
+exports.sunset_core:RegisterCallback('sunset:storeOwnedVehicle', function(source, netId, plate, props, fuelLevel, garageId, parked)
+    return storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageId, parked)
+end)
+
+AddEventHandler('playerDropped', function()
+    StoreRate[source] = nil
 end)
 
 exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(source, fromFuel, toFuel, plate)

@@ -1,5 +1,6 @@
 local Incidents = {}
 local incidentSeq = 0
+local LastExtinguish = {}
 
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
@@ -134,6 +135,10 @@ exports.sunset_core:RegisterCallback('sunset:fireExtinguish', function(source, i
     local inc = Incidents[incidentId]
     if not inc or inc.status ~= 'active' then return nil, 'Incident not found' end
 
+    local now = GetGameTimer()
+    if now - (LastExtinguish[source] or 0) < 200 then return nil, 'Extinguishing too quickly' end
+    LastExtinguish[source] = now
+
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil, 'Invalid player' end
     local pCoords = GetEntityCoords(ped)
@@ -155,6 +160,10 @@ exports.sunset_core:RegisterCallback('sunset:fireExtinguish', function(source, i
     end
 
     return { fireHealth = inc.fireHealth, maxHealth = inc.maxHealth }
+end)
+
+AddEventHandler('playerDropped', function()
+    LastExtinguish[source] = nil
 end)
 
 exports.sunset_core:RegisterCallback('sunset:fireAcceptDispatch', function(source, callId)

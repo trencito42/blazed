@@ -60,9 +60,15 @@ local function spawnFleetVehicle(depot, factionId)
         return
     end
 
+    local authorized, err = Sunset.AwaitCallback('sunset:factionRequestFleet', factionId)
+    if not authorized then
+        exports.sunset_ui:Notify(err or 'Fleet request denied', 'error')
+        return
+    end
+
     deleteFleetVehicle()
 
-    local model = joaat(depot.vehicle or 'sultan')
+    local model = joaat(authorized.vehicle or depot.vehicle or 'sultan')
     RequestModel(model)
     local timeout = GetGameTimer() + 8000
     while not HasModelLoaded(model) do
@@ -81,7 +87,7 @@ local function spawnFleetVehicle(depot, factionId)
         return
     end
 
-    local prefix = depot.platePrefix or 'SUN'
+    local prefix = authorized.platePrefix or depot.platePrefix or 'SUN'
     SetVehicleNumberPlateText(veh, prefix .. math.random(100, 999))
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
@@ -105,7 +111,9 @@ end)
 RegisterNetEvent('sunset:client:dutyState', function(state, job)
     onDuty = state == true
     myFaction = job
-    exports.sunset_ui:Notify(state and 'ON DUTY' or 'OFF DUTY', state and 'success' or 'info')
+    local faction = job and Sunset.Factions[job]
+    local label = faction and faction.label or 'Faction'
+    exports.sunset_ui:Notify(onDuty and ('ON DUTY — ' .. label) or ('OFF DUTY — ' .. label), onDuty and 'success' or 'info')
 end)
 
 function IsOnDutyLocal()

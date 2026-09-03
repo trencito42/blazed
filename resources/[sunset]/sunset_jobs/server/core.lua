@@ -30,10 +30,17 @@ end
 function SunsetJobs_ClearSession(source, finalState, reason)
     local session = Sessions[source]
     if not session then return end
-    session.state = finalState or 'CANCELLED'
+    finalState = finalState or 'CANCELLED'
+    if not Sunset.JobSession.CanTransition(session.state, finalState) then
+        print(('[sunset_jobs] rejected invalid terminal transition %s -> %s for %s'):format(
+            tostring(session.state), tostring(finalState), tostring(source)))
+        return false
+    end
+    session.state = finalState
     session.endReason = reason
     Sessions[source] = nil
     TriggerClientEvent('sunset:jobs:sessionEnded', source, session.jobId, session.state, reason)
+    return true
 end
 
 function SunsetJobs_RequireSession(source, jobId, allowedStates)
@@ -57,6 +64,7 @@ end
 function SunsetJobs_SetState(source, state)
     local session = Sessions[source]
     if not session then return false end
+    if not Sunset.JobSession.CanTransition(session.state, state) then return false end
     session.state = state
     TriggerClientEvent('sunset:jobs:stateChanged', source, state, session.data or {})
     return true
@@ -67,6 +75,18 @@ function SunsetJobs_ValidateCoords(source, target, radius)
     if not pos then return false end
     local t = type(target) == 'vector3' and target or vector3(target.x, target.y, target.z)
     return dist(pos, t) <= (radius or 5.0)
+end
+
+function SunsetJobs_ValidateVehicle(source, expectedModel, mustDrive, maxDistance)
+    local session = Sessions[source]
+    if not session or not session.vehicleNetId then return false end
+    local entity = NetworkGetEntityFromNetworkId(session.vehicleNetId)
+    if not entity or entity == 0 or not DoesEntityExist(entity) then return false end
+    if expectedModel and GetEntityModel(entity) ~= joaat(expectedModel) then return false end
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return false end
+    if mustDrive and GetPedInVehicleSeat(entity, -1) ~= ped then return false end
+    return #(GetEntityCoords(ped) - GetEntityCoords(entity)) <= (maxDistance or 15.0)
 end
 
 local function xpForLevel(level)
@@ -267,7 +287,15 @@ end)
 exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(source, vehicleNetId, trailerNetId)
     local session, err = SunsetJobs_RequireSession(source, nil, { 'STARTING', 'ACTIVE', 'RETURNING' })
     if not session then return nil, err end
-    session.vehicleNetId = tonumber(vehicleNetId)
+    vehicleNetId = tonumber(vehicleNetId)
+    local entity = vehicleNetId and NetworkGetEntityFromNetworkId(vehicleNetId) or 0
+    if not entity or entity == 0 or not DoesEntityExist(entity) then return nil, 'Work vehicle not networked' end
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 or GetPedInVehicleSeat(entity, -1) ~= ped then return nil, 'You must drive the work vehicle' end
+    local cfg = Sunset.GetJobConfig(session.jobId)
+    local expected = cfg and (cfg.truckModel or cfg.vehicleModel)
+    if expected and GetEntityModel(entity) ~= joaat(expected) then return nil, 'Invalid work vehicle' end
+    session.vehicleNetId = vehicleNetId
     session.trailerNetId = trailerNetId and tonumber(trailerNetId) or nil
     if session.state == 'STARTING' then
         SunsetJobs_SetState(source, 'ACTIVE')

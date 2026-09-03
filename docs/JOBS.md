@@ -16,7 +16,7 @@ Hire at Job Center (City Hall) or admin `/setjob`. Use `/jobs` for the NUI panel
 ### Job Core
 
 - **States:** `IDLE` → `STARTING` → `ACTIVE` → `RETURNING` → `COMPLETED` / `FAILED` / `CANCELLED`
-- **Server:** session validation, coords checks, payouts (`AddMoney`), job XP in `job_progress` table (`sql/09-jobs.sql`)
+- **Server:** enforced state transitions, start/work coordinates, registered work-vehicle checks, authoritative payouts (`AddMoney`), and job XP in `job_progress` (`sql/09-jobs.sql`)
 - **Resilience:** disconnect clears session; work vehicle destroy fails shift; configurable timeout per job
 - **Config:** `sunset_core/shared/jobs_config.lua`
 

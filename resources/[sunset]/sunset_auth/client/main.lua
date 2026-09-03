@@ -25,7 +25,6 @@ AddEventHandler('sunset:nui:authLogin', function(data)
     authenticated = true
     exports.sunset_ui:Send('authHide', {})
     exports.sunset_ui:SetFocus(false, false)
-    TriggerServerEvent('sunset:server:authSuccess', result.accountId, result.username)
 end)
 
 AddEventHandler('sunset:nui:authRegister', function(data)
@@ -38,5 +37,4 @@ AddEventHandler('sunset:nui:authRegister', function(data)
     authenticated = true
     exports.sunset_ui:Send('authHide', {})
     exports.sunset_ui:SetFocus(false, false)
-    TriggerServerEvent('sunset:server:authSuccess', result.accountId, result.username)
 end)

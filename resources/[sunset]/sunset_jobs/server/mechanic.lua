@@ -1,4 +1,5 @@
 local MechanicProviders = {}
+local LastRepair = {}
 
 local function charJob(source)
     local char = exports.sunset_core:GetCharacter(source)
@@ -9,6 +10,8 @@ end
 exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:start', function(source)
     if charJob(source) ~= 'mechanic' then return nil, 'Not employed as mechanic' end
 
+    local cfg = Sunset.GetJobConfig('mechanic')
+    if not SunsetJobs_ValidateCoords(source, cfg.depot.coords, 12.0) then return nil, 'Go to the mechanic depot to start work' end
     local session, err = SunsetJobs_StartSession(source, 'mechanic', {
         repairs = 0,
         activeCallId = nil,
@@ -46,6 +49,9 @@ exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:repair', function(sou
     local session, err = SunsetJobs_RequireSession(source, 'mechanic', { 'ACTIVE' })
     if not session then return nil, err end
 
+    if not session.data.activeCallId then return nil, 'Accept a mechanic service call first' end
+    local now = GetGameTimer()
+    if now - (LastRepair[source] or 0) < 10000 then return nil, 'Wait before repairing again' end
     targetSource = tonumber(targetSource)
     if not targetSource or not GetPlayerName(targetSource) then
         return nil, 'Customer not found'
@@ -57,6 +63,11 @@ exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:repair', function(sou
     if #(mePos - themPos) > (cfg.repairRadius or 6.0) then
         return nil, 'Too far from the vehicle'
     end
+    local targetPed = GetPlayerPed(targetSource)
+    if not targetPed or targetPed == 0 or GetVehiclePedIsIn(targetPed, false) == 0 then return nil, 'Customer must be in a vehicle' end
+    local call = exports.sunset_dispatch:GetCall(session.data.activeCallId)
+    if not call or tonumber(call.callerSource) ~= targetSource then return nil, 'Repair the customer assigned to this call' end
+    LastRepair[source] = now
 
     local level = 1
     local char = exports.sunset_core:GetCharacter(source)
@@ -115,10 +126,20 @@ AddEventHandler('sunset:jobs:notifyMechanicCall', function(callData)
     end
 end)
 
+AddEventHandler('sunset:dispatch:callAccepted', function(callId, callType, providerSource, callerSource)
+    if callType ~= 'mechanic' or not MechanicProviders[providerSource] then return end
+    local session = SunsetJobs_GetSession(providerSource)
+    if not session or session.jobId ~= 'mechanic' then return end
+    session.data.activeCallId = tonumber(callId)
+    session.data.stage = 'en_route'
+    TriggerClientEvent('sunset:jobs:stateChanged', providerSource, 'ACTIVE', session.data)
+end)
+
 exports('GetMechanicProviders', function()
     return MechanicProviders
 end)
 
 AddEventHandler('playerDropped', function()
     MechanicProviders[source] = nil
+    LastRepair[source] = nil
 end)

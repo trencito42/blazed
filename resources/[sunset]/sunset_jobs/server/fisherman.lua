@@ -1,4 +1,10 @@
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:start', function(source)
+    local cfg = Sunset.GetJobConfig('fisherman')
+    local atWork = SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, 12.0)
+    for _, spot in ipairs(cfg.spots or {}) do
+        if SunsetJobs_ValidateCoords(source, spot.coords, (cfg.catchRadius or 8.0) + 4.0) then atWork = true break end
+    end
+    if not atWork then return nil, 'Go to a fishing spot or the fish buyer to start work' end
     local session, err = SunsetJobs_StartSession(source, 'fisherman', {
         catches = 0,
         pendingValue = 0,
@@ -19,6 +25,10 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:catch', function(sou
     if not SunsetJobs_ValidateCoords(source, spot.coords, cfg.catchRadius or 8.0) then
         return nil, 'Not at a fishing spot'
     end
+    local now = GetGameTimer()
+    local earliest = session.data.nextCatchAt or 0
+    if now < earliest then return nil, 'Fishing too quickly' end
+    session.data.nextCatchAt = now + math.max(3000, cfg.minigameDurationMs or 8000)
 
     if session.state == 'STARTING' then
         SunsetJobs_SetState(source, 'ACTIVE')

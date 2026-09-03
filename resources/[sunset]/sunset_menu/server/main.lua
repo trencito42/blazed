@@ -106,10 +106,22 @@ exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
     end
     local totalPlaytime = (tonumber(player.playtime) or 0) + sessionMin
 
+    local career = { completed_tasks = 0, total_earned = 0, skill_levels = 0 }
+    pcall(function()
+        career = MySQL.single.await([[
+            SELECT COALESCE(SUM(completed_tasks), 0) AS completed_tasks,
+                   COALESCE(SUM(total_earned), 0) AS total_earned,
+                   COALESCE(SUM(level), 0) AS skill_levels
+            FROM job_progress WHERE character_id = ?
+        ]], { char.id }) or career
+    end)
+
     return {
         playtime = totalPlaytime,
         playtimeFormatted = ('%dH %dM'):format(math.floor(totalPlaytime / 60), totalPlaytime % 60),
+        sessionFormatted = ('%dH %dM'):format(math.floor(sessionMin / 60), sessionMin % 60),
         lastLogin = formatLogin(char.last_played_before or char.last_played),
+        characterCreated = formatLogin(char.created_at),
         premium = player.premium_points or 0,
         nextPayday = getNextPaydayTime(),
         serverTime = os.date('%H:%M'),
@@ -135,5 +147,8 @@ exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
         jobType = faction and faction.type or 'civilian',
         hasDuty = faction and faction.duty == true,
         onDuty = onDuty,
+        completedTasks = tonumber(career.completed_tasks) or 0,
+        careerEarnings = tonumber(career.total_earned) or 0,
+        combinedSkillLevels = tonumber(career.skill_levels) or 0,
     }
 end)

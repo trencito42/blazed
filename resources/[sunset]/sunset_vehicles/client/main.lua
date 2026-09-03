@@ -504,18 +504,34 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         local vehEngine = vehData.engine or 1000.0
         local vehBody = vehData.body or 1000.0
 
+        if not entity then
+            notify('Vehicle is not currently in the world', 'error')
+            return
+        end
+
+        local ped = PlayerPedId()
+        if GetPedInVehicleSeat(entity, -1) ~= ped then
+            notify('You must be driving this vehicle to store it', 'error')
+            return
+        end
+
         if entity then
             props.model = GetEntityModel(entity)
             vehFuel = GetVehicleFuelLevel(entity)
             vehEngine = GetVehicleEngineHealth(entity)
             vehBody = GetVehicleBodyHealth(entity)
-            deleteVehicleEntity(entity)
-            if spawnedOwnedVehicle == entity then spawnedOwnedVehicle = nil end
         end
 
         local plate = normalizePlate(vehData.plate)
         local parked = captureParkedPosition(entity)
-        TriggerServerEvent('sunset:server:vehicleStored', plate, props, vehFuel, vehEngine, vehBody, vehData.garage or 'legion', parked)
+        local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(entity), plate, props,
+            vehFuel, vehData.garage or 'legion', parked)
+        if not ok then
+            notify(err or 'Vehicle could not be stored', 'error')
+            return
+        end
+        deleteVehicleEntity(entity)
+        if spawnedOwnedVehicle == entity then spawnedOwnedVehicle = nil end
         notify('Vehicle stored in garage', 'success')
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('garageHide', {})
@@ -555,30 +571,36 @@ AddEventHandler('sunset:nui:garageClose', function()
 end)
 
 RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
-    local veh = getVeh()
-    if veh == 0 or not isDriver() then return notify('You must be driving your vehicle', 'error') end
-    local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
-    local props = { model = GetEntityModel(veh) }
-    local parked = captureParkedPosition(veh)
-    TriggerServerEvent('sunset:server:vehicleStored', plate, props, fuel, GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId, parked)
-    deleteVehicleEntity(veh)
-    if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
-    notify('Vehicle stored', 'success')
+    CreateThread(function()
+        local veh = getVeh()
+        if veh == 0 or not isDriver() then return notify('You must be driving your vehicle', 'error') end
+        local plate = normalizePlate(GetVehicleNumberPlateText(veh))
+        local parked = captureParkedPosition(veh)
+        local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(veh), plate,
+            { model = GetEntityModel(veh) }, fuel, garageId, parked)
+        if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
+        deleteVehicleEntity(veh)
+        if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
+        notify('Vehicle stored', 'success')
+    end)
 end)
 
 AddEventHandler('sunset:world:garageStore', function(garageId)
-    local veh = getVeh()
-    if veh == 0 or not isDriver() then
-        notify('You must be driving your vehicle to store it', 'error')
-        return
-    end
-    local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
-    local parked = captureParkedPosition(veh)
-    TriggerServerEvent('sunset:server:vehicleStored', plate, { model = GetEntityModel(veh) }, fuel,
-        GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId, parked)
-    deleteVehicleEntity(veh)
-    if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
-    notify('Vehicle stored', 'success')
+    CreateThread(function()
+        local veh = getVeh()
+        if veh == 0 or not isDriver() then
+            notify('You must be driving your vehicle to store it', 'error')
+            return
+        end
+        local plate = normalizePlate(GetVehicleNumberPlateText(veh))
+        local parked = captureParkedPosition(veh)
+        local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(veh), plate,
+            { model = GetEntityModel(veh) }, fuel, garageId, parked)
+        if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
+        deleteVehicleEntity(veh)
+        if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
+        notify('Vehicle stored', 'success')
+    end)
 end)
 
 local function setFuelLevel(veh, level)
@@ -594,4 +616,3 @@ exports('SetFuelLevel', setFuelLevel)
 exports('GetFuelLevel', function()
     return fuel
 end)
-

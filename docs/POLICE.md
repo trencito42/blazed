@@ -117,7 +117,8 @@ Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 | `/so` NUI summon alert event | Done (`summonAlert` — UI agent can style) |
 | `/clear`, `/confiscate`, radar commands | Done |
 | Ticket violations config | Done (`Sunset.Police.violations`) |
-| MDC offline wanted records | Done |
+| Persisted wanted list includes offline records | Done |
+| MDC person lookup by offline character/name | Not implemented (online server ID only) |
 | Arrest: cuffed + jail zone + bounty | Done |
 | `sunset_hud` wanted from state bag | Done |
 

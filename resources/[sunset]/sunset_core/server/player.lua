@@ -99,8 +99,11 @@ function Sunset.SetJob(source, job, grade)
     if Sunset.Factions[job] then return false end
     if not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then return false end
 
+    grade = tonumber(grade) or 0
+    if not Sunset.CivilianJobs[job].grades[grade] then return false end
+
     char.job = job
-    char.job_grade = grade or 0
+    char.job_grade = grade
     MySQL.update.await(
         'UPDATE characters SET job = ?, job_grade = ? WHERE id = ?',
         { char.job, char.job_grade, char.id }
@@ -120,8 +123,10 @@ function Sunset.SetFaction(source, factionId, grade)
         char.metadata.faction_grade = nil
     else
         if not Sunset.Factions[factionId] then return false end
+        grade = tonumber(grade) or 0
+        if not Sunset.Factions[factionId].grades[grade] then return false end
         char.metadata.faction = factionId
-        char.metadata.faction_grade = grade or 0
+        char.metadata.faction_grade = grade
         if Sunset.Factions[char.job] then
             char.job = 'unemployed'
             char.job_grade = 0

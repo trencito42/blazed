@@ -20,6 +20,7 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:jobs:courier:start', function(source)
     local cfg = Sunset.GetJobConfig('courier')
+    if not SunsetJobs_ValidateCoords(source, cfg.warehouse.coords, 8.0) then return nil, 'Go to the courier warehouse to start work' end
     local queue = buildDeliveryQueue(cfg)
 
     local session, err = SunsetJobs_StartSession(source, 'courier', {
@@ -57,6 +58,8 @@ exports.sunset_core:RegisterCallback('sunset:jobs:courier:deliver', function(sou
     local session, err = SunsetJobs_RequireSession(source, 'courier', { 'ACTIVE' })
     if not session then return nil, err end
     if not session.data.hasPackage then return nil, 'Pick up a package first' end
+    local ped = GetPlayerPed(source)
+    if ped and ped ~= 0 and GetVehiclePedIsIn(ped, false) ~= 0 then return nil, 'Deliver the package on foot' end
 
     local cfg = Sunset.GetJobConfig('courier')
     local idx = session.data.deliveryIndex or 1

@@ -14,6 +14,10 @@ const Menu = {
 
         $$('.menu-action').forEach((btn) => {
             btn.addEventListener('click', () => {
+                if (btn.dataset.action === 'statistics') {
+                    this.setTab('statistics');
+                    return;
+                }
                 post('menuAction', { action: btn.dataset.action });
             });
         });
@@ -28,6 +32,12 @@ const Menu = {
 
     formatXp(n) {
         return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+
+    escape(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[ch]);
     },
 
     factionTips(jobId) {
@@ -112,20 +122,22 @@ const Menu = {
             const status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
             const statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
             const fuel = Math.round(Number(v.fuel) || 100);
-            const model = (v.model || 'vehicle').toUpperCase();
+            const model = this.escape((v.model || 'vehicle').toUpperCase());
+            const plate = this.escape(v.plate || '—');
+            const garage = this.escape(v.garage || 'legion');
 
             let actions = '';
             if (stored) {
-                actions = `<button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${v.id}">Spawn</button>`;
+                actions = `<button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${Number(v.id) || 0}">Spawn</button>`;
             } else if (inWorld) {
                 actions = `
-                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${v.plate}" data-v-id="${v.id}">GPS</button>
-                    <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="store" data-v-id="${v.id}">Store</button>`;
+                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(v.id) || 0}">GPS</button>
+                    <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="store" data-v-id="${Number(v.id) || 0}">Store</button>`;
             } else {
                 actions = `
-                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${v.plate}" data-v-id="${v.id}">GPS</button>
-                    <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${v.id}">Respawn</button>
-                    <button type="button" class="menu-vcard__btn" data-v-action="store" data-v-id="${v.id}">Store</button>`;
+                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(v.id) || 0}">GPS</button>
+                    <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${Number(v.id) || 0}">Respawn</button>
+                    <button type="button" class="menu-vcard__btn" data-v-action="store" data-v-id="${Number(v.id) || 0}">Store</button>`;
             }
 
             return `<article class="menu-vcard">
@@ -139,8 +151,8 @@ const Menu = {
                         <strong>${model}</strong>
                         <span class="menu-vcard__status menu-vcard__status--${statusClass}">${status}</span>
                     </div>
-                    <div class="menu-vcard__plate">${v.plate || '—'}</div>
-                    <div class="menu-vcard__meta">Fuel ${fuel}% · ${v.garage || 'legion'}</div>
+                    <div class="menu-vcard__plate">${plate}</div>
+                    <div class="menu-vcard__meta">Fuel ${fuel}% · ${garage}</div>
                     <div class="menu-vcard__actions">${actions}</div>
                 </div>
             </article>`;
@@ -168,18 +180,18 @@ const Menu = {
             ? (data.onDuty ? '<span class="menu-job-badge menu-job-badge--on">ON DUTY</span>' : '<span class="menu-job-badge menu-job-badge--off">OFF DUTY</span>')
             : '';
 
-        const jobLine = hasFaction
+        const jobLine = this.escape(hasFaction
             ? (data.factionLabel || data.factionId)
-            : (unemployed ? 'Unemployed' : (data.job || 'Unemployed'));
+            : (unemployed ? 'Unemployed' : (data.job || 'Unemployed')));
 
-        const rankLine = hasFaction
+        const rankLine = this.escape(hasFaction
             ? (data.factionGradeLabel || '—')
-            : (data.jobGradeLabel || '—');
+            : (data.jobGradeLabel || '—'));
 
         const salaryLine = hasFaction ? (data.factionSalary || 0) : (data.jobSalary || 0);
 
         const civilianSub = hasFaction
-            ? `<p class="menu-job-sub">Civilian job: ${data.job || 'Unemployed'}</p>`
+            ? `<p class="menu-job-sub">Civilian job: ${this.escape(data.job || 'Unemployed')}</p>`
             : '';
 
         card.innerHTML = `
@@ -249,6 +261,18 @@ const Menu = {
         $('#menu-premium').textContent = String(data.premium ?? 0);
         $('#menu-playtime').textContent = data.playtime || '0H 0M';
         $('#menu-lastlogin').textContent = data.lastLogin || '—';
+
+        $('#menu-stats-level').textContent = String(data.level || 1);
+        $('#menu-stats-xp').textContent = `${this.formatXp(data.xp || 0)} / ${this.formatXp(data.xpMax || 5000)} XP`;
+        $('#menu-stats-playtime').textContent = data.playtime || '0H 0M';
+        $('#menu-stats-session').textContent = data.sessionTime || '0H 0M';
+        $('#menu-stats-created').textContent = data.characterCreated || '—';
+        $('#menu-stats-lastlogin').textContent = `Last login ${data.lastLogin || '—'}`;
+        $('#menu-stats-tasks').textContent = String(data.completedTasks || 0);
+        $('#menu-stats-earned').textContent = formatMoney(data.careerEarnings || 0);
+        $('#menu-stats-skills').textContent = String(data.combinedSkillLevels || 0);
+        $('#menu-stats-assets').textContent = `${data.vehicleCount || 0} vehicles · ${data.propertyCount || 0} properties`;
+        $('#menu-stats-home').textContent = `Home: ${data.homeLabel || 'None'}`;
 
         const xp = data.xp || 0;
         const xpMax = data.xpMax || 5000;

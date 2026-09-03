@@ -158,8 +158,8 @@ Sunset.Factions = {
             [0] = { label = 'Probationary', salary = 300, perms = { stabilize = true } },
             [1] = { label = 'Firefighter', salary = 420, perms = { stabilize = true, heal = true } },
             [2] = { label = 'Engineer', salary = 550, perms = { stabilize = true, heal = true, revive = true, invite = true } },
-            [3] = { label = 'Captain', salary = 750, perms = { heal = true, revive = true, invite = true } },
-            [4] = { label = 'Battalion Chief', salary = 950, perms = { heal = true, revive = true, invite = true, promote = true } },
+            [3] = { label = 'Captain', salary = 750, perms = { stabilize = true, heal = true, revive = true, invite = true } },
+            [4] = { label = 'Battalion Chief', salary = 950, perms = { stabilize = true, heal = true, revive = true, invite = true, promote = true } },
         },
     },
     sunset_cartel = {

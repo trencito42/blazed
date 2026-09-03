@@ -21,6 +21,14 @@ local function requireLeaderPerm(source, perm)
     return char, factionId
 end
 
+local function highestFactionGrade(factionId)
+    local highest = 0
+    for grade in pairs((Sunset.Factions[factionId] and Sunset.Factions[factionId].grades) or {}) do
+        if type(grade) == 'number' and grade > highest then highest = grade end
+    end
+    return highest
+end
+
 RegisterCommand('setleader', function(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
         return FactionCore.notify(source, 'No permission', 'error')
@@ -36,7 +44,9 @@ RegisterCommand('setleader', function(source, args)
     if not char then return end
     local current = select(1, FactionCore.getFactionOf(char))
     if current ~= factionId then
-        exports.sunset_core:SetFaction(target, factionId, 4)
+        if not exports.sunset_core:SetFaction(target, factionId, highestFactionGrade(factionId)) then
+            return FactionCore.notify(source, 'Could not assign faction rank', 'error')
+        end
     end
     MySQL.insert.await(
         'INSERT INTO faction_leaders (character_id, faction_id, assigned_by) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE assigned_by = VALUES(assigned_by)',

@@ -17,12 +17,19 @@ local function addSociety(societyName, amount)
     end)
 end
 
+local function nearFactionPoint(source, faction, point, radius)
+    local coords = faction and faction[point]
+    if not coords then return false end
+    return FactionCore.distBetween(FactionCore.playerCoords(source), coords) <= (radius or 5.0)
+end
+
 function IsOnDuty(source)
     return FactionCore.isOnDuty(source)
 end
 exports('IsOnDuty', IsOnDuty)
 
 local function setDuty(source, state)
+    state = state == true
     FactionCore.setOnDuty(source, state)
     local char = getChar(source)
     if char then
@@ -30,7 +37,7 @@ local function setDuty(source, state)
         char.metadata.on_duty = state
         TriggerClientEvent('sunset:client:updateCharacter', source, char)
     end
-    local factionId = select(1, getFactionOf(char))
+    local factionId = char and select(1, getFactionOf(char)) or nil
     TriggerClientEvent('sunset:client:dutyState', source, state, factionId)
     TriggerEvent('sunset:server:taxiDutySync', source, state)
     if SyncPlayerCombatState then SyncPlayerCombatState(source) end
@@ -42,6 +49,9 @@ exports.sunset_core:RegisterCallback('sunset:toggleDuty', function(source)
     local factionId = getFactionOf(char)
     local faction = factionId and Sunset.Factions[factionId]
     if not faction or not faction.duty then return nil, 'You are not in a faction with duty shifts' end
+    if not FactionCore.isOnDuty(source) and not nearFactionPoint(source, faction, 'hq', 6.0) then
+        return nil, 'Go to your faction HQ to start duty'
+    end
     setDuty(source, not FactionCore.isOnDuty(source))
     return FactionCore.isOnDuty(source)
 end)
@@ -51,6 +61,10 @@ exports.sunset_core:RegisterCallback('sunset:joinFactionHQ', function(source, fa
     if not char then return nil, 'No character' end
     local faction = Sunset.Factions[factionId]
     if not faction then return nil, 'Unknown faction' end
+    if faction.type == 'illegal' then return nil, 'This faction is invite-only' end
+    if not nearFactionPoint(source, faction, 'hq', 6.0) then
+        return nil, 'You must be at this faction HQ'
+    end
 
     local currentFaction = getFactionOf(char)
     if currentFaction and currentFaction ~= factionId then
@@ -219,6 +233,10 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:mechanicShopRepair', function(source)
     local price = 250
+    local faction = Sunset.Factions.mechanic
+    if not nearFactionPoint(source, faction, 'hq', 8.0) then return nil, 'You must be at LS Customs' end
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 or GetVehiclePedIsIn(ped, false) == 0 then return nil, 'You must be in a vehicle' end
     if exports.sunset_core:RemoveMoney(source, 'cash', price, 'ls_customs_repair') then
         addSociety('mechanic', math.floor(price * 0.5))
         return true
@@ -230,6 +248,18 @@ exports.sunset_core:RegisterCallback('sunset:mechanicShopRepair', function(sourc
     return nil, ('Not enough money ($%s)'):format(price)
 end)
 
+exports.sunset_core:RegisterCallback('sunset:factionRequestFleet', function(source, factionId)
+    local char = getChar(source)
+    local ownFaction = char and select(1, getFactionOf(char))
+    local faction = ownFaction and Sunset.Factions[ownFaction]
+    if ownFaction ~= factionId or not faction or not faction.depot then return nil, 'You do not work here' end
+    if not FactionCore.isOnDuty(source) then return nil, 'Go on duty first' end
+    if FactionCore.distBetween(FactionCore.playerCoords(source), faction.depot.coords) > 8.0 then
+        return nil, 'You must be at the fleet garage'
+    end
+    return { vehicle = faction.depot.vehicle, platePrefix = faction.depot.platePrefix }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, targetId)
     if not hasPerm(source, 'repair') then return nil, 'Not on duty or no permission' end
     targetId = tonumber(targetId) or source
@@ -239,6 +269,10 @@ exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, t
     local targetPos = FactionCore.playerCoords(targetId)
     if FactionCore.distBetween(officerPos, targetPos) > 6.0 then
         return nil, 'You must be near the vehicle'
+    end
+    local targetPed = GetPlayerPed(targetId)
+    if not targetPed or targetPed == 0 or GetVehiclePedIsIn(targetPed, false) == 0 then
+        return nil, 'Target must be inside a vehicle'
     end
 
     TriggerClientEvent('sunset:faction:repairVehicle', targetId)

@@ -47,13 +47,18 @@ local function buildMenuData()
     pcall(function()
         local ped = PlayerPedId()
         local currentPlate = nil
+        local currentVehicle = 0
         if IsPedInAnyVehicle(ped, false) then
-            currentPlate = (GetVehicleNumberPlateText(GetVehiclePedIsIn(ped, false)) or ''):gsub('%s+', ''):upper()
+            currentVehicle = GetVehiclePedIsIn(ped, false)
+            currentPlate = (GetVehicleNumberPlateText(currentVehicle) or ''):gsub('%s+', ''):upper()
         end
         for _, v in ipairs(extras.vehicles or {}) do
             local plate = (v.plate or ''):gsub('%s+', ''):upper()
-            if currentPlate ~= '' and plate ~= '' and (currentPlate == plate or currentPlate:find(plate, 1, true) or plate:find(currentPlate, 1, true)) then
+            if currentPlate ~= nil and currentPlate ~= '' and plate == currentPlate then
                 v.inWorld = true
+                v.fuel = exports.sunset_vehicles:GetFuelLevel()
+                v.engine = GetVehicleEngineHealth(currentVehicle)
+                v.body = GetVehicleBodyHealth(currentVehicle)
             else
                 v.inWorld = exports.sunset_vehicles:IsPlateInWorld(v.plate)
             end
@@ -120,6 +125,11 @@ local function buildMenuData()
         locked = locked,
         playtime = extras.playtimeFormatted or '0H 0M',
         lastLogin = extras.lastLogin or '—',
+        characterCreated = extras.characterCreated or '—',
+        sessionTime = extras.sessionFormatted or '0H 0M',
+        completedTasks = extras.completedTasks or 0,
+        careerEarnings = extras.careerEarnings or 0,
+        combinedSkillLevels = extras.combinedSkillLevels or 0,
         payday = extras.nextPayday or '—',
         serverTime = extras.serverTime or '—',
         vehicleCount = extras.vehicleCount or 0,
@@ -189,15 +199,6 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         end)
         return
     end
-    if data.action == 'statistics' then
-        local extras = Sunset.AwaitCallback('sunset:getMenuData') or {}
-        exports.sunset_ui:Notify(('Level %s | Playtime %s | Next payday %s'):format(
-            extras.level or 1,
-            extras.playtimeFormatted or '0H 0M',
-            extras.nextPayday or '—'
-        ), 'info')
-        return
-    end
 end)
 
 AddEventHandler('sunset:nui:menuVehicleAction', function(data)
@@ -226,12 +227,19 @@ AddEventHandler('sunset:nui:menuJobAction', function(data)
     CreateThread(function()
         if data.action == 'duty' then
             local state, err = Sunset.AwaitCallback('sunset:toggleDuty')
-            if state == nil then exports.sunset_ui:Notify(err or 'Cannot toggle duty', 'error') end
+            if state == nil then
+                exports.sunset_ui:Notify(err or 'Cannot toggle duty', 'error')
+            end
         elseif data.action == 'leave' then
             local ok, err = Sunset.AwaitCallback('sunset:leaveFaction')
-            if ok then exports.sunset_ui:Notify('You left your faction', 'warning')
-            else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+            if ok then
+                closeMenu()
+            else
+                exports.sunset_ui:Notify(err or 'Failed', 'error')
+            end
         elseif data.action == 'faction' then
+            closeMenu()
+            Wait(100)
             ExecuteCommand('faction')
         end
     end)

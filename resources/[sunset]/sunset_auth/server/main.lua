@@ -32,7 +32,11 @@ exports.sunset_core:RegisterCallback('sunset:authRegister', function(source, use
         { username:lower(), hash, salt }
     )
 
-    return { accountId = accountId, username = username:lower() }
+    local normalized = username:lower()
+    if not exports.sunset_core:CompleteAuthentication(source, accountId, normalized) then
+        return nil, 'Could not establish authenticated session'
+    end
+    return { username = normalized }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:authLogin', function(source, username, password)
@@ -49,5 +53,8 @@ exports.sunset_core:RegisterCallback('sunset:authLogin', function(source, userna
         return nil, 'Invalid username or password'
     end
 
-    return { accountId = account.id, username = account.username }
+    if not exports.sunset_core:CompleteAuthentication(source, account.id, account.username) then
+        return nil, 'Could not establish authenticated session'
+    end
+    return { username = account.username }
 end)

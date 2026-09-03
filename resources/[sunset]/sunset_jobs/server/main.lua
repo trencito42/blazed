@@ -70,7 +70,11 @@ RegisterCommand('setjob', function(source, args)
         return
     end
 
-    exports.sunset_core:SetJob(target, jobId, grade)
+    if not exports.sunset_core:SetJob(target, jobId, grade) then
+        local msg = 'Invalid grade for civilian job: ' .. tostring(grade)
+        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        return
+    end
     local label = Sunset.CivilianJobs[jobId].label
     TriggerClientEvent('sunset:client:notify', target, 'Job set to ' .. label, 'success')
     if source ~= 0 then
@@ -113,7 +117,11 @@ RegisterCommand('setfaction', function(source, args)
         return
     end
 
-    exports.sunset_core:SetFaction(target, factionId, grade)
+    if not exports.sunset_core:SetFaction(target, factionId, grade) then
+        local msg = 'Invalid grade for faction: ' .. tostring(grade)
+        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        return
+    end
     local label = Sunset.Factions[factionId].label
     TriggerClientEvent('sunset:client:notify', target, 'Faction set to ' .. label, 'success')
     if source ~= 0 then

@@ -1,5 +1,9 @@
 local Downed = {}
 
+local function bleedoutDuration()
+    return math.max(30, tonumber(Sunset.Death and Sunset.Death.bleedoutSeconds) or 300)
+end
+
 local function hospitalSpawn(char)
     local pos = char and exports.sunset_core:GetSpawnPosition(char)
     if pos and pos.x then return pos end
@@ -56,6 +60,8 @@ function StabilizePlayer(targetId)
         return false, 'Target is not downed'
     end
     Downed[targetId].stabilized = true
+    Downed[targetId].releaseAt = os.time()
+        + math.max(30, tonumber(Sunset.Death and Sunset.Death.stabilizeBonusSeconds) or 120)
     TriggerClientEvent('sunset:death:stabilized', targetId)
     return true
 end
@@ -69,26 +75,30 @@ RegisterNetEvent('sunset:server:playerDied', function()
     local source = source
     local char = exports.sunset_core:GetCharacter(source)
     if char then char.is_dead = true end
-    Downed[source] = { startedAt = os.time(), stabilized = false }
+    local now = os.time()
+    Downed[source] = { startedAt = now, releaseAt = now + bleedoutDuration(), stabilized = false }
     TriggerEvent('sunset:death:playerDowned', source)
 end)
 
 RegisterNetEvent('sunset:death:enteredDowned', function()
     local source = source
     if not Downed[source] then
-        Downed[source] = { startedAt = os.time(), stabilized = false }
+        local now = os.time()
+        Downed[source] = { startedAt = now, releaseAt = now + bleedoutDuration(), stabilized = false }
     end
 end)
 
 RegisterNetEvent('sunset:server:bleedoutExpired', function()
     local source = source
-    if not Downed[source] then return end
+    local state = Downed[source]
+    if not state or os.time() < (state.releaseAt or math.huge) then return end
     respawnPlayer(source, Sunset.Config.HospitalBill or 0)
 end)
 
 RegisterNetEvent('sunset:server:requestRespawn', function()
     local source = source
-    if not Downed[source] then return end
+    local state = Downed[source]
+    if not state or os.time() < (state.releaseAt or math.huge) then return end
     respawnPlayer(source, Sunset.Config.HospitalBill or 0)
 end)
 
@@ -110,4 +120,3 @@ exports.sunset_core:RegisterCallback('sunset:revivePlayer', function(source, tar
     if not ok then return nil, err end
     return true
 end)
-

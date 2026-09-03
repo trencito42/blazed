@@ -38,7 +38,7 @@ local function spawnPlayer(char)
     SetEntityHeading(ped, w)
     FreezeEntityPosition(ped, true)
 
-    TriggerServerEvent('sunset:server:setCharacter', char)
+    TriggerServerEvent('sunset:server:characterSpawned', char.id)
 
     Wait(1000)
     DoScreenFadeIn(1500)

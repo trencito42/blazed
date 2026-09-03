@@ -40,6 +40,10 @@ local function checkRateLimit(source, key)
 end
 
 function ServiceCore.isProviderForType(source, callType)
+    if callType == 'mechanic' and GetResourceState('sunset_jobs') == 'started' then
+        local ok, providers = pcall(function() return exports.sunset_jobs:GetMechanicProviders() end)
+        if ok and providers and providers[source] then return true end
+    end
     local char = getChar(source)
     if not char or not exports.sunset_factions:IsOnDuty(source) then return false end
     local factionId = Sunset.GetCharacterFaction(char)
@@ -448,6 +452,27 @@ function ServiceCore.updateCallState(source, callType, callId, newState)
 end
 
 function ServiceCore.completeCall(source, callType, callId)
+    local call = ServiceCore.getCall(callType, callId)
+    if not call then return nil, 'Call not found' end
+
+    -- A successful gameplay action (revive/extinguish/repair) is authoritative
+    -- proof of service. Advance any skipped UI states so the persisted dispatch
+    -- row cannot remain OPEN after the real incident was completed.
+    if call.status == Sunset.Dispatch.States.OPEN then
+        local accepted, err = ServiceCore.acceptCall(source, callType, callId)
+        if not accepted then return nil, err end
+        call = ServiceCore.getCall(callType, callId)
+    end
+    local steps = {
+        [Sunset.Dispatch.States.ASSIGNED] = Sunset.Dispatch.States.EN_ROUTE,
+        [Sunset.Dispatch.States.EN_ROUTE] = Sunset.Dispatch.States.ARRIVED,
+        [Sunset.Dispatch.States.ARRIVED] = Sunset.Dispatch.States.IN_PROGRESS,
+    }
+    while call and steps[call.status] do
+        local updated, err = ServiceCore.updateCallState(source, callType, callId, steps[call.status])
+        if not updated then return nil, err end
+        call = ServiceCore.getCall(callType, callId)
+    end
     return ServiceCore.updateCallState(source, callType, callId, Sunset.Dispatch.States.COMPLETED)
 end
 

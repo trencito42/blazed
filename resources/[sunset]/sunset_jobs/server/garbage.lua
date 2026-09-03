@@ -14,6 +14,7 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:jobs:garbage:start', function(source)
     local cfg = Sunset.GetJobConfig('garbage')
+    if not SunsetJobs_ValidateCoords(source, cfg.depot.coords, 20.0) then return nil, 'Go to the garbage depot to start work' end
     local routeBins = shuffleBins(cfg.bins, cfg.capacity + 2)
 
     local session, err = SunsetJobs_StartSession(source, 'garbage', {
@@ -33,6 +34,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:garbage:collectBin', function(
     if session.data.stage ~= 'collecting' then return nil, 'Unload at depot first' end
 
     local cfg = Sunset.GetJobConfig('garbage')
+    if not SunsetJobs_ValidateVehicle(source, cfg.truckModel, false, 25.0) then return nil, 'Your assigned trash truck must be nearby' end
     local idx = session.data.binIndex or 1
     local bin = session.data.bins[idx]
     if not bin then return nil, 'No more bins on route' end
@@ -60,6 +62,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:garbage:unload', function(sour
     if session.data.stage ~= 'return_unload' then return nil, 'Truck not full yet' end
 
     local cfg = Sunset.GetJobConfig('garbage')
+    if not SunsetJobs_ValidateVehicle(source, cfg.truckModel, true, 20.0) then return nil, 'Use your assigned trash truck' end
     local unload = cfg.depot.unload or cfg.depot.coords
     if not SunsetJobs_ValidateCoords(source, unload, 8.0) then
         return nil, 'Drive to the depot unload point'
