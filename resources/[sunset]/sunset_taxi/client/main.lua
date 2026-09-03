@@ -52,10 +52,16 @@ local function getPickupCoords()
     return { x = coords.x, y = coords.y, z = coords.z }
 end
 
+local function clientPlayerPos()
+    local coords = GetEntityCoords(PlayerPedId())
+    return { x = coords.x + 0.0, y = coords.y + 0.0 }
+end
+
 local function refreshPhoneTaxi()
     CreateThread(function()
         local data, err = Sunset.AwaitCallback('sunset:getTaxiAppData')
         if data then
+            data.playerPos = clientPlayerPos()
             exports.sunset_ui:Send('taxiUpdate', data)
         else
             exports.sunset_ui:Send('taxiUpdate', {

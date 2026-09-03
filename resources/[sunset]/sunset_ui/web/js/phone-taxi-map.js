@@ -77,13 +77,16 @@ const TaxiPhoneMap = {
             map.fitBounds(this.bounds, { animate: false, padding: [4, 4] });
         });
 
-        if (options.player) this.setPlayer(options.player.x, options.player.y);
+        if (options.player) this.setPlayer(options.player);
         if (options.destination) this.setDestination(options.destination.x, options.destination.y);
     },
 
     setPlayer(x, y) {
-        if (!this.map || x == null || y == null) return;
-        const latlng = L.latLng(y, x);
+        if (!this.map) return;
+        const px = typeof x === 'object' && x !== null ? x.x : x;
+        const py = typeof x === 'object' && x !== null ? x.y : y;
+        if (px == null || py == null) return;
+        const latlng = L.latLng(py, px);
         if (!this.youMarker) {
             this.youMarker = L.marker(latlng, { icon: this.icon('phone-taxi-map-marker phone-taxi-map-marker--you'), interactive: false }).addTo(this.map);
         } else {
@@ -110,7 +113,7 @@ const TaxiPhoneMap = {
 
     update(player, destination) {
         if (!this.map) return;
-        if (player) this.setPlayer(player.x, player.y);
+        if (player) this.setPlayer(player);
         if (destination && destination.x != null) this.setDestination(destination.x, destination.y);
         else this.clearDestination();
     },

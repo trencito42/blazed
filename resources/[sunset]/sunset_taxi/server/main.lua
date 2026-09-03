@@ -129,7 +129,10 @@ local function buildAppData(source)
     end
 
     local ped = GetPlayerPed(source)
-    local pcoords = GetEntityCoords(ped)
+    local px, py = GetEntityCoords(ped)
+    if type(px) == 'vector3' then
+        px, py = px.x, px.y
+    end
 
     local data = {
         appName = Sunset.Taxi.appName,
@@ -139,7 +142,7 @@ local function buildAppData(source)
         driverAvailable = DriverAvailable[source] ~= false,
         destinations = destinations,
         mapBounds = Sunset.Taxi.mapBounds,
-        playerPos = { x = pcoords.x, y = pcoords.y },
+        playerPos = { x = px + 0.0, y = py + 0.0 },
         activeRide = nil,
         pendingOffers = {},
         pricing = {
