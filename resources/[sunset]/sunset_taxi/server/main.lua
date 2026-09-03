@@ -454,6 +454,10 @@ exports.sunset_core:RegisterCallback('sunset:taxiCancelRide', function(source)
         TriggerClientEvent('sunset:client:taxiRideEnded', otherSrc)
     end
 
+    if ride.dispatchCallId then
+        pcall(function() exports.sunset_dispatch:CancelCall(source, 'taxi', ride.dispatchCallId, 'Ride cancelled') end)
+    end
+
     broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
     return true
 end)

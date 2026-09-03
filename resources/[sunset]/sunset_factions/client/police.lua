@@ -46,10 +46,11 @@ end
 
 RegisterNetEvent('sunset:police:summonAlert', function(data)
     data = data or {}
-    exports.sunset_ui:Send('summonAlert', {
+    TriggerEvent('sunset:ui:policeOrder', {
         officer = data.officer or 'Law Enforcement',
         officerId = data.officerId,
         message = data.message or 'You are being summoned — stop and comply',
+        duration = 15000,
     })
     exports.sunset_ui:Notify(data.message or 'You are being summoned by law enforcement — stop and comply', 'warning', 15000)
     PlaySoundFrontend(-1, 'TIMER_STOP', 'HUD_MINI_GAME_SOUNDSET', true)
