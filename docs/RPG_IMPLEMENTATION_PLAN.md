@@ -179,11 +179,11 @@ exports.sunset_dispatch:GetCallForResponder(characterId)
 - On `/ticket` / `/fine`: insert `tickets` (UI uses `tickets` table).
 - Deprecate in-memory `Wanted` table gradually; keep export compat.
 
-### Phase C — Dispatch consumers
+### Phase C — Dispatch consumers ✅
 
-- `/backup` → `CreateCall(police_backup)` instead of ad-hoc blip only.
-- EMS `/d` distress → `CreateCall(ems_medical)`.
-- UI CAD reads `GetActiveCalls`.
+- `/backup` → `CreateServiceCall(police_backup)` — notifies LEO/EMS/LSFD + temp blips; `/cbackup` cancels.
+- `/service medic|fire|mechanic|taxi` → unified dispatch queue.
+- Civilian mechanic `/work` shift wired to AcceptCall/CompleteCall.
 
 ### Phase D — Job loops (Agent Jobs)
 

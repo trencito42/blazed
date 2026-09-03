@@ -28,7 +28,7 @@ Hire at Job Center (City Hall) or admin `/setjob`. Use `/jobs` for the NUI panel
 | Garbage | Depot → trash truck → collect bins (animation) → full truck → unload |
 | Courier | Warehouse → carry package → deliver addresses → repeat |
 | Fisherman | Fishing spots → minigame catch → sell at pier buyer |
-| Mechanic | Go on duty → accept dispatch calls → repair nearby vehicle (engine/body health) |
+| Mechanic | Go on duty → receive `/service mechanic` dispatch via `sunset_dispatch` → accept (E) → repair nearby vehicle |
 
 ## Faction Jobs (`sunset_factions`)
 

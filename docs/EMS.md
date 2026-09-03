@@ -12,6 +12,7 @@ When a player dies:
 2. Bleedout timer: 5 minutes (`Sunset.Death.bleedoutSeconds`).
 3. After bleedout or `/respawn`, they are sent to Pillbox with a hospital bill.
 4. On-duty EMS/LSFD within 500 m are notified.
+5. On-duty LEO/EMS/LSFD receive **officer backup** alerts (`/backup`) with map blip via `sunset_dispatch`.
 
 ## Medical commands
 

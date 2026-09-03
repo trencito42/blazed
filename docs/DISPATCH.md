@@ -9,7 +9,8 @@ Unified server-authoritative dispatch for civilian service requests. Other resou
 | `taxi` | On-duty transport faction | Downtown Cab (`taxi`) |
 | `medic` | On-duty EMS | Pillbox EMS (`medic`) |
 | `fire` | On-duty fire rescue | LSFD (`lsfd`) |
-| `mechanic` | On-duty mechanics | LS Customs (`mechanic`) |
+| `mechanic` | On-duty mechanics + civilian `/work` mechanics | LS Customs (`mechanic`) + `sunset_jobs` |
+| `police_backup` | Broadcast-only — on-duty LEO, EMS, LSFD | LSPD officer caller |
 
 ## Call states
 
@@ -91,11 +92,23 @@ Table `service_calls` in `sql/09-dispatch-wanted-jail.sql`. Open calls reload on
 
 Configured in `sunset_core/shared/dispatch.lua`: create 30s, accept 2s, cancel 5s per player.
 
+## Police backup
+
+| Command | Description |
+|---------|-------------|
+| `/backup` | Officer requests backup — creates `police_backup` dispatch call |
+| `/cbackup` | Officer cancels active backup — removes responder blips |
+
+- Notifies all on-duty **law enforcement, EMS, and fire rescue** with notification + 60s temp blip.
+- Rate limit: 30s between requests; one active backup per officer.
+- Auto-cancel on officer disconnect, death, or server restart (open calls re-broadcast on load).
+
 ## Integration notes
 
 - **Taxi** (`sunset_taxi`): use `CreateServiceCall` for `/service taxi`; implement fare meter separately and call `CompleteCall` when paid.
 - **EMS** (`sunset_factions` / `sunset_death`): `/service medic`; heal/revive commands validate distance then `UpdateCallState` / `CompleteCall`.
 - **Fire** (`sunset_fire`): `/service fire`; incident scripts drive ARRIVED → IN_PROGRESS → COMPLETED.
-- **Mechanic** (`sunset_jobs`): `/service mechanic`; repair flow completes the call.
+- **Mechanic** (`sunset_jobs`): civilian `/work` shift listens to `sunset:jobs:notifyMechanicCall` and `sunset:dispatch:newCall`; uses `AcceptCall(source, 'mechanic', id)` and `CompleteCall(source, 'mechanic', id)`.
+- **Police backup** (`sunset_factions`): `/backup` and `/cbackup` via `CreateServiceCall` / `CancelCall` with type `police_backup`.
 
 Shared contract: `sunset_core/shared/dispatch.lua`.

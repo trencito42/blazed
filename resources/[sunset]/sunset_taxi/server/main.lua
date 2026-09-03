@@ -179,6 +179,17 @@ local function startMeter(ride)
                     local computed = math.floor(baseFare + ride.meterKm * perKm)
                     local maxFare = math.floor((ride.fare or computed) * (cfg.maxFareMultiplier or 1.5))
                     ride.meterFare = math.min(math.max(computed, Sunset.Taxi.minFare or 100), maxFare)
+                elseif ride.lastMoveAt and (os.time() - ride.lastMoveAt) >= idleSec then
+                    if not ride.idleNotified then
+                        ride.idleNotified = true
+                        TriggerClientEvent('sunset:client:notify', ride.driverSource,
+                            'Meter paused — vehicle idle too long', 'warning')
+                        local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
+                        if passengerSrc then
+                            TriggerClientEvent('sunset:client:notify', passengerSrc,
+                                'Taxi meter paused — vehicle idle', 'info')
+                        end
+                    end
                 end
             end
 

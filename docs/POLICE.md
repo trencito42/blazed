@@ -65,7 +65,8 @@ Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 | Command | Description |
 |---------|-------------|
 | `/m [message]` | Megaphone (35m radius) |
-| `/backup` | Alert all on-duty LEO with map blip |
+| `/backup` | Alert all on-duty LEO, EMS, and LSFD with map blip via `sunset_dispatch` |
+| `/cbackup` | Cancel active backup request and remove responder blips |
 | `/pdgarage` | Spawn patrol vehicle |
 | `/pd` | Command help |
 
@@ -120,6 +121,5 @@ Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 | Arrest: cuffed + jail zone + bounty | Done |
 | `sunset_hud` wanted from state bag | Done |
 
-**Deploy:** run `sql/09-dispatch-wanted-jail.sql` then `sql/10-police-persist.sql` (integration owner).
-
-**Not in scope (other agents):** `sunset_dispatch`, `sunset_ui` summon panel styling, `sql/09` integration tables.
+- **Ticket amounts** are resolved server-side from `Sunset.Police.violations` — client cannot set price.
+- **Jail release** requires server-validated `releaseAt` — client timer triggers request but server rejects early release.

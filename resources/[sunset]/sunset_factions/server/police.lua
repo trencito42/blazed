@@ -474,25 +474,45 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source)
     if not FactionCore.hasPerm(source, 'backup') then return nil, 'No permission' end
+    if GetResourceState('sunset_dispatch') ~= 'started' then return nil, 'Dispatch unavailable' end
+
+    local char = FactionCore.getChar(source)
+    local factionId = char and FactionCore.getFactionOf(char)
     local pos = FactionCore.playerCoords(source)
     local name = exports.sunset_core:GetPlayerDisplayName(source)
-    local sent = 0
-    for _, id in ipairs(GetPlayers()) do
-        local src = tonumber(id)
-        if src ~= source and FactionCore.isLawEnforcement(src) then
-            TriggerClientEvent('sunset:client:notify', src,
-                ('BACKUP requested by %s (#%d)'):format(name, source), 'warning', 12000)
-            TriggerClientEvent('sunset:police:backupBlip', src, { x = pos.x, y = pos.y, z = pos.z }, source)
-            sent = sent + 1
-        end
-    end
-    if sent < 1 then return nil, 'No on-duty units available' end
-    return sent
+
+    local call, err = exports.sunset_dispatch:CreateServiceCall(
+        source,
+        'police_backup',
+        pos,
+        { officerSource = source, officerName = name, factionId = factionId },
+        ('BACKUP requested by %s (#%d)'):format(name, source)
+    )
+    if not call then return nil, err end
+    return call.id
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeCancelBackup', function(source)
+    if not FactionCore.hasPerm(source, 'backup') then return nil, 'No permission' end
+    if GetResourceState('sunset_dispatch') ~= 'started' then return nil, 'Dispatch unavailable' end
+
+    local call = exports.sunset_dispatch:GetPlayerActiveCall(source, 'police_backup')
+    if not call then return nil, 'No active backup request' end
+
+    local ok, err = exports.sunset_dispatch:CancelCall(source, 'police_backup', call.id, 'Backup cancelled by officer')
+    if not ok then return nil, err end
+    return true
 end)
 
 RegisterNetEvent('sunset:server:jailComplete', function()
     local src = source
-    if not JailedOnline[src] then return end
+    local jail = JailedOnline[src]
+    if not jail then return end
+    if not jail.releaseAt or os.time() < jail.releaseAt then
+        notify(src, 'Your sentence is not complete yet', 'error')
+        syncJailBag(src, { releaseAt = jail.releaseAt, minutes = math.max(1, math.ceil((jail.releaseAt - os.time()) / 60)) })
+        return
+    end
     endJail(src)
     notify(src, 'Your sentence is complete — you are free', 'success', 6000)
 end)
@@ -505,6 +525,16 @@ AddEventHandler('sunset:server:characterSelected', function(source, characterId)
     if characterId then
         Police.hydratePlayer(source, characterId)
     end
+end)
+
+AddEventHandler('sunset:death:playerDowned', function(victimSource)
+    if GetResourceState('sunset_dispatch') ~= 'started' then return end
+    pcall(function()
+        local call = exports.sunset_dispatch:GetPlayerActiveCall(victimSource, 'police_backup')
+        if call then
+            exports.sunset_dispatch:CancelCall(victimSource, 'police_backup', call.id, 'Officer down — backup cancelled')
+        end
+    end)
 end)
 
 AddEventHandler('playerDropped', function()
@@ -600,9 +630,20 @@ exports.sunset_core:RegisterCallback('sunset:policeIssueTicket', function(source
         return nil, 'Not on duty or no permission'
     end
     targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
+
+    reasonCode = reasonCode and string.lower(reasonCode) or nil
+    if reasonCode then
+        local violation = Sunset.GetPoliceViolation(reasonCode)
+        if not violation then return nil, 'Invalid violation code' end
+        amount = violation.amount
+        reason = violation.label
+    else
+        return nil, 'Select a violation from the citation list'
+    end
+
     amount = math.floor(tonumber(amount) or 0)
-    if not targetId or amount < 1 or amount > 50000 then return nil, 'Invalid citation' end
-    if not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if amount < 1 or amount > 50000 then return nil, 'Invalid citation amount' end
 
     local officerPos = FactionCore.playerCoords(source)
     local targetPos = FactionCore.playerCoords(targetId)

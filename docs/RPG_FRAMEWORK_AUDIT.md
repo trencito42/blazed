@@ -71,16 +71,18 @@ SunsetMP is a custom FiveM RPG framework built around modular `sunset_*` resourc
 
 | System | Status |
 |--------|--------|
-| Trucker / Garbage / Courier jobs | Config + hire only |
-| Fisherman minigame | Not started |
-| Fire hose / fire missions | Not started |
-| EMS dispatch / hospital workflow | Not started |
-| Wanted persistence (DB) | Memory-only, lost on restart |
-| Jail persistence | Client timer only |
+| Trucker / Garbage / Courier jobs | **Complete** — full `/work` loops |
+| Fisherman minigame | **Complete** |
+| Fire hose / fire missions | **Partial** — `sunset_fire` vehicle fires; no hose physics |
+| EMS dispatch / hospital workflow | **Partial** — medic dispatch + revive; no stretcher/intake |
+| Wanted persistence (DB) | **Complete** — `wanted_records` |
+| Jail persistence | **Complete** — `jail_sentences` + server `releaseAt` validation |
+| Police backup | **Complete** — `police_backup` via `sunset_dispatch` |
+| Civilian mechanic dispatch | **Complete** — wired AcceptCall/CompleteCall |
 | Faction member offline roster | Online-only `/fmembers` |
-| MDT records / warrants history | Not started |
-| Dispatch CAD for EMS/Fire | Not started |
-| State bags for detention sync | Partial (events only) |
+| MDT records / warrants history | **Partial** — MDC online lookup + ticket history |
+| Dispatch CAD for EMS/Fire | **Partial** — `/calls` panel + chat commands |
+| State bags for detention sync | **Complete** |
 
 ---
 
@@ -89,8 +91,8 @@ SunsetMP is a custom FiveM RPG framework built around modular `sunset_*` resourc
 1. **Faction id checks scattered** — `== 'police'` used in multiple places; addressed by `faction_core.lua` capability model.
 2. **Cuff via open NetEvent** — `sunset:server:factionCmd` had no distance validation; **fixed** — moved to callbacks in `detention.lua`.
 3. **Duty not persisted** — intentional for session play but confusing after reconnect.
-4. **Jail is client-side timer** — player can potentially exploit by reconnecting (sentence not stored).
-5. **Wanted in server memory** — no DB, no offline warrant service.
+4. **Jail is client-side timer** — server validates `releaseAt` on `sunset:server:jailComplete`; DB sentence persists.
+5. **Wanted in server memory** — **Fixed** — DB persistence via `wanted_records`.
 6. **Fleet vehicles client-spawned** — not owned/persisted; acceptable for patrol but not for evidence chain.
 7. **Scoreboard exposes cash** — minor privacy concern for RP.
 8. **Romanian strings in older SQL/comments** — player-facing text now English.
@@ -108,7 +110,10 @@ SunsetMP is a custom FiveM RPG framework built around modular `sunset_*` resourc
 | Client-trusted taxi complete | Low | Already server-validated |
 | Illegal sell without duty check | Low | Server checks duty |
 | Admin `/setfaction` without audit | Medium | **Fixed** — `faction_audit_log` |
-| Jail escape via disconnect | Medium | Open — needs DB sentence |
+| Jail escape via early `jailComplete` | Critical | **Fixed** — server `releaseAt` check |
+| Ticket amount from client NUI | High | **Fixed** — server config only |
+| Backup ad-hoc blip (no dispatch) | Medium | **Fixed** — unified `police_backup` dispatch |
+| Jail escape via disconnect | Medium | **Fixed** — DB sentence + hydrate on reconnect |
 | Frisk returns full inventory server-side | Low | OK for RP; officer must have perm |
 
 ---

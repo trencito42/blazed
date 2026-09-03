@@ -19,12 +19,6 @@ exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:start', function(sour
     MechanicProviders[source] = true
     SunsetJobs_SetState(source, 'ACTIVE')
 
-    if GetResourceState('sunset_dispatch') == 'started' then
-        pcall(function()
-            TriggerEvent('sunset:dispatch:registerProvider', source, 'mechanic')
-        end)
-    end
-
     return session.data
 end)
 
@@ -36,7 +30,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:acceptCall', function
     callId = tonumber(callId)
     if GetResourceState('sunset_dispatch') == 'started' then
         local ok, result = pcall(function()
-            return exports.sunset_dispatch:AcceptCall(source, callId)
+            return exports.sunset_dispatch:AcceptCall(source, 'mechanic', callId)
         end)
         if ok and result then
             session.data.activeCallId = callId
@@ -92,7 +86,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:repair', function(sou
 
     if callId and GetResourceState('sunset_dispatch') == 'started' then
         pcall(function()
-            exports.sunset_dispatch:CompleteCall(callId)
+            exports.sunset_dispatch:CompleteCall(source, 'mechanic', callId)
         end)
     end
 
@@ -104,12 +98,6 @@ exports.sunset_core:RegisterCallback('sunset:jobs:mechanic:endShift', function(s
     if not session or session.jobId ~= 'mechanic' then return nil, 'Not on duty' end
 
     MechanicProviders[source] = nil
-    if GetResourceState('sunset_dispatch') == 'started' then
-        pcall(function()
-            TriggerEvent('sunset:dispatch:unregisterProvider', source, 'mechanic')
-        end)
-    end
-
     SunsetJobs_ClearSession(source, 'COMPLETED', 'Off duty')
     return true
 end)

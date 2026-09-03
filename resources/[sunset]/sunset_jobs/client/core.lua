@@ -209,4 +209,10 @@ RegisterNetEvent('sunset:client:updateCharacter', function(char)
     Sunset.Character = char
 end)
 
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() then
+        JobClient.cleanup()
+    end
+end)
+
 Sunset.JobClient = JobClient

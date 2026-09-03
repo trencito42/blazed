@@ -34,6 +34,12 @@ Sunset.Dispatch.ServiceTypes = {
         factionTypes = { 'mechanic' },
         providerFactions = { 'mechanic' },
     },
+    police_backup = {
+        label = 'Officer Backup',
+        factionTypes = { 'law_enforcement', 'ems', 'fire_rescue' },
+        providerFactions = { 'police', 'medic', 'lsfd' },
+        broadcastOnly = true,
+    },
 }
 
 Sunset.Dispatch.rateLimits = {
@@ -41,6 +47,7 @@ Sunset.Dispatch.rateLimits = {
     acceptMs = 2000,
     cancelMs = 5000,
     listMs = 1500,
+    backupMs = 30000,
 }
 
 Sunset.Dispatch.callTimeoutSec = 600
@@ -62,7 +69,7 @@ Sunset.Dispatch.CallType = {
     fire = 'fire',
     mechanic_roadside = 'mechanic',
     civilian_distress = 'medic',
-    police_backup = 'medic',
+    police_backup = 'police_backup',
 }
 
 local TERMINAL = {

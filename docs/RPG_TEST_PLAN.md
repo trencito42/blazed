@@ -32,7 +32,13 @@
 - [ ] Jail teleports + disables controls until timer ends
 - [ ] `/ticket` UI issues fine — money removed from target
 - [ ] `/mdc` UI shows wanted list
-- [ ] `/backup` notifies other on-duty LEO with blip
+- [ ] `/backup` notifies on-duty LEO, EMS, LSFD with blip via dispatch
+- [ ] `/cbackup` cancels backup and removes blips
+- [ ] Jail early release exploit blocked (server `releaseAt` check)
+- [ ] Ticket UI cannot set custom amount (server config only)
+- [ ] `/fare` fails when driver >8m from passenger
+- [ ] `/revive` fails when >4m or target not downed
+- [ ] Civilian mechanic `/work` receives and completes dispatch calls
 - [ ] `/m` heard only within ~35m
 
 ## EMS / LSFD

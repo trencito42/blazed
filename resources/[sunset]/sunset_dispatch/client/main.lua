@@ -1,4 +1,5 @@
 local activeWaypointCallId = nil
+local backupBlips = {}
 
 local function notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
@@ -27,6 +28,36 @@ RegisterNetEvent('sunset:dispatch:newCall', function(call)
         and Sunset.Dispatch.ServiceTypes[call.callType].label
         or call.callType
     notify(('New %s call #%d — /accept %s %d'):format(label, call.id, call.callType, call.id), 'warning')
+    TriggerEvent('sunset:jobs:dispatchNewCall', call)
+end)
+
+local function removeBackupBlip(callId)
+    local blip = backupBlips[callId]
+    if blip and DoesBlipExist(blip) then RemoveBlip(blip) end
+    backupBlips[callId] = nil
+end
+
+RegisterNetEvent('sunset:dispatch:backupAlert', function(call)
+    if not call or not call.coords then return end
+    local officerId = call.callerSource or call.callerServerId or 0
+    local officerName = call.callerName or ('Officer #%d'):format(officerId)
+    notify(('BACKUP requested by %s (#%d)'):format(officerName, officerId), 'warning', 12000)
+    removeBackupBlip(call.id)
+    local blip = AddBlipForCoord(call.coords.x, call.coords.y, call.coords.z)
+    SetBlipSprite(blip, 161)
+    SetBlipColour(blip, 3)
+    SetBlipScale(blip, 1.1)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName(('Backup #%d'):format(officerId))
+    EndTextCommandSetBlipName(blip)
+    backupBlips[call.id] = blip
+    SetTimeout(60000, function()
+        removeBackupBlip(call.id)
+    end)
+end)
+
+RegisterNetEvent('sunset:dispatch:backupEnded', function(call)
+    if call and call.id then removeBackupBlip(call.id) end
 end)
 
 RegisterNetEvent('sunset:dispatch:callAccepted', function(call)
@@ -71,7 +102,10 @@ CreateThread(function()
 end)
 
 AddEventHandler('onResourceStop', function(resource)
-    if resource == GetCurrentResourceName() then clearWaypoint() end
+    if resource == GetCurrentResourceName() then
+        clearWaypoint()
+        for callId in pairs(backupBlips) do removeBackupBlip(callId) end
+    end
 end)
 
 RegisterCommand('calls', function()

@@ -219,8 +219,14 @@ end, false)
 
 RegisterCommand('backup', function()
     local ok, err = Sunset.AwaitCallback('sunset:policeBackup')
-    if ok then exports.sunset_ui:Notify(('Backup request sent to %d units'):format(ok), 'success')
+    if ok then exports.sunset_ui:Notify(('Backup request #%d sent — /cbackup to cancel'):format(ok), 'success')
     else exports.sunset_ui:Notify(err or 'Backup failed', 'error') end
+end, false)
+
+RegisterCommand('cbackup', function()
+    local ok, err = Sunset.AwaitCallback('sunset:policeCancelBackup')
+    if ok then exports.sunset_ui:Notify('Backup request cancelled', 'success')
+    else exports.sunset_ui:Notify(err or 'Could not cancel backup', 'error') end
 end, false)
 
 RegisterCommand('mdc', function()
@@ -279,35 +285,15 @@ RegisterCommand('radars', function()
     end
 end, false)
 
-RegisterNetEvent('sunset:police:backupBlip', function(coords, officerId)
-    if not coords then return end
-    local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
-    SetBlipSprite(blip, 161)
-    SetBlipColour(blip, 3)
-    SetBlipScale(blip, 1.1)
-    BeginTextCommandSetBlipName('STRING')
-    AddTextComponentSubstringPlayerName(('Backup #%d'):format(officerId or 0))
-    EndTextCommandSetBlipName(blip)
-    SetTimeout(60000, function()
-        if DoesBlipExist(blip) then RemoveBlip(blip) end
-    end)
-end)
-
 AddEventHandler('sunset:nui:ticketIssue', function(data)
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('ticketHide', {})
-    local amount = tonumber(data.amount)
     local reason = data.reason or ''
-    if data.violationCode then
-        for _, row in ipairs(Sunset.Police.violations or {}) do
-            if row.code == data.violationCode then
-                amount = row.amount
-                reason = row.label
-                break
-            end
-        end
+    if not data.violationCode then
+        exports.sunset_ui:Notify('Select a violation from the list', 'error')
+        return
     end
-    local ok, err = Sunset.AwaitCallback('sunset:policeIssueTicket', tonumber(data.targetId), amount, reason, data.violationCode)
+    local ok, err = Sunset.AwaitCallback('sunset:policeIssueTicket', tonumber(data.targetId), nil, reason, data.violationCode)
     if ok then exports.sunset_ui:Notify('Citation issued', 'success')
     else exports.sunset_ui:Notify(err or 'Failed', 'error') end
 end)
@@ -353,7 +339,8 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/clear', 'Clear wanted status (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/wanted', 'List active wanted players (LSPD)')
     TriggerEvent('chat:addSuggestion', '/arrest', 'Arrest restrained suspect at jail zone (LSPD)', { { name = 'id' } })
-    TriggerEvent('chat:addSuggestion', '/backup', 'Request LSPD backup')
+    TriggerEvent('chat:addSuggestion', '/backup', 'Request emergency backup (LEO/EMS/Fire notified)')
+    TriggerEvent('chat:addSuggestion', '/cbackup', 'Cancel your active backup request')
     TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)')
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })

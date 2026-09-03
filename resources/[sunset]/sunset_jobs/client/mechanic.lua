@@ -3,12 +3,24 @@ local activeCall = nil
 local repairing = false
 
 RegisterNetEvent('sunset:jobs:mechanic:newCall', function(callData)
+    if JC.jobId ~= 'mechanic' or JC.state == 'IDLE' then return end
     activeCall = callData
-    JC.notify(('Mechanic call: %s — /work accept or go to customer'):format(
-        callData and callData.label or 'Service request'), 'info')
+    JC.notify(('Mechanic call #%s: %s — press E to accept'):format(
+        callData and callData.id or '?', callData and callData.label or 'Service request'), 'info')
     if callData and callData.coords then
         JC.setWaypoint(callData.coords)
     end
+end)
+
+AddEventHandler('sunset:jobs:dispatchNewCall', function(call)
+    if not call or call.callType ~= 'mechanic' then return end
+    if JC.jobId ~= 'mechanic' or JC.state == 'IDLE' then return end
+    TriggerEvent('sunset:jobs:mechanic:newCall', {
+        id = call.id,
+        label = call.description or 'Mechanic service request',
+        coords = call.coords,
+        callerName = call.callerName,
+    })
 end)
 
 RegisterNetEvent('sunset:jobs:mechanic:applyRepair', function(restoreAmount)

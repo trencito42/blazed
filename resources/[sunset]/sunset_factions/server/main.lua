@@ -200,7 +200,18 @@ end)
 exports.sunset_core:RegisterCallback('sunset:factionRevive', function(source, targetId)
     if not hasPerm(source, 'revive') then return nil, 'Not on duty or no permission' end
     targetId = tonumber(targetId)
-    if not targetId then return nil, 'Usage: /revive [player id]' end
+    if not targetId or not GetPlayerName(targetId) then return nil, 'Usage: /revive [player id]' end
+
+    local officerPos = FactionCore.playerCoords(source)
+    local targetPos = FactionCore.playerCoords(targetId)
+    if FactionCore.distBetween(officerPos, targetPos) > 4.0 then
+        return nil, 'You must be near the patient'
+    end
+
+    local isDowned = false
+    pcall(function() isDowned = exports.sunset_death:IsPlayerDowned(targetId) end)
+    if not isDowned then return nil, 'Target is not downed' end
+
     local ok, err = exports.sunset_death:RevivePlayer(targetId)
     if not ok then return nil, err end
     return true
@@ -223,6 +234,13 @@ exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, t
     if not hasPerm(source, 'repair') then return nil, 'Not on duty or no permission' end
     targetId = tonumber(targetId) or source
     if not GetPlayerName(targetId) then return nil, 'Player not found' end
+
+    local officerPos = FactionCore.playerCoords(source)
+    local targetPos = FactionCore.playerCoords(targetId)
+    if FactionCore.distBetween(officerPos, targetPos) > 6.0 then
+        return nil, 'You must be near the vehicle'
+    end
+
     TriggerClientEvent('sunset:faction:repairVehicle', targetId)
     return true
 end)
@@ -233,6 +251,13 @@ exports.sunset_core:RegisterCallback('sunset:taxiFare', function(source, targetI
     amount = math.floor(tonumber(amount) or 0)
     if not targetId or amount < 1 or amount > 25000 then return nil, 'Invalid fare' end
     if not GetPlayerName(targetId) then return nil, 'Passenger not found' end
+
+    local driverPos = FactionCore.playerCoords(source)
+    local passengerPos = FactionCore.playerCoords(targetId)
+    if FactionCore.distBetween(driverPos, passengerPos) > 8.0 then
+        return nil, 'You must be near the passenger'
+    end
+
     if not exports.sunset_core:RemoveMoney(targetId, 'cash', amount, 'taxi') then
         if not exports.sunset_core:RemoveMoney(targetId, 'bank', amount, 'taxi') then
             return nil, 'Passenger cannot pay'

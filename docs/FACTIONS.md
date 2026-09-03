@@ -6,7 +6,7 @@ SunsetMP uses a **capability-based faction framework**. Factions are not hardcod
 
 | Type | Factions | Capabilities |
 |------|----------|--------------|
-| `law_enforcement` | LSPD (`police`) | Cuff, arrest, wanted, fines, MDC, backup |
+| `law_enforcement` | LSPD (`police`) | Cuff, arrest, wanted, fines, MDC, backup (`/backup`, `/cbackup`) |
 | `ems` | Pillbox EMS (`medic`) | Heal, revive |
 | `fire_rescue` | LSFD (`lsfd`) | Heal, revive (Engineer+) |
 | `transport` | Downtown Cab (`taxi`) | Fares, phone app rides |

@@ -47,7 +47,8 @@
 | `/ticket` | Citation UI |
 | `/mdc` | Mobile data terminal |
 | `/m [message]` | Megaphone |
-| `/backup` | Request backup |
+| `/backup` | Request emergency backup (notifies on-duty LEO, EMS, LSFD + map blip) |
+| `/cbackup` | Cancel your active backup request |
 
 ## EMS / LSFD
 | Command | Description |

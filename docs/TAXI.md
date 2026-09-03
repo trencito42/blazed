@@ -27,7 +27,8 @@ Both paths create a dispatch entry and notify on-duty taxi drivers.
 During an active trip (`in_progress`), the server tracks distance driven:
 
 - Fare = `baseFare + meterKm × perKm` (see `sunset_taxi/shared/config.lua`)
-- **Anti-idle**: fare only increases when the cab moves at least 4 m between ticks; standing still does not inflate the meter
+- **Anti-idle**: fare only increases when the cab moves at least 4 m between ticks
+- **Idle timeout**: after `idleTimeoutSec` (45s default) without movement, meter stops increasing and both driver/passenger are notified
 - Final charge uses the meter fare (capped at 1.5× the estimated fare)
 - Company cut (12%) goes to the `taxi` society
 

@@ -46,6 +46,25 @@ function ServiceCore.isProviderForType(source, callType)
     return factionId and Sunset.Dispatch.ProviderFactionMatches(callType, factionId)
 end
 
+local function isEmergencyResponder(source)
+    if not exports.sunset_factions:IsOnDuty(source) then return false end
+    local char = getChar(source)
+    if not char then return false end
+    local factionId = Sunset.GetCharacterFaction(char)
+    if not factionId then return false end
+    local fType = Sunset.GetFactionType(factionId)
+    return fType == 'law_enforcement' or fType == 'ems' or fType == 'fire_rescue'
+end
+
+local function broadcastBackupResponders(event, payload, excludeSource)
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src ~= excludeSource and isEmergencyResponder(src) then
+            TriggerClientEvent(event, src, payload)
+        end
+    end
+end
+
 local function serializeCall(call, viewerSource)
     if not call then return nil end
     local viewerChar = viewerSource and getChar(viewerSource)
@@ -157,7 +176,12 @@ function ServiceCore.loadOpenCalls()
     if not ok or not rows then return end
     for _, row in ipairs(rows) do
         hydrateCall(row)
-        if row.status == Sunset.Dispatch.States.OPEN then scheduleTimeout(row.id) end
+        if row.status == Sunset.Dispatch.States.OPEN then
+            scheduleTimeout(row.id)
+            if row.call_type == 'police_backup' then
+                broadcastBackupResponders('sunset:dispatch:backupAlert', serializeCall(Calls[row.id]))
+            end
+        end
     end
 end
 
@@ -213,11 +237,16 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
     local char = not isSystem and getChar(source) or nil
     if not isSystem and not char then return nil, 'No character' end
     if not isSystem then
-        if not checkRateLimit(source, 'createMs') then
-            return nil, 'Please wait before requesting another service'
+        local rateKey = callType == 'police_backup' and 'backupMs' or 'createMs'
+        if not checkRateLimit(source, rateKey) then
+            return nil, callType == 'police_backup'
+                and 'Please wait before requesting backup again'
+                or 'Please wait before requesting another service'
         end
-        if ServiceCore.getPlayerActiveCall(source) then
-            return nil, 'You already have an active service request'
+        if ServiceCore.getPlayerActiveCall(source, callType) then
+            return nil, callType == 'police_backup'
+                and 'You already have an active backup request — use /cbackup to cancel'
+                or 'You already have an active service request'
         end
     end
 
@@ -251,9 +280,26 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
     local payload = serializeCall(call, source)
     local label = Sunset.Dispatch.ServiceTypes[callType].label or callType
     if not isSystem then
-        notify(source, ('%s request sent — waiting for a responder'):format(label), 'success')
+        notify(source, callType == 'police_backup'
+            and 'Backup request sent — use /cbackup to cancel'
+            or ('%s request sent — waiting for a responder'):format(label), 'success')
     end
-    broadcastProviders(callType, 'sunset:dispatch:newCall', payload)
+    if callType == 'police_backup' then
+        broadcastBackupResponders('sunset:dispatch:backupAlert', payload, source)
+    elseif callType == 'mechanic' then
+        broadcastProviders(callType, 'sunset:dispatch:newCall', payload)
+        TriggerEvent('sunset:jobs:notifyMechanicCall', {
+            id = call.id,
+            callType = callType,
+            label = description ~= '' and description or 'Mechanic service request',
+            coords = coords,
+            callerName = callerName,
+            description = description,
+            createdAt = call.createdAt,
+        })
+    else
+        broadcastProviders(callType, 'sunset:dispatch:newCall', payload)
+    end
     TriggerEvent('sunset:dispatch:callCreated', call.id, callType, source)
     scheduleTimeout(call.id)
     return payload
@@ -263,6 +309,10 @@ function ServiceCore.acceptCall(source, callType, callId)
     callType = Sunset.Dispatch.NormalizeServiceType(callType)
     callId = tonumber(callId)
     if not callType or not callId then return nil, 'Usage: /accept [type] [id]' end
+    local cfg = Sunset.Dispatch.ServiceTypes[callType]
+    if cfg and cfg.broadcastOnly then
+        return nil, 'This call type cannot be accepted'
+    end
     if not ServiceCore.isProviderForType(source, callType) then
         return nil, 'You must be on duty as a ' .. (Sunset.Dispatch.ServiceTypes[callType].label or callType) .. ' provider'
     end
@@ -344,6 +394,9 @@ function ServiceCore.cancelCall(source, callType, callId, reason)
     if callerSrc and callerSrc ~= source then
         notify(callerSrc, reason or 'Service call was cancelled', 'warning')
         TriggerClientEvent('sunset:dispatch:callEnded', callerSrc, payload)
+    end
+    if callType == 'police_backup' then
+        broadcastBackupResponders('sunset:dispatch:backupEnded', payload)
     end
     if responderSrc and responderSrc ~= source then
         notify(responderSrc, reason or 'Service call was cancelled', 'warning')
