@@ -49,12 +49,21 @@ local function buildHudData()
     local displayName = playerData and playerData.name
         or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
 
+    local jobId = select(1, Sunset.GetCharacterJob(char))
+    local factionId = select(1, Sunset.GetCharacterFaction(char))
+    local jobLabel = 'Unemployed'
+    if factionId and Sunset.Factions[factionId] then
+        jobLabel = Sunset.Factions[factionId].label
+    elseif Sunset.Jobs[jobId] then
+        jobLabel = Sunset.Jobs[jobId].label
+    end
+
     local data = {
         playerId = GetPlayerServerId(PlayerId()),
         cash = char.cash,
         bank = char.bank,
         name = displayName,
-        job = getJobLabel(char.job),
+        job = jobLabel,
         health = healthPct,
         armor = GetPedArmour(ped),
         time = getGameTime(),

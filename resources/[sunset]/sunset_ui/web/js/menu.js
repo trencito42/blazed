@@ -32,8 +32,8 @@ const Menu = {
 
     factionTips(jobId) {
         const common = [
-            '<li>Job saves to database — survives relog.</li>',
-            '<li>HQ marker → <strong>[E]</strong> to join or toggle duty.</li>',
+            '<li>Civilian jobs are hired at the Job Center.</li>',
+            '<li>Factions (LSPD, EMS, Taxi, gangs) join at HQ — press <strong>[E]</strong> for duty.</li>',
         ];
         const perJob = {
             police: [
@@ -70,6 +70,18 @@ const Menu = {
                 '<li>Hidden HQ — recruit via <strong>/finvite</strong>.</li>',
                 '<li>Workshop crafting — shiv, ammo (ranked).</li>',
                 '<li><strong>/fence</strong> contraband at HQ stash.</li>',
+            ],
+            trucker: [
+                '<li>Haul cargo routes across San Andreas.</li>',
+                '<li>Keep your civilian job while in a faction.</li>',
+            ],
+            fisherman: [
+                '<li>Catch and sell fish for extra income.</li>',
+                '<li>Works alongside any faction membership.</li>',
+            ],
+            unemployed: [
+                '<li>Visit the Job Center for trucker or fisherman work.</li>',
+                '<li>Or join a faction at HQ markers on the map.</li>',
             ],
         };
         const tips = [...common, ...(perJob[jobId] || ['<li>Use <strong>/faction</strong> to see your commands.</li>'])];
@@ -155,9 +167,9 @@ const Menu = {
             ? (data.onDuty ? '<span class="menu-job-badge menu-job-badge--on">ON DUTY</span>' : '<span class="menu-job-badge menu-job-badge--off">OFF DUTY</span>')
             : '';
 
-        const jobLine = unemployed && !hasFaction
-            ? 'Unemployed'
-            : (hasFaction ? (data.factionLabel || data.factionId) : (data.job || 'Unemployed'));
+        const jobLine = hasFaction
+            ? (data.factionLabel || data.factionId)
+            : (unemployed ? 'Unemployed' : (data.job || 'Unemployed'));
 
         const rankLine = hasFaction
             ? (data.factionGradeLabel || '—')
@@ -165,12 +177,16 @@ const Menu = {
 
         const salaryLine = hasFaction ? (data.factionSalary || 0) : (data.jobSalary || 0);
 
+        const civilianSub = hasFaction
+            ? `<p class="menu-job-sub">Civilian job: ${data.job || 'Unemployed'}</p>`
+            : '';
+
         card.innerHTML = `
             <div class="menu-job-card__header">
                 <div>
-                    <div class="menu-job-card__label">${hasFaction ? 'FACTION' : 'JOB'}</div>
+                    <div class="menu-job-card__label">${hasFaction ? 'FACTION' : 'CIVILIAN JOB'}</div>
                     <h4>${jobLine}</h4>
-                    ${!hasFaction && !unemployed ? '' : (hasFaction && !unemployed ? `<p class="menu-job-sub">Job: ${data.job || 'Unemployed'}</p>` : '')}
+                    ${civilianSub}
                 </div>
                 ${dutyBadge}
             </div>
@@ -201,7 +217,7 @@ const Menu = {
         side.innerHTML = `
             <div class="menu-job-side__box">
                 <h5>Quick tips</h5>
-                <ul>${this.factionTips(data.jobId)}</ul>
+                <ul>${this.factionTips(data.factionId || data.jobId)}</ul>
             </div>
             <div class="menu-job-actions">${actions}</div>`;
 
@@ -222,7 +238,8 @@ const Menu = {
         this.init();
 
         $('#menu-name').textContent = (data.name || '—').toUpperCase();
-        $('#menu-id').textContent = 'ID: ' + (data.id || 0);
+        const idSuffix = data.id ? (' #' + data.id) : '';
+        $('#menu-id').textContent = (data.name || 'Player') + idSuffix;
         const cidEl = $('#menu-cid');
         if (cidEl) cidEl.textContent = data.cid ? ('CID: ' + data.cid) : 'CID: —';
         $('#menu-rank').textContent = data.rank || 'PLAYER';

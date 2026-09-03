@@ -9,6 +9,7 @@ version '1.0.0'
 shared_scripts {
     '@sunset_core/shared/config.lua',
     '@sunset_core/shared/items.lua',
+    'shared/vehicle_config.lua',
 }
 
 client_scripts {

@@ -37,6 +37,17 @@
     text-transform: uppercase;
 }
 
+.badge--player {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .badge--payday { color: #e85d2a; }
 
 /* ── Top Right ── */

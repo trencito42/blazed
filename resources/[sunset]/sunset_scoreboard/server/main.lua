@@ -13,8 +13,14 @@ CreateThread(function()
             end)
 
             local jobLabel = 'Unemployed'
-            if char and Sunset.Jobs[char.job] then
-                jobLabel = Sunset.Jobs[char.job].label
+            if char then
+                local factionId = select(1, Sunset.GetCharacterFaction(char))
+                local jobId = select(1, Sunset.GetCharacterJob(char))
+                if factionId and Sunset.Factions[factionId] then
+                    jobLabel = Sunset.Factions[factionId].label
+                elseif Sunset.Jobs[jobId] then
+                    jobLabel = Sunset.Jobs[jobId].label
+                end
             end
 
             table.insert(list, {

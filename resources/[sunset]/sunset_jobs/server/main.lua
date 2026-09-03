@@ -46,7 +46,7 @@ RegisterCommand('setjob', function(source, args)
     local jobId = args[2]
     local grade = tonumber(args[3]) or 0
     if not targetArg or not jobId then
-        local msg = 'Usage: /setjob [id|username] [job] [grade]'
+        local msg = 'Usage: /setjob [id|username] [civilian_job] [grade] — unemployed, trucker, fisherman'
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
         return
     end
@@ -58,20 +58,65 @@ RegisterCommand('setjob', function(source, args)
         return
     end
 
-    if not Sunset.Jobs[jobId] and not Sunset.CivilianJobs[jobId] then
-        local msg = 'Invalid job: ' .. jobId
+    if Sunset.Factions[jobId] then
+        local msg = 'Use /setfaction for factions (police, taxi, medic...). /setjob is for civilian jobs only.'
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
         return
     end
 
-    if Sunset.Factions[jobId] then
-        exports.sunset_core:SetFaction(target, jobId, grade)
-    else
-        exports.sunset_core:SetJob(target, jobId, grade)
+    if not Sunset.CivilianJobs[jobId] then
+        local msg = 'Invalid civilian job: ' .. jobId
+        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        return
     end
-    local label = Sunset.Jobs[jobId].label
+
+    exports.sunset_core:SetJob(target, jobId, grade)
+    local label = Sunset.CivilianJobs[jobId].label
     TriggerClientEvent('sunset:client:notify', target, 'Job set to ' .. label, 'success')
     if source ~= 0 then
         TriggerClientEvent('sunset:client:notify', source, 'Set job for ' .. GetPlayerName(target), 'success')
+    end
+end, false)
+
+RegisterCommand('setfaction', function(source, args)
+    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
+        TriggerClientEvent('sunset:client:notify', source, 'No permission', 'error')
+        return
+    end
+
+    local targetArg = args[1]
+    local factionId = args[2]
+    local grade = tonumber(args[3]) or 0
+    if not targetArg or not factionId then
+        local msg = 'Usage: /setfaction [id|username] [faction] [grade] — police, medic, taxi, mechanic, lsfd, gangs...'
+        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        return
+    end
+
+    local target = resolvePlayer(source, targetArg)
+    if not target then
+        local msg = 'Player not found or offline'
+        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        return
+    end
+
+    if factionId == 'none' or factionId == 'clear' then
+        exports.sunset_core:SetFaction(target, nil, 0)
+        TriggerClientEvent('sunset:client:notify', target, 'Faction cleared', 'success')
+        if source ~= 0 then TriggerClientEvent('sunset:client:notify', source, 'Cleared faction for ' .. GetPlayerName(target), 'success') end
+        return
+    end
+
+    if not Sunset.Factions[factionId] then
+        local msg = 'Invalid faction: ' .. factionId
+        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        return
+    end
+
+    exports.sunset_core:SetFaction(target, factionId, grade)
+    local label = Sunset.Factions[factionId].label
+    TriggerClientEvent('sunset:client:notify', target, 'Faction set to ' .. label, 'success')
+    if source ~= 0 then
+        TriggerClientEvent('sunset:client:notify', source, 'Set faction for ' .. GetPlayerName(target), 'success')
     end
 end, false)

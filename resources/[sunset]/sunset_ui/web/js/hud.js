@@ -67,8 +67,11 @@ const Hud = {
         if (!data) return;
         this.init();
 
-        if (data.playerId !== undefined) $('#hud-id').textContent = 'ID: ' + data.playerId;
-        if (data.payday) $('#hud-payday').textContent = data.payday;
+        if (data.name !== undefined || data.playerId !== undefined) {
+            const name = data.name || 'Player';
+            const id = data.playerId !== undefined ? data.playerId : 0;
+            $('#hud-player').textContent = name + ' #' + id;
+        }
 
         if (data.health !== undefined) {
             const hp = Math.round(Math.max(0, Math.min(100, data.health)));

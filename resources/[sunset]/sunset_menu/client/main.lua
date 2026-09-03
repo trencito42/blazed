@@ -64,7 +64,8 @@ local function buildMenuData()
     local maxHp = GetEntityMaxHealth(ped) - 100
     local hp = GetEntityHealth(ped) - 100
     local health = maxHp > 0 and math.floor((hp / maxHp) * 100) or 0
-    local job = Sunset.Jobs[char.job]
+    local jobId = extras.jobId or select(1, Sunset.GetCharacterJob(char)) or 'unemployed'
+    local job = Sunset.CivilianJobs[jobId] or Sunset.Jobs[jobId]
 
     local fuel, seatbelt, locked
     pcall(function()
@@ -96,7 +97,7 @@ local function buildMenuData()
         bank = char.bank,
         premium = extras.premium or (playerData and playerData.premium) or 0,
         job = extras.jobLabel or (job and job.label) or 'Unemployed',
-        jobId = extras.jobId or char.job or 'unemployed',
+        jobId = jobId,
         jobGrade = extras.jobGrade or char.job_grade or 0,
         jobGradeLabel = extras.jobGradeLabel or '—',
         jobSalary = extras.jobSalary or 0,
@@ -108,7 +109,6 @@ local function buildMenuData()
         jobType = extras.jobType or 'civilian',
         hasDuty = extras.hasDuty == true,
         onDuty = extras.onDuty == true,
-        faction = char.job or 'unemployed',
         health = math.max(0, math.min(100, health)),
         armor = math.max(0, math.min(100, GetPedArmour(ped))),
         hunger = extras.hunger or char.hunger or 100,

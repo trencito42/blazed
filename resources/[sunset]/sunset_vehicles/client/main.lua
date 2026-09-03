@@ -5,6 +5,12 @@ local currentVeh = 0
 local fuel = 100.0
 local spawnedOwnedVehicle = nil
 local protectedVehicles = {}
+local lastBodyHealth = 1000.0
+local lastVehSpeed = 0.0
+
+-- RP-friendly ejection: hard crashes only (not every bump)
+local EJECT_PARAMS = { 48.0, 52.0, 17.0, 1200.0 }
+local NO_EJECT_PARAMS = { 10000.0, 10000.0, 17.0, 0.0 }
 
 local function getVeh()
     local ped = PlayerPedId()
@@ -73,7 +79,7 @@ RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'N')
 -- ═══ SEATBELT (K) ═══
 RegisterCommand('sunset_seatbelt', function()
     if blocked() then return end
-    if not isDriver() then return end
+    if not IsPedInAnyVehicle(PlayerPedId(), false) then return end
     seatbelt = not seatbelt
     notify(seatbelt and 'Seatbelt ON' or 'Seatbelt OFF', seatbelt and 'success' or 'warning')
 end, false)
@@ -113,25 +119,74 @@ RegisterCommand('sunset_lights', function()
 end, false)
 RegisterKeyMapping('sunset_lights', 'Vehicle lights', 'keyboard', 'H')
 
+local function applySeatbeltPhysics(ped)
+    if seatbelt then
+        SetPedConfigFlag(ped, 32, false)
+        SetFlyThroughWindscreenParams(NO_EJECT_PARAMS[1], NO_EJECT_PARAMS[2], NO_EJECT_PARAMS[3], NO_EJECT_PARAMS[4])
+    else
+        SetPedConfigFlag(ped, 32, true)
+        SetFlyThroughWindscreenParams(EJECT_PARAMS[1], EJECT_PARAMS[2], EJECT_PARAMS[3], EJECT_PARAMS[4])
+    end
+end
+
 CreateThread(function()
     while true do
         local ped = PlayerPedId()
         if IsPedInAnyVehicle(ped, false) then
             local veh = GetVehiclePedIsIn(ped, false)
             syncLockState(veh)
-
-            -- Fără ejectare prin geam (centura rămâne RP/visual)
-            SetPedConfigFlag(ped, 32, false)
-            SetFlyThroughWindscreenParams(10000.0, 10000.0, 17.0, 0.0)
-
+            applySeatbeltPhysics(ped)
             Wait(0)
         else
             seatbelt = false
             lightMode = 0
+            lastBodyHealth = 1000.0
+            lastVehSpeed = 0.0
             Wait(500)
         end
     end
 end)
+
+local function computeFuelDrain(veh)
+    local profiles = Sunset.VehicleProfiles or {}
+    local base = profiles.fuelBase or 0.0035
+    local class = GetVehicleClass(veh)
+    local model = GetEntityModel(veh)
+    local classMult = Sunset.GetVehicleFuelMultiplier(model, class)
+
+    if classMult <= 0 then return 0 end
+
+    local rpm = GetVehicleCurrentRpm(veh)
+    local speedKmh = GetEntitySpeed(veh) * 3.6
+    if speedKmh <= 1.0 and rpm < 0.15 then
+        return base * classMult * 0.15 * rpm
+    end
+
+    local rpmFactor = 0.25 + (rpm * 0.75)
+    local speedFactor = math.min(speedKmh / 160.0, 1.0)
+    return base * classMult * (rpmFactor + speedFactor * 0.35)
+end
+
+local function applyCollisionDamage(veh)
+    local body = GetVehicleBodyHealth(veh)
+    local speed = GetEntitySpeed(veh)
+    local bodyLoss = lastBodyHealth - body
+    local speedDrop = lastVehSpeed - speed
+
+    if bodyLoss > 8.0 and (lastVehSpeed > 8.0 or speedDrop > 4.0) then
+        local profile = Sunset.GetVehicleDamageProfile(GetEntityModel(veh), GetVehicleClass(veh))
+        local engineScale = profile.engine or 1.0
+        local bodyScale = profile.body or 1.0
+        local scaledLoss = bodyLoss * engineScale * bodyScale * 0.45
+        if scaledLoss > 0.5 then
+            local eng = GetVehicleEngineHealth(veh)
+            SetVehicleEngineHealth(veh, math.max(150.0, eng - scaledLoss))
+        end
+    end
+
+    lastBodyHealth = body
+    lastVehSpeed = speed
+end
 
 CreateThread(function()
     while true do
@@ -144,14 +199,19 @@ CreateThread(function()
                     fuel = 100.0
                 end
                 SetVehicleFuelLevel(veh, fuel)
+                lastBodyHealth = GetVehicleBodyHealth(veh)
+                lastVehSpeed = GetEntitySpeed(veh)
                 local _, lightsOn, highbeams = GetVehicleLightsState(veh)
                 if highbeams == 1 then lightMode = 2
                 elseif lightsOn == 1 then lightMode = 1
                 else lightMode = 0 end
             end
 
-            if GetEntitySpeed(veh) * 3.6 > 1 then
-                fuel = math.max(0, fuel - 0.008)
+            applyCollisionDamage(veh)
+
+            local drain = computeFuelDrain(veh)
+            if drain > 0 then
+                fuel = math.max(0, fuel - drain)
                 SetVehicleFuelLevel(veh, fuel)
             end
             if fuel <= 0 then SetVehicleEngineOn(veh, false, true, true) end

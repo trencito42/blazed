@@ -167,7 +167,8 @@ exports.sunset_core:RegisterCallback('sunset:policeFine', function(source, targe
 
     local commission = math.floor(amount * 0.1)
     exports.sunset_core:AddMoney(source, 'bank', commission, 'fine_commission')
-    local faction = officer and Sunset.Factions[officer.job]
+    local officerFaction = officer and select(1, Sunset.GetCharacterFaction(officer))
+    local faction = officerFaction and Sunset.Factions[officerFaction]
     if faction and faction.society then
         addSociety(faction.society, amount - commission)
     end
