@@ -11,6 +11,18 @@ function JobClient.notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
 end
 
+function JobClient.showObjective(title, subtitle, progress)
+    TriggerEvent('sunset:ui:jobObjective', {
+        title = title or 'Job',
+        subtitle = subtitle or '',
+        progress = progress,
+    })
+end
+
+function JobClient.hideObjective()
+    TriggerEvent('sunset:ui:jobObjective', { hide = true })
+end
+
 function JobClient.setWaypoint(coords)
     if not coords then return end
     SetNewWaypoint(coords.x + 0.0, coords.y + 0.0)
@@ -172,6 +184,8 @@ RegisterNetEvent('sunset:jobs:sessionStarted', function(jobId, session)
     JobClient.jobId = jobId
     JobClient.state = session.state or 'STARTING'
     JobClient.sessionData = session.data
+    local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
+    JobClient.showObjective(label, 'Shift started — follow GPS markers')
 end)
 
 RegisterNetEvent('sunset:jobs:stateChanged', function(state, data)
@@ -180,6 +194,7 @@ RegisterNetEvent('sunset:jobs:stateChanged', function(state, data)
 end)
 
 RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId, state, reason)
+    JobClient.hideObjective()
     JobClient.cleanup()
     if state == 'COMPLETED' then
         JobClient.notify('Shift complete!', 'success')

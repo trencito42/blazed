@@ -206,34 +206,40 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
     callType = Sunset.Dispatch.NormalizeServiceType(callType)
     if not callType then return nil, 'Invalid service type' end
 
-    local char = getChar(source)
-    if not char then return nil, 'No character' end
-    if not checkRateLimit(source, 'createMs') then
-        return nil, 'Please wait before requesting another service'
-    end
-    if ServiceCore.getPlayerActiveCall(source) then
-        return nil, 'You already have an active service request'
-    end
-
-    coords = Sunset.Dispatch.EncodeCoords(coords or playerCoords(source))
     metadata = metadata or {}
     description = description or ''
+    local isSystem = not source or source == 0 or metadata.system == true
+
+    local char = not isSystem and getChar(source) or nil
+    if not isSystem and not char then return nil, 'No character' end
+    if not isSystem then
+        if not checkRateLimit(source, 'createMs') then
+            return nil, 'Please wait before requesting another service'
+        end
+        if ServiceCore.getPlayerActiveCall(source) then
+            return nil, 'You already have an active service request'
+        end
+    end
+
+    coords = Sunset.Dispatch.EncodeCoords(coords or (not isSystem and playerCoords(source)) or coords)
+    local callerCharId = char and char.id or 0
+    local callerName = isSystem and 'Dispatch' or exports.sunset_core:GetPlayerDisplayName(source)
 
     local insertId = MySQL.insert.await([[
         INSERT INTO service_calls (call_type, status, caller_character_id, coords, description, metadata)
         VALUES (?, 'OPEN', ?, ?, ?, ?)
-    ]], { callType, char.id, json.encode(coords), description, json.encode(metadata) })
+    ]], { callType, callerCharId, json.encode(coords), description, json.encode(metadata) })
     if not insertId then return nil, 'Could not create service call' end
 
     local call = {
         id = insertId,
         callType = callType,
         status = Sunset.Dispatch.States.OPEN,
-        callerCharacterId = char.id,
+        callerCharacterId = callerCharId,
         responderCharacterId = nil,
-        callerSource = source,
+        callerSource = isSystem and nil or source,
         responderSource = nil,
-        callerName = exports.sunset_core:GetPlayerDisplayName(source),
+        callerName = callerName,
         responderName = nil,
         coords = coords,
         description = description,
@@ -244,7 +250,9 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
 
     local payload = serializeCall(call, source)
     local label = Sunset.Dispatch.ServiceTypes[callType].label or callType
-    notify(source, ('%s request sent — waiting for a responder'):format(label), 'success')
+    if not isSystem then
+        notify(source, ('%s request sent — waiting for a responder'):format(label), 'success')
+    end
     broadcastProviders(callType, 'sunset:dispatch:newCall', payload)
     TriggerEvent('sunset:dispatch:callCreated', call.id, callType, source)
     scheduleTimeout(call.id)

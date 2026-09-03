@@ -294,6 +294,7 @@ end)
 
 AddEventHandler('sunset:nui:ticketIssue', function(data)
     exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:Send('ticketHide', {})
     local amount = tonumber(data.amount)
     local reason = data.reason or ''
     if data.violationCode then
@@ -305,9 +306,35 @@ AddEventHandler('sunset:nui:ticketIssue', function(data)
             end
         end
     end
-    local ok, err = Sunset.AwaitCallback('sunset:policeFine', tonumber(data.targetId), amount, reason)
+    local ok, err = Sunset.AwaitCallback('sunset:policeIssueTicket', tonumber(data.targetId), amount, reason, data.violationCode)
     if ok then exports.sunset_ui:Notify('Citation issued', 'success')
     else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end)
+
+AddEventHandler('sunset:ui:mdcSearchRequest', function(data)
+    local result = Sunset.AwaitCallback('sunset:policeMdcLookup', tonumber(data and data.targetId))
+    exports.sunset_ui:Send('mdcUpdate', { lookup = result })
+end)
+
+AddEventHandler('sunset:ui:ticketPayRequest', function(data)
+    local ok, err = Sunset.AwaitCallback('sunset:policePayTicket', tonumber(data and data.ticketId))
+    if ok then
+        exports.sunset_ui:Send('ticketReceiveHide', {})
+        exports.sunset_ui:SetFocus(false, false)
+        exports.sunset_ui:Notify('Citation paid', 'success')
+    else
+        exports.sunset_ui:Notify(err or 'Payment failed', 'error')
+    end
+end)
+
+AddEventHandler('sunset:ui:ticketRefuseRequest', function(data)
+    local ok, err = Sunset.AwaitCallback('sunset:policeRefuseTicket', tonumber(data and data.ticketId))
+    if ok then
+        exports.sunset_ui:Send('ticketReceiveHide', {})
+        exports.sunset_ui:SetFocus(false, false)
+    else
+        exports.sunset_ui:Notify(err or 'Could not refuse', 'error')
+    end
 end)
 
 AddEventHandler('sunset:nui:ticketClose', function()

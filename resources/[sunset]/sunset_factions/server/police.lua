@@ -546,3 +546,130 @@ CreateThread(function()
 end)
 
 exports('IsJailed', function(source) return Police.isJailed(source) end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcLookup', function(source, targetId)
+    if not FactionCore.hasPerm(source, 'mdc') and not FactionCore.isLawEnforcement(source) then
+        return { error = 'You must be on-duty law enforcement' }
+    end
+
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then
+        return { error = 'Player not online — search by server ID' }
+    end
+
+    local char = FactionCore.getChar(targetId)
+    if not char then return { error = 'No character loaded' } end
+
+    local wanted = WantedOnline[targetId]
+    local jailed = JailedOnline[targetId]
+    local unpaid = MySQL.scalar.await(
+        'SELECT COALESCE(SUM(amount), 0) FROM tickets WHERE target_character_id = ? AND paid = 0',
+        { char.id }
+    ) or 0
+
+    local charges = MySQL.query.await([[
+        SELECT reason, amount, created_at FROM tickets
+        WHERE target_character_id = ?
+        ORDER BY created_at DESC LIMIT 8
+    ]], { char.id }) or {}
+
+    local chargeRows = {}
+    for _, row in ipairs(charges) do
+        chargeRows[#chargeRows + 1] = {
+            reason = row.reason,
+            amount = row.amount,
+            date = row.created_at and tostring(row.created_at):sub(1, 10) or '',
+        }
+    end
+
+    return {
+        id = targetId,
+        name = exports.sunset_core:GetPlayerDisplayName(targetId),
+        wanted = wanted ~= nil,
+        wantedLevel = wanted and wanted.level or 0,
+        wantedReason = wanted and wanted.reason or '',
+        jailed = jailed ~= nil,
+        jailMinutes = jailed and math.max(1, math.ceil((jailed.releaseAt - os.time()) / 60)) or 0,
+        finesOwed = unpaid,
+        charges = chargeRows,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeIssueTicket', function(source, targetId, amount, reason, reasonCode)
+    if not FactionCore.hasPerm(source, 'ticket') and not FactionCore.hasPerm(source, 'fine') then
+        return nil, 'Not on duty or no permission'
+    end
+    targetId = tonumber(targetId)
+    amount = math.floor(tonumber(amount) or 0)
+    if not targetId or amount < 1 or amount > 50000 then return nil, 'Invalid citation' end
+    if not GetPlayerName(targetId) then return nil, 'Player not found' end
+
+    local officerPos = FactionCore.playerCoords(source)
+    local targetPos = FactionCore.playerCoords(targetId)
+    if FactionCore.distBetween(officerPos, targetPos) > 8.0 then
+        return nil, 'You must be near the target'
+    end
+
+    local officer = FactionCore.getChar(source)
+    local target = FactionCore.getChar(targetId)
+    if not officer or not target then return nil, 'Character error' end
+
+    local ticketId = MySQL.insert.await([[
+        INSERT INTO tickets (officer_character_id, target_character_id, amount, reason, reason_code, paid)
+        VALUES (?, ?, ?, ?, ?, 0)
+    ]], { officer.id, target.id, amount, reason or '', reasonCode or '' })
+
+    TriggerClientEvent('sunset:ui:ticketReceive', targetId, {
+        ticketId = ticketId,
+        id = ticketId,
+        amount = amount,
+        reason = reason or 'Traffic violation',
+        officer = exports.sunset_core:GetPlayerDisplayName(source),
+        officerId = source,
+    })
+    notify(source, ('Citation #%d issued to #%d'):format(ticketId, targetId), 'success')
+    return ticketId
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policePayTicket', function(source, ticketId)
+    ticketId = tonumber(ticketId)
+    if not ticketId then return nil, 'Invalid ticket' end
+
+    local char = FactionCore.getChar(source)
+    if not char then return nil, 'No character' end
+
+    local row = MySQL.single.await(
+        'SELECT id, target_character_id, amount, reason, paid FROM tickets WHERE id = ?',
+        { ticketId }
+    )
+    if not row or row.target_character_id ~= char.id then return nil, 'Ticket not found' end
+    if row.paid == 1 then return nil, 'Already paid' end
+
+    if not exports.sunset_core:RemoveMoney(source, 'bank', row.amount, 'ticket')
+        and not exports.sunset_core:RemoveMoney(source, 'cash', row.amount, 'ticket') then
+        return nil, 'Insufficient funds'
+    end
+
+    MySQL.update.await('UPDATE tickets SET paid = 1, paid_at = NOW() WHERE id = ?', { ticketId })
+    notify(source, ('Paid citation $%s — %s'):format(row.amount, row.reason or ''), 'success')
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeRefuseTicket', function(source, ticketId)
+    ticketId = tonumber(ticketId)
+    if not ticketId then return nil, 'Invalid ticket' end
+
+    local char = FactionCore.getChar(source)
+    if not char then return nil, 'No character' end
+
+    local row = MySQL.single.await(
+        'SELECT id, target_character_id, amount, reason, paid FROM tickets WHERE id = ?',
+        { ticketId }
+    )
+    if not row or row.target_character_id ~= char.id then return nil, 'Ticket not found' end
+    if row.paid == 1 then return nil, 'Already paid' end
+
+    setWanted(source, 1, 'Refused citation: ' .. (row.reason or ''), 'evading', 4, nil)
+    notify(source, 'You refused the citation — wanted level set', 'error')
+    return true
+end)

@@ -208,9 +208,26 @@ exports.sunset_core:RegisterCallback('sunset:jobs:getPanelData', function(source
     end
     table.sort(jobs, function(a, b) return a.label < b.label end)
 
+    local currentJobObj = nil
+    if jobId and jobId ~= 'unemployed' then
+        currentJobObj = {
+            id = jobId,
+            label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId,
+        }
+    end
+
+    for _, row in ipairs(jobs) do
+        local prog = progress[row.id]
+        if prog then
+            row.level = prog.level
+            row.xp = prog.xp
+            row.xpNext = prog.xpToNext or xpForLevel(prog.level)
+        end
+    end
+
     return {
-        currentJob = jobId,
-        currentJobLabel = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId,
+        currentJob = currentJobObj,
+        currentJobLabel = currentJobObj and currentJobObj.label or 'Unemployed',
         jobGrade = jobGrade,
         session = session and {
             jobId = session.jobId,
@@ -225,7 +242,19 @@ end)
 exports.sunset_core:RegisterCallback('sunset:jobs:getSkills', function(source)
     local char = getChar(source)
     if not char then return nil, 'No character' end
-    return { progress = fetchProgress(char.id) }
+    local progress = fetchProgress(char.id)
+    local skills = {}
+    for jobId, prog in pairs(progress) do
+        skills[#skills + 1] = {
+            id = jobId,
+            label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId,
+            level = prog.level,
+            xp = prog.xp,
+            xpNext = prog.xpToNext or xpForLevel(prog.level),
+        }
+    end
+    table.sort(skills, function(a, b) return a.label < b.label end)
+    return { progress = progress, skills = skills }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:cancelWork', function(source)

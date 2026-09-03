@@ -15,8 +15,7 @@ local function openJobsPanel()
         JC.notify(err or 'Could not load jobs', 'error')
         return
     end
-    exports.sunset_ui:Send('jobsShow', data)
-    exports.sunset_ui:SetFocus(true, true)
+    TriggerEvent('sunset:ui:jobs', data)
 end
 
 local function showSkills()
@@ -25,16 +24,7 @@ local function showSkills()
         JC.notify(err or 'Could not load skills', 'error')
         return
     end
-    local lines = { '— Job Skills —' }
-    local any = false
-    for jobId, prog in pairs(data.progress or {}) do
-        local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
-        lines[#lines + 1] = ('%s: Lv.%d (%d XP, %d tasks, $%d earned)'):format(
-            label, prog.level, prog.xp, prog.completedTasks, prog.totalEarned)
-        any = true
-    end
-    if not any then lines[#lines + 1] = 'No job XP yet — start working with /work' end
-    TriggerEvent('chat:addMessage', { args = { '^3Jobs', table.concat(lines, '\n') } })
+    TriggerEvent('sunset:ui:skills', { skills = data.skills or {} })
 end
 
 local function showJobHelp()
@@ -104,6 +94,18 @@ AddEventHandler('sunset:nui:jobsStartWork', function()
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('jobsHide', {})
     startWork()
+end)
+
+AddEventHandler('sunset:ui:jobsSelectRequest', function(data)
+    if not data or not data.jobId then return end
+    exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:Send('jobsHide', {})
+    local ok, err = Sunset.AwaitCallback('sunset:hireJob', data.jobId)
+    if ok then
+        JC.notify('You are now employed as ' .. (data.jobLabel or data.jobId), 'success')
+    else
+        JC.notify(err or 'Could not get job', 'error')
+    end
 end)
 
 AddEventHandler('sunset:nui:jobsCancelWork', function()

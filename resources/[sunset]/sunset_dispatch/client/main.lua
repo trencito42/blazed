@@ -73,3 +73,37 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource == GetCurrentResourceName() then clearWaypoint() end
 end)
+
+RegisterCommand('calls', function()
+    local data, err = Sunset.AwaitCallback('sunset:dispatchPanelData')
+    if not data then
+        notify(err or 'Cannot open dispatch panel', 'error')
+        return
+    end
+    TriggerEvent('sunset:ui:serviceCalls', data)
+end, false)
+
+AddEventHandler('sunset:ui:serviceCallsAcceptRequest', function(data)
+    local callId = tonumber(data and data.callId)
+    if not callId then return end
+
+    local call = Sunset.AwaitCallback('sunset:dispatchGet', callId)
+    if not call or not call.callType then
+        notify('Call not found', 'error')
+        return
+    end
+
+    local accepted, err = Sunset.AwaitCallback('sunset:dispatchAccept', call.callType, callId)
+    if accepted then
+        notify(('Accepted call #%d'):format(callId), 'success')
+        exports.sunset_ui:Send('serviceCallsHide', {})
+        exports.sunset_ui:SetFocus(false, false)
+    else
+        notify(err or 'Could not accept call', 'error')
+    end
+end)
+
+CreateThread(function()
+    Wait(2000)
+    TriggerEvent('chat:addSuggestion', '/calls', 'Open service dispatch panel (on duty)')
+end)

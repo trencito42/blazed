@@ -65,6 +65,17 @@ local function spawnIncident()
     }
     Incidents[inc.id] = inc
 
+    pcall(function()
+        local call = exports.sunset_dispatch:CreateServiceCall(
+            0,
+            'fire',
+            inc.coords,
+            { incidentId = inc.id, system = true },
+            inc.label
+        )
+        if call and call.id then inc.dispatchCallId = call.id end
+    end)
+
     broadcastFirefighters('sunset:fire:newIncident', serializeIncident(inc))
     TriggerEvent('sunset:fire:incidentSpawned', inc.id)
 end
@@ -148,8 +159,8 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:fireAcceptDispatch', function(source, callId)
     if not isFirefighter(source) then return nil, 'Not on duty' end
-    local ok, err = exports.sunset_dispatch:AcceptCall(callId, source)
-    if not ok then return nil, err end
+    local call, err = exports.sunset_dispatch:AcceptCall(source, 'fire', callId)
+    if not call then return nil, err end
     return true
 end)
 

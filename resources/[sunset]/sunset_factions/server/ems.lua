@@ -124,6 +124,19 @@ end)
 AddEventHandler('sunset:death:playerDowned', function(victimSource)
     local coords = FactionCore.playerCoords(victimSource)
     if not coords then return end
+
+    pcall(function()
+        local existing = exports.sunset_dispatch:GetPlayerActiveCall(victimSource, 'medic')
+        if existing and Sunset.Dispatch.IsActiveState(existing.status or existing.state) then return end
+        exports.sunset_dispatch:CreateServiceCall(
+            victimSource,
+            'medic',
+            coords,
+            { auto = true, source = 'downed' },
+            'Injured civilian requires medical assistance'
+        )
+    end)
+
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         if src ~= victimSource and exports.sunset_factions:IsOnDuty(src) then

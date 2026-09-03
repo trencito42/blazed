@@ -87,6 +87,42 @@ exports.sunset_core:RegisterCallback('sunset:dispatchGet', function(source, call
     return ServiceCore.serializeCall(call, source)
 end)
 
+exports.sunset_core:RegisterCallback('sunset:dispatchAccept', function(source, callType, callId)
+    if not exports.sunset_factions:IsOnDuty(source) then
+        return nil, 'You must be on duty'
+    end
+    local call, err = ServiceCore.acceptCall(source, callType, callId)
+    if not call then return nil, err end
+    return call
+end)
+
+exports.sunset_core:RegisterCallback('sunset:dispatchPanelData', function(source)
+    if not exports.sunset_factions:IsOnDuty(source) then
+        return nil, 'You must be on duty'
+    end
+
+    local openCalls = ServiceCore.getActiveCalls(nil, { status = Sunset.Dispatch.States.OPEN })
+    local uiCalls = {}
+    for _, call in ipairs(openCalls) do
+        if ServiceCore.isProviderForType(source, call.callType) then
+            local cfg = Sunset.Dispatch.ServiceTypes[call.callType]
+            local c = call.coords or {}
+            uiCalls[#uiCalls + 1] = {
+                id = call.id,
+                type = call.callType,
+                typeLabel = cfg and cfg.label or call.callType,
+                title = call.description,
+                message = call.description,
+                caller = call.callerName,
+                location = ('%.0f, %.0f'):format(c.x or 0, c.y or 0),
+                status = 'open',
+                canAccept = true,
+            }
+        end
+    end
+    return { calls = uiCalls }
+end)
+
 AddEventHandler('playerDropped', function()
     ServiceCore.handleDisconnect(source)
 end)
