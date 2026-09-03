@@ -7,7 +7,7 @@ local function syncCombatState(source)
     end
     local factionId = select(1, Sunset.GetCharacterFaction(char))
     Player(source).state:set('sunsetFaction', factionId, true)
-    Player(source).state:set('sunsetOnDuty', OnDuty[source] == true, true)
+    Player(source).state:set('sunsetOnDuty', FactionCore.isOnDuty(source) == true, true)
 end
 
 AddEventHandler('sunset:server:characterSelected', function(source)

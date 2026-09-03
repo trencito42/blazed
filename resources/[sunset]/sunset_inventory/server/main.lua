@@ -141,6 +141,9 @@ exports.sunset_core:RegisterCallback('sunset:useItem', function(source, item)
 end)
 
 AddEventHandler('sunset:server:characterSelected', function(source, charId)
+    local char = exports.sunset_core:GetCharacter(source)
+    charId = tonumber(charId) or (char and tonumber(char.id))
+    if not charId then return end
     loadInventory(charId)
 end)
 

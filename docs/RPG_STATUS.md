@@ -11,6 +11,7 @@
 - Duty notifications always use a boolean state and a faction label; faction leave no longer adds a duplicate generic notification.
 - Fuel-pump input is edge-triggered after each fill. Holding E when the tank reaches 100% cannot reopen the pump and spam "Tank is already full".
 - The custom HUD intentionally reports km/h (`m/s * 3.6`). Many GTA vehicle dashboard textures are mph: 141 km/h is approximately 88 mph, which explains the apparent gauge discrepancy.
+- Live-log verification found and fixed a faction friendly-fire state crash (`OnDuty` was an undefined global), a missing shared profile dependency in `sunset_fire`, and a defensive character-id fallback in inventory loading.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 
