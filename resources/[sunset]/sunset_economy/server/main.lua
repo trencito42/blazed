@@ -1,4 +1,4 @@
-local PaydayTimers = {}
+local lastPaydayHour = -1
 
 local function getSalary(char)
     local job = Sunset.Jobs[char.job]
@@ -19,33 +19,31 @@ local function processPayday(source)
     TriggerClientEvent('sunset:client:payday', source, net, tax)
 end
 
-RegisterNetEvent('sunset:server:paydayTick', function()
-    processPayday(source)
-end)
-
-AddEventHandler('sunset:client:playerSpawned', function() end)
-
-RegisterNetEvent('sunset:server:playerSpawned', function()
-    local source = source
-    PaydayTimers[source] = Sunset.Config.PaydayInterval
-end)
-
-AddEventHandler('playerDropped', function()
-    PaydayTimers[source] = nil
-end)
+local function broadcastTime()
+    local hour = tonumber(os.date('%H'))
+    local minute = tonumber(os.date('%M'))
+    local nextH = (hour + 1) % 24
+  TriggerClientEvent('sunset:client:serverTime', -1, {
+        time = os.date('%H:%M'),
+        hour = hour,
+        minute = minute,
+        nextPayday = ('%02d:00'):format(nextH),
+    })
+end
 
 CreateThread(function()
     while true do
-        for src, timer in pairs(PaydayTimers) do
-            timer = timer - 1
-            if timer <= 0 then
-                processPayday(src)
-                timer = Sunset.Config.PaydayInterval
+        local hour = tonumber(os.date('%H'))
+        if hour ~= lastPaydayHour then
+            if lastPaydayHour >= 0 then
+                for _, playerId in ipairs(GetPlayers()) do
+                    processPayday(tonumber(playerId))
+                end
             end
-            PaydayTimers[src] = timer
-            TriggerClientEvent('sunset:client:paydayTimer', src, timer)
+            lastPaydayHour = hour
         end
-        Wait(1000)
+        broadcastTime()
+        Wait(10000)
     end
 end)
 

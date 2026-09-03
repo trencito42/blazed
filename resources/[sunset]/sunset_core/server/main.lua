@@ -84,6 +84,8 @@ RegisterNetEvent('sunset:server:authSuccess', function(accountId, username)
         account_id = accountId,
         license = license,
         name = username,
+        playtime = tonumber(player.playtime) or 0,
+        sessionStart = os.time(),
         character = nil,
     }
 
@@ -92,6 +94,7 @@ RegisterNetEvent('sunset:server:authSuccess', function(accountId, username)
         id = player.id,
         account_id = accountId,
         name = username,
+        playtime = tonumber(player.playtime) or 0,
     })
     Sunset.Debug('Player authenticated:', source, username)
 end)
@@ -116,6 +119,13 @@ end)
 
 AddEventHandler('playerDropped', function()
     local source = source
+    local player = Players[source]
+    if player and player.sessionStart then
+        local mins = math.max(0, math.floor((os.time() - player.sessionStart) / 60))
+        if mins > 0 then
+            MySQL.update.await('UPDATE players SET playtime = playtime + ? WHERE id = ?', { mins, player.id })
+        end
+    end
     if Players[source] and Players[source].character then
         Sunset.SaveCharacter(source)
     end
@@ -183,6 +193,7 @@ RegisterCallback('sunset:selectCharacter', function(source, charId)
     if not char then return nil, 'Invalid character' end
 
     char = Sunset.DecodeCharacter(char)
+    char.last_played_before = char.last_played
     MySQL.update.await('UPDATE characters SET last_played = NOW() WHERE id = ?', { charId })
     Players[source].character = char
     return char

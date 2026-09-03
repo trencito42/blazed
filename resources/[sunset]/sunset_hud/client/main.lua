@@ -1,6 +1,5 @@
-local hudActive = false
-local char = nil
-local paydayTimer = 0
+local nextPaydayLabel = '--:--'
+local serverTimeLabel = '00:00'
 
 local function nui(action, data)
     exports.sunset_ui:Send(action, data or {})
@@ -22,11 +21,11 @@ local function getJobLabel(jobName)
 end
 
 local function getGameTime()
-    return ('%02d:%02d'):format(GetClockHours(), GetClockMinutes())
+    return serverTimeLabel
 end
 
-local function formatPayday(seconds)
-    return ('%02d:%02d'):format(math.floor(seconds / 60), seconds % 60)
+local function formatPayday()
+    return nextPaydayLabel
 end
 
 local function getHudLayout()
@@ -55,7 +54,7 @@ local function buildHudData()
         health = healthPct,
         armor = GetPedArmour(ped),
         time = getGameTime(),
-        payday = formatPayday(paydayTimer),
+        payday = formatPayday(),
         street = street,
         zone = zone,
         inVehicle = false,
@@ -87,7 +86,7 @@ local function activateHud(character)
     char = character
     hudActive = true
     pcall(function()
-        paydayTimer = exports.sunset_economy:GetPaydaySeconds() or Sunset.Config.PaydayInterval
+        nextPaydayLabel = exports.sunset_economy:GetNextPayday() or nextPaydayLabel
     end)
     nui('showHud', {
         playerId = GetPlayerServerId(PlayerId()),
@@ -131,7 +130,7 @@ AddEventHandler('onResourceStart', function(resource)
 end)
 
 function GetPaydaySeconds()
-    return paydayTimer
+    return 0
 end
 exports('GetPaydaySeconds', GetPaydaySeconds)
 
@@ -174,8 +173,17 @@ RegisterCommand('hudedit', function()
     exports.sunset_ui:Send('hudEditToggle', {})
 end, false)
 
-RegisterNetEvent('sunset:client:paydayTimer', function(seconds)
-    paydayTimer = seconds
+RegisterNetEvent('sunset:client:serverTime', function(data)
+    if not data then return end
+    if data.time then serverTimeLabel = data.time end
+    if data.nextPayday then nextPaydayLabel = data.nextPayday end
+    if data.hour and data.minute then
+        NetworkOverrideClockTime(data.hour, data.minute, 0)
+    end
+end)
+
+RegisterNetEvent('sunset:client:paydayTimer', function()
+    -- legacy noop
 end)
 
 RegisterNetEvent('sunset:client:updateCharacter', function(updated)

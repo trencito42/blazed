@@ -3,13 +3,15 @@ game 'gta5'
 lua54 'yes'
 
 name 'sunset_menu'
-description 'Player menu (M) — stats reale'
+description 'Player menu (M)'
 version '1.0.0'
 
-shared_scripts {
-    '@sunset_core/shared/config.lua',
-}
+shared_scripts { '@sunset_core/shared/config.lua' }
 
 client_scripts { 'client/main.lua' }
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server/main.lua',
+}
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_hud' }
+dependencies { 'sunset_core', 'sunset_ui' }

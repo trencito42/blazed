@@ -27,6 +27,10 @@ local function notify(msg, type)
     exports.sunset_ui:Notify(msg, type or 'info')
 end
 
+local function blocked()
+    return IsNuiFocused() or IsPauseMenuActive()
+end
+
 local function driverOnly()
     if isPassenger() then
         notify('Only the driver can do that', 'error')
@@ -43,7 +47,8 @@ end
 
 -- ═══ LOCK (N) ═══
 RegisterCommand('sunset_lock', function()
-    if isPassenger() then return notify('Doar șoferul poate face asta', 'error') end
+    if blocked() then return end
+    if isPassenger() then return notify('Only the driver can do that', 'error') end
 
     local ped = PlayerPedId()
     local veh = getVeh()
@@ -61,6 +66,7 @@ RegisterKeyMapping('sunset_lock', 'Încuie mașina', 'keyboard', 'N')
 
 -- ═══ SEATBELT (K) ═══
 RegisterCommand('sunset_seatbelt', function()
+    if blocked() then return end
     if not isDriver() then return end
     seatbelt = not seatbelt
     notify(seatbelt and 'Seatbelt ON' or 'Seatbelt OFF', seatbelt and 'success' or 'warning')
@@ -69,6 +75,7 @@ RegisterKeyMapping('sunset_seatbelt', 'Seatbelt', 'keyboard', 'K')
 
 -- ═══ ENGINE (2) ═══
 RegisterCommand('sunset_engine', function()
+    if blocked() then return end
     if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end
@@ -80,6 +87,7 @@ RegisterKeyMapping('sunset_engine', 'Motor on/off', 'keyboard', '2')
 
 -- ═══ LIGHTS (H) — off → low → high ═══
 RegisterCommand('sunset_lights', function()
+    if blocked() then return end
     if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end

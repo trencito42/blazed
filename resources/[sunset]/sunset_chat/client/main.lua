@@ -1,4 +1,11 @@
 local chatOpen = false
+local chatHistory = {}
+local historyIndex = -1
+
+local function inputBlocked()
+    return chatOpen or IsNuiFocused()
+end
+exports('IsChatOpen', function() return chatOpen end)
 
 local function openChat()
     if chatOpen then return end
@@ -25,6 +32,9 @@ AddEventHandler('sunset:nui:chatSend', function(data)
     local msg = (data.message or ''):gsub('^%s+', ''):gsub('%s+$', '')
     if msg == '' then return end
 
+    chatHistory[#chatHistory + 1] = msg
+    historyIndex = #chatHistory + 1
+
     if msg:sub(1, 1) == '/' then
         ExecuteCommand(msg:sub(2))
     else
@@ -34,6 +44,19 @@ end)
 
 AddEventHandler('sunset:nui:chatClose', function()
     closeChat()
+end)
+
+AddEventHandler('sunset:nui:chatHistory', function(data)
+    if data.direction == 'up' then
+        if #chatHistory == 0 then return end
+        historyIndex = math.max(1, historyIndex - 1)
+        exports.sunset_ui:Send('chatSetInput', { text = chatHistory[historyIndex] or '' })
+    elseif data.direction == 'down' then
+        if #chatHistory == 0 then return end
+        historyIndex = math.min(#chatHistory + 1, historyIndex + 1)
+        local text = historyIndex > #chatHistory and '' or (chatHistory[historyIndex] or '')
+        exports.sunset_ui:Send('chatSetInput', { text = text })
+    end
 end)
 
 RegisterNetEvent('sunset:chat:message', function(payload)

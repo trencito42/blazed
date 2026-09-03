@@ -29,7 +29,7 @@ const Chat = {
             wrap.classList.remove('hidden');
             setTimeout(() => {
                 input.focus();
-                input.select();
+                input.setSelectionRange(input.value.length, input.value.length);
             }, 50);
         } else {
             chat.classList.remove('chat-open');
@@ -37,6 +37,14 @@ const Chat = {
             input.value = '';
             input.blur();
         }
+    },
+
+    setInput(text) {
+        const input = $('#chat-input');
+        if (!input) return;
+        input.value = text || '';
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
     },
 
     send() {
@@ -49,8 +57,17 @@ const Chat = {
 };
 
 $('#chat-input')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); Chat.send(); }
-    if (e.key === 'Escape') { e.preventDefault(); post('chatClose'); }
+    if (e.key === 'Enter') { e.preventDefault(); Chat.send(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); post('chatClose'); return; }
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        post('chatHistory', { direction: 'up' });
+        return;
+    }
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        post('chatHistory', { direction: 'down' });
+    }
 });
 
 window.Chat = Chat;

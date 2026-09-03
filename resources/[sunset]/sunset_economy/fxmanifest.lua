@@ -20,5 +20,5 @@ client_scripts {
 }
 
 exports {
-    'GetPaydaySeconds',
+    'GetNextPayday',
 }

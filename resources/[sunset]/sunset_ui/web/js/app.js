@@ -142,6 +142,10 @@ window.addEventListener('message', (event) => {
             if (window.Chat) Chat.add(data || event.data.data);
             break;
 
+        case 'chatSetInput':
+            if (window.Chat) Chat.setInput((data || event.data.data)?.text);
+            break;
+
         case 'menuShow':
             if (window.Menu) Menu.show(data || event.data.data);
             break;

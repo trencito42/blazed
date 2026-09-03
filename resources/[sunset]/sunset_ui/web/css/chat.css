@@ -13,6 +13,16 @@
     pointer-events: auto;
 }
 
+.chat.chat-open .chat-messages {
+    user-select: text;
+    -webkit-user-select: text;
+    pointer-events: auto;
+}
+
+.chat.chat-open .chat-msg {
+    cursor: text;
+}
+
 .chat-messages {
     max-height: 260px;
     overflow-y: auto;

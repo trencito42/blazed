@@ -1,16 +1,16 @@
-local paydayTimer = 0
+local nextPaydayLabel = '--:--'
 local nearShop = nil
 local nearAtm = false
 
-RegisterNetEvent('sunset:client:paydayTimer', function(seconds)
-    paydayTimer = seconds
+RegisterNetEvent('sunset:client:serverTime', function(data)
+    if data and data.nextPayday then nextPaydayLabel = data.nextPayday end
 end)
 
 RegisterNetEvent('sunset:client:payday', function(net, tax)
     exports.sunset_ui:Notify(('Payday: +$%s (tax: $%s)'):format(net, tax), 'success', 6000)
 end)
 
-exports('GetPaydaySeconds', function() return paydayTimer end)
+exports('GetNextPayday', function() return nextPaydayLabel end)
 
 CreateThread(function()
     while true do
@@ -90,9 +90,6 @@ AddEventHandler('sunset:nui:atmClose', function()
     exports.sunset_ui:Send('atmHide', {})
 end)
 
-exports('GetPaydaySeconds', function() return paydayTimer end)
-
 AddEventHandler('sunset:client:playerSpawned', function()
     TriggerServerEvent('sunset:server:playerSpawned')
-    paydayTimer = Sunset.Config.PaydayInterval
 end)
