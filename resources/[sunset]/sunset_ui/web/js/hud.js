@@ -67,10 +67,13 @@ const Hud = {
         if (!data) return;
         this.init();
 
-        if (data.name !== undefined || data.playerId !== undefined) {
-            const name = data.name || 'Player';
-            const id = data.playerId !== undefined ? data.playerId : 0;
-            $('#hud-player').textContent = name + ' #' + id;
+        if (data.name !== undefined) {
+            const el = $('#hud-player-name');
+            if (el) el.textContent = data.name || 'Player';
+        }
+        if (data.playerId !== undefined) {
+            const el = $('#hud-player-id');
+            if (el) el.textContent = '#' + (data.playerId !== undefined ? data.playerId : 0);
         }
 
         if (data.health !== undefined) {

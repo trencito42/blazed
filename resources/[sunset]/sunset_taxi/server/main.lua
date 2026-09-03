@@ -34,6 +34,38 @@ local function encodeCoords(coords)
     }
 end
 
+local function getPlayerCoords(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil end
+    local c = GetEntityCoords(ped)
+    if type(c) == 'vector3' then return c end
+    return vector3(c.x or c[1] or 0.0, c.y or c[2] or 0.0, c.z or c[3] or 0.0)
+end
+
+local function distanceBetween(a, b)
+    if not a or not b then return 999999.0 end
+    return #(vector3(a.x, a.y, a.z) - vector3(b.x, b.y, b.z))
+end
+
+local function getDriverVehicleModel(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil end
+    local veh = GetVehiclePedIsIn(ped, false)
+    if not veh or veh == 0 then return nil end
+    return GetEntityModel(veh)
+end
+
+local function requireTaxiVehicle(source)
+    local model = getDriverVehicleModel(source)
+    if not model then
+        return false, 'You must be in a cab vehicle'
+    end
+    if not Sunset.Taxi.IsValidTaxiVehicle(model) then
+        return false, 'You must use a company cab, not a personal vehicle'
+    end
+    return true
+end
+
 local function rideForPassenger(charId)
     for _, ride in pairs(Rides) do
         if ride.passengerCharId == charId and ride.status ~= 'completed' and ride.status ~= 'cancelled' then
@@ -65,6 +97,8 @@ local function serializeRide(ride, viewerSource)
         createdAt = ride.createdAt,
         isPassenger = viewerChar and viewerChar.id == ride.passengerCharId,
         isDriver = viewerChar and viewerChar.id == ride.driverCharId,
+        passengerServerId = ride.passengerSource,
+        driverServerId = ride.driverSource,
     }
     return out
 end
@@ -269,6 +303,9 @@ exports.sunset_core:RegisterCallback('sunset:taxiAcceptRide', function(source, r
     if not isTaxiDriver(source) then return nil, 'You must be on duty as a taxi driver' end
     if DriverAvailable[source] == false then return nil, 'Turn on availability in the Cab app' end
 
+    local okVehicle, vehicleErr = requireTaxiVehicle(source)
+    if not okVehicle then return nil, vehicleErr end
+
     local char = getChar(source)
     if not char then return nil, 'No character' end
     if rideForDriver(char.id) then return nil, 'Finish your current ride first' end
@@ -324,8 +361,21 @@ end)
 exports.sunset_core:RegisterCallback('sunset:taxiPickupPassenger', function(source)
     local char = getChar(source)
     if not char then return nil, 'No character' end
+
+    local okVehicle, vehicleErr = requireTaxiVehicle(source)
+    if not okVehicle then return nil, vehicleErr end
+
     local ride = rideForDriver(char.id)
     if not ride or ride.status ~= 'accepted' then return nil, 'No passenger to pick up' end
+
+    local coords = getPlayerCoords(source)
+    local pickup = ride.pickup
+    if coords and pickup then
+        local dist = distanceBetween(coords, pickup)
+        if dist > (Sunset.Taxi.pickupRadius or 18.0) then
+            return nil, 'You are too far from the pickup location'
+        end
+    end
 
     ride.status = 'in_progress'
     local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
@@ -341,8 +391,22 @@ end)
 exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
     local char = getChar(source)
     if not char then return nil, 'No character' end
+
+    local okVehicle, vehicleErr = requireTaxiVehicle(source)
+    if not okVehicle then return nil, vehicleErr end
+
     local ride = rideForDriver(char.id)
     if not ride or ride.status ~= 'in_progress' then return nil, 'No trip in progress' end
+
+    local coords = getPlayerCoords(source)
+    local dest = ride.destination
+    if coords and dest then
+        local dist = distanceBetween(coords, dest)
+        local radius = Sunset.Taxi.completeRadius or Sunset.Taxi.dropoffRadius or 60.0
+        if dist > radius then
+            return nil, 'You must reach the destination before completing the trip'
+        end
+    end
 
     local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
     if not passengerSrc then

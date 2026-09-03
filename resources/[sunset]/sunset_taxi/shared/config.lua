@@ -11,6 +11,10 @@ Sunset.Taxi = {
     companyCut = 0.12,
     pickupRadius = 18.0,
     dropoffRadius = 28.0,
+    completeRadius = 60.0,
+    arrivingDistanceKm = 0.15,
+    distanceUpdateMs = 1500,
+    allowedVehicles = { 'taxi' },
     tipOptions = { 25, 50, 100 },
     destinations = {
         { id = 'legion', label = 'Legion Square', category = 'Popular', coords = vector3(215.76, -810.12, 30.73) },
@@ -31,6 +35,20 @@ Sunset.Taxi = {
     },
     mapBounds = { minX = -4000, maxX = 6000, minY = -5500, maxY = 8000 },
 }
+
+function Sunset.Taxi.IsValidTaxiVehicle(modelHash)
+    if not modelHash then return false end
+    local cfg = Sunset.Taxi
+    for _, name in ipairs(cfg.allowedVehicles or { 'taxi' }) do
+        if joaat(name) == modelHash then return true end
+    end
+    local faction = Sunset.Factions and Sunset.Factions[cfg.factionId or 'taxi']
+    local depot = faction and faction.depot
+    if depot and depot.vehicle and joaat(depot.vehicle) == modelHash then
+        return true
+    end
+    return modelHash == joaat('taxi')
+end
 
 function Sunset.TaxiDistanceKm(a, b)
     if not a or not b then return 0 end

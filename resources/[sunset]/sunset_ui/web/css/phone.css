@@ -439,6 +439,15 @@
     color: rgba(255, 255, 255, 0.55);
 }
 
+.phone-taxi-row--live strong {
+    color: #64d2ff;
+}
+
+.phone-taxi-hint--warn {
+    color: #ff9f0a;
+    margin-top: 4px;
+}
+
 .phone-taxi-modes {
     display: grid;
     grid-template-columns: repeat(3, 1fr);

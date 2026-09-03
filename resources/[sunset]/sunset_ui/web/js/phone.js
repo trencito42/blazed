@@ -432,6 +432,23 @@ const Phone = {
             if (this.screen === 'taxi') this.renderTaxi();
             return;
         }
+
+        const isDistancePatch = payload.driverDistanceKm !== undefined
+            || payload.passengerDistanceKm !== undefined
+            || payload.nearDestination !== undefined
+            || payload.driverStatusText !== undefined;
+
+        if (isDistancePatch && this.taxiData) {
+            Object.assign(this.taxiData, payload);
+            if (this.screen !== 'taxi') return;
+            if (this.taxiMode === 'map' && window.TaxiPhoneMap?.map) {
+                this.updateTaxiLiveFields();
+                return;
+            }
+            this.updateTaxiLiveFields();
+            return;
+        }
+
         this.taxiData = payload || this.taxiData;
         if (this.screen !== 'taxi') return;
         if (this.taxiMode === 'map' && window.TaxiPhoneMap?.map && this.taxiData) {
@@ -439,6 +456,51 @@ const Phone = {
             return;
         }
         this.renderTaxi();
+    },
+
+    formatTaxiDistance(km) {
+        if (km === null || km === undefined) return '—';
+        const n = Number(km);
+        if (Number.isNaN(n)) return '—';
+        if (n < 1) return `${Math.round(n * 1000)} m`;
+        return `${n.toFixed(1)} km`;
+    },
+
+    updateTaxiLiveFields() {
+        const d = this.taxiData;
+        if (!d) return;
+
+        const ride = d.activeRide;
+        const needsCard = ride && (ride.status === 'accepted' || ride.status === 'in_progress');
+        const hasLiveEl = $('#phone-taxi-driver-dist') || $('#phone-taxi-passenger-dist');
+        if (needsCard && !hasLiveEl && this.screen === 'taxi') {
+            this.renderTaxi();
+            return;
+        }
+
+        const driverDist = $('#phone-taxi-driver-dist');
+        const passengerDist = $('#phone-taxi-passenger-dist');
+        const driverStatus = $('#phone-taxi-driver-status');
+        const passengerStatus = $('#phone-taxi-passenger-status');
+        const completeBtn = $('#phone-taxi-complete');
+
+        if (driverDist && d.driverDistanceKm !== undefined) {
+            driverDist.textContent = this.formatTaxiDistance(d.driverDistanceKm);
+        }
+        if (passengerDist && d.passengerDistanceKm !== undefined) {
+            passengerDist.textContent = this.formatTaxiDistance(d.passengerDistanceKm);
+        }
+        if (driverStatus && d.driverStatusText) {
+            driverStatus.textContent = d.driverStatusText;
+        }
+        if (passengerStatus && d.passengerStatusText) {
+            passengerStatus.textContent = d.passengerStatusText;
+        }
+        if (completeBtn) {
+            const canComplete = d.nearDestination === true;
+            completeBtn.disabled = !canComplete;
+            completeBtn.title = canComplete ? '' : 'Drive to the destination first';
+        }
     },
 
     taxiDest: null,
@@ -610,9 +672,10 @@ const Phone = {
     },
 
     renderActiveRideCard(ride, isDriver) {
+        const d = this.taxiData || {};
         const statusLabels = {
             pending: 'Looking for a driver...',
-            accepted: isDriver ? 'Go pick up passenger' : 'Driver on the way',
+            accepted: isDriver ? 'Go pick up passenger' : (d.driverStatusText || 'Driver on the way'),
             in_progress: 'Trip in progress',
             completed: 'Completed',
             cancelled: 'Cancelled',
@@ -623,7 +686,8 @@ const Phone = {
                 actions = `<button type="button" class="phone-taxi-btn phone-taxi-btn--primary" id="phone-taxi-pickup">Passenger picked up</button>
                            <button type="button" class="phone-taxi-btn" id="phone-taxi-cancel">Cancel ride</button>`;
             } else if (ride.status === 'in_progress') {
-                actions = `<button type="button" class="phone-taxi-btn phone-taxi-btn--primary" id="phone-taxi-complete">Complete trip & charge</button>`;
+                const canComplete = d.nearDestination === true;
+                actions = `<button type="button" class="phone-taxi-btn phone-taxi-btn--primary" id="phone-taxi-complete" ${canComplete ? '' : 'disabled'} title="${canComplete ? '' : 'Drive to the destination first'}">Complete trip & charge</button>`;
             }
         } else if (ride.status === 'pending' || ride.status === 'accepted') {
             actions = `<button type="button" class="phone-taxi-btn" id="phone-taxi-cancel">Cancel ride</button>`;
@@ -634,12 +698,38 @@ const Phone = {
             actions = `<div class="phone-taxi-tips"><span>Tip your driver</span><div class="phone-taxi-tip-row">${tips}</div></div>`;
         }
 
+        let distanceRows = '';
+        if (!isDriver && (ride.status === 'accepted' || ride.status === 'in_progress')) {
+            distanceRows += `<div class="phone-taxi-row phone-taxi-row--live">
+                <span>Driver</span>
+                <strong id="phone-taxi-driver-status">${d.driverStatusText || 'Driver en route'}</strong>
+            </div>
+            <div class="phone-taxi-row phone-taxi-row--live">
+                <span>Distance</span>
+                <strong id="phone-taxi-driver-dist">${this.formatTaxiDistance(d.driverDistanceKm)}</strong>
+            </div>`;
+        }
+        if (isDriver && ride.status === 'accepted') {
+            distanceRows += `<div class="phone-taxi-row phone-taxi-row--live">
+                <span>Passenger</span>
+                <strong id="phone-taxi-passenger-status">${d.passengerStatusText || 'En route to passenger'}</strong>
+            </div>
+            <div class="phone-taxi-row phone-taxi-row--live">
+                <span>Distance</span>
+                <strong id="phone-taxi-passenger-dist">${this.formatTaxiDistance(d.passengerDistanceKm)}</strong>
+            </div>`;
+        }
+        if (isDriver && ride.status === 'in_progress' && !d.nearDestination) {
+            distanceRows += `<p class="phone-taxi-hint phone-taxi-hint--warn">Drive to the destination to complete the trip.</p>`;
+        }
+
         return `<div class="phone-taxi-card phone-taxi-card--active">
             <div class="phone-taxi-status phone-taxi-status--${ride.status}">${statusLabels[ride.status] || ride.status}</div>
             <div class="phone-taxi-row"><span>Destination</span><strong>${ride.destination?.label || '—'}</strong></div>
             <div class="phone-taxi-row"><span>Fare</span><strong>${this.formatMoney(ride.fare)}</strong></div>
             ${ride.driverName ? `<div class="phone-taxi-row"><span>Driver</span><strong>${ride.driverName}</strong></div>` : ''}
             ${ride.passengerName && isDriver ? `<div class="phone-taxi-row"><span>Passenger</span><strong>${ride.passengerName}</strong></div>` : ''}
+            ${distanceRows}
             ${actions}
         </div>`;
     },

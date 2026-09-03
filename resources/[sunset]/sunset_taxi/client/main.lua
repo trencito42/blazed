@@ -1,7 +1,49 @@
 local depotVehicle = nil
 local activeRide = nil
+local lastTaxiAppData = nil
 
 local MAP = Sunset.Taxi.mapBounds or { minX = -4000, maxX = 6000, minY = -5500, maxY = 8000 }
+
+local function isInTaxiVehicle()
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then return false end
+    local veh = GetVehiclePedIsIn(ped, false)
+    if not veh or veh == 0 then return false end
+    return Sunset.Taxi.IsValidTaxiVehicle(GetEntityModel(veh))
+end
+
+local function requireTaxiVehicle()
+    if isInTaxiVehicle() then return true end
+    notify('You must use a company cab, not a personal vehicle', 'error')
+    return false
+end
+
+local function coordsFromServerId(serverId)
+    serverId = tonumber(serverId)
+    if not serverId then return nil end
+    local player = GetPlayerFromServerId(serverId)
+    if player == -1 then return nil end
+    local ped = GetPlayerPed(player)
+    if not ped or ped == 0 then return nil end
+    local c = GetEntityCoords(ped)
+    return vector3(c.x, c.y, c.z)
+end
+
+local function distKm(a, b)
+    if not a or not b then return nil end
+    return #(a - b) / 1000.0
+end
+
+local function pushTaxiDistanceUpdate(ride, extra)
+    local payload = extra or {}
+    if lastTaxiAppData then
+        for k, v in pairs(lastTaxiAppData) do
+            if payload[k] == nil then payload[k] = v end
+        end
+    end
+    if ride then payload.activeRide = ride end
+    exports.sunset_ui:Send('taxiUpdate', payload)
+end
 
 local function notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
@@ -62,6 +104,11 @@ local function refreshPhoneTaxi()
         local data, err = Sunset.AwaitCallback('sunset:getTaxiAppData')
         if data then
             data.playerPos = clientPlayerPos()
+            lastTaxiAppData = data
+            if data.activeRide then
+                activeRide = data.activeRide
+                if activeRide.isDriver then activeRide.isDriver = true end
+            end
             exports.sunset_ui:Send('taxiUpdate', data)
         else
             exports.sunset_ui:Send('taxiUpdate', {
@@ -232,6 +279,7 @@ end)
 
 AddEventHandler('sunset:nui:taxiAcceptRide', function(data)
     CreateThread(function()
+        if not requireTaxiVehicle() then return end
         local ride, err = Sunset.AwaitCallback('sunset:taxiAcceptRide', data.rideId)
         if not ride then notify(err or 'Could not accept', 'error') end
         refreshPhoneTaxi()
@@ -248,6 +296,7 @@ end)
 
 AddEventHandler('sunset:nui:taxiPickup', function()
     CreateThread(function()
+        if not requireTaxiVehicle() then return end
         local ride, err = Sunset.AwaitCallback('sunset:taxiPickupPassenger')
         if not ride then notify(err or 'Failed', 'error') end
         refreshPhoneTaxi()
@@ -256,6 +305,7 @@ end)
 
 AddEventHandler('sunset:nui:taxiComplete', function()
     CreateThread(function()
+        if not requireTaxiVehicle() then return end
         local ok, err = Sunset.AwaitCallback('sunset:taxiCompleteRide')
         if not ok then notify(err or 'Failed', 'error') end
         refreshPhoneTaxi()
@@ -278,6 +328,86 @@ AddEventHandler('sunset:nui:taxiTip', function(data)
 end)
 
 local proximityHintAt = 0
+
+CreateThread(function()
+    while true do
+        local waitMs = Sunset.Taxi.distanceUpdateMs or 1500
+        local ride = activeRide or (lastTaxiAppData and lastTaxiAppData.activeRide)
+        if ride and (ride.status == 'accepted' or ride.status == 'in_progress') then
+            local myCoords = GetEntityCoords(PlayerPedId())
+            local arrivingKm = Sunset.Taxi.arrivingDistanceKm or 0.15
+            local completeRadius = Sunset.Taxi.completeRadius or Sunset.Taxi.dropoffRadius or 60.0
+            local pickupRadius = Sunset.Taxi.pickupRadius or 18.0
+
+            local driverDistanceKm = nil
+            local passengerDistanceKm = nil
+            local driverStatusText = nil
+            local passengerStatusText = nil
+            local nearDestination = false
+            local nearPickup = false
+
+            local char = exports.sunset_core:GetCharacter()
+            local isDriver = ride.isDriver or (char and Sunset.GetCharacterFaction(char) == 'taxi' and exports.sunset_factions:IsOnDuty())
+
+            if isDriver then
+                local targetCoords
+                if ride.status == 'accepted' then
+                    if ride.pickup then
+                        targetCoords = vector3(ride.pickup.x, ride.pickup.y, ride.pickup.z)
+                    end
+                    if ride.passengerServerId then
+                        local pCoords = coordsFromServerId(ride.passengerServerId)
+                        if pCoords then targetCoords = pCoords end
+                    end
+                elseif ride.status == 'in_progress' and ride.passengerServerId then
+                    local pCoords = coordsFromServerId(ride.passengerServerId)
+                    if pCoords then targetCoords = pCoords end
+                end
+
+                if targetCoords then
+                    passengerDistanceKm = distKm(myCoords, targetCoords)
+                    if ride.status == 'accepted' then
+                        nearPickup = #(myCoords - targetCoords) <= pickupRadius
+                        passengerStatusText = nearPickup and 'At pickup' or 'En route to passenger'
+                    else
+                        passengerStatusText = 'Passenger on board'
+                    end
+                end
+
+                if ride.status == 'in_progress' and ride.destination then
+                    local dest = vector3(ride.destination.x, ride.destination.y, ride.destination.z)
+                    nearDestination = #(myCoords - dest) <= completeRadius
+                end
+            else
+                if ride.driverServerId then
+                    local dCoords = coordsFromServerId(ride.driverServerId)
+                    if dCoords then
+                        driverDistanceKm = distKm(myCoords, dCoords)
+                        if ride.status == 'accepted' then
+                            driverStatusText = driverDistanceKm <= arrivingKm and 'Driver arriving' or 'Driver en route'
+                        else
+                            driverStatusText = 'Trip in progress'
+                        end
+                    elseif ride.status == 'accepted' then
+                        driverStatusText = 'Driver en route'
+                    end
+                end
+            end
+
+            pushTaxiDistanceUpdate(ride, {
+                driverDistanceKm = driverDistanceKm,
+                passengerDistanceKm = passengerDistanceKm,
+                driverStatusText = driverStatusText,
+                passengerStatusText = passengerStatusText,
+                nearDestination = nearDestination,
+                nearPickup = nearPickup,
+            })
+        else
+            waitMs = 2000
+        end
+        Wait(waitMs)
+    end
+end)
 
 CreateThread(function()
     while true do
