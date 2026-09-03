@@ -84,5 +84,14 @@ fi
 if [ -f sql/08-faction-core.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/08-faction-core.sql 2>/dev/null || true
 fi
+if [ -f sql/09-dispatch-wanted-jail.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-dispatch-wanted-jail.sql 2>/dev/null || true
+fi
+if [ -f sql/09-jobs.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-jobs.sql 2>/dev/null || true
+fi
+if [ -f sql/10-police-persist.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/10-police-persist.sql 2>/dev/null || true
+fi
 
 echo "Done. Connect: F8 -> connect $(curl -s ifconfig.me 2>/dev/null || echo YOUR_IP):30120"

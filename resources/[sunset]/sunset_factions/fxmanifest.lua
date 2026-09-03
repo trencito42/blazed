@@ -23,6 +23,7 @@ client_scripts {
     'client/friendlyfire.lua',
     'client/detention.lua',
     'client/police.lua',
+    'client/ems.lua',
     'client/main.lua',
 }
 
@@ -34,7 +35,8 @@ server_scripts {
     'server/chat.lua',
     'server/leaders.lua',
     'server/police.lua',
+    'server/ems.lua',
     'server/friendlyfire.lua',
 }
 
-exports { 'IsOnDuty', 'GetDutyState', 'HasFactionPerm', 'IsCuffed', 'GetWantedState' }
+exports { 'IsOnDuty', 'GetDutyState', 'HasFactionPerm', 'IsCuffed', 'GetWantedState', 'IsJailed', 'GetDetentionState' }

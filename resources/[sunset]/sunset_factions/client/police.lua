@@ -1,52 +1,73 @@
-local isCuffed = false
 local jailed = false
-local jailEndMs = 0
+local jailReleaseAt = 0
+local radarActive = false
+local lastRadarLock = 0
 
-local CUFF_DICT = 'mp_arresting'
-local CUFF_ANIM = 'idle'
-
-local function loadAnimDict(dict)
-    if HasAnimDictLoaded(dict) then return true end
-    RequestAnimDict(dict)
-    local timeout = GetGameTimer() + 5000
-    while not HasAnimDictLoaded(dict) do
-        if GetGameTimer() > timeout then return false end
-        Wait(10)
-    end
-    return true
+local function chatLine(name, message)
+    exports.sunset_ui:Send('chatMessage', { id = 0, name = name, message = message, time = '' })
 end
 
-local function applyCuffState(state)
-    isCuffed = state == true
+local function mphFromEntity(entity)
+    return math.floor(GetEntitySpeed(entity) * 2.236936 + 0.5)
+end
+
+local function getVehicleInRadarCone()
     local ped = PlayerPedId()
+    local origin = GetEntityCoords(ped)
+    local forward = GetEntityForwardVector(ped)
+    local cfg = Sunset.Police and Sunset.Police.radar or {}
+    local range = cfg.mobileRange or 45.0
+    local bestVeh, bestSpeed, bestPlate = 0, 0, nil
+    local bestDot = -1.0
 
-    if isCuffed then
-        SetEnableHandcuffs(ped, true)
-        if loadAnimDict(CUFF_DICT) then
-            TaskPlayAnim(ped, CUFF_DICT, CUFF_ANIM, 8.0, -8.0, -1, 49, 0, false, false, false)
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if DoesEntityExist(veh) then
+            local vehCoords = GetEntityCoords(veh)
+            local delta = vehCoords - origin
+            local dist = #(delta)
+            if dist <= range and dist > 2.0 then
+                local dir = delta / dist
+                local dot = forward.x * dir.x + forward.y * dir.y + forward.z * dir.z
+                if dot >= 0.92 and dot > bestDot then
+                    local driver = GetPedInVehicleSeat(veh, -1)
+                    if driver ~= 0 and IsPedAPlayer(driver) then
+                        bestDot = dot
+                        bestVeh = veh
+                        bestSpeed = mphFromEntity(veh)
+                        bestPlate = GetVehicleNumberPlateText(veh)
+                    end
+                end
+            end
         end
-        exports.sunset_ui:Notify('You have been restrained', 'error')
-    else
-        SetEnableHandcuffs(ped, false)
-        ClearPedTasks(ped)
-        exports.sunset_ui:Notify('Restraints removed', 'success')
     end
+
+    return bestVeh, bestSpeed, bestPlate
 end
 
-RegisterNetEvent('sunset:faction:cuff', function()
-    applyCuffState(true)
+RegisterNetEvent('sunset:police:summonAlert', function(data)
+    data = data or {}
+    exports.sunset_ui:Send('summonAlert', {
+        officer = data.officer or 'Law Enforcement',
+        officerId = data.officerId,
+        message = data.message or 'You are being summoned — stop and comply',
+    })
+    exports.sunset_ui:Notify(data.message or 'You are being summoned by law enforcement — stop and comply', 'warning', 15000)
+    PlaySoundFrontend(-1, 'TIMER_STOP', 'HUD_MINI_GAME_SOUNDSET', true)
 end)
 
-RegisterNetEvent('sunset:faction:uncuff', function()
-    applyCuffState(false)
-end)
+RegisterNetEvent('sunset:police:jail', function(payload)
+    payload = type(payload) == 'table' and payload or { minutes = tonumber(payload) or 2 }
+    local releaseAt = payload.releaseAt
+    local minutes = payload.minutes or 2
+    if not releaseAt then
+        releaseAt = GetCloudTimeAsInt() + minutes * 60
+    else
+        minutes = math.max(1, math.ceil((releaseAt - GetCloudTimeAsInt()) / 60))
+    end
 
-RegisterNetEvent('sunset:police:jail', function(minutes, coords)
-    minutes = math.max(1, tonumber(minutes) or 2)
     jailed = true
-    jailEndMs = GetGameTimer() + minutes * 60000
-
-    if isCuffed then applyCuffState(false) end
+    jailReleaseAt = releaseAt
+    local coords = payload.coords
 
     local ped = PlayerPedId()
     if coords and coords.x then
@@ -57,36 +78,14 @@ RegisterNetEvent('sunset:police:jail', function(minutes, coords)
     exports.sunset_ui:Notify(('Sentenced — %d minutes remaining'):format(minutes), 'error', 8000)
 end)
 
-CreateThread(function()
-    while true do
-        if isCuffed then
-            local ped = PlayerPedId()
-            DisableControlAction(0, 21, true)
-            DisableControlAction(0, 24, true)
-            DisableControlAction(0, 25, true)
-            DisableControlAction(0, 47, true)
-            DisableControlAction(0, 58, true)
-            DisableControlAction(0, 140, true)
-            DisableControlAction(0, 141, true)
-            DisableControlAction(0, 142, true)
-            DisableControlAction(0, 143, true)
-            DisableControlAction(0, 263, true)
-            DisableControlAction(0, 264, true)
-            DisableControlAction(0, 257, true)
-
-            if IsPedInAnyVehicle(ped, false) then
-                DisableControlAction(0, 75, true)
-                DisableControlAction(0, 23, true)
-            end
-
-            SetPedCanPlayGestureAnims(ped, false)
-            if not IsEntityPlayingAnim(ped, CUFF_DICT, CUFF_ANIM, 3) and loadAnimDict(CUFF_DICT) then
-                TaskPlayAnim(ped, CUFF_DICT, CUFF_ANIM, 8.0, -8.0, -1, 49, 0, false, false, false)
-            end
-            Wait(0)
-        else
-            Wait(400)
-        end
+RegisterNetEvent('sunset:police:release', function()
+    jailed = false
+    jailReleaseAt = 0
+    local release = Sunset.Police and Sunset.Police.releaseCoords
+    local ped = PlayerPedId()
+    if release then
+        SetEntityCoords(ped, release.x, release.y, release.z, false, false, false, false)
+        SetEntityHeading(ped, release.w or 0.0)
     end
 end)
 
@@ -97,8 +96,10 @@ CreateThread(function()
             EnableControlAction(0, 1, true)
             EnableControlAction(0, 2, true)
 
-            if GetGameTimer() >= jailEndMs then
+            if GetCloudTimeAsInt() >= jailReleaseAt then
                 jailed = false
+                jailReleaseAt = 0
+                TriggerServerEvent('sunset:server:jailComplete')
                 local release = Sunset.Police and Sunset.Police.releaseCoords
                 local ped = PlayerPedId()
                 if release then
@@ -114,9 +115,28 @@ CreateThread(function()
     end
 end)
 
-local function chatLine(name, message)
-    exports.sunset_ui:Send('chatMessage', { id = 0, name = name, message = message, time = '' })
-end
+CreateThread(function()
+    while true do
+        if radarActive then
+            local veh, speed, plate = getVehicleInRadarCone()
+            if veh ~= 0 and speed > 0 then
+                local cfg = Sunset.Police and Sunset.Police.radar or {}
+                local limit = cfg.defaultLimitMph or 55
+                local now = GetGameTimer()
+                if speed > limit and now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
+                    lastRadarLock = now
+                    local result = Sunset.AwaitCallback('sunset:policeRadarLock', speed, plate)
+                    if result and result.flagged then
+                        exports.sunset_ui:Notify(result.message or ('Radar lock: %d mph'):format(speed), 'warning', 5000)
+                    end
+                end
+            end
+            Wait((Sunset.Police and Sunset.Police.radar and Sunset.Police.radar.scanIntervalMs) or 750)
+        else
+            Wait(500)
+        end
+    end
+end)
 
 RegisterCommand('su', function(_, args)
     local target = tonumber(args[1])
@@ -154,6 +174,17 @@ RegisterCommand('so', function(_, args)
     if not ok then exports.sunset_ui:Notify(err or 'Failed', 'error') end
 end, false)
 
+RegisterCommand('clear', function(_, args)
+    local target = tonumber(args[1])
+    if not target then
+        exports.sunset_ui:Notify('Usage: /clear [id]', 'error')
+        return
+    end
+    local ok, err = Sunset.AwaitCallback('sunset:policeClearWanted', target)
+    if ok then exports.sunset_ui:Notify(('Cleared wanted for #%d'):format(target), 'success')
+    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+end, false)
+
 RegisterCommand('wanted', function()
     local list, err = Sunset.AwaitCallback('sunset:policeWantedList')
     if not list then
@@ -161,16 +192,17 @@ RegisterCommand('wanted', function()
         return
     end
 
-    chatLine('LSPD', '=== Active Wanted ===')
+    chatLine('LSPD', '=== Active Wanted (persisted) ===')
     if #list == 0 then
-        chatLine('LSPD', 'No active wanted players online')
+        chatLine('LSPD', 'No active wanted records')
         return
     end
 
     for _, row in ipairs(list) do
         local mins = math.ceil((row.remainingSec or 0) / 60)
-        chatLine('LSPD', ('#%d %s — ★%d %s (%d min left)'):format(
-            row.id, row.name or 'Unknown', row.level, row.reason or '—', mins))
+        local status = row.online and ('#' .. tostring(row.id)) or ('CID ' .. tostring(row.characterId) .. ' [offline]')
+        chatLine('LSPD', ('%s %s — ★%d %s (%d min left)'):format(
+            status, row.name or 'Unknown', row.level, row.reason or '—', mins))
     end
 end, false)
 
@@ -198,8 +230,52 @@ RegisterCommand('mdc', function()
 end, false)
 
 RegisterCommand('ticket', function()
-    exports.sunset_ui:Send('ticketShow', {})
+    local violations = Sunset.AwaitCallback('sunset:policeViolations') or {}
+    exports.sunset_ui:Send('ticketShow', { violations = violations })
     exports.sunset_ui:SetFocus(true, true)
+end, false)
+
+RegisterCommand('confiscate', function(_, args)
+    local target = tonumber(args[1])
+    if not target then
+        exports.sunset_ui:Notify('Usage: /confiscate [id]', 'error')
+        return
+    end
+    local removed, err = Sunset.AwaitCallback('sunset:policeConfiscate', target)
+    if not removed then return exports.sunset_ui:Notify(err or 'Confiscation failed', 'error') end
+    chatLine('LSPD', ('=== Confiscated from #%d ==='):format(target))
+    for _, row in ipairs(removed) do
+        chatLine('LSPD', ('%s x%d'):format(row.label or row.item, row.count))
+    end
+    exports.sunset_ui:Notify('Contraband confiscated', 'success')
+end, false)
+
+RegisterCommand('startradar', function()
+    local violations = Sunset.AwaitCallback('sunset:policeViolations')
+    if violations == nil then
+        return exports.sunset_ui:Notify('You must be on-duty law enforcement', 'error')
+    end
+    radarActive = true
+    lastRadarLock = 0
+    exports.sunset_ui:Notify('Speed radar active — aim at oncoming traffic', 'success')
+end, false)
+
+RegisterCommand('stopradar', function()
+    radarActive = false
+    exports.sunset_ui:Notify('Speed radar deactivated', 'info')
+end, false)
+
+RegisterCommand('radars', function()
+    local list, err = Sunset.AwaitCallback('sunset:policeFixedRadars')
+    if not list then return exports.sunset_ui:Notify(err or 'Unavailable', 'error') end
+    chatLine('LSPD', '=== Fixed Speed Cameras ===')
+    if #list == 0 then
+        chatLine('LSPD', 'No fixed cameras configured')
+        return
+    end
+    for _, row in ipairs(list) do
+        chatLine('LSPD', ('%s — %d mph limit (%.0f, %.0f)'):format(row.label, row.limitMph, row.x, row.y))
+    end
 end, false)
 
 RegisterNetEvent('sunset:police:backupBlip', function(coords, officerId)
@@ -218,7 +294,18 @@ end)
 
 AddEventHandler('sunset:nui:ticketIssue', function(data)
     exports.sunset_ui:SetFocus(false, false)
-    local ok, err = Sunset.AwaitCallback('sunset:policeFine', tonumber(data.targetId), tonumber(data.amount), data.reason or '')
+    local amount = tonumber(data.amount)
+    local reason = data.reason or ''
+    if data.violationCode then
+        for _, row in ipairs(Sunset.Police.violations or {}) do
+            if row.code == data.violationCode then
+                amount = row.amount
+                reason = row.label
+                break
+            end
+        end
+    end
+    local ok, err = Sunset.AwaitCallback('sunset:policeFine', tonumber(data.targetId), amount, reason)
     if ok then exports.sunset_ui:Notify('Citation issued', 'success')
     else exports.sunset_ui:Notify(err or 'Failed', 'error') end
 end)
@@ -235,24 +322,25 @@ CreateThread(function()
     Wait(3500)
     TriggerEvent('chat:addSuggestion', '/su', 'Set wanted level (LSPD)', { { name = 'id' }, { name = 'reason_code' } })
     TriggerEvent('chat:addSuggestion', '/so', 'Summon suspect nearby (LSPD)', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/clear', 'Clear wanted status (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/wanted', 'List active wanted players (LSPD)')
-    TriggerEvent('chat:addSuggestion', '/arrest', 'Arrest restrained suspect (LSPD)', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/arrest', 'Arrest restrained suspect at jail zone (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/backup', 'Request LSPD backup')
     TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)')
+    TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/startradar', 'Activate mobile speed radar')
+    TriggerEvent('chat:addSuggestion', '/stopradar', 'Deactivate mobile speed radar')
+    TriggerEvent('chat:addSuggestion', '/radars', 'List fixed speed cameras')
     TriggerEvent('chat:addSuggestion', '/m', 'Megaphone', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/handsup', 'Toggle hands up')
     TriggerEvent('chat:addSuggestion', '/escort', 'Escort restrained suspect', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/frisk', 'Frisk suspect', { { name = 'id' } })
 end)
 
-exports('IsCuffedLocal', function() return isCuffed end)
 exports('IsJailed', function() return jailed end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    if isCuffed then
-        SetEnableHandcuffs(PlayerPedId(), false)
-        ClearPedTasks(PlayerPedId())
-    end
+    radarActive = false
 end)

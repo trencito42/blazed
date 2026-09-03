@@ -54,10 +54,10 @@ Sunset.Factions = {
         },
         grades = {
             [0] = { label = 'Cadet', salary = 400, perms = { cuff = true, escort = true, frisk = true, members = true } },
-            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, escort = true, frisk = true, fine = true, ticket = true, mdc = true, megaphone = true, members = true } },
-            [2] = { label = 'Sergeant', salary = 700, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, invite = true, members = true } },
-            [3] = { label = 'Lieutenant', salary = 900, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, invite = true, giverank = true, fwarn = true, fmotd = true, members = true } },
-            [4] = { label = 'Chief', salary = 1200, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, invite = true, promote = true, giverank = true, uninvite = true, fwarn = true, fmotd = true, members = true } },
+            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, escort = true, frisk = true, fine = true, ticket = true, mdc = true, megaphone = true, radar = true, confiscate = true, members = true } },
+            [2] = { label = 'Sergeant', salary = 700, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, members = true } },
+            [3] = { label = 'Lieutenant', salary = 900, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, giverank = true, fwarn = true, fmotd = true, members = true } },
+            [4] = { label = 'Chief', salary = 1200, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, promote = true, giverank = true, uninvite = true, fwarn = true, fmotd = true, members = true } },
         },
     },
     medic = {
@@ -79,11 +79,11 @@ Sunset.Factions = {
             platePrefix = 'EMS',
         },
         grades = {
-            [0] = { label = 'Trainee', salary = 350, perms = { heal = true } },
-            [1] = { label = 'Paramedic', salary = 500, perms = { heal = true, revive = true } },
-            [2] = { label = 'Doctor', salary = 650, perms = { heal = true, revive = true, invite = true } },
-            [3] = { label = 'Surgeon', salary = 800, perms = { heal = true, revive = true, invite = true } },
-            [4] = { label = 'Chief Medical', salary = 1000, perms = { heal = true, revive = true, invite = true, promote = true } },
+            [0] = { label = 'Trainee', salary = 350, perms = { stabilize = true } },
+            [1] = { label = 'Paramedic', salary = 500, perms = { stabilize = true, heal = true, revive = true } },
+            [2] = { label = 'Doctor', salary = 650, perms = { stabilize = true, heal = true, revive = true, invite = true } },
+            [3] = { label = 'Surgeon', salary = 800, perms = { stabilize = true, heal = true, revive = true, invite = true } },
+            [4] = { label = 'Chief Medical', salary = 1000, perms = { stabilize = true, heal = true, revive = true, invite = true, promote = true } },
         },
     },
     taxi = {
@@ -155,9 +155,9 @@ Sunset.Factions = {
             platePrefix = 'LSFD',
         },
         grades = {
-            [0] = { label = 'Probationary', salary = 300, perms = { heal = true } },
-            [1] = { label = 'Firefighter', salary = 420, perms = { heal = true } },
-            [2] = { label = 'Engineer', salary = 550, perms = { heal = true, revive = true, invite = true } },
+            [0] = { label = 'Probationary', salary = 300, perms = { stabilize = true } },
+            [1] = { label = 'Firefighter', salary = 420, perms = { stabilize = true, heal = true } },
+            [2] = { label = 'Engineer', salary = 550, perms = { stabilize = true, heal = true, revive = true, invite = true } },
             [3] = { label = 'Captain', salary = 750, perms = { heal = true, revive = true, invite = true } },
             [4] = { label = 'Battalion Chief', salary = 950, perms = { heal = true, revive = true, invite = true, promote = true } },
         },
@@ -209,8 +209,9 @@ Sunset.FactionCommandCatalog = {
     { perm = 'fine', cmd = '/fine [id] [amount] [reason]', desc = 'Issue a citation' },
     { perm = 'cuff', cmd = '/cuff [id]', desc = 'Restrain a suspect' },
     { perm = 'uncuff', cmd = '/uncuff [id]', desc = 'Release restraints' },
-    { perm = 'heal', cmd = '/heal [id]', desc = 'Stabilize injuries (self if no id)' },
-    { perm = 'revive', cmd = '/revive [id]', desc = 'Revive an unconscious player' },
+    { perm = 'stabilize', cmd = '/stabilize [id]', desc = 'Stabilize a downed patient' },
+    { perm = 'heal', cmd = '/heal [id]', desc = 'Treat injuries (self if no id)' },
+    { perm = 'revive', cmd = '/revive [id]', desc = 'Revive a downed player' },
     { perm = 'repair', cmd = '/repairveh [id]', desc = 'Repair a player vehicle' },
     { perm = 'fare', cmd = '/fare [id] [amount]', desc = 'Charge a manual taxi fare' },
     { perm = 'sell', cmd = '/sellpouch', desc = 'Sell sealed pouches at HQ (Cartel)' },
@@ -276,6 +277,11 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
         list[#list + 1] = { cmd = '/frisk [id]', desc = 'Search suspect inventory' }
         list[#list + 1] = { cmd = '/ticket', desc = 'Issue citation (UI)' }
         list[#list + 1] = { cmd = '/mdc', desc = 'Mobile data terminal' }
+        list[#list + 1] = { cmd = '/clear [id]', desc = 'Clear wanted status' }
+        list[#list + 1] = { cmd = '/confiscate [id]', desc = 'Confiscate contraband' }
+        list[#list + 1] = { cmd = '/startradar', desc = 'Activate speed radar' }
+        list[#list + 1] = { cmd = '/stopradar', desc = 'Deactivate speed radar' }
+        list[#list + 1] = { cmd = '/radars', desc = 'List fixed speed cameras' }
         list[#list + 1] = { cmd = '/m [message]', desc = 'Megaphone (nearby)' }
         list[#list + 1] = { cmd = '/backup', desc = 'Request LSPD backup' }
     end

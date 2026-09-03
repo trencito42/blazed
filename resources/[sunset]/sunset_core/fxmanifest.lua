@@ -10,8 +10,11 @@ version '1.0.0'
 shared_scripts {
     'shared/config.lua',
     'shared/jobs_civilian.lua',
+    'shared/jobs_config.lua',
     'shared/profile.lua',
     'shared/faction_core.lua',
+    'shared/dispatch.lua',
+    'shared/job_session.lua',
     'shared/factions.lua',
     'shared/crafting.lua',
     'shared/police.lua',

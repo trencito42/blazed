@@ -11,28 +11,35 @@ Built on `sunset_factions` with `factionType = law_enforcement`. Extends commit 
 ## Detention Flow (State Machine)
 
 ```
-FREE → CUFFED → [ESCORTED] → [IN_VEHICLE] → ARRESTED → JAILED
+FREE → COMPLIANT → CUFFED → ESCORTED → IN_VEHICLE → JAILED
 ```
 
-| State | Command | Server callback |
-|-------|---------|-----------------|
-| Cuff | `/cuff [id]` | `sunset:detentionCuff` |
+| State | Trigger | Server |
+|-------|---------|--------|
+| FREE | Default / uncuff / sentence complete | `sunsetDetention` state bag |
+| COMPLIANT | `/handsup` or `X` | `sunset:server:handsUp` |
+| CUFFED | `/cuff [id]` | `sunset:detentionCuff` |
+| ESCORTED | `/escort [id]` or `/drag [id]` | `sunset:detentionEscort` |
+| IN_VEHICLE | `/putinveh [id]` or cuffed ped enters vehicle | `sunset:detentionPutInVehicle` |
+| JAILED | `/arrest [id]` at jail zone | `sunset:policeArrest` |
+
+| Command | Server callback |
+|---------|-----------------|
 | Uncuff | `/uncuff [id]` | `sunset:detentionUncuff` |
-| Escort | `/escort [id]` or `/drag [id]` | `sunset:detentionEscort` |
-| Put in car | `/putinveh [id]` | `sunset:detentionPutInVehicle` |
-| Remove | `/takeout [id]` | `sunset:detentionTakeOut` |
+| Remove from car | `/takeout [id]` | `sunset:detentionTakeOut` |
 | Frisk | `/frisk [id]` | `sunset:detentionFrisk` |
 
-All enforcement actions validate **proximity** server-side.
+All enforcement actions validate **proximity** and **law_enforcement capability** server-side.
 
 ## Wanted & Arrest
 
 | Command | Description |
 |---------|-------------|
-| `/su [id] [reason]` | Set wanted (type `/su` for reason codes) |
-| `/so [id]` | Summon suspect (range check) |
-| `/wanted` | Chat list of active wanted |
-| `/arrest [id]` | Jail restrained suspect (near officer or MRPD jail point) |
+| `/su [id] [reason]` | Set wanted (type `/su` for reason codes) — **persisted** |
+| `/so [id]` | Summon suspect (range check) + NUI alert |
+| `/wanted` | Chat list of active wanted (online + offline DB records) |
+| `/clear [id]` | Clear wanted (Sergeant+) — **persisted** |
+| `/arrest [id]` | Jail restrained suspect at MRPD/Bolingbroke booking zone |
 
 Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 
@@ -41,8 +48,17 @@ Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 | Command | Description |
 |---------|-------------|
 | `/fine [id] [amount] [reason]` | Text citation |
-| `/ticket` | Citation UI panel |
-| `/mdc` | Mobile Data Terminal (wanted list UI) |
+| `/ticket` | Citation UI panel (violations from `Sunset.Police.violations`) |
+| `/mdc` | Mobile Data Terminal (persisted wanted list UI) |
+| `/confiscate [id]` | Remove configured contraband items |
+
+## Radar
+
+| Command | Description |
+|---------|-------------|
+| `/startradar` | Activate mobile speed radar (forward cone) |
+| `/stopradar` | Deactivate mobile radar |
+| `/radars` | List fixed speed camera locations |
 
 ## Other
 
@@ -57,18 +73,53 @@ Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 
 | Command | Description |
 |---------|-------------|
-| `/handsup` or `X` | Toggle hands up animation |
+| `/handsup` or `X` | Toggle hands up animation (COMPLIANT state) |
 
 ## Jail
 
 - Coordinates: Bolingbroke (`Sunset.Police.jailCoords`)
+- Booking zones: MRPD (`Sunset.Police.pdJailPoint`) or Bolingbroke intake
 - Release: `Sunset.Police.releaseCoords`
-- **Client timer only** — persistence planned for next session
+- **Persisted** in `character_jail` — disconnect/reconnect serves remaining time
+- Arrest bounty paid to officer bank from `Sunset.Police.bounties`
+
+## State Bags
+
+| Bag | Scope | Purpose |
+|-----|-------|---------|
+| `sunsetWanted` | Player | `{ level, reason, reasonCode, decayAt }` |
+| `sunsetJailed` | Player | `{ releaseAt, minutes }` |
+| `sunsetDetention` | Player | `FREE` / `COMPLIANT` / `CUFFED` / `ESCORTED` / `IN_VEHICLE` / `JAILED` |
+| `sunsetCuffed` | Player | boolean |
+
+`sunset_hud` reads `sunsetWanted` for wanted stars on reconnect.
 
 ## Files
 
-- `sunset_core/shared/police.lua` — config
-- `sunset_factions/server/police.lua` — wanted/arrest
-- `sunset_factions/server/detention.lua` — cuff/escort
-- `sunset_factions/client/police.lua` — commands
+- `sunset_core/shared/police.lua` — config (reasons, violations, radar, confiscatable)
+- `sunset_factions/server/police.lua` — wanted/arrest/jail persistence
+- `sunset_factions/server/detention.lua` — cuff/escort state machine
+- `sunset_factions/client/police.lua` — commands, radar, jail client
 - `sunset_factions/client/detention.lua` — anims/escort
+- `sql/09-dispatch-wanted-jail.sql` — `wanted_records`, `jail_sentences` (integration owner)
+- `sql/10-police-persist.sql` — `police_confiscations`
+
+## Implementation Status
+
+| Feature | Status |
+|---------|--------|
+| Wanted persistence (`wanted_records` from sql/09) | Done |
+| Jail persistence (`jail_sentences` from sql/09) | Done |
+| Reconnect jail / wanted hydration | Done |
+| State bags (wanted, jail, detention) | Done |
+| Detention state machine | Done |
+| `/so` NUI summon alert event | Done (`summonAlert` — UI agent can style) |
+| `/clear`, `/confiscate`, radar commands | Done |
+| Ticket violations config | Done (`Sunset.Police.violations`) |
+| MDC offline wanted records | Done |
+| Arrest: cuffed + jail zone + bounty | Done |
+| `sunset_hud` wanted from state bag | Done |
+
+**Deploy:** run `sql/09-dispatch-wanted-jail.sql` then `sql/10-police-persist.sql` (integration owner).
+
+**Not in scope (other agents):** `sunset_dispatch`, `sunset_ui` summon panel styling, `sql/09` integration tables.

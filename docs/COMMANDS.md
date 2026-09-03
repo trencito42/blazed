@@ -60,6 +60,14 @@
 |---------|-------------|
 | `/fare [id] [amount]` | Manual fare collection |
 
+## Service Dispatch
+| Command | Description |
+|---------|-------------|
+| `/service [type] [message]` | Request taxi, medic, fire, or mechanic |
+| `/servicecalls` | List open calls (on-duty providers) |
+| `/accept [type] [id]` | Accept a service call |
+| `/cancel [type] [id]` | Cancel a service call |
+
 ## Mechanic
 | Command | Description |
 |---------|-------------|

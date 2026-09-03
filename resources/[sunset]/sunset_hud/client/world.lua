@@ -9,8 +9,28 @@ exports('SetWantedLevel', function(level)
     customWanted = math.max(0, math.min(5, tonumber(level) or 0))
 end)
 
+local function applyWantedFromBag(value)
+    if value and value.level then
+        customWanted = math.max(0, math.min(5, tonumber(value.level) or 0))
+    else
+        customWanted = 0
+    end
+end
+
 RegisterNetEvent('sunset:client:wantedUpdate', function(level, reason)
     customWanted = math.max(0, math.min(5, tonumber(level) or 0))
+end)
+
+AddStateBagChangeHandler('sunsetWanted', nil, function(bagName, _, value)
+    if bagName == ('player:%s'):format(GetPlayerServerId(PlayerId())) then
+        applyWantedFromBag(value)
+    end
+end)
+
+CreateThread(function()
+    Wait(2000)
+    local bag = LocalPlayer.state.sunsetWanted
+    if bag then applyWantedFromBag(bag) end
 end)
 
 local function vehicleHasPlayerOccupant(veh)
@@ -90,7 +110,6 @@ CreateThread(function()
     end
 end)
 
--- Curăță NPC-uri și trafic ambiental din jurul jucătorului
 CreateThread(function()
     while true do
         local ped = PlayerPedId()

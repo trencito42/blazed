@@ -55,6 +55,24 @@ RegisterNetEvent('sunset:detention:sync', function(targetId, state)
     end
 end)
 
+CreateThread(function()
+    local wasInVehicle = false
+    while true do
+        if isCuffed then
+            local ped = PlayerPedId()
+            local inVehicle = IsPedInAnyVehicle(ped, false)
+            if inVehicle ~= wasInVehicle then
+                wasInVehicle = inVehicle
+                TriggerServerEvent('sunset:server:detentionVehicleState', inVehicle)
+            end
+            Wait(500)
+        else
+            wasInVehicle = false
+            Wait(800)
+        end
+    end
+end)
+
 RegisterNetEvent('sunset:detention:escort', function(officerServerId)
     if not officerServerId then
         isEscorted = false
