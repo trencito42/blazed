@@ -8,11 +8,43 @@ local function generatePlate()
     return plate
 end
 
+local function hasParkedPosition(veh)
+    return veh
+        and veh.parked_x ~= nil
+        and veh.parked_y ~= nil
+        and veh.parked_z ~= nil
+        and tonumber(veh.parked_x) ~= nil
+        and tonumber(veh.parked_y) ~= nil
+        and tonumber(veh.parked_z) ~= nil
+end
+
+local function buildSpawnOpts(veh)
+    local garage = Sunset.Garages[veh.garage or 'legion'] or Sunset.Garages.legion
+    if not garage or not garage.spawn then return nil end
+
+    if hasParkedPosition(veh) then
+        return {
+            x = tonumber(veh.parked_x),
+            y = tonumber(veh.parked_y),
+            z = tonumber(veh.parked_z),
+            w = tonumber(veh.parked_h) or 0.0,
+        }
+    end
+
+    local spawn = garage.spawn
+    return {
+        x = spawn.x,
+        y = spawn.y,
+        z = spawn.z,
+        w = spawn.w or 0.0,
+    }
+end
+
 exports.sunset_core:RegisterCallback('sunset:getVehicles', function(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return {} end
     return MySQL.query.await(
-        'SELECT id, plate, model, fuel, engine, body, stored, garage FROM vehicles WHERE character_id = ?',
+        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE character_id = ?',
         { char.id }
     ) or {}
 end)
@@ -55,16 +87,13 @@ exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, veh
         return nil, 'Vehicle not available'
     end
 
-    local garage = Sunset.Garages[veh.garage or 'legion'] or Sunset.Garages.legion
-    if not garage or not garage.spawn then
+    local spawnOpts = buildSpawnOpts(veh)
+    if not spawnOpts then
         return nil, 'Garage spawn not configured'
     end
 
     TriggerClientEvent('sunset:client:cleanupOwnedVehicles', source, outPlates)
-    TriggerClientEvent('sunset:client:spawnOwnedVehicle', source, veh, {
-        nearPlayer = true,
-        fresh = stored == 1,
-    })
+    TriggerClientEvent('sunset:client:spawnOwnedVehicle', source, veh, spawnOpts)
     return true
 end)
 
@@ -72,7 +101,7 @@ exports.sunset_core:RegisterCallback('sunset:getVehicleById', function(source, v
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil end
     return MySQL.single.await(
-        'SELECT id, plate, model, fuel, engine, body, stored, garage FROM vehicles WHERE id = ? AND character_id = ?',
+        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE id = ? AND character_id = ?',
         { vehicleId, char.id }
     )
 end)
@@ -85,13 +114,22 @@ exports.sunset_core:RegisterCallback('sunset:storeVehicle', function(source, gar
     return true
 end)
 
-RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuelLevel, engine, body, garageId)
+RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuelLevel, engine, body, garageId, parked)
     local source = source
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
 
+    local px, py, pz, ph = nil, nil, nil, nil
+    if type(parked) == 'table' then
+        px = tonumber(parked.x)
+        py = tonumber(parked.y)
+        pz = tonumber(parked.z)
+        ph = tonumber(parked.h) or tonumber(parked.w)
+    end
+
     MySQL.update.await([[
-        UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?
+        UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?,
+            parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?
         WHERE plate = ? AND character_id = ?
     ]], {
         garageId or 'legion',
@@ -99,6 +137,7 @@ RegisterNetEvent('sunset:server:vehicleStored', function(plate, props, fuelLevel
         fuelLevel or 100,
         engine or 1000,
         body or 1000,
+        px, py, pz, ph,
         plate,
         char.id,
     })
@@ -157,7 +196,7 @@ local function openGarageMenu(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
     local vehicles = MySQL.query.await(
-        'SELECT id, plate, model, stored, garage FROM vehicles WHERE character_id = ?',
+        'SELECT id, plate, model, stored, garage, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE character_id = ?',
         { char.id }
     ) or {}
     TriggerClientEvent('sunset:client:garageMenu', source, vehicles)

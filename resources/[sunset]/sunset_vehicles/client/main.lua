@@ -195,8 +195,8 @@ CreateThread(function()
             if veh ~= currentVeh then
                 currentVeh = veh
                 fuel = GetVehicleFuelLevel(veh)
-                if fuel <= 0 or fuel > 100 then
-                    fuel = 100.0
+                if fuel < 0 or fuel > 100 then
+                    fuel = math.max(0, math.min(100, fuel))
                 end
                 SetVehicleFuelLevel(veh, fuel)
                 lastBodyHealth = GetVehicleBodyHealth(veh)
@@ -341,34 +341,52 @@ RegisterNetEvent('sunset:client:cleanupOwnedVehicles', function(plates)
     end
 end)
 
-local function normalizeVehicleStats(vehData, fresh)
+local function normalizeVehicleStats(vehData)
     local fuel = tonumber(vehData.fuel)
     local engine = tonumber(vehData.engine)
     local body = tonumber(vehData.body)
 
-    if fresh or not fuel or fuel <= 0 or fuel > 100 then fuel = 100.0 end
-    if fresh or not engine or engine < 300 or engine > 1000 then engine = 1000.0 end
-    if fresh or not body or body < 300 or body > 1000 then body = 1000.0 end
+    if not fuel or fuel < 0 or fuel > 100 then fuel = 100.0 end
+    if not engine or engine < 150 or engine > 1000 then engine = 1000.0 end
+    if not body or body < 150 or body > 1000 then body = 1000.0 end
 
     return fuel, engine, body
 end
 
+local function hasParkedPosition(vehData)
+    return vehData
+        and tonumber(vehData.parked_x) ~= nil
+        and tonumber(vehData.parked_y) ~= nil
+        and tonumber(vehData.parked_z) ~= nil
+end
+
 local function getSpawnPoint(opts)
-    if opts and opts.nearPlayer then
-        local ped = PlayerPedId()
-        local coords = GetEntityCoords(ped)
-        local heading = GetEntityHeading(ped)
-        local forward = GetEntityForwardVector(ped)
-        local x = coords.x + forward.x * 4.5
-        local y = coords.y + forward.y * 4.5
-        local z = coords.z
-        local found, groundZ = GetGroundZFor_3dCoord(x, y, z + 2.0, false)
-        if found then z = groundZ + 0.15 end
-        return x, y, z, heading
+    if opts and opts.x and opts.y and opts.z then
+        return opts.x, opts.y, opts.z, opts.w or opts.h or 0.0
     end
 
     local spawn = opts or {}
     return spawn.x, spawn.y, spawn.z, spawn.w or spawn.h or 0.0
+end
+
+local function getParkedCoords(vehData)
+    if not hasParkedPosition(vehData) then return nil end
+    return {
+        x = tonumber(vehData.parked_x),
+        y = tonumber(vehData.parked_y),
+        z = tonumber(vehData.parked_z),
+    }
+end
+
+local function captureParkedPosition(entity)
+    if not entity or entity == 0 then return nil end
+    local coords = GetEntityCoords(entity)
+    return {
+        x = coords.x,
+        y = coords.y,
+        z = coords.z,
+        h = GetEntityHeading(entity),
+    }
 end
 
 RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
@@ -391,8 +409,7 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
         Wait(10)
     end
 
-    local fresh = spawnOpts and spawnOpts.fresh == true
-    local vehFuel, vehEngine, vehBody = normalizeVehicleStats(vehData, fresh)
+    local vehFuel, vehEngine, vehBody = normalizeVehicleStats(vehData)
     local sx, sy, sz, heading = getSpawnPoint(spawnOpts)
     RequestCollisionAtCoord(sx, sy, sz)
 
@@ -416,21 +433,20 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     SetVehicleHasBeenOwnedByPlayer(vehicle, true)
     SetVehicleNeedsToBeHotwired(vehicle, false)
     SetVehRadioStation(vehicle, 'OFF')
-    SetVehicleFixed(vehicle)
-    SetVehicleDeformationFixed(vehicle)
     SetVehicleDirtLevel(vehicle, 0.0)
     SetVehiclePetrolTankHealth(vehicle, 1000.0)
     SetVehicleFuelLevel(vehicle, vehFuel)
     SetVehicleEngineHealth(vehicle, vehEngine)
     SetVehicleBodyHealth(vehicle, vehBody)
-    SetVehicleEngineOn(vehicle, true, true, false)
+    local engineOn = vehFuel > 0 and vehEngine > 250.0
+    SetVehicleEngineOn(vehicle, engineOn, true, false)
     SetModelAsNoLongerNeeded(model)
 
     spawnedOwnedVehicle = vehicle
     markProtected(vehicle)
     fuel = vehFuel
     currentVeh = 0
-    notify(('Vehicle spawned nearby: %s (fuel %d%%)'):format(vehData.plate, math.floor(vehFuel)), 'success')
+    notify(('Vehicle spawned: %s (fuel %d%%)'):format(vehData.plate, math.floor(vehFuel)), 'success')
 end)
 
 RegisterNetEvent('sunset:client:garageMenu', function(vehicles)
@@ -480,7 +496,8 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         end
 
         local plate = normalizePlate(vehData.plate)
-        TriggerServerEvent('sunset:server:vehicleStored', plate, props, vehFuel, vehEngine, vehBody, vehData.garage or 'legion')
+        local parked = captureParkedPosition(entity)
+        TriggerServerEvent('sunset:server:vehicleStored', plate, props, vehFuel, vehEngine, vehBody, vehData.garage or 'legion', parked)
         notify('Vehicle stored in garage', 'success')
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('garageHide', {})
@@ -489,13 +506,27 @@ end)
 
 AddEventHandler('sunset:nui:garageLocate', function(data)
     local entity = findVehicleByPlate(data.plate)
-    if not entity then
-        notify('Vehicle not found in the world', 'error')
+    if entity then
+        local coords = GetEntityCoords(entity)
+        SetNewWaypoint(coords.x, coords.y)
+        notify('GPS set to ' .. normalizePlate(data.plate), 'success')
+        exports.sunset_ui:SetFocus(false, false)
+        exports.sunset_ui:Send('garageHide', {})
         return
     end
-    local coords = GetEntityCoords(entity)
-    SetNewWaypoint(coords.x, coords.y)
-    notify('GPS set to ' .. normalizePlate(data.plate), 'success')
+
+    local vehData = nil
+    if data.vehicleId then
+        vehData = Sunset.AwaitCallback('sunset:getVehicleById', tonumber(data.vehicleId))
+    end
+
+    local parked = vehData and getParkedCoords(vehData) or nil
+    if parked then
+        SetNewWaypoint(parked.x, parked.y)
+        notify('GPS set to parked location: ' .. normalizePlate(data.plate or vehData.plate), 'success')
+    else
+        notify('Vehicle not found — no parked location saved', 'error')
+    end
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('garageHide', {})
 end)
@@ -510,7 +541,8 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
     if veh == 0 or not isDriver() then return notify('You must be driving your vehicle', 'error') end
     local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
     local props = { model = GetEntityModel(veh) }
-    TriggerServerEvent('sunset:server:vehicleStored', plate, props, fuel, GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId)
+    local parked = captureParkedPosition(veh)
+    TriggerServerEvent('sunset:server:vehicleStored', plate, props, fuel, GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId, parked)
     deleteVehicleEntity(veh)
     if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
     notify('Vehicle stored', 'success')
@@ -523,8 +555,9 @@ AddEventHandler('sunset:world:garageStore', function(garageId)
         return
     end
     local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
+    local parked = captureParkedPosition(veh)
     TriggerServerEvent('sunset:server:vehicleStored', plate, { model = GetEntityModel(veh) }, fuel,
-        GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId)
+        GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId, parked)
     deleteVehicleEntity(veh)
     if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
     notify('Vehicle stored', 'success')

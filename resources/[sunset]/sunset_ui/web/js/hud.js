@@ -12,9 +12,9 @@ const Hud = {
 
         const cx = 120;
         const cy = 120;
-        const outerR = 92;
-        const innerR = 86;
-        const labelR = 78;
+        const outerR = 98;
+        const innerR = 90;
+        const labelR = 82;
         const start = 135;
         const sweep = 270;
         const max = this.MAX_SPEED;

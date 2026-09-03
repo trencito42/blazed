@@ -213,7 +213,10 @@ AddEventHandler('sunset:nui:menuVehicleAction', function(data)
         elseif data.action == 'store' then
             TriggerEvent('sunset:nui:garageStore', { vehicleId = tonumber(data.vehicleId) })
         elseif data.action == 'gps' then
-            TriggerEvent('sunset:nui:garageLocate', { plate = data.plate })
+            TriggerEvent('sunset:nui:garageLocate', {
+                plate = data.plate,
+                vehicleId = tonumber(data.vehicleId),
+            })
         end
     end)
 end)

@@ -17,9 +17,18 @@ local function hideHint()
     end
 end
 
+local MARKER_DRAW_DIST = 75.0
+
 local function drawMarkerAt(coords, r, g, b)
-    DrawMarker(1, coords.x, coords.y, coords.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        1.2, 1.2, 0.5, r, g, b, 120, false, false, 2, false, nil, nil, false)
+    DrawMarker(
+        1,
+        coords.x, coords.y, coords.z - 0.98,
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+        1.9, 1.9, 0.85,
+        r, g, b, 185,
+        false, false, 2, false, nil, nil, false
+    )
 end
 
 local function addBlip(coords, preset, label, shortRange)
@@ -180,7 +189,29 @@ RegisterNetEvent('sunset:client:registerPropertyZones', function(properties)
     end
 end)
 
-local MARKER_DRAW_DIST = 45.0
+CreateThread(function()
+    while true do
+        local ped = PlayerPedId()
+        local coords = GetEntityCoords(ped)
+        local anyNearby = false
+
+        for _, zone in ipairs(zones) do
+            if #(coords - zone.coords) < MARKER_DRAW_DIST then
+                anyNearby = true
+                drawMarkerAt(zone.coords, zone.markerColor[1], zone.markerColor[2], zone.markerColor[3])
+            end
+        end
+
+        for _, prop in ipairs(propertyZones) do
+            if #(coords - prop.coords) < MARKER_DRAW_DIST then
+                anyNearby = true
+                drawMarkerAt(prop.coords, 155, 89, 182)
+            end
+        end
+
+        Wait(anyNearby and 0 or 500)
+    end
+end)
 
 CreateThread(function()
     while true do
@@ -191,9 +222,6 @@ CreateThread(function()
 
         for _, zone in ipairs(zones) do
             local dist = #(coords - zone.coords)
-            if dist < MARKER_DRAW_DIST then
-                drawMarkerAt(zone.coords, zone.markerColor[1], zone.markerColor[2], zone.markerColor[3])
-            end
             if dist < zone.radius and dist < closestDist then
                 closest = zone
                 closestDist = dist
@@ -232,7 +260,7 @@ CreateThread(function()
                 activeZone = nil
                 hideHint()
             end
-            Wait(400)
+            Wait(250)
         end
     end
 end)

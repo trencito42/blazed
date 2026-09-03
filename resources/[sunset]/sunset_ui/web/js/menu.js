@@ -119,10 +119,11 @@ const Menu = {
                 actions = `<button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${v.id}">Spawn</button>`;
             } else if (inWorld) {
                 actions = `
-                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${v.plate}">GPS</button>
+                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${v.plate}" data-v-id="${v.id}">GPS</button>
                     <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="store" data-v-id="${v.id}">Store</button>`;
             } else {
                 actions = `
+                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${v.plate}" data-v-id="${v.id}">GPS</button>
                     <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${v.id}">Respawn</button>
                     <button type="button" class="menu-vcard__btn" data-v-action="store" data-v-id="${v.id}">Store</button>`;
             }

@@ -139,9 +139,10 @@ const Panels = {
             if (stored) {
                 addBtn(actions, 'Spawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
             } else if (inWorld) {
-                addBtn(actions, 'GPS', '', () => post('garageLocate', { plate: v.plate }));
+                addBtn(actions, 'GPS', '', () => post('garageLocate', { plate: v.plate, vehicleId: v.id }));
                 addBtn(actions, 'Store', 'menu-vcard__btn--primary', () => post('garageStore', { vehicleId: v.id }));
             } else {
+                addBtn(actions, 'GPS', '', () => post('garageLocate', { plate: v.plate, vehicleId: v.id }));
                 addBtn(actions, 'Respawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
                 addBtn(actions, 'Store', '', () => post('garageStore', { vehicleId: v.id }));
             }

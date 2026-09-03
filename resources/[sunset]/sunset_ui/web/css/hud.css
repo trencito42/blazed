@@ -236,7 +236,7 @@
 
 /* ── Speedometer — Forza Horizon style (jos-dreapta) ── */
 .fh-speedo {
-    --fh-size: 190px;
+    --fh-size: 218px;
     --fh-arc-len: 434;
     --fh-rpm-len: 358;
     --fh-max-speed: 320;
@@ -301,7 +301,7 @@
 .fh-tick-label {
     fill: rgba(255, 255, 255, 0.28);
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-anchor: middle;
@@ -310,7 +310,7 @@
 
 .fh-tick-label--major {
     fill: rgba(255, 255, 255, 0.5);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .fh-speedo__readout {
@@ -327,7 +327,7 @@
 
 .fh-speedo__gear {
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.12em;
     color: rgba(255, 255, 255, 0.55);
@@ -347,7 +347,7 @@
 
 .fh-speedo__speed {
     font-family: 'Barlow Condensed', 'Inter', sans-serif;
-    font-size: 60px;
+    font-size: 68px;
     font-weight: 700;
     line-height: 0.9;
     color: #fff;
@@ -494,12 +494,12 @@
 
 @media (max-width: 1280px) {
     .fh-speedo {
-        --fh-size: 170px;
+        --fh-size: 195px;
         bottom: 14px;
         right: 14px;
     }
 
-    .fh-speedo__speed { font-size: 52px; }
+    .fh-speedo__speed { font-size: 58px; }
     .fh-stat__val { font-size: 15px; }
     .hud-player-name,
     .hud-player-id { font-size: 20px; }
