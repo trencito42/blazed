@@ -1,6 +1,67 @@
 SunsetAppearance = SunsetAppearance or {}
 
-local OVERLAY_OFF = 255
+local function applyHeadBlend(ped, hb)
+    local shapeMix = hb.shapeMix or 0.5
+    local skinMix = hb.skinMix or 0.0
+    local thirdMix = hb.thirdMix or 0.0
+
+    SetPedHeadBlendData(
+        ped,
+        hb.shapeFirst or 0, hb.shapeSecond or 0, hb.shapeThird or 0,
+        hb.skinFirst or 0, hb.skinSecond or 0, hb.skinThird or 0,
+        shapeMix, skinMix, thirdMix,
+        false
+    )
+
+    -- Force blend refresh (hands/face sync)
+    if UpdatePedHeadBlendData then
+        UpdatePedHeadBlendData(ped, shapeMix, skinMix, thirdMix)
+    end
+
+    local timeout = GetGameTimer() + 1500
+    while not HasPedHeadBlendFinished(ped) and GetGameTimer() < timeout do
+        Wait(0)
+    end
+end
+
+local function applyHair(ped, hair)
+    hair = hair or {}
+    local drawable = hair.drawable or 0
+    local texture = hair.texture or 0
+    local color = math.max(0, math.min(63, math.floor(hair.color or 0)))
+    local highlight = math.max(0, math.min(63, math.floor(hair.highlight or color)))
+
+    SetPedComponentVariation(ped, 2, drawable, texture, 2)
+    SetPedHairColor(ped, color, highlight)
+end
+
+local function applyOverlay(ped, overlayId, ov)
+    ov = ov or {}
+    local index = math.floor(ov.index or 0)
+    local color = math.max(0, math.min(63, math.floor(ov.color or 0)))
+
+    if index <= 0 then
+        SetPedHeadOverlay(ped, overlayId, 255, 0.0)
+        return
+    end
+
+    SetPedHeadOverlay(ped, overlayId, index, ov.opacity or 0.99)
+    SetPedHeadOverlayColor(ped, overlayId, 1, color, color)
+end
+
+local function syncSkinTone(hb, tone)
+    tone = math.max(0, math.min(45, math.floor(tone or 0)))
+    hb.skinFirst = tone
+    hb.skinSecond = tone
+    hb.skinThird = tone
+    hb.skinMix = 0.0
+    hb.thirdMix = 0.0
+    -- Match face structure parents to skin for consistent ethnicity
+    hb.shapeFirst = tone
+    hb.shapeSecond = tone
+    hb.shapeThird = tone
+    return tone
+end
 
 local function clampDrawable(ped, slot, drawable)
     local maxDraw = GetNumberOfPedDrawableVariations(ped, slot) - 1
@@ -152,32 +213,21 @@ function SunsetAppearance.apply(ped, appearance, gender)
     appearance = SunsetAppearance.normalize(appearance, gender)
     local hb = appearance.headBlend
 
-    SetPedHeadBlendData(
-        ped,
-        hb.shapeFirst or 0, hb.shapeSecond or 0, hb.shapeThird or 0,
-        hb.skinFirst or 0, hb.skinSecond or 0, hb.skinThird or 0,
-        hb.shapeMix or 0.5, hb.skinMix or 0.5, hb.thirdMix or 0.0,
-        false
-    )
-
     appearance = SunsetAppearance.applyClothes(ped, appearance, gender)
 
-    local hair = appearance.hair
-    hair.drawable = setComponentSafe(ped, 2, hair.drawable or 0)
-    SetPedHairColor(ped, hair.color or 0, hair.highlight or 0)
+    appearance.hair.drawable = setComponentSafe(ped, 2, appearance.hair.drawable or 0)
+    applyHair(ped, appearance.hair)
 
-    for id, ov in pairs(appearance.overlays or {}) do
-        local overlayId = tonumber(id)
-        if not overlayId then goto continue end
-        local index = ov.index or 0
-        if index <= 0 then
-            SetPedHeadOverlay(ped, overlayId, 255, 0.0)
-        else
-            SetPedHeadOverlay(ped, overlayId, index, ov.opacity or 1.0)
-            SetPedHeadOverlayColor(ped, overlayId, 1, ov.color or 0, ov.color or 0)
-        end
-        ::continue::
+    if gender == 1 then
+        applyOverlay(ped, 1, { index = 0 })
+        applyOverlay(ped, 2, appearance.overlays['2'])
+    else
+        applyOverlay(ped, 1, appearance.overlays['1'])
+        applyOverlay(ped, 2, appearance.overlays['2'])
     end
+
+    -- Head blend LAST so skin applies to face + hands after clothing
+    applyHeadBlend(ped, hb)
 
     return appearance
 end
@@ -200,10 +250,14 @@ function SunsetAppearance.buildEditor(ped, appearance, gender)
     add({ type = 'shapeMix', label = 'Face Mix', min = 0, max = 100, value = math.floor((appearance.headBlend.shapeMix or 0.5) * 100), camera = 'face' })
     add({ type = 'hairStyle', label = 'Hair Style', min = 0, max = drawableMax(ped, 2), value = appearance.hair.drawable or 0, camera = 'face' })
     add({ type = 'hairColor', label = 'Hair Color', min = 0, max = 63, value = appearance.hair.color or 0, camera = 'face' })
+    add({ type = 'hairHighlight', label = 'Hair Highlight', min = 0, max = 63, value = appearance.hair.highlight or appearance.hair.color or 0, camera = 'face' })
 
     if gender ~= 1 then
-        add({ type = 'beard', label = 'Beard', min = 0, max = math.max(0, GetNumHeadOverlayValues(ped, 1) - 1), value = appearance.overlays['1'].index or 0, camera = 'face' })
+        local beardMax = math.max(1, GetNumHeadOverlayValues(ped, 1) - 1)
+        add({ type = 'beard', label = 'Beard Style', min = 0, max = beardMax, value = appearance.overlays['1'].index or 0, camera = 'face' })
         add({ type = 'beardColor', label = 'Beard Color', min = 0, max = 63, value = appearance.overlays['1'].color or 0, camera = 'face' })
+        add({ type = 'eyebrows', label = 'Eyebrows', min = 0, max = math.max(1, GetNumHeadOverlayValues(ped, 2) - 1), value = appearance.overlays['2'].index or 0, camera = 'face' })
+        add({ type = 'eyebrowColor', label = 'Eyebrow Color', min = 0, max = 63, value = appearance.overlays['2'].color or 0, camera = 'face' })
     end
 
     local clothes = {
@@ -232,9 +286,7 @@ function SunsetAppearance.applyField(ped, appearance, gender, change)
     local value = tonumber(change.value) or 0
 
     if t == 'skinTone' then
-        appearance.headBlend.skinFirst = value
-        appearance.headBlend.skinSecond = value
-        appearance.headBlend.skinMix = 0.0
+        syncSkinTone(appearance.headBlend, value)
     elseif t == 'shapeFirst' then
         appearance.headBlend.shapeFirst = value
     elseif t == 'shapeSecond' then
@@ -245,11 +297,29 @@ function SunsetAppearance.applyField(ped, appearance, gender, change)
         appearance.hair.drawable = value
     elseif t == 'hairColor' then
         appearance.hair.color = value
+        if (appearance.hair.highlight or 0) == 0 then
+            appearance.hair.highlight = value
+        end
+    elseif t == 'hairHighlight' then
+        appearance.hair.highlight = value
     elseif t == 'beard' then
         appearance.overlays['1'].index = value
-        appearance.overlays['1'].opacity = value == 0 and 0.0 or 1.0
+        appearance.overlays['1'].opacity = value == 0 and 0.0 or 0.99
     elseif t == 'beardColor' then
         appearance.overlays['1'].color = value
+        if (appearance.overlays['1'].index or 0) == 0 then
+            appearance.overlays['1'].index = 1
+            appearance.overlays['1'].opacity = 0.99
+        end
+    elseif t == 'eyebrows' then
+        appearance.overlays['2'].index = value
+        appearance.overlays['2'].opacity = value == 0 and 0.0 or 0.99
+    elseif t == 'eyebrowColor' then
+        appearance.overlays['2'].color = value
+        if (appearance.overlays['2'].index or 0) == 0 then
+            appearance.overlays['2'].index = 1
+            appearance.overlays['2'].opacity = 0.99
+        end
     elseif t == 'component' then
         local slot = tonumber(change.component)
         if slot then
