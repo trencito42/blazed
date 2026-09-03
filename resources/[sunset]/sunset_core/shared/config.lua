@@ -33,7 +33,9 @@ Sunset.Config = {
     -- Fuel ($ per 1% tank; $ per liter for gas can fills at pump)
     FuelPricePerPercent = 1.75,
     FuelPricePerLiter = 2.92,
-    FuelFillRatePerSec = 0.22,
+    -- Pump flow (liters/sec). 60L sedan @ 3.0 L/s ≈ 20s empty→full; 20L can @ 2.5 L/s ≈ 8s.
+    FuelFlowLitersPerSecond = 3.0,
+    GasCanFlowLitersPerSecond = 2.5,
     FuelPumpReach = 4.2,
 
     -- Combat

@@ -46,13 +46,20 @@ local function maxCanLiters()
     return Sunset.GetGasCanMaxLiters()
 end
 
-local function canFillRateLiters()
-    local maxLiters = maxCanLiters()
-    return (Sunset.Config.FuelFillRatePerSec or 0.22) / 100.0 * maxLiters
+local function vehicleFlowLitersPerSec()
+    return Sunset.Config.FuelFlowLitersPerSecond or 3.0
 end
 
-local function fillRate()
-    return Sunset.Config.FuelFillRatePerSec or 0.22
+local function canFlowLitersPerSec()
+    return Sunset.Config.GasCanFlowLitersPerSecond or vehicleFlowLitersPerSec()
+end
+
+local function fillRatePercent(veh)
+    local flow = vehicleFlowLitersPerSec()
+    local class = GetVehicleClass(veh)
+    local tankLiters = Sunset.GetVehicleTankCapacityLiters(class)
+    if tankLiters <= 0 then return 0 end
+    return (flow / tankLiters) * 100.0
 end
 
 local function pumpReach()
@@ -317,12 +324,17 @@ CreateThread(function()
                     finishRefuel(veh, sessionStartFuel, 100.0, sessionStation)
                 else
                     local dt = GetFrameTime()
-                    local added = fillRate() * dt
+                    local added = fillRatePercent(veh) * dt
                     local nextFuel = math.min(100.0, current + added)
                     setFuelLevel(veh, nextFuel)
-                    local liters = nextFuel - sessionStartFuel
-                    local cost = math.floor(liters * pricePerPercent() * 100) / 100
-                    updatePumpUi(sessionStation, nextFuel, liters, cost)
+                    local class = GetVehicleClass(veh)
+                    local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
+                    local addedPct = nextFuel - sessionStartFuel
+                    local addedLiters = addedPct / 100.0 * tankCap
+                    local tankLiters = Sunset.PercentToTankLiters(nextFuel, class)
+                    local cost = math.floor(addedPct * pricePerPercent() * 100) / 100
+                    updatePumpUi(sessionStation, nextFuel, addedLiters, cost,
+                        ('%.0f%% — %.1f/%.0f L'):format(nextFuel, tankLiters, tankCap))
                 end
             end
             Wait(0)
@@ -335,7 +347,7 @@ CreateThread(function()
             else
                 local dt = GetFrameTime()
                 local maxLiters = maxCanLiters()
-                local added = canFillRateLiters() * dt
+                local added = canFlowLitersPerSec() * dt
                 canCurrentLiters = math.min(maxLiters, canCurrentLiters + added)
                 local sessionAdded = canCurrentLiters - canSessionStartLiters
                 local cost = math.floor(sessionAdded * pricePerLiter() * 100) / 100

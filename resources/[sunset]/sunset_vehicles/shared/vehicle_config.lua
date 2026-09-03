@@ -98,6 +98,8 @@ function Sunset.GetGasCanMaxLiters()
     return (def and def.maxLiters) or 20
 end
 
+-- Pump fill rates: Sunset.Config.FuelFlowLitersPerSecond / GasCanFlowLitersPerSecond
+
 function Sunset.GetVehicleTankCapacityLiters(vehicleClass)
     local caps = Sunset.VehicleProfiles.classTankCapacityLiters or {}
     local cap = caps[vehicleClass]
