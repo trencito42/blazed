@@ -91,4 +91,12 @@ AddEventHandler('playerDropped', function()
     ServiceCore.handleDisconnect(source)
 end)
 
+exports('UpdateCallState', function(source, callType, callId, newState)
+    return ServiceCore.updateCallState(source, callType, callId, newState)
+end)
+
+exports('IsProviderForType', function(source, callType)
+    return ServiceCore.isProviderForType(source, callType)
+end)
+
 print('[sunset_dispatch] exports and callbacks ready')

@@ -43,4 +43,6 @@ server_exports {
     'GetActiveCalls',
     'GetCallForResponder',
     'GetPlayerActiveCall',
+    'UpdateCallState',
+    'IsProviderForType',
 }

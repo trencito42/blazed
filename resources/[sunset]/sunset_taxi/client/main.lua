@@ -172,6 +172,15 @@ local function spawnDepotVehicle()
     notify('Cab ready — open Downtown Cab app for rides', 'success')
 end
 
+RegisterNetEvent('sunset:client:taxiMeterUpdate', function(data)
+    if not data then return end
+    if lastTaxiAppData and lastTaxiAppData.activeRide then
+        lastTaxiAppData.activeRide.meterFare = data.meterFare
+        lastTaxiAppData.activeRide.meterKm = data.meterKm
+        exports.sunset_ui:Send('taxiUpdate', lastTaxiAppData)
+    end
+end)
+
 RegisterNetEvent('sunset:client:taxiRefresh', function()
     refreshPhoneTaxi()
 end)

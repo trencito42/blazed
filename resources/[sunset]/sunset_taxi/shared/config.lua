@@ -14,6 +14,12 @@ Sunset.Taxi = {
     completeRadius = 60.0,
     arrivingDistanceKm = 0.15,
     distanceUpdateMs = 1500,
+    meter = {
+        tickMs = 2000,
+        minMoveMeters = 4.0,
+        idleTimeoutSec = 45,
+        maxFareMultiplier = 1.5,
+    },
     allowedVehicles = { 'taxi' },
     tipOptions = { 25, 50, 100 },
     destinations = {

@@ -2,6 +2,8 @@ local Rides = {}
 local rideSeq = 0
 local DriverAvailable = {}
 local DriverSessionStats = {}
+local MeterThreads = {}
+
 
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
@@ -89,7 +91,9 @@ local function serializeRide(ride, viewerSource)
         id = ride.id,
         status = ride.status,
         fare = ride.fare,
+        meterFare = ride.meterFare,
         distanceKm = ride.distanceKm,
+        meterKm = ride.meterKm,
         pickup = ride.pickup,
         destination = ride.destination,
         passengerName = ride.passengerName,
@@ -105,6 +109,95 @@ end
 
 local function pushTaxiUpdate(source)
     TriggerClientEvent('sunset:client:taxiRefresh', source)
+end
+
+local function recordTaxiActivity(driverSource, ride, amount)
+    local char = getChar(driverSource)
+    if not char then return end
+    local factionId = Sunset.GetCharacterFaction(char)
+    if factionId ~= Sunset.Taxi.factionId then return end
+    pcall(function()
+        if FactionCore and FactionCore.auditLog then
+            FactionCore.auditLog(factionId, char.id, 'taxi_ride_complete', ride.passengerCharId, {
+                fare = amount,
+                distanceKm = ride.meterKm or ride.distanceKm,
+                rideId = ride.id,
+            })
+        end
+    end)
+    TriggerEvent('sunset:faction:activityComplete', driverSource, 'transport', {
+        fare = amount,
+        distanceKm = ride.meterKm or ride.distanceKm,
+    })
+end
+
+local function createDispatchForRide(ride)
+    pcall(function()
+        local call = exports.sunset_dispatch:CreateServiceCall(
+            ride.passengerSource,
+            'taxi',
+            ride.pickup,
+            { rideId = ride.id, fare = ride.fare },
+            ('Cab to %s — $%s'):format(ride.destination.label or 'destination', ride.fare)
+        )
+        if call and call.id then
+            ride.dispatchCallId = call.id
+        end
+    end)
+end
+
+local function stopMeter(rideId)
+    MeterThreads[rideId] = nil
+end
+
+local function startMeter(ride)
+    local cfg = Sunset.Taxi.meter or {}
+    local tickMs = cfg.tickMs or 2000
+    local minMove = cfg.minMoveMeters or 4.0
+    local idleSec = cfg.idleTimeoutSec or 45
+    ride.meterKm = 0.0
+    ride.meterFare = ride.fare or Sunset.Taxi.minFare
+    ride.lastMeterPos = getPlayerCoords(ride.driverSource)
+    ride.lastMoveAt = os.time()
+    MeterThreads[ride.id] = true
+
+    CreateThread(function()
+        while MeterThreads[ride.id] and ride.status == 'in_progress' do
+            Wait(tickMs)
+            if not ride.driverSource or ride.status ~= 'in_progress' then break end
+
+            local coords = getPlayerCoords(ride.driverSource)
+            local last = ride.lastMeterPos
+            if coords and last then
+                local moved = distanceBetween(coords, last)
+                if moved >= minMove then
+                    ride.meterKm = (ride.meterKm or 0) + (moved / 1000.0)
+                    ride.lastMeterPos = coords
+                    ride.lastMoveAt = os.time()
+                    local baseFare = Sunset.Taxi.baseFare or 75
+                    local perKm = Sunset.Taxi.perKm or 35
+                    local computed = math.floor(baseFare + ride.meterKm * perKm)
+                    local maxFare = math.floor((ride.fare or computed) * (cfg.maxFareMultiplier or 1.5))
+                    ride.meterFare = math.min(math.max(computed, Sunset.Taxi.minFare or 100), maxFare)
+                end
+            end
+
+            TriggerClientEvent('sunset:client:taxiMeterUpdate', ride.driverSource, {
+                rideId = ride.id,
+                meterKm = ride.meterKm,
+                meterFare = ride.meterFare,
+            })
+            local passengerSrc = findSourceByCharacterId(ride.passengerCharId)
+            if passengerSrc then
+                TriggerClientEvent('sunset:client:taxiMeterUpdate', passengerSrc, {
+                    rideId = ride.id,
+                    meterKm = ride.meterKm,
+                    meterFare = ride.meterFare,
+                })
+            end
+        end
+        MeterThreads[ride.id] = nil
+    end)
 end
 
 local function broadcastDrivers(event, payload)
@@ -241,6 +334,7 @@ local function startRide(source, pickup, destination, destLabel)
         createdAt = os.time(),
     }
     Rides[ride.id] = ride
+    createDispatchForRide(ride)
 
     broadcastDrivers('sunset:client:taxiNewOffer', serializeRide(ride, source))
     TriggerClientEvent('sunset:client:notify', source,
@@ -328,6 +422,12 @@ exports.sunset_core:RegisterCallback('sunset:taxiAcceptRide', function(source, r
 
     broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
     TriggerClientEvent('sunset:client:taxiRideAccepted', source, serializeRide(ride, source))
+
+    if ride.dispatchCallId then
+        pcall(function() exports.sunset_dispatch:AcceptCall(source, 'taxi', ride.dispatchCallId) end)
+        pcall(function() exports.sunset_dispatch:UpdateCallState(source, 'taxi', ride.dispatchCallId, 'EN_ROUTE') end)
+    end
+
     return serializeRide(ride, source)
 end)
 
@@ -384,6 +484,11 @@ exports.sunset_core:RegisterCallback('sunset:taxiPickupPassenger', function(sour
         pushTaxiUpdate(passengerSrc)
     end
 
+    startMeter(ride)
+    if ride.dispatchCallId then
+        pcall(function() exports.sunset_dispatch:UpdateCallState(source, 'taxi', ride.dispatchCallId, 'IN_PROGRESS') end)
+    end
+
     TriggerClientEvent('sunset:client:taxiRideInProgress', source, serializeRide(ride, source))
     return serializeRide(ride, source)
 end)
@@ -414,7 +519,8 @@ exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
         return nil, 'Passenger is offline'
     end
 
-    local amount = ride.fare or Sunset.Taxi.minFare
+    local amount = ride.meterFare or ride.fare or Sunset.Taxi.minFare
+    stopMeter(ride.id)
     local cutRate = Sunset.Taxi.companyCut or 0.12
     local companyCut = math.floor(amount * cutRate)
     local driverPay = amount - companyCut
@@ -453,6 +559,11 @@ exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
             amount,
         })
     end)
+
+    recordTaxiActivity(source, ride, amount)
+    if ride.dispatchCallId then
+        pcall(function() exports.sunset_dispatch:CompleteCall(source, 'taxi', ride.dispatchCallId) end)
+    end
 
     return true
 end)
@@ -531,3 +642,44 @@ AddEventHandler('sunset:server:taxiDutySync', function(source, onDuty)
         DriverAvailable[source] = nil
     end
 end)
+
+AddEventHandler('sunset:dispatch:callAccepted', function(callId, callType, providerSource)
+    if callType ~= 'taxi' then return end
+    local call = exports.sunset_dispatch:GetCall(callId)
+    if not call or (call.metadata and call.metadata.rideId) then return end
+
+    local char = getChar(providerSource)
+    if not char or not isTaxiDriver(providerSource) then return end
+
+    local pickup = call.coords
+    local okVehicle = requireTaxiVehicle(providerSource)
+    if not okVehicle then return end
+
+    rideSeq = rideSeq + 1
+    local ride = {
+        id = rideSeq,
+        passengerSource = call.callerSource,
+        passengerCharId = call.callerCharacterId,
+        passengerName = call.callerName,
+        driverSource = providerSource,
+        driverCharId = char.id,
+        driverName = exports.sunset_core:GetPlayerDisplayName(providerSource),
+        pickup = pickup,
+        destination = { x = pickup.x, y = pickup.y, z = pickup.z, label = call.description or 'Service call' },
+        fare = Sunset.Taxi.minFare,
+        distanceKm = 0,
+        status = 'accepted',
+        createdAt = os.time(),
+        dispatchCallId = callId,
+        fromDispatch = true,
+    }
+    Rides[ride.id] = ride
+
+    TriggerClientEvent('sunset:client:taxiRideAccepted', providerSource, serializeRide(ride, providerSource))
+    local callerSrc = call.callerSource or findSourceByCharacterId(call.callerCharacterId)
+    if callerSrc then
+        TriggerClientEvent('sunset:client:notify', callerSrc,
+            ('Driver %s accepted your taxi call'):format(ride.driverName), 'success')
+    end
+end)
+
