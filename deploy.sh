@@ -7,9 +7,19 @@ BRANCH="${BRANCH:-main}"
 DIR="$(pwd)"
 
 pull_repo() {
+  ENV_BACKUP=""
+  if [ -f .env ]; then
+    ENV_BACKUP="$(mktemp)"
+    cp .env "$ENV_BACKUP"
+  fi
+
   if [ -d .git ]; then
     if GIT_TERMINAL_PROMPT=0 git fetch origin "$BRANCH" 2>/dev/null; then
       GIT_TERMINAL_PROMPT=0 git reset --hard "origin/$BRANCH"
+      if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
+        cp "$ENV_BACKUP" .env
+        rm -f "$ENV_BACKUP"
+      fi
       return 0
     fi
   fi
@@ -25,6 +35,11 @@ pull_repo() {
     mkdir -p /tmp/blazed-deploy
     cp -a /tmp/blazed-main/. /tmp/blazed-deploy/
     cp -a /tmp/blazed-deploy/. "$DIR/"
+  fi
+
+  if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
+    cp "$ENV_BACKUP" .env
+    rm -f "$ENV_BACKUP"
   fi
 }
 
