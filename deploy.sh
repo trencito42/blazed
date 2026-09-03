@@ -15,10 +15,10 @@ pull_repo() {
   fi
 
   echo "[deploy] git failed — using GitHub ZIP (repo public)"
-  curl -fsSL -o /tmp/blazed.zip "${REPO}/archive/refs/heads/${BRANCH}.zip"
+  curl -fsSL -o /tmp/blazed.zip "${REPO}/archive/refs/heads/${BRANCH}.zip?$(date +%s)"
   rm -rf /tmp/blazed-main
   unzip -qo /tmp/blazed.zip -d /tmp
-  cp -a /tmp/blazed-main/. "$DIR/"
+  rsync -a --delete /tmp/blazed-main/ "$DIR/"
 }
 
 pull_repo
@@ -29,5 +29,6 @@ chmod +x docker/fivem/entrypoint.sh deploy.sh
 
 docker compose build fivem
 docker compose up -d --remove-orphans
+docker compose up -d --force-recreate fivem
 
 echo "Done. Connect: F8 -> connect $(curl -s ifconfig.me 2>/dev/null || echo YOUR_IP):30120"
