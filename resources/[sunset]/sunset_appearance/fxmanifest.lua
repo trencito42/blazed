@@ -17,8 +17,14 @@ exports { 'IsEditing', 'ApplyAppearance' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
+    'client/torso_data.lua',
     'client/appearance_lib.lua',
     'client/main.lua',
+}
+
+files {
+    'data/besttorso_male.json',
+    'data/besttorso_female.json',
 }
 
 server_scripts { 'server/main.lua' }

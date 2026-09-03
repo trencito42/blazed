@@ -89,10 +89,20 @@ local function nearestUsableDrawable(ped, slot, drawable)
     return 0
 end
 
-local function setComponentSafe(ped, slot, drawable)
+local function setComponentSafe(ped, slot, drawable, texture)
     drawable = nearestUsableDrawable(ped, slot, drawable)
-    SetPedComponentVariation(ped, slot, drawable, 0, 2)
-    return drawable
+    texture = texture or 0
+    local maxTex = GetNumberOfPedTextureVariations(ped, slot, drawable) - 1
+    if maxTex < 0 then maxTex = 0 end
+    texture = math.max(0, math.min(math.floor(texture), maxTex))
+    SetPedComponentVariation(ped, slot, drawable, texture, 2)
+    return drawable, texture
+end
+
+local function overlayMax(overlayId)
+    local count = GetNumHeadOverlayValues(overlayId)
+    if not count or count < 1 then return 0 end
+    return count - 1
 end
 
 function SunsetAppearance.default(gender)
@@ -161,50 +171,38 @@ function SunsetAppearance.normalize(raw, gender)
     return out
 end
 
-function SunsetAppearance.resolveTorso(ped, gender, top, undershirt)
-    local isFemale = gender == 1
-    local candidates
-
-    if top == 0 and (undershirt or 0) == 0 then
-        candidates = isFemale and { 15, 14, 3, 0 } or { 15, 0, 1, 4 }
-    elseif top == 0 then
-        candidates = isFemale and { 3, 14, 15, 0 } or { 15, 3, 4, 0 }
-    else
-        candidates = isFemale and { 14, 3, 6, 11, 2, 0 } or { 15, 4, 1, 6, 11, 3, 0 }
-    end
-
-    for _, torso in ipairs(candidates) do
-        if isDrawableUsable(ped, 3, torso) then
-            return torso
-        end
-    end
-    return isFemale and 14 or 15
+function SunsetAppearance.resolveTorso(ped, gender, top, topTexture)
+    local torso, tex = TorsoData.getBestTorso(gender, top, topTexture or 0)
+    if torso then return torso, tex or 0 end
+    return gender == 1 and 14 or 15, 0
 end
 
 function SunsetAppearance.syncTorso(appearance, ped, gender)
-    local top = appearance.components['11'].drawable or 0
-    local undershirt = appearance.components['8'].drawable or 0
-    appearance.components['3'].drawable = SunsetAppearance.resolveTorso(ped, gender, top, undershirt)
+    local top = appearance.components['11'] or { drawable = 0, texture = 0 }
+    local torso, tex = SunsetAppearance.resolveTorso(ped, gender, top.drawable, top.texture)
+    appearance.components['3'] = { drawable = torso, texture = tex }
     return appearance
 end
 
 function SunsetAppearance.applyClothes(ped, appearance, gender)
+    local c = appearance.components
+
+    local d, t = setComponentSafe(ped, 4, math.max(1, c['4'].drawable or 1))
+    c['4'].drawable, c['4'].texture = d, t
+
+    d, t = setComponentSafe(ped, 6, c['6'].drawable or 1)
+    c['6'].drawable, c['6'].texture = d, t
+
+    d, t = setComponentSafe(ped, 8, c['8'].drawable or 15)
+    c['8'].drawable, c['8'].texture = d, t
+
     appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
 
-    local order = { 4, 6, 8, 11, 3 }
-    for _, slot in ipairs(order) do
-        local comp = appearance.components[tostring(slot)]
-        if comp then
-            comp.drawable = setComponentSafe(ped, slot, comp.drawable or 0)
-            comp.texture = 0
-        end
-    end
+    d, t = setComponentSafe(ped, 3, c['3'].drawable, c['3'].texture)
+    c['3'].drawable, c['3'].texture = d, t
 
-  -- Re-apply top after torso so jacket layer stays visible
-    local top = appearance.components['11']
-    if top then
-        top.drawable = setComponentSafe(ped, 11, top.drawable)
-    end
+    d, t = setComponentSafe(ped, 11, c['11'].drawable, c['11'].texture)
+    c['11'].drawable, c['11'].texture = d, t
 
     return appearance
 end
@@ -215,7 +213,8 @@ function SunsetAppearance.apply(ped, appearance, gender)
 
     appearance = SunsetAppearance.applyClothes(ped, appearance, gender)
 
-    appearance.hair.drawable = setComponentSafe(ped, 2, appearance.hair.drawable or 0)
+    local hd, ht = setComponentSafe(ped, 2, appearance.hair.drawable or 0, appearance.hair.texture or 0)
+    appearance.hair.drawable, appearance.hair.texture = hd, ht
     applyHair(ped, appearance.hair)
 
     if gender == 1 then
@@ -253,10 +252,10 @@ function SunsetAppearance.buildEditor(ped, appearance, gender)
     add({ type = 'hairHighlight', label = 'Hair Highlight', min = 0, max = 63, value = appearance.hair.highlight or appearance.hair.color or 0, camera = 'face' })
 
     if gender ~= 1 then
-        local beardMax = math.max(1, GetNumHeadOverlayValues(ped, 1) - 1)
+        local beardMax = overlayMax(1)
         add({ type = 'beard', label = 'Beard Style', min = 0, max = beardMax, value = appearance.overlays['1'].index or 0, camera = 'face' })
         add({ type = 'beardColor', label = 'Beard Color', min = 0, max = 63, value = appearance.overlays['1'].color or 0, camera = 'face' })
-        add({ type = 'eyebrows', label = 'Eyebrows', min = 0, max = math.max(1, GetNumHeadOverlayValues(ped, 2) - 1), value = appearance.overlays['2'].index or 0, camera = 'face' })
+        add({ type = 'eyebrows', label = 'Eyebrows', min = 0, max = overlayMax(2), value = appearance.overlays['2'].index or 0, camera = 'face' })
         add({ type = 'eyebrowColor', label = 'Eyebrow Color', min = 0, max = 63, value = appearance.overlays['2'].color or 0, camera = 'face' })
     end
 
@@ -326,6 +325,9 @@ function SunsetAppearance.applyField(ped, appearance, gender, change)
             appearance.components[tostring(slot)] = appearance.components[tostring(slot)] or { drawable = 0, texture = 0 }
             appearance.components[tostring(slot)].drawable = value
             appearance.components[tostring(slot)].texture = 0
+            if slot == 8 or slot == 11 then
+                appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+            end
         end
     end
 
