@@ -53,8 +53,13 @@ pull_repo() {
 pull_repo
 
 chmod -R a+rX config docker resources sql
-sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh
-chmod +x docker/fivem/entrypoint.sh deploy.sh
+sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
+chmod +x docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
+
+# ox_lib must exist (with web/build) before the FiveM container copies resources
+if [ -f scripts/install-deps.sh ]; then
+  sh scripts/install-deps.sh
+fi
 
 docker compose build fivem
 docker compose up -d --remove-orphans
@@ -72,11 +77,6 @@ if [ -f sql/05-factions-crafting.sql ]; then
 fi
 if [ -f sql/06-taxi.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/06-taxi.sql 2>/dev/null || true
-fi
-
-# Optional deps (ox_lib, pma-voice)
-if [ -f scripts/install-deps.sh ]; then
-  sh scripts/install-deps.sh 2>/dev/null || true
 fi
 
 echo "Done. Connect: F8 -> connect $(curl -s ifconfig.me 2>/dev/null || echo YOUR_IP):30120"
