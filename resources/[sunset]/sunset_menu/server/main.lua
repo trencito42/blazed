@@ -1,15 +1,57 @@
-local function formatLogin(ts)
-    if not ts then return '—' end
+local LOGIN_MONTHS = {
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+}
+
+local function parseLoginTimestamp(ts)
+    if ts == nil then return nil end
+
     if type(ts) == 'number' then
-        return os.date('%d.%m.%Y %H:%M', ts)
+        local sec = math.floor(ts)
+        -- oxmysql typeCast returns Unix time in milliseconds
+        if sec > 9999999999 then
+            sec = math.floor(sec / 1000)
+        end
+        return sec > 0 and sec or nil
     end
-    if type(ts) == 'table' and ts.year then
-        return ('%02d.%02d.%04d %02d:%02d'):format(ts.day, ts.month, ts.year, ts.hour or 0, ts.min or 0)
+
+    if type(ts) == 'table' and ts.year and ts.month and ts.day then
+        return os.time({
+            year = ts.year,
+            month = ts.month,
+            day = ts.day,
+            hour = ts.hour or 0,
+            min = ts.min or 0,
+            sec = ts.sec or 0,
+        })
     end
-    local s = tostring(ts)
-    local y, mo, d, h, mi = s:match('(%d+)-(%d+)-(%d+)[ T](%d+):(%d+)')
-    if y then return ('%s.%s.%s %s:%s'):format(d, mo, y, h, mi) end
-    return s
+
+    if type(ts) == 'string' and ts ~= '' then
+        local y, mo, d, h, mi, s = ts:match('^(%d+)-(%d+)-(%d+)[ T](%d+):(%d+):?(%d*)')
+        if y then
+            return os.time({
+                year = tonumber(y),
+                month = tonumber(mo),
+                day = tonumber(d),
+                hour = tonumber(h),
+                min = tonumber(mi),
+                sec = tonumber(s) or 0,
+            })
+        end
+        local n = tonumber(ts)
+        if n then return parseLoginTimestamp(n) end
+    end
+
+    return nil
+end
+
+local function formatLogin(ts)
+    local sec = parseLoginTimestamp(ts)
+    if not sec then return '—' end
+    local t = os.date('*t', sec)
+    if not t then return '—' end
+    local mon = LOGIN_MONTHS[t.month] or '???'
+    return ('%s %d, %d — %02d:%02d'):format(mon, t.day, t.year, t.hour, t.min)
 end
 
 local function getNextPaydayTime()
