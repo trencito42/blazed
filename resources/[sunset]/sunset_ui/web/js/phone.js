@@ -7,18 +7,112 @@ const Phone = {
         if (this._ready) return;
         this._ready = true;
 
-        $('#phone-home-indicator')?.addEventListener('click', () => this.goHomeOrClose());
+        this.setupHomeBar();
+        this.setupKeys();
+
         $$('[data-phone-app]').forEach((btn) => {
             btn.addEventListener('click', () => this.openApp(btn.dataset.phoneApp));
         });
-        $('#phone-back-messages')?.addEventListener('click', () => this.showView('messages'));
-        $('#phone-back-contacts')?.addEventListener('click', () => this.goHome());
-        $('#phone-back-chat')?.addEventListener('click', () => this.showView('messages'));
-        $('#phone-back-bank')?.addEventListener('click', () => this.goHome());
-        $('#phone-back-settings')?.addEventListener('click', () => this.goHome());
+        $('#phone-back-messages')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.goHome();
+        });
+        $('#phone-back-contacts')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.goHome();
+        });
+        $('#phone-back-chat')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showView('messages');
+        });
+        $('#phone-back-bank')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.goHome();
+        });
+        $('#phone-back-settings')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.goHome();
+        });
         $('#phone-chat-send')?.addEventListener('click', () => this.sendMessage());
         $('#phone-chat-input')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.sendMessage();
+        });
+    },
+
+    setupKeys() {
+        if (this._keysBound) return;
+        this._keysBound = true;
+        window.addEventListener('keydown', (e) => {
+            const device = $('#phone-device');
+            if (!device?.classList.contains('is-open')) return;
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.goHomeOrClose();
+                return;
+            }
+            if (e.key === 'p' || e.key === 'P') {
+                if (e.target.matches('input, textarea')) return;
+                e.preventDefault();
+                e.stopPropagation();
+                post('phoneClose', {});
+            }
+        });
+    },
+
+    setupHomeBar() {
+        const zone = $('#phone-home-zone');
+        const bar = $('#phone-home-indicator');
+        if (!zone || zone._bound) return;
+        zone._bound = true;
+
+        let startY = 0;
+        let dragging = false;
+        let moved = false;
+
+        const finish = (endY) => {
+            const delta = startY - endY;
+            zone.classList.remove('is-dragging');
+            if (bar) bar.style.transform = '';
+            dragging = false;
+
+            if (delta > 30) {
+                this.goHomeOrClose();
+            } else if (!moved) {
+                this.goHomeOrClose();
+            }
+            moved = false;
+        };
+
+        zone.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            zone.setPointerCapture(e.pointerId);
+            startY = e.clientY;
+            dragging = true;
+            moved = false;
+            zone.classList.add('is-dragging');
+        });
+
+        zone.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            const delta = startY - e.clientY;
+            if (Math.abs(delta) > 4) moved = true;
+            if (delta > 0 && bar) {
+                bar.style.transform = `translateY(-${Math.min(delta * 0.45, 36)}px)`;
+            }
+        });
+
+        zone.addEventListener('pointerup', (e) => {
+            if (!dragging) return;
+            zone.releasePointerCapture(e.pointerId);
+            finish(e.clientY);
+        });
+
+        zone.addEventListener('pointercancel', (e) => {
+            if (!dragging) return;
+            finish(e.clientY);
         });
     },
 

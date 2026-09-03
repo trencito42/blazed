@@ -30,7 +30,7 @@ local function openPhone()
         phoneOpen = true
         playPhoneAnim(true)
         exports.sunset_ui:Send('phoneShow', data)
-        exports.sunset_ui:SetFocus(true, true, false)
+        exports.sunset_ui:SetFocus(true, true, true)
     end)
 end
 
@@ -42,9 +42,11 @@ local function closePhone()
     exports.sunset_ui:Send('phoneHide', {})
 end
 
-RegisterCommand('phone', function()
+local function togglePhone()
     if phoneOpen then closePhone() else openPhone() end
-end, false)
+end
+
+RegisterCommand('phone', togglePhone, false)
 RegisterKeyMapping('phone', 'Open phone', 'keyboard', 'P')
 
 AddEventHandler('sunset:nui:phoneClose', function()

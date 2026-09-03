@@ -526,7 +526,7 @@
                     <div class="phone-view phone-threads" data-view="messages">
                         <div class="phone-appbar">
                             <button type="button" class="phone-back" id="phone-back-messages">‹ Home</button>
-                            <h3>Messages</h3>
+                            <h3 class="phone-appbar__title">Messages</h3>
                         </div>
                         <div class="phone-scroll" id="phone-thread-list"></div>
                     </div>
@@ -535,9 +535,9 @@
                     <div class="phone-view phone-chat" data-view="chat">
                         <div class="phone-appbar">
                             <button type="button" class="phone-back" id="phone-back-chat">‹ Back</button>
-                            <div style="flex:1;text-align:center;padding-right:40px">
-                                <h3 id="phone-chat-title" style="margin:0">Chat</h3>
-                                <div id="phone-chat-subtitle" style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px"></div>
+                            <div class="phone-appbar__title--stack">
+                                <h3 id="phone-chat-title">Chat</h3>
+                                <div class="phone-appbar__subtitle" id="phone-chat-subtitle"></div>
                             </div>
                         </div>
                         <div class="phone-chat__messages" id="phone-chat-messages"></div>
@@ -551,7 +551,7 @@
                     <div class="phone-view phone-contacts" data-view="contacts">
                         <div class="phone-appbar">
                             <button type="button" class="phone-back" id="phone-back-contacts">‹ Home</button>
-                            <h3>Contacts</h3>
+                            <h3 class="phone-appbar__title">Contacts</h3>
                         </div>
                         <div class="phone-scroll" id="phone-contact-list"></div>
                     </div>
@@ -560,7 +560,7 @@
                     <div class="phone-view" data-view="bank">
                         <div class="phone-appbar phone-appbar--light">
                             <button type="button" class="phone-back" id="phone-back-bank">‹ Home</button>
-                            <h3>Bank</h3>
+                            <h3 class="phone-appbar__title">Bank</h3>
                         </div>
                         <div class="phone-scroll phone-bank">
                             <div class="phone-bank-card">
@@ -577,7 +577,7 @@
                     <div class="phone-view phone-settings" data-view="settings">
                         <div class="phone-appbar">
                             <button type="button" class="phone-back" id="phone-back-settings">‹ Home</button>
-                            <h3>Settings</h3>
+                            <h3 class="phone-appbar__title">Settings</h3>
                         </div>
                         <div class="phone-scroll">
                             <div class="phone-settings-profile">
@@ -593,7 +593,9 @@
                     </div>
                 </div>
 
-                <div class="phone-home-indicator" id="phone-home-indicator" title="Home"></div>
+                <div class="phone-home-zone" id="phone-home-zone" title="Swipe up">
+                    <div class="phone-home-indicator" id="phone-home-indicator"></div>
+                </div>
             </div>
         </div>
     </div>
