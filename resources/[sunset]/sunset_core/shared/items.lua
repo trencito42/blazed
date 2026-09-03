@@ -170,7 +170,10 @@ Sunset.JobCenters = {
         jobs = {
             { id = 'unemployed', label = 'Unemployed' },
             { id = 'trucker', label = 'Trucker' },
+            { id = 'garbage', label = 'Garbage Collector' },
+            { id = 'courier', label = 'Courier' },
             { id = 'fisherman', label = 'Fisherman' },
+            { id = 'mechanic', label = 'Roadside Mechanic' },
         },
     },
 }

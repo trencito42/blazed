@@ -1,6 +1,6 @@
 Sunset = Sunset or {}
 
--- Civilian jobs (Job Center) — separate from factions (LSPD, EMS, gangs...)
+--- Civilian jobs (Job Center) — separate from factions (LSPD, EMS, gangs...)
 Sunset.CivilianJobs = {
     unemployed = {
         label = 'Unemployed',
@@ -10,13 +10,31 @@ Sunset.CivilianJobs = {
     trucker = {
         label = 'Trucker',
         type = 'civilian',
-        description = 'Haul cargo across San Andreas. (Routes coming soon)',
+        description = 'Haul cargo across San Andreas. Depot at the docks.',
         grades = { [0] = { label = 'Driver', salary = 150, perms = {} } },
+    },
+    garbage = {
+        label = 'Garbage Collector',
+        type = 'civilian',
+        description = 'Collect bins on city routes and unload at the depot.',
+        grades = { [0] = { label = 'Collector', salary = 130, perms = {} } },
+    },
+    courier = {
+        label = 'Courier',
+        type = 'civilian',
+        description = 'Pick up packages and deliver them on foot.',
+        grades = { [0] = { label = 'Runner', salary = 110, perms = {} } },
     },
     fisherman = {
         label = 'Fisherman',
         type = 'civilian',
-        description = 'Catch and sell fish. (Minigame coming soon)',
+        description = 'Fish at coastal spots and sell your catch.',
         grades = { [0] = { label = 'Angler', salary = 120, perms = {} } },
+    },
+    mechanic = {
+        label = 'Roadside Mechanic',
+        type = 'civilian',
+        description = 'Respond to /service mechanic calls and repair vehicles.',
+        grades = { [0] = { label = 'Apprentice', salary = 140, perms = {} } },
     },
 }

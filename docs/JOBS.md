@@ -1,14 +1,34 @@
-# Jobs — Current State & Roadmap
+# Jobs — Current State
 
 ## Civilian Jobs (`sunset_jobs`)
 
-| Job | Status | Salary | Notes |
-|-----|--------|--------|-------|
+| Job | Status | Salary | Commands |
+|-----|--------|--------|----------|
 | `unemployed` | Active | $0 | Default |
-| `trucker` | **Stub** | $150/hr | Hire at Job Center — no routes |
-| `fisherman` | **Stub** | $120/hr | Hire at Job Center — no minigame |
+| `trucker` | **Complete** | $150/hr | `/work` — depot spawn, trailer route, delivery, return |
+| `garbage` | **Complete** | $130/hr | `/work` — bin collection, capacity, depot unload |
+| `courier` | **Complete** | $110/hr | `/work` — warehouse pickup, on-foot delivery loop |
+| `fisherman` | **Complete** | $120/hr | `/work` — fishing minigame, sell at pier |
+| `mechanic` | **Complete** | $140/hr | `/work` — on duty, `/service mechanic` dispatch hook, vehicle repair |
 
-Hire via Job Center UI or admin `/setjob [id] [job] [grade]`.
+Hire at Job Center (City Hall) or admin `/setjob`. Use `/jobs` for the NUI panel, `/jobhelp` for tips, `/skills` for per-job XP.
+
+### Job Core
+
+- **States:** `IDLE` → `STARTING` → `ACTIVE` → `RETURNING` → `COMPLETED` / `FAILED` / `CANCELLED`
+- **Server:** session validation, coords checks, payouts (`AddMoney`), job XP in `job_progress` table (`sql/09-jobs.sql`)
+- **Resilience:** disconnect clears session; work vehicle destroy fails shift; configurable timeout per job
+- **Config:** `sunset_core/shared/jobs_config.lua`
+
+### Per-Job Loops
+
+| Job | Flow |
+|-----|------|
+| Trucker | Docks depot → spawn Phantom + trailer → pickup → delivery → return truck |
+| Garbage | Depot → trash truck → collect bins (animation) → full truck → unload |
+| Courier | Warehouse → carry package → deliver addresses → repeat |
+| Fisherman | Fishing spots → minigame catch → sell at pier buyer |
+| Mechanic | Go on duty → accept dispatch calls → repair nearby vehicle (engine/body health) |
 
 ## Faction Jobs (`sunset_factions`)
 
@@ -20,28 +40,18 @@ Factions are hired at HQ, not Job Center. See [FACTIONS.md](./FACTIONS.md).
 | Taxi | Phone app + manual fare — **substantial** |
 | EMS | Heal/revive only — **minimal** |
 | LSFD | Heal/revive (rank-gated) — **minimal** |
-| Mechanic | HQ repair + `/repairveh` — **basic** |
+| Mechanic (faction) | HQ repair + `/repairveh` — **basic** (separate from civilian roadside mechanic) |
 | Gangs | HQ sell/fence — **basic** |
 
-## Planned (Not This Session)
+## Commands
 
-### Trucker
-- Pickup/delivery routes with cargo props
-- Pay per distance + bonus
-- Company depot at docks
-
-### Garbage
-- Route waypoints, bin props
-- Society payout split
-
-### Courier
-- Package pickup timer
-- Random delivery addresses
-
-### Fire Department (beyond foundation)
-- Hose/synced fire entities
-- Callout dispatch from `/d` or phone
-- Scene stabilization XP
+```
+/jobs              — Jobs NUI (skills, descriptions, start work)
+/work [cancel]     — Start or cancel civilian work shift
+/jobhelp           — Help for your current job
+/skills            — Job skill levels (XP in job_progress)
+/setjob [id] [job] — Admin: set civilian job
+```
 
 ## Admin Commands
 

@@ -46,7 +46,7 @@ RegisterCommand('setjob', function(source, args)
     local jobId = args[2]
     local grade = tonumber(args[3]) or 0
     if not targetArg or not jobId then
-        local msg = 'Usage: /setjob [id|username] [civilian_job] [grade] — unemployed, trucker, fisherman'
+        local msg = 'Usage: /setjob [id|username] [civilian_job] [grade] — unemployed, trucker, garbage, courier, fisherman, mechanic'
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
         return
     end

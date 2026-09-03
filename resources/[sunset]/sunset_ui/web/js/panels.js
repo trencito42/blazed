@@ -593,6 +593,37 @@ const Panels = {
     },
     hideJobCenter() { $('#jobcenter')?.classList.add('hidden'); },
 
+    showJobsPanel(data) {
+        this.init();
+        const d = data || {};
+        $('#jobs-panel-title').textContent = 'Jobs';
+        $('#jobs-panel-current').textContent = `Current: ${d.currentJobLabel || d.currentJob || 'Unemployed'}`;
+
+        const sessionEl = $('#jobs-panel-session');
+        if (d.session) {
+            sessionEl.textContent = `Active shift: ${d.session.jobId} (${d.session.state})`;
+            sessionEl.classList.remove('hidden');
+        } else {
+            sessionEl.classList.add('hidden');
+        }
+
+        const list = $('#jobs-panel-list');
+        list.innerHTML = '';
+        (d.jobs || []).forEach((job) => {
+            const prog = job.progress;
+            const skill = prog ? `Lv.${prog.level} · ${prog.completedTasks || 0} tasks` : 'No XP yet';
+            const li = document.createElement('li');
+            li.innerHTML = `<div class="craft-row"><strong>${job.label}</strong><span class="craft-meta">$${job.salary || 0}/hr · ${skill}</span><span class="craft-meta">${job.description || ''}</span></div>`;
+            list.appendChild(li);
+        });
+
+        $('#jobs-panel-work').onclick = () => post('jobsStartWork');
+        $('#jobs-panel-cancel').onclick = () => post('jobsCancelWork');
+        $('#jobs-panel-close').onclick = () => post('jobsClose');
+        $('#jobs-panel')?.classList.remove('hidden');
+    },
+    hideJobsPanel() { $('#jobs-panel')?.classList.add('hidden'); },
+
     showCrafting(data) {
         this.init();
         this._craftStation = data.stationId;

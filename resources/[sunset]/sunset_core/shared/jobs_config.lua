@@ -1,0 +1,123 @@
+Sunset = Sunset or {}
+
+--- Civilian job gameplay config (depots, routes, payouts). Hire data in jobs_civilian.lua.
+Sunset.JobsConfig = {
+    trucker = {
+        label = 'Trucker',
+        help = 'Go to the depot, spawn your rig, pick up cargo, deliver, then return the truck.',
+        depot = {
+            coords = vector3(1208.77, -3114.84, 5.54),
+            spawn = vector4(1245.58, -3135.42, 5.54, 90.0),
+            trailerSpawn = vector4(1255.0, -3135.42, 5.54, 90.0),
+            blip = { sprite = 477, color = 5, scale = 0.85 },
+        },
+        truckModel = 'phantom',
+        trailerModel = 'trailers2',
+        routes = {
+            { pickup = vector3(89.55, -1742.12, 29.29), delivery = vector3(2550.12, 467.55, 108.45), pay = 850, label = 'Davis → Vinewood Hills' },
+            { pickup = vector3(-424.88, -2789.33, 6.0), delivery = vector3(1702.55, 6416.12, 32.76), pay = 1200, label = 'Docks → Paleto Bay' },
+            { pickup = vector3(2747.32, 3472.88, 55.67), delivery = vector3(-219.45, -2419.88, 6.0), pay = 950, label = 'Sandy Shores → South Docks' },
+        },
+        xpPerDelivery = 45,
+        timeoutSec = 1800,
+        deliveryRadius = 12.0,
+        returnRadius = 15.0,
+    },
+
+    garbage = {
+        label = 'Garbage Collector',
+        help = 'Collect bins on your route, fill the truck, then unload at the depot.',
+        depot = {
+            coords = vector3(-321.70, -1545.94, 27.72),
+            spawn = vector4(-341.12, -1530.45, 27.72, 270.0),
+            unload = vector3(-350.45, -1560.22, 25.22),
+            blip = { sprite = 318, color = 2, scale = 0.85 },
+        },
+        truckModel = 'trash',
+        capacity = 8,
+        bins = {
+            vector3(-128.45, -1415.22, 29.35),
+            vector3(45.12, -1398.55, 29.35),
+            vector3(180.88, -1315.45, 29.22),
+            vector3(295.45, -1270.12, 29.45),
+            vector3(-55.22, -1755.88, 29.42),
+            vector3(120.55, -1688.22, 29.30),
+            vector3(380.12, -1512.45, 29.28),
+            vector3(510.88, -1455.22, 29.28),
+            vector3(-200.45, -1605.12, 33.48),
+            vector3(-350.22, -1470.88, 30.55),
+        },
+        payPerBin = 65,
+        payPerUnload = 150,
+        xpPerBin = 12,
+        xpPerUnload = 30,
+        collectRadius = 2.5,
+        timeoutSec = 1500,
+    },
+
+    courier = {
+        label = 'Courier',
+        help = 'Pick up packages at the warehouse and deliver them on foot.',
+        warehouse = {
+            coords = vector3(78.45, 112.22, 81.17),
+            blip = { sprite = 478, color = 3, scale = 0.85 },
+        },
+        deliveries = {
+            { coords = vector3(-47.22, -1758.45, 29.42), label = 'Davis Ave' },
+            { coords = vector3(213.88, -810.45, 30.73), label = 'Legion Square' },
+            { coords = vector3(-706.22, -914.55, 19.22), label = 'Little Seoul' },
+            { coords = vector3(373.45, -828.22, 29.28), label = 'Pillbox Hill' },
+            { coords = vector3(-1288.45, -1115.22, 6.99), label = 'Vespucci Canals' },
+            { coords = vector3(127.55, -1298.88, 29.22), label = 'Strawberry' },
+        },
+        packagesPerRun = 4,
+        payPerPackage = 120,
+        xpPerPackage = 18,
+        deliveryRadius = 2.5,
+        pickupRadius = 3.0,
+        timeoutSec = 1200,
+    },
+
+    fisherman = {
+        label = 'Fisherman',
+        help = 'Fish at marked spots, then sell your catch at the pier.',
+        spots = {
+            { coords = vector3(-1850.45, -1248.22, 8.62), blip = { sprite = 68, color = 3, scale = 0.75 } },
+            { coords = vector3(1300.88, 4225.45, 33.91), blip = { sprite = 68, color = 3, scale = 0.75 } },
+            { coords = vector3(-1598.22, 5200.45, 4.31), blip = { sprite = 68, color = 3, scale = 0.75 } },
+        },
+        sellPoint = {
+            coords = vector3(-1845.22, -1195.45, 14.30),
+            blip = { sprite = 280, color = 46, scale = 0.8 },
+        },
+        minigameDurationMs = 8000,
+        catchRadius = 8.0,
+        sellRadius = 3.0,
+        catchPayMin = 35,
+        catchPayMax = 120,
+        xpPerCatch = 15,
+        sellBonusMultiplier = 1.25,
+        timeoutSec = 900,
+    },
+
+    mechanic = {
+        label = 'Roadside Mechanic',
+        help = 'Go on duty to accept /service mechanic calls. Repair vehicles to earn pay.',
+        depot = {
+            coords = vector3(-347.45, -133.22, 39.01),
+            blip = { sprite = 446, color = 5, scale = 0.85 },
+        },
+        repairRadius = 6.0,
+        repairDurationMs = 12000,
+        payPerRepair = 200,
+        xpPerRepair = 25,
+        healthRestoreMin = 400,
+        healthRestoreMax = 1000,
+        timeoutSec = 2400,
+        dispatchServiceType = 'mechanic',
+    },
+}
+
+function Sunset.GetJobConfig(jobId)
+    return Sunset.JobsConfig and Sunset.JobsConfig[jobId]
+end

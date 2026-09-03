@@ -87,6 +87,9 @@ fi
 if [ -f sql/09-dispatch-wanted-jail.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-dispatch-wanted-jail.sql 2>/dev/null || true
 fi
+if [ -f sql/09-dispatch-wanted-jail.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-dispatch-wanted-jail.sql 2>/dev/null || true
+fi
 if [ -f sql/09-jobs.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-jobs.sql 2>/dev/null || true
 fi

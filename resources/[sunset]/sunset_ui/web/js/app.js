@@ -301,6 +301,12 @@ window.addEventListener('message', (event) => {
         case 'jobCenterHide':
             if (window.Panels) Panels.hideJobCenter();
             break;
+        case 'jobsShow':
+            if (window.Panels) Panels.showJobsPanel(data || event.data.data);
+            break;
+        case 'jobsHide':
+            if (window.Panels) Panels.hideJobsPanel();
+            break;
         case 'craftingShow':
             if (window.Panels) Panels.showCrafting(data || event.data.data);
             break;
