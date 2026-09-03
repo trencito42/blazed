@@ -238,6 +238,7 @@ window.addEventListener('message', (event) => {
         case 'appearanceShow':
             showApp(false);
             showHud(false);
+            $('#app')?.classList.add('hidden');
             if (window.Panels) Panels.showAppearance(data || event.data.data);
             break;
         case 'appearanceUpdate':

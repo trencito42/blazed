@@ -141,25 +141,28 @@
     line-height: 1.45;
 }
 
-.studio-preview-label {
+.studio-preview-hud {
     position: absolute;
-    left: 32px;
+    left: 28px;
     bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     pointer-events: none;
+    z-index: 2;
+}
+
+.studio-preview-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(255, 140, 0, 0.7);
+    color: rgba(255, 140, 0, 0.85);
 }
 
 .studio-preview-keys {
-    position: absolute;
-    left: 32px;
-    bottom: 48px;
-    pointer-events: none;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .studio-controls {

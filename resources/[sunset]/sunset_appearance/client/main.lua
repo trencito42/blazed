@@ -3,7 +3,10 @@ local pendingChar = nil
 local studioCam = nil
 local pedHeading = 180.0
 
-local STUDIO = vector4(402.87, -996.41, -99.0, 180.0)
+local function getStudioCoords()
+    local spawn = Sunset.Config.DefaultSpawn
+    return vector4(spawn.x, spawn.y, spawn.z, spawn.w or 180.0)
+end
 
 local function applyAppearance(ped, appearance)
     if not appearance then return end
@@ -24,15 +27,22 @@ local function destroyStudio()
         DestroyCam(studioCam, false)
         studioCam = nil
     end
+    ClearFocus()
 end
 
 local function setupCamera(ped)
     if studioCam then DestroyCam(studioCam, false) end
     studioCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+
     local coords = GetEntityCoords(ped)
-    SetCamCoord(studioCam, coords.x + 0.05, coords.y + 2.15, coords.z + 0.62)
+    local heading = math.rad(pedHeading)
+    local dist = 2.35
+    local camX = coords.x - math.sin(heading) * dist
+    local camY = coords.y + math.cos(heading) * dist
+
+    SetCamCoord(studioCam, camX, camY, coords.z + 0.62)
     PointCamAtCoord(studioCam, coords.x, coords.y, coords.z + 0.58)
-    SetCamFov(studioCam, 40.0)
+    SetCamFov(studioCam, 38.0)
     SetCamActive(studioCam, true)
     RenderScriptCams(true, false, 0, true, true)
 end
@@ -67,42 +77,64 @@ local function buildComponentList(ped)
     }
 end
 
-local function prepareStudioInterior()
-    local x, y, z = STUDIO.x, STUDIO.y, STUDIO.z
+local function waitForWorldAt(x, y, z, ped)
     RequestCollisionAtCoord(x, y, z)
-    local interior = GetInteriorAtCoords(x, y, z)
-    if interior ~= 0 then
-        PinInteriorInMemory(interior)
-        RefreshInterior(interior)
+    NewLoadSceneStart(x, y, z, x, y, z, 50.0, 0)
+    local timeout = GetGameTimer() + 8000
+    while not IsNewLoadSceneLoaded() do
+        if GetGameTimer() > timeout then break end
+        Wait(0)
+    end
+    NewLoadSceneStop()
+    SetFocusPosAndVel(x, y, z, 0.0, 0.0, 0.0)
+
+    timeout = GetGameTimer() + 8000
+    while not HasCollisionLoadedAroundEntity(ped) do
+        if GetGameTimer() > timeout then break end
+        RequestCollisionAtCoord(x, y, z)
+        Wait(0)
     end
 end
 
-local function enterStudio(char)
-    DoScreenFadeOut(400)
-    Wait(500)
+local function enterStudio(char, skipFade)
+    if not skipFade then
+        DoScreenFadeOut(400)
+        Wait(500)
+    end
+
+    ShutdownLoadingScreenNui()
+    ShutdownLoadingScreen()
+    exports.sunset_ui:Send('hide', {})
 
     if not loadFreemodePed(char) then
-        DoScreenFadeIn(500)
+        if not skipFade then DoScreenFadeIn(500) end
         exports.sunset_ui:Notify('Failed to load character model', 'error')
         return false
     end
 
-    prepareStudioInterior()
-
+    local studio = getStudioCoords()
     local ped = PlayerPedId()
-    SetEntityCoordsNoOffset(ped, STUDIO.x, STUDIO.y, STUDIO.z, false, false, false)
-    pedHeading = STUDIO.w
+    pedHeading = studio.w
+
+    SetEntityCoordsNoOffset(ped, studio.x, studio.y, studio.z, false, false, false)
     SetEntityHeading(ped, pedHeading)
+    waitForWorldAt(studio.x, studio.y, studio.z, ped)
+
     FreezeEntityPosition(ped, true)
     SetEntityVisible(ped, true, false)
+    SetEntityAlpha(ped, 255, false)
+    SetLocalPlayerVisibleLocally(true)
+    NetworkSetEntityInvisibleToNetwork(ped, false)
     ClearPedTasksImmediately(ped)
     SetEntityCollision(ped, false, false)
 
     setupCamera(ped)
     DisplayRadar(false)
-    NetworkOverrideClockTime(12, 0, 0)
+    NetworkOverrideClockTime(20, 30, 0)
+    SetWeatherTypeNowPersist('CLEAR')
+    SetRainLevel(0.0)
 
-    DoScreenFadeIn(700)
+    if not skipFade then DoScreenFadeIn(700) end
     return true
 end
 
@@ -111,14 +143,13 @@ local function openEditor(char)
     pendingChar = char
     char.gender = char.gender or 0
 
-    if not enterStudio(char) then return end
+    if not enterStudio(char, false) then return end
 
     editing = true
-    local ped = PlayerPedId()
 
     exports.sunset_ui:Send('appearanceShow', {
         gender = char.gender,
-        components = buildComponentList(ped),
+        components = buildComponentList(PlayerPedId()),
     })
     exports.sunset_ui:SetFocus(true, true, true)
 end
@@ -127,13 +158,16 @@ CreateThread(function()
     while true do
         if editing then
             local ped = PlayerPedId()
+            SetEntityVisible(ped, true, false)
             if IsControlPressed(0, 34) or IsControlPressed(0, 174) then
                 pedHeading = pedHeading - 1.8
                 SetEntityHeading(ped, pedHeading)
+                setupCamera(ped)
             end
             if IsControlPressed(0, 35) or IsControlPressed(0, 175) then
                 pedHeading = pedHeading + 1.8
                 SetEntityHeading(ped, pedHeading)
+                setupCamera(ped)
             end
             DisableControlAction(0, 1, true)
             DisableControlAction(0, 2, true)
@@ -157,19 +191,19 @@ end)
 
 AddEventHandler('sunset:nui:appearanceRotate', function(data)
     local ped = PlayerPedId()
-    local delta = (data.direction == 'left') and -12.0 or 12.0
+    local delta = (data.direction == 'left') and -15.0 or 15.0
     pedHeading = pedHeading + delta
     SetEntityHeading(ped, pedHeading)
+    setupCamera(ped)
 end)
 
 AddEventHandler('sunset:nui:appearanceGender', function(data)
     if not pendingChar or not editing then return end
     pendingChar.gender = tonumber(data.gender) or 0
-    enterStudio(pendingChar)
-    local ped = PlayerPedId()
+    enterStudio(pendingChar, true)
     exports.sunset_ui:Send('appearanceUpdate', {
         gender = pendingChar.gender,
-        components = buildComponentList(ped),
+        components = buildComponentList(PlayerPedId()),
     })
 end)
 

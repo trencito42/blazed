@@ -517,12 +517,14 @@
     <!-- APPEARANCE STUDIO (3D preview — transparent left side) -->
     <div id="appearance-studio" class="appearance-studio hidden">
         <div class="studio-vignette"></div>
-        <p class="studio-preview-label">Live preview</p>
-        <p class="studio-preview-keys">A / D sau ← → pentru rotire</p>
+        <div class="studio-preview-hud">
+            <span class="studio-preview-label">Live preview</span>
+            <span class="studio-preview-keys">A / D sau ← → rotire</span>
+        </div>
         <aside class="studio-sidebar">
             <img class="studio-logo" src="assets/logo.png" alt="SunsetMP">
             <h2 class="studio-title">Character Look</h2>
-            <p class="studio-hint">Personajul tău apare în stânga. Ajustează detaliile și confirmă.</p>
+            <p class="studio-hint">Preview-ul e în centru-stânga. Ajustează și confirmă.</p>
             <div class="studio-gender" id="appearance-gender">
                 <button type="button" class="studio-gender__btn is-active" data-gender="0">MALE</button>
                 <button type="button" class="studio-gender__btn" data-gender="1">FEMALE</button>
