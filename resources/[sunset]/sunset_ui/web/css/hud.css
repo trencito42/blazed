@@ -122,13 +122,13 @@
 }
 
 .loc-box {
-    padding: 6px 12px;
-    background: rgba(0,0,0,0.55);
-    border-left: 2px solid #e85d2a;
+    padding: 0;
+    background: none;
+    border: none;
 }
 
-.loc-street { display: block; font-size: 12px; font-weight: 600; color: #fff; }
-.loc-zone { display: block; font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; }
+.loc-street { display: block; color: #fff; }
+.loc-zone { display: block; font-size: 9px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* ── Vehicle bar — esports style ── */
 .hud-bc {

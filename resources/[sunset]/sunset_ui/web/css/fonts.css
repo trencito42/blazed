@@ -1,35 +1,20 @@
 @font-face {
-    font-family: 'SunsetHUD';
+    font-family: 'Pricedown';
     src: url('../assets/fonts/pricedown.otf') format('opentype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
 }
 
-.hud,
-.fh-speedo,
-.hud-tr,
-.hud-editor-bar,
-.hud-wanted,
-.loc-box {
-    font-family: 'SunsetHUD', 'Inter', sans-serif;
-}
-
-.fh-speedo__speed,
-.fh-speedo__gear,
-.fh-speedo__unit,
-.fh-tick-label,
-.fh-stat__label,
-.fh-stat__val,
-.hud-wanted__level,
-.money-val,
-.badge,
+/* Doar numele străzii (sus) — restul HUD rămâne Inter */
 .loc-street {
-    font-family: 'SunsetHUD', 'Barlow Condensed', 'Inter', sans-serif;
+    font-family: 'Pricedown', 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: normal;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
 }
 
-.stat-val,
-.stat-row--time span {
-    font-family: 'SunsetHUD', 'Inter', sans-serif;
-    letter-spacing: 0.02em;
+.loc-zone {
+    font-family: 'Inter', sans-serif;
 }
