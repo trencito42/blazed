@@ -24,6 +24,10 @@ client_scripts {
     'client/core.lua',
     'client/trucker.lua',
     'client/garbage.lua',
+    'client/courier.lua',
+    'client/fisherman.lua',
+    'client/mechanic.lua',
+    'client/commands.lua',
     'client/main.lua',
 }
 
