@@ -26,7 +26,7 @@ Sunset.JobsConfig = {
 
     garbage = {
         label = 'Garbage Collector',
-        help = 'Collect bins on your route, fill the truck, then unload at the depot.',
+        help = 'Drive to bins, pick up trash (E), dump at the truck rear, then unload at the depot when full.',
         depot = {
             coords = vector3(-321.70, -1545.94, 27.72),
             spawn = vector4(-341.12, -1530.45, 27.72, 270.0),
@@ -51,7 +51,9 @@ Sunset.JobsConfig = {
         payPerUnload = 150,
         xpPerBin = 12,
         xpPerUnload = 30,
-        collectRadius = 2.5,
+        collectRadius = 3.0,
+        dumpRadius = 3.5,
+        truckRearOffset = -4.5,
         timeoutSec = 1500,
     },
 

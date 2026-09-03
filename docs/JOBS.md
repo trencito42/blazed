@@ -6,7 +6,7 @@
 |-----|--------|--------|----------|
 | `unemployed` | Active | $0 | Default |
 | `trucker` | **Complete** | $150/hr | `/work` — depot spawn, trailer route, delivery, return |
-| `garbage` | **Complete** | $130/hr | `/work` — bin collection, capacity, depot unload |
+| `garbage` | **Complete** | $130/hr | `/work` — bin pickup, truck dump, depot unload |
 | `courier` | **Complete** | $110/hr | `/work` — warehouse pickup, on-foot delivery loop |
 | `fisherman` | **Complete** | $120/hr | `/work` — fishing minigame, sell at pier |
 | `mechanic` | **Complete** | $140/hr | `/work` — on duty, `/service mechanic` dispatch hook, vehicle repair |
@@ -27,10 +27,20 @@ When hired, GPS is set to that job's work location. `/work` sets GPS to the next
 | Job | Flow |
 |-----|------|
 | Trucker | Docks depot → spawn Phantom + trailer → pickup → delivery → return truck |
-| Garbage | Depot → trash truck → collect bins (animation) → full truck → unload |
+| Garbage | Depot → trash truck → bin pickup (E) → carry bag → dump at truck rear → full → depot unload |
 | Courier | Warehouse loading dock → carry package → deliver addresses → repeat |
 | Fisherman | Fishing spots → minigame catch → sell at pier buyer |
 | Mechanic | Go on duty → receive `/service mechanic` dispatch via `sunset_dispatch` → accept (E) → repair nearby vehicle |
+
+### Garbage Collector
+
+1. Start at **Garbage Depot** (`/work`) — spawns a trash truck and assigns a shuffled bin route.
+2. Drive to the GPS bin marker, exit the truck, press **E** at the bin to pick up a trash bag.
+3. Walk to the **rear of your truck** (orange marker), press **E** to dump the bag — you earn per-bin pay and XP.
+4. Repeat until the truck is full (8 bags by default).
+5. Drive to the **depot unload point** in your truck to finish the shift and collect the unload bonus.
+
+Server validates bin proximity on pickup and truck-rear proximity on dump; failed checks show an error notification instead of silently stalling.
 
 ## Faction Jobs (`sunset_factions`)
 
