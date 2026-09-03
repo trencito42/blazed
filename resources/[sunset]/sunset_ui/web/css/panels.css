@@ -243,3 +243,184 @@
 }
 .auth-tab.is-active { background: rgba(255,140,0,0.2); color: #ff8c00; }
 .auth-form.hidden { display: none; }
+
+/* ── MDC ── */
+.mdc-panel h2 { margin-bottom: 2px; }
+.mdc-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.mdc-sub { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; }
+.mdc-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.mdc-tab {
+    flex: 1;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px;
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: default;
+}
+.mdc-tab.is-active { background: rgba(255,140,0,0.12); border-color: rgba(255,140,0,0.35); color: #ff8c00; }
+.mdc-pane { display: none; }
+.mdc-pane.is-active { display: block; }
+.mdc-wanted-list, .mdc-charges { list-style: none; padding: 0; margin: 0; }
+.mdc-wanted-list li, .mdc-charges li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 4px;
+    font-size: 13px;
+}
+.mdc-wanted-list .mdc-stars { color: #ff453a; font-weight: 700; }
+.mdc-wanted-list .mdc-time { font-size: 11px; color: rgba(255,255,255,0.45); }
+.mdc-search { display: flex; gap: 8px; margin-bottom: 14px; }
+.mdc-search input { flex: 1; }
+.mdc-result { padding: 14px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; }
+.mdc-result__head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+.mdc-result__head strong { font-size: 16px; }
+.mdc-result__id { color: #ff8c00; font-size: 13px; }
+.mdc-result__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.mdc-stat { display: flex; flex-direction: column; gap: 2px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; }
+.mdc-stat span { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; }
+.mdc-stat strong { font-size: 13px; }
+.mdc-section-title { font-size: 11px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px; }
+.mdc-empty { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; padding: 24px 0; }
+
+/* ── Ticket receive ── */
+.ticket-receive { text-align: center; }
+.ticket-receive__badge {
+    display: inline-block;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+    background: rgba(255,69,58,0.15);
+    border: 1px solid rgba(255,69,58,0.35);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #ff453a;
+}
+.ticket-receive__officer { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 12px; }
+.ticket-receive__amount { font-size: 36px; font-weight: 700; color: #ff8c00; margin-bottom: 8px; }
+.ticket-receive__reason { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
+.ticket-receive__hint { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 16px; line-height: 1.4; }
+
+/* ── Service calls ── */
+.servicecalls-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.servicecalls-header h2 { margin: 0; }
+.servicecalls-count { font-size: 11px; color: rgba(255,255,255,0.45); text-transform: uppercase; }
+.servicecalls-list { list-style: none; padding: 0; margin: 0; max-height: 52vh; overflow-y: auto; }
+.servicecalls-list li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px;
+    font-size: 13px;
+}
+.servicecalls-list .sc-type {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ff8c00;
+}
+.servicecalls-list .sc-title { font-weight: 600; font-size: 14px; }
+.servicecalls-list .sc-meta { font-size: 11px; color: rgba(255,255,255,0.45); grid-column: 1 / -1; }
+.servicecalls-list .sc-status {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    align-self: start;
+}
+.sc-status--open { background: rgba(52,199,89,0.15); color: #34c759; }
+.sc-status--assigned { background: rgba(255,140,0,0.15); color: #ff8c00; }
+.sc-status--closed { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
+.servicecalls-list button {
+    grid-row: 1 / 3;
+    grid-column: 2;
+    align-self: center;
+    background: rgba(255,140,0,0.15);
+    border: 1px solid rgba(255,140,0,0.35);
+    color: #ff8c00;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: default;
+}
+.servicecalls-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 32px 0; font-size: 13px; }
+
+/* ── Jobs browser ── */
+.jobs-browser__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.jobs-browser__head h2 { margin: 0; }
+.jobs-browser__sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+.jobs-browser__current { text-align: right; font-size: 11px; color: rgba(255,255,255,0.45); }
+.jobs-browser__current strong { display: block; font-size: 14px; color: #ff8c00; margin-top: 2px; }
+.jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    max-height: 52vh;
+    overflow-y: auto;
+    margin-bottom: 8px;
+}
+.job-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px;
+    transition: border-color 0.15s;
+}
+.job-card.is-current { border-color: rgba(255,140,0,0.45); box-shadow: inset 0 0 0 1px rgba(255,140,0,0.12); }
+.job-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.job-card__name { font-size: 14px; font-weight: 700; }
+.job-card__pay { font-size: 11px; color: #34c759; font-weight: 600; white-space: nowrap; }
+.job-card__desc { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.35; flex: 1; }
+.job-card__xp { font-size: 10px; color: rgba(255,255,255,0.35); }
+.job-card__btn {
+    margin-top: 4px;
+    padding: 8px;
+    background: rgba(255,140,0,0.12);
+    border: 1px solid rgba(255,140,0,0.3);
+    border-radius: 4px;
+    color: #ff8c00;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: default;
+}
+.job-card__btn:disabled { opacity: 0.4; }
+.job-card__btn--active { background: rgba(52,199,89,0.12); border-color: rgba(52,199,89,0.3); color: #34c759; }
+
+/* ── Skills ── */
+.skills-header { margin-bottom: 14px; }
+.skills-header h2 { margin: 0 0 2px; }
+.skills-sub { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
+.skills-list { list-style: none; padding: 0; margin: 0; max-height: 55vh; overflow-y: auto; }
+.skills-list li {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.skills-list li:last-child { border-bottom: none; }
+.skill-row__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.skill-row__name { font-size: 14px; font-weight: 600; }
+.skill-row__level { font-size: 11px; color: #ff8c00; font-weight: 700; }
+.skill-row__bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.skill-row__fill { height: 100%; background: linear-gradient(90deg, #e85d2a, #ff8c00); border-radius: 2px; transition: width 0.3s ease; }
+.skill-row__xp { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+.skills-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 32px 0; }

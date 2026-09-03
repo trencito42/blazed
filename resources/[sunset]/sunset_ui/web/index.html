@@ -22,6 +22,44 @@
 <body>
     <div id="notifications" class="notifications"></div>
 
+    <!-- POLICE ORDER (summon alert) -->
+    <div id="police-order" class="police-order hidden" aria-live="assertive">
+        <div class="police-order__inner">
+            <div class="police-order__stripe"></div>
+            <div class="police-order__content">
+                <span class="police-order__badge">POLICE ORDER</span>
+                <p class="police-order__msg" id="police-order-msg">Stop and comply with law enforcement</p>
+                <span class="police-order__meta" id="police-order-meta"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAXI METER HUD -->
+    <div id="taxi-meter" class="taxi-meter hidden" data-hud-panel="taxi-meter">
+        <div class="taxi-meter__head">
+            <span class="taxi-meter__label">TAXI METER</span>
+            <span class="taxi-meter__status" id="taxi-meter-status">IDLE</span>
+        </div>
+        <div class="taxi-meter__fare" id="taxi-meter-fare">$0</div>
+        <div class="taxi-meter__row">
+            <span>Distance</span><strong id="taxi-meter-dist">0.0 km</strong>
+        </div>
+        <div class="taxi-meter__row">
+            <span>Time</span><strong id="taxi-meter-time">00:00</strong>
+        </div>
+    </div>
+
+    <!-- JOB OBJECTIVE HUD -->
+    <div id="job-objective" class="job-objective hidden" data-hud-panel="objective">
+        <div class="job-objective__tag" id="job-objective-tag">JOB</div>
+        <div class="job-objective__title" id="job-objective-title">—</div>
+        <div class="job-objective__desc" id="job-objective-desc"></div>
+        <div class="job-objective__progress hidden" id="job-objective-progress-wrap">
+            <div class="job-objective__bar"><div class="job-objective__fill" id="job-objective-fill"></div></div>
+            <span class="job-objective__pct" id="job-objective-pct">0%</span>
+        </div>
+    </div>
+
     <div id="fuel-pump" class="hidden" aria-hidden="true">
         <div class="fuel-pump__header">
             <div>
@@ -476,14 +514,43 @@
 
     <!-- MDC -->
     <div id="mdc" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide">
-            <h2>MDC — Mobile Data Terminal</h2>
-            <ul class="panel-list" id="mdc-list"></ul>
-            <button type="button" class="panel-close" id="mdc-close">Close</button>
+        <div class="overlay-panel__box overlay-panel__box--wide mdc-panel">
+            <div class="mdc-header">
+                <h2>MDC</h2>
+                <span class="mdc-sub">Mobile Data Terminal</span>
+            </div>
+            <div class="mdc-tabs">
+                <button type="button" class="mdc-tab is-active" data-mdc-tab="wanted">WANTED</button>
+                <button type="button" class="mdc-tab" data-mdc-tab="lookup">LOOKUP</button>
+            </div>
+            <div class="mdc-pane is-active" data-mdc-pane="wanted">
+                <ul class="mdc-wanted-list" id="mdc-wanted-list"></ul>
+            </div>
+            <div class="mdc-pane" data-mdc-pane="lookup">
+                <div class="mdc-search">
+                    <input type="number" id="mdc-search-id" min="1" placeholder="Player server ID">
+                    <button type="button" class="btn btn--primary" id="mdc-search-btn">SEARCH</button>
+                </div>
+                <div class="mdc-result hidden" id="mdc-result">
+                    <div class="mdc-result__head">
+                        <strong id="mdc-result-name">—</strong>
+                        <span class="mdc-result__id" id="mdc-result-id">#0</span>
+                    </div>
+                    <div class="mdc-result__grid">
+                        <div class="mdc-stat"><span>Wanted</span><strong id="mdc-result-wanted">—</strong></div>
+                        <div class="mdc-stat"><span>Jail</span><strong id="mdc-result-jail">—</strong></div>
+                        <div class="mdc-stat"><span>Fines owed</span><strong id="mdc-result-fines">—</strong></div>
+                    </div>
+                    <h3 class="mdc-section-title">Charges</h3>
+                    <ul class="mdc-charges" id="mdc-charges-list"></ul>
+                </div>
+                <p class="mdc-empty hidden" id="mdc-lookup-empty">Enter a player ID to view record.</p>
+            </div>
+            <button type="button" class="panel-close" id="mdc-close">Close (ESC)</button>
         </div>
     </div>
 
-    <!-- TICKET -->
+    <!-- TICKET ISSUE (officer) -->
     <div id="ticket" class="overlay-panel hidden">
         <div class="overlay-panel__box">
             <h2>Issue Citation</h2>
@@ -494,6 +561,64 @@
                 <button type="button" class="btn btn--primary" id="ticket-issue">ISSUE CITATION</button>
             </div>
             <button type="button" class="panel-close" id="ticket-close">Close</button>
+        </div>
+    </div>
+
+    <!-- TICKET RECEIVE (civilian pay/refuse) -->
+    <div id="ticket-receive" class="overlay-panel hidden">
+        <div class="overlay-panel__box ticket-receive">
+            <div class="ticket-receive__badge">CITATION</div>
+            <h2>Traffic Citation</h2>
+            <p class="ticket-receive__officer" id="ticket-receive-officer">Issued by Officer —</p>
+            <div class="ticket-receive__amount" id="ticket-receive-amount">$250</div>
+            <p class="ticket-receive__reason" id="ticket-receive-reason">—</p>
+            <p class="ticket-receive__hint">Pay now from bank or cash. Refusing may increase wanted level.</p>
+            <div class="btn-row">
+                <button type="button" class="btn btn--primary" id="ticket-pay">PAY FINE</button>
+                <button type="button" class="btn btn--ghost" id="ticket-refuse">REFUSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SERVICE CALLS -->
+    <div id="servicecalls" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide servicecalls-panel">
+            <div class="servicecalls-header">
+                <h2>Service Calls</h2>
+                <span class="servicecalls-count" id="servicecalls-count">0 active</span>
+            </div>
+            <ul class="servicecalls-list" id="servicecalls-list"></ul>
+            <button type="button" class="panel-close" id="servicecalls-close">Close (ESC)</button>
+        </div>
+    </div>
+
+    <!-- JOBS BROWSER -->
+    <div id="jobs-browser" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide jobs-browser">
+            <div class="jobs-browser__head">
+                <div>
+                    <h2>Jobs</h2>
+                    <p class="jobs-browser__sub">Civilian careers — use <strong>/work</strong> when employed</p>
+                </div>
+                <div class="jobs-browser__current hidden" id="jobs-current">
+                    <span>Current</span>
+                    <strong id="jobs-current-label">—</strong>
+                </div>
+            </div>
+            <div class="jobs-grid" id="jobs-grid"></div>
+            <button type="button" class="panel-close" id="jobs-close">Close (ESC)</button>
+        </div>
+    </div>
+
+    <!-- SKILLS -->
+    <div id="skills" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide skills-panel">
+            <div class="skills-header">
+                <h2>Skills</h2>
+                <span class="skills-sub">Job experience &amp; progression</span>
+            </div>
+            <ul class="skills-list" id="skills-list"></ul>
+            <button type="button" class="panel-close" id="skills-close">Close (ESC)</button>
         </div>
     </div>
 
@@ -769,6 +894,7 @@
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js"></script>
     <script src="js/panels.js"></script>
+    <script src="js/overlays.js"></script>
     <script src="js/fuel_pump.js"></script>
 </body>
 </html>

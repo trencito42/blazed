@@ -183,6 +183,9 @@ window.addEventListener('message', (event) => {
         case 'mdcShow':
             if (window.Panels) Panels.showMdc(data || event.data.data);
             break;
+        case 'mdcUpdate':
+            if (window.Panels) Panels.updateMdcLookup((data || event.data.data)?.lookup);
+            break;
         case 'mdcHide':
             if (window.Panels) Panels.hideMdc();
             break;
@@ -191,6 +194,57 @@ window.addEventListener('message', (event) => {
             break;
         case 'ticketHide':
             if (window.Panels) Panels.hideTicket();
+            break;
+        case 'ticketReceiveShow':
+            if (window.Panels) Panels.showTicketReceive(data || event.data.data);
+            break;
+        case 'ticketReceiveHide':
+            if (window.Panels) Panels.hideTicketReceive();
+            break;
+        case 'serviceCallsShow':
+            if (window.Panels) Panels.showServiceCalls(data || event.data.data);
+            break;
+        case 'serviceCallsUpdate':
+            if (window.Panels) Panels.showServiceCalls(data || event.data.data);
+            break;
+        case 'serviceCallsHide':
+            if (window.Panels) Panels.hideServiceCalls();
+            break;
+        case 'jobsShow':
+            if (window.Panels) Panels.showJobsBrowser(data || event.data.data);
+            break;
+        case 'jobsHide':
+            if (window.Panels) Panels.hideJobsBrowser();
+            break;
+        case 'skillsShow':
+            if (window.Panels) Panels.showSkills(data || event.data.data);
+            break;
+        case 'skillsHide':
+            if (window.Panels) Panels.hideSkills();
+            break;
+        case 'policeOrderShow':
+            if (window.Overlays) Overlays.showPoliceOrder(data || event.data.data);
+            break;
+        case 'policeOrderHide':
+            if (window.Overlays) Overlays.hidePoliceOrder();
+            break;
+        case 'taxiMeterShow':
+            if (window.Overlays) Overlays.showTaxiMeter(data || event.data.data);
+            break;
+        case 'taxiMeterUpdate':
+            if (window.Overlays) Overlays.updateTaxiMeter(data || event.data.data);
+            break;
+        case 'taxiMeterHide':
+            if (window.Overlays) Overlays.hideTaxiMeter();
+            break;
+        case 'jobObjectiveShow':
+            if (window.Overlays) Overlays.showJobObjective(data || event.data.data);
+            break;
+        case 'jobObjectiveUpdate':
+            if (window.Overlays) Overlays.updateJobObjective(data || event.data.data);
+            break;
+        case 'jobObjectiveHide':
+            if (window.Overlays) Overlays.hideJobObjective();
             break;
         case 'garageShow':
             if (window.Panels) Panels.showGarage(data || event.data.data);

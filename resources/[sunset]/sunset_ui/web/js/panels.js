@@ -23,6 +23,17 @@ const Panels = {
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
         $('#atm-close')?.addEventListener('click', () => post('atmClose'));
         $('#mdc-close')?.addEventListener('click', () => post('mdcClose'));
+        $('#mdc-search-btn')?.addEventListener('click', () => {
+            const id = Number($('#mdc-search-id')?.value || 0);
+            if (id > 0) post('mdcSearch', { targetId: id });
+        });
+        $('#mdc-search-id')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') $('#mdc-search-btn')?.click();
+        });
+        $$('.mdc-tab').forEach((tab) => {
+            tab.addEventListener('click', () => this.setMdcTab(tab.dataset.mdcTab));
+        });
+
         $('#ticket-close')?.addEventListener('click', () => post('ticketClose'));
         $('#ticket-issue')?.addEventListener('click', () => {
             post('ticketIssue', {
@@ -30,6 +41,32 @@ const Panels = {
                 amount: Number($('#ticket-amount')?.value || 0),
                 reason: $('#ticket-reason')?.value || '',
             });
+        });
+        $('#ticket-pay')?.addEventListener('click', () => post('ticketPay', { ticketId: this._ticketId }));
+        $('#ticket-refuse')?.addEventListener('click', () => post('ticketRefuse', { ticketId: this._ticketId }));
+
+        $('#servicecalls-close')?.addEventListener('click', () => post('serviceCallsClose'));
+        $('#jobs-close')?.addEventListener('click', () => post('jobsClose'));
+        $('#skills-close')?.addEventListener('click', () => post('skillsClose'));
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const panels = ['#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills'];
+            for (const sel of panels) {
+                const el = $(sel);
+                if (el && !el.classList.contains('hidden')) {
+                    const map = {
+                        '#mdc': 'mdcClose',
+                        '#ticket': 'ticketClose',
+                        '#servicecalls': 'serviceCallsClose',
+                        '#jobs-browser': 'jobsClose',
+                        '#skills': 'skillsClose',
+                    };
+                    post(map[sel]);
+                    e.preventDefault();
+                    return;
+                }
+            }
         });
         $('#garage-close')?.addEventListener('click', () => post('garageClose'));
         $('#properties-close')?.addEventListener('click', () => post('propertiesClose'));
@@ -99,26 +136,84 @@ const Panels = {
     showAtm() { this.init(); $('#atm')?.classList.remove('hidden'); },
     hideAtm() { $('#atm')?.classList.add('hidden'); },
 
+    setMdcTab(tab) {
+        $$('.mdc-tab').forEach((el) => el.classList.toggle('is-active', el.dataset.mdcTab === tab));
+        $$('.mdc-pane').forEach((el) => el.classList.toggle('is-active', el.dataset.mdcPane === tab));
+    },
+
     showMdc(data) {
         this.init();
-        const list = $('#mdc-list');
+        this.setMdcTab('wanted');
+        const list = $('#mdc-wanted-list');
         if (!list) return;
         list.innerHTML = '';
         const rows = data?.wanted || [];
         if (rows.length === 0) {
             const li = document.createElement('li');
+            li.className = 'mdc-empty';
             li.textContent = 'No active wanted players online';
             list.appendChild(li);
         } else {
             rows.forEach((row) => {
                 const li = document.createElement('li');
                 const mins = Math.ceil((row.remainingSec || 0) / 60);
-                li.innerHTML = `<span>#${row.id} ${row.name} — ★${row.level} ${row.reason || '—'} (${mins}m left)</span>`;
+                li.innerHTML = `
+                    <div>
+                        <strong>#${row.id} ${row.name || 'Unknown'}</strong>
+                        <div class="mdc-time">${row.reason || '—'} · ${mins}m left</div>
+                    </div>
+                    <span class="mdc-stars">★${row.level || 1}</span>`;
                 list.appendChild(li);
             });
         }
+
+        if (data?.lookup) this.updateMdcLookup(data.lookup);
         $('#mdc')?.classList.remove('hidden');
     },
+
+    updateMdcLookup(data) {
+        const result = $('#mdc-result');
+        const empty = $('#mdc-lookup-empty');
+        if (!data || data.error) {
+            result?.classList.add('hidden');
+            if (empty) {
+                empty.textContent = data?.error || 'No record found.';
+                empty.classList.remove('hidden');
+            }
+            return;
+        }
+
+        empty?.classList.add('hidden');
+        result?.classList.remove('hidden');
+        $('#mdc-result-name').textContent = data.name || 'Unknown';
+        $('#mdc-result-id').textContent = `#${data.id || 0}`;
+        $('#mdc-result-wanted').textContent = data.wanted
+            ? `★${data.wantedLevel || 1} — ${data.wantedReason || 'Active'}`
+            : 'Clear';
+        $('#mdc-result-jail').textContent = data.jailed
+            ? `${data.jailMinutes || 0} min remaining`
+            : 'Not jailed';
+        $('#mdc-result-fines').textContent = data.finesOwed
+            ? formatMoney(data.finesOwed)
+            : '$0';
+
+        const charges = $('#mdc-charges-list');
+        if (!charges) return;
+        charges.innerHTML = '';
+        const rows = data.charges || [];
+        if (!rows.length) {
+            const li = document.createElement('li');
+            li.textContent = 'No charges on record';
+            charges.appendChild(li);
+        } else {
+            rows.forEach((row) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${row.reason || row.label || '—'}</span><span>${row.date || formatMoney(row.amount || 0)}</span>`;
+                charges.appendChild(li);
+            });
+        }
+    },
+
     hideMdc() { $('#mdc')?.classList.add('hidden'); },
 
     showTicket() {
@@ -129,6 +224,125 @@ const Panels = {
         $('#ticket')?.classList.remove('hidden');
     },
     hideTicket() { $('#ticket')?.classList.add('hidden'); },
+
+    showTicketReceive(data) {
+        this.init();
+        this._ticketId = data?.ticketId || data?.id;
+        $('#ticket-receive-officer').textContent = data?.officer
+            ? `Issued by ${data.officer}${data.officerId ? ` #${data.officerId}` : ''}`
+            : 'Issued by Law Enforcement';
+        $('#ticket-receive-amount').textContent = formatMoney(data?.amount || 0);
+        $('#ticket-receive-reason').textContent = data?.reason || 'Traffic violation';
+        $('#ticket-receive')?.classList.remove('hidden');
+    },
+
+    hideTicketReceive() { $('#ticket-receive')?.classList.add('hidden'); },
+
+    showServiceCalls(data) {
+        this.init();
+        const list = $('#servicecalls-list');
+        const calls = data?.calls || [];
+        $('#servicecalls-count').textContent = `${calls.length} active`;
+        list.innerHTML = '';
+
+        if (!calls.length) {
+            list.innerHTML = '<li class="servicecalls-empty">No active service calls</li>';
+        } else {
+            calls.forEach((call) => {
+                const li = document.createElement('li');
+                const statusClass = `sc-status--${call.status || 'open'}`;
+                const canAccept = call.canAccept === true && call.status === 'open';
+                li.innerHTML = `
+                    <div>
+                        <div class="sc-type">${call.typeLabel || call.type || 'CALL'}</div>
+                        <div class="sc-title">${call.title || call.message || 'Service request'}</div>
+                        <div class="sc-meta">${call.location || call.zone || ''}${call.caller ? ` · ${call.caller}` : ''}</div>
+                    </div>
+                    <span class="sc-status ${statusClass}">${call.status || 'open'}</span>
+                    ${canAccept ? `<button type="button" data-call-id="${call.id}">ACCEPT</button>` : ''}`;
+                li.querySelector('button')?.addEventListener('click', () => {
+                    post('serviceCallsAccept', { callId: call.id });
+                });
+                list.appendChild(li);
+            });
+        }
+        $('#servicecalls')?.classList.remove('hidden');
+    },
+
+    hideServiceCalls() { $('#servicecalls')?.classList.add('hidden'); },
+
+    showJobsBrowser(data) {
+        this.init();
+        const grid = $('#jobs-grid');
+        const currentWrap = $('#jobs-current');
+        const currentJob = data?.currentJob;
+
+        if (currentJob) {
+            currentWrap?.classList.remove('hidden');
+            $('#jobs-current-label').textContent = currentJob.label || currentJob.id || '—';
+        } else {
+            currentWrap?.classList.add('hidden');
+        }
+
+        grid.innerHTML = '';
+        (data?.jobs || []).forEach((job) => {
+            const isCurrent = currentJob && (currentJob.id === job.id);
+            const card = document.createElement('div');
+            card.className = `job-card${isCurrent ? ' is-current' : ''}`;
+            const xpText = job.xp !== undefined ? `Lv ${job.level || 1} · ${job.xp || 0} XP` : '';
+            card.innerHTML = `
+                <div class="job-card__top">
+                    <span class="job-card__name">${job.label || job.id}</span>
+                    <span class="job-card__pay">$${job.salary || 0}/hr</span>
+                </div>
+                <p class="job-card__desc">${job.description || 'No description'}</p>
+                ${xpText ? `<span class="job-card__xp">${xpText}</span>` : ''}
+                <button type="button" class="job-card__btn${isCurrent ? ' job-card__btn--active' : ''}" ${isCurrent ? 'disabled' : ''}>
+                    ${isCurrent ? 'CURRENT JOB' : (job.canSelect === false ? 'LOCKED' : 'SELECT')}
+                </button>`;
+            const btn = card.querySelector('button');
+            if (!isCurrent && job.canSelect !== false) {
+                btn?.addEventListener('click', () => post('jobsSelect', { jobId: job.id, jobLabel: job.label }));
+            }
+            grid.appendChild(card);
+        });
+
+        if (!(data?.jobs || []).length) {
+            grid.innerHTML = '<p class="mdc-empty">No jobs available</p>';
+        }
+        $('#jobs-browser')?.classList.remove('hidden');
+    },
+
+    hideJobsBrowser() { $('#jobs-browser')?.classList.add('hidden'); },
+
+    showSkills(data) {
+        this.init();
+        const list = $('#skills-list');
+        list.innerHTML = '';
+        const skills = data?.skills || [];
+
+        if (!skills.length) {
+            list.innerHTML = '<li class="skills-empty">No skills tracked yet. Start a job to earn XP.</li>';
+        } else {
+            skills.forEach((skill) => {
+                const li = document.createElement('li');
+                const xp = skill.xp || 0;
+                const xpNext = skill.xpNext || 100;
+                const pct = xpNext > 0 ? Math.min(100, Math.round((xp / xpNext) * 100)) : 0;
+                li.innerHTML = `
+                    <div class="skill-row__head">
+                        <span class="skill-row__name">${skill.label || skill.id}</span>
+                        <span class="skill-row__level">LEVEL ${skill.level || 1}</span>
+                    </div>
+                    <div class="skill-row__bar"><div class="skill-row__fill" style="width:${pct}%"></div></div>
+                    <div class="skill-row__xp">${xp.toLocaleString()} / ${xpNext.toLocaleString()} XP</div>`;
+                list.appendChild(li);
+            });
+        }
+        $('#skills')?.classList.remove('hidden');
+    },
+
+    hideSkills() { $('#skills')?.classList.add('hidden'); },
 
     showGarage(data) {
         this.init();

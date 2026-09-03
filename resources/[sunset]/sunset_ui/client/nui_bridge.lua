@@ -26,8 +26,16 @@ forward('shopClose')
 forward('atmAction')
 forward('atmClose')
 forward('mdcClose')
+forward('mdcSearch')
 forward('ticketClose')
 forward('ticketIssue')
+forward('ticketPay')
+forward('ticketRefuse')
+forward('serviceCallsClose')
+forward('serviceCallsAccept')
+forward('jobsClose')
+forward('jobsSelect')
+forward('skillsClose')
 forward('garageSpawn')
 forward('garageStore')
 forward('garageLocate')
@@ -77,4 +85,86 @@ end)
 RegisterNUICallback('hudEditFocus', function(data, cb)
     SetFocus(data.focus == true, data.focus == true)
     cb('ok')
+end)
+
+-- Client events for other resources to trigger UI (no server logic here)
+RegisterNetEvent('sunset:ui:policeOrder', function(data)
+    Send('policeOrderShow', data or {})
+end)
+
+RegisterNetEvent('sunset:ui:ticketReceive', function(data)
+    Send('ticketReceiveShow', data or {})
+    SetFocus(true, true)
+end)
+
+RegisterNetEvent('sunset:ui:serviceCalls', function(data)
+    Send('serviceCallsShow', data or {})
+    SetFocus(true, true)
+end)
+
+RegisterNetEvent('sunset:ui:jobs', function(data)
+    Send('jobsShow', data or {})
+    SetFocus(true, true)
+end)
+
+RegisterNetEvent('sunset:ui:skills', function(data)
+    Send('skillsShow', data or {})
+    SetFocus(true, true)
+end)
+
+RegisterNetEvent('sunset:ui:jobObjective', function(data)
+    if data and data.hide then
+        Send('jobObjectiveHide', {})
+    elseif data then
+        Send('jobObjectiveShow', data)
+    end
+end)
+
+RegisterNetEvent('sunset:ui:taxiMeter', function(data)
+    if data and data.hide then
+        Send('taxiMeterHide', {})
+    elseif data then
+        Send('taxiMeterUpdate', data)
+    end
+end)
+
+-- NUI close handlers — release focus
+local closePanels = {
+    'mdcClose', 'ticketClose', 'serviceCallsClose', 'jobsClose', 'skillsClose',
+}
+for _, name in ipairs(closePanels) do
+    AddEventHandler('sunset:nui:' .. name, function()
+        if name == 'mdcClose' then
+            Send('mdcHide', {})
+        elseif name == 'ticketClose' then
+            Send('ticketHide', {})
+        elseif name == 'serviceCallsClose' then
+            Send('serviceCallsHide', {})
+        elseif name == 'jobsClose' then
+            Send('jobsHide', {})
+        elseif name == 'skillsClose' then
+            Send('skillsHide', {})
+        end
+        SetFocus(false, false)
+    end)
+end
+
+AddEventHandler('sunset:nui:mdcSearch', function(data)
+    TriggerEvent('sunset:ui:mdcSearchRequest', data)
+end)
+
+AddEventHandler('sunset:nui:ticketPay', function(data)
+    TriggerEvent('sunset:ui:ticketPayRequest', data)
+end)
+
+AddEventHandler('sunset:nui:ticketRefuse', function(data)
+    TriggerEvent('sunset:ui:ticketRefuseRequest', data)
+end)
+
+AddEventHandler('sunset:nui:serviceCallsAccept', function(data)
+    TriggerEvent('sunset:ui:serviceCallsAcceptRequest', data)
+end)
+
+AddEventHandler('sunset:nui:jobsSelect', function(data)
+    TriggerEvent('sunset:ui:jobsSelectRequest', data)
 end)
