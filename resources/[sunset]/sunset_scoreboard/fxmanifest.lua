@@ -3,7 +3,7 @@ game 'gta5'
 lua54 'yes'
 
 name 'sunset_scoreboard'
-description 'Tab scoreboard — player list'
+description 'F10 scoreboard — player list'
 version '1.0.0'
 
 shared_scripts {

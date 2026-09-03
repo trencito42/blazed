@@ -33,16 +33,33 @@ local function spawnIncidentVehicle(inc)
     if veh == 0 then return nil end
 
     SetEntityAsMissionEntity(veh, true, true)
+    Entity(veh).state:set('sunsetProtectedVehicle', true, true)
+    local netId = NetworkGetNetworkIdFromEntity(veh)
+    if netId and netId ~= 0 then
+        SetNetworkIdCanMigrate(netId, true)
+        SetNetworkIdExistsOnAllMachines(netId, true)
+    end
     SetVehicleEngineHealth(veh, 100.0)
     SetVehicleBodyHealth(veh, 200.0)
     SetVehicleUndriveable(veh, true)
     SetVehicleDoorOpen(veh, 4, false, false)
-    StartScriptFire(c.x, c.y, c.z, 25, false)
+    local fireHandle = StartScriptFire(c.x, c.y, c.z, 25, false)
     SetModelAsNoLongerNeeded(model)
 
     inc.vehicle = veh
     inc.fireHandles = inc.fireHandles or {}
+    inc.fireHandles[#inc.fireHandles + 1] = fireHandle
     return veh
+end
+
+local function storeIncident(serverIncident)
+    local current = incidents[serverIncident.id]
+    if current then
+        serverIncident.vehicle = current.vehicle
+        serverIncident.fireHandles = current.fireHandles
+    end
+    incidents[serverIncident.id] = serverIncident
+    return serverIncident
 end
 
 local function cleanupIncident(incidentId)
@@ -64,7 +81,7 @@ local function syncIncidents(list, routeFirst)
     local active = {}
     for _, inc in ipairs(list or {}) do
         active[inc.id] = true
-        incidents[inc.id] = inc
+        inc = storeIncident(inc)
         spawnIncidentVehicle(inc)
     end
     for id in pairs(incidents) do
@@ -78,7 +95,7 @@ end
 
 RegisterNetEvent('sunset:fire:newIncident', function(inc)
     if not inc or not inc.id then return end
-    incidents[inc.id] = inc
+    inc = storeIncident(inc)
     spawnIncidentVehicle(inc)
     SetNewWaypoint(inc.coords.x, inc.coords.y)
     notify(('Vehicle fire reported — incident #%s'):format(inc.id), 'warning', 8000)
@@ -86,7 +103,7 @@ end)
 
 RegisterNetEvent('sunset:fire:incidentUpdate', function(inc)
     if not inc or not inc.id then return end
-    incidents[inc.id] = inc
+    storeIncident(inc)
 end)
 
 RegisterNetEvent('sunset:fire:incidentEnded', function(incidentId)

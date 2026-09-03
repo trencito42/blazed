@@ -19,6 +19,8 @@
 - Civilian job changes and faction changes now use separate runtime events. Taking or quitting a civilian job no longer forces faction duty off, and joining/leaving a faction no longer impersonates a civilian job change.
 - Core callback throttling always sends an explicit error response, preventing an awaiting client/NUI action from hanging when the limit is reached.
 - Dispatch persistence uses an explicit SQL `NULL` branch for unassigned calls, avoiding sparse Lua parameter arrays and oxmysql null-argument runtime errors.
+- Fire incident vehicles are protected from the traffic cleanup system and keep their local entity/fire handles across server updates; cleanup now removes both vehicle and script fire correctly.
+- TAB and the mouse wheel are restored for weapon selection. The player list is now held with F10 under a fresh key mapping, avoiding persisted TAB bindings from the old command.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 

@@ -56,6 +56,10 @@ local function isProtectedVehicle(veh)
     if veh == 0 or not DoesEntityExist(veh) then return true end
     if vehicleHasPlayerOccupant(veh) then return true end
     if vehicleWasPlayerOwned(veh) then return true end
+    local stateOk, stateProtected = pcall(function()
+        return Entity(veh).state.sunsetProtectedVehicle
+    end)
+    if stateOk and stateProtected == true then return true end
     local ok, protected = pcall(function()
         return exports.sunset_vehicles:IsProtectedVehicle(veh)
     end)

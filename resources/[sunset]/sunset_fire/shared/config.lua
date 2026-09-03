@@ -11,11 +11,13 @@ Sunset.Fire = {
     payout = 350,
     societyCut = 0.15,
     spawnPoints = {
-        vector4(215.0, -810.0, 30.7, 160.0),
-        vector4(441.0, -981.0, 30.7, 90.0),
+        -- Roadside/industrial scenes away from faction HQs and public spawn.
+        vector4(842.5, -2115.4, 29.3, 175.0),
+        vector4(-430.2, -1719.1, 19.0, 70.0),
         vector4(-1037.0, -2737.0, 20.2, 240.0),
-        vector4(1200.0, -1465.0, 34.9, 0.0),
-        vector4(725.0, 120.0, 80.8, 180.0),
+        vector4(1703.7, 3755.2, 34.1, 35.0),
+        vector4(-304.5, 6228.4, 31.5, 135.0),
+        vector4(2560.1, 2607.4, 38.1, 110.0),
     },
     vehicleModels = { 'sultan', 'futo', 'blista', 'asea', 'primo' },
 }

@@ -14,23 +14,21 @@ local function toggleScoreboard(show)
     end
 end
 
-RegisterCommand('+sunset_scoreboard', function()
+RegisterCommand('+sunset_playerlist', function()
     toggleScoreboard(true)
 end, false)
 
-RegisterCommand('-sunset_scoreboard', function()
+RegisterCommand('-sunset_playerlist', function()
     toggleScoreboard(false)
 end, false)
 
-RegisterKeyMapping('+sunset_scoreboard', 'Scoreboard (player list)', 'keyboard', 'TAB')
+RegisterKeyMapping('+sunset_playerlist', 'Player list', 'keyboard', 'F10')
 
 CreateThread(function()
     while true do
         Wait(0)
-        -- Blochează weapon wheel / player list GTA fără overlay negru
-        DisableControlAction(0, 37, true)
-        DisableControlAction(0, 199, true) -- pause menu
         if open then
+            DisableControlAction(0, 199, true) -- pause menu
             DisableControlAction(0, 1, true)
             DisableControlAction(0, 2, true)
         end
