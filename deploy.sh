@@ -31,4 +31,9 @@ docker compose build fivem
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem
 
+# Run SQL migrations (idempotent where possible)
+if [ -f sql/03-foundation.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/03-foundation.sql 2>/dev/null || true
+fi
+
 echo "Done. Connect: F8 -> connect $(curl -s ifconfig.me 2>/dev/null || echo YOUR_IP):30120"

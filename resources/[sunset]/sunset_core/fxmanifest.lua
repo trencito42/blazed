@@ -10,6 +10,8 @@ version '1.0.0'
 shared_scripts {
     'shared/config.lua',
     'shared/utils.lua',
+    'shared/items.lua',
+    'shared/password.lua',
 }
 
 server_scripts {
@@ -34,4 +36,10 @@ server_exports {
     'GetPlayer',
     'GetCharacter',
     'RegisterCallback',
+    'SaveCharacter',
+    'AddMoney',
+    'RemoveMoney',
+    'GetMoney',
+    'SetJob',
+    'GetSpawnPosition',
 }

@@ -58,13 +58,13 @@ local function buildMenuData()
         cash = char.cash,
         bank = char.bank,
         premium = 0,
-        job = job and job.label or 'Șomer',
+        job = job and job.label or 'Unemployed',
         faction = 'Civilian',
         health = math.max(0, math.min(100, health)),
         armor = math.max(0, math.min(100, GetPedArmour(ped))),
-        hunger = 100,
-        thirst = 100,
-        stamina = stamina,
+        hunger = char.hunger or 100,
+        thirst = char.thirst or 100,
+        stamina = math.max(0, math.min(100, 100 - (char.stress or 0))),
         fuel = fuel,
         playtime = formatPlaytime(playtimeMin),
         lastLogin = formatLastLogin(char.last_played),
@@ -94,7 +94,7 @@ end
 RegisterCommand('sunset_menu', function()
     toggleMenu(not menuOpen)
 end, false)
-RegisterKeyMapping('sunset_menu', 'Meniu jucător', 'keyboard', 'M')
+RegisterKeyMapping('sunset_menu', 'Player menu', 'keyboard', 'M')
 
 AddEventHandler('sunset:nui:menuClose', function()
     toggleMenu(false)
@@ -102,15 +102,17 @@ end)
 
 AddEventHandler('sunset:nui:menuAction', function(data)
     local labels = {
-        inventory = 'Inventar',
-        animations = 'Animații',
-        phone = 'Telefon',
-        documents = 'Documente',
-        licenses = 'Licențe',
-        statistics = 'Statistici',
+        inventory = 'Inventory',
+        animations = 'Animations',
+        phone = 'Phone',
+        documents = 'Documents',
+        licenses = 'Licenses',
+        statistics = 'Statistics',
     }
-    local label = labels[data and data.action] or 'Secțiune'
-    exports.sunset_ui:Notify(label .. ' — în curând', 'info')
+    local label = labels[data and data.action] or 'Section'
+    if data and data.action == 'inventory' then return end
+    if data and data.action == 'animations' then return end
+    exports.sunset_ui:Notify(label .. ' — coming soon', 'info')
 end)
 
 CreateThread(function()

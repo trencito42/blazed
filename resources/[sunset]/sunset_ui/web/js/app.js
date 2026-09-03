@@ -89,6 +89,10 @@ window.addEventListener('message', (event) => {
             showApp(true);
             showHud(false);
             App.data = data || {};
+            if (screen === 'auth' && window.Panels) {
+                Panels.showAuth();
+                return;
+            }
             showScreen(screen);
             if (screen === 'characters' && window.Characters) {
                 Characters.init(data);
@@ -150,6 +154,56 @@ window.addEventListener('message', (event) => {
             if (window.Menu) Menu.hide();
             break;
 
+        case 'inventoryShow':
+            if (window.Panels) Panels.showInventory(data || event.data.data);
+            break;
+        case 'inventoryUpdate':
+            if (window.Panels) Panels.showInventory(data || event.data.data);
+            break;
+        case 'inventoryHide':
+            if (window.Panels) Panels.hideInventory();
+            break;
+        case 'shopShow':
+            if (window.Panels) Panels.showShop(data || event.data.data);
+            break;
+        case 'shopHide':
+            if (window.Panels) Panels.hideShop();
+            break;
+        case 'atmShow':
+            if (window.Panels) Panels.showAtm();
+            break;
+        case 'atmHide':
+            if (window.Panels) Panels.hideAtm();
+            break;
+        case 'garageShow':
+            if (window.Panels) Panels.showGarage(data || event.data.data);
+            break;
+        case 'garageHide':
+            if (window.Panels) Panels.hideGarage();
+            break;
+        case 'propertiesShow':
+            if (window.Panels) Panels.showProperties(data || event.data.data);
+            break;
+        case 'propertiesHide':
+            if (window.Panels) Panels.hideProperties();
+            break;
+        case 'emotesShow':
+            if (window.Panels) Panels.showEmotes();
+            break;
+        case 'emotesHide':
+            if (window.Panels) Panels.hideEmotes();
+            break;
+        case 'clothingShow':
+            if (window.Panels) Panels.showClothing(data || event.data.data);
+            break;
+        case 'clothingHide':
+            if (window.Panels) Panels.hideClothing();
+            break;
+
+        case 'authHide':
+            if (window.Panels) Panels.hideAuth();
+            break;
+
         case 'hudEditToggle':
             if (window.HudEditor) HudEditor.toggle();
             break;
@@ -170,10 +224,10 @@ const LoadingScreen = {
         const fill = $('#loading-fill');
         const text = $('#loading-text');
         const steps = data?.steps || [
-            { progress: 30, text: 'Se conectează la server...' },
-            { progress: 60, text: 'Se încarcă personajul...' },
-            { progress: 90, text: 'Pregătim lumea...' },
-            { progress: 100, text: 'Gata!' },
+            { progress: 30, text: 'Connecting to server...' },
+            { progress: 60, text: 'Loading character...' },
+            { progress: 90, text: 'Preparing world...' },
+            { progress: 100, text: 'Ready!' },
         ];
 
         let i = 0;

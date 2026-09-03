@@ -1,0 +1,102 @@
+/* Overlay panels — inventory, shop, auth, etc. */
+.overlay-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    font-family: 'Inter', sans-serif;
+}
+.overlay-panel.hidden { display: none; }
+
+.overlay-panel__box {
+    width: min(520px, 92vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: rgba(18, 18, 20, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 24px;
+    color: #f2f2f2;
+}
+
+.overlay-panel__box--wide { width: min(720px, 94vw); }
+
+.overlay-panel h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    color: #ff8c00;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.overlay-panel .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.overlay-panel .field span { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+.overlay-panel input {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 14px;
+}
+.overlay-panel .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.overlay-panel .btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: default;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+}
+.overlay-panel .btn--primary { background: #ff8c00; color: #111; }
+.overlay-panel .btn--ghost { background: rgba(255,255,255,0.08); color: #fff; }
+
+.panel-list { list-style: none; padding: 0; margin: 0; }
+.panel-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 13px;
+}
+.panel-list button {
+    background: rgba(255,140,0,0.15);
+    border: 1px solid rgba(255,140,0,0.35);
+    color: #ff8c00;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: default;
+}
+.panel-close {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,255,255,0.06);
+    border: none;
+    color: rgba(255,255,255,0.6);
+    border-radius: 4px;
+    cursor: default;
+}
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.auth-tab {
+    flex: 1;
+    padding: 8px;
+    background: rgba(255,255,255,0.05);
+    border: none;
+    color: rgba(255,255,255,0.5);
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    cursor: default;
+}
+.auth-tab.is-active { background: rgba(255,140,0,0.2); color: #ff8c00; }
+.auth-form.hidden { display: none; }

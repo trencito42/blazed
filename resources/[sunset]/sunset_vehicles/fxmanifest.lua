@@ -3,14 +3,24 @@ game 'gta5'
 lua54 'yes'
 
 name 'sunset_vehicles'
-description 'Vehicle systems — lock, seatbelt, fuel, headlights'
+description 'Vehicle systems — lock, seatbelt, fuel, garage'
 version '1.0.0'
+
+shared_scripts {
+    '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/items.lua',
+}
 
 client_scripts {
     'client/main.lua',
 }
 
-dependencies { 'sunset_ui' }
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server/main.lua',
+}
+
+dependencies { 'sunset_ui', 'sunset_core' }
 
 exports {
     'GetVehicleState',

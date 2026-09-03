@@ -1,46 +1,61 @@
 # ═══════════════════════════════════════════════════════════════
-#  SUNSETMP — FiveM RPG (production / Docker)
+#  SUNSETMP — FiveM RPG
 # ═══════════════════════════════════════════════════════════════
 
 endpoint_add_tcp "0.0.0.0:30120"
 endpoint_add_udp "0.0.0.0:30120"
 
-sv_hostname "SunsetMP | RPG Roleplay"
+sv_hostname "SunsetMP | RPG"
 sets sv_projectName "SunsetMP"
-sets sv_projectDesc "Un univers RPG unic — trăiește povestea ta la apus."
-sets tags "roleplay, rpg, romanian, sunsetmp"
-sets locale "ro-RO"
+sets sv_projectDesc "Sunset RPG — build your story."
+sets tags "rpg, sunsetmp, english"
+sets locale "en-US"
 
 sv_maxclients 48
 sv_enforceGameBuild 3095
 
-# Obligatoriu pentru conectare jucători
 set onesync on
 set onesync_population false
 
-# Setat la runtime din env (docker/entrypoint.sh)
 sv_licenseKey "__LICENSE_KEY__"
 set mysql_connection_string "__MYSQL_CONNECTION_STRING__"
 
-# ═══ RESURSE SYSTEM (GTA default — necesare pentru connect) ═══
+# ═══ SYSTEM ═══
 ensure mapmanager
 ensure sessionmanager
 ensure hardcap
 
-# ═══ RESURSE SUNSET ═══
+# ═══ VOICE (optional — run scripts/install-deps.sh) ═══
+# ensure pma-voice
 
+# ═══ OX (optional — run scripts/install-deps.sh) ═══
+# ensure ox_lib
+# ensure ox_target
+# ensure ox_inventory
+
+# ═══ SUNSET CORE ═══
 ensure sunset_loadscreen
 ensure oxmysql
 ensure sunset_core
 ensure sunset_ui
+ensure sunset_auth
 ensure sunset_characters
 ensure sunset_spawn
+ensure sunset_player
+ensure sunset_inventory
+ensure sunset_economy
+ensure sunset_needs
+ensure sunset_death
 ensure sunset_vehicles
+ensure sunset_properties
+ensure sunset_emotes
+ensure sunset_clothing
 ensure sunset_hud
 ensure sunset_admin
 ensure sunset_scoreboard
 ensure sunset_chat
 ensure sunset_menu
+ensure sunset_help
 
 add_ace group.admin command allow
 add_ace group.admin command.quit deny

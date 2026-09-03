@@ -18,7 +18,7 @@ end
 
 local function getJobLabel(jobName)
     local job = Sunset.Jobs[jobName]
-    return job and job.label or 'Șomer'
+    return job and job.label or 'Unemployed'
 end
 
 local function getGameTime()
@@ -86,7 +86,9 @@ end
 local function activateHud(character)
     char = character
     hudActive = true
-    if paydayTimer <= 0 then paydayTimer = 42 * 60 + 18 end
+    pcall(function()
+        paydayTimer = exports.sunset_economy:GetPaydaySeconds() or Sunset.Config.PaydayInterval
+    end)
     nui('showHud', {
         playerId = GetPlayerServerId(PlayerId()),
         layout = getHudLayout(),
@@ -135,15 +137,6 @@ exports('GetPaydaySeconds', GetPaydaySeconds)
 
 CreateThread(function()
     while true do
-        if hudActive and paydayTimer > 0 then
-            paydayTimer = paydayTimer - 1
-        end
-        Wait(1000)
-    end
-end)
-
-CreateThread(function()
-    while true do
         if hudActive then
             local veh = nil
             pcall(function() veh = exports.sunset_vehicles:GetVehicleState() end)
@@ -181,10 +174,20 @@ RegisterCommand('hudedit', function()
     exports.sunset_ui:Send('hudEditToggle', {})
 end, false)
 
+RegisterNetEvent('sunset:client:paydayTimer', function(seconds)
+    paydayTimer = seconds
+end)
+
+RegisterNetEvent('sunset:client:updateCharacter', function(updated)
+    if char and updated then
+        for k, v in pairs(updated) do char[k] = v end
+    end
+end)
+
 AddEventHandler('sunset:nui:hudEditSave', function(data)
     if type(data) ~= 'table' then return end
     SetResourceKvp('sunset_hud_layout', json.encode(data))
-    exports.sunset_ui:Notify('Poziție HUD salvată', 'success')
+    exports.sunset_ui:Notify('HUD layout saved', 'success')
 end)
 
 AddEventHandler('sunset:nui:hudEditClose', function()

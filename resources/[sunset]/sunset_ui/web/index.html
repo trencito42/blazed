@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/hud.css">
     <link rel="stylesheet" href="css/scoreboard.css">
     <link rel="stylesheet" href="css/chat.css">
-    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/panels.css">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -26,37 +26,37 @@
                 <img class="panel-logo" src="assets/logo.png" alt="SunsetMP">
                 <p class="panel-user" id="player-name"></p>
                 <div class="slots" id="characters-list"></div>
-                <button class="btn" id="btn-create-char">+ Personaj nou</button>
+                <button class="btn" id="btn-create-char">+ New Character</button>
             </div>
         </section>
         <section id="screen-create" class="screen hidden">
             <div class="panel panel--center">
-                <button class="link-back" id="btn-back-select">← Înapoi</button>
-                <h2 class="panel-title">Personaj nou</h2>
+                <button class="link-back" id="btn-back-select">← Back</button>
+                <h2 class="panel-title">New Character</h2>
                 <form id="create-form" class="form">
                     <div class="row">
-                        <label class="field"><span>Prenume</span><input type="text" id="firstname" maxlength="32" required></label>
-                        <label class="field"><span>Nume</span><input type="text" id="lastname" maxlength="32" required></label>
+                        <label class="field"><span>First Name</span><input type="text" id="firstname" maxlength="32" required></label>
+                        <label class="field"><span>Last Name</span><input type="text" id="lastname" maxlength="32" required></label>
                     </div>
                     <div class="row">
-                        <label class="field"><span>Data nașterii</span><input type="date" id="dateofbirth" required></label>
-                        <label class="field"><span>Naționalitate</span><select id="nationality"></select></label>
+                        <label class="field"><span>Date of Birth</span><input type="date" id="dateofbirth" required></label>
+                        <label class="field"><span>Nationality</span><select id="nationality"></select></label>
                     </div>
                     <div class="field">
-                        <span>Gen</span>
+                        <span>Gender</span>
                         <div class="toggle" id="gender-picker">
-                            <button type="button" class="toggle__btn active" data-gender="0">Bărbat</button>
-                            <button type="button" class="toggle__btn" data-gender="1">Femeie</button>
+                            <button type="button" class="toggle__btn active" data-gender="0">Male</button>
+                            <button type="button" class="toggle__btn" data-gender="1">Female</button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn--primary">Confirmă</button>
+                    <button type="submit" class="btn btn--primary">Confirm</button>
                 </form>
             </div>
         </section>
         <section id="screen-loading" class="screen screen--loading hidden">
             <img class="panel-logo panel-logo--sm" src="assets/logo.png" alt="">
             <div class="loading-bar"><div class="loading-bar__fill" id="loading-fill"></div></div>
-            <p class="loading-text" id="loading-text">Se încarcă...</p>
+            <p class="loading-text" id="loading-text">Loading...</p>
         </section>
     </div>
 
@@ -224,7 +224,7 @@
     <div id="chat" class="chat">
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-wrap hidden" id="chat-input-wrap">
-            <input type="text" class="chat-input" id="chat-input" placeholder="Scrie un mesaj... (/comandă pentru comenzi)" maxlength="256">
+            <input type="text" class="chat-input" id="chat-input" placeholder="Type a message... (/help for commands)" maxlength="256">
         </div>
     </div>
 
@@ -347,6 +347,98 @@
         </div>
     </div>
 
+    <!-- AUTH -->
+    <div id="auth" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2>SunsetMP — Login</h2>
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">LOGIN</button>
+                <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">REGISTER</button>
+            </div>
+            <div id="auth-form-login" class="auth-form">
+                <label class="field"><span>Username</span><input type="text" id="auth-login-user" maxlength="20" autocomplete="username"></label>
+                <label class="field"><span>Password</span><input type="password" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
+                <div class="btn-row"><button type="button" class="btn btn--primary" id="auth-login-btn">LOGIN</button></div>
+            </div>
+            <div id="auth-form-register" class="auth-form hidden">
+                <label class="field"><span>Username</span><input type="text" id="auth-reg-user" maxlength="20"></label>
+                <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64"></label>
+                <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64"></label>
+                <div class="btn-row"><button type="button" class="btn btn--primary" id="auth-register-btn">CREATE ACCOUNT</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div id="inventory" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide">
+            <h2>Inventory <span id="inventory-weight" style="float:right;font-size:12px;color:#aaa"></span></h2>
+            <ul class="panel-list" id="inventory-list"></ul>
+            <button type="button" class="panel-close" id="inventory-close">Close (I)</button>
+        </div>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shop" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2 id="shop-title">Shop</h2>
+            <ul class="panel-list" id="shop-list"></ul>
+            <button type="button" class="panel-close" id="shop-close">Close</button>
+        </div>
+    </div>
+
+    <!-- ATM -->
+    <div id="atm" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2>ATM</h2>
+            <label class="field"><span>Amount</span><input type="number" id="atm-amount" min="1" value="100"></label>
+            <div class="btn-row">
+                <button type="button" class="btn btn--primary" id="atm-deposit">DEPOSIT</button>
+                <button type="button" class="btn btn--ghost" id="atm-withdraw">WITHDRAW</button>
+            </div>
+            <button type="button" class="panel-close" id="atm-close">Close</button>
+        </div>
+    </div>
+
+    <!-- GARAGE -->
+    <div id="garage" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide">
+            <h2>Garage</h2>
+            <ul class="panel-list" id="garage-list"></ul>
+            <button type="button" class="panel-close" id="garage-close">Close</button>
+        </div>
+    </div>
+
+    <!-- PROPERTIES -->
+    <div id="properties" class="overlay-panel hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide">
+            <h2>Properties</h2>
+            <ul class="panel-list" id="properties-list"></ul>
+            <button type="button" class="panel-close" id="properties-close">Close</button>
+        </div>
+    </div>
+
+    <!-- EMOTES -->
+    <div id="emotes" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2>Emotes</h2>
+            <ul class="panel-list" id="emotes-list"></ul>
+            <button type="button" class="panel-close" id="emotes-close">Close</button>
+        </div>
+    </div>
+
+    <!-- CLOTHING -->
+    <div id="clothing" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2 id="clothing-title">Clothing</h2>
+            <p style="color:#aaa;font-size:13px">Use arrow keys in-game to preview. Basic shop — $50 per change.</p>
+            <div class="btn-row">
+                <button type="button" class="btn btn--primary" id="clothing-next" onclick="post('clothingApply',{type:'clothing',component:11,drawable:Math.floor(Math.random()*20)})">RANDOM OUTFIT</button>
+            </div>
+            <button type="button" class="panel-close" id="clothing-close">Close</button>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
     <script src="js/characters.js"></script>
     <script src="js/hud.js"></script>
@@ -354,5 +446,6 @@
     <script src="js/scoreboard.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/menu.js"></script>
+    <script src="js/panels.js"></script>
 </body>
 </html>

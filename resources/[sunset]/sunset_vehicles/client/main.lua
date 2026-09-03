@@ -29,7 +29,7 @@ end
 
 local function driverOnly()
     if isPassenger() then
-        notify('Doar șoferul poate face asta', 'error')
+        notify('Only the driver can do that', 'error')
         return false
     end
     return true
@@ -51,11 +51,11 @@ RegisterCommand('sunset_lock', function()
         local coords = GetEntityCoords(ped)
         veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71)
     end
-    if veh == 0 then return notify('Nicio mașină în apropiere', 'error') end
+    if veh == 0 then return notify('No vehicle nearby', 'error') end
 
     locked = not locked
     SetVehicleDoorsLocked(veh, locked and 2 or 1)
-    notify(locked and 'Încuiat' or 'Descuiat', locked and 'success' or 'info')
+    notify(locked and 'Locked' or 'Unlocked', locked and 'success' or 'info')
 end, false)
 RegisterKeyMapping('sunset_lock', 'Încuie mașina', 'keyboard', 'N')
 
@@ -63,9 +63,9 @@ RegisterKeyMapping('sunset_lock', 'Încuie mașina', 'keyboard', 'N')
 RegisterCommand('sunset_seatbelt', function()
     if not isDriver() then return end
     seatbelt = not seatbelt
-    notify(seatbelt and 'Centură ON' or 'Centură OFF', seatbelt and 'success' or 'warning')
+    notify(seatbelt and 'Seatbelt ON' or 'Seatbelt OFF', seatbelt and 'success' or 'warning')
 end, false)
-RegisterKeyMapping('sunset_seatbelt', 'Centură', 'keyboard', 'K')
+RegisterKeyMapping('sunset_seatbelt', 'Seatbelt', 'keyboard', 'K')
 
 -- ═══ ENGINE (2) ═══
 RegisterCommand('sunset_engine', function()
@@ -167,4 +167,76 @@ function GetVehicleState()
         engineOn = GetIsVehicleEngineRunning(veh),
     }
 end
+RegisterNetEvent('sunset:client:notify', function(msg, typ)
+    exports.sunset_ui:Notify(msg, typ or 'info')
+end)
+
 exports('GetVehicleState', GetVehicleState)
+
+-- ═══ OWNED VEHICLES / GARAGE ═══
+
+RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawn)
+    local model = joaat(vehData.model)
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(10) end
+
+    local vehicle = CreateVehicle(model, spawn.x, spawn.y, spawn.z, spawn.w, true, false)
+    SetVehicleNumberPlateText(vehicle, vehData.plate)
+    SetEntityAsMissionEntity(vehicle, true, true)
+    SetVehicleFuelLevel(vehicle, vehData.fuel or 100.0)
+    SetVehicleEngineHealth(vehicle, vehData.engine or 1000.0)
+    SetVehicleBodyHealth(vehicle, vehData.body or 1000.0)
+    TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
+    SetModelAsNoLongerNeeded(model)
+    notify('Vehicle spawned: ' .. vehData.plate, 'success')
+end)
+
+RegisterNetEvent('sunset:client:garageMenu', function(vehicles)
+    exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+    exports.sunset_ui:SetFocus(true, true)
+end)
+
+AddEventHandler('sunset:nui:garageSpawn', function(data)
+    Sunset.AwaitCallback('sunset:spawnVehicle', data.vehicleId)
+    exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:Send('garageHide', {})
+end)
+
+AddEventHandler('sunset:nui:garageClose', function()
+    exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:Send('garageHide', {})
+end)
+
+RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
+    local veh = getVeh()
+    if veh == 0 or not isDriver() then return notify('You must be driving your vehicle', 'error') end
+    local plate = GetVehicleNumberPlateText(veh):gsub('%s+', '')
+    local props = { model = GetEntityModel(veh) }
+    TriggerServerEvent('sunset:server:vehicleStored', plate, props, fuel, GetVehicleEngineHealth(veh), GetVehicleBodyHealth(veh), garageId)
+    DeleteVehicle(veh)
+    notify('Vehicle stored', 'success')
+end)
+
+CreateThread(function()
+    while true do
+        local ped = PlayerPedId()
+        local coords = GetEntityCoords(ped)
+        for id, garage in pairs(Sunset.Garages) do
+            if #(coords - garage.store) < 3.0 then
+                BeginTextCommandDisplayHelp('STRING')
+                AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ to store vehicle | /garage to open garage')
+                EndTextCommandDisplayHelp(0, false, true, -1)
+                if IsControlJustReleased(0, 38) and getVeh() ~= 0 then
+                    TriggerServerEvent('sunset:server:vehicleStored', GetVehicleNumberPlateText(getVeh()):gsub('%s+', ''), {}, fuel, GetVehicleEngineHealth(getVeh()), GetVehicleBodyHealth(getVeh()), id)
+                    DeleteVehicle(getVeh())
+                    notify('Vehicle stored', 'success')
+                end
+                Wait(0)
+                goto continue
+            end
+        end
+        Wait(500)
+        ::continue::
+    end
+end)
+

@@ -1,6 +1,3 @@
--- NUI callbacks must live in sunset_ui (ui_page owner).
--- Forward to sunset_characters via local events.
-
 local function forward(name)
     RegisterNUICallback(name, function(data, cb)
         TriggerEvent('sunset:nui:' .. name, data)
@@ -17,6 +14,21 @@ forward('chatSend')
 forward('chatClose')
 forward('menuClose')
 forward('menuAction')
+forward('authLogin')
+forward('authRegister')
+forward('inventoryClose')
+forward('inventoryUse')
+forward('shopBuy')
+forward('shopClose')
+forward('atmAction')
+forward('atmClose')
+forward('garageSpawn')
+forward('garageClose')
+forward('propertiesClose')
+forward('emotePlay')
+forward('emotesClose')
+forward('clothingApply')
+forward('clothingClose')
 
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)

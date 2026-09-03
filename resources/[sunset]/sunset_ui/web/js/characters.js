@@ -8,7 +8,7 @@ const Characters = {
 
     init(data) {
         this.list = data.characters || [];
-        $('#player-name').textContent = data.playerName || 'Jucător';
+        $('#player-name').textContent = data.playerName || 'Player';
 
         const container = $('#characters-list');
         container.innerHTML = '';
@@ -20,7 +20,7 @@ const Characters = {
         if (this.list.length < (data.maxSlots || 3)) {
             const empty = document.createElement('div');
             empty.className = 'slot slot--empty';
-            empty.textContent = '+ Slot liber';
+            empty.textContent = '+ Empty Slot';
             empty.addEventListener('click', () => this.openCreate());
             container.appendChild(empty);
         }
@@ -37,7 +37,7 @@ const Characters = {
             : '—';
 
         el.innerHTML = `
-            <button class="slot__delete" title="Șterge">✕</button>
+            <button class="slot__delete" title="Delete">✕</button>
             <div class="slot__name">${char.firstname} ${char.lastname}</div>
             <div class="slot__meta">$${char.cash} · ${lastPlayed}</div>
         `;
@@ -106,7 +106,7 @@ const Characters = {
         };
 
         if (!data.firstname || !data.lastname || !data.dateofbirth) {
-            notify('Completează toate câmpurile', 'error');
+            notify('Please fill in all fields', 'error');
             return;
         }
 

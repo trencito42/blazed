@@ -17,7 +17,7 @@ end
 RegisterCommand('sunset_chat', function()
     openChat()
 end, false)
-RegisterKeyMapping('sunset_chat', 'Deschide chat', 'keyboard', 'T')
+RegisterKeyMapping('sunset_chat', 'Open chat', 'keyboard', 'T')
 
 AddEventHandler('sunset:nui:chatSend', function(data)
     closeChat()
@@ -44,7 +44,7 @@ AddEventHandler('sunset:client:playerSpawned', function()
     exports.sunset_ui:Send('chatMessage', {
         id = 0,
         name = 'SERVER',
-        message = 'Bine ai venit pe SunsetMP! T = chat, /comandă pentru comenzi.',
+        message = 'Welcome to SunsetMP! T = chat, /help for commands.',
         time = '',
     })
 end)

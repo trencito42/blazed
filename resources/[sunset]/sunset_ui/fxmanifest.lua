@@ -17,6 +17,7 @@ files {
     'web/css/scoreboard.css',
     'web/css/chat.css',
     'web/css/menu.css',
+    'web/css/panels.css',
     'web/js/*.js',
     'web/assets/**/*',
 }
