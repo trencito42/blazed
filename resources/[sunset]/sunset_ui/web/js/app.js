@@ -222,6 +222,12 @@ window.addEventListener('message', (event) => {
         case 'skillsHide':
             if (window.Panels) Panels.hideSkills();
             break;
+        case 'helpShow':
+            if (window.Panels) Panels.showHelp(data || event.data.data);
+            break;
+        case 'helpHide':
+            if (window.Panels) Panels.hideHelp();
+            break;
         case 'policeOrderShow':
             if (window.Overlays) Overlays.showPoliceOrder(data || event.data.data);
             break;

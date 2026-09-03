@@ -1,42 +1,31 @@
-local HelpLines = {
-    '=== SunsetMP Help ===',
-    '/help — Show this list',
-    'M — Player menu | I — Inventory | P — Phone | TAB — Scoreboard',
-    '=== JOBS vs FACTIONS (SAMP-style) ===',
-    'JOB (civilian) — Job Center: Trucker, Fisherman, Unemployed',
-    'FACTION — Join at HQ on map: LSPD, EMS, Taxi, Mechanic, Fire, Gangs',
-    'You can have a JOB and a FACTION at the same time.',
-    'Example: Job = Trucker, Faction = LSPD',
-    '=== Payday & XP ===',
-    'Payday every hour at :00 server time — paid to BANK',
-    'Faction salary: must be ON DUTY (/duty at HQ)',
-    'Civilian job salary: paid even off duty',
-    'XP: earned while playing (+50 each payday, +2/min active)',
-    'Level up at 5000 XP per level (shown in M menu)',
-    '=== Factions ===',
-    '[E] at HQ — join faction | again — /duty toggle',
-    '/faction — rank, salary, your commands',
-    '/leavefaction — leave faction (job stays)',
-    '/f [msg] — Faction chat',
-    'LSPD: /pd — full police help | /pdgarage — patrol car',
-    'Gas stations — drive in, [E] refuel',
-    '/v — personal vehicles garage',
-    'E — interact everywhere (shops, ATM, HQ, crafting)',
-}
-
-local function showHelp()
-    for _, line in ipairs(HelpLines) do
-        exports.sunset_ui:Send('chatMessage', {
-            id = 0,
-            name = 'HELP',
-            message = line,
-            time = '',
-        })
+local function registerSuggestions(categories)
+    for _, cat in ipairs(categories or {}) do
+        for _, entry in ipairs(cat.entries or {}) do
+            local cmd = entry.cmd and entry.cmd:match('^(/[%w_]+)')
+            if cmd then
+                TriggerEvent('chat:addSuggestion', cmd, entry.desc or '')
+            end
+        end
     end
 end
 
+local function openHelp(data)
+    TriggerEvent('sunset:ui:help', data)
+    registerSuggestions(data.categories)
+end
+
 RegisterCommand('help', function()
-    showHelp()
+    local data, err = Sunset.AwaitCallback('sunset:getHelp')
+    if not data then
+        exports.sunset_ui:Notify(err or 'Could not load help', 'error')
+        return
+    end
+    openHelp(data)
 end, false)
 
-TriggerEvent('chat:addSuggestion', '/help', 'Show available commands')
+TriggerEvent('chat:addSuggestion', '/help', 'Open your personalized command guide')
+
+AddEventHandler('sunset:nui:helpClose', function()
+    exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:Send('helpHide', {})
+end)

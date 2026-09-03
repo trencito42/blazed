@@ -36,6 +36,7 @@ forward('serviceCallsAccept')
 forward('jobsClose')
 forward('jobsSelect')
 forward('skillsClose')
+forward('helpClose')
 forward('garageSpawn')
 forward('garageStore')
 forward('garageLocate')
@@ -115,6 +116,11 @@ RegisterNetEvent('sunset:ui:skills', function(data)
     SetFocus(true, true)
 end)
 
+RegisterNetEvent('sunset:ui:help', function(data)
+    Send('helpShow', data or {})
+    SetFocus(true, true)
+end)
+
 RegisterNetEvent('sunset:ui:jobObjective', function(data)
     if data and data.hide then
         Send('jobObjectiveHide', {})
@@ -133,7 +139,7 @@ end)
 
 -- NUI close handlers — release focus
 local closePanels = {
-    'mdcClose', 'ticketClose', 'serviceCallsClose', 'jobsClose', 'skillsClose',
+    'mdcClose', 'ticketClose', 'serviceCallsClose', 'jobsClose', 'skillsClose', 'helpClose',
 }
 for _, name in ipairs(closePanels) do
     AddEventHandler('sunset:nui:' .. name, function()
@@ -147,6 +153,8 @@ for _, name in ipairs(closePanels) do
             Send('jobsHide', {})
         elseif name == 'skillsClose' then
             Send('skillsHide', {})
+        elseif name == 'helpClose' then
+            Send('helpHide', {})
         end
         SetFocus(false, false)
     end)

@@ -48,10 +48,11 @@ const Panels = {
         $('#servicecalls-close')?.addEventListener('click', () => post('serviceCallsClose'));
         $('#jobs-close')?.addEventListener('click', () => post('jobsClose'));
         $('#skills-close')?.addEventListener('click', () => post('skillsClose'));
+        $('#help-close')?.addEventListener('click', () => post('helpClose'));
 
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            const panels = ['#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills'];
+            const panels = ['#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills', '#help'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -61,6 +62,7 @@ const Panels = {
                         '#servicecalls': 'serviceCallsClose',
                         '#jobs-browser': 'jobsClose',
                         '#skills': 'skillsClose',
+                        '#help': 'helpClose',
                     };
                     post(map[sel]);
                     e.preventDefault();
@@ -343,6 +345,50 @@ const Panels = {
     },
 
     hideSkills() { $('#skills')?.classList.add('hidden'); },
+
+    showHelp(data) {
+        this.init();
+        const body = $('#help-body');
+        const sub = $('#help-sub');
+        if (!body) return;
+
+        const categories = data?.categories || [];
+        if (sub) {
+            const bits = [];
+            if (data?.onDuty) bits.push('On duty');
+            if (data?.adminLevel && data.adminLevel > 0) bits.push('Admin L' + data.adminLevel);
+            sub.textContent = bits.length ? bits.join(' · ') : 'Available for you right now';
+        }
+
+        body.innerHTML = '';
+        if (!categories.length) {
+            body.innerHTML = '<p class="help-empty">No commands available.</p>';
+        } else {
+            categories.forEach((cat) => {
+                const section = document.createElement('section');
+                section.className = 'help-section';
+                section.innerHTML = `<h3 class="help-section__title">${cat.title || 'Commands'}</h3>`;
+                const list = document.createElement('ul');
+                list.className = 'help-list';
+                (cat.entries || []).forEach((row) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="help-cmd">${row.cmd || '—'}</span><span class="help-desc">${row.desc || ''}</span>`;
+                    list.appendChild(li);
+                });
+                if (!(cat.entries || []).length) {
+                    const li = document.createElement('li');
+                    li.className = 'help-empty';
+                    li.textContent = 'No commands in this category';
+                    list.appendChild(li);
+                }
+                section.appendChild(list);
+                body.appendChild(section);
+            });
+        }
+        $('#help')?.classList.remove('hidden');
+    },
+
+    hideHelp() { $('#help')?.classList.add('hidden'); },
 
     showGarage(data) {
         this.init();

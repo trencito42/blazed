@@ -27,8 +27,7 @@ end
 
 local function resolvePlayer(source, idArg)
     if not idArg or idArg == '' then
-        if source == 0 then return nil end
-        return source
+        return nil
     end
 
     local asNum = tonumber(idArg)
@@ -59,7 +58,16 @@ local function resolvePlayer(source, idArg)
     return nil
 end
 
-local function getTarget(source, id)
+local function getTarget(source, id, usage)
+    if not id or id == '' then
+        if source ~= 0 then
+            notify(source, usage or 'You must specify a player ID.', 'error')
+        else
+            print('[Sunset] You must specify a player ID')
+        end
+        return nil
+    end
+
     local target = resolvePlayer(source, id)
     if not target then
         if source ~= 0 then
@@ -70,6 +78,13 @@ local function getTarget(source, id)
         return nil
     end
     return target
+end
+
+local function guardSelfTarget(source, target, idArg, action)
+    if source == 0 or not target or target ~= source then return true end
+    if idArg == '--self' or string.lower(tostring(idArg)) == 'self' then return true end
+    notify(source, ('Cannot %s yourself. Specify another player ID.'):format(action), 'error')
+    return false
 end
 
 local function resolveTarget(source, idArg)
@@ -102,8 +117,8 @@ end
 -- /kick [id] [motiv]
 RegisterCommand('kick', function(source, args)
     if source ~= 0 and not hasPerm(source, 'kick') then return notify(source, 'No permission', 'error') end
-    local target = getTarget(source, args[1])
-    if not target then return end
+    local target = getTarget(source, args[1], 'Usage: /kick [player id] [reason]')
+    if not target or not guardSelfTarget(source, target, args[1], 'kick') then return end
     local reason = table.concat(args, ' ', 2)
     if reason == '' then reason = 'No reason given' end
     DropPlayer(target, 'You were kicked: ' .. reason)
@@ -113,8 +128,8 @@ end, false)
 -- /ban [id] [motiv]
 RegisterCommand('ban', function(source, args)
     if source ~= 0 and not hasPerm(source, 'ban') then return notify(source, 'No permission', 'error') end
-    local target = getTarget(source, args[1])
-    if not target then return end
+    local target = getTarget(source, args[1], 'Usage: /ban [player id] [reason]')
+    if not target or not guardSelfTarget(source, target, args[1], 'ban') then return end
     local reason = table.concat(args, ' ', 2)
     if reason == '' then reason = 'Ban permanent' end
 
@@ -132,7 +147,7 @@ RegisterCommand('tp', function(source, args)
     if not hasPerm(source, 'tp') then return notify(source, 'No permission', 'error') end
 
     if args[1] and not args[2] then
-        local target = getTarget(source, args[1])
+        local target = getTarget(source, args[1], 'Usage: /tp [player id]')
         if not target then return end
         local ped = GetPlayerPed(target)
         local coords = GetEntityCoords(ped)
@@ -146,7 +161,7 @@ end, false)
 RegisterCommand('bring', function(source, args)
     if source == 0 then return end
     if not hasPerm(source, 'bring') then return notify(source, 'No permission', 'error') end
-    local target = getTarget(source, args[1])
+    local target = getTarget(source, args[1], 'Usage: /bring [player id]')
     if not target then return end
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)

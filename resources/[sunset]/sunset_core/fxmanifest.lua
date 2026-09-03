@@ -21,6 +21,7 @@ shared_scripts {
     'shared/utils.lua',
     'shared/items.lua',
     'shared/password.lua',
+    'shared/help_registry.lua',
 }
 
 server_scripts {
