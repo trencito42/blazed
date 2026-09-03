@@ -478,122 +478,162 @@
     <div id="phone-device" class="phone-device hidden">
         <div class="phone-frame">
             <div class="phone-screen">
-                <div class="phone-wallpaper"></div>
+                <div class="phone-wallpaper" id="phone-wallpaper"></div>
                 <div class="phone-status">
                     <span id="phone-time">12:00</span>
-                    <div class="phone-notch"></div>
+                    <div class="phone-dynamic-island"></div>
                     <div class="phone-status-icons">
-                        <span>5G</span>
-                        <span>🔋</span>
+                        <svg width="18" height="12" viewBox="0 0 18 12" fill="white"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5"/></svg>
+                        <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><path d="M8 2.4C10.4 2.4 12.5 3.4 14 5L15.5 3.5C13.6 1.3 10.9 0 8 0S2.4 1.3.5 3.5L2 5C3.5 3.4 5.6 2.4 8 2.4ZM8 6.4C9.2 6.4 10.3 6.9 11.1 7.7L12.6 6.2C11.4 5 9.8 4.2 8 4.2S4.6 5 3.4 6.2L4.9 7.7C5.7 6.9 6.8 6.4 8 6.4ZM8 10.4C8.7 10.4 9.3 10.7 9.8 11.1L8 13L6.2 11.1C6.7 10.7 7.3 10.4 8 10.4Z" transform="translate(0,-1)"/></svg>
+                        <svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="22" height="12" rx="3" stroke="white" stroke-opacity="0.4"/><rect x="2" y="2" width="17" height="9" rx="2" fill="white"/><path d="M24 4.5H25.5C26.05 4.5 26.5 4.95 26.5 5.5V7.5C26.5 8.05 26.05 8.5 25.5 8.5H24V4.5Z" fill="white" fill-opacity="0.4"/></svg>
                     </div>
                 </div>
 
                 <div class="phone-content">
                     <!-- Home -->
                     <div class="phone-view is-active" data-view="home">
+                        <div class="phone-home-top">
+                            <div class="phone-home-date" id="phone-home-date">Thursday, September 3</div>
+                        </div>
                         <div class="phone-home-grid">
                             <button type="button" class="phone-app-icon" data-phone-app="messages">
-                                <div class="phone-app-icon__img phone-app-icon__img--messages">💬</div>
+                                <div class="phone-app-icon__img phone-app-icon__img--messages">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                                </div>
                                 <span>Messages</span>
                             </button>
                             <button type="button" class="phone-app-icon" data-phone-app="contacts">
-                                <div class="phone-app-icon__img phone-app-icon__img--contacts">👤</div>
+                                <div class="phone-app-icon__img phone-app-icon__img--contacts">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                </div>
                                 <span>Contacts</span>
                             </button>
                             <button type="button" class="phone-app-icon" data-phone-app="bank">
-                                <div class="phone-app-icon__img phone-app-icon__img--bank">💳</div>
-                                <span>Bank</span>
+                                <div class="phone-app-icon__img phone-app-icon__img--bank">
+                                    <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" fill="#ff8c00"/><rect x="3" y="4" width="18" height="4" rx="1" fill="#ff6b00"/><rect x="6" y="11" width="4" height="2" rx="0.5" fill="white" opacity="0.8"/></svg>
+                                </div>
+                                <span>Wallet</span>
                             </button>
                             <button type="button" class="phone-app-icon" data-phone-app="settings">
-                                <div class="phone-app-icon__img phone-app-icon__img--settings">⚙️</div>
+                                <div class="phone-app-icon__img phone-app-icon__img--settings">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M19.4 13c0-.3 0-.7-.1-1l2-1.5-2-3.5-2.4 1c-.5-.4-1.1-.7-1.7-1l-.3-2.6H9.1l-.3 2.6c-.6.2-1.2.6-1.7 1l-2.4-1-2 3.5 2 1.5c0 .3-.1.7-.1 1s0 .7.1 1l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1l.3 2.6h5.8l.3-2.6c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+                                </div>
                                 <span>Settings</span>
                             </button>
                         </div>
                         <div class="phone-dock">
                             <button type="button" class="phone-app-icon" data-phone-app="messages">
-                                <div class="phone-app-icon__img phone-app-icon__img--messages">💬</div>
+                                <div class="phone-app-icon__img phone-app-icon__img--messages">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                                </div>
                             </button>
                             <button type="button" class="phone-app-icon" data-phone-app="contacts">
-                                <div class="phone-app-icon__img phone-app-icon__img--contacts">👤</div>
+                                <div class="phone-app-icon__img phone-app-icon__img--contacts">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                </div>
                             </button>
                             <button type="button" class="phone-app-icon" data-phone-app="bank">
-                                <div class="phone-app-icon__img phone-app-icon__img--bank">💳</div>
+                                <div class="phone-app-icon__img phone-app-icon__img--bank">
+                                    <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" fill="#ff8c00"/><rect x="3" y="4" width="18" height="4" rx="1" fill="#ff6b00"/></svg>
+                                </div>
                             </button>
                         </div>
                     </div>
 
                     <!-- Messages -->
                     <div class="phone-view phone-threads" data-view="messages">
-                        <div class="phone-appbar">
-                            <button type="button" class="phone-back" id="phone-back-messages">‹ Home</button>
-                            <h3 class="phone-appbar__title">Messages</h3>
+                        <div class="ios-nav">
+                            <button type="button" class="ios-nav__back" id="phone-back-messages">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Home
+                            </button>
+                            <h1 class="ios-large-title">Messages</h1>
                         </div>
                         <div class="phone-scroll" id="phone-thread-list"></div>
                     </div>
 
                     <!-- Chat -->
                     <div class="phone-view phone-chat" data-view="chat">
-                        <div class="phone-appbar">
-                            <button type="button" class="phone-back" id="phone-back-chat">‹ Back</button>
-                            <div class="phone-appbar__title--stack">
+                        <div class="ios-nav ios-nav--blur">
+                            <button type="button" class="ios-nav__back" id="phone-back-chat">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Messages
+                            </button>
+                            <div class="ios-nav__center">
                                 <h3 id="phone-chat-title">Chat</h3>
-                                <div class="phone-appbar__subtitle" id="phone-chat-subtitle"></div>
+                                <div class="ios-nav__subtitle" id="phone-chat-subtitle"></div>
                             </div>
                         </div>
                         <div class="phone-chat__messages" id="phone-chat-messages"></div>
                         <div class="phone-chat__compose">
-                            <input type="text" id="phone-chat-input" placeholder="iMessage" maxlength="256" autocomplete="off">
-                            <button type="button" id="phone-chat-send">↑</button>
+                            <button type="button" class="phone-chat__plus" tabindex="-1">+</button>
+                            <div class="phone-chat__input-wrap">
+                                <input type="text" id="phone-chat-input" placeholder="iMessage" maxlength="256" autocomplete="off">
+                            </div>
+                            <button type="button" class="phone-chat__send" id="phone-chat-send">↑</button>
                         </div>
                     </div>
 
                     <!-- Contacts -->
                     <div class="phone-view phone-contacts" data-view="contacts">
-                        <div class="phone-appbar">
-                            <button type="button" class="phone-back" id="phone-back-contacts">‹ Home</button>
-                            <h3 class="phone-appbar__title">Contacts</h3>
+                        <div class="ios-nav">
+                            <button type="button" class="ios-nav__back" id="phone-back-contacts">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Home
+                            </button>
+                            <h1 class="ios-large-title">Contacts</h1>
                         </div>
                         <div class="phone-scroll" id="phone-contact-list"></div>
                     </div>
 
                     <!-- Bank -->
                     <div class="phone-view" data-view="bank">
-                        <div class="phone-appbar phone-appbar--light">
-                            <button type="button" class="phone-back" id="phone-back-bank">‹ Home</button>
-                            <h3 class="phone-appbar__title">Bank</h3>
+                        <div class="ios-nav ios-nav--light">
+                            <button type="button" class="ios-nav__back" id="phone-back-bank" style="color:#007aff">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Home
+                            </button>
+                            <h1 class="ios-large-title">Wallet</h1>
                         </div>
                         <div class="phone-scroll phone-bank">
                             <div class="phone-bank-card">
-                                <div class="phone-bank-card__label">Total Balance</div>
+                                <div class="phone-bank-card__label">Apple Cash & Sunset Bank</div>
                                 <div class="phone-bank-card__amount" id="phone-bank-total">$0</div>
-                                <div class="phone-bank-card__label">Sunset Bank</div>
+                                <div class="phone-bank-card__label">Available Balance</div>
                             </div>
-                            <div class="phone-bank-row"><span>Cash</span><strong id="phone-bank-cash">$0</strong></div>
-                            <div class="phone-bank-row"><span>Bank Account</span><strong id="phone-bank-bank">$0</strong></div>
+                            <div class="phone-bank-group">
+                                <div class="phone-bank-row"><span>Cash</span><strong id="phone-bank-cash">$0</strong></div>
+                                <div class="phone-bank-row"><span>Bank Account</span><strong id="phone-bank-bank">$0</strong></div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Settings -->
                     <div class="phone-view phone-settings" data-view="settings">
-                        <div class="phone-appbar">
-                            <button type="button" class="phone-back" id="phone-back-settings">‹ Home</button>
-                            <h3 class="phone-appbar__title">Settings</h3>
+                        <div class="ios-nav">
+                            <button type="button" class="ios-nav__back" id="phone-back-settings">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Home
+                            </button>
+                            <h1 class="ios-large-title">Settings</h1>
                         </div>
                         <div class="phone-scroll">
                             <div class="phone-settings-profile">
                                 <div class="phone-settings-profile__avatar" id="phone-settings-avatar">T</div>
                                 <div>
-                                    <div id="phone-settings-name" style="font-size:20px;font-weight:600;color:#fff">Player</div>
-                                    <div id="phone-settings-id" style="font-size:13px;color:rgba(255,255,255,0.5)">ID</div>
+                                    <div class="phone-settings-name" id="phone-settings-name">Player</div>
+                                    <div class="phone-settings-id" id="phone-settings-id">Apple ID</div>
                                 </div>
                             </div>
-                            <div class="phone-settings-row">SunsetMP Phone<span>iOS-style RP phone</span></div>
-                            <div class="phone-settings-row">Close<span>Press P or swipe home bar</span></div>
+                            <div class="phone-settings-group">
+                                <div class="phone-settings-row">SunsetMP<span>Los Santos Roleplay</span></div>
+                                <div class="phone-settings-row">Close Phone<span>Press P or swipe home bar</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="phone-home-zone" id="phone-home-zone" title="Swipe up">
+                <div class="phone-home-zone" id="phone-home-zone">
                     <div class="phone-home-indicator" id="phone-home-indicator"></div>
                 </div>
             </div>

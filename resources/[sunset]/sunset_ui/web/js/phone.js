@@ -124,6 +124,27 @@ const Phone = {
         const now = new Date();
         const el = $('#phone-time');
         if (el) el.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        this.updateHomeDate(now);
+    },
+
+    updateHomeDate(now = new Date()) {
+        const el = $('#phone-home-date');
+        if (!el) return;
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        el.textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+    },
+
+    formatMsgTime(raw) {
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return '';
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        if (sameDay) {
+            return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
     },
 
     show(payload) {
@@ -161,7 +182,7 @@ const Phone = {
         if (this.chatTarget) {
             this.chatTarget.online = this.isContactOnline(this.chatTarget.charId);
             const sub = $('#phone-chat-subtitle');
-            if (sub) sub.textContent = this.chatTarget.online ? 'Online' : 'Will deliver when online';
+            if (sub) sub.textContent = this.chatTarget.online ? 'iMessage' : 'Offline — message queued';
             this.renderChat(this.chatTarget);
         }
     },
@@ -183,6 +204,10 @@ const Phone = {
     showView(name) {
         this.screen = name;
         $$('.phone-view').forEach((v) => v.classList.toggle('is-active', v.dataset.view === name));
+        const wp = $('#phone-wallpaper');
+        if (wp) wp.classList.toggle('phone-wallpaper--app', name !== 'home');
+        const island = $('.phone-dynamic-island');
+        if (island) island.style.width = name === 'home' ? '108px' : '96px';
     },
 
     renderHome() {
@@ -256,12 +281,18 @@ const Phone = {
             btn.type = 'button';
             btn.className = 'phone-thread';
             const initial = (t.name || '?').charAt(0).toUpperCase();
+            const lastMsg = t.messages[0];
+            const timeStr = lastMsg ? this.formatMsgTime(lastMsg.created_at) : '';
             btn.innerHTML = `
                 <div class="phone-thread__avatar">${initial}</div>
                 <div class="phone-thread__body">
-                    <div class="phone-thread__name">${t.name}</div>
+                    <div class="phone-thread__row">
+                        <span class="phone-thread__name">${t.name}</span>
+                        ${timeStr ? `<span class="phone-thread__time">${timeStr}</span>` : ''}
+                    </div>
                     <div class="phone-thread__preview">${t.preview || ''}</div>
-                </div>`;
+                </div>
+                <span class="phone-thread__chevron">›</span>`;
             btn.addEventListener('click', () => this.openChat({
                 name: t.name,
                 charId: t.charId,
@@ -278,9 +309,14 @@ const Phone = {
         const contacts = this.data?.contacts || [];
 
         if (!contacts.length) {
-            list.innerHTML = '<p class="phone-empty">No players online right now.</p>';
+            list.innerHTML = '<p class="phone-empty">No one else is online.<br>Players appear here when connected.</p>';
             return;
         }
+
+        const header = document.createElement('div');
+        header.className = 'phone-contacts__section';
+        header.textContent = 'Online';
+        list.appendChild(header);
 
         contacts.forEach((c) => {
             const btn = document.createElement('button');
@@ -291,7 +327,7 @@ const Phone = {
                 <div class="phone-thread__avatar">${initial}</div>
                 <div class="phone-thread__body">
                     <div class="phone-thread__name">${c.name}</div>
-                    <div class="phone-contact__meta">ID ${c.serverId} · Online</div>
+                    <div class="phone-contact__meta">${c.online !== false ? '● Online' : 'Offline'}</div>
                 </div>`;
             btn.addEventListener('click', () => this.openChat({
                 name: c.name,
@@ -307,7 +343,7 @@ const Phone = {
         const online = this.isContactOnline(target.charId);
         $('#phone-chat-title').textContent = target.name || 'Chat';
         const sub = $('#phone-chat-subtitle');
-        if (sub) sub.textContent = online ? 'Online' : 'Will deliver when online';
+        if (sub) sub.textContent = online ? 'iMessage' : 'Offline — message queued';
         this.renderChat(target);
         this.showView('chat');
     },
@@ -332,10 +368,17 @@ const Phone = {
 
         msgs.forEach((m) => {
             const mine = m.sender_character_id === myId;
+            const row = document.createElement('div');
+            row.className = `phone-bubble-wrap ${mine ? 'phone-bubble-wrap--out' : 'phone-bubble-wrap--in'}`;
             const bubble = document.createElement('div');
             bubble.className = `phone-bubble ${mine ? 'phone-bubble--out' : 'phone-bubble--in'}`;
             bubble.textContent = m.message;
-            wrap.appendChild(bubble);
+            const timeEl = document.createElement('span');
+            timeEl.className = 'phone-bubble__time';
+            timeEl.textContent = this.formatMsgTime(m.created_at);
+            row.appendChild(bubble);
+            row.appendChild(timeEl);
+            wrap.appendChild(row);
         });
         wrap.scrollTop = wrap.scrollHeight;
     },
@@ -365,7 +408,7 @@ const Phone = {
         const d = this.data || {};
         const name = d.myName || 'Player';
         $('#phone-settings-name').textContent = name;
-        $('#phone-settings-id').textContent = `Server ID: ${d.myId || '—'}`;
+        $('#phone-settings-id').textContent = `Player ID ${d.myId || '—'}`;
         const avatar = $('#phone-settings-avatar');
         if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
     },
