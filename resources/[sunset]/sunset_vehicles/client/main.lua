@@ -277,9 +277,6 @@ function GetVehicleState()
         engineOn = GetIsVehicleEngineRunning(veh),
     }
 end
-RegisterNetEvent('sunset:client:notify', function(msg, typ)
-    exports.sunset_ui:Notify(msg, typ or 'info')
-end)
 
 exports('GetVehicleState', GetVehicleState)
 
@@ -651,11 +648,7 @@ end)
 local function getGasCanTargetVehicle()
     local ped = PlayerPedId()
     if IsPedInAnyVehicle(ped, false) then
-        local veh = GetVehiclePedIsIn(ped, false)
-        if GetPedInVehicleSeat(veh, -1) ~= ped then
-            return nil, 'Only the driver can use a gas can inside the vehicle'
-        end
-        return veh
+        return nil, 'Exit the vehicle and stand beside it before using the gas can'
     end
 
     local coords = GetEntityCoords(ped)
@@ -669,6 +662,19 @@ RegisterNetEvent('sunset:client:useGasCan', function()
         pcall(function() exports.sunset_inventory:Close() end)
         Wait(100)
 
+        local ped = PlayerPedId()
+        if IsPedInAnyVehicle(ped, false) then
+            local insideVehicle = GetVehiclePedIsIn(ped, false)
+            local insideFuel = readFuelPercent(insideVehicle)
+            if insideFuel >= 99.5 then
+                notify('This vehicle already has a full tank (100%). The gas can was not used.', 'info')
+            else
+                notify(('Exit the vehicle and stand beside it to refuel. Current tank: %d%%.'):format(
+                    math.floor(insideFuel + 0.5)), 'warning')
+            end
+            return
+        end
+
         local veh, err = getGasCanTargetVehicle()
         if not veh then
             notify(err or 'No vehicle nearby', 'error')
@@ -676,15 +682,14 @@ RegisterNetEvent('sunset:client:useGasCan', function()
         end
 
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
-        local ped = PlayerPedId()
         local vehicleClass = GetVehicleClass(veh)
         local tankCapacity = Sunset.GetVehicleTankCapacityLiters(vehicleClass)
 
         local fuelPct
-        if IsPedInAnyVehicle(ped, false) and GetPedInVehicleSeat(veh, -1) == ped then
-            fuelPct = exports.sunset_vehicles:GetFuelLevel() or fuel
-        else
-            fuelPct = readFuelPercent(veh)
+        fuelPct = readFuelPercent(veh)
+        if fuelPct >= 99.5 then
+            notify('This vehicle already has a full tank (100%). The gas can was not used.', 'info')
+            return
         end
         local tankLiters = Sunset.PercentToTankLiters(fuelPct, vehicleClass)
 

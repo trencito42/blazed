@@ -47,7 +47,7 @@ local function startFisherman()
     for i, spot in ipairs(cfg.spots or {}) do
         JC.addBlip(spot.coords, spot.blip or { sprite = 68, color = 3 }, 'Fishing Spot ' .. i)
     end
-    JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, 'Fish Buyer')
+    JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, cfg.sellPoint.label or 'Fish Buyer')
     JC.sessionData = data
     if cfg.spots and cfg.spots[1] then
         JC.setWaypoint(cfg.spots[1].coords)
@@ -68,11 +68,17 @@ local function startFisherman()
             local sell = cfg2.sellPoint.coords
             if (JC.sessionData.pendingValue or 0) > 0 then
                 JC.drawMarker(sell, 255, 200, 50)
+                if JC.isNear(sell, (cfg2.sellRadius or 3.0) + 2.0) then
+                    JC.showHelp(('Press ~INPUT_CONTEXT~ to sell your fish ($%d before buyer bonus)'):format(
+                        JC.sessionData.pendingValue or 0))
+                end
                 if JC.isNear(sell, cfg2.sellRadius) and IsControlJustPressed(0, 38) then
-                    local ok, result = Sunset.AwaitCallback('sunset:jobs:fisherman:sell')
-                    if ok then
-                        JC.notify(('Sold catch for $%s'):format(result and result.amount or 0), 'success')
+                    local result, sellErr = Sunset.AwaitCallback('sunset:jobs:fisherman:sell')
+                    if result then
+                        JC.notify(('Sold catch for $%s'):format(result.amount or 0), 'success')
                         break
+                    else
+                        JC.notify(sellErr or 'Could not sell the fish. Stay inside the yellow marker and try again.', 'error')
                     end
                 end
             end
@@ -121,9 +127,12 @@ local function attemptFish()
     fishing = false
     if reeled and result then
         JC.sessionData.pendingValue = result.pendingValue
-        JC.showObjective('Fishing', ('Catch value $%s · total $%s — /fish again or sell'):format(
-            result.value, result.pendingValue), 50)
-        JC.notify(('Caught fish worth $%s'):format(result.value), 'success')
+        local sellLabel = cfg.sellPoint.label or 'Fish Buyer'
+        JC.setWaypoint(cfg.sellPoint.coords)
+        JC.showObjective('Sell fish or keep fishing', ('Catch $%s · bag $%s — yellow marker at %s, press E'):format(
+            result.value, result.pendingValue, sellLabel), 50)
+        JC.notify(('Caught fish worth $%s. Fish Buyer marked on GPS; press E in the yellow marker to sell.'):format(
+            result.value), 'success', 9000)
     else
         JC.showObjective('Fishing', 'Fish escaped — press E or /fish to cast again', 0)
         JC.notify(reelErr or 'Too late — the fish escaped', 'warning')

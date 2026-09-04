@@ -26,6 +26,8 @@
 - Trucker milestones require the assigned truck and its assigned attached trailer; truck/trailer registration is verified and detachment/vehicle abandonment has a 60-second recovery window. `/recovertrailer` safely rights and reattaches a nearby overturned assigned trailer while the truck is stopped (three uses per shift, three-minute cooldown).
 - The inaccessible Tataviam truck checkpoint was replaced with a wide freight destination and truck checkpoints now use an articulated-vehicle-friendly radius.
 - Fisherman now uses `/fish` or E to cast with a visible rod and a server-timed reaction challenge; catches require reeling during the short BITE window.
+- A successful catch routes the player to the Fish Buyer at Del Perro Pier and shows the exact E interaction; the sale UI now reports the authoritative paid amount.
+- Server notifications have one canonical client listener (duplicate toasts removed), and generic/nil errors are converted into user-facing explanations. Inventory use now explains the failed requirement and never consumes an item whose action is not implemented.
 - Owned vehicle fuel and damage are checkpointed to persistence every 30 seconds while driving, in addition to garage storage/refuelling saves.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**

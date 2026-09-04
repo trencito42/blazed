@@ -6,10 +6,6 @@ RegisterNetEvent('sunset:client:setAdmin', function(level)
     adminLevel = level or 0
 end)
 
-RegisterNetEvent('sunset:client:notify', function(msg, type)
-    exports.sunset_ui:Notify(msg, type)
-end)
-
 RegisterNetEvent('sunset:admin:teleport', function(x, y, z)
     local ped = PlayerPedId()
     SetEntityCoords(ped, x + 0.0, y + 0.0, z + 0.0, false, false, false, false)

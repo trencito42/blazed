@@ -7,8 +7,8 @@ local JobClient = {
     threadActive = false,
 }
 
-function JobClient.notify(msg, typ)
-    exports.sunset_ui:Notify(msg, typ or 'info')
+function JobClient.notify(msg, typ, duration)
+    exports.sunset_ui:Notify(msg, typ or 'info', duration)
 end
 
 function JobClient.showObjective(title, subtitle, progress)
@@ -57,6 +57,12 @@ end
 function JobClient.drawMarker(coords, r, g, b)
     DrawMarker(1, coords.x, coords.y, coords.z - 0.95, 0, 0, 0, 0, 0, 0,
         2.0, 2.0, 1.0, r or 255, g or 140, b or 0, 160, false, false, 2, false, nil, nil, false)
+end
+
+function JobClient.showHelp(text)
+    BeginTextCommandDisplayHelp('STRING')
+    AddTextComponentSubstringPlayerName(text)
+    EndTextCommandDisplayHelp(0, false, true, -1)
 end
 
 function JobClient.loadModel(model)

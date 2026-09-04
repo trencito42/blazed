@@ -5,6 +5,13 @@ local RateLimits = {}
 local AcceptLocks = {}
 local ProviderActive = {}
 
+local function emitClient(eventName, target, ...)
+    target = tonumber(target)
+    if type(eventName) ~= 'string' or eventName == '' or not target or target < 1 then return false end
+    TriggerClientEvent(eventName, target, ...)
+    return true
+end
+
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
 end
@@ -25,7 +32,7 @@ local function playerCoords(source)
 end
 
 local function notify(source, msg, typ)
-    TriggerClientEvent('sunset:client:notify', source, msg, typ or 'info')
+    emitClient('sunset:client:notify', source, msg, typ or 'info')
 end
 
 local function checkRateLimit(source, key)
@@ -64,7 +71,7 @@ local function broadcastBackupResponders(event, payload, excludeSource)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         if src ~= excludeSource and isEmergencyResponder(src) then
-            TriggerClientEvent(event, src, payload)
+            emitClient(event, src, payload)
         end
     end
 end
@@ -134,7 +141,7 @@ local function broadcastProviders(callType, event, payload)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         if ServiceCore.isProviderForType(src, callType) then
-            TriggerClientEvent(event, src, payload)
+            emitClient(event, src, payload)
         end
     end
 end
@@ -149,7 +156,7 @@ local function scheduleTimeout(callId)
         local callerSrc = call.callerSource or findSourceByCharacterId(call.callerCharacterId)
         if callerSrc then
             notify(callerSrc, 'Your service request timed out — no responders available', 'warning')
-            TriggerClientEvent('sunset:dispatch:callEnded', callerSrc, serializeCall(call, callerSrc))
+            emitClient('sunset:dispatch:callEnded', callerSrc, serializeCall(call, callerSrc))
         end
         broadcastProviders(call.callType, 'sunset:dispatch:callUpdated', serializeCall(call))
         TriggerEvent('sunset:dispatch:callCancelled', callId, call.callType, 'timeout')
@@ -364,9 +371,9 @@ function ServiceCore.acceptCall(source, callType, callId)
         local callerSrc = call.callerSource or findSourceByCharacterId(call.callerCharacterId)
         if callerSrc then
             notify(callerSrc, ('%s accepted your request'):format(call.responderName), 'success')
-            TriggerClientEvent('sunset:dispatch:callAccepted', callerSrc, payload)
+            emitClient('sunset:dispatch:callAccepted', callerSrc, payload)
         end
-        TriggerClientEvent('sunset:dispatch:waypoint', source, call.coords)
+        emitClient('sunset:dispatch:waypoint', source, call.coords)
         notify(source, ('Call #%d accepted — GPS set'):format(callId), 'success')
         broadcastProviders(callType, 'sunset:dispatch:callTaken', { id = callId })
         broadcastProviders(callType, 'sunset:dispatch:callUpdated', payload)
@@ -412,14 +419,14 @@ function ServiceCore.cancelCall(source, callType, callId, reason)
     local responderSrc = call.responderSource or findSourceByCharacterId(call.responderCharacterId)
     if callerSrc and callerSrc ~= source then
         notify(callerSrc, reason or 'Service call was cancelled', 'warning')
-        TriggerClientEvent('sunset:dispatch:callEnded', callerSrc, payload)
+        emitClient('sunset:dispatch:callEnded', callerSrc, payload)
     end
     if callType == 'police_backup' then
         broadcastBackupResponders('sunset:dispatch:backupEnded', payload)
     end
     if responderSrc and responderSrc ~= source then
         notify(responderSrc, reason or 'Service call was cancelled', 'warning')
-        TriggerClientEvent('sunset:dispatch:callEnded', responderSrc, payload)
+        emitClient('sunset:dispatch:callEnded', responderSrc, payload)
     end
     broadcastProviders(callType, 'sunset:dispatch:callUpdated', payload)
     TriggerEvent('sunset:dispatch:callCancelled', callId, callType, isCaller and 'caller' or 'provider')
@@ -452,16 +459,16 @@ function ServiceCore.updateCallState(source, callType, callId, newState)
     local payload = serializeCall(call, source)
     local callerSrc = call.callerSource or findSourceByCharacterId(call.callerCharacterId)
     local responderSrc = call.responderSource or findSourceByCharacterId(call.responderCharacterId)
-    if callerSrc then TriggerClientEvent('sunset:dispatch:callUpdated', callerSrc, payload) end
-    if responderSrc then TriggerClientEvent('sunset:dispatch:callUpdated', responderSrc, payload) end
+    if callerSrc then emitClient('sunset:dispatch:callUpdated', callerSrc, payload) end
+    if responderSrc then emitClient('sunset:dispatch:callUpdated', responderSrc, payload) end
     broadcastProviders(callType, 'sunset:dispatch:callUpdated', payload)
     TriggerEvent('sunset:dispatch:callStateChanged', callId, callType, newState, source)
 
     if Sunset.Dispatch.IsTerminalState(newState) then
         if call.responderSource then ProviderActive[call.responderSource] = nil end
         Calls[callId] = nil
-        if callerSrc then TriggerClientEvent('sunset:dispatch:callEnded', callerSrc, payload) end
-        if responderSrc then TriggerClientEvent('sunset:dispatch:callEnded', responderSrc, payload) end
+        if callerSrc then emitClient('sunset:dispatch:callEnded', callerSrc, payload) end
+        if responderSrc then emitClient('sunset:dispatch:callEnded', responderSrc, payload) end
     end
     return payload
 end
