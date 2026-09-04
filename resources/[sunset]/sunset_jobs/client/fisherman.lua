@@ -51,7 +51,7 @@ local function attemptSell()
     if selling then return end
     local cfg = Sunset.GetJobConfig('fisherman')
     if not cfg or not cfg.sellPoint then return JC.notify('Fish Buyer is not configured', 'error') end
-    if not JC.isNear(cfg.sellPoint.coords, (cfg.sellRadius or 3.0) + 2.0) then
+    if not JC.isNear(cfg.sellPoint.coords, cfg.sellRadius or 5.0) then
         JC.setWaypoint(cfg.sellPoint.coords)
         return JC.notify('Fish Buyer marked on GPS: Del Perro Pier. Enter the yellow marker and press E.', 'info', 8000)
     end
@@ -103,7 +103,7 @@ local function startFisherman()
             local sell = cfg2.sellPoint.coords
             if (JC.sessionData.pendingValue or 0) > 0 then
                 JC.drawMarker(sell, 255, 200, 50)
-                if JC.isNear(sell, (cfg2.sellRadius or 3.0) + 2.0) then
+                if JC.isNear(sell, cfg2.sellRadius or 5.0) then
                     JC.showHelp(('Press ~INPUT_CONTEXT~ to sell your fish ($%d before buyer bonus)'):format(
                         JC.sessionData.pendingValue or 0))
                 end
@@ -196,7 +196,7 @@ CreateThread(function()
         local employed = JC.getCharacterJob() == 'fisherman'
         if employed and cfg and cfg.sellPoint and JC.isNear(cfg.sellPoint.coords, 30.0) then
             JC.drawMarker(cfg.sellPoint.coords, 255, 200, 50)
-            if JC.isNear(cfg.sellPoint.coords, (cfg.sellRadius or 3.0) + 2.0) then
+            if JC.isNear(cfg.sellPoint.coords, cfg.sellRadius or 5.0) then
                 JC.showHelp('Press ~INPUT_CONTEXT~ to sell all Fresh Fish in your inventory')
                 if IsControlJustPressed(0, 38) then CreateThread(attemptSell) end
             end

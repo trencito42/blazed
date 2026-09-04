@@ -160,7 +160,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:sell', function(sour
     if select(1, Sunset.GetCharacterJob(char)) ~= 'fisherman' then
         return nil, 'Only employed fishermen can sell fish here. Get the Fisherman job first.'
     end
-    if not SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, cfg.sellRadius or 3.0) then
+    if not SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, cfg.sellRadius or 5.0) then
         return nil, 'You are not at Fish Buyer. Follow the yellow GPS marker at Del Perro Pier.'
     end
     if SellLocks[source] then return nil, 'Your fish sale is already being processed.' end
