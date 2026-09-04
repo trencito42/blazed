@@ -5,7 +5,18 @@ local JobClient = {
     vehicles = {},
     blips = {},
     threadActive = false,
+    trailerLostSent = false,
 }
+
+local function protectJobVehicle(veh)
+    if not veh or veh == 0 then return end
+    SetEntityInvincible(veh, true)
+    SetVehicleCanBeVisiblyDamaged(veh, false)
+    SetVehicleTyresCanBurst(veh, false)
+    SetVehicleEngineCanDegrade(veh, false)
+    SetVehicleExplodesOnHighExplosionDamage(veh, false)
+    SetEntityProofs(veh, true, true, true, true, true, true, true, true)
+end
 
 function JobClient.notify(msg, typ, duration)
     exports.sunset_ui:Notify(msg, typ or 'info', duration)
@@ -77,14 +88,21 @@ function JobClient.loadModel(model)
     return hash
 end
 
-function JobClient.deleteVehicles()
-    for _, veh in ipairs(JobClient.vehicles) do
+function JobClient.deleteVehicles(keepTruck)
+    local startIdx = keepTruck and 2 or 1
+    for i = startIdx, #JobClient.vehicles do
+        local veh = JobClient.vehicles[i]
         if veh and DoesEntityExist(veh) then
             SetEntityAsMissionEntity(veh, true, true)
             DeleteVehicle(veh)
         end
     end
-    JobClient.vehicles = {}
+    if keepTruck and JobClient.vehicles[1] then
+        JobClient.vehicles = { JobClient.vehicles[1] }
+    else
+        JobClient.vehicles = {}
+    end
+    JobClient.trailerLostSent = false
 end
 
 function JobClient.spawnVehicle(model, spawn, warp)
@@ -105,6 +123,7 @@ function JobClient.spawnVehicle(model, spawn, warp)
     SetEntityAsMissionEntity(veh, true, true)
     Entity(veh).state:set('sunsetProtectedVehicle', true, true)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
+    protectJobVehicle(veh)
     SetVehicleNeedsToBeHotwired(veh, false)
     SetVehRadioStation(veh, 'OFF')
     SetModelAsNoLongerNeeded(hash)
@@ -123,6 +142,7 @@ function JobClient.attachTrailer(truck, trailerModel, spawn)
     SetEntityAsMissionEntity(trailer, true, true)
     Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
     SetVehicleHasBeenOwnedByPlayer(trailer, true)
+    protectJobVehicle(trailer)
     AttachVehicleToTrailer(truck, trailer, 1.0)
     Entity(truck).state:set('sunsetTrailerAttached', true, true)
     Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
@@ -171,21 +191,85 @@ function JobClient.progress(label, duration)
     Wait(duration)
 end
 
+function JobClient.respawnTrailer(truck, trailerModel)
+    if not truck or not DoesEntityExist(truck) then return nil, 'Truck is missing' end
+
+    local oldTrailer = JobClient.vehicles[2]
+    if oldTrailer and DoesEntityExist(oldTrailer) then
+        DetachVehicleFromTrailer(truck)
+        SetEntityAsMissionEntity(oldTrailer, true, true)
+        DeleteVehicle(oldTrailer)
+    end
+    if #JobClient.vehicles >= 2 then
+        table.remove(JobClient.vehicles, 2)
+    end
+
+    local offset = GetOffsetFromEntityInWorldCoords(truck, 0.0, -12.0, 0.5)
+    local heading = GetEntityHeading(truck)
+    local spawn = vector4(offset.x, offset.y, offset.z, heading)
+    local trailer = JobClient.attachTrailer(truck, trailerModel, spawn)
+    if not trailer then return nil, 'Could not spawn replacement trailer' end
+
+    local tNet = NetworkGetNetworkIdFromEntity(trailer)
+    for _ = 1, 8 do
+        if tNet and tNet ~= 0 then
+            local ok, err = Sunset.AwaitCallback('sunset:jobs:registerTrailer', tNet)
+            if ok then
+                JobClient.trailerLostSent = false
+                return trailer
+            end
+            if err and err ~= 'Trailer is not networked' then
+                return nil, err
+            end
+        end
+        Wait(400)
+        tNet = NetworkGetNetworkIdFromEntity(trailer)
+    end
+    return nil, 'Could not register replacement trailer'
+end
+
 function JobClient.monitorVehicles()
     CreateThread(function()
         while JobClient.state ~= 'IDLE' and #JobClient.vehicles > 0 do
-            local anyAlive = false
-            for _, veh in ipairs(JobClient.vehicles) do
-                if veh and DoesEntityExist(veh) then anyAlive = true break end
-            end
             local truck = JobClient.vehicles[1]
             local trailer = JobClient.vehicles[2]
-            if truck and trailer and DoesEntityExist(truck) and DoesEntityExist(trailer) then
+            local truckAlive = truck and DoesEntityExist(truck)
+            local trailerAlive = trailer and DoesEntityExist(trailer)
+
+            if truck and trailer and truckAlive and trailerAlive then
                 local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
                 Entity(truck).state:set('sunsetTrailerAttached', attached and attachedEntity == trailer, true)
                 Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
             end
-            if not anyAlive and JobClient.state ~= 'IDLE' then
+
+            if truckAlive and trailer and not trailerAlive and JobClient.jobId == 'trucker'
+                and not JobClient.trailerLostSent then
+                JobClient.trailerLostSent = true
+                local result = Sunset.AwaitCallback('sunset:jobs:trailerDestroyed')
+                if result and result.failed then
+                    -- session ended server-side
+                elseif result and result.respawn and result.trailerModel then
+                    local truckEntity = truck
+                    if result.truckNetId then
+                        local netTruck = NetworkGetEntityFromNetworkId(result.truckNetId)
+                        if netTruck ~= 0 and DoesEntityExist(netTruck) then
+                            truckEntity = netTruck
+                        end
+                    end
+                    local cfg = Sunset.GetJobConfig('trucker')
+                    local spawned, spawnErr = JobClient.respawnTrailer(truckEntity, result.trailerModel)
+                    if spawned then
+                        JobClient.notify(('Replacement trailer spawned. %d recoveries remain.'):format(
+                            result.remaining or 0), 'success', 7000)
+                    elseif spawnErr then
+                        JobClient.notify(spawnErr, 'error')
+                    end
+                else
+                    JobClient.trailerLostSent = false
+                end
+            end
+
+            if not truckAlive and JobClient.state ~= 'IDLE' then
                 Sunset.AwaitCallback('sunset:jobs:vehicleLost')
                 JobClient.cleanup()
                 JobClient.notify('Work vehicle destroyed — shift failed', 'error')
@@ -196,8 +280,9 @@ function JobClient.monitorVehicles()
     end)
 end
 
-function JobClient.cleanup()
-    JobClient.deleteVehicles()
+function JobClient.cleanup(options)
+    options = options or {}
+    JobClient.deleteVehicles(options.keepTruck == true)
     JobClient.clearBlips()
     JobClient.state = 'IDLE'
     JobClient.jobId = nil
@@ -266,15 +351,31 @@ RegisterNetEvent('sunset:jobs:stateChanged', function(state, data)
     if data then JobClient.sessionData = data end
 end)
 
-RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId, state, reason)
+RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId, state, reason, options)
     JobClient.hideObjective()
-    JobClient.cleanup()
+    JobClient.cleanup(options or {})
     if state == 'COMPLETED' then
         JobClient.notify('Shift complete!', 'success')
     elseif state == 'FAILED' then
         JobClient.notify(reason or 'Shift failed', 'error')
     elseif state == 'CANCELLED' then
         JobClient.notify(reason or 'Shift cancelled', 'info')
+    end
+end)
+
+RegisterNetEvent('sunset:jobs:trailerRespawn', function(data)
+    if JobClient.jobId ~= 'trucker' or not data or not data.trailerModel then return end
+    local truck = JobClient.vehicles[1]
+    if data.truckNetId then
+        local netTruck = NetworkGetEntityFromNetworkId(data.truckNetId)
+        if netTruck ~= 0 and DoesEntityExist(netTruck) then truck = netTruck end
+    end
+    local spawned, err = JobClient.respawnTrailer(truck, data.trailerModel)
+    if spawned then
+        JobClient.notify(('Replacement trailer spawned. %d recoveries remain.'):format(
+            data.remaining or 0), 'success', 7000)
+    elseif err then
+        JobClient.notify(err, 'error')
     end
 end)
 

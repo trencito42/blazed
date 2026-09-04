@@ -17,6 +17,19 @@ local function recoverTrailer()
         return JC.notify(err or 'Trailer recovery is not available', 'error')
     end
 
+    if recovery.respawn then
+        local truck = NetworkGetEntityFromNetworkId(recovery.truckNetId or 0)
+        if truck == 0 or not DoesEntityExist(truck) then
+            truck = JC.vehicles[1]
+        end
+        local spawned, spawnErr = JC.respawnTrailer(truck, recovery.trailerModel)
+        if not spawned then
+            return JC.notify(spawnErr or 'Could not spawn replacement trailer', 'error')
+        end
+        return JC.notify(('Replacement trailer spawned. %d recoveries remain this shift.'):format(
+            recovery.remaining or 0), 'success')
+    end
+
     local truck = NetworkGetEntityFromNetworkId(recovery.truckNetId or 0)
     local trailer = NetworkGetEntityFromNetworkId(recovery.trailerNetId or 0)
     if truck == 0 or trailer == 0 or not DoesEntityExist(truck) or not DoesEntityExist(trailer) then

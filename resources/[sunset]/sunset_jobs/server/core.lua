@@ -27,7 +27,7 @@ function SunsetJobs_GetSession(source)
     return Sessions[source]
 end
 
-function SunsetJobs_ClearSession(source, finalState, reason)
+function SunsetJobs_ClearSession(source, finalState, reason, options)
     local session = Sessions[source]
     if not session then return end
     finalState = finalState or 'CANCELLED'
@@ -39,7 +39,7 @@ function SunsetJobs_ClearSession(source, finalState, reason)
     session.state = finalState
     session.endReason = reason
     Sessions[source] = nil
-    TriggerClientEvent('sunset:jobs:sessionEnded', source, session.jobId, session.state, reason)
+    TriggerClientEvent('sunset:jobs:sessionEnded', source, session.jobId, session.state, reason, options or {})
     return true
 end
 
@@ -89,44 +89,102 @@ function SunsetJobs_ValidateVehicle(source, expectedModel, mustDrive, maxDistanc
     return #(GetEntityCoords(ped) - GetEntityCoords(entity)) <= (maxDistance or 15.0)
 end
 
-function SunsetJobs_ValidateTrailer(source, mustBeAttached, maxDistance)
+--- Returns: ok | no_truck | destroyed | detached | too_far | wrong_model
+function SunsetJobs_GetTrailerState(source, mustBeAttached, maxDistance)
     local session = Sessions[source]
     if not session or not session.vehicleNetId or not session.trailerNetId then
-        return false, 'Your assigned trailer is missing'
+        return 'destroyed'
     end
 
     local truck = NetworkGetEntityFromNetworkId(session.vehicleNetId)
     local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
     if not truck or truck == 0 or not DoesEntityExist(truck) then
-        return false, 'Your assigned truck is missing'
+        return 'no_truck'
     end
     if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
-        return false, 'Your assigned trailer is missing'
+        return 'destroyed'
     end
 
     local cfg = Sunset.GetJobConfig(session.jobId)
     if cfg and cfg.trailerModel and GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
-        return false, 'Wrong trailer'
+        return 'wrong_model'
     end
     if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > (maxDistance or 15.0) then
-        return false, 'Return to your assigned trailer'
+        return 'too_far'
     end
 
     if mustBeAttached then
         local nativeOk, attached, attachedEntity = pcall(function()
             return GetVehicleTrailerVehicle(truck)
         end)
-        if nativeOk and (not attached or attachedEntity ~= trailer) then
-            return false, 'Attach your assigned trailer before continuing'
-        elseif not nativeOk then
+        if nativeOk then
+            if not attached or attachedEntity ~= trailer then
+                return 'detached'
+            end
+        else
             local state = Entity(truck).state
             if state.sunsetTrailerAttached ~= true
                 or tonumber(state.sunsetTrailerNetId) ~= tonumber(session.trailerNetId) then
-                return false, 'Attach your assigned trailer before continuing'
+                return 'detached'
             end
         end
     end
-    return true
+    return 'ok'
+end
+
+function SunsetJobs_ValidateTrailer(source, mustBeAttached, maxDistance)
+    local state = SunsetJobs_GetTrailerState(source, mustBeAttached, maxDistance)
+    if state == 'ok' then return true end
+    if state == 'no_truck' then return false, 'Your assigned truck is missing' end
+    if state == 'destroyed' then return false, 'Your assigned trailer was destroyed' end
+    if state == 'wrong_model' then return false, 'Wrong trailer' end
+    if state == 'too_far' then return false, 'Return to your assigned trailer' end
+    return false, 'Attach your assigned trailer before continuing'
+end
+
+local function trailerRecoveryRemaining(session, cfg)
+    local uses = session.trailerRecoveryUses or 0
+    local maxUses = cfg.trailerRecoveryMaxUses or 3
+    return maxUses - uses, maxUses
+end
+
+local function authorizeTrailerRecovery(session, cfg)
+    local remaining = trailerRecoveryRemaining(session, cfg)
+    if remaining <= 0 then return nil, 'No trailer recoveries remain for this shift' end
+
+    local now = os.time()
+    local cooldown = cfg.trailerRecoveryCooldownSec or 180
+    if session.lastTrailerRecoveryAt and now - session.lastTrailerRecoveryAt < cooldown then
+        return nil, ('Trailer recovery available in %d seconds'):format(
+            cooldown - (now - session.lastTrailerRecoveryAt))
+    end
+
+    session.lastTrailerRecoveryAt = now
+    session.trailerRecoveryUses = (session.trailerRecoveryUses or 0) + 1
+    session.trailerDetachSince = nil
+    session.trailerWarned = nil
+    return remaining - 1
+end
+
+local function failTruckerTrailerLoss(source, session, reason)
+    local cfg = Sunset.GetJobConfig('trucker')
+    local stage = session.data and session.data.stage
+    local route = cfg and cfg.routes and session.data and cfg.routes[session.data.routeIndex]
+    local partialPay = 0
+
+    if route and (stage == 'to_delivery' or stage == 'return_depot') then
+        local fraction = cfg.trailerLossPartialPayFraction or 0.5
+        partialPay = math.floor((route.pay or 500) * fraction)
+        if partialPay > 0 then
+            SunsetJobs_PayReward(source, 'trucker', partialPay, 'trucker_trailer_loss', false)
+        end
+    end
+
+    local finalReason = reason
+    if partialPay > 0 then
+        finalReason = ('%s — partial pay $%d'):format(reason, partialPay)
+    end
+    SunsetJobs_ClearSession(source, 'FAILED', finalReason, { keepTruck = true })
 end
 
 local function xpForLevel(level)
@@ -371,16 +429,14 @@ exports.sunset_core:RegisterCallback('sunset:jobs:recoverTrailer', function(sour
     if not session then return nil, err end
 
     local cfg = Sunset.GetJobConfig('trucker')
-    if not cfg or not session.vehicleNetId or not session.trailerNetId then
-        return nil, 'Your assigned truck or trailer is missing'
+    if not cfg or not session.vehicleNetId then
+        return nil, 'Your assigned truck is missing'
     end
 
     local truck = NetworkGetEntityFromNetworkId(session.vehicleNetId)
-    local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
     local ped = GetPlayerPed(source)
-    if not truck or truck == 0 or not DoesEntityExist(truck)
-        or not trailer or trailer == 0 or not DoesEntityExist(trailer) then
-        return nil, 'Your assigned truck or trailer no longer exists'
+    if not truck or truck == 0 or not DoesEntityExist(truck) then
+        return nil, 'Your assigned truck no longer exists'
     end
     if not ped or ped == 0 or GetPedInVehicleSeat(truck, -1) ~= ped then
         return nil, 'Sit in the driver seat of your assigned truck'
@@ -388,28 +444,104 @@ exports.sunset_core:RegisterCallback('sunset:jobs:recoverTrailer', function(sour
     if GetEntitySpeed(truck) > 1.5 then
         return nil, 'Stop the truck before recovering the trailer'
     end
+
+    local trailerState = SunsetJobs_GetTrailerState(source, false, cfg.trailerRecoveryMaxDistance or 30.0)
+    if trailerState == 'destroyed' or trailerState == 'wrong_model' then
+        local remaining, err2 = authorizeTrailerRecovery(session, cfg)
+        if not remaining then return nil, err2 end
+        return {
+            respawn = true,
+            truckNetId = session.vehicleNetId,
+            trailerModel = cfg.trailerModel,
+            remaining = remaining,
+        }
+    end
+
+    if not session.trailerNetId then
+        return nil, 'Your assigned trailer is missing'
+    end
+
+    local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
+    if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
+        local remaining, err2 = authorizeTrailerRecovery(session, cfg)
+        if not remaining then return nil, err2 end
+        return {
+            respawn = true,
+            truckNetId = session.vehicleNetId,
+            trailerModel = cfg.trailerModel,
+            remaining = remaining,
+        }
+    end
+
     if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > (cfg.trailerRecoveryMaxDistance or 30.0) then
         return nil, 'The assigned trailer is too far away to recover'
     end
 
-    local now = os.time()
-    local cooldown = cfg.trailerRecoveryCooldownSec or 180
-    if session.lastTrailerRecoveryAt and now - session.lastTrailerRecoveryAt < cooldown then
-        return nil, ('Trailer recovery available in %d seconds'):format(
-            cooldown - (now - session.lastTrailerRecoveryAt))
-    end
-    local uses = session.trailerRecoveryUses or 0
-    local maxUses = cfg.trailerRecoveryMaxUses or 3
-    if uses >= maxUses then
-        return nil, 'No trailer recoveries remain for this shift'
-    end
-
-    session.lastTrailerRecoveryAt = now
-    session.trailerRecoveryUses = uses + 1
+    local remaining, err2 = authorizeTrailerRecovery(session, cfg)
+    if not remaining then return nil, err2 end
     return {
         truckNetId = session.vehicleNetId,
         trailerNetId = session.trailerNetId,
-        remaining = maxUses - session.trailerRecoveryUses,
+        remaining = remaining,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:jobs:registerTrailer', function(source, trailerNetId)
+    local session, err = SunsetJobs_RequireSession(source, 'trucker', { 'ACTIVE', 'RETURNING', 'STARTING' })
+    if not session then return nil, err end
+
+    local cfg = Sunset.GetJobConfig('trucker')
+    trailerNetId = tonumber(trailerNetId)
+    local trailer = trailerNetId and NetworkGetEntityFromNetworkId(trailerNetId) or 0
+    if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
+        return nil, 'Trailer is not networked'
+    end
+    if cfg and cfg.trailerModel and GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
+        return nil, 'Invalid trailer model'
+    end
+
+    local truck = session.vehicleNetId and NetworkGetEntityFromNetworkId(session.vehicleNetId) or 0
+    if not truck or truck == 0 or not DoesEntityExist(truck) then
+        return nil, 'Your assigned truck is missing'
+    end
+    if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > 25.0 then
+        return nil, 'Spawn the replacement trailer near your truck'
+    end
+
+    session.trailerNetId = trailerNetId
+    session.trailerDetachSince = nil
+    session.trailerWarned = nil
+    session.trailerDestroyHandled = nil
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:jobs:trailerDestroyed', function(source)
+    local session, err = SunsetJobs_RequireSession(source, 'trucker', { 'ACTIVE', 'RETURNING' })
+    if not session then return nil, err end
+    if session.trailerDestroyHandled then return nil, 'Already handling trailer loss' end
+
+    local state = SunsetJobs_GetTrailerState(source, false, 50.0)
+    if state ~= 'destroyed' then return nil, 'Trailer is still present' end
+
+    local cfg = Sunset.GetJobConfig('trucker')
+    local usesLeft = trailerRecoveryRemaining(session, cfg)
+    if usesLeft <= 0 then
+        session.trailerDestroyHandled = true
+        failTruckerTrailerLoss(source, session, 'Trailer destroyed — no recoveries left')
+        return { failed = true }
+    end
+
+    local remaining, err2 = authorizeTrailerRecovery(session, cfg)
+    if not remaining then return nil, err2 end
+
+    session.trailerDestroyHandled = true
+    TriggerClientEvent('sunset:client:notify', source,
+        'Trailer destroyed! Spawning a replacement — use /recovertrailer if it does not attach.', 'error', 8000)
+    return {
+        respawn = true,
+        truckNetId = session.vehicleNetId,
+        trailerModel = cfg.trailerModel,
+        remaining = remaining,
     }
 end)
 
@@ -456,21 +588,51 @@ CreateThread(function()
                 end
 
                 if Sessions[src] and cfg and cfg.requiresAttachedTrailer and session.trailerNetId then
-                    local valid = SunsetJobs_ValidateTrailer(src, true, 18.0)
-                    if valid then
+                    local trailerState = SunsetJobs_GetTrailerState(src, true, 18.0)
+                    if trailerState == 'ok' then
                         session.trailerDetachSince = nil
                         session.trailerWarned = nil
+                        session.trailerDestroyHandled = nil
+                    elseif trailerState == 'destroyed' then
+                        if not session.trailerDestroyHandled then
+                            local usesLeft = trailerRecoveryRemaining(session, cfg)
+                            if usesLeft <= 0 then
+                                session.trailerDestroyHandled = true
+                                failTruckerTrailerLoss(src, session, 'Trailer destroyed — no recoveries left')
+                            else
+                                local remaining, err2 = authorizeTrailerRecovery(session, cfg)
+                                if remaining then
+                                    session.trailerDestroyHandled = true
+                                    TriggerClientEvent('sunset:client:notify', src,
+                                        'Trailer destroyed! Spawning a replacement — use /recovertrailer if needed.', 'error', 8000)
+                                    TriggerClientEvent('sunset:jobs:trailerRespawn', src, {
+                                        truckNetId = session.vehicleNetId,
+                                        trailerModel = cfg.trailerModel,
+                                        remaining = remaining,
+                                    })
+                                elseif err2 then
+                                    TriggerClientEvent('sunset:client:notify', src, err2, 'warning')
+                                end
+                            end
+                        end
+                    elseif trailerState == 'no_truck' then
+                        -- work-vehicle abandonment monitor handles truck loss
                     else
                         session.trailerDetachSince = session.trailerDetachSince or now
                         local elapsed = now - session.trailerDetachSince
                         local grace = cfg.trailerGraceSec or 60
-                        if not session.trailerWarned then
-                            session.trailerWarned = true
+                        local remaining = grace - elapsed
+                        local warnBucket = remaining <= 10 and 10 or (remaining <= 30 and 30 or 60)
+                        if session.trailerWarned ~= warnBucket then
+                            session.trailerWarned = warnBucket
                             TriggerClientEvent('sunset:client:notify', src,
-                                ('Reattach your assigned trailer within %d seconds'):format(grace), 'warning')
+                                ('Reattach your trailer within %d seconds or the shift ends'):format(
+                                    math.max(0, remaining)), 'warning')
                         end
                         if elapsed >= grace then
-                            SunsetJobs_ClearSession(src, 'FAILED', 'Assigned trailer was abandoned')
+                            SunsetJobs_ClearSession(src, 'FAILED',
+                                'Trailer detached too long — shift ended (your truck is still yours)',
+                                { keepTruck = true })
                         end
                     end
                 end
