@@ -1,6 +1,7 @@
 local JC = Sunset.JobClient
 local fishing = false
 local rod = nil
+local selling = false
 
 local function removeRod()
     if rod and DoesEntityExist(rod) then DeleteEntity(rod) end
@@ -35,6 +36,25 @@ local function nearestSpotIndex()
     return best, bestDist
 end
 
+local function attemptSell()
+    if selling then return end
+    local cfg = Sunset.GetJobConfig('fisherman')
+    if not cfg or not cfg.sellPoint then return JC.notify('Fish Buyer is not configured', 'error') end
+    if not JC.isNear(cfg.sellPoint.coords, (cfg.sellRadius or 3.0) + 2.0) then
+        JC.setWaypoint(cfg.sellPoint.coords)
+        return JC.notify('Fish Buyer marked on GPS: Del Perro Pier. Enter the yellow marker and press E.', 'info', 8000)
+    end
+
+    selling = true
+    local result, sellErr = Sunset.AwaitCallback('sunset:jobs:fisherman:sell')
+    selling = false
+    if result then
+        JC.notify(('Sold %d fish for $%s'):format(result.count or 0, result.amount or 0), 'success')
+    else
+        JC.notify(sellErr or 'Could not sell the fish. Stay inside the yellow marker and try again.', 'error')
+    end
+end
+
 local function startFisherman()
     local data, err = Sunset.AwaitCallback('sunset:jobs:fisherman:start')
     if not data then
@@ -49,11 +69,15 @@ local function startFisherman()
     end
     JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, cfg.sellPoint.label or 'Fish Buyer')
     JC.sessionData = data
-    if cfg.spots and cfg.spots[1] then
+    if (data.carried or 0) > 0 then
+        JC.setWaypoint(cfg.sellPoint.coords)
+    elseif cfg.spots and cfg.spots[1] then
         JC.setWaypoint(cfg.spots[1].coords)
     end
-    JC.showObjective('Fishing', 'Stand in a blue marker and press E or type /fish', 0)
-    JC.notify('At a blue fishing marker, press E or use /fish. Reel in when BITE appears.', 'info', 9000)
+    JC.showObjective('Fishing', ('Bag %d/%d — blue marker: E or /fish · buyer: /sellfish'):format(
+        data.carried or 0, data.capacity or 2), 0)
+    JC.notify(('Fishing bag: %d/%d. Catch with E or /fish; use /sellfish at any time to mark the buyer.'):format(
+        data.carried or 0, data.capacity or 2), 'info', 9000)
 
     CreateThread(function()
         while JC.jobId == 'fisherman' and JC.state ~= 'IDLE' do
@@ -71,15 +95,6 @@ local function startFisherman()
                 if JC.isNear(sell, (cfg2.sellRadius or 3.0) + 2.0) then
                     JC.showHelp(('Press ~INPUT_CONTEXT~ to sell your fish ($%d before buyer bonus)'):format(
                         JC.sessionData.pendingValue or 0))
-                end
-                if JC.isNear(sell, cfg2.sellRadius) and IsControlJustPressed(0, 38) then
-                    local result, sellErr = Sunset.AwaitCallback('sunset:jobs:fisherman:sell')
-                    if result then
-                        JC.notify(('Sold catch for $%s'):format(result.amount or 0), 'success')
-                        break
-                    else
-                        JC.notify(sellErr or 'Could not sell the fish. Stay inside the yellow marker and try again.', 'error')
-                    end
                 end
             end
             Wait(0)
@@ -127,12 +142,14 @@ local function attemptFish()
     fishing = false
     if reeled and result then
         JC.sessionData.pendingValue = result.pendingValue
+        JC.sessionData.carried = result.carried
+        JC.sessionData.capacity = result.capacity
         local sellLabel = cfg.sellPoint.label or 'Fish Buyer'
         JC.setWaypoint(cfg.sellPoint.coords)
-        JC.showObjective('Sell fish or keep fishing', ('Catch $%s · bag $%s — yellow marker at %s, press E'):format(
-            result.value, result.pendingValue, sellLabel), 50)
-        JC.notify(('Caught fish worth $%s. Fish Buyer marked on GPS; press E in the yellow marker to sell.'):format(
-            result.value), 'success', 9000)
+        JC.showObjective('Sell fish or keep fishing', ('Bag %d/%d · value $%s — %s, press E'):format(
+            result.carried or 0, result.capacity or 2, result.pendingValue, sellLabel), 50)
+        JC.notify(('Fresh Fish added to inventory (%d/%d). Buyer marked on GPS; press E or /sellfish there.'):format(
+            result.carried or 0, result.capacity or 2), 'success', 9000)
     else
         JC.showObjective('Fishing', 'Fish escaped — press E or /fish to cast again', 0)
         JC.notify(reelErr or 'Too late — the fish escaped', 'warning')
@@ -141,6 +158,10 @@ end
 
 RegisterCommand('fish', function()
     CreateThread(attemptFish)
+end, false)
+
+RegisterCommand('sellfish', function()
+    CreateThread(attemptSell)
 end, false)
 
 CreateThread(function()
@@ -157,6 +178,24 @@ CreateThread(function()
     end
 end)
 
+CreateThread(function()
+    while true do
+        local cfg = Sunset.GetJobConfig('fisherman')
+        local employed = JC.getCharacterJob() == 'fisherman'
+        if employed and cfg and cfg.sellPoint and JC.isNear(cfg.sellPoint.coords, 30.0) then
+            JC.drawMarker(cfg.sellPoint.coords, 255, 200, 50)
+            if JC.isNear(cfg.sellPoint.coords, (cfg.sellRadius or 3.0) + 2.0) then
+                JC.showHelp('Press ~INPUT_CONTEXT~ to sell all Fresh Fish in your inventory')
+                if IsControlJustPressed(0, 38) then CreateThread(attemptSell) end
+            end
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)
+
 TriggerEvent('chat:addSuggestion', '/fish', 'Cast your fishing rod at a marked fishing spot')
+TriggerEvent('chat:addSuggestion', '/sellfish', 'Mark the Fish Buyer or sell fish at Del Perro Pier')
 
 Sunset.Jobs.StartFisherman = startFisherman

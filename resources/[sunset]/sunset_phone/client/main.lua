@@ -111,7 +111,18 @@ local function togglePhone()
 end
 
 RegisterCommand('phone', togglePhone, false)
-RegisterKeyMapping('phone', 'Open phone', 'keyboard', 'P')
+
+-- P is GTA's primary pause binding. Capture that control directly so pressing P
+-- opens only the phone; ESC remains available for the pause menu.
+CreateThread(function()
+    while true do
+        DisableControlAction(0, 199, true) -- INPUT_FRONTEND_PAUSE (P)
+        if IsDisabledControlJustReleased(0, 199) then
+            togglePhone()
+        end
+        Wait(0)
+    end
+end)
 
 AddEventHandler('sunset:nui:phoneClose', function()
     closePhone()

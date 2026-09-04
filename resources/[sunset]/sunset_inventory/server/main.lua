@@ -21,6 +21,28 @@ local function calcWeight(items)
     return total
 end
 
+local function inventoryView(items)
+    local view = {}
+    for _, row in ipairs(items or {}) do
+        local def = Sunset.Items[row.item] or {}
+        view[#view + 1] = {
+            id = row.id,
+            item = row.item,
+            count = row.count,
+            slot = row.slot,
+            metadata = row.metadata,
+            label = def.label or row.item,
+            usable = def.usable == true,
+            icon = def.icon,
+        }
+    end
+    return view
+end
+
+local function sendInventoryUpdate(source, items)
+    emitClient('sunset:client:inventoryUpdate', source, inventoryView(items), calcWeight(items))
+end
+
 local function loadInventory(characterId)
     local rows = MySQL.query.await(
         'SELECT id, item, count, slot, metadata FROM character_inventory WHERE character_id = ? ORDER BY slot',
@@ -58,7 +80,7 @@ function AddItem(source, item, count, slot, metadata)
         if row.item == item and (not slot or row.slot == slot) and not metadata then
             row.count = row.count + count
             MySQL.update.await('UPDATE character_inventory SET count = ? WHERE id = ?', { row.count, row.id })
-            emitClient('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
+            sendInventoryUpdate(source, inv)
             return true
         end
     end
@@ -78,7 +100,7 @@ function AddItem(source, item, count, slot, metadata)
         { char.id, item, count, freeSlot, metadata and json.encode(metadata) or nil }
     )
     inv[#inv + 1] = { id = id, item = item, count = count, slot = freeSlot, metadata = metadata }
-    emitClient('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
+    sendInventoryUpdate(source, inv)
     return true
 end
 
@@ -98,7 +120,7 @@ function RemoveItem(source, item, count)
             else
                 MySQL.update.await('UPDATE character_inventory SET count = ? WHERE id = ?', { row.count, row.id })
             end
-            emitClient('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
+            sendInventoryUpdate(source, inv)
             return true
         end
     end
@@ -149,8 +171,33 @@ function SetItemMetadata(source, item, metadata)
         json.encode(row.metadata), row.id,
     })
     local inv = GetInventory(source)
-    emitClient('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
+    sendInventoryUpdate(source, inv)
     return true
+end
+
+function CountItem(source, item)
+    local total = 0
+    for _, row in ipairs(GetInventory(source)) do
+        if row.item == item then total = total + (tonumber(row.count) or 0) end
+    end
+    return total
+end
+
+function TakeAllItems(source, item)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char or type(item) ~= 'string' then return nil end
+    local inv = GetInventory(source)
+    local removed = {}
+    for _, row in ipairs(inv) do
+        if row.item == item then removed[#removed + 1] = row end
+    end
+    if #removed == 0 then return {} end
+    MySQL.update.await('DELETE FROM character_inventory WHERE character_id = ? AND item = ?', { char.id, item })
+    for i = #inv, 1, -1 do
+        if inv[i].item == item then table.remove(inv, i) end
+    end
+    sendInventoryUpdate(source, inv)
+    return removed
 end
 
 function UseItem(source, item)
@@ -200,13 +247,15 @@ exports('RemoveItem', RemoveItem)
 exports('HasItem', HasItem)
 exports('UseItem', UseItem)
 exports('SetItemMetadata', SetItemMetadata)
+exports('CountItem', CountItem)
+exports('TakeAllItems', TakeAllItems)
 exports('GetGasCanLiters', function(source)
     return getGasCanLiters(findInventoryRow(source, 'gas_can'))
 end)
 
 exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
     local inv = GetInventory(source)
-    return { items = inv, weight = calcWeight(inv), maxWeight = Sunset.Config.MaxWeight }
+    return { items = inventoryView(inv), weight = calcWeight(inv), maxWeight = Sunset.Config.MaxWeight }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:useItem', function(source, item)
@@ -234,7 +283,7 @@ RegisterNetEvent('sunset:server:inventoryLoaded', function()
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
     local inv = loadInventory(char.id)
-    emitClient('sunset:client:inventoryUpdate', source, inv, calcWeight(inv))
+    sendInventoryUpdate(source, inv)
 end)
 
 AddEventHandler('playerDropped', function()

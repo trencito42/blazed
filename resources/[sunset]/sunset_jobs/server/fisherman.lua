@@ -1,3 +1,28 @@
+local SellLocks = {}
+
+local function fishLevelAndCapacity(source, cfg)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return 1, cfg.carryBase or 2 end
+    local level = tonumber(MySQL.scalar.await(
+        'SELECT level FROM job_progress WHERE character_id = ? AND job_id = ?',
+        { char.id, 'fisherman' }
+    )) or 1
+    local capacity = (cfg.carryBase or 2) + math.max(0, level - 1) * (cfg.carryPerLevel or 1)
+    return level, math.min(cfg.carryMax or 12, capacity)
+end
+
+local function fishInventorySummary(source, cfg)
+    local count, value = 0, 0
+    for _, row in ipairs(exports.sunset_inventory:GetInventory(source) or {}) do
+        if row.item == (cfg.fishItem or 'fresh_fish') then
+            local rowCount = tonumber(row.count) or 0
+            count = count + rowCount
+            value = value + (tonumber(row.metadata and row.metadata.value) or cfg.catchPayMin or 35) * rowCount
+        end
+    end
+    return count, value
+end
+
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:start', function(source)
     local cfg = Sunset.GetJobConfig('fisherman')
     local atWork = SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, 12.0)
@@ -5,9 +30,14 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:start', function(sou
         if SunsetJobs_ValidateCoords(source, spot.coords, (cfg.catchRadius or 8.0) + 4.0) then atWork = true break end
     end
     if not atWork then return nil, 'Go to a fishing spot or the fish buyer to start work' end
+    local level, capacity = fishLevelAndCapacity(source, cfg)
+    local carried, carriedValue = fishInventorySummary(source, cfg)
     local session, err = SunsetJobs_StartSession(source, 'fisherman', {
         catches = 0,
-        pendingValue = 0,
+        carried = carried,
+        pendingValue = carriedValue,
+        level = level,
+        capacity = capacity,
         stage = 'fishing',
     })
     if not session then return nil, err end
@@ -37,6 +67,15 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     local spot = cfg.spots[spotIndex]
     if not spot or not SunsetJobs_ValidateCoords(source, spot.coords, cfg.catchRadius or 8.0) then
         return nil, 'Stand inside a fishing marker'
+    end
+    local level, capacity = fishLevelAndCapacity(source, cfg)
+    local carried = exports.sunset_inventory:CountItem(source, cfg.fishItem or 'fresh_fish') or 0
+    session.data.level = level
+    session.data.capacity = capacity
+    session.data.carried = carried
+    if carried >= capacity then
+        return nil, ('Fishing bag full (%d/%d). Follow GPS to Fish Buyer or use /sellfish.'):format(
+            carried, capacity)
     end
     local now = GetGameTimer()
     local challenge = session.data.fishingChallenge
@@ -76,11 +115,32 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     if now > challenge.expiresAt then return nil, 'Too late — the fish escaped' end
 
     local value = math.random(cfg.catchPayMin or 30, cfg.catchPayMax or 100)
+    local level, capacity = fishLevelAndCapacity(source, cfg)
+    local fishItem = cfg.fishItem or 'fresh_fish'
+    local carried = exports.sunset_inventory:CountItem(source, fishItem) or 0
+    if carried >= capacity then
+        return nil, ('Fishing bag full (%d/%d). Sell your fish before casting again.'):format(carried, capacity)
+    end
+    if not exports.sunset_inventory:AddItem(source, fishItem, 1, nil, {
+        value = value,
+        caughtAt = os.time(),
+    }) then
+        return nil, 'The fish escaped because your inventory has no free slot or weight. Free space and try again.'
+    end
     session.data.catches = (session.data.catches or 0) + 1
     session.data.pendingValue = (session.data.pendingValue or 0) + value
+    session.data.carried = carried + 1
+    session.data.capacity = capacity
+    session.data.level = level
 
     SunsetJobs_AddJobXP(source, 'fisherman', cfg.xpPerCatch or 12)
-    return { value = value, catches = session.data.catches, pendingValue = session.data.pendingValue }
+    return {
+        value = value,
+        catches = session.data.catches,
+        carried = session.data.carried,
+        capacity = capacity,
+        pendingValue = session.data.pendingValue,
+    }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:miss', function(source, token)
@@ -94,34 +154,56 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:miss', function(sour
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:sell', function(source)
-    local session, err = SunsetJobs_RequireSession(source, 'fisherman', { 'ACTIVE' })
-    if not session then return nil, err end
-
     local cfg = Sunset.GetJobConfig('fisherman')
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'Your character is not loaded. Reconnect and try again.' end
+    if select(1, Sunset.GetCharacterJob(char)) ~= 'fisherman' then
+        return nil, 'Only employed fishermen can sell fish here. Get the Fisherman job first.'
+    end
     if not SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, cfg.sellRadius or 3.0) then
-        return nil, 'Go to the fish buyer'
+        return nil, 'You are not at Fish Buyer. Follow the yellow GPS marker at Del Perro Pier.'
+    end
+    if SellLocks[source] then return nil, 'Your fish sale is already being processed.' end
+
+    local count, pending = fishInventorySummary(source, cfg)
+    if count <= 0 or pending <= 0 then return nil, 'You have no Fresh Fish in your inventory. Catch fish with /fish first.' end
+
+    SellLocks[source] = true
+    local takeOk, removed = pcall(function()
+        return exports.sunset_inventory:TakeAllItems(source, cfg.fishItem or 'fresh_fish')
+    end)
+    if not takeOk or not removed or #removed == 0 then
+        SellLocks[source] = nil
+        return nil, 'The fish sale could not read your inventory. Nothing was charged; reopen it and try again.'
+    end
+    local bonus = math.floor(pending * (cfg.sellBonusMultiplier or 1.0))
+    local payOk, paid = pcall(SunsetJobs_PayReward, source, 'fisherman', bonus, 'fisherman_sell', true)
+    if not payOk or not paid then
+        for _, row in ipairs(removed) do
+            exports.sunset_inventory:AddItem(source, cfg.fishItem or 'fresh_fish', row.count or 1, nil, row.metadata)
+        end
+        SellLocks[source] = nil
+        return nil, 'Payment failed. Your fish were returned to your inventory.'
     end
 
-    local pending = session.data.pendingValue or 0
-    if pending <= 0 then return nil, 'Nothing to sell — catch some fish first' end
-
-    local bonus = math.floor(pending * (cfg.sellBonusMultiplier or 1.0))
-    SunsetJobs_PayReward(source, 'fisherman', bonus, 'fisherman_sell', true)
-
-    session.data.pendingValue = 0
-    SunsetJobs_ClearSession(source, 'COMPLETED', 'Catch sold')
-    return { amount = bonus }
+    local session = SunsetJobs_GetSession(source)
+    if session and session.jobId == 'fisherman' then
+        session.data.pendingValue = 0
+        session.data.carried = 0
+        SunsetJobs_ClearSession(source, 'COMPLETED', 'Catch sold')
+    end
+    SellLocks[source] = nil
+    return { amount = bonus, count = count }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:endShift', function(source)
     local session = SunsetJobs_GetSession(source)
     if not session or session.jobId ~= 'fisherman' then return nil, 'No fishing shift' end
 
-    local pending = session.data.pendingValue or 0
-    if pending > 0 then
-        return nil, 'Sell your catch at the pier first'
-    end
-
     SunsetJobs_ClearSession(source, 'CANCELLED', 'Shift ended')
     return true
+end)
+
+AddEventHandler('playerDropped', function()
+    SellLocks[source] = nil
 end)

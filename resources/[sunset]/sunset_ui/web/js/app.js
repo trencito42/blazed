@@ -26,6 +26,7 @@ function showScreen(name) {
 function showApp(visible) {
     const app = $('#app');
     if (visible) {
+        app.classList.remove('app--enter-game');
         app.classList.remove('hidden');
     } else {
         app.classList.add('hidden');
@@ -121,6 +122,21 @@ window.addEventListener('message', (event) => {
         case 'hideHud':
             showHud(false);
             break;
+
+        case 'pauseState':
+            document.body.classList.toggle('game-paused', Boolean(data?.paused));
+            break;
+
+        case 'enterGameplay': {
+            const app = $('#app');
+            const transitionMs = Math.max(250, Number(data?.duration) || 800);
+            if (app) {
+                app.style.setProperty('--enter-duration', `${transitionMs}ms`);
+                app.classList.add('app--enter-game');
+                setTimeout(() => showApp(false), transitionMs);
+            }
+            break;
+        }
 
         case 'updateHud':
             if (window.Hud) Hud.update(data || event.data.data);

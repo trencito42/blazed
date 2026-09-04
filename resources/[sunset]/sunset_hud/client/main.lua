@@ -1,6 +1,9 @@
 local nextPaydayLabel = '--:--'
 local serverTimeLabel = '00:00'
 local defaultLayoutCache = nil
+local char = nil
+local hudActive = false
+local pauseHidden = false
 
 local function nui(action, data)
     exports.sunset_ui:Send(action, data or {})
@@ -187,7 +190,7 @@ exports('GetPaydaySeconds', GetPaydaySeconds)
 
 CreateThread(function()
     while true do
-        if hudActive then
+        if hudActive and not pauseHidden then
             local veh = nil
             pcall(function() veh = exports.sunset_vehicles:GetVehicleState() end)
             updateHud()
@@ -195,6 +198,18 @@ CreateThread(function()
         else
             Wait(1000)
         end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        local paused = IsPauseMenuActive()
+        if paused ~= pauseHidden then
+            pauseHidden = paused
+            nui('pauseState', { paused = paused })
+            DisplayRadar(not paused)
+        end
+        Wait(paused and 50 or 100)
     end
 end)
 

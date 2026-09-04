@@ -28,6 +28,8 @@
 - Fisherman now uses `/fish` or E to cast with a visible rod and a server-timed reaction challenge; catches require reeling during the short BITE window.
 - A successful catch routes the player to the Fish Buyer at Del Perro Pier and shows the exact E interaction; the sale UI now reports the authoritative paid amount.
 - Server notifications have one canonical client listener (duplicate toasts removed), and generic/nil errors are converted into user-facing explanations. Inventory use now explains the failed requirement and never consumes an item whose action is not implemented.
+- Fisherman catches are persistent `Fresh Fish` inventory items. Carry capacity starts at two and increases by one per Fisherman level (configured cap: 12); `/sellfish` routes to or sells at the Del Perro Pier buyer.
+- P is reserved for the phone while ESC opens pause. HUD overlays fade out during pause and return smoothly on exit; character entry uses a loading-to-game blur/fade transition.
 - Owned vehicle fuel and damage are checkpointed to persistence every 30 seconds while driving, in addition to garage storage/refuelling saves.
 
 Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**

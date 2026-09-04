@@ -27,6 +27,39 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 10;
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+    transition: opacity var(--enter-duration, 500ms) ease,
+        filter var(--enter-duration, 500ms) ease,
+        transform var(--enter-duration, 500ms) ease;
+}
+
+.app.app--enter-game {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(1.025);
+    pointer-events: none;
+}
+
+body.game-paused #hud,
+body.game-paused #job-objective,
+body.game-paused #taxi-meter,
+body.game-paused #police-order,
+body.game-paused #notifications,
+body.game-paused #progress {
+    opacity: 0 !important;
+    filter: blur(3px);
+    pointer-events: none !important;
+}
+
+#hud,
+#job-objective,
+#taxi-meter,
+#police-order,
+#notifications,
+#progress {
+    transition: opacity 220ms ease, filter 220ms ease;
 }
 
 .app-bg {

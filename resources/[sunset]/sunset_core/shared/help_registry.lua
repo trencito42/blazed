@@ -48,6 +48,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/skills', desc = 'View job skill levels' },
     { cmd = '/jobhelp', desc = 'Help text for your civilian job' },
     { cmd = '/fish', desc = 'Cast and play the fishing reaction challenge at a fishing spot' },
+    { cmd = '/sellfish', desc = 'Mark the Fish Buyer or sell carried fish inside the yellow marker' },
     { cmd = '/recovertrailer', desc = 'Right and reattach an overturned assigned Trucker trailer' },
     { cmd = '/quitjob', desc = 'Quit civilian job at Job Center' },
     { cmd = '/faction', desc = 'Faction rank, salary, and your commands' },

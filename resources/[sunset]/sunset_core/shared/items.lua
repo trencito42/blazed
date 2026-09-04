@@ -19,6 +19,7 @@ Sunset.Items = {
     sealed_pouch = { label = 'Sealed Pouch', weight = 0.15, usable = true, stress = -15, category = 'supplies', icon = '📦' },
     shiv = { label = 'Shiv', weight = 0.3, usable = false, weapon = 'WEAPON_SWITCHBLADE', category = 'tools', icon = '🔪' },
     gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxLiters = 20, category = 'tools', icon = '⛽' },
+    fresh_fish = { label = 'Fresh Fish', weight = 1.0, usable = false, category = 'food', icon = '🐟' },
     ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false, category = 'ammo', icon = '🔫' },
 }
 

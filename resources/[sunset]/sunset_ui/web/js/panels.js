@@ -106,7 +106,7 @@ const Panels = {
         list.innerHTML = '';
         (data.items || []).forEach((row) => {
             const def = row.item || 'unknown';
-            let label = def;
+            let label = row.label || def;
             if (def === 'gas_can' && row.metadata) {
                 const maxL = 20;
                 let liters = Number(row.metadata.liters);
@@ -117,9 +117,15 @@ const Panels = {
                     label = `Gas Can (${Math.round(liters)}/${maxL} L)`;
                 }
             }
+            if (def === 'fresh_fish' && row.metadata) {
+                const value = Math.max(0, Number(row.metadata.value) || 0);
+                label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
+            }
             const li = document.createElement('li');
-            li.innerHTML = `<span>${label} x${row.count}</span><button data-item="${def}">USE</button>`;
-            li.querySelector('button')?.addEventListener('click', () => post('inventoryUse', { item: def }));
+            li.innerHTML = `<span>${label} x${row.count}</span>${row.usable ? `<button data-item="${def}">USE</button>` : ''}`;
+            if (row.usable) {
+                li.querySelector('button')?.addEventListener('click', () => post('inventoryUse', { item: def }));
+            }
             list.appendChild(li);
         });
         $('#inventory-weight').textContent = `${(data.weight || 0).toFixed(1)} / ${data.maxWeight || 30} kg`;

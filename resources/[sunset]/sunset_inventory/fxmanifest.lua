@@ -24,4 +24,7 @@ client_scripts {
     'client/weapons.lua',
 }
 
-server_exports { 'GetInventory', 'AddItem', 'RemoveItem', 'HasItem', 'UseItem' }
+server_exports {
+    'GetInventory', 'AddItem', 'RemoveItem', 'HasItem', 'UseItem',
+    'SetItemMetadata', 'GetGasCanLiters', 'CountItem', 'TakeAllItems',
+}
