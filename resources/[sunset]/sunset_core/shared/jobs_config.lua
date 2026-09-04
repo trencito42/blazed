@@ -70,7 +70,7 @@ Sunset.JobsConfig = {
         label = 'Courier',
         help = 'Pick up packages at the warehouse and deliver them on foot.',
         warehouse = {
-            coords = vector3(69.51, 127.86, 79.20),
+            coords = vector3(78.45, 112.22, 81.17),
             blip = { sprite = 478, color = 3, scale = 0.85 },
         },
         deliveries = {
@@ -81,11 +81,13 @@ Sunset.JobsConfig = {
             { coords = vector3(-1288.45, -1115.22, 6.99), label = 'Vespucci Canals' },
             { coords = vector3(127.55, -1298.88, 29.22), label = 'Strawberry' },
         },
+        packageProp = 'prop_cs_cardbox_01',
         packagesPerRun = 4,
         payPerPackage = 120,
         xpPerPackage = 18,
         deliveryRadius = 2.5,
-        pickupRadius = 3.0,
+        pickupRadius = 3.5,
+        pickupZTolerance = 5.0,
         timeoutSec = 1200,
     },
 

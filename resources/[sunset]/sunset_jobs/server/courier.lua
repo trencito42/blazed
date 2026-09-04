@@ -18,6 +18,23 @@ local function buildDeliveryQueue(cfg)
     return queue
 end
 
+local function playerOnFoot(source)
+    local ped = GetPlayerPed(source)
+    return ped and ped ~= 0 and GetVehiclePedIsIn(ped, false) == 0
+end
+
+local function validatePickupCoords(source, cfg)
+    local pos = GetEntityCoords(GetPlayerPed(source))
+    if not pos then return false end
+    local target = cfg.warehouse.coords
+    local t = type(target) == 'vector3' and target or vector3(target.x, target.y, target.z)
+    local dx = pos.x - t.x
+    local dy = pos.y - t.y
+    local horiz = math.sqrt(dx * dx + dy * dy)
+    if horiz > (cfg.pickupRadius or 3.0) then return false end
+    return math.abs(pos.z - t.z) <= (cfg.pickupZTolerance or 5.0)
+end
+
 exports.sunset_core:RegisterCallback('sunset:jobs:courier:start', function(source)
     local cfg = Sunset.GetJobConfig('courier')
     local queue = buildDeliveryQueue(cfg)
@@ -39,9 +56,18 @@ exports.sunset_core:RegisterCallback('sunset:jobs:courier:pickup', function(sour
     if not session then return nil, err end
     if session.data.hasPackage then return nil, 'Already carrying a package' end
 
+    local stage = session.data.stage
+    if stage ~= 'pickup' and not (stage == 'delivering' and not session.data.hasPackage) then
+        return nil, 'Not ready to pick up a package'
+    end
+
+    if not playerOnFoot(source) then
+        return nil, 'Pick up packages on foot'
+    end
+
     local cfg = Sunset.GetJobConfig('courier')
-    if not SunsetJobs_ValidateCoords(source, cfg.warehouse.coords, cfg.pickupRadius or 3.0) then
-        return nil, 'Go to the warehouse'
+    if not validatePickupCoords(source, cfg) then
+        return nil, 'Go to the warehouse loading dock'
     end
 
     if session.state == 'STARTING' then
@@ -57,8 +83,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:courier:deliver', function(sou
     local session, err = SunsetJobs_RequireSession(source, 'courier', { 'ACTIVE' })
     if not session then return nil, err end
     if not session.data.hasPackage then return nil, 'Pick up a package first' end
-    local ped = GetPlayerPed(source)
-    if ped and ped ~= 0 and GetVehiclePedIsIn(ped, false) ~= 0 then return nil, 'Deliver the package on foot' end
+    if not playerOnFoot(source) then return nil, 'Deliver the package on foot' end
 
     local cfg = Sunset.GetJobConfig('courier')
     local idx = session.data.deliveryIndex or 1
