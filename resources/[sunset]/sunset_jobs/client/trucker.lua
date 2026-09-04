@@ -11,6 +11,28 @@ local function requestControl(entity)
     return NetworkHasControlOfEntity(entity)
 end
 
+local function isNearTruckerPoint(coords, cfg)
+    local p = GetEntityCoords(PlayerPedId())
+    local t = type(coords) == 'vector3' and coords or vector3(coords.x, coords.y, coords.z)
+    local dx, dy = p.x - t.x, p.y - t.y
+    if math.sqrt(dx * dx + dy * dy) > (cfg.deliveryRadius or 25.0) then return false end
+    return math.abs(p.z - t.z) <= (cfg.deliveryZTolerance or 8.0)
+end
+
+local function routePoint(session, key)
+    local point = session and session[key]
+    if not point then return nil end
+    return vector3(point.x, point.y, point.z)
+end
+
+local function inWorkTruck()
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then return false end
+    local truck = JC.vehicles[1]
+    if not truck or not DoesEntityExist(truck) then return true end
+    return GetVehiclePedIsIn(ped, false) == truck
+end
+
 local function recoverTrailer()
     local recovery, err = Sunset.AwaitCallback('sunset:jobs:recoverTrailer')
     if not recovery then
@@ -74,6 +96,7 @@ local function startTrucker()
     end
 
     local cfg = Sunset.GetJobConfig('trucker')
+    JC.sessionData = data
     JC.clearBlips()
     JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Trucker Depot')
 
@@ -102,48 +125,76 @@ local function startTrucker()
     JC.notify('Drive to pickup: ' .. (data.label or ''), 'info')
 
     CreateThread(function()
+        local busy = false
         while JC.jobId == 'trucker' and JC.state ~= 'IDLE' do
-            local ped = PlayerPedId()
-            local stage = JC.sessionData and JC.sessionData.stage
+            local session = JC.sessionData
+            local stage = session and session.stage
 
-            if stage == 'to_pickup' and data.pickup then
-                local p = vector3(data.pickup.x, data.pickup.y, data.pickup.z)
-                JC.drawMarker(p, 255, 180, 0)
-                if JC.isNear(p, cfg.deliveryRadius) and IsPedInAnyVehicle(ped, false) then
-                    local ok, newData = Sunset.AwaitCallback('sunset:jobs:trucker:atPickup')
-                    if ok then
-                        JC.sessionData = newData
-                        JC.clearBlips()
-                        JC.addBlip(vector3(data.delivery.x, data.delivery.y, data.delivery.z), { sprite = 478, color = 2 }, 'Delivery')
-                        JC.setWaypoint(data.delivery)
-                        JC.showObjective('Deliver cargo', 'Follow the GPS to the delivery point', 50)
-                        JC.notify('Cargo loaded — deliver to destination', 'success')
+            if stage == 'to_pickup' then
+                local p = routePoint(session, 'pickup')
+                if p then
+                    JC.drawMarker(p, 255, 180, 0)
+                    if isNearTruckerPoint(p, cfg) and inWorkTruck() and not busy then
+                        JC.showHelp('Press ~INPUT_CONTEXT~ to load cargo')
+                        if IsControlJustPressed(0, 38) then
+                            busy = true
+                            local newData, err2 = Sunset.AwaitCallback('sunset:jobs:trucker:atPickup')
+                            busy = false
+                            if newData then
+                                JC.sessionData = newData
+                                local delivery = routePoint(newData, 'delivery')
+                                if delivery then
+                                    JC.clearBlips()
+                                    JC.addBlip(delivery, { sprite = 478, color = 2 }, 'Delivery')
+                                    JC.setWaypoint(delivery)
+                                end
+                                JC.showObjective('Deliver cargo', 'Follow the GPS to the delivery point', 50)
+                                JC.notify('Cargo loaded — deliver to destination', 'success')
+                            else
+                                JC.notify(err2 or 'Could not load cargo at the pickup', 'error')
+                            end
+                        end
                     end
                 end
-            elseif stage == 'to_delivery' and data.delivery then
-                local d = vector3(data.delivery.x, data.delivery.y, data.delivery.z)
-                JC.drawMarker(d, 46, 204, 113)
-                if JC.isNear(d, cfg.deliveryRadius) and IsPedInAnyVehicle(ped, false) then
-                    local result, err2 = Sunset.AwaitCallback('sunset:jobs:trucker:deliver')
-                    if result then
-                        JC.sessionData.stage = 'return_depot'
-                        JC.clearBlips()
-                        JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
-                        JC.setWaypoint(cfg.depot.coords)
-                        JC.showObjective('Return the truck', 'Take the truck and trailer back to the depot', 90)
-                        JC.notify(('Delivered! +$%s — return truck to depot'):format(result.pay or 0), 'success')
-                    elseif err2 then
-                        JC.notify(err2, 'error')
+            elseif stage == 'to_delivery' then
+                local d = routePoint(session, 'delivery')
+                if d then
+                    JC.drawMarker(d, 46, 204, 113)
+                    if isNearTruckerPoint(d, cfg) and inWorkTruck() and not busy then
+                        JC.showHelp('Press ~INPUT_CONTEXT~ to deliver cargo')
+                        if IsControlJustPressed(0, 38) then
+                            busy = true
+                            local result, err2 = Sunset.AwaitCallback('sunset:jobs:trucker:deliver')
+                            busy = false
+                            if result then
+                                JC.sessionData = JC.sessionData or {}
+                                JC.sessionData.stage = result.stage or 'return_depot'
+                                JC.clearBlips()
+                                JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
+                                JC.setWaypoint(cfg.depot.coords)
+                                JC.showObjective('Return the truck', 'Take the truck and trailer back to the depot', 90)
+                                JC.notify(('Delivered! +$%s — return truck to depot'):format(result.pay or 0), 'success')
+                            else
+                                JC.notify(err2 or 'Could not deliver cargo', 'error')
+                            end
+                        end
                     end
                 end
             elseif stage == 'return_depot' then
                 JC.drawMarker(cfg.depot.coords, 52, 152, 219)
-                if JC.isNear(cfg.depot.coords, cfg.returnRadius or 15.0) and IsPedInAnyVehicle(ped, false) then
-                    local ok, err3 = Sunset.AwaitCallback('sunset:jobs:trucker:returnDepot')
-                    if ok then
-                        JC.deleteVehicles()
-                        break
-                    elseif err3 then JC.notify(err3, 'error') end
+                if JC.isNear(cfg.depot.coords, cfg.returnRadius or 25.0) and inWorkTruck() and not busy then
+                    JC.showHelp('Press ~INPUT_CONTEXT~ to return the truck')
+                    if IsControlJustPressed(0, 38) then
+                        busy = true
+                        local ok, err3 = Sunset.AwaitCallback('sunset:jobs:trucker:returnDepot')
+                        busy = false
+                        if ok then
+                            JC.deleteVehicles()
+                            break
+                        else
+                            JC.notify(err3 or 'Could not return the truck to the depot', 'error')
+                        end
+                    end
                 end
             end
             Wait(0)
