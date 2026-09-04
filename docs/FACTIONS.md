@@ -18,7 +18,21 @@ SunsetMP uses a **capability-based faction framework**. Factions are not hardcod
 1. Go to faction HQ (map blip / world marker).
 2. Press `[E]` to join (must not be in another faction).
 3. Use `/duty` to toggle shift. **Salary requires ON DUTY.**
-4. `/leavefaction` to quit.
+4. `/leavefaction` or `/quitfaction` to quit voluntarily (leaders are auto-demoted).
+
+## Faction headquarters
+
+| Faction ID | Label | HQ marker `[E]` | Notes |
+|------------|-------|-----------------|-------|
+| `police` | LSPD | Mission Row PD — `441.15, -981.95, 30.69` | MRPD fleet garage nearby |
+| `medic` | Pillbox EMS | Pillbox Hospital lobby — `307.12, -595.55, 43.28` | Requires `bob74_ipl` for hospital interior |
+| `taxi` | Downtown Cab Co. | `903.32, -170.14, 74.08` | Cab depot at same block |
+| `mechanic` | LS Customs | `337.52, -136.57, 39.01` | Drive-in repair when in vehicle |
+| `lsfd` | LS Fire Department | `1194.82, -1464.01, 34.86` | Fire station garage |
+| `sunset_cartel` | Sunset Cartel | `1394.72, 1141.98, 114.33` | Invite-only; members-only blip |
+| `night_syndicate` | Night Syndicate | `-1520.88, 849.55, 181.59` | Invite-only; members-only blip |
+
+Hospital respawn (`HospitalSpawn`) uses Pillbox at `311.18, -592.49, 43.28`. EMS supply crafting is at `309.50, -597.80, 43.28`.
 
 ## Chat Channels
 

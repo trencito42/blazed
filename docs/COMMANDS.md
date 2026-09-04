@@ -6,7 +6,8 @@
 | `/faction` | Faction info, rank, salary, your commands |
 | `/duty` | Toggle on/off shift |
 | `/leavefaction` | Leave current faction |
-| `/quitjob` | Same as `/leavefaction` |
+| `/quitfaction` | Same as `/leavefaction` |
+| `/quitjob` | Quit civilian job at Job Center (not faction) |
 | `/handsup` | Toggle hands up (`X` key) |
 
 ## Faction Chat
@@ -89,3 +90,5 @@
 | `/setleader [id] [faction]` | Assign faction leader |
 | `/removeleader [id] [faction]` | Remove faction leader |
 | `/kick`, `/ban`, `/tp`, `/heal`, `/revive`, etc. | See `sunset_admin` |
+| `/gotocp [id or name]` | Teleport to checkpoint (moderator+) |
+| `/speed [multiplier]` | Vehicle speed boost while driving (moderator+); `/speed off` to reset |

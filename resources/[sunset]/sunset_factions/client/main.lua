@@ -125,18 +125,24 @@ local function blocked()
     return IsNuiFocused()
 end
 
-RegisterCommand('leavefaction', function()
+local function leaveFactionCommand()
     local ok, err = Sunset.AwaitCallback('sunset:leaveFaction')
     if ok then
+        onDuty = false
+        myFaction = nil
         deleteFleetVehicle()
         refreshIllegalBlip()
     else
         exports.sunset_ui:Notify(err or 'Could not leave faction', 'error')
     end
-end, false)
+end
+
+RegisterCommand('leavefaction', leaveFactionCommand, false)
+RegisterCommand('quitfaction', leaveFactionCommand, false)
+RegisterCommand('factionquit', leaveFactionCommand, false)
 
 RegisterCommand('quitgroup', function()
-    ExecuteCommand('leavefaction')
+    leaveFactionCommand()
 end, false)
 
 RegisterCommand('duty', function()
@@ -365,6 +371,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/duty', 'Toggle faction duty shift')
     TriggerEvent('chat:addSuggestion', '/faction', 'Show faction info and your commands')
     TriggerEvent('chat:addSuggestion', '/leavefaction', 'Leave your faction; keeps your civilian job')
+    TriggerEvent('chat:addSuggestion', '/quitfaction', 'Same as /leavefaction; keeps your civilian job')
     TriggerEvent('chat:addSuggestion', '/quitgroup', 'Same as /leavefaction; keeps your civilian job')
     TriggerEvent('chat:addSuggestion', '/f', 'Faction chat', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/r', 'On-duty faction radio', { { name = 'message' } })

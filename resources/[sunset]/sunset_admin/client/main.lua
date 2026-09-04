@@ -110,3 +110,67 @@ CreateThread(function()
 end)
 
 exports('GetAdminLevel', function() return adminLevel end)
+
+local speedMultiplier = 1.0
+
+local function applyVehicleSpeed(mult)
+    speedMultiplier = mult
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then return end
+    local veh = GetVehiclePedIsIn(ped, false)
+    if mult <= 1.01 then
+        SetVehicleEnginePowerMultiplier(veh, 1.0)
+        SetVehicleCheatPowerIncrease(veh, 0.0)
+    else
+        SetVehicleEnginePowerMultiplier(veh, mult)
+        SetVehicleCheatPowerIncrease(veh, mult)
+    end
+end
+
+RegisterNetEvent('sunset:admin:setSpeed', function(mult)
+    mult = tonumber(mult) or 1.0
+    applyVehicleSpeed(mult)
+    if mult > 1.01 and IsPedInAnyVehicle(PlayerPedId(), false) then
+        exports.sunset_ui:Notify(('Speed boost: %.1fx'):format(mult), 'info')
+    end
+end)
+
+CreateThread(function()
+    local lastVeh = 0
+    while true do
+        Wait(400)
+        local ped = PlayerPedId()
+        local veh = IsPedInAnyVehicle(ped, false) and GetVehiclePedIsIn(ped, false) or 0
+        if veh ~= lastVeh then
+            if lastVeh ~= 0 and DoesEntityExist(lastVeh) then
+                SetVehicleEnginePowerMultiplier(lastVeh, 1.0)
+                SetVehicleCheatPowerIncrease(lastVeh, 0.0)
+            end
+            if veh ~= 0 and speedMultiplier > 1.01 then
+                applyVehicleSpeed(speedMultiplier)
+            end
+            lastVeh = veh
+        elseif veh ~= 0 and speedMultiplier > 1.01 then
+            SetVehicleEnginePowerMultiplier(veh, speedMultiplier)
+            SetVehicleCheatPowerIncrease(veh, speedMultiplier)
+        end
+    end
+end)
+
+RegisterCommand('gotocp', function(_, args)
+    TriggerServerEvent('sunset:admin:gotocp', table.concat(args, ' '))
+end, false)
+
+RegisterCommand('speed', function(_, args)
+    TriggerServerEvent('sunset:admin:requestSpeed', args[1])
+end, false)
+
+CreateThread(function()
+    Wait(4000)
+    TriggerEvent('chat:addSuggestion', '/gotocp', 'Teleport to a checkpoint (admin)', {
+        { name = 'id or name', help = 'e.g. hq_medic, pillbox, mrpd' },
+    })
+    TriggerEvent('chat:addSuggestion', '/speed', 'Vehicle speed multiplier while driving (admin)', {
+        { name = 'multiplier', help = 'e.g. 2.5 — omit or use off/1 to reset' },
+    })
+end)

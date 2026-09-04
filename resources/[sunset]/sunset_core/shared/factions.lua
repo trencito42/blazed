@@ -261,6 +261,7 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
     list[#list + 1] = { cmd = '/duty', desc = 'Toggle on/off shift' }
     list[#list + 1] = { cmd = '/f [message]', desc = 'Faction radio chat' }
     list[#list + 1] = { cmd = '/leavefaction', desc = 'Leave your faction' }
+    list[#list + 1] = { cmd = '/quitfaction', desc = 'Leave your faction (alias)' }
     if Sunset.FactionTypeMatches(jobId, 'law_enforcement') then
         list[#list + 1] = { cmd = '/pdgarage', desc = 'Spawn MRPD patrol vehicle (on duty)' }
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }

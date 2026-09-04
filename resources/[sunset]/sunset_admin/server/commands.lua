@@ -327,3 +327,63 @@ RegisterCommand('coords', function(source)
     if not hasPerm(source, 'coords') then return end
     TriggerClientEvent('sunset:admin:copyCoords', source)
 end, false)
+
+local function sendCheckpointList(source)
+    local chat = function(line)
+        TriggerClientEvent('sunset:chat:message', source, { id = 0, name = 'ADMIN', message = line, time = '' })
+    end
+    chat('=== Checkpoints (use /gotocp [id or name]) ===')
+    local lastCategory
+    for _, cp in ipairs(SunsetAdmin.BuildCheckpoints()) do
+        if cp.category ~= lastCategory then
+            chat(('— %s —'):format(cp.category))
+            lastCategory = cp.category
+        end
+        chat(('%s — %s'):format(cp.id, cp.label))
+    end
+end
+
+RegisterNetEvent('sunset:admin:gotocp', function(query)
+    local source = source
+    if source == 0 then return end
+    if not hasPerm(source, 'gotocp') then return notify(source, 'No permission', 'error') end
+
+    query = query and tostring(query):gsub('^%s+', ''):gsub('%s+$', '') or ''
+    if query == '' then
+        sendCheckpointList(source)
+        return
+    end
+
+    local cp = SunsetAdmin.FindCheckpoint(query)
+    if not cp then
+        return notify(source, ('Unknown checkpoint "%s". Use /gotocp with no args to list IDs.'):format(query), 'error')
+    end
+
+    local c = cp.coords
+    TriggerClientEvent('sunset:admin:teleport', source, c.x, c.y, c.z)
+    notify(source, ('Teleported to %s (%s)'):format(cp.label, cp.id), 'success')
+end)
+
+RegisterNetEvent('sunset:admin:requestSpeed', function(arg)
+    local source = source
+    if source == 0 then return end
+    if not hasPerm(source, 'speed') then return notify(source, 'No permission', 'error') end
+
+    local mult = 1.0
+    if arg and arg ~= '' then
+        local lowered = string.lower(tostring(arg))
+        if lowered == 'off' or lowered == 'reset' then
+            mult = 1.0
+        else
+            mult = tonumber(arg) or 1.0
+        end
+    end
+
+    mult = math.max(0.5, math.min(mult, 10.0))
+    TriggerClientEvent('sunset:admin:setSpeed', source, mult)
+    if mult <= 1.01 then
+        notify(source, 'Vehicle speed boost disabled', 'info')
+    else
+        notify(source, ('Vehicle speed multiplier: %.1fx (use /speed 1 or /speed off to reset)'):format(mult), 'success')
+    end
+end)

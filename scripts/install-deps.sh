@@ -48,5 +48,6 @@ install_ox_lib
 clone_repo ox_target https://github.com/overextended/ox_target.git
 clone_repo ox_inventory https://github.com/overextended/ox_inventory.git
 clone_repo pma-voice https://github.com/AvarianKnight/pma-voice.git
+clone_repo bob74_ipl https://github.com/Bob74/bob74_ipl.git
 
 echo "Done. ox_lib uses release zip; other deps use git clone."

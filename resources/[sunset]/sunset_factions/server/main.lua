@@ -82,7 +82,7 @@ exports.sunset_core:RegisterCallback('sunset:joinFactionHQ', function(source, fa
     return true
 end)
 
-exports.sunset_core:RegisterCallback('sunset:leaveFaction', function(source)
+local function leaveFactionForSource(source)
     local char = getChar(source)
     if not char then return nil, 'Cannot leave the faction: your character is not loaded. Reconnect and select it again.' end
     local oldFaction = getFactionOf(char)
@@ -90,15 +90,28 @@ exports.sunset_core:RegisterCallback('sunset:leaveFaction', function(source)
 
     setDuty(source, false)
 
+    if FactionCore.isFactionLeader(char.id, oldFaction) then
+        MySQL.update.await(
+            'DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?',
+            { char.id, oldFaction }
+        )
+    end
+
     if not exports.sunset_core:SetFaction(source, nil, 0) then
         return nil, 'Could not leave faction — try again'
     end
+
+    FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true })
 
     TriggerClientEvent('sunset:client:notify', source,
         ('You left %s. Your civilian job is unchanged.'):format(
             Sunset.Factions[oldFaction] and Sunset.Factions[oldFaction].label or oldFaction
         ), 'success')
     return true
+end
+
+exports.sunset_core:RegisterCallback('sunset:leaveFaction', function(source)
+    return leaveFactionForSource(source)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, targetId)

@@ -41,6 +41,7 @@ setr voice_enablePhones 1
 setr sv_showBusySpinnerOnLoadingScreen false
 ensure sunset_loadscreen
 ensure oxmysql
+ensure bob74_ipl
 ensure sunset_core
 ensure sunset_ui
 ensure sunset_world
