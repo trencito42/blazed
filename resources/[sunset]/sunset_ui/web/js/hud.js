@@ -1,172 +1,107 @@
 const Hud = {
-    MAX_SPEED: 320,
-    ARC_LEN: 434,
-    RPM_ARC_LEN: 358,
     smooth: { speed: 0, rpm: 0 },
-    ticksReady: false,
+    lastSpeed: null,
+    lastGear: null,
 
     init() {
-        if (this.ticksReady) return;
-        const group = document.getElementById('fh-ticks');
-        if (!group) return;
-
-        const cx = 120;
-        const cy = 120;
-        const outerR = 98;
-        const innerR = 90;
-        const labelR = 82;
-        const start = 135;
-        const sweep = 270;
-        const max = this.MAX_SPEED;
-        const step = 20;
-
-        for (let v = 0; v <= max; v += step) {
-            const t = v / max;
-            const angle = (start + sweep * t) * (Math.PI / 180);
-            const major = v % 40 === 0;
-            const len = major ? 9 : 5;
-            const x1 = cx + Math.cos(angle) * (outerR - len);
-            const y1 = cy + Math.sin(angle) * (outerR - len);
-            const x2 = cx + Math.cos(angle) * outerR;
-            const y2 = cy + Math.sin(angle) * outerR;
-
-            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            tick.setAttribute('x1', x1);
-            tick.setAttribute('y1', y1);
-            tick.setAttribute('x2', x2);
-            tick.setAttribute('y2', y2);
-            tick.setAttribute('class', 'fh-tick' + (major ? ' fh-tick--major' : ''));
-            group.appendChild(tick);
-
-            if (major && v > 0 && v < max) {
-                const lx = cx + Math.cos(angle) * labelR;
-                const ly = cy + Math.sin(angle) * labelR;
-                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                label.setAttribute('x', lx);
-                label.setAttribute('y', ly);
-                label.setAttribute('class', 'fh-tick-label fh-tick-label--major');
-                label.textContent = v;
-                group.appendChild(label);
-            }
-        }
-
-        this.ticksReady = true;
+        if (this._ready) return;
+        this._ready = true;
+        setTimeout(() => {
+            $$('.hud-boot').forEach((el) => el.classList.remove('hud-boot'));
+        }, 1500);
     },
 
-    lerp(a, b, t) {
-        return a + (b - a) * t;
+    clamp(value, min = 0, max = 100) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return min;
+        return Math.max(min, Math.min(max, parsed));
     },
 
-    setArc(el, len, progress) {
-        if (!el) return;
-        const p = Math.max(0, Math.min(1, progress));
-        el.style.strokeDashoffset = String(len * (1 - p));
+    lerp(from, to, amount) {
+        return from + (to - from) * amount;
+    },
+
+    retrigger(element, className) {
+        if (!element) return;
+        element.classList.remove(className);
+        void element.offsetWidth;
+        element.classList.add(className);
     },
 
     update(data) {
         if (!data) return;
         this.init();
 
-        if (data.name !== undefined) {
-            const el = $('#hud-player-name');
-            if (el) el.textContent = data.name || 'Player';
-        }
-        if (data.playerId !== undefined) {
-            const el = $('#hud-player-id');
-            if (el) el.textContent = '#' + (data.playerId !== undefined ? data.playerId : 0);
-        }
-
         if (data.health !== undefined) {
-            const hp = Math.round(Math.max(0, Math.min(100, data.health)));
-            $('#hud-health').style.width = hp + '%';
-            $('#hud-health-val').textContent = hp;
+            const health = Math.round(this.clamp(data.health));
+            $('#hud-health').style.width = `${health}%`;
         }
         if (data.armor !== undefined) {
-            const ar = Math.round(Math.max(0, Math.min(100, data.armor)));
-            $('#hud-armor').style.width = ar + '%';
-            $('#hud-armor-val').textContent = ar;
+            const armor = Math.round(this.clamp(data.armor));
+            $('#hud-armor').style.width = `${armor}%`;
         }
         if (data.cash !== undefined) $('#hud-cash').textContent = formatMoney(data.cash);
+        if (data.bank !== undefined) $('#hud-bank').textContent = formatMoney(data.bank);
         if (data.time) $('#hud-time').textContent = data.time;
         if (data.street) $('#hud-street').textContent = data.street;
         if (data.zone) $('#hud-zone').textContent = data.zone;
+        if (data.heading) $('#hud-heading').textContent = data.heading;
 
-        const wanted = data.wanted || 0;
+        const wanted = Math.max(0, Math.round(Number(data.wanted) || 0));
         const wantedEl = $('#hud-wanted');
         if (wantedEl) {
             wantedEl.classList.toggle('hidden', wanted <= 0);
             $('#hud-wanted-level').textContent = wanted;
         }
 
-        const vehBar = $('#hud-vehicle-bar');
         const speedo = $('#hud-speedo');
-
-        if (data.inVehicle) {
-            vehBar.classList.remove('hidden');
-            speedo.classList.remove('hidden');
-
-            this.setSlot('slot-lock', data.locked);
-            this.setSlot('slot-seatbelt', data.seatbelt);
-            this.setSlot('slot-engine', data.engineOn);
-
-            const lights = $('#slot-lights');
-            lights.classList.remove('active', 'lights-low', 'lights-high');
-            if (data.lightMode === 1) {
-                lights.classList.add('active', 'lights-low');
-            } else if (data.lightMode === 2) {
-                lights.classList.add('active', 'lights-high');
-            }
-
-            const fuelPct = Math.round(data.fuel || 0);
-            $('#hud-fuel-pct').textContent = fuelPct + '%';
-            $('#hud-fuel-val').textContent = fuelPct;
-            const fuelStat = speedo.querySelector('.fh-stat--fuel');
-            if (fuelStat) {
-                fuelStat.classList.toggle('warn', fuelPct <= 15);
-            }
-            const fuelSlot = $('#slot-fuel');
-            fuelSlot.classList.toggle('active', fuelPct > 15);
-            fuelSlot.classList.toggle('warn', fuelPct <= 15);
-
-            const targetSpeed = data.speed || 0;
-            const targetRpm = Math.max(0, Math.min(1, data.rpm || 0));
-            this.smooth.speed = this.lerp(this.smooth.speed, targetSpeed, 0.22);
-            this.smooth.rpm = this.lerp(this.smooth.rpm, targetRpm, 0.28);
-
-            const displaySpeed = Math.round(this.smooth.speed);
-            $('#hud-speed').textContent = displaySpeed;
-
-            const gearEl = $('#hud-gear');
-            const gearText = displaySpeed === 0 ? 'N' : (data.gear === 0 ? 'R' : String(data.gear));
-            gearEl.textContent = gearText;
-            gearEl.classList.toggle('fh-speedo__gear--active', displaySpeed > 0);
-
-            const engPct = Math.round(((data.engine || 1000) / 1000) * 100);
-            $('#hud-eng-val').textContent = engPct;
-            const engStat = speedo.querySelector('.fh-stat--eng');
-            if (engStat) {
-                engStat.classList.remove('warn', 'crit');
-                if (engPct <= 25) engStat.classList.add('crit');
-                else if (engPct <= 50) engStat.classList.add('warn');
-            }
-
-            const speedProgress = Math.min(this.smooth.speed, this.MAX_SPEED) / this.MAX_SPEED;
-            this.setArc($('#fh-speed-arc'), this.ARC_LEN, speedProgress);
-            this.setArc($('#fh-rpm-arc'), this.RPM_ARC_LEN, this.smooth.rpm);
-
-            const rpmBar = $('#fh-rpm-bar');
-            if (rpmBar) rpmBar.style.width = (this.smooth.rpm * 100) + '%';
-        } else {
-            vehBar.classList.add('hidden');
+        if (!speedo) return;
+        if (!data.inVehicle) {
             speedo.classList.add('hidden');
             this.smooth.speed = 0;
             this.smooth.rpm = 0;
+            this.lastSpeed = null;
+            this.lastGear = null;
+            return;
         }
-    },
 
-    setSlot(id, active) {
-        const el = document.getElementById(id);
-        if (el) el.classList.toggle('active', !!active);
+        speedo.classList.remove('hidden');
+        const targetSpeed = Math.max(0, Number(data.speed) || 0);
+        const targetRpm = this.clamp(data.rpm, 0, 1);
+        this.smooth.speed = this.lerp(this.smooth.speed, targetSpeed, 0.22);
+        this.smooth.rpm = this.lerp(this.smooth.rpm, targetRpm, 0.28);
+
+        const displaySpeed = Math.round(this.smooth.speed);
+        const speedEl = $('#hud-speed');
+        speedEl.textContent = displaySpeed;
+        if (displaySpeed !== this.lastSpeed) {
+            this.retrigger(speedEl, 'anim-speed');
+            this.lastSpeed = displaySpeed;
+        }
+
+        const rawGear = Number(data.gear);
+        const gearText = displaySpeed === 0 ? 'N' : (rawGear === 0 ? 'R' : `G${Math.max(1, Math.round(rawGear || 1))}`);
+        const gearEl = $('#hud-gear');
+        gearEl.textContent = gearText;
+        if (gearText !== this.lastGear) {
+            this.retrigger(gearEl, 'anim-gear');
+            this.lastGear = gearText;
+        }
+
+        $('#hud-rpm').style.width = `${this.smooth.rpm * 100}%`;
+
+        const fuel = Math.round(this.clamp(data.fuel));
+        $('#hud-fuel').style.width = `${fuel}%`;
+        const fuelStat = $('#hud-fuel-stat');
+        fuelStat.classList.toggle('warn', fuel <= 15);
+        fuelStat.classList.toggle('crit', fuel <= 5);
+
+        const engineRaw = Number(data.engine);
+        const engine = Math.round(this.clamp(Number.isFinite(engineRaw) ? engineRaw / 10 : 100));
+        $('#hud-engine').style.width = `${engine}%`;
+        const engineStat = $('#hud-engine-stat');
+        engineStat.classList.toggle('warn', engine <= 50);
+        engineStat.classList.toggle('crit', engine <= 25);
     },
 };
 

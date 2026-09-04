@@ -3,6 +3,16 @@
 **Last updated:** 2026-09-05
 **Code baseline:** runtime commit `e1836d3`, deployed to Coolify on 2026-09-05
 
+## Faithful `onscreenhud.txt` integration (2026-09-05, not deployed)
+
+- Replaced the permanent legacy HUD composition with the supplied three-module screen HUD: top-right clock/money/health/armor, bottom-left compass/street/zone, and bottom-right speed/gear/RPM/engine/fuel.
+- Preserved the reference geometry, clipped glass panels, segmented bars, boot motion, fixed-width speed digits and speed/gear change animations while adapting purple accents to SunsetMP orange/amber.
+- Added the previously undisplayed bank balance and a live eight-direction compass value from the player heading.
+- Vehicle speed remains authoritative km/h from `sunset_vehicles`; RPM, engine condition and fuel now drive the reference bars with correct zero-value handling and low/critical states.
+- Reduced `/hudedit` to the three visible modules and updated the default layout schema; stale keys from older saved layouts are harmlessly ignored.
+- The HUD remains hidden with the pause menu and the contextual wanted indicator appears only when applicable.
+- Static visual QA was performed at 1280 x 720. JavaScript, CSS, Lua parsing, unique HTML IDs and whitespace checks passed. No server restart/deployment was performed.
+
 ## Faithful `m_menu.html` integration (2026-09-05, not deployed)
 
 - Replaced the previous themed dashboard with the actual `SUNSET OS` composition from the supplied `m_menu.html`: matching two-column geometry, clipped technical panels, tab rail, character summary, action tiles, scanlines/glitch motion and segmented status footer.

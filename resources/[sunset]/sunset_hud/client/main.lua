@@ -19,6 +19,13 @@ local function getStreetName()
     return street or '—', zone
 end
 
+local function getCompassDirection(ped)
+    local heading = (GetEntityHeading(ped) + 22.5) % 360.0
+    local directions = { 'N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE' }
+    local index = math.floor(heading / 45.0) + 1
+    return directions[index] or 'N'
+end
+
 local function getJobLabel(jobName)
     local job = Sunset.Jobs[jobName]
     return job and job.label or 'Unemployed'
@@ -101,6 +108,7 @@ local function buildHudData()
         payday = formatPayday(),
         street = street,
         zone = zone,
+        heading = getCompassDirection(ped),
         inVehicle = false,
         wanted = exports['sunset_hud']:GetWantedLevel(),
     }

@@ -1,5 +1,5 @@
 const HudEditor = {
-    panels: ['tl', 'logo', 'tr', 'bl', 'bc', 'speedo'],
+    panels: ['tr', 'bl', 'speedo'],
     positions: {},
     snapshot: null,
     active: null,

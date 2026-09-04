@@ -162,122 +162,61 @@
 
     <!-- RPG HUD -->
     <div id="hud" class="hud hidden">
-        <div class="hud-tl" data-hud-panel="tl">
-            <div class="hud-player-badge" id="hud-player-badge">
-                <span class="hud-player-name" id="hud-player-name">Player</span>
-                <span class="hud-player-id" id="hud-player-id">#0</span>
-            </div>
-        </div>
-
-        <div class="hud-logo-wrap" data-hud-panel="logo">
-            <img class="hud-logo" src="assets/logo.png" alt="SunsetMP">
-        </div>
-
-        <div class="hud-tr" data-hud-panel="tr">
+        <div class="hud-tr hud-boot" data-hud-panel="tr">
             <div class="hud-wanted hidden" id="hud-wanted">
                 <span class="hud-wanted__label">WANTED</span>
                 <span class="hud-wanted__level" id="hud-wanted-level">0</span>
             </div>
-            <div class="stat-row">
-                    <svg class="ico ico--hp" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    <div class="stat-bar"><div class="stat-bar__fill stat-bar__fill--hp" id="hud-health"></div></div>
-                    <span class="stat-val" id="hud-health-val">100</span>
-                </div>
-                <div class="stat-row">
-                    <svg class="ico ico--armor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-                    <div class="stat-bar"><div class="stat-bar__fill stat-bar__fill--armor" id="hud-armor"></div></div>
-                    <span class="stat-val" id="hud-armor-val">0</span>
-                </div>
-                <div class="stat-row stat-row--money">
-                    <svg class="ico ico--money" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.59 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
-                    <span class="money-val" id="hud-cash">$0</span>
-                </div>
-                <div class="stat-row stat-row--time">
-                    <svg class="ico ico--clock" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <div class="info-panel">
+                <div class="clock-display">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span id="hud-time">00:00</span>
+                </div>
+                <div class="money-display">
+                    <strong class="money-cash" id="hud-cash">$0</strong>
+                    <span class="money-bank" id="hud-bank">$0</span>
+                </div>
+            </div>
+            <div class="status-bars-container">
+                <div class="status-bar-wrapper status-bar-wrapper--hp" title="Health">
+                    <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <div class="bar-track"><div class="bar-fill fill-hp" id="hud-health"></div></div>
+                </div>
+                <div class="status-bar-wrapper status-bar-wrapper--armor" title="Armor">
+                    <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <div class="bar-track"><div class="bar-fill fill-armor" id="hud-armor"></div></div>
+                </div>
             </div>
         </div>
 
-        <div class="fh-speedo hidden" id="hud-speedo" data-hud-panel="speedo">
-                <svg class="fh-speedo__svg" viewBox="0 0 240 240" aria-hidden="true">
-                    <defs>
-                        <linearGradient id="fh-speed-grad" x1="0%" y1="50%" x2="100%" y2="50%">
-                            <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
-                            <stop offset="55%" stop-color="rgba(255,255,255,0.85)"/>
-                            <stop offset="100%" stop-color="#ffffff"/>
-                        </linearGradient>
-                        <linearGradient id="fh-rpm-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
-                            <stop offset="70%" stop-color="#ffb347"/>
-                            <stop offset="100%" stop-color="#ff4757"/>
-                        </linearGradient>
-                        <filter id="fh-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur stdDeviation="1.8" result="blur"/>
-                            <feMerge>
-                                <feMergeNode in="blur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    <g id="fh-ticks"></g>
-                    <circle class="fh-arc fh-arc--bg" cx="120" cy="120" r="92" id="fh-arc-bg"/>
-                    <circle class="fh-arc fh-arc--speed" cx="120" cy="120" r="92" id="fh-speed-arc"/>
-                    <circle class="fh-arc fh-arc--rpm" cx="120" cy="120" r="76" id="fh-rpm-arc"/>
-                </svg>
-                <div class="fh-speedo__readout">
-                    <span class="fh-speedo__gear" id="hud-gear">N</span>
-                    <span class="fh-speedo__speed" id="hud-speed">0</span>
-                    <span class="fh-speedo__unit">KM/H</span>
+        <div class="hud-bl hud-boot hud-boot--location" data-hud-panel="bl">
+            <div class="compass-heading" id="hud-heading">N</div>
+            <div class="location-panel">
+                <strong class="street-name" id="hud-street">—</strong>
+                <span class="zone-name" id="hud-zone">LOS SANTOS</span>
+            </div>
+        </div>
+
+        <div class="hud-bottom-right hud-boot hud-boot--speed hidden" id="hud-speedo" data-hud-panel="speedo">
+            <div class="speedo-panel">
+                <div class="speed-row">
+                    <div class="speed-val-container">
+                        <strong class="speed-val" id="hud-speed">0</strong>
+                        <span class="speed-unit">KM/H</span>
+                    </div>
+                    <strong class="speed-gear" id="hud-gear">N</strong>
                 </div>
-                <div class="fh-speedo__rpm-bar">
-                    <div class="fh-speedo__rpm-track">
-                        <div class="fh-speedo__rpm-fill" id="fh-rpm-bar"></div>
-                        <div class="fh-speedo__rpm-redline"></div>
+                <div class="rpm-track"><div class="rpm-fill" id="hud-rpm"></div></div>
+                <div class="veh-status-row">
+                    <div class="veh-mini-stat" id="hud-engine-stat" title="Engine condition">
+                        <svg class="veh-mini-icon veh-mini-icon--engine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+                        <div class="veh-mini-bar-track"><div class="veh-mini-bar-fill fill-engine" id="hud-engine"></div></div>
+                    </div>
+                    <div class="veh-mini-stat" id="hud-fuel-stat" title="Fuel level">
+                        <svg class="veh-mini-icon veh-mini-icon--fuel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="4" y="6" width="12" height="16" rx="2"/><path d="M4 10h12"/><path d="M16 10l4-2v4c0 2-2 4-4 4"/></svg>
+                        <div class="veh-mini-bar-track"><div class="veh-mini-bar-fill fill-fuel" id="hud-fuel"></div></div>
                     </div>
                 </div>
-                <div class="fh-speedo__stats">
-                    <span class="fh-stat fh-stat--fuel">
-                        <span class="fh-stat__label">FUEL</span>
-                        <span class="fh-stat__val" id="hud-fuel-val">100</span>
-                    </span>
-                    <span class="fh-stat fh-stat--eng">
-                        <span class="fh-stat__label">ENG</span>
-                        <span class="fh-stat__val" id="hud-eng-val">100</span>
-                    </span>
-                </div>
-            </div>
-
-        <div class="hud-bl" data-hud-panel="bl">
-            <div class="loc-box">
-                <span class="loc-street" id="hud-street">—</span>
-                <span class="loc-zone" id="hud-zone">Los Santos</span>
-            </div>
-        </div>
-
-        <div class="hud-bc hidden" id="hud-vehicle-bar" data-hud-panel="bc">
-            <div class="veh-slot" id="slot-lock">
-                <div class="veh-slot__icon"><img src="assets/icons/icon_lock.webp" alt="Lock"></div>
-                <span class="veh-slot__key">N</span>
-            </div>
-            <div class="veh-slot" id="slot-seatbelt">
-                <div class="veh-slot__icon"><img src="assets/icons/icon_buckle.webp" alt="Seatbelt"></div>
-                <span class="veh-slot__key">K</span>
-            </div>
-            <div class="veh-slot" id="slot-lights">
-                <div class="veh-slot__icon veh-slot__icon--lights">
-                    <img class="ico-lights-off" src="assets/icons/icon_lights_off.webp" alt="Lights off">
-                    <img class="ico-lights-low" src="assets/icons/icon_lights_1.webp" alt="Low beams">
-                    <img class="ico-lights-high" src="assets/icons/icon_lights_2.webp" alt="High beams">
-                </div>
-                <span class="veh-slot__key">H</span>
-            </div>
-            <div class="veh-slot" id="slot-engine">
-                <div class="veh-slot__icon"><img src="assets/icons/icon_engine.webp" alt="Engine"></div>
-                <span class="veh-slot__key">2</span>
-            </div>
-            <div class="veh-slot" id="slot-fuel">
-                <div class="veh-slot__icon"><img src="assets/icons/icon_fuel.webp" alt="Fuel"></div>
-                <span class="veh-slot__key" id="hud-fuel-pct">100%</span>
             </div>
         </div>
 
