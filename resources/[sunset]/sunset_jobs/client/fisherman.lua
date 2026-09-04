@@ -3,6 +3,17 @@ local fishing = false
 local rod = nil
 local selling = false
 
+local function fishBagProgress(carried, capacity)
+    capacity = math.max(tonumber(capacity) or 2, 1)
+    carried = math.max(0, tonumber(carried) or 0)
+    return math.floor((carried / capacity) * 100)
+end
+
+local function sessionBagProgress()
+    local data = JC.sessionData or {}
+    return fishBagProgress(data.carried, data.capacity)
+end
+
 local function removeRod()
     if rod and DoesEntityExist(rod) then DeleteEntity(rod) end
     rod = nil
@@ -75,7 +86,7 @@ local function startFisherman()
         JC.setWaypoint(cfg.spots[1].coords)
     end
     JC.showObjective('Fishing', ('Bag %d/%d — blue marker: E or /fish · buyer: /sellfish'):format(
-        data.carried or 0, data.capacity or 2), 0)
+        data.carried or 0, data.capacity or 2), fishBagProgress(data.carried, data.capacity))
     JC.notify(('Fishing bag: %d/%d. Catch with E or /fish; use /sellfish at any time to mark the buyer.'):format(
         data.carried or 0, data.capacity or 2), 'info', 9000)
 
@@ -121,10 +132,10 @@ local function attemptFish()
 
     equipRod()
     JC.playAnim('amb@world_human_stand_fishing@idle_a', 'idle_c', -1)
-    JC.showObjective('Line cast', 'Wait for a bite…', 25)
+    JC.showObjective('Line cast', 'Wait for a bite…', sessionBagProgress())
     Wait(tonumber(cast.delayMs) or 3000)
     PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-    JC.showObjective('BITE!', 'Press E now to reel the fish in', 75)
+    JC.showObjective('BITE!', 'Press E now to reel the fish in', sessionBagProgress())
 
     local deadline = GetGameTimer() + (tonumber(cast.windowMs) or 1400)
     local reeled = false
@@ -147,11 +158,12 @@ local function attemptFish()
         local sellLabel = cfg.sellPoint.label or 'Fish Buyer'
         JC.setWaypoint(cfg.sellPoint.coords)
         JC.showObjective('Sell fish or keep fishing', ('Bag %d/%d · value $%s — %s, press E'):format(
-            result.carried or 0, result.capacity or 2, result.pendingValue, sellLabel), 50)
+            result.carried or 0, result.capacity or 2, result.pendingValue, sellLabel),
+            fishBagProgress(result.carried, result.capacity))
         JC.notify(('Fresh Fish added to inventory (%d/%d). Buyer marked on GPS; press E or /sellfish there.'):format(
             result.carried or 0, result.capacity or 2), 'success', 9000)
     else
-        JC.showObjective('Fishing', 'Fish escaped — press E or /fish to cast again', 0)
+        JC.showObjective('Fishing', 'Fish escaped — press E or /fish to cast again', sessionBagProgress())
         JC.notify(reelErr or 'Too late — the fish escaped', 'warning')
     end
 end
