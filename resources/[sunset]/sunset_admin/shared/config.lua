@@ -30,4 +30,9 @@ SunsetAdmin.Commands = {
     gotocp = 2,
     gotoloc = 2,
     speed = 2,
+    setjob = 3,
+    setfaction = 3,
+    givecar = 3,
+    setleader = 3,
+    removeleader = 3,
 }

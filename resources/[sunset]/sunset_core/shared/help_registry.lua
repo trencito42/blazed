@@ -23,6 +23,11 @@ Sunset.HelpAdminDescriptions = {
     gotocp = 'Teleport to a saved admin checkpoint by name',
     gotoloc = 'Teleport to a predefined world location by id or name',
     speed = 'Boost vehicle engine power while driving (multiplier)',
+    setjob = 'Set a player civilian job (trucker, fisherman, etc.)',
+    setfaction = 'Assign a player to a faction with grade',
+    givecar = 'Give a vehicle to a player (stored in garage)',
+    setleader = 'Grant faction leader permissions to a member',
+    removeleader = 'Revoke faction leader role from a member',
 }
 
 Sunset.HelpGeneralEntries = {
@@ -59,6 +64,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/faction', desc = 'Faction rank, salary, and your commands' },
     { cmd = '/leavefaction', desc = 'Leave your faction (job stays)' },
     { cmd = '/quitfaction', desc = 'Alias for /leavefaction (civilian job stays)' },
+    { cmd = '/factionquit', desc = 'Alias for /leavefaction (civilian job stays)' },
     { cmd = '/quitgroup', desc = 'Alias for /leavefaction (civilian job stays)' },
     { cmd = '/duty', desc = 'Toggle on/off duty at faction HQ' },
     { cmd = '/f [message]', desc = 'Faction chat' },

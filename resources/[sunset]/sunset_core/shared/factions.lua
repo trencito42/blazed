@@ -262,6 +262,7 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
     list[#list + 1] = { cmd = '/f [message]', desc = 'Faction radio chat' }
     list[#list + 1] = { cmd = '/leavefaction', desc = 'Leave your faction' }
     list[#list + 1] = { cmd = '/quitfaction', desc = 'Leave your faction (alias)' }
+    list[#list + 1] = { cmd = '/factionquit', desc = 'Leave your faction (alias)' }
     if Sunset.FactionTypeMatches(jobId, 'law_enforcement') then
         list[#list + 1] = { cmd = '/pdgarage', desc = 'Spawn MRPD patrol vehicle (on duty)' }
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }
@@ -290,8 +291,9 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
         if Sunset.HasFactionPerm(jobId, grade, 'frisk') then
             list[#list + 1] = { cmd = '/frisk [id]', desc = 'Search suspect inventory' }
         end
-        if Sunset.HasFactionPerm(jobId, grade, 'ticket') then
+        if Sunset.HasFactionPerm(jobId, grade, 'ticket') or Sunset.HasFactionPerm(jobId, grade, 'fine') then
             list[#list + 1] = { cmd = '/ticket [id]', desc = 'Issue server-priced citation (UI)' }
+            list[#list + 1] = { cmd = '/fine [id]', desc = 'Alias for /ticket citation UI' }
         end
         if Sunset.HasFactionPerm(jobId, grade, 'mdc') then
             list[#list + 1] = { cmd = '/mdc', desc = 'Mobile data terminal' }
@@ -323,6 +325,9 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
     end
     if Sunset.HasFactionPerm(jobId, grade, 'uninvite') then
         list[#list + 1] = { cmd = '/funinvite [id]', desc = 'Remove member from faction' }
+    end
+    if Sunset.HasFactionPerm(jobId, grade, 'giverank') then
+        list[#list + 1] = { cmd = '/fgiverank [id] [grade]', desc = 'Set member faction rank' }
     end
     return list
 end
