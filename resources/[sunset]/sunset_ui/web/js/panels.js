@@ -1,3 +1,29 @@
+const ITEM_ICON_ROOT = 'assets/items/';
+const ITEM_ICON_FALLBACK = `${ITEM_ICON_ROOT}backpack.webp`;
+
+function itemIconUrl(icon) {
+    const basename = String(icon || 'backpack').trim();
+    return /^[a-z0-9_-]+$/i.test(basename)
+        ? `${ITEM_ICON_ROOT}${basename}.webp`
+        : ITEM_ICON_FALLBACK;
+}
+
+function createItemArtwork(row, className) {
+    const wrap = document.createElement('div');
+    wrap.className = className;
+    wrap.setAttribute('aria-hidden', 'true');
+
+    const image = document.createElement('img');
+    image.src = itemIconUrl(row?.icon);
+    image.alt = '';
+    image.loading = 'eager';
+    image.addEventListener('error', () => {
+        if (!image.src.endsWith('/backpack.webp')) image.src = ITEM_ICON_FALLBACK;
+    }, { once: true });
+    wrap.appendChild(image);
+    return wrap;
+}
+
 const Panels = {
     init() {
         if (this._ready) return;
@@ -122,13 +148,29 @@ const Panels = {
                 label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
             }
             const li = document.createElement('li');
-            li.innerHTML = `<span>${label} x${row.count}</span>${row.usable ? `<button data-item="${def}">USE</button>` : ''}`;
+            li.className = 'inventory-row';
+            li.appendChild(createItemArtwork(row, 'inventory-row__icon'));
+
+            const details = document.createElement('div');
+            details.className = 'inventory-row__details';
+            const name = document.createElement('strong');
+            name.textContent = label;
+            const meta = document.createElement('span');
+            meta.textContent = `${Math.max(0, Number(row.count) || 0)} unit${Number(row.count) === 1 ? '' : 's'}`;
+            details.append(name, meta);
+            li.appendChild(details);
+
             if (row.usable) {
-                li.querySelector('button')?.addEventListener('click', () => post('inventoryUse', { item: def }));
+                const useButton = document.createElement('button');
+                useButton.type = 'button';
+                useButton.textContent = 'USE';
+                useButton.addEventListener('click', () => post('inventoryUse', { item: def }));
+                li.appendChild(useButton);
             }
             list.appendChild(li);
         });
-        $('#inventory-weight').textContent = `${(data.weight || 0).toFixed(1)} / ${data.maxWeight || 30} kg`;
+        const currentWeight = Number(data.weight) || 0;
+        $('#inventory-weight').textContent = `${currentWeight.toFixed(1)} / ${Number(data.maxWeight) || 30} KG`;
         $('#inventory')?.classList.remove('hidden');
     },
 
@@ -185,17 +227,36 @@ const Panels = {
                 const card = document.createElement('article');
                 card.className = 'shop-card';
                 const weight = row.weight != null ? `${Number(row.weight).toFixed(1)} kg` : '';
-                card.innerHTML = `
-                    <div class="shop-card__icon" aria-hidden="true">${row.icon || '📦'}</div>
-                    <div class="shop-card__body">
-                        <span class="shop-card__name">${row.label || row.item}</span>
-                        ${weight ? `<span class="shop-card__meta">${weight}</span>` : ''}
-                        <span class="shop-card__price">${formatMoney(row.price)}</span>
-                    </div>
-                    <button type="button" class="shop-card__buy">BUY</button>`;
-                card.querySelector('.shop-card__buy')?.addEventListener('click', () => {
+                card.appendChild(createItemArtwork(row, 'shop-card__icon'));
+
+                const body = document.createElement('div');
+                body.className = 'shop-card__body';
+                const name = document.createElement('span');
+                name.className = 'shop-card__name';
+                name.textContent = row.label || row.item || 'Unknown item';
+                body.appendChild(name);
+                if (weight) {
+                    const meta = document.createElement('span');
+                    meta.className = 'shop-card__meta';
+                    meta.textContent = `${weight} • ${(row.category || 'misc').toUpperCase()}`;
+                    body.appendChild(meta);
+                }
+                card.appendChild(body);
+
+                const price = document.createElement('span');
+                price.className = 'shop-card__price';
+                price.textContent = formatMoney(row.price);
+                card.appendChild(price);
+
+                const buy = document.createElement('button');
+                buy.type = 'button';
+                buy.className = 'shop-card__buy';
+                buy.textContent = 'BUY';
+                buy.setAttribute('aria-label', `Buy ${name.textContent}`);
+                buy.addEventListener('click', () => {
                     post('shopBuy', { shopId: data.shopId, item: row.item, amount: 1 });
                 });
+                card.appendChild(buy);
                 grid.appendChild(card);
             });
         };

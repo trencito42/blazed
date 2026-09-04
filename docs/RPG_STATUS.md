@@ -1,7 +1,15 @@
 # SunsetMP RPG Status (Canonical)
 
 **Last updated:** 2026-09-05
-**Code baseline:** working tree after `180802d` plus dealership/vehicle/crafting reliability pass (not deployed)
+**Code baseline:** `main` after dealership/vehicle/crafting reliability and Sunset OS UI passes (not deployed)
+
+## Sunset OS UI and item-art pass (2026-09-05)
+
+- Replaced emoji item definitions with validated asset basenames and vendored the complete 232-icon, 100 x 100 WebP Swisser FiveM inventory pack (CC0 1.0, license included).
+- Inventory rows and all shop catalogues now render real item artwork with a safe local fallback; dynamic labels are assigned as text rather than interpolated HTML.
+- Rebuilt 24/7/Ammunation browsing as a compact vertical catalogue with category filters, a dedicated scrollbar, weight/category metadata, price and an explicit purchase action.
+- Added one final-loaded Sunset OS theme shared by character/auth screens, M menu, overlay panels, dealership, mission widgets and the phone wallpaper: dark technical panels, orange/amber identity, angular corners and consistent typography without the purple accent from the design reference.
+- Browser visual QA covered the 24/7 catalogue and M menu at desktop resolution; all referenced item art loaded and the browser console had no errors or warnings.
 
 ## Dealership, vehicle and crafting pass (2026-09-05)
 

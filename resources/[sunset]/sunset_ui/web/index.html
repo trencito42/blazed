@@ -6,7 +6,7 @@
     <title>SunsetMP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/fonts.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/hud.css">
@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css">
     <link rel="stylesheet" href="css/fuel_pump.css">
+    <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -66,7 +67,7 @@
                 <div class="fuel-pump__brand">Fuel Pump</div>
                 <div class="fuel-pump__station" id="fuel-pump-station">Gas Station</div>
             </div>
-            <div class="fuel-pump__icon">⛽</div>
+            <div class="fuel-pump__icon"><img src="assets/items/jerry_can.webp" alt=""></div>
         </div>
         <div class="fuel-pump__display">
             <div class="fuel-pump__row">
@@ -501,8 +502,11 @@
 
     <!-- INVENTORY -->
     <div id="inventory" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide">
-            <h2>Inventory <span id="inventory-weight" style="float:right;font-size:12px;color:#aaa"></span></h2>
+        <div class="overlay-panel__box overlay-panel__box--wide inventory-panel">
+            <div class="panel-tech-header">
+                <div><span class="panel-kicker">CHARACTER STORAGE</span><h2>Inventory</h2></div>
+                <span class="panel-counter" id="inventory-weight"></span>
+            </div>
             <ul class="panel-list" id="inventory-list"></ul>
             <button type="button" class="panel-close" id="inventory-close">Close (I)</button>
         </div>
@@ -519,7 +523,7 @@
                 <span class="shop-badge">OPEN 24/7</span>
             </div>
             <div class="shop-categories" id="shop-categories"></div>
-            <div class="shop-grid" id="shop-grid"></div>
+            <div class="shop-list" id="shop-grid"></div>
             <button type="button" class="panel-close" id="shop-close">Close (ESC)</button>
         </div>
     </div>

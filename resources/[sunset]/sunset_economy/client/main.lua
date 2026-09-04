@@ -23,7 +23,7 @@ local function enrichShop(shop)
             price = row.price,
             label = def.label or row.item,
             category = def.category or 'misc',
-            icon = def.icon or '📦',
+            icon = def.icon or 'backpack',
             weight = def.weight,
         }
     end
