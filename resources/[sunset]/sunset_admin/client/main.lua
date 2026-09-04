@@ -113,46 +113,85 @@ exports('GetAdminLevel', function() return adminLevel end)
 
 local speedMultiplier = 1.0
 
-local function applyVehicleSpeed(mult)
-    speedMultiplier = mult
-    local ped = PlayerPedId()
-    if not IsPedInAnyVehicle(ped, false) then return end
-    local veh = GetVehiclePedIsIn(ped, false)
+local function resetVehicleSpeed(veh)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    SetVehicleEnginePowerMultiplier(veh, 1.0)
+    SetVehicleEngineTorqueMultiplier(veh, 1.0)
+    SetVehicleCheatPowerIncrease(veh, 0.0)
+    ModifyVehicleTopSpeed(veh, 0.0)
+    SetVehicleMaxSpeed(veh, 0.0)
+end
+
+local function applyVehicleSpeedBoost(veh, mult)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
     if mult <= 1.01 then
-        SetVehicleEnginePowerMultiplier(veh, 1.0)
-        SetVehicleCheatPowerIncrease(veh, 0.0)
+        resetVehicleSpeed(veh)
+        return
+    end
+
+    SetVehicleMaxSpeed(veh, 0.0)
+    -- Power multiplier is additive in GTA; small values like 2.5 have almost no effect.
+    SetVehicleEnginePowerMultiplier(veh, (mult - 1.0) * 20.0)
+    SetVehicleEngineTorqueMultiplier(veh, mult)
+    SetVehicleCheatPowerIncrease(veh, (mult - 1.0) * 2.0)
+    ModifyVehicleTopSpeed(veh, mult - 1.0)
+end
+
+local function setSpeedMultiplier(mult)
+    mult = tonumber(mult) or 1.0
+    mult = math.max(0.5, math.min(mult, 10.0))
+    speedMultiplier = mult
+
+    local ped = PlayerPedId()
+    if IsPedInAnyVehicle(ped, false) then
+        applyVehicleSpeedBoost(GetVehiclePedIsIn(ped, false), mult)
+    end
+
+    if mult <= 1.01 then
+        exports.sunset_ui:Notify('Speed boost disabled', 'info')
     else
-        SetVehicleEnginePowerMultiplier(veh, mult)
-        SetVehicleCheatPowerIncrease(veh, mult)
+        exports.sunset_ui:Notify(('Speed boost: %.1fx'):format(mult), 'success')
     end
 end
 
-RegisterNetEvent('sunset:admin:setSpeed', function(mult)
-    mult = tonumber(mult) or 1.0
-    applyVehicleSpeed(mult)
-    if mult > 1.01 and IsPedInAnyVehicle(PlayerPedId(), false) then
-        exports.sunset_ui:Notify(('Speed boost: %.1fx'):format(mult), 'info')
+RegisterNetEvent('sunset:admin:setSpeed', setSpeedMultiplier)
+
+-- GTA resets vehicle multipliers every frame while driving; re-apply while boosted.
+CreateThread(function()
+    while true do
+        if speedMultiplier > 1.01 then
+            local ped = PlayerPedId()
+            if IsPedInAnyVehicle(ped, false) then
+                local veh = GetVehiclePedIsIn(ped, false)
+                if GetPedInVehicleSeat(veh, -1) == ped then
+                    applyVehicleSpeedBoost(veh, speedMultiplier)
+                    Wait(0)
+                else
+                    Wait(250)
+                end
+            else
+                Wait(500)
+            end
+        else
+            Wait(500)
+        end
     end
 end)
 
 CreateThread(function()
     local lastVeh = 0
     while true do
-        Wait(400)
+        Wait(200)
         local ped = PlayerPedId()
         local veh = IsPedInAnyVehicle(ped, false) and GetVehiclePedIsIn(ped, false) or 0
         if veh ~= lastVeh then
             if lastVeh ~= 0 and DoesEntityExist(lastVeh) then
-                SetVehicleEnginePowerMultiplier(lastVeh, 1.0)
-                SetVehicleCheatPowerIncrease(lastVeh, 0.0)
+                resetVehicleSpeed(lastVeh)
             end
             if veh ~= 0 and speedMultiplier > 1.01 then
-                applyVehicleSpeed(speedMultiplier)
+                applyVehicleSpeedBoost(veh, speedMultiplier)
             end
             lastVeh = veh
-        elseif veh ~= 0 and speedMultiplier > 1.01 then
-            SetVehicleEnginePowerMultiplier(veh, speedMultiplier)
-            SetVehicleCheatPowerIncrease(veh, speedMultiplier)
         end
     end
 end)

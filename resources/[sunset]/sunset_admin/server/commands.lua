@@ -458,9 +458,4 @@ RegisterNetEvent('sunset:admin:requestSpeed', function(arg)
 
     mult = math.max(0.5, math.min(mult, 10.0))
     TriggerClientEvent('sunset:admin:setSpeed', source, mult)
-    if mult <= 1.01 then
-        notify(source, 'Vehicle speed boost disabled', 'info')
-    else
-        notify(source, ('Vehicle speed multiplier: %.1fx (use /speed 1 or /speed off to reset)'):format(mult), 'success')
-    end
 end)
