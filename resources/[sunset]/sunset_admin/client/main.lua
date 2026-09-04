@@ -64,13 +64,42 @@ RegisterNetEvent('sunset:admin:toggleGod', function()
     exports.sunset_ui:Notify(godmode and 'Godmode ON' or 'Godmode OFF', 'info')
 end)
 
-RegisterNetEvent('sunset:admin:copyCoords', function()
-    local ped = PlayerPedId()
-    local c = GetEntityCoords(ped)
-    local h = GetEntityHeading(ped)
-    local str = ('vector4(%.2f, %.2f, %.2f, %.2f)'):format(c.x, c.y, c.z, h)
-    print(str)
-    exports.sunset_ui:Notify('Coords printed to F8', 'info')
+local function hasCoordsPerm()
+    local need = SunsetAdmin.Commands.coords or 2
+    return adminLevel >= need
+end
+
+local function coordChat(line)
+    exports.sunset_ui:Send('chatMessage', { id = 0, name = 'COORDS', message = line, time = '' })
+end
+
+local function showPosition(args)
+    if not hasCoordsPerm() then
+        exports.sunset_ui:Notify('No permission', 'error')
+        return
+    end
+
+    local x, y, z, heading = currentPosition()
+    local useV4 = args and args[1] and string.lower(tostring(args[1])) == 'v4'
+
+    if useV4 then
+        local line = ('vector4(%.2f, %.2f, %.2f, %.2f)'):format(x, y, z, heading)
+        print('[Sunset] ' .. line)
+        coordChat(line)
+    else
+        local v3 = ('vector3(%.2f, %.2f, %.2f)'):format(x, y, z)
+        local raw = ('%.2f, %.2f, %.2f, %.2f'):format(x, y, z, heading)
+        print('[Sunset] ' .. v3)
+        print('[Sunset] ' .. raw)
+        coordChat(v3)
+        coordChat(raw)
+    end
+
+    exports.sunset_ui:Notify('Position in chat and F8 (use /coords v4 for vector4)', 'info')
+end
+
+RegisterNetEvent('sunset:admin:copyCoords', function(args)
+    showPosition(args or {})
 end)
 
 -- Noclip thread
@@ -202,6 +231,16 @@ local function currentPosition()
     return c.x, c.y, c.z, GetEntityHeading(ped)
 end
 
+local function registerCoordsCommand(name)
+    RegisterCommand(name, function(_, args)
+        showPosition(args)
+    end, false)
+end
+
+registerCoordsCommand('coords')
+registerCoordsCommand('getpos')
+registerCoordsCommand('pos')
+
 RegisterCommand('setcp', function(_, args)
     local name = table.concat(args, ' ')
     local x, y, z, heading = currentPosition()
@@ -226,6 +265,11 @@ end, false)
 
 CreateThread(function()
     Wait(4000)
+    TriggerEvent('chat:addSuggestion', '/coords', 'Show your position for configs (admin)', {
+        { name = 'v4', help = 'Optional — output vector4 with heading' },
+    })
+    TriggerEvent('chat:addSuggestion', '/getpos', 'Alias for /coords (admin)')
+    TriggerEvent('chat:addSuggestion', '/pos', 'Alias for /coords (admin)')
     TriggerEvent('chat:addSuggestion', '/setcp', 'Save your current position as a named checkpoint (admin)', {
         { name = 'name', help = 'e.g. staging, event_spawn' },
     })

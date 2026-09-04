@@ -321,11 +321,11 @@ RegisterCommand('setadmin', function(source, args)
     if source ~= 0 then notify(source, 'Admin set for account ' .. account.username, 'success') end
 end, false)
 
--- /coords
-RegisterCommand('coords', function(source)
+-- /coords [v4] — client also registers /getpos and /pos for NUI chat
+RegisterCommand('coords', function(source, args)
     if source == 0 then return end
-    if not hasPerm(source, 'coords') then return end
-    TriggerClientEvent('sunset:admin:copyCoords', source)
+    if not hasPerm(source, 'coords') then return notify(source, 'No permission', 'error') end
+    TriggerClientEvent('sunset:admin:copyCoords', source, args)
 end, false)
 
 local function sendPlacedCheckpointList(source)
