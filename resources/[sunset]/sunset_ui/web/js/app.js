@@ -338,6 +338,13 @@ window.addEventListener('message', (event) => {
         case 'craftingHide':
             if (window.Panels) Panels.hideCrafting();
             break;
+        case 'dealershipShow':
+        case 'dealershipUpdate':
+            if (window.Panels) Panels.showDealership(data || event.data.data);
+            break;
+        case 'dealershipHide':
+            if (window.Panels) Panels.hideDealership();
+            break;
         case 'appearanceShow':
             showApp(false);
             showHud(false);
@@ -418,6 +425,11 @@ const LoadingScreen = {
 // Close character screens on ESC (not menu/chat)
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    const dealership = $('#dealership');
+    if (dealership && !dealership.classList.contains('hidden')) {
+        post('dealershipClose');
+        return;
+    }
     const app = $('#app');
     if (app && !app.classList.contains('hidden')) {
         post('close');

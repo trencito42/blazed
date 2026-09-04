@@ -1,7 +1,16 @@
 # SunsetMP RPG Status (Canonical)
 
-**Last updated:** 2026-09-03  
-**Code baseline:** local audit after `614c4f9` (not yet deployed by this audit)
+**Last updated:** 2026-09-05
+**Code baseline:** working tree after `180802d` plus dealership/vehicle/crafting reliability pass (not deployed)
+
+## Dealership, vehicle and crafting pass (2026-09-05)
+
+- Added a persistent Premium Deluxe Motorsport catalog with stock, pricing, availability, filters, 3D preview, timed test drives, server-authoritative purchases and owned-vehicle delivery to Legion Garage.
+- Added an Admin 3+ catalog manager (`/dealershipadmin`) for adding, editing and deleting catalog entries; administrative changes have a database audit trail.
+- Vehicle engines now remain off until explicitly started with `2`; accelerator/brake input cannot silently override the selected engine state.
+- Hard crashes without a seatbelt now use a reliable ejection fallback. Self-inflicted collision damage is excluded from faction friendly-fire handling, so a crash no longer produces the misleading same-faction warning.
+- Crafting now validates station proximity server-side, displays owned/required material counts, explains locked recipes, and provides `/crafting` GPS guidance.
+- Corrected the admin coordinate helper nil call, post-delivery Trucker partial-pay exploit, immortal job vehicles, orphaned failed-shift trucks, faction-leader leave ordering, and unpurchased barber preview retention.
 
 ## Live vehicle/menu corrections (2026-09-04)
 
@@ -55,6 +64,7 @@ Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 | Taxi manual `/fare` | COMPLETE | Proximity-validated server charge |
 | Unified service dispatch | COMPLETE | taxi/medic/fire/mechanic/police_backup |
 | Economy (shops/ATM/payday) | COMPLETE | |
+| Vehicle dealership | COMPLETE (static verification) | Persistent stock, preview, test drive, purchase and admin catalog management; live gameplay QA required |
 | Death / hospital respawn | COMPLETE | Bleedout, bill, EMS notify radius |
 | Player stats / progression | PARTIAL | Persistent level/XP, total playtime and per-job progress; advanced histories/achievements are not implemented |
 | M menu / NUI | PARTIAL | Player, vehicles, career, property, settings and persistent statistics views; property/settings remain lightweight |

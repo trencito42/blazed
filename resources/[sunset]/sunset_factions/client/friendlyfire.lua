@@ -82,11 +82,15 @@ AddEventHandler('gameEventTriggered', function(name, args)
     local attacker = args[2]
     if victim ~= PlayerPedId() then return end
     if not attacker or attacker == 0 or not DoesEntityExist(attacker) then return end
+    -- GTA reports the local ped as the attacker for some vehicle collision and
+    -- windscreen damage events. That is not faction friendly fire.
+    if attacker == victim then return end
     if not IsPedAPlayer(attacker) then return end
 
     local playerIdx = NetworkGetPlayerIndexFromPed(attacker)
     if playerIdx < 0 then return end
     local serverId = GetPlayerServerId(playerIdx)
+    if serverId == GetPlayerServerId(PlayerId()) then return end
     if not isAllyOnDuty(serverId) then return end
 
     SetEntityHealth(victim, lastHealth)

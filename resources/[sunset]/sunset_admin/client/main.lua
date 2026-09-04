@@ -73,6 +73,8 @@ local function coordChat(line)
     exports.sunset_ui:Send('chatMessage', { id = 0, name = 'COORDS', message = line, time = '' })
 end
 
+local currentPosition
+
 local function showPosition(args)
     if not hasCoordsPerm() then
         exports.sunset_ui:Notify('No permission', 'error')
@@ -225,7 +227,7 @@ CreateThread(function()
     end
 end)
 
-local function currentPosition()
+currentPosition = function()
     local ped = PlayerPedId()
     local c = GetEntityCoords(ped)
     return c.x, c.y, c.z, GetEntityHeading(ped)

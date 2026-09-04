@@ -88,17 +88,18 @@ local function leaveFactionForSource(source)
     local oldFaction = getFactionOf(char)
     if not oldFaction then return nil, 'You are not in a faction' end
 
+    local wasLeader = FactionCore.isFactionLeader(char.id, oldFaction)
     setDuty(source, false)
 
-    if FactionCore.isFactionLeader(char.id, oldFaction) then
+    if not exports.sunset_core:SetFaction(source, nil, 0) then
+        return nil, 'Could not leave faction — try again'
+    end
+
+    if wasLeader then
         MySQL.update.await(
             'DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?',
             { char.id, oldFaction }
         )
-    end
-
-    if not exports.sunset_core:SetFaction(source, nil, 0) then
-        return nil, 'Could not leave faction — try again'
     end
 
     FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true })

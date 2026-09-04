@@ -95,3 +95,12 @@
 | `/gotocp [name]` | Teleport to saved checkpoint; omit or `list` to show names (moderator+) |
 | `/gotoloc [id or name]` | Teleport to predefined world location (moderator+) |
 | `/speed [multiplier]` | Vehicle speed boost while driving (moderator+); `/speed off` to reset |
+| `/dealershipadmin` | Open the dealership stock/price/availability manager (admin 3+) |
+
+## Vehicles and dealership
+| Command / key | Description |
+|---------|-------------|
+| `E` at Premium Deluxe Motorsport | Browse, filter, preview, buy or test-drive available vehicles |
+| `/dealership` | Open the catalog while at the dealership |
+| `2` | Explicitly start or stop the engine; accelerate no longer starts it automatically |
+| `K` | Toggle seatbelt; a hard crash without it can eject you |

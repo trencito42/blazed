@@ -783,16 +783,46 @@ const Panels = {
         $('#crafting-title').textContent = data.stationLabel || 'Crafting';
         const list = $('#crafting-list');
         list.innerHTML = '';
+        if (data.stationHint) {
+            const hint = document.createElement('li');
+            hint.className = 'craft-meta';
+            hint.textContent = data.stationHint;
+            list.appendChild(hint);
+        }
         (data.recipes || []).forEach((recipe) => {
             const li = document.createElement('li');
-            const needs = (recipe.inputList || []).map((row) => `${row.label} x${row.count}`).join(', ');
+            const row = document.createElement('div');
+            row.className = 'craft-row';
+            const title = document.createElement('strong');
+            title.textContent = recipe.label || recipe.id;
+            row.appendChild(title);
+            (recipe.inputList || []).forEach((input) => {
+                const need = document.createElement('span');
+                need.className = `craft-meta ${(Number(input.owned) || 0) >= (Number(input.count) || 0) ? 'craft-meta--ok' : 'craft-meta--missing'}`;
+                need.textContent = `${input.label}: ${input.owned || 0}/${input.count || 0}`;
+                row.appendChild(need);
+            });
             const outLabel = recipe.outputLabel || recipe.output?.item || '?';
             const outCount = recipe.output?.count || 1;
-            li.innerHTML = `<div class="craft-row"><strong>${recipe.label}</strong><span class="craft-meta">${needs || '—'} → ${outLabel} x${outCount}</span><button>CRAFT</button></div>`;
-            li.querySelector('button')?.addEventListener('click', () => post('craftingCraft', {
+            const output = document.createElement('span');
+            output.className = 'craft-meta';
+            output.textContent = `Produces: ${outLabel} x${outCount}`;
+            row.appendChild(output);
+            if (recipe.lockedReason) {
+                const locked = document.createElement('span');
+                locked.className = 'craft-lock';
+                locked.textContent = recipe.lockedReason;
+                row.appendChild(locked);
+            }
+            const button = document.createElement('button');
+            button.textContent = recipe.canCraft ? 'CRAFT' : 'REQUIREMENTS NOT MET';
+            button.disabled = !recipe.canCraft;
+            button.addEventListener('click', () => post('craftingCraft', {
                 stationId: this._craftStation,
                 recipeId: recipe.id,
             }));
+            row.appendChild(button);
+            li.appendChild(row);
             list.appendChild(li);
         });
         if (!(data.recipes || []).length) {
@@ -803,6 +833,186 @@ const Panels = {
     },
     updateCrafting(data) { this.showCrafting(data); },
     hideCrafting() { $('#crafting')?.classList.add('hidden'); },
+
+    showDealership(data) {
+        this.init();
+        this._dealerData = { ...(this._dealerData || {}), ...(data || {}) };
+        this._dealerVehicles = this._dealerData.vehicles || [];
+        $('#dealership-title').textContent = this._dealerData.dealership || 'Vehicle Dealership';
+        const money = this._dealerData.money;
+        $('#dealership-balance').textContent = money
+            ? `BANK ${formatMoney(Number(money.bank) || 0)}  ·  CASH ${formatMoney(Number(money.cash) || 0)}`
+            : (this._dealerData.admin ? 'Administrative catalog — every change is audited' : 'Select a vehicle to inspect it');
+        $('#dealership-admin')?.classList.toggle('hidden', !this._dealerData.admin);
+
+        const category = $('#dealership-category');
+        const brand = $('#dealership-brand');
+        const selectedCategory = category.value;
+        const selectedBrand = brand.value;
+        const fillOptions = (select, values, first) => {
+            select.innerHTML = '';
+            const base = document.createElement('option');
+            base.value = '';
+            base.textContent = first;
+            select.appendChild(base);
+            [...new Set(values.filter(Boolean))].sort().forEach((value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
+        };
+        fillOptions(category, this._dealerVehicles.map((v) => v.category), 'All categories');
+        fillOptions(brand, this._dealerVehicles.map((v) => v.brand), 'All brands');
+        category.value = selectedCategory;
+        brand.value = selectedBrand;
+
+        const render = () => this._renderDealership();
+        $('#dealership-search').oninput = render;
+        category.onchange = render;
+        brand.onchange = render;
+        $('#dealership-instock').onchange = render;
+        $('#dealership-close').onclick = () => post('dealershipClose');
+        $('#dealership-rotate-left').onclick = () => post('dealershipRotate', { direction: -1 });
+        $('#dealership-rotate-right').onclick = () => post('dealershipRotate', { direction: 1 });
+        $('#dealership-admin-new').onclick = () => this._fillDealerAdmin(null);
+        $('#dealership-admin-save').onclick = () => post('dealershipAdminSave', {
+            model: $('#dealer-model').value,
+            label: $('#dealer-label').value,
+            brand: $('#dealer-brand').value,
+            category: $('#dealer-category').value,
+            price: Number($('#dealer-price').value),
+            stock: Number($('#dealer-stock').value),
+            displayOrder: Number($('#dealer-order').value),
+            available: $('#dealer-available').checked,
+            testDriveEnabled: $('#dealer-testdrive').checked,
+        });
+        $('#dealership-admin-delete').onclick = () => {
+            const model = $('#dealer-model').value;
+            if (model && window.confirm(`Remove ${model} from the dealership catalog?`)) {
+                post('dealershipAdminDelete', { model });
+            }
+        };
+        this._renderDealership();
+        $('#dealership')?.classList.remove('hidden');
+    },
+
+    _renderDealership() {
+        const list = $('#dealership-list');
+        if (!list) return;
+        const query = ($('#dealership-search').value || '').trim().toLowerCase();
+        const category = $('#dealership-category').value;
+        const brand = $('#dealership-brand').value;
+        const inStock = $('#dealership-instock').checked;
+        const rows = (this._dealerVehicles || []).filter((v) => {
+            const haystack = `${v.model} ${v.label} ${v.brand}`.toLowerCase();
+            return (!query || haystack.includes(query))
+                && (!category || v.category === category)
+                && (!brand || v.brand === brand)
+                && (!inStock || Number(v.stock) > 0);
+        });
+        list.innerHTML = '';
+        rows.forEach((vehicle) => {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = `dealership-card ${this._dealerSelected === vehicle.model ? 'is-active' : ''}`;
+            const top = document.createElement('div');
+            top.className = 'dealership-card__top';
+            const name = document.createElement('span');
+            name.textContent = vehicle.label || vehicle.model;
+            const price = document.createElement('span');
+            price.textContent = formatMoney(Number(vehicle.price) || 0);
+            top.append(name, price);
+            const meta = document.createElement('div');
+            meta.className = 'dealership-card__meta';
+            const identity = document.createElement('span');
+            identity.textContent = `${vehicle.brand || 'Other'} · ${vehicle.category || 'other'}`;
+            const stock = document.createElement('span');
+            stock.className = Number(vehicle.stock) > 0 ? '' : 'dealership-card__stock--out';
+            stock.textContent = Number(vehicle.stock) > 0 ? `${vehicle.stock} in stock` : 'sold out';
+            meta.append(identity, stock);
+            card.append(top, meta);
+            card.onclick = () => {
+                this._dealerSelected = vehicle.model;
+                post('dealershipSelect', { model: vehicle.model });
+                this._renderDealership();
+                if (this._dealerData.admin) this._fillDealerAdmin(vehicle);
+            };
+            list.appendChild(card);
+        });
+        if (!rows.length) {
+            const empty = document.createElement('p');
+            empty.className = 'craft-meta';
+            empty.textContent = 'No vehicles match these filters.';
+            list.appendChild(empty);
+        }
+        const previousSelection = this._dealerSelected;
+        let selected = rows.find((v) => v.model === this._dealerSelected);
+        if (!selected && rows.length) {
+            selected = rows[0];
+            this._dealerSelected = selected.model;
+        }
+        if (selected && previousSelection !== selected.model) {
+            post('dealershipSelect', { model: selected.model });
+            if (this._dealerData.admin) this._fillDealerAdmin(selected);
+        }
+        this._renderDealerDetail(selected);
+    },
+
+    _renderDealerDetail(vehicle) {
+        const detail = $('#dealership-detail');
+        detail.innerHTML = '';
+        if (!vehicle) {
+            detail.textContent = 'Select a vehicle from the catalog.';
+            return;
+        }
+        const brand = document.createElement('div');
+        brand.className = 'dealership__detail-brand';
+        brand.textContent = `${vehicle.brand || 'Other'} · ${vehicle.category || 'other'} · ${vehicle.model}`;
+        const name = document.createElement('h3');
+        name.textContent = vehicle.label || vehicle.model;
+        const price = document.createElement('div');
+        price.className = 'dealership__detail-price';
+        price.textContent = formatMoney(Number(vehicle.price) || 0);
+        const stock = document.createElement('div');
+        stock.className = 'dealership__detail-stock';
+        stock.textContent = Number(vehicle.stock) > 0 ? `${vehicle.stock} vehicle(s) currently available` : 'Currently sold out';
+        detail.append(brand, name, price, stock);
+        if (!this._dealerData.admin) {
+            const actions = document.createElement('div');
+            actions.className = 'dealership__detail-actions';
+            const buy = document.createElement('button');
+            buy.textContent = Number(vehicle.stock) > 0 ? 'BUY — STORED AT LEGION' : 'SOLD OUT';
+            buy.disabled = Number(vehicle.stock) <= 0;
+            buy.onclick = () => post('dealershipBuy', { model: vehicle.model });
+            const test = document.createElement('button');
+            test.className = 'secondary';
+            test.textContent = `TEST DRIVE — ${this._dealerData.testDriveSeconds || 60}s`;
+            test.disabled = !(vehicle.test_drive_enabled === true || Number(vehicle.test_drive_enabled) === 1);
+            test.onclick = () => post('dealershipTestDrive', { model: vehicle.model });
+            actions.append(buy, test);
+            detail.appendChild(actions);
+        }
+    },
+
+    _fillDealerAdmin(vehicle) {
+        const value = (id, val = '') => { $(id).value = val; };
+        value('#dealer-model', vehicle?.model || '');
+        value('#dealer-label', vehicle?.label || '');
+        value('#dealer-brand', vehicle?.brand || '');
+        value('#dealer-category', vehicle?.category || '');
+        value('#dealer-price', vehicle?.price || '');
+        value('#dealer-stock', vehicle?.stock ?? 0);
+        value('#dealer-order', vehicle?.display_order ?? 100);
+        $('#dealer-model').readOnly = Boolean(vehicle);
+        $('#dealer-available').checked = vehicle ? Number(vehicle.available) === 1 : true;
+        $('#dealer-testdrive').checked = vehicle ? Number(vehicle.test_drive_enabled) === 1 : true;
+    },
+
+    hideDealership() {
+        $('#dealership')?.classList.add('hidden');
+        this._dealerSelected = null;
+    },
 
     showAppearance(data) {
         this.init();

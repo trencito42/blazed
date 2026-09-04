@@ -172,7 +172,9 @@ local function failTruckerTrailerLoss(source, session, reason)
     local route = cfg and cfg.routes and session.data and cfg.routes[session.data.routeIndex]
     local partialPay = 0
 
-    if route and (stage == 'to_delivery' or stage == 'return_depot') then
+    -- Delivery already pays the full route. Never add partial compensation
+    -- after the cargo has been delivered and the player is returning the rig.
+    if route and stage == 'to_delivery' then
         local fraction = cfg.trailerLossPartialPayFraction or 0.5
         partialPay = math.floor((route.pay or 500) * fraction)
         if partialPay > 0 then
@@ -184,7 +186,7 @@ local function failTruckerTrailerLoss(source, session, reason)
     if partialPay > 0 then
         finalReason = ('%s — partial pay $%d'):format(reason, partialPay)
     end
-    SunsetJobs_ClearSession(source, 'FAILED', finalReason, { keepTruck = true })
+    SunsetJobs_ClearSession(source, 'FAILED', finalReason)
 end
 
 local function xpForLevel(level)
@@ -631,8 +633,7 @@ CreateThread(function()
                         end
                         if elapsed >= grace then
                             SunsetJobs_ClearSession(src, 'FAILED',
-                                'Trailer detached too long — shift ended (your truck is still yours)',
-                                { keepTruck = true })
+                                'Trailer detached too long — shift ended and the work vehicle was returned')
                         end
                     end
                 end

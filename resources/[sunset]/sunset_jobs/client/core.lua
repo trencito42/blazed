@@ -10,12 +10,14 @@ local JobClient = {
 
 local function protectJobVehicle(veh)
     if not veh or veh == 0 then return end
-    SetEntityInvincible(veh, true)
-    SetVehicleCanBeVisiblyDamaged(veh, false)
-    SetVehicleTyresCanBurst(veh, false)
-    SetVehicleEngineCanDegrade(veh, false)
+    -- Mission/network protection keeps the entity from being cleaned up, but
+    -- job vehicles must still take normal damage and be recoverable gameplay.
+    SetEntityInvincible(veh, false)
+    SetVehicleCanBeVisiblyDamaged(veh, true)
+    SetVehicleTyresCanBurst(veh, true)
+    SetVehicleEngineCanDegrade(veh, true)
     SetVehicleExplodesOnHighExplosionDamage(veh, false)
-    SetEntityProofs(veh, true, true, true, true, true, true, true, true)
+    SetEntityProofs(veh, false, false, false, false, false, false, false, false)
 end
 
 function JobClient.notify(msg, typ, duration)

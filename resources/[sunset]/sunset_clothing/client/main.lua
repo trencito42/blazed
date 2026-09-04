@@ -24,7 +24,7 @@ local function captureSnapshot()
 end
 
 local function restoreSnapshot()
-    if not savedSnapshot or savedSnapshot.purchased then return end
+    if not savedSnapshot then return end
     local ped = PlayerPedId()
     if SunsetAppearance and SunsetAppearance.apply then
         SunsetAppearance.apply(ped, savedSnapshot.appearance, savedSnapshot.gender)

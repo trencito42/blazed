@@ -898,6 +898,56 @@
         </div>
     </div>
 
+    <!-- VEHICLE DEALERSHIP -->
+    <div id="dealership" class="dealership hidden">
+        <aside class="dealership__panel">
+            <header class="dealership__header">
+                <div>
+                    <span class="dealership__eyebrow">SunsetMP vehicle market</span>
+                    <h2 id="dealership-title">Premium Deluxe Motorsport</h2>
+                </div>
+                <button type="button" class="dealership__close" id="dealership-close">×</button>
+            </header>
+            <div class="dealership__balance" id="dealership-balance"></div>
+            <div class="dealership__filters">
+                <input id="dealership-search" type="search" placeholder="Search model, brand or name">
+                <select id="dealership-category"><option value="">All categories</option></select>
+                <select id="dealership-brand"><option value="">All brands</option></select>
+                <label class="dealership__stock-filter"><input id="dealership-instock" type="checkbox"> In stock only</label>
+            </div>
+            <div class="dealership__content">
+                <div id="dealership-list" class="dealership__list"></div>
+                <section id="dealership-detail" class="dealership__detail"></section>
+            </div>
+            <section id="dealership-admin" class="dealership__admin hidden">
+                <div class="dealership__admin-title">
+                    <strong>ADMIN STOCK MANAGER</strong>
+                    <button type="button" id="dealership-admin-new">+ NEW VEHICLE</button>
+                </div>
+                <div class="dealership__admin-grid">
+                    <label>Spawn model<input id="dealer-model" maxlength="64" placeholder="sultan"></label>
+                    <label>Display name<input id="dealer-label" maxlength="80" placeholder="Sultan"></label>
+                    <label>Brand<input id="dealer-brand" maxlength="48" placeholder="Karin"></label>
+                    <label>Category<input id="dealer-category" maxlength="32" placeholder="sport"></label>
+                    <label>Price<input id="dealer-price" type="number" min="1" max="2000000000"></label>
+                    <label>Stock<input id="dealer-stock" type="number" min="0" max="1000000"></label>
+                    <label>Order<input id="dealer-order" type="number" min="0" max="9999"></label>
+                    <label class="dealership__check"><input id="dealer-available" type="checkbox"> Available for sale</label>
+                    <label class="dealership__check"><input id="dealer-testdrive" type="checkbox"> Test drive enabled</label>
+                </div>
+                <div class="dealership__admin-actions">
+                    <button type="button" id="dealership-admin-save">SAVE / ADD</button>
+                    <button type="button" id="dealership-admin-delete" class="danger">DELETE SELECTED</button>
+                </div>
+            </section>
+        </aside>
+        <div class="dealership__preview-controls">
+            <button type="button" id="dealership-rotate-left">◀ ROTATE</button>
+            <span>LIVE 3D PREVIEW</span>
+            <button type="button" id="dealership-rotate-right">ROTATE ▶</button>
+        </div>
+    </div>
+
     <!-- CRAFTING -->
     <div id="crafting" class="overlay-panel hidden">
         <div class="overlay-panel__box overlay-panel__box--wide">

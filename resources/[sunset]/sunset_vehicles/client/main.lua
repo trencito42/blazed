@@ -7,6 +7,8 @@ local spawnedOwnedVehicle = nil
 local protectedVehicles = {}
 local lastBodyHealth = 1000.0
 local lastVehSpeed = 0.0
+local engineEnabled = {}
+local lastEjectAt = 0
 
 -- GTA fuel natives use liters (0..fPetrolTankVolume), not 0–100%. We track percent for HUD/DB.
 local function getNativeTankVolume(veh)
@@ -113,11 +115,18 @@ RegisterCommand('sunset_engine', function()
     if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end
-    local on = not GetIsVehicleEngineRunning(veh)
-    SetVehicleEngineOn(veh, on, false, true)
+    local on = engineEnabled[veh] ~= true
+    engineEnabled[veh] = on
+    SetVehicleEngineOn(veh, on, true, true)
     notify(on and 'Engine on' or 'Engine off', 'info')
 end, false)
 RegisterKeyMapping('sunset_engine', 'Motor on/off', 'keyboard', '2')
+
+AddEventHandler('sunset:vehicles:setEngineState', function(veh, enabled)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    engineEnabled[veh] = enabled == true
+    SetVehicleEngineOn(veh, enabled == true, true, true)
+end)
 
 -- ═══ LIGHTS (H) — off → low → high ═══
 RegisterCommand('sunset_lights', function()
@@ -152,18 +161,58 @@ local function applySeatbeltPhysics(ped)
 end
 
 CreateThread(function()
+    local previousVehicle = 0
+    local previousSpeed = 0.0
+    local previousBody = 1000.0
+
     while true do
         local ped = PlayerPedId()
         if IsPedInAnyVehicle(ped, false) then
             local veh = GetVehiclePedIsIn(ped, false)
+            local driver = GetPedInVehicleSeat(veh, -1) == ped
+            if driver and engineEnabled[veh] == nil then
+                -- Engine state is deliberate on SunsetMP: entering a vehicle or
+                -- pressing accelerate must not silently start it.
+                engineEnabled[veh] = false
+                SetVehicleEngineOn(veh, false, true, true)
+            elseif driver and engineEnabled[veh] == false then
+                SetVehicleEngineOn(veh, false, true, true)
+            end
+
             syncLockState(veh)
             applySeatbeltPhysics(ped)
+
+            local speed = GetEntitySpeed(veh)
+            local body = GetVehicleBodyHealth(veh)
+            if previousVehicle == veh and not seatbelt and GetGameTimer() - lastEjectAt > 3000 then
+                local class = GetVehicleClass(veh)
+                local canEject = class ~= 8 and class ~= 13 and class ~= 14 and class ~= 15 and class ~= 16
+                local hardStop = previousSpeed >= 18.0 and (previousSpeed - speed) >= 10.0
+                local collisionDamage = previousBody - body >= 8.0
+                if canEject and hardStop and collisionDamage then
+                    lastEjectAt = GetGameTimer()
+                    local forward = GetEntityForwardVector(veh)
+                    local pos = GetEntityCoords(ped)
+                    SetEntityCoordsNoOffset(ped, pos.x + forward.x * 1.8, pos.y + forward.y * 1.8,
+                        pos.z + 0.35, true, true, true)
+                    SetEntityVelocity(ped, forward.x * previousSpeed * 0.75,
+                        forward.y * previousSpeed * 0.75, 2.5)
+                    SetPedToRagdoll(ped, 1500, 3500, 0, true, true, false)
+                    notify('You were thrown from the vehicle because you were not wearing a seatbelt', 'error')
+                end
+            end
+            previousVehicle = veh
+            previousSpeed = speed
+            previousBody = body
             Wait(0)
         else
             seatbelt = false
             lightMode = 0
             lastBodyHealth = 1000.0
             lastVehSpeed = 0.0
+            previousVehicle = 0
+            previousSpeed = 0.0
+            previousBody = 1000.0
             Wait(500)
         end
     end
@@ -468,8 +517,8 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     writeFuelPercent(vehicle, vehFuel)
     SetVehicleEngineHealth(vehicle, vehEngine)
     SetVehicleBodyHealth(vehicle, vehBody)
-    local engineOn = vehFuel > 0 and vehEngine > 250.0
-    SetVehicleEngineOn(vehicle, engineOn, true, false)
+    engineEnabled[vehicle] = false
+    SetVehicleEngineOn(vehicle, false, true, true)
     SetModelAsNoLongerNeeded(model)
 
     spawnedOwnedVehicle = vehicle

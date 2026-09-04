@@ -37,18 +37,26 @@ AddEventHandler('sunset:nui:craftingCraft', function(data)
     local duration = recipe and recipe.time or 5000
     local label = recipe and recipe.label or 'Crafting'
 
+    exports.sunset_ui:Send('craftingHide', {})
+    exports.sunset_ui:SetFocus(false, false)
+
     if not runCraftProgress(duration, label) then
         exports.sunset_ui:Notify('Crafting cancelled', 'warning')
-        return
+    else
+        local ok, err = Sunset.AwaitCallback('sunset:craftItem', data.stationId, data.recipeId)
+        if ok then
+            exports.sunset_ui:Notify(('Crafted %s successfully'):format(label), 'success')
+        else
+            exports.sunset_ui:Notify(err or 'Craft failed', 'error')
+        end
     end
 
-    local ok, err = Sunset.AwaitCallback('sunset:craftItem', data.stationId, data.recipeId)
-    if ok then
-        exports.sunset_ui:Notify('Crafted successfully', 'success')
-        local refreshed = Sunset.AwaitCallback('sunset:getCraftingMenu', data.stationId)
-        if refreshed then exports.sunset_ui:Send('craftingUpdate', refreshed) end
+    local refreshed = Sunset.AwaitCallback('sunset:getCraftingMenu', data.stationId)
+    if refreshed and craftingOpen then
+        exports.sunset_ui:Send('craftingShow', refreshed)
+        exports.sunset_ui:SetFocus(true, true)
     else
-        exports.sunset_ui:Notify(err or 'Craft failed', 'error')
+        craftingOpen = false
     end
 end)
 
@@ -63,4 +71,35 @@ CreateThread(function()
     for id, station in pairs(Sunset.CraftingStations or {}) do
         TriggerEvent('sunset:world:registerCraftingStation', id, station)
     end
+end)
+
+RegisterCommand('crafting', function()
+    local char = exports.sunset_core:GetCharacter()
+    if not char then return exports.sunset_ui:Notify('Your character is not loaded yet.', 'error') end
+    local factionId = select(1, Sunset.GetCharacterFaction(char))
+    local pos = GetEntityCoords(PlayerPedId())
+    local closestId, closest, closestDistance
+    for id, station in pairs(Sunset.CraftingStations or {}) do
+        if station.access == 'public' or station.faction == factionId then
+            local distance = #(pos - station.coords)
+            if not closestDistance or distance < closestDistance then
+                closestId, closest, closestDistance = id, station, distance
+            end
+        end
+    end
+    if not closest then
+        return exports.sunset_ui:Notify('No crafting station is available for your current faction.', 'error')
+    end
+    if closestDistance <= 4.0 then
+        TriggerEvent('sunset:world:openCrafting', closestId, closest)
+        return
+    end
+    SetNewWaypoint(closest.coords.x, closest.coords.y)
+    exports.sunset_ui:Notify(('GPS set to %s. Enter its marker and press E; materials come from your inventory.'):format(
+        closest.label or 'crafting station'), 'info', 9000)
+end, false)
+
+CreateThread(function()
+    Wait(3500)
+    TriggerEvent('chat:addSuggestion', '/crafting', 'Mark the nearest crafting station available to you')
 end)

@@ -62,8 +62,19 @@ if [ -f scripts/install-deps.sh ]; then
 fi
 
 docker compose build fivem
-docker compose up -d --remove-orphans
-docker compose up -d --force-recreate fivem
+docker compose up -d mariadb
+
+# Apply schema changes before the gameplay resource starts, so a newly added
+# resource never boots against missing tables.
+attempt=0
+until docker compose exec -T mariadb mariadb-admin ping -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" --silent >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge 30 ]; then
+    echo "[deploy] MariaDB did not become ready in time" >&2
+    exit 1
+  fi
+  sleep 2
+done
 
 # Run SQL migrations (idempotent where possible)
 if [ -f sql/03-foundation.sql ]; then
@@ -96,5 +107,11 @@ fi
 if [ -f sql/11-admin-checkpoints.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/11-admin-checkpoints.sql 2>/dev/null || true
 fi
+if [ -f sql/12-dealership.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/12-dealership.sql
+fi
+
+docker compose up -d --remove-orphans
+docker compose up -d --force-recreate fivem
 
 echo "Done. Connect: F8 -> connect $(curl -s ifconfig.me 2>/dev/null || echo YOUR_IP):30120"
