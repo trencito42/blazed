@@ -25,7 +25,7 @@ SunsetMP uses a **capability-based faction framework**. Factions are not hardcod
 | Faction ID | Label | HQ marker `[E]` | Notes |
 |------------|-------|-----------------|-------|
 | `police` | LSPD | Mission Row PD — `441.15, -981.95, 30.69` | MRPD fleet garage nearby |
-| `medic` | Pillbox EMS | Pillbox Hospital lobby — `307.12, -595.55, 43.28` | Requires `bob74_ipl` for hospital interior |
+| `medic` | Pillbox EMS | Pillbox Hospital lobby — `307.12, -595.55, 43.28` | `sunset_world` swaps bob74 IPL to walkable interior |
 | `taxi` | Downtown Cab Co. | `903.32, -170.14, 74.08` | Cab depot at same block |
 | `mechanic` | LS Customs | `337.52, -136.57, 39.01` | Drive-in repair when in vehicle |
 | `lsfd` | LS Fire Department | `1194.82, -1464.01, 34.86` | Fire station garage |

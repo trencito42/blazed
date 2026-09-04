@@ -13,6 +13,7 @@ shared_scripts {
 
 client_scripts {
     'client/main.lua',
+    'client/pillbox_hospital.lua',
 }
 
-dependencies { 'sunset_core' }
+dependencies { 'sunset_core', 'bob74_ipl' }
