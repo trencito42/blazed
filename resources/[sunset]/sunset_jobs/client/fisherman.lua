@@ -61,6 +61,19 @@ local function attemptSell()
     selling = false
     if result then
         JC.notify(('Sold %d fish for $%s'):format(result.count or 0, result.amount or 0), 'success')
+        if result.session then
+            JC.sessionData = result.session
+            local cfg = Sunset.GetJobConfig('fisherman')
+            local spotIdx = nearestSpotIndex()
+            local spot = cfg.spots and cfg.spots[spotIdx]
+            if spot then
+                JC.setWaypoint(spot.coords)
+            end
+            JC.showObjective('Fishing', ('Bag %d/%d — blue marker: E or /fish · buyer: /sellfish'):format(
+                result.session.carried or 0, result.session.capacity or 2),
+                fishBagProgress(result.session.carried, result.session.capacity))
+            JC.notify('Shift still active — cast at the nearest blue fishing marker.', 'info', 7000)
+        end
     else
         JC.notify(sellErr or 'Could not sell the fish. Stay inside the yellow marker and try again.', 'error')
     end

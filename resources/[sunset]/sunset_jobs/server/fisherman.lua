@@ -190,10 +190,15 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:sell', function(sour
     if session and session.jobId == 'fisherman' then
         session.data.pendingValue = 0
         session.data.carried = 0
-        SunsetJobs_ClearSession(source, 'COMPLETED', 'Catch sold')
+        session.data.stage = 'fishing'
+        session.data.fishingChallenge = nil
+        if session.state == 'STARTING' then
+            SunsetJobs_SetState(source, 'ACTIVE')
+        end
+        TriggerClientEvent('sunset:jobs:stateChanged', source, session.state, session.data)
     end
     SellLocks[source] = nil
-    return { amount = bonus, count = count }
+    return { amount = bonus, count = count, session = session and session.data }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:endShift', function(source)

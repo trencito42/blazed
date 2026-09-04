@@ -611,8 +611,8 @@ const Panels = {
         $('#clothing-title').textContent = type === 'barber' ? 'Barber' : 'Clothing';
 
         if (type === 'barber') {
-            if (hint) hint.textContent = 'Alege coafura. $50 per schimbare.';
-            if (this.barberHair == null) this.barberHair = 0;
+            if (hint) hint.textContent = 'Choose a hairstyle. $50 per change.';
+            this.barberHair = data.hair ?? this.barberHair ?? 0;
 
             const picker = document.createElement('div');
             picker.className = 'clothing-picker';
@@ -648,10 +648,9 @@ const Panels = {
                 post('clothingApply', { type: 'barber', hair: this.barberHair, pay: true });
             });
             label();
-            preview();
         } else {
-            if (hint) hint.textContent = 'Alege haina (torso). $50 per schimbare.';
-            if (this.clothingDrawable == null) this.clothingDrawable = 0;
+            if (hint) hint.textContent = 'Choose a top (torso). $50 per change.';
+            this.clothingDrawable = data.drawable ?? this.clothingDrawable ?? 0;
 
             const picker = document.createElement('div');
             picker.className = 'clothing-picker';
@@ -696,7 +695,6 @@ const Panels = {
                 });
             });
             label();
-            preview();
         }
 
         $('#clothing')?.classList.remove('hidden');
