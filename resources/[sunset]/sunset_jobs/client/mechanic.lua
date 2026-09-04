@@ -74,6 +74,7 @@ local function startMechanic()
     JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Mechanic Depot')
     JC.sessionData = data
     JC.setWaypoint(cfg.depot.coords)
+    JC.showObjective('Roadside Mechanic', 'Wait for a service call, then press E to accept it', 0)
     JC.notify('On duty — accept /service mechanic calls. Stand near a vehicle and press E to repair.', 'success')
 
     CreateThread(function()
@@ -82,6 +83,7 @@ local function startMechanic()
                 if IsControlJustPressed(0, 38) then
                     Sunset.AwaitCallback('sunset:jobs:mechanic:acceptCall', activeCall.id)
                     JC.sessionData.stage = 'en_route'
+                    JC.showObjective('Roadside Mechanic', 'Drive to the customer shown on GPS', 40)
                     JC.notify('Call accepted — go to customer', 'success')
                 end
             end
@@ -99,6 +101,7 @@ local function startMechanic()
                     if result then
                         activeCall = nil
                         JC.sessionData.stage = 'on_duty'
+                        JC.showObjective('Roadside Mechanic', 'Repair complete — waiting for another call', 100)
                         JC.notify(('Repair complete +$%s'):format(result.pay or 0), 'success')
                     elseif err2 then
                         JC.notify(err2, 'error')

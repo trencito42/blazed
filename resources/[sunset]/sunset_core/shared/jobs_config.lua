@@ -14,14 +14,18 @@ Sunset.JobsConfig = {
         truckModel = 'phantom',
         trailerModel = 'trailers2',
         routes = {
-            { pickup = vector3(89.55, -1742.12, 29.29), delivery = vector3(2550.12, 467.55, 108.45), pay = 850, label = 'Davis → Vinewood Hills' },
+            { pickup = vector3(896.20, -3205.70, 5.90), delivery = vector3(2670.00, 3520.00, 52.80), pay = 850, label = 'Terminal → Harmony Freight' },
             { pickup = vector3(-424.88, -2789.33, 6.0), delivery = vector3(1702.55, 6416.12, 32.76), pay = 1200, label = 'Docks → Paleto Bay' },
             { pickup = vector3(2747.32, 3472.88, 55.67), delivery = vector3(-219.45, -2419.88, 6.0), pay = 950, label = 'Sandy Shores → South Docks' },
         },
         xpPerDelivery = 45,
         timeoutSec = 1800,
-        deliveryRadius = 12.0,
-        returnRadius = 15.0,
+        deliveryRadius = 25.0,
+        returnRadius = 25.0,
+        requiresWorkVehicle = true,
+        vehicleExitGraceSec = 60,
+        requiresAttachedTrailer = true,
+        trailerGraceSec = 60,
     },
 
     garbage = {
@@ -55,6 +59,8 @@ Sunset.JobsConfig = {
         dumpRadius = 3.5,
         truckRearOffset = -4.5,
         timeoutSec = 1500,
+        requiresWorkVehicle = true,
+        vehicleExitGraceSec = 60,
     },
 
     courier = {
@@ -92,7 +98,9 @@ Sunset.JobsConfig = {
             coords = vector3(-1845.22, -1195.45, 14.30),
             blip = { sprite = 280, color = 46, scale = 0.8 },
         },
-        minigameDurationMs = 8000,
+        biteDelayMinMs = 2500,
+        biteDelayMaxMs = 6500,
+        reactionWindowMs = 1500,
         catchRadius = 8.0,
         sellRadius = 3.0,
         catchPayMin = 35,

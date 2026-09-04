@@ -9,6 +9,7 @@ local function generatePlate()
 end
 
 local StoreRate = {}
+local StateSyncRate = {}
 
 local function normalizePlate(plate)
     return type(plate) == 'string' and plate:gsub('%s+', ''):upper() or ''
@@ -217,8 +218,39 @@ exports.sunset_core:RegisterCallback('sunset:storeOwnedVehicle', function(source
     return storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageId, parked)
 end)
 
+exports.sunset_core:RegisterCallback('sunset:syncOwnedVehicleState', function(source, netId, plate, reportedFuel)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character' end
+    local now = GetGameTimer()
+    if now - (StateSyncRate[source] or 0) < 10000 then return true end
+    StateSyncRate[source] = now
+
+    plate = normalizePlate(plate)
+    local row = MySQL.single.await(
+        'SELECT id, fuel FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ? AND stored = 0',
+        { plate, char.id }
+    )
+    if not row then return nil, 'Owned vehicle not active' end
+    local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+    local ped = GetPlayerPed(source)
+    if not vehicle or vehicle == 0 or not DoesEntityExist(vehicle) or not ped or ped == 0
+        or GetPedInVehicleSeat(vehicle, -1) ~= ped or normalizePlate(GetVehicleNumberPlateText(vehicle)) ~= plate then
+        return nil, 'Vehicle state rejected'
+    end
+
+    -- Driving may only consume fuel here. Refuelling has separate paid callbacks.
+    local previousFuel = math.max(0, math.min(100, tonumber(row.fuel) or 100))
+    local fuelValue = math.max(0, math.min(previousFuel + 0.5, tonumber(reportedFuel) or previousFuel))
+    local engine = math.max(-4000, math.min(1000, GetVehicleEngineHealth(vehicle)))
+    local body = math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
+    MySQL.update.await('UPDATE vehicles SET fuel = ?, engine = ?, body = ? WHERE id = ? AND character_id = ?',
+        { fuelValue, engine, body, row.id, char.id })
+    return true
+end)
+
 AddEventHandler('playerDropped', function()
     StoreRate[source] = nil
+    StateSyncRate[source] = nil
 end)
 
 exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(source, fromFuel, toFuel, plate)

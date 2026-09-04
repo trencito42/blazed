@@ -118,6 +118,8 @@ function JobClient.attachTrailer(truck, trailerModel, spawn)
     Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
     SetVehicleHasBeenOwnedByPlayer(trailer, true)
     AttachVehicleToTrailer(truck, trailer, 1.0)
+    Entity(truck).state:set('sunsetTrailerAttached', true, true)
+    Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
     JobClient.vehicles[#JobClient.vehicles + 1] = trailer
     SetModelAsNoLongerNeeded(thash)
     return trailer
@@ -125,10 +127,22 @@ end
 
 function JobClient.registerVehiclesWithServer()
     local truck = JobClient.vehicles[1]
-    if not truck or not DoesEntityExist(truck) then return end
+    if not truck or not DoesEntityExist(truck) then return false, 'Work vehicle is missing' end
     local trailer = JobClient.vehicles[2]
     local tNet = trailer and DoesEntityExist(trailer) and NetworkGetNetworkIdFromEntity(trailer) or nil
-    Sunset.AwaitCallback('sunset:jobs:registerVehicle', NetworkGetNetworkIdFromEntity(truck), tNet)
+    for _ = 1, 8 do
+        local truckNet = NetworkGetNetworkIdFromEntity(truck)
+        tNet = trailer and DoesEntityExist(trailer) and NetworkGetNetworkIdFromEntity(trailer) or nil
+        if truckNet and truckNet ~= 0 and (not trailer or (tNet and tNet ~= 0)) then
+            local ok, err = Sunset.AwaitCallback('sunset:jobs:registerVehicle', truckNet, tNet)
+            if ok then return true end
+            if err and err ~= 'Work vehicle not networked' and err ~= 'Work trailer is not networked' then
+                return false, err
+            end
+        end
+        Wait(400)
+    end
+    return false, 'Could not network the work vehicle'
 end
 
 function JobClient.playAnim(dict, anim, duration)
@@ -157,6 +171,13 @@ function JobClient.monitorVehicles()
             local anyAlive = false
             for _, veh in ipairs(JobClient.vehicles) do
                 if veh and DoesEntityExist(veh) then anyAlive = true break end
+            end
+            local truck = JobClient.vehicles[1]
+            local trailer = JobClient.vehicles[2]
+            if truck and trailer and DoesEntityExist(truck) and DoesEntityExist(trailer) then
+                local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
+                Entity(truck).state:set('sunsetTrailerAttached', attached and attachedEntity == trailer, true)
+                Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
             end
             if not anyAlive and JobClient.state ~= 'IDLE' then
                 Sunset.AwaitCallback('sunset:jobs:vehicleLost')

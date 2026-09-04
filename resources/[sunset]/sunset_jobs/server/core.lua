@@ -89,6 +89,46 @@ function SunsetJobs_ValidateVehicle(source, expectedModel, mustDrive, maxDistanc
     return #(GetEntityCoords(ped) - GetEntityCoords(entity)) <= (maxDistance or 15.0)
 end
 
+function SunsetJobs_ValidateTrailer(source, mustBeAttached, maxDistance)
+    local session = Sessions[source]
+    if not session or not session.vehicleNetId or not session.trailerNetId then
+        return false, 'Your assigned trailer is missing'
+    end
+
+    local truck = NetworkGetEntityFromNetworkId(session.vehicleNetId)
+    local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
+    if not truck or truck == 0 or not DoesEntityExist(truck) then
+        return false, 'Your assigned truck is missing'
+    end
+    if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
+        return false, 'Your assigned trailer is missing'
+    end
+
+    local cfg = Sunset.GetJobConfig(session.jobId)
+    if cfg and cfg.trailerModel and GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
+        return false, 'Wrong trailer'
+    end
+    if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > (maxDistance or 15.0) then
+        return false, 'Return to your assigned trailer'
+    end
+
+    if mustBeAttached then
+        local nativeOk, attached, attachedEntity = pcall(function()
+            return GetVehicleTrailerVehicle(truck)
+        end)
+        if nativeOk and (not attached or attachedEntity ~= trailer) then
+            return false, 'Attach your assigned trailer before continuing'
+        elseif not nativeOk then
+            local state = Entity(truck).state
+            if state.sunsetTrailerAttached ~= true
+                or tonumber(state.sunsetTrailerNetId) ~= tonumber(session.trailerNetId) then
+                return false, 'Attach your assigned trailer before continuing'
+            end
+        end
+    end
+    return true
+end
+
 local function xpForLevel(level)
     return math.max(100, (level or 1) * 100)
 end
@@ -297,6 +337,22 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
     if expected and GetEntityModel(entity) ~= joaat(expected) then return nil, 'Invalid work vehicle' end
     session.vehicleNetId = vehicleNetId
     session.trailerNetId = trailerNetId and tonumber(trailerNetId) or nil
+    if cfg and cfg.trailerModel then
+        if not session.trailerNetId then return nil, 'Work trailer was not registered' end
+        local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
+        if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
+            session.trailerNetId = nil
+            return nil, 'Work trailer is not networked'
+        end
+        if GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
+            session.trailerNetId = nil
+            return nil, 'Invalid work trailer'
+        end
+        if #(GetEntityCoords(entity) - GetEntityCoords(trailer)) > 20.0 then
+            session.trailerNetId = nil
+            return nil, 'Work trailer is too far from the truck'
+        end
+    end
     if session.state == 'STARTING' then
         SunsetJobs_SetState(source, 'ACTIVE')
     end
@@ -319,11 +375,58 @@ end)
 
 CreateThread(function()
     while true do
-        Wait(30000)
+        Wait(5000)
         local now = os.time()
         for src, session in pairs(Sessions) do
             if session.timeoutAt and now > session.timeoutAt then
                 SunsetJobs_ClearSession(src, 'FAILED', 'Shift timed out')
+            else
+                local cfg = Sunset.GetJobConfig(session.jobId)
+                if cfg and cfg.requiresWorkVehicle and session.vehicleNetId then
+                    local vehicle = NetworkGetEntityFromNetworkId(session.vehicleNetId)
+                    local ped = GetPlayerPed(src)
+                    local driving = vehicle and vehicle ~= 0 and DoesEntityExist(vehicle)
+                        and ped and ped ~= 0 and GetPedInVehicleSeat(vehicle, -1) == ped
+
+                    if driving then
+                        session.vehicleExitSince = nil
+                        session.vehicleExitWarn = nil
+                    else
+                        session.vehicleExitSince = session.vehicleExitSince or now
+                        local elapsed = now - session.vehicleExitSince
+                        local grace = cfg.vehicleExitGraceSec or 60
+                        local remaining = grace - elapsed
+                        local warnBucket = remaining <= 10 and 10 or (remaining <= 30 and 30 or 60)
+                        if session.vehicleExitWarn ~= warnBucket then
+                            session.vehicleExitWarn = warnBucket
+                            TriggerClientEvent('sunset:client:notify', src,
+                                ('Return to your work vehicle within %d seconds'):format(math.max(0, remaining)), 'warning')
+                        end
+                        if elapsed >= grace then
+                            SunsetJobs_ClearSession(src, 'FAILED', 'You abandoned your work vehicle')
+                        end
+                    end
+                end
+
+                if Sessions[src] and cfg and cfg.requiresAttachedTrailer and session.trailerNetId then
+                    local valid = SunsetJobs_ValidateTrailer(src, true, 18.0)
+                    if valid then
+                        session.trailerDetachSince = nil
+                        session.trailerWarned = nil
+                    else
+                        session.trailerDetachSince = session.trailerDetachSince or now
+                        local elapsed = now - session.trailerDetachSince
+                        local grace = cfg.trailerGraceSec or 60
+                        if not session.trailerWarned then
+                            session.trailerWarned = true
+                            TriggerClientEvent('sunset:client:notify', src,
+                                ('Reattach your assigned trailer within %d seconds'):format(grace), 'warning')
+                        end
+                        if elapsed >= grace then
+                            SunsetJobs_ClearSession(src, 'FAILED', 'Assigned trailer was abandoned')
+                        end
+                    end
+                end
             end
         end
     end

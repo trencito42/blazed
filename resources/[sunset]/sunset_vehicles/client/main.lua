@@ -169,6 +169,20 @@ CreateThread(function()
     end
 end)
 
+-- Persist fuel/damage while an owned vehicle is being driven, not only when it
+-- is manually stored. This limits rollback after disconnects or crashes.
+CreateThread(function()
+    while true do
+        Wait(30000)
+        local veh = getVeh()
+        if veh ~= 0 and isDriver() and spawnedOwnedVehicle == veh and DoesEntityExist(veh) then
+            local plate = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
+            Sunset.AwaitCallback('sunset:syncOwnedVehicleState', VehToNet(veh),
+                plate, fuel)
+        end
+    end
+end)
+
 local function computeFuelDrain(veh)
     local profiles = Sunset.VehicleProfiles or {}
     local base = profiles.fuelBase or 0.0035

@@ -47,6 +47,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/work [cancel]', desc = 'Start civilian job shift or cancel current shift' },
     { cmd = '/skills', desc = 'View job skill levels' },
     { cmd = '/jobhelp', desc = 'Help text for your civilian job' },
+    { cmd = '/fish', desc = 'Cast and play the fishing reaction challenge at a fishing spot' },
     { cmd = '/quitjob', desc = 'Quit civilian job at Job Center' },
     { cmd = '/faction', desc = 'Faction rank, salary, and your commands' },
     { cmd = '/leavefaction', desc = 'Leave your faction (job stays)' },

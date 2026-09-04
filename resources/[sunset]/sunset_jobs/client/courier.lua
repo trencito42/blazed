@@ -21,6 +21,7 @@ local function startCourier()
     JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Courier Warehouse')
     JC.sessionData = data
     JC.setWaypoint(cfg.warehouse.coords)
+    JC.showObjective('Courier', 'Pick up a package at the warehouse', 0)
     JC.notify('Go to the warehouse loading dock to pick up packages', 'info')
 
     CreateThread(function()
@@ -41,6 +42,9 @@ local function startCourier()
                         local target = newData.deliveries[idx]
                         if target then
                             pointToDelivery(cfg, target, 'Delivery: ' .. (target.label or ''))
+                            JC.showObjective('Courier', ('Deliver package %d/%d to %s'):format(
+                                idx, newData.total or 1, target.label or 'the address'),
+                                math.floor(((idx - 1) / math.max(newData.total or 1, 1)) * 100))
                             JC.notify('Deliver to ' .. (target.label or 'address'), 'info')
                         end
                     end
@@ -66,6 +70,8 @@ local function startCourier()
                                 JC.clearBlips()
                                 JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Courier Warehouse')
                                 JC.setWaypoint(cfg.warehouse.coords)
+                                JC.showObjective('Courier', 'Return to the warehouse for the next package',
+                                    math.floor(((JC.sessionData.delivered or 0) / math.max(JC.sessionData.total or 1, 1)) * 100))
                                 JC.notify('Return to warehouse for next package', 'info')
                             end
                         elseif err2 then

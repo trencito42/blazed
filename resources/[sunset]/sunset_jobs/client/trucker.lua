@@ -17,7 +17,17 @@ local function startTrucker()
         return
     end
     local trailer = JC.attachTrailer(truck, cfg.trailerModel, cfg.depot.trailerSpawn)
-    JC.registerVehiclesWithServer()
+    if not trailer then
+        JC.deleteVehicles()
+        Sunset.AwaitCallback('sunset:jobs:cancelWork')
+        return JC.notify('Could not create the assigned trailer — try again', 'error')
+    end
+    local registered, registerErr = JC.registerVehiclesWithServer()
+    if not registered then
+        JC.deleteVehicles()
+        Sunset.AwaitCallback('sunset:jobs:cancelWork')
+        return JC.notify(registerErr or 'Could not register the truck and trailer', 'error')
+    end
     JC.monitorVehicles()
 
     JC.setWaypoint(data.pickup)
