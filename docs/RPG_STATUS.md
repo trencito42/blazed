@@ -3,6 +3,16 @@
 **Last updated:** 2026-09-05
 **Code baseline:** runtime commit `e1836d3`, deployed to Coolify on 2026-09-05
 
+## Faithful `m_menu.html` integration (2026-09-05, not deployed)
+
+- Replaced the previous themed dashboard with the actual `SUNSET OS` composition from the supplied `m_menu.html`: matching two-column geometry, clipped technical panels, tab rail, character summary, action tiles, scanlines/glitch motion and segmented status footer.
+- Kept the reference layout while adapting purple accents to the server's orange/amber identity and extending it with real Armor, Fuel, owned-vehicle diagnostics, faction/civilian employment, progression and property data.
+- Vehicle cards now clamp and display authoritative fuel, engine and body percentages, including valid zero values rather than silently replacing them with 100%.
+- Centralized M-menu action routing. Inventory, Animations, Phone, Documents and Licenses no longer have competing event handlers that could open an overlay and immediately close it or leave it without focus.
+- Extended the same visual language to job objectives, taxi meter, notifications, generic progress, scoreboard, chat input and the lower vehicle control HUD.
+- Restored the missing generic progress-bar markup used by gameplay scripts and rebuilt notification markup with explicit state titles and safe text rendering.
+- Visual comparison was performed directly against `m_menu.html` at 1280 x 720. JavaScript syntax, CSS validation, unique HTML IDs and whitespace checks passed. Server restart/deployment was intentionally not performed.
+
 ## Sunset OS UI and item-art pass (2026-09-05)
 
 - Replaced emoji item definitions with validated asset basenames and vendored the complete 232-icon, 100 x 100 WebP Swisser FiveM inventory pack (CC0 1.0, license included).

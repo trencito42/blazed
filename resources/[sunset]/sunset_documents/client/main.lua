@@ -17,9 +17,3 @@ AddEventHandler('sunset:nui:documentsClose', function()
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('documentsHide', {})
 end)
-
-AddEventHandler('sunset:nui:menuAction', function(data)
-    if not data then return end
-    if data.action == 'documents' then showDocuments('id') end
-    if data.action == 'licenses' then showDocuments('licenses') end
-end)

@@ -61,6 +61,11 @@
         </div>
     </div>
 
+    <div id="progress" class="progress hidden" aria-live="polite">
+        <div class="progress__header"><span>SUNSET OS</span><strong class="progress__label">Processing</strong></div>
+        <div class="progress__track"><div class="progress__fill"></div></div>
+    </div>
+
     <div id="fuel-pump" class="hidden" aria-hidden="true">
         <div class="fuel-pump__header">
             <div>
@@ -326,175 +331,86 @@
         </div>
     </div>
 
-    <!-- PLAYER MENU (M) -->
+    <!-- PLAYER MENU (M) — production wiring for the m_menu.html Sunset OS design -->
     <div id="menu" class="menu hidden">
+        <div class="menu-noise" aria-hidden="true"></div>
         <div class="menu-wrap">
-            <div class="menu-shell">
-                <header class="menu-topbar">
-                    <button type="button" class="menu-close-btn" id="menu-close-btn">
-                        <span class="menu-keycap">ESC</span>
-                        <span class="menu-close-btn__text">CLOSE MENU</span>
-                    </button>
-                    <nav class="menu-tabs" id="menu-tabs">
-                        <button type="button" class="menu-tab is-active" data-tab="player">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.87 0-7 2.13-7 4.75V20h14v-1.25C19 16.13 15.87 14 12 14z"/></svg>
-                            <span>PLAYER</span>
-                        </button>
-                        <button type="button" class="menu-tab" data-tab="vehicle">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 11l1.5-4.5h11L19 11v6h-2v2h-2v-2H9v2H7v-2H5v-6zm2.2 0h9.6l-.9-2.5H8.1L7.2 11z"/></svg>
-                            <span>VEHICLE</span>
-                        </button>
-                        <button type="button" class="menu-tab" data-tab="job">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 4h4v2h5v14H5V6h5V4zm2 0v2h0V4zm-6 4v10h12V8H6z"/></svg>
-                            <span>JOB</span>
-                        </button>
-                        <button type="button" class="menu-tab" data-tab="property">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 3 10v11h7v-6h4v6h7V10L12 3z"/></svg>
-                            <span>PROPERTY</span>
-                        </button>
-                        <button type="button" class="menu-tab" data-tab="settings">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3a7.94 7.94 0 0 1 0 2l2.03 1.58-1.92 3.32-2.39-.96a8.09 8.09 0 0 1-1.73 1l-.36 2.52H9.65l-.36-2.52a8.09 8.09 0 0 1-1.73-1l-2.39.96-1.92-3.32L3.06 13a7.94 7.94 0 0 1 0-2L1.03 9.42l1.92-3.32 2.39.96c.53-.4 1.11-.73 1.73-1l.36-2.52h4.7l.36 2.52c.62.27 1.2.6 1.73 1l2.39-.96 1.92 3.32L20.97 11z"/></svg>
-                            <span>SETTINGS</span>
-                        </button>
-                    </nav>
-                    <button type="button" class="menu-exit-btn" id="menu-exit-btn" aria-label="Close">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                    </button>
-                </header>
+            <header class="menu-brand">
+                <div>SUNSET <span>OS</span></div>
+                <button type="button" class="menu-close-btn" id="menu-close-btn"><span class="menu-keycap">ESC</span> CLOSE MENU</button>
+            </header>
 
-                <div class="menu-panels">
-                    <section class="menu-panel-view is-active" data-panel="player">
-                        <div class="menu-col menu-col--profile">
-                            <div class="menu-idcard">
-                                <div class="menu-idcard__photo-wrap">
-                                    <div class="menu-avatar" id="menu-avatar"></div>
-                                    <span class="menu-idcard__badge">ID PHOTO</span>
-                                </div>
-                                <div class="menu-profile__meta">
-                                    <h2 class="menu-profile__name" id="menu-name">—</h2>
-                                    <p class="menu-profile__id" id="menu-id">ID: 0</p>
-                                    <p class="menu-profile__cid" id="menu-cid">CID: —</p>
-                                    <div class="menu-rank">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 2L12 4l3.5 3L21 5l-2 11H5zm2.7-2h8.6l.9-5.08L12 11 6.8 8.92 7.7 14z"/></svg>
-                                        <span id="menu-rank">LOYAL PLAYER</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="menu-xp">
-                                <div class="menu-xp__row">
-                                    <span id="menu-xp-text">0 / 5.000 XP</span>
-                                    <span id="menu-level">LEVEL 1</span>
-                                </div>
-                                <div class="menu-xp__track">
-                                    <div class="menu-xp__fill" id="menu-xp-bar"></div>
-                                </div>
-                            </div>
-                        </div>
+            <nav class="menu-tabs" id="menu-tabs" aria-label="Player menu sections">
+                <button type="button" class="menu-tab is-active" data-tab="player">PLAYER</button>
+                <button type="button" class="menu-tab" data-tab="vehicle">VEHICLE</button>
+                <button type="button" class="menu-tab" data-tab="job">JOB</button>
+                <button type="button" class="menu-tab" data-tab="property">PROPERTY</button>
+                <button type="button" class="menu-tab" data-tab="settings">CONFIG</button>
+                <button type="button" class="menu-exit-btn" id="menu-exit-btn" aria-label="Close menu">×</button>
+            </nav>
 
-                        <div class="menu-col menu-col--info">
-                            <h3 class="menu-section-title">INFO</h3>
-                            <ul class="menu-info-list">
-                                <li><span class="menu-info__left"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 7H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zm0 10H3V9h18v8z"/></svg>CASH</span><span class="menu-info__val" id="menu-cash">$0</span></li>
-                                <li><span class="menu-info__left"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 4h16v2H4V4zm0 4h10v2H4V8zm0 4h16v2H4v-2zm0 4h10v2H4v-2z"/></svg>BANK</span><span class="menu-info__val" id="menu-bank">$0</span></li>
-                                <li><span class="menu-info__left"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="ico-premium"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6z"/></svg>PREMIUM</span><span class="menu-info__val" id="menu-premium">0</span></li>
-                                <li><span class="menu-info__left"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.5 5H11v6l4.75 2.85.75-1.23-4-2.37V7z"/></svg>PLAYTIME</span><span class="menu-info__val" id="menu-playtime">0H 0M</span></li>
-                                <li><span class="menu-info__left"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V8h14v11z"/></svg>LAST LOGIN</span><span class="menu-info__val" id="menu-lastlogin">—</span></li>
-                            </ul>
-                        </div>
+            <aside class="menu-profile tech-panel" aria-label="Character summary">
+                <div>
+                    <div class="menu-profile__name-row">
+                        <h2 class="menu-profile__name" id="menu-name">—</h2>
+                        <span class="menu-profile__id" id="menu-id">ID: 0</span>
+                    </div>
+                    <div class="menu-profile__sub"><span id="menu-cid">CID: —</span><span id="menu-rank">PLAYER</span></div>
+                    <div class="menu-xp">
+                        <div class="menu-xp__row"><span id="menu-level">LEVEL 1</span><span id="menu-xp-text">0 / 5.000 XP</span></div>
+                        <div class="menu-xp__track"><div class="menu-xp__fill" id="menu-xp-bar"></div></div>
+                    </div>
+                </div>
 
-                        <div class="menu-col menu-col--actions">
-                            <h3 class="menu-section-title">QUICK ACTIONS</h3>
-                            <div class="menu-actions">
-                                <button type="button" class="menu-action" data-action="inventory"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 6h-4V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4v14h16V6zm-8-2h4v2h-4V4z"/></svg><span>INVENTORY</span></button>
-                                <button type="button" class="menu-action" data-action="animations"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.3l-2.1-2 .6-2.7H17v-2h-4.4l-1.3 5.6z"/></svg><span>ANIMATIONS</span></button>
-                                <button type="button" class="menu-action" data-action="phone"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-5 20a1.5 1.5 0 1 1 1.5-1.5A1.5 1.5 0 0 1 12 21z"/></svg><span>PHONE</span></button>
-                                <button type="button" class="menu-action" data-action="documents"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg><span>DOCUMENTS</span></button>
-                                <button type="button" class="menu-action" data-action="licenses"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 4h16v2H4V4zm0 4h10v2H4V8zm0 4h16v2H4v-2zm0 4h10v2H4v-2z"/></svg><span>LICENSES</span></button>
-                                <button type="button" class="menu-action" data-action="statistics"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3h2v18H3V3zm4 10h2v8H7v-8zm4-4h2v12h-2V9zm4 6h2v6h-2v-6zm4-8h2v14h-2V7z"/></svg><span>STATISTICS</span></button>
-                            </div>
-                        </div>
-                    </section>
+                <ul class="menu-info-list">
+                    <li><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><div><span>CASH</span><strong class="is-good" id="menu-cash">$0</strong></div></li>
+                    <li><svg viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3"/></svg><div><span>BANK</span><strong id="menu-bank">$0</strong></div></li>
+                    <li><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><div><span>SUNSET COINS</span><strong class="is-accent" id="menu-premium">0</strong></div></li>
+                    <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><span>PLAYTIME</span><strong id="menu-playtime">0H 0M</strong></div></li>
+                    <li><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><div><span>LAST LOGIN</span><strong id="menu-lastlogin">—</strong></div></li>
+                </ul>
+            </aside>
 
-                    <section class="menu-panel-view" data-panel="vehicle">
-                        <div class="menu-mgmt">
-                            <div class="menu-mgmt__head">
-                                <h3>YOUR GARAGE</h3>
-                                <p>Plates are assigned automatically when you receive a vehicle — shown on the card and on the bumper.</p>
-                            </div>
-                            <div class="menu-vehicle-grid" id="menu-vehicle-grid"></div>
-                        </div>
-                    </section>
-                    <section class="menu-panel-view" data-panel="job">
-                        <div class="menu-mgmt">
-                            <div class="menu-mgmt__head">
-                                <h3>CAREER</h3>
-                                <p>Civilian jobs (Job Center) and factions (LSPD, EMS, Taxi, gangs) are separate. Join a faction at HQ and press <strong>[E]</strong> for duty.</p>
-                            </div>
-                            <div class="menu-job-layout">
-                                <div class="menu-job-card" id="menu-job-card"></div>
-                                <div class="menu-job-side" id="menu-job-side"></div>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="menu-panel-view" data-panel="statistics">
-                        <div class="menu-mgmt">
-                            <div class="menu-mgmt__head">
-                                <h3>CHARACTER PROGRESSION</h3>
-                                <p>Persistent RPG statistics from server-authoritative character and job records.</p>
-                            </div>
-                            <div class="menu-stats-grid">
-                                <article><span>LEVEL</span><strong id="menu-stats-level">1</strong><small id="menu-stats-xp">0 / 5,000 XP</small></article>
-                                <article><span>TOTAL PLAYTIME</span><strong id="menu-stats-playtime">0H 0M</strong><small>Across all sessions</small></article>
-                                <article><span>CURRENT SESSION</span><strong id="menu-stats-session">0H 0M</strong><small>Active time this login</small></article>
-                                <article><span>CHARACTER CREATED</span><strong id="menu-stats-created">—</strong><small id="menu-stats-lastlogin">Last login —</small></article>
-                                <article><span>JOB TASKS</span><strong id="menu-stats-tasks">0</strong><small>Completed civilian objectives</small></article>
-                                <article><span>CAREER EARNINGS</span><strong id="menu-stats-earned">$0</strong><small>Tracked job rewards</small></article>
-                                <article><span>COMBINED SKILL LEVELS</span><strong id="menu-stats-skills">0</strong><small>Across civilian careers</small></article>
-                                <article><span>ASSETS</span><strong id="menu-stats-assets">0 vehicles · 0 properties</strong><small id="menu-stats-home">Home: None</small></article>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="menu-panel-view" data-panel="property">
-                        <div class="menu-placeholder">
-                            <h3>PROPERTY</h3>
-                            <div class="menu-placeholder__row"><span>OWNED</span><strong id="menu-property-count">0</strong></div>
-                            <div class="menu-placeholder__row"><span>HOME SPAWN</span><strong id="menu-home-label">None</strong></div>
-                            <p>Use <strong>/properties</strong> or press <strong>E</strong> at a property marker.</p>
-                        </div>
-                    </section>
-                    <section class="menu-panel-view" data-panel="settings">
-                        <div class="menu-placeholder"><h3>SETTINGS</h3><p>/hudedit — move HUD panels</p><p>/help — all commands</p></div>
-                    </section>
-                </div>
-            </div>
+            <main class="menu-panels">
+                <section class="menu-panel-view tech-panel accent-orange is-active" data-panel="player">
+                    <h3 class="menu-section-title">QUICK ACTIONS_</h3>
+                    <div class="menu-actions">
+                        <button type="button" class="menu-action" data-action="inventory"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><span class="menu-action__copy"><strong>INVENTORY</strong><span>ITEMS &amp; STORAGE</span></span></button>
+                        <button type="button" class="menu-action" data-action="animations"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="12" y1="16" x2="6" y2="22"/><line x1="12" y1="16" x2="18" y2="22"/><line x1="6" y1="10" x2="18" y2="10"/></svg><span class="menu-action__copy"><strong>ANIMATIONS</strong><span>EMOTES &amp; WALKS</span></span></button>
+                        <button type="button" class="menu-action" data-action="phone"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="menu-action__copy"><strong>SMARTPHONE</strong><span>CALLS &amp; APPS</span></span></button>
+                        <button type="button" class="menu-action" data-action="documents"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="menu-action__copy"><strong>DOCUMENTS</strong><span>INVOICES &amp; ID</span></span></button>
+                        <button type="button" class="menu-action" data-action="licenses"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="14" y2="16"/></svg><span class="menu-action__copy"><strong>LICENSES</strong><span>DRIVING &amp; WEAPONS</span></span></button>
+                        <button type="button" class="menu-action" data-action="statistics"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="menu-action__copy"><strong>STATISTICS</strong><span>SKILLS &amp; PROGRESS</span></span></button>
+                    </div>
+                </section>
 
-            <div class="menu-statusbar">
-                <div class="menu-stat-icon" title="Health">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    <span class="menu-stat-icon__label">HP</span>
-                    <span id="menu-health-pct">100%</span>
-                </div>
-                <div class="menu-stat-icon" title="Hunger">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2h-5z"/></svg>
-                    <span class="menu-stat-icon__label">FOOD</span>
-                    <span id="menu-hunger-pct">100%</span>
-                </div>
-                <div class="menu-stat-icon" title="Thirst">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c-3.5 5.5-6 9.2-6 12a6 6 0 0 0 12 0c0-2.8-2.5-6.5-6-12z"/></svg>
-                    <span class="menu-stat-icon__label">WATER</span>
-                    <span id="menu-thirst-pct">100%</span>
-                </div>
-                <div class="menu-stat-icon menu-stat-icon--accent" title="Stress">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                    <span class="menu-stat-icon__label">STRESS</span>
-                    <span id="menu-stress-pct">0%</span>
-                </div>
-                <div class="menu-stat-icon menu-stat-icon--accent" title="Fuel">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 2h10v4h2l-2 4v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V2zm2 2v14h6V8h2.5L16 6H9z"/></svg>
-                    <span class="menu-stat-icon__label">FUEL</span>
-                    <span id="menu-fuel-pct">—</span>
-                </div>
-            </div>
+                <section class="menu-panel-view tech-panel" data-panel="vehicle">
+                    <div class="menu-mgmt"><div class="menu-mgmt__head"><h3>VEHICLE DIAGNOSTIC LINK_</h3><p>Owned vehicles, live condition and garage controls.</p></div><div class="menu-vehicle-grid" id="menu-vehicle-grid"></div><p class="menu-terminal-line">&gt; ECU CONNECTION ESTABLISHED. VEHICLE DATA IS SERVER AUTHORITATIVE.</p></div>
+                </section>
+                <section class="menu-panel-view tech-panel accent-orange" data-panel="job">
+                    <div class="menu-mgmt"><div class="menu-mgmt__head"><h3>EMPLOYMENT_</h3><p>Civilian work and faction membership are independent and can be active simultaneously.</p></div><div class="menu-job-layout"><div class="menu-job-card" id="menu-job-card"></div><div class="menu-job-side" id="menu-job-side"></div></div></div>
+                </section>
+                <section class="menu-panel-view tech-panel" data-panel="statistics">
+                    <div class="menu-mgmt"><div class="menu-mgmt__head"><h3>CHARACTER PROGRESSION_</h3><p>Persistent server-authoritative RPG statistics.</p></div><div class="menu-stats-grid">
+                        <article><span>LEVEL</span><strong id="menu-stats-level">1</strong><small id="menu-stats-xp">0 / 5,000 XP</small></article><article><span>TOTAL PLAYTIME</span><strong id="menu-stats-playtime">0H 0M</strong><small>Across all sessions</small></article><article><span>CURRENT SESSION</span><strong id="menu-stats-session">0H 0M</strong><small>Active time this login</small></article><article><span>CHARACTER CREATED</span><strong id="menu-stats-created">—</strong><small id="menu-stats-lastlogin">Last login —</small></article><article><span>JOB TASKS</span><strong id="menu-stats-tasks">0</strong><small>Completed objectives</small></article><article><span>CAREER EARNINGS</span><strong id="menu-stats-earned">$0</strong><small>Tracked job rewards</small></article><article><span>SKILL LEVELS</span><strong id="menu-stats-skills">0</strong><small>Combined career levels</small></article><article><span>ASSETS</span><strong id="menu-stats-assets">0 vehicles · 0 properties</strong><small id="menu-stats-home">Home: None</small></article>
+                    </div></div>
+                </section>
+                <section class="menu-panel-view tech-panel accent-orange" data-panel="property">
+                    <div class="menu-placeholder"><h3>REAL ESTATE_</h3><div class="menu-placeholder__row"><span>OWNED</span><strong id="menu-property-count">0</strong></div><div class="menu-placeholder__row"><span>HOME SPAWN</span><strong id="menu-home-label">None</strong></div><p>Use <strong>/properties</strong> or interact at a property marker.</p></div>
+                </section>
+                <section class="menu-panel-view tech-panel" data-panel="settings">
+                    <div class="menu-placeholder"><h3>SYSTEM CONFIG_</h3><p><strong>/hudedit</strong> — move HUD modules</p><p><strong>/help</strong> — command reference</p></div>
+                </section>
+            </main>
+
+            <footer class="menu-statusbar">
+                <div class="menu-stat-icon is-good" title="Health"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l7.78-7.78a5.5 5.5 0 0 0 0-7.78z"/></svg><div><strong id="menu-health-pct">100%</strong><span>HP</span><i><b id="menu-health-bar"></b></i></div></div>
+                <div class="menu-stat-icon is-armor" title="Armor"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div><strong id="menu-armor-pct">0%</strong><span>ARMOR</span><i><b id="menu-armor-bar"></b></i></div></div>
+                <div class="menu-stat-icon is-warning" title="Hunger"><svg viewBox="0 0 24 24"><path d="M3 10h18v3H3zM4 14h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM6 9V7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2"/></svg><div><strong id="menu-hunger-pct">100%</strong><span>FOOD</span><i><b id="menu-hunger-bar"></b></i></div></div>
+                <div class="menu-stat-icon is-water" title="Thirst"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg><div><strong id="menu-thirst-pct">100%</strong><span>WATER</span><i><b id="menu-thirst-bar"></b></i></div></div>
+                <div class="menu-stat-icon is-danger" title="Stress"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58A2.5 2.5 0 0 1 7 4.04 2.5 2.5 0 0 1 9.5 2zM14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58A2.5 2.5 0 0 0 17 4.04 2.5 2.5 0 0 0 14.5 2z"/></svg><div><strong id="menu-stress-pct">0%</strong><span>STRESS</span><i><b id="menu-stress-bar"></b></i></div></div>
+                <div class="menu-stat-icon is-accent" title="Vehicle fuel"><svg viewBox="0 0 24 24"><path d="M7 2h10v20H7zM9 4h6v6H9zM17 7h2l2 3v8a2 2 0 0 1-2 2h-2"/></svg><div><strong id="menu-fuel-pct">—</strong><span>FUEL</span><i><b id="menu-fuel-bar"></b></i></div></div>
+            </footer>
         </div>
     </div>
 

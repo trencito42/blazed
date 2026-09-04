@@ -37,12 +37,6 @@ AddEventHandler('sunset:nui:inventoryUse', function(data)
     if not ok then exports.sunset_ui:Notify(err or 'Cannot use item', 'error') end
 end)
 
-AddEventHandler('sunset:nui:menuAction', function(data)
-    if data and data.action == 'inventory' then
-        openInventory()
-    end
-end)
-
 RegisterCommand('inventory', function()
     if IsNuiFocused() then return end
     local ok, chatOpen = pcall(function() return exports.sunset_chat:IsChatOpen() end)

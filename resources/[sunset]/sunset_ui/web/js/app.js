@@ -44,9 +44,23 @@ function showHud(visible) {
 
 function notify(message, type = 'info', duration = 4000) {
     const container = $('#notifications');
+    if (!container) return;
+    const safeType = ['info', 'success', 'warning', 'error'].includes(type) ? type : 'info';
     const el = document.createElement('div');
-    el.className = `notification notification--${type}`;
-    el.textContent = message;
+    el.className = `notification notification--${safeType}`;
+    el.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
+    const signal = document.createElement('span');
+    signal.className = 'notification__signal';
+    const body = document.createElement('div');
+    body.className = 'notification__body';
+    const title = document.createElement('strong');
+    title.className = 'notification__title';
+    title.textContent = safeType === 'error' ? 'SYSTEM ERROR' : safeType === 'warning' ? 'ATTENTION' : safeType === 'success' ? 'CONFIRMED' : 'SYSTEM MESSAGE';
+    const copy = document.createElement('span');
+    copy.className = 'notification__message';
+    copy.textContent = String(message ?? '');
+    body.append(title, copy);
+    el.append(signal, body);
     container.appendChild(el);
 
     setTimeout(() => {
@@ -59,6 +73,7 @@ function notify(message, type = 'info', duration = 4000) {
 
 function progressBar(label, duration) {
     const progress = $('#progress');
+    if (!progress) return;
     const fill = progress.querySelector('.progress__fill');
     const labelEl = progress.querySelector('.progress__label');
 

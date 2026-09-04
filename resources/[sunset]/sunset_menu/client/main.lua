@@ -189,6 +189,11 @@ AddEventHandler('sunset:nui:menuAction', function(data)
     end
     if data.action == 'documents' or data.action == 'licenses' then
         closeMenu()
+        local command = data.action == 'documents' and 'id' or 'licenses'
+        CreateThread(function()
+            Wait(150)
+            ExecuteCommand(command)
+        end)
         return
     end
     if data.action == 'phone' then

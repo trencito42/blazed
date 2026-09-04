@@ -150,12 +150,6 @@ RegisterNetEvent('sunset:client:phoneMessage', function()
     end)
 end)
 
-AddEventHandler('sunset:nui:menuAction', function(data)
-    if data and data.action == 'phone' then
-        openPhone()
-    end
-end)
-
 CreateThread(function()
     while true do
         if phoneOpen then

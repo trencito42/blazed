@@ -64,8 +64,4 @@ AddEventHandler('sunset:nui:emotesClose', function()
     exports.sunset_ui:Send('emotesHide', {})
 end)
 
-AddEventHandler('sunset:nui:menuAction', function(data)
-    if data and data.action == 'animations' then ExecuteCommand('emotes') end
-end)
-
 RegisterKeyMapping('stopemote', 'Stop emote', 'keyboard', 'X')

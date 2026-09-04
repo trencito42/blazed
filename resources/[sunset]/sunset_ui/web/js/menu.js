@@ -28,6 +28,14 @@ const Menu = {
         this.activeTab = tab;
         $$('.menu-tab').forEach((el) => el.classList.toggle('is-active', el.dataset.tab === tab));
         $$('.menu-panel-view').forEach((el) => el.classList.toggle('is-active', el.dataset.panel === tab));
+        const activePanel = $(`.menu-panel-view[data-panel="${tab}"]`);
+        const profile = $('.menu-profile');
+        [activePanel, profile].forEach((panel) => {
+            if (!panel) return;
+            panel.classList.remove('glitch-effect');
+            void panel.offsetWidth;
+            panel.classList.add('glitch-effect');
+        });
     },
 
     formatXp(n) {
@@ -121,7 +129,12 @@ const Menu = {
             const inWorld = v.inWorld === true;
             const status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
             const statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
-            const fuel = Math.round(Number(v.fuel) || 100);
+            const fuelValue = Number(v.fuel);
+            const engineValue = Number(v.engine);
+            const bodyValue = Number(v.body);
+            const fuel = Math.max(0, Math.min(100, Math.round(Number.isFinite(fuelValue) ? fuelValue : 100)));
+            const engine = Math.max(0, Math.min(100, Math.round((Number.isFinite(engineValue) ? engineValue : 1000) / 10)));
+            const body = Math.max(0, Math.min(100, Math.round((Number.isFinite(bodyValue) ? bodyValue : 1000) / 10)));
             const model = this.escape((v.model || 'vehicle').toUpperCase());
             const plate = this.escape(v.plate || '—');
             const garage = this.escape(v.garage || 'legion');
@@ -152,7 +165,12 @@ const Menu = {
                         <span class="menu-vcard__status menu-vcard__status--${statusClass}">${status}</span>
                     </div>
                     <div class="menu-vcard__plate">${plate}</div>
-                    <div class="menu-vcard__meta">Fuel ${fuel}% · ${garage}</div>
+                    <div class="menu-vcard__meta">${garage}</div>
+                    <div class="menu-vcard__diag">
+                        <span>FUEL <i><b style="width:${fuel}%"></b></i><em>${fuel}%</em></span>
+                        <span>ENGINE <i><b style="width:${engine}%"></b></i><em>${engine}%</em></span>
+                        <span>BODY <i><b style="width:${body}%"></b></i><em>${body}%</em></span>
+                    </div>
                     <div class="menu-vcard__actions">${actions}</div>
                 </div>
             </article>`;
@@ -254,14 +272,13 @@ const Menu = {
         this.init();
 
         $('#menu-name').textContent = (data.name || '—').toUpperCase();
-        const idSuffix = data.id ? (' #' + data.id) : '';
-        $('#menu-id').textContent = (data.name || 'Player') + idSuffix;
+        $('#menu-id').textContent = `ID: ${Number(data.id) || 0}`;
         const cidEl = $('#menu-cid');
         if (cidEl) cidEl.textContent = data.cid ? ('CID: ' + data.cid) : 'CID: —';
         $('#menu-rank').textContent = data.rank || 'PLAYER';
         $('#menu-cash').textContent = formatMoney(data.cash || 0);
         $('#menu-bank').textContent = formatMoney(data.bank || 0);
-        $('#menu-premium').textContent = String(data.premium ?? 0);
+        $('#menu-premium').textContent = `${this.formatXp(data.premium ?? 0)} SC`;
         $('#menu-playtime').textContent = data.playtime || '0H 0M';
         $('#menu-lastlogin').textContent = data.lastLogin || '—';
 
@@ -285,11 +302,24 @@ const Menu = {
         const xpBar = $('#menu-xp-bar');
         if (xpBar) xpBar.style.width = `${Math.min(100, (xp / xpMax) * 100)}%`;
 
-        $('#menu-health-pct').textContent = `${Math.round(data.health ?? 100)}%`;
-        $('#menu-hunger-pct').textContent = `${Math.round(data.hunger ?? 100)}%`;
-        $('#menu-thirst-pct').textContent = `${Math.round(data.thirst ?? 100)}%`;
-        $('#menu-stress-pct').textContent = `${Math.round(data.stress ?? 0)}%`;
-        $('#menu-fuel-pct').textContent = data.fuel != null ? `${Math.round(data.fuel)}%` : '—';
+        const health = Math.max(0, Math.min(100, Math.round(data.health ?? 100)));
+        const armor = Math.max(0, Math.min(100, Math.round(data.armor ?? 0)));
+        const hunger = Math.max(0, Math.min(100, Math.round(data.hunger ?? 100)));
+        const thirst = Math.max(0, Math.min(100, Math.round(data.thirst ?? 100)));
+        const stress = Math.max(0, Math.min(100, Math.round(data.stress ?? 0)));
+        const fuel = data.fuel != null ? Math.max(0, Math.min(100, Math.round(data.fuel))) : null;
+        $('#menu-health-pct').textContent = `${health}%`;
+        $('#menu-armor-pct').textContent = `${armor}%`;
+        $('#menu-hunger-pct').textContent = `${hunger}%`;
+        $('#menu-thirst-pct').textContent = `${thirst}%`;
+        $('#menu-stress-pct').textContent = `${stress}%`;
+        $('#menu-fuel-pct').textContent = fuel != null ? `${fuel}%` : '—';
+        $('#menu-health-bar').style.width = `${health}%`;
+        $('#menu-armor-bar').style.width = `${armor}%`;
+        $('#menu-hunger-bar').style.width = `${hunger}%`;
+        $('#menu-thirst-bar').style.width = `${thirst}%`;
+        $('#menu-stress-bar').style.width = `${stress}%`;
+        $('#menu-fuel-bar').style.width = `${fuel ?? 0}%`;
 
         $('#menu-property-count').textContent = String(data.propertyCount ?? 0);
         $('#menu-home-label').textContent = data.homeLabel || 'None';
