@@ -1,5 +1,58 @@
 local JC = Sunset.JobClient
 
+local function requestControl(entity)
+    if NetworkHasControlOfEntity(entity) then return true end
+    NetworkRequestControlOfEntity(entity)
+    local timeout = GetGameTimer() + 3000
+    while not NetworkHasControlOfEntity(entity) and GetGameTimer() < timeout do
+        NetworkRequestControlOfEntity(entity)
+        Wait(0)
+    end
+    return NetworkHasControlOfEntity(entity)
+end
+
+local function recoverTrailer()
+    local recovery, err = Sunset.AwaitCallback('sunset:jobs:recoverTrailer')
+    if not recovery then
+        return JC.notify(err or 'Trailer recovery is not available', 'error')
+    end
+
+    local truck = NetworkGetEntityFromNetworkId(recovery.truckNetId or 0)
+    local trailer = NetworkGetEntityFromNetworkId(recovery.trailerNetId or 0)
+    if truck == 0 or trailer == 0 or not DoesEntityExist(truck) or not DoesEntityExist(trailer) then
+        return JC.notify('Could not find your assigned truck or trailer', 'error')
+    end
+    if not requestControl(trailer) then
+        return JC.notify('Could not take control of the trailer — try again', 'error')
+    end
+
+    SetVehicleHandbrake(truck, true)
+    SetEntityVelocity(trailer, 0.0, 0.0, 0.0)
+    DetachVehicleFromTrailer(truck)
+    Wait(150)
+
+    local target = GetOffsetFromEntityInWorldCoords(truck, 0.0, -10.5, 1.0)
+    local heading = GetEntityHeading(truck)
+    SetEntityCoordsNoOffset(trailer, target.x, target.y, target.z, false, false, false)
+    SetEntityRotation(trailer, 0.0, 0.0, heading, 2, true)
+    SetEntityHeading(trailer, heading)
+    SetVehicleOnGroundProperly(trailer)
+    Wait(250)
+    AttachVehicleToTrailer(truck, trailer, 1.0)
+    SetVehicleHandbrake(truck, false)
+
+    Wait(250)
+    local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
+    local recovered = attached and attachedEntity == trailer
+    Entity(truck).state:set('sunsetTrailerAttached', recovered, true)
+    Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
+    if not recovered then
+        return JC.notify('Trailer is upright but could not attach automatically — reverse into it', 'warning')
+    end
+    JC.notify(('Trailer recovered and attached. %d recoveries remain this shift.'):format(
+        recovery.remaining or 0), 'success')
+end
+
 local function startTrucker()
     local data, err = Sunset.AwaitCallback('sunset:jobs:trucker:start')
     if not data then
@@ -87,3 +140,9 @@ end
 
 Sunset.Jobs = Sunset.Jobs or {}
 Sunset.Jobs.StartTrucker = startTrucker
+
+RegisterCommand('recovertrailer', function()
+    recoverTrailer()
+end, false)
+
+TriggerEvent('chat:addSuggestion', '/recovertrailer', 'Right and reattach your assigned Trucker trailer')

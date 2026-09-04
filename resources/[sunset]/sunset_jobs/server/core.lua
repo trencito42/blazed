@@ -366,6 +366,53 @@ exports.sunset_core:RegisterCallback('sunset:jobs:vehicleLost', function(source)
     return true
 end)
 
+exports.sunset_core:RegisterCallback('sunset:jobs:recoverTrailer', function(source)
+    local session, err = SunsetJobs_RequireSession(source, 'trucker', { 'ACTIVE', 'RETURNING' })
+    if not session then return nil, err end
+
+    local cfg = Sunset.GetJobConfig('trucker')
+    if not cfg or not session.vehicleNetId or not session.trailerNetId then
+        return nil, 'Your assigned truck or trailer is missing'
+    end
+
+    local truck = NetworkGetEntityFromNetworkId(session.vehicleNetId)
+    local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
+    local ped = GetPlayerPed(source)
+    if not truck or truck == 0 or not DoesEntityExist(truck)
+        or not trailer or trailer == 0 or not DoesEntityExist(trailer) then
+        return nil, 'Your assigned truck or trailer no longer exists'
+    end
+    if not ped or ped == 0 or GetPedInVehicleSeat(truck, -1) ~= ped then
+        return nil, 'Sit in the driver seat of your assigned truck'
+    end
+    if GetEntitySpeed(truck) > 1.5 then
+        return nil, 'Stop the truck before recovering the trailer'
+    end
+    if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > (cfg.trailerRecoveryMaxDistance or 30.0) then
+        return nil, 'The assigned trailer is too far away to recover'
+    end
+
+    local now = os.time()
+    local cooldown = cfg.trailerRecoveryCooldownSec or 180
+    if session.lastTrailerRecoveryAt and now - session.lastTrailerRecoveryAt < cooldown then
+        return nil, ('Trailer recovery available in %d seconds'):format(
+            cooldown - (now - session.lastTrailerRecoveryAt))
+    end
+    local uses = session.trailerRecoveryUses or 0
+    local maxUses = cfg.trailerRecoveryMaxUses or 3
+    if uses >= maxUses then
+        return nil, 'No trailer recoveries remain for this shift'
+    end
+
+    session.lastTrailerRecoveryAt = now
+    session.trailerRecoveryUses = uses + 1
+    return {
+        truckNetId = session.vehicleNetId,
+        trailerNetId = session.trailerNetId,
+        remaining = maxUses - session.trailerRecoveryUses,
+    }
+end)
+
 AddEventHandler('playerDropped', function()
     local src = source
     if Sessions[src] then

@@ -4,7 +4,7 @@ Sunset = Sunset or {}
 Sunset.JobsConfig = {
     trucker = {
         label = 'Trucker',
-        help = 'Go to the depot, spawn your rig, pick up cargo, deliver, then return the truck.',
+        help = 'Go to the depot, spawn your rig, pick up cargo, deliver, then return the truck. Use /recovertrailer if your assigned trailer overturns.',
         depot = {
             coords = vector3(1208.77, -3114.84, 5.54),
             spawn = vector4(1245.58, -3135.42, 5.54, 90.0),
@@ -26,6 +26,9 @@ Sunset.JobsConfig = {
         vehicleExitGraceSec = 60,
         requiresAttachedTrailer = true,
         trailerGraceSec = 60,
+        trailerRecoveryCooldownSec = 180,
+        trailerRecoveryMaxUses = 3,
+        trailerRecoveryMaxDistance = 30.0,
     },
 
     garbage = {

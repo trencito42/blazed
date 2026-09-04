@@ -23,7 +23,7 @@
 - TAB and the mouse wheel are restored for weapon selection. The player list is now held with F10 under a fresh key mapping, avoiding persisted TAB bindings from the old command.
 - World cleanup now deletes only GTA ambient population entities, never script/network/mission vehicles or peds. All civilian work vehicles and trailers are also explicitly protected.
 - Trucker work now shows a persistent mission objective with pickup, delivery and depot-return stages; objective subtitles are rendered correctly by NUI.
-- Trucker milestones require the assigned truck and its assigned attached trailer; truck/trailer registration is verified and detachment/vehicle abandonment has a 60-second recovery window.
+- Trucker milestones require the assigned truck and its assigned attached trailer; truck/trailer registration is verified and detachment/vehicle abandonment has a 60-second recovery window. `/recovertrailer` safely rights and reattaches a nearby overturned assigned trailer while the truck is stopped (three uses per shift, three-minute cooldown).
 - The inaccessible Tataviam truck checkpoint was replaced with a wide freight destination and truck checkpoints now use an articulated-vehicle-friendly radius.
 - Fisherman now uses `/fish` or E to cast with a visible rod and a server-timed reaction challenge; catches require reeling during the short BITE window.
 - Owned vehicle fuel and damage are checkpointed to persistence every 30 seconds while driving, in addition to garage storage/refuelling saves.
