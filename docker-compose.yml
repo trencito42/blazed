@@ -46,6 +46,7 @@ services:
     volumes:
       - ./config:/config-mount:ro
       - ./resources:/config/resources-custom:ro
+      - ./sql:/migrations:ro
       - fivem_txdata:/txData
       - fivem_config:/config
     tty: true

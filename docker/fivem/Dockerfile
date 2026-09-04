@@ -38,7 +38,7 @@ LABEL org.opencontainers.image.authors="Spritsail <fivem@spritsail.io>" \
       io.spritsail.version.fivem_data=${DATA_VER}
 
 COPY --from=builder /output/ /
-RUN apk add --no-cache tini
+RUN apk add --no-cache tini mariadb-client
 
 COPY entrypoint.sh /usr/local/bin/sunset-entrypoint.sh
 RUN chmod +x /usr/local/bin/sunset-entrypoint.sh

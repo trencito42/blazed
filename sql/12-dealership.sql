@@ -51,7 +51,16 @@ CREATE TABLE IF NOT EXISTS `dealership_meta` (
 INSERT IGNORE INTO `dealership_vehicles`
     (`model`, `label`, `brand`, `category`, `price`, `stock`, `available`, `test_drive_enabled`, `display_order`)
 SELECT seed.* FROM (
-    SELECT 'blista', 'Blista', 'Dinka', 'compact', 12000, 12, 1, 1, 10
+    SELECT
+        'blista' AS `model`,
+        'Blista' AS `label`,
+        'Dinka' AS `brand`,
+        'compact' AS `category`,
+        12000 AS `price`,
+        12 AS `stock`,
+        1 AS `available`,
+        1 AS `test_drive_enabled`,
+        10 AS `display_order`
     UNION ALL SELECT 'issi2', 'Issi', 'Weeny', 'compact', 14500, 10, 1, 1, 20
     UNION ALL SELECT 'prairie', 'Prairie', 'Bollokan', 'compact', 18000, 8, 1, 1, 30
     UNION ALL SELECT 'asea', 'Asea', 'Declasse', 'sedan', 22000, 10, 1, 1, 40
