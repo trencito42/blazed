@@ -6,14 +6,15 @@ local function vec3(v)
     return v
 end
 
-function SunsetAdmin.BuildCheckpoints()
+--- Hardcoded world locations (HQs, shops, garages, etc.) for /gotoloc only.
+function SunsetAdmin.BuildLocations()
     local list = {}
     local seen = {}
 
     local function add(id, label, coords, category)
         coords = vec3(coords)
         if not coords then return end
-        id = id or ('cp_' .. #list + 1)
+        id = id or ('loc_' .. #list + 1)
         if seen[id] then return end
         seen[id] = true
         list[#list + 1] = {
@@ -85,17 +86,17 @@ function SunsetAdmin.BuildCheckpoints()
     return list
 end
 
-function SunsetAdmin.FindCheckpoint(query)
+function SunsetAdmin.FindLocation(query)
     if not query or query == '' then return nil end
     query = string.lower(query)
 
     local exact
-    for _, cp in ipairs(SunsetAdmin.BuildCheckpoints()) do
-        if string.lower(cp.id) == query then
-            return cp
+    for _, loc in ipairs(SunsetAdmin.BuildLocations()) do
+        if string.lower(loc.id) == query then
+            return loc
         end
-        if not exact and string.find(string.lower(cp.label), query, 1, true) then
-            exact = cp
+        if not exact and string.find(string.lower(loc.label), query, 1, true) then
+            exact = loc
         end
     end
     return exact

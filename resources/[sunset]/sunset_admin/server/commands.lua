@@ -328,20 +328,77 @@ RegisterCommand('coords', function(source)
     TriggerClientEvent('sunset:admin:copyCoords', source)
 end, false)
 
-local function sendCheckpointList(source)
+local function sendPlacedCheckpointList(source)
     local chat = function(line)
         TriggerClientEvent('sunset:chat:message', source, { id = 0, name = 'ADMIN', message = line, time = '' })
     end
-    chat('=== Checkpoints (use /gotocp [id or name]) ===')
-    local lastCategory
-    for _, cp in ipairs(SunsetAdmin.BuildCheckpoints()) do
-        if cp.category ~= lastCategory then
-            chat(('— %s —'):format(cp.category))
-            lastCategory = cp.category
-        end
-        chat(('%s — %s'):format(cp.id, cp.label))
+    local list = SunsetAdmin.GetCheckpoints()
+    chat('=== Placed checkpoints (use /gotocp [name]) ===')
+    if #list == 0 then
+        chat('No checkpoints saved yet. Stand somewhere and use /setcp [name].')
+        return
+    end
+    for _, cp in ipairs(list) do
+        chat(('%s — %s'):format(cp.id, cp.label or cp.id))
     end
 end
+
+local function sendLocationList(source)
+    local chat = function(line)
+        TriggerClientEvent('sunset:chat:message', source, { id = 0, name = 'ADMIN', message = line, time = '' })
+    end
+    chat('=== World locations (use /gotoloc [id or name]) ===')
+    local lastCategory
+    for _, loc in ipairs(SunsetAdmin.BuildLocations()) do
+        if loc.category ~= lastCategory then
+            chat(('— %s —'):format(loc.category))
+            lastCategory = loc.category
+        end
+        chat(('%s — %s'):format(loc.id, loc.label))
+    end
+end
+
+RegisterNetEvent('sunset:admin:setcp', function(name, x, y, z, heading)
+    local source = source
+    if source == 0 then return end
+    if not hasPerm(source, 'setcp') then return notify(source, 'No permission', 'error') end
+
+    name = name and tostring(name):gsub('^%s+', ''):gsub('%s+$', '') or ''
+    if name == '' then
+        return notify(source, 'Usage: /setcp [name]', 'error')
+    end
+
+    x, y, z, heading = tonumber(x), tonumber(y), tonumber(z), tonumber(heading)
+    if not x or not y or not z then
+        return notify(source, 'Could not read your position.', 'error')
+    end
+
+    local createdBy = GetPlayerName(source) or ('player_' .. source)
+    local ok, result = SunsetAdmin.SaveCheckpoint(name, name, x, y, z, heading, createdBy)
+    if not ok then
+        return notify(source, result, 'error')
+    end
+
+    notify(source, ('Checkpoint saved as "%s". Use /gotocp %s to teleport here.'):format(result, result), 'success')
+end)
+
+RegisterNetEvent('sunset:admin:delcp', function(name)
+    local source = source
+    if source == 0 then return end
+    if not hasPerm(source, 'delcp') then return notify(source, 'No permission', 'error') end
+
+    name = name and tostring(name):gsub('^%s+', ''):gsub('%s+$', '') or ''
+    if name == '' then
+        return notify(source, 'Usage: /delcp [name]', 'error')
+    end
+
+    local ok, result = SunsetAdmin.DeleteCheckpoint(name)
+    if not ok then
+        return notify(source, result, 'error')
+    end
+
+    notify(source, ('Deleted checkpoint "%s".'):format(result), 'success')
+end)
 
 RegisterNetEvent('sunset:admin:gotocp', function(query)
     local source = source
@@ -349,19 +406,39 @@ RegisterNetEvent('sunset:admin:gotocp', function(query)
     if not hasPerm(source, 'gotocp') then return notify(source, 'No permission', 'error') end
 
     query = query and tostring(query):gsub('^%s+', ''):gsub('%s+$', '') or ''
-    if query == '' then
-        sendCheckpointList(source)
+    if query == '' or string.lower(query) == 'list' then
+        sendPlacedCheckpointList(source)
         return
     end
 
-    local cp = SunsetAdmin.FindCheckpoint(query)
+    local cp = SunsetAdmin.FindPlacedCheckpoint(query)
     if not cp then
-        return notify(source, ('Unknown checkpoint "%s". Use /gotocp with no args to list IDs.'):format(query), 'error')
+        return notify(source, ('Unknown checkpoint "%s". Use /gotocp or /gotocp list to see saved names.'):format(query), 'error')
     end
 
-    local c = cp.coords
+    TriggerClientEvent('sunset:admin:teleport', source, cp.x, cp.y, cp.z)
+    notify(source, ('Teleported to checkpoint %s (%s)'):format(cp.label or cp.id, cp.id), 'success')
+end)
+
+RegisterNetEvent('sunset:admin:gotoloc', function(query)
+    local source = source
+    if source == 0 then return end
+    if not hasPerm(source, 'gotoloc') then return notify(source, 'No permission', 'error') end
+
+    query = query and tostring(query):gsub('^%s+', ''):gsub('%s+$', '') or ''
+    if query == '' or string.lower(query) == 'list' then
+        sendLocationList(source)
+        return
+    end
+
+    local loc = SunsetAdmin.FindLocation(query)
+    if not loc then
+        return notify(source, ('Unknown location "%s". Use /gotoloc or /gotoloc list to see IDs.'):format(query), 'error')
+    end
+
+    local c = loc.coords
     TriggerClientEvent('sunset:admin:teleport', source, c.x, c.y, c.z)
-    notify(source, ('Teleported to %s (%s)'):format(cp.label, cp.id), 'success')
+    notify(source, ('Teleported to %s (%s)'):format(loc.label, loc.id), 'success')
 end)
 
 RegisterNetEvent('sunset:admin:requestSpeed', function(arg)

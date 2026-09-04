@@ -25,6 +25,9 @@ SunsetAdmin.Commands = {
     setadmin = 5,
     coords = 2,
     hudexport = 3,
+    setcp = 2,
+    delcp = 2,
     gotocp = 2,
+    gotoloc = 2,
     speed = 2,
 }

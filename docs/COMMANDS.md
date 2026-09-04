@@ -90,5 +90,8 @@
 | `/setleader [id] [faction]` | Assign faction leader |
 | `/removeleader [id] [faction]` | Remove faction leader |
 | `/kick`, `/ban`, `/tp`, `/heal`, `/revive`, etc. | See `sunset_admin` |
-| `/gotocp [id or name]` | Teleport to checkpoint (moderator+) |
+| `/setcp [name]` | Save current position as checkpoint (moderator+) |
+| `/delcp [name]` | Delete saved checkpoint (moderator+) |
+| `/gotocp [name]` | Teleport to saved checkpoint; omit or `list` to show names (moderator+) |
+| `/gotoloc [id or name]` | Teleport to predefined world location (moderator+) |
 | `/speed [multiplier]` | Vehicle speed boost while driving (moderator+); `/speed off` to reset |

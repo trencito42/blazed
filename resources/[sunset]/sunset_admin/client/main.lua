@@ -157,8 +157,28 @@ CreateThread(function()
     end
 end)
 
+local function currentPosition()
+    local ped = PlayerPedId()
+    local c = GetEntityCoords(ped)
+    return c.x, c.y, c.z, GetEntityHeading(ped)
+end
+
+RegisterCommand('setcp', function(_, args)
+    local name = table.concat(args, ' ')
+    local x, y, z, heading = currentPosition()
+    TriggerServerEvent('sunset:admin:setcp', name, x, y, z, heading)
+end, false)
+
+RegisterCommand('delcp', function(_, args)
+    TriggerServerEvent('sunset:admin:delcp', table.concat(args, ' '))
+end, false)
+
 RegisterCommand('gotocp', function(_, args)
     TriggerServerEvent('sunset:admin:gotocp', table.concat(args, ' '))
+end, false)
+
+RegisterCommand('gotoloc', function(_, args)
+    TriggerServerEvent('sunset:admin:gotoloc', table.concat(args, ' '))
 end, false)
 
 RegisterCommand('speed', function(_, args)
@@ -167,8 +187,17 @@ end, false)
 
 CreateThread(function()
     Wait(4000)
-    TriggerEvent('chat:addSuggestion', '/gotocp', 'Teleport to a checkpoint (admin)', {
-        { name = 'id or name', help = 'e.g. hq_medic, pillbox, mrpd' },
+    TriggerEvent('chat:addSuggestion', '/setcp', 'Save your current position as a named checkpoint (admin)', {
+        { name = 'name', help = 'e.g. staging, event_spawn' },
+    })
+    TriggerEvent('chat:addSuggestion', '/delcp', 'Delete a saved checkpoint (admin)', {
+        { name = 'name', help = 'Checkpoint name saved with /setcp' },
+    })
+    TriggerEvent('chat:addSuggestion', '/gotocp', 'Teleport to a saved admin checkpoint', {
+        { name = 'name', help = 'Omit or use list to show saved checkpoints' },
+    })
+    TriggerEvent('chat:addSuggestion', '/gotoloc', 'Teleport to a predefined world location (admin)', {
+        { name = 'id or name', help = 'e.g. hq_medic, hospital — omit or use list' },
     })
     TriggerEvent('chat:addSuggestion', '/speed', 'Vehicle speed multiplier while driving (admin)', {
         { name = 'multiplier', help = 'e.g. 2.5 — omit or use off/1 to reset' },

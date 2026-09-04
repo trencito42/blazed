@@ -14,12 +14,13 @@ shared_scripts {
     '@sunset_core/shared/jobs_config.lua',
     '@sunset_core/shared/crafting.lua',
     'shared/config.lua',
-    'shared/checkpoints.lua',
+    'shared/locations.lua',
 }
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/checkpoints.lua',
     'server/commands.lua',
 }
 

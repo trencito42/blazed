@@ -18,7 +18,10 @@ Sunset.HelpAdminDescriptions = {
     setadmin = 'Set admin level for an account',
     coords = 'Copy your coordinates to clipboard',
     hudexport = 'Export HUD layout JSON',
-    gotocp = 'Teleport to a configured checkpoint by id or name',
+    setcp = 'Save your current position as a named checkpoint',
+    delcp = 'Delete a saved admin checkpoint',
+    gotocp = 'Teleport to a saved admin checkpoint by name',
+    gotoloc = 'Teleport to a predefined world location by id or name',
     speed = 'Boost vehicle engine power while driving (multiplier)',
 }
 
