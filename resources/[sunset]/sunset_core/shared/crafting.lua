@@ -19,7 +19,7 @@ Sunset.CraftingStations = {
     },
     ems_supply = {
         label = 'EMS Supply Room',
-        coords = vector3(309.50, -597.80, 43.28),
+        coords = vector3(296.0, -582.0, 43.28),
         marker = { 255, 50, 50 },
         access = 'faction',
         faction = 'medic',

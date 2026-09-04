@@ -67,8 +67,8 @@ Sunset.Factions = {
         description = 'Emergency medical services — heal, revive, and stabilize patients at Pillbox.',
         society = 'medic',
         duty = true,
-        hq = vector3(307.12, -595.55, 43.28),
-        hqHint = '[E] Pillbox EMS — join / toggle duty',
+        hq = vector3(298.0, -584.0, 43.28),
+        hqHint = '[E] Pillbox EMS — join / toggle duty (exterior)',
         blip = { sprite = 61, color = 1, scale = 0.9 },
         marker = { 255, 50, 50 },
         depot = {

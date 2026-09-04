@@ -25,7 +25,7 @@ Sunset.Config = {
     -- Death
     RespawnDelay = 5000, -- ms
     HospitalBill = 250,
-    HospitalSpawn = vector4(311.18, -592.49, 43.28, 70.0), -- Pillbox
+    HospitalSpawn = vector4(298.0, -584.0, 43.28, 70.0), -- Pillbox exterior (lobby IPL not walkable)
 
     -- Save
     SaveInterval = 60, -- seconds

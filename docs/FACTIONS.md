@@ -25,14 +25,16 @@ SunsetMP uses a **capability-based faction framework**. Factions are not hardcod
 | Faction ID | Label | HQ marker `[E]` | Notes |
 |------------|-------|-----------------|-------|
 | `police` | LSPD | Mission Row PD — `441.15, -981.95, 30.69` | MRPD fleet garage nearby |
-| `medic` | Pillbox EMS | Pillbox Hospital lobby — `307.12, -595.55, 43.28` | `sunset_world` swaps bob74 IPL to walkable interior |
+| `medic` | Pillbox EMS | Pillbox entrance — `298.0, -584.0, 43.28` (exterior) | Hospital interior closed (bob74 default); RP outside |
 | `taxi` | Downtown Cab Co. | `903.32, -170.14, 74.08` | Cab depot at same block |
 | `mechanic` | LS Customs | `337.52, -136.57, 39.01` | Drive-in repair when in vehicle |
 | `lsfd` | LS Fire Department | `1194.82, -1464.01, 34.86` | Fire station garage |
 | `sunset_cartel` | Sunset Cartel | `1394.72, 1141.98, 114.33` | Invite-only; members-only blip |
 | `night_syndicate` | Night Syndicate | `-1520.88, 849.55, 181.59` | Invite-only; members-only blip |
 
-Hospital respawn (`HospitalSpawn`) uses Pillbox at `311.18, -592.49, 43.28`. EMS supply crafting is at `309.50, -597.80, 43.28`.
+Hospital respawn (`HospitalSpawn`) uses Pillbox exterior at `298.0, -584.0, 43.28`. EMS supply crafting is at `296.0, -582.0, 43.28` (exterior near entrance).
+
+**Pillbox interior:** GTA V has no clean walkable native lobby IPL — `rc12b_hospitalinterior` is the heist disaster state. bob74_ipl keeps `rc12b_default` (closed glass doors, visible interior). Admins can place a door checkpoint: stand at the main entrance (`309.0, -595.5, 43.28`) and run `/setcp pillbox_door`.
 
 ## Chat Channels
 

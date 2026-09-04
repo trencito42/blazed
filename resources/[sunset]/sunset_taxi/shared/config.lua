@@ -24,7 +24,7 @@ Sunset.Taxi = {
     tipOptions = { 25, 50, 100 },
     destinations = {
         { id = 'legion', label = 'Legion Square', category = 'Popular', coords = vector3(215.76, -810.12, 30.73) },
-        { id = 'pillbox', label = 'Pillbox Hospital', category = 'Popular', coords = vector3(307.12, -595.55, 43.28) },
+        { id = 'pillbox', label = 'Pillbox Hospital', category = 'Popular', coords = vector3(298.0, -584.0, 43.28) },
         { id = 'mrpd', label = 'Mission Row PD', category = 'Popular', coords = vector3(441.15, -981.95, 30.69) },
         { id = 'airport', label = 'LSIA Airport', category = 'Popular', coords = vector3(-1037.52, -2737.44, 20.17) },
         { id = 'sandy', label = 'Sandy Shores', category = 'Blaine County', coords = vector3(1960.13, 3740.02, 32.34) },
