@@ -1,7 +1,7 @@
 # SunsetMP RPG Status (Canonical)
 
 **Last updated:** 2026-09-05
-**Code baseline:** `main` after dealership/vehicle/crafting reliability and Sunset OS UI passes (not deployed)
+**Code baseline:** runtime commit `e1836d3`, deployed to Coolify on 2026-09-05
 
 ## Sunset OS UI and item-art pass (2026-09-05)
 
