@@ -39,12 +39,13 @@
 | `/putinveh [id]` | Put suspect in vehicle |
 | `/takeout [id]` | Remove suspect from vehicle |
 | `/frisk [id]` | Search suspect |
-| `/su [id] [reason]` | Set wanted level |
-| `/so [id]` | Summon suspect |
+| `/su [id] [reason]` | Add a wanted charge; `/su` lists valid reason codes |
+| `/so [id]` | Order a nearby suspect to stop; target gets overlay and nearby players get chat alert |
 | `/wanted` | List wanted players |
-| `/arrest [id]` | Arrest restrained suspect |
-| `/fine [id] [amount] [reason]` | Issue fine |
-| `/ticket` | Citation UI |
+| `/booking` | Set GPS to nearest MRPD/Bolingbroke booking marker |
+| `/arrest [id]` | Arrest a cuffed, wanted suspect inside a booking marker |
+| `/fine [id]` | Alias that opens the safe citation UI |
+| `/ticket [id]` | Select an official server-priced violation and issue citation |
 | `/mdc` | Mobile data terminal |
 | `/m [message]` | Megaphone |
 | `/backup` | Request emergency backup (notifies on-duty LEO, EMS, LSFD + map blip) |

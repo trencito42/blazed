@@ -13,11 +13,13 @@ end
 
 local function requireLeaderPerm(source, perm)
     local char = FactionCore.getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Your character is not loaded. Reconnect and select it again.' end
     local factionId = select(1, FactionCore.getFactionOf(char))
     if not factionId then return nil, 'No faction' end
     if FactionCore.isFactionLeader(char.id, factionId) then return char, factionId end
-    if not FactionCore.hasPerm(source, perm) then return nil, 'No permission' end
+    if not FactionCore.hasPerm(source, perm) then
+        return nil, FactionCore.accessError(source, perm, 'manage faction members')
+    end
     return char, factionId
 end
 
@@ -81,7 +83,9 @@ exports.sunset_core:RegisterCallback('sunset:factionUninvite', function(source, 
     if not char then return nil, factionId end
 
     targetId = tonumber(targetId)
-    if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if not targetId or not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
     local target = FactionCore.getChar(targetId)
     if not target or select(1, FactionCore.getFactionOf(target)) ~= factionId then
         return nil, 'Target is not in your faction'
@@ -101,7 +105,9 @@ exports.sunset_core:RegisterCallback('sunset:factionGiveRank', function(source, 
     targetId = tonumber(targetId)
     newGrade = tonumber(newGrade)
     if not targetId or newGrade == nil then return nil, 'Usage: /fgiverank [id] [grade]' end
-    if not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
 
     local target = FactionCore.getChar(targetId)
     if not target or select(1, FactionCore.getFactionOf(target)) ~= factionId then
@@ -128,7 +134,9 @@ exports.sunset_core:RegisterCallback('sunset:factionWarn', function(source, targ
 
     targetId = tonumber(targetId)
     reason = reason or 'No reason given'
-    if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if not targetId or not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
     local target = FactionCore.getChar(targetId)
     if not target or select(1, FactionCore.getFactionOf(target)) ~= factionId then
         return nil, 'Target is not in your faction'

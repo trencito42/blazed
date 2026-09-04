@@ -104,14 +104,14 @@ end
 
 local function validateOfficerTarget(source, targetId, perm, range)
     if not FactionCore.hasPerm(source, perm) then
-        return nil, 'Not on duty or no permission'
+        return nil, FactionCore.accessError(source, perm, 'interact with a suspect', 'law_enforcement')
     end
     targetId = tonumber(targetId)
     if not targetId or not FactionCore.isOnline(targetId) then
-        return nil, 'Player not found'
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
     end
     if targetId == source then
-        return nil, 'Invalid target'
+        return nil, 'You cannot use a detention action on yourself.'
     end
     if Detention.getState(targetId) == Detention.States.JAILED then
         return nil, 'Suspect is already in custody'
@@ -119,7 +119,8 @@ local function validateOfficerTarget(source, targetId, perm, range)
     local officerPos = FactionCore.playerCoords(source)
     local targetPos = FactionCore.playerCoords(targetId)
     if FactionCore.distBetween(officerPos, targetPos) > (range or INTERACT_RANGE) then
-        return nil, ('You must be within %dm'):format(math.floor(range or INTERACT_RANGE))
+        return nil, ('Move closer to player #%d: you must be within %dm.'):format(
+            targetId, math.floor(range or INTERACT_RANGE))
     end
     return targetId
 end

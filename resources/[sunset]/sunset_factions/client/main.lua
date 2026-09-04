@@ -146,29 +146,28 @@ RegisterCommand('duty', function()
 end, false)
 
 RegisterCommand('fine', function(_, args)
-    local ok, err = Sunset.AwaitCallback('sunset:policeFine', tonumber(args[1]), tonumber(args[2]), table.concat(args, ' ', 3))
-    if ok then exports.sunset_ui:Notify('Fine issued', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    local target = tonumber(args[1])
+    ExecuteCommand(target and ('ticket %d'):format(target) or 'ticket')
 end, false)
 
 RegisterCommand('cuff', function(_, args)
     local target = tonumber(args[1])
     if not target then return exports.sunset_ui:Notify('Usage: /cuff [id]', 'error') end
     local ok, err = Sunset.AwaitCallback('sunset:detentionCuff', target)
-    if not ok then exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    if not ok then exports.sunset_ui:Notify(err or 'Could not cuff the suspect. Check duty, rank, ID and distance.', 'error') end
 end, false)
 
 RegisterCommand('uncuff', function(_, args)
     local target = tonumber(args[1])
     if not target then return exports.sunset_ui:Notify('Usage: /uncuff [id]', 'error') end
     local ok, err = Sunset.AwaitCallback('sunset:detentionUncuff', target)
-    if not ok then exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    if not ok then exports.sunset_ui:Notify(err or 'Could not remove the cuffs. Check duty, rank, ID and distance.', 'error') end
 end, false)
 
 RegisterCommand('repairveh', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:mechanicRepair', tonumber(args[1]))
     if ok then exports.sunset_ui:Notify('Vehicle repaired', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Repair could not start. Check duty, rank, distance and that the target is in a vehicle.', 'error') end
 end, false)
 
 RegisterNetEvent('sunset:faction:repairVehicle', function()
@@ -184,31 +183,31 @@ end)
 RegisterCommand('fare', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:taxiFare', tonumber(args[1]), tonumber(args[2]))
     if ok then exports.sunset_ui:Notify('Fare collected', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Fare could not be charged. Check duty, passenger ID, distance, amount and funds.', 'error') end
 end, false)
 
 RegisterCommand('finvite', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:factionInvite', tonumber(args[1]))
     if ok then exports.sunset_ui:Notify('Member recruited', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Recruitment failed. Check your leader permission and the target ID.', 'error') end
 end, false)
 
 RegisterCommand('fpromote', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:factionPromote', tonumber(args[1]), tonumber(args[2]))
     if ok then exports.sunset_ui:Notify('Member promoted', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Promotion failed. Check your leader permission, target ID and grade.', 'error') end
 end, false)
 
 RegisterCommand('fgiverank', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:factionGiveRank', tonumber(args[1]), tonumber(args[2]))
     if ok then exports.sunset_ui:Notify('Rank updated', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Rank change failed. Check your leader permission, target ID and grade.', 'error') end
 end, false)
 
 RegisterCommand('funinvite', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:factionUninvite', tonumber(args[1]))
     if ok then exports.sunset_ui:Notify('Member removed', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Member removal failed. Check your leader permission and target ID.', 'error') end
 end, false)
 
 RegisterCommand('fwarn', function(_, args)
@@ -217,7 +216,7 @@ RegisterCommand('fwarn', function(_, args)
     if not target or reason == '' then return exports.sunset_ui:Notify('Usage: /fwarn [id] [reason]', 'error') end
     local ok, err = Sunset.AwaitCallback('sunset:factionWarn', target, reason)
     if ok then exports.sunset_ui:Notify('Warning issued', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'Faction warning failed. Check your leader permission, target ID and reason.', 'error') end
 end, false)
 
 RegisterCommand('fmotd', function(_, args)
@@ -225,12 +224,12 @@ RegisterCommand('fmotd', function(_, args)
     if msg == '' then return exports.sunset_ui:Notify('Usage: /fmotd [message]', 'error') end
     local ok, err = Sunset.AwaitCallback('sunset:factionSetMotd', msg)
     if ok then exports.sunset_ui:Notify('Faction MOTD updated', 'success')
-    else exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    else exports.sunset_ui:Notify(err or 'MOTD update failed. Check your faction permission and message.', 'error') end
 end, false)
 
 RegisterCommand('fmembers', function()
     local data, err = Sunset.AwaitCallback('sunset:factionMembers')
-    if not data then return exports.sunset_ui:Notify(err or 'Failed', 'error') end
+    if not data then return exports.sunset_ui:Notify(err or 'Faction members could not be loaded. Check your membership and try again.', 'error') end
     local chat = function(line)
         exports.sunset_ui:Send('chatMessage', { id = 0, name = 'FACTION', message = line, time = '' })
     end
@@ -405,11 +404,11 @@ local PD_HELP = {
     '/so [id] — Summon suspect (must be nearby)',
     '/clear [id] — Clear wanted status',
     '/wanted — List active wanted (persisted)',
-    '/arrest [id] — Arrest at jail zone (restrained)',
+    '/booking — GPS to nearest MRPD/Bolingbroke booking marker',
+    '/arrest [id] — Book a CUFFED + WANTED suspect inside that marker',
     '/cuff [id] — Restrain suspect',
-    '/uncuff [id] — Release (Sergeant+)',
-    '/fine [id] [amount] [reason] — Citation (Officer+)',
-    '/ticket — Issue citation (UI)',
+    '/uncuff [id] — Remove restraints',
+    '/ticket [id] (or /fine [id]) — choose an official citation in UI',
     '/mdc — Mobile data terminal',
     '/confiscate [id] — Confiscate contraband',
     '/startradar — Activate speed radar',
@@ -417,7 +416,8 @@ local PD_HELP = {
     '/radars — List fixed speed cameras',
     '/f [msg] — Faction radio',
     '/faction — Your rank, salary, commands',
-    'Payday: every hour at :00 — must be ON DUTY — $400+ to bank',
+    '/help — personalized list filtered to commands your current rank can use',
+    'Payday: every hour at :00 — must be ON DUTY — salary goes to bank',
 }
 
 RegisterCommand('pd', function()

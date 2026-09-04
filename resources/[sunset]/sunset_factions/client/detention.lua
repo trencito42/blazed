@@ -20,26 +20,42 @@ local function loadAnimDict(dict)
 end
 
 local function applyCuffState(state)
+    local changed = isCuffed ~= (state == true)
     isCuffed = state == true
     local ped = PlayerPedId()
     if isCuffed then
         SetEnableHandcuffs(ped, true)
+        SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
+        SetPedCanPlayGestureAnims(ped, false)
         if loadAnimDict(CUFF_DICT) then
             TaskPlayAnim(ped, CUFF_DICT, CUFF_ANIM, 8.0, -8.0, -1, 49, 0, false, false, false)
         end
-        exports.sunset_ui:Notify('You have been restrained', 'error')
+        if changed then exports.sunset_ui:Notify('You have been restrained', 'error') end
     else
         SetEnableHandcuffs(ped, false)
+        SetPedCanPlayGestureAnims(ped, true)
         isEscorted = false
         escortOfficer = nil
         DetachEntity(ped, true, false)
-        ClearPedTasks(ped)
-        exports.sunset_ui:Notify('Restraints removed', 'success')
+        if changed then
+            ClearPedTasks(ped)
+            exports.sunset_ui:Notify('Restraints removed', 'success')
+        end
     end
 end
 
 RegisterNetEvent('sunset:faction:cuff', function()
     applyCuffState(true)
+end)
+
+CreateThread(function()
+    Wait(1500)
+    applyCuffState(LocalPlayer.state.sunsetCuffed == true)
+end)
+
+AddEventHandler('playerSpawned', function()
+    Wait(500)
+    applyCuffState(LocalPlayer.state.sunsetCuffed == true)
 end)
 
 RegisterNetEvent('sunset:faction:uncuff', function()
@@ -156,7 +172,7 @@ RegisterCommand('frisk', function(_, args)
     local target = tonumber(args[1])
     if not target then return exports.sunset_ui:Notify('Usage: /frisk [id]', 'error') end
     local items, err = Sunset.AwaitCallback('sunset:detentionFrisk', target)
-    if not items then return exports.sunset_ui:Notify(err or 'Frisk failed', 'error') end
+    if not items then return exports.sunset_ui:Notify(err or 'Frisk failed. Check duty, rank, target ID and 3m distance.', 'error') end
     exports.sunset_ui:Send('chatMessage', { id = 0, name = 'FRI SK', message = ('=== Frisk #%d ==='):format(target), time = '' })
     if #items == 0 then
         exports.sunset_ui:Send('chatMessage', { id = 0, name = 'FRI SK', message = 'No items found', time = '' })
@@ -187,7 +203,8 @@ CreateThread(function()
                 DisableControlAction(0, 75, true)
                 DisableControlAction(0, 23, true)
             end
-            if isCuffed and not IsEntityPlayingAnim(ped, CUFF_DICT, CUFF_ANIM, 3) and loadAnimDict(CUFF_DICT) then
+            if isCuffed and not IsPedInAnyVehicle(ped, false) and not IsPedRagdoll(ped)
+                and not IsEntityPlayingAnim(ped, CUFF_DICT, CUFF_ANIM, 3) and loadAnimDict(CUFF_DICT) then
                 TaskPlayAnim(ped, CUFF_DICT, CUFF_ANIM, 8.0, -8.0, -1, 49, 0, false, false, false)
             end
             Wait(0)

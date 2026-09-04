@@ -7,6 +7,10 @@ Sunset.Police = {
     jailCoords = vector4(1641.99, 2570.29, 45.56, 270.0),
     releaseCoords = vector4(1855.68, 2604.45, 45.67, 270.0),
     pdJailPoint = vector3(461.85, -994.55, 24.91),
+    bookingPoints = {
+        { label = 'MRPD Booking — basement', coords = vector3(461.85, -994.55, 24.91) },
+        { label = 'Bolingbroke Reception — front processing gate', coords = vector3(1845.91, 2585.84, 45.67) },
+    },
 
     decayMinutes = {
         [1] = 15,

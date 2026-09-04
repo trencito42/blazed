@@ -25,11 +25,11 @@ exports.sunset_core:RegisterCallback('sunset:emsStabilize', function(source, tar
     local isAdmin = false
     pcall(function() isAdmin = exports.sunset_admin:IsAdmin(source, 2) end)
     if not isAdmin and not FactionCore.hasPerm(source, 'stabilize') and not FactionCore.hasPerm(source, 'heal') then
-        return nil, 'Not on duty or no permission'
+        return nil, FactionCore.accessError(source, 'stabilize', 'stabilize a patient')
     end
     targetId = tonumber(targetId)
     if not targetId or not FactionCore.isOnline(targetId) then
-        return nil, 'Player not found'
+        return nil, ('Patient ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
     end
     if not isAdmin and targetId ~= source and not distCheck(source, targetId, MEDIC_RANGE) then
         return nil, 'You must be near the patient'
@@ -48,10 +48,12 @@ exports.sunset_core:RegisterCallback('sunset:emsHeal', function(source, targetId
     local isAdmin = false
     pcall(function() isAdmin = exports.sunset_admin:IsAdmin(source, 2) end)
     if not isAdmin and not FactionCore.hasPerm(source, 'heal') then
-        return nil, 'Not on duty or no permission'
+        return nil, FactionCore.accessError(source, 'heal', 'heal a patient')
     end
     targetId = tonumber(targetId) or source
-    if not FactionCore.isOnline(targetId) then return nil, 'Player not found' end
+    if not FactionCore.isOnline(targetId) then
+        return nil, ('Patient ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
     if targetId ~= source and not isAdmin and not distCheck(source, targetId, HEAL_RANGE) then
         return nil, 'You must be near the patient'
     end
@@ -75,7 +77,7 @@ exports.sunset_core:RegisterCallback('sunset:emsRevive', function(source, target
     local isAdmin = false
     pcall(function() isAdmin = exports.sunset_admin:IsAdmin(source, 2) end)
     if not isAdmin and not FactionCore.hasPerm(source, 'revive') then
-        return nil, 'Not on duty or no permission'
+        return nil, FactionCore.accessError(source, 'revive', 'revive a patient')
     end
     targetId = tonumber(targetId)
     if not targetId or not FactionCore.isOnline(targetId) then

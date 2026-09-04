@@ -580,8 +580,9 @@
         <div class="overlay-panel__box">
             <h2>Issue Citation</h2>
             <label class="field"><span>Target ID</span><input type="number" id="ticket-target" min="1"></label>
-            <label class="field"><span>Amount ($)</span><input type="number" id="ticket-amount" min="1" value="250"></label>
-            <label class="field"><span>Reason</span><input type="text" id="ticket-reason" maxlength="128" placeholder="Traffic violation"></label>
+            <label class="field"><span>Violation</span><select id="ticket-violation"></select></label>
+            <label class="field"><span>Amount ($)</span><input type="number" id="ticket-amount" min="1" value="250" readonly></label>
+            <label class="field"><span>Reason</span><input type="text" id="ticket-reason" maxlength="128" readonly></label>
             <div class="btn-row">
                 <button type="button" class="btn btn--primary" id="ticket-issue">ISSUE CITATION</button>
             </div>

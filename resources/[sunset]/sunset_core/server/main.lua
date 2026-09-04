@@ -43,7 +43,8 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
 
     if not ok then
         print(('^1[SunsetMP]^7 Callback error (%s): %s'):format(name, tostring(packed)))
-        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, tostring(packed))
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil,
+            ('Server error while processing %s. Try once more; if it repeats, report this action to staff.'):format(name))
         return
     end
 

@@ -53,8 +53,8 @@ Sunset.Factions = {
             },
         },
         grades = {
-            [0] = { label = 'Cadet', salary = 400, perms = { cuff = true, escort = true, frisk = true, members = true } },
-            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, escort = true, frisk = true, fine = true, ticket = true, mdc = true, megaphone = true, radar = true, confiscate = true, members = true } },
+            [0] = { label = 'Cadet', salary = 400, perms = { cuff = true, uncuff = true, escort = true, frisk = true, members = true } },
+            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, members = true } },
             [2] = { label = 'Sergeant', salary = 700, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, members = true } },
             [3] = { label = 'Lieutenant', salary = 900, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, giverank = true, fwarn = true, fmotd = true, members = true } },
             [4] = { label = 'Chief', salary = 1200, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, promote = true, giverank = true, uninvite = true, fwarn = true, fmotd = true, members = true } },
@@ -206,9 +206,6 @@ Sunset.Factions = {
 
 -- Command reference shown in /faction and help (filtered by player perms at runtime)
 Sunset.FactionCommandCatalog = {
-    { perm = 'fine', cmd = '/fine [id] [amount] [reason]', desc = 'Issue a citation' },
-    { perm = 'cuff', cmd = '/cuff [id]', desc = 'Restrain a suspect' },
-    { perm = 'uncuff', cmd = '/uncuff [id]', desc = 'Release restraints' },
     { perm = 'stabilize', cmd = '/stabilize [id]', desc = 'Stabilize a downed patient' },
     { perm = 'heal', cmd = '/heal [id]', desc = 'Treat injuries (self if no id)' },
     { perm = 'revive', cmd = '/revive [id]', desc = 'Revive a downed player' },
@@ -267,23 +264,54 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
     if Sunset.FactionTypeMatches(jobId, 'law_enforcement') then
         list[#list + 1] = { cmd = '/pdgarage', desc = 'Spawn MRPD patrol vehicle (on duty)' }
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }
-        list[#list + 1] = { cmd = '/su [id] [reason]', desc = 'Set wanted level on suspect' }
         list[#list + 1] = { cmd = '/so [id]', desc = 'Summon nearby suspect' }
         list[#list + 1] = { cmd = '/wanted', desc = 'List active wanted players' }
-        list[#list + 1] = { cmd = '/arrest [id]', desc = 'Arrest restrained suspect' }
-        list[#list + 1] = { cmd = '/escort [id]', desc = 'Drag/escort restrained suspect' }
-        list[#list + 1] = { cmd = '/putinveh [id]', desc = 'Place suspect in your vehicle' }
-        list[#list + 1] = { cmd = '/takeout [id]', desc = 'Remove suspect from vehicle' }
-        list[#list + 1] = { cmd = '/frisk [id]', desc = 'Search suspect inventory' }
-        list[#list + 1] = { cmd = '/ticket', desc = 'Issue citation (UI)' }
-        list[#list + 1] = { cmd = '/mdc', desc = 'Mobile data terminal' }
-        list[#list + 1] = { cmd = '/clear [id]', desc = 'Clear wanted status' }
-        list[#list + 1] = { cmd = '/confiscate [id]', desc = 'Confiscate contraband' }
-        list[#list + 1] = { cmd = '/startradar', desc = 'Activate speed radar' }
-        list[#list + 1] = { cmd = '/stopradar', desc = 'Deactivate speed radar' }
-        list[#list + 1] = { cmd = '/radars', desc = 'List fixed speed cameras' }
-        list[#list + 1] = { cmd = '/m [message]', desc = 'Megaphone (nearby)' }
-        list[#list + 1] = { cmd = '/backup', desc = 'Request LSPD backup' }
+        if Sunset.HasFactionPerm(jobId, grade, 'cuff') then
+            list[#list + 1] = { cmd = '/cuff [id]', desc = 'Restrain a nearby suspect' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'uncuff') then
+            list[#list + 1] = { cmd = '/uncuff [id]', desc = 'Remove a nearby suspect’s restraints' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'wanted') then
+            list[#list + 1] = { cmd = '/su [id] [reason]', desc = 'Add a persisted wanted charge' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'arrest') then
+            list[#list + 1] = { cmd = '/booking', desc = 'GPS to nearest arrest booking marker' }
+            list[#list + 1] = { cmd = '/arrest [id]', desc = 'Book cuffed, wanted suspect at marker' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'escort') then
+            list[#list + 1] = { cmd = '/escort [id]', desc = 'Drag/escort restrained suspect' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'vehicle_detain') then
+            list[#list + 1] = { cmd = '/putinveh [id]', desc = 'Place suspect in a nearby vehicle' }
+            list[#list + 1] = { cmd = '/takeout [id]', desc = 'Remove suspect from nearby vehicle' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'frisk') then
+            list[#list + 1] = { cmd = '/frisk [id]', desc = 'Search suspect inventory' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'ticket') then
+            list[#list + 1] = { cmd = '/ticket [id]', desc = 'Issue server-priced citation (UI)' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'mdc') then
+            list[#list + 1] = { cmd = '/mdc', desc = 'Mobile data terminal' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'clear_wanted') then
+            list[#list + 1] = { cmd = '/clear [id]', desc = 'Clear wanted status' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'confiscate') then
+            list[#list + 1] = { cmd = '/confiscate [id]', desc = 'Confiscate configured contraband' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'radar') then
+            list[#list + 1] = { cmd = '/startradar', desc = 'Activate speed radar' }
+            list[#list + 1] = { cmd = '/stopradar', desc = 'Deactivate speed radar' }
+            list[#list + 1] = { cmd = '/radars', desc = 'List fixed speed cameras' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'megaphone') then
+            list[#list + 1] = { cmd = '/m [message]', desc = 'Megaphone (nearby)' }
+        end
+        if Sunset.HasFactionPerm(jobId, grade, 'backup') then
+            list[#list + 1] = { cmd = '/backup', desc = 'Request LSPD backup' }
+        end
     end
     if Sunset.HasFactionPerm(jobId, grade, 'fmotd') or Sunset.HasFactionPerm(jobId, grade, 'invite') then
         list[#list + 1] = { cmd = '/fmembers', desc = 'List online faction members' }

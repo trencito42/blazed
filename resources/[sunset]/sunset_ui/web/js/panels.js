@@ -38,8 +38,8 @@ const Panels = {
         $('#ticket-issue')?.addEventListener('click', () => {
             post('ticketIssue', {
                 targetId: Number($('#ticket-target')?.value || 0),
-                amount: Number($('#ticket-amount')?.value || 0),
                 reason: $('#ticket-reason')?.value || '',
+                violationCode: $('#ticket-violation')?.value || '',
             });
         });
         $('#ticket-pay')?.addEventListener('click', () => post('ticketPay', { ticketId: this._ticketId }));
@@ -309,11 +309,29 @@ const Panels = {
 
     hideMdc() { $('#mdc')?.classList.add('hidden'); },
 
-    showTicket() {
+    showTicket(data = {}) {
         this.init();
-        $('#ticket-target').value = '';
-        $('#ticket-amount').value = '250';
-        $('#ticket-reason').value = '';
+        const target = $('#ticket-target');
+        const violation = $('#ticket-violation');
+        const amount = $('#ticket-amount');
+        const reason = $('#ticket-reason');
+        target.value = data.targetId || '';
+        violation.innerHTML = '<option value="">Select a violation...</option>';
+        (data.violations || []).forEach((row) => {
+            const option = document.createElement('option');
+            option.value = row.code;
+            option.textContent = `${row.label} — $${Number(row.amount || 0).toLocaleString()} (${row.code})`;
+            option.dataset.amount = row.amount || 0;
+            option.dataset.label = row.label || row.code;
+            violation.appendChild(option);
+        });
+        const syncViolation = () => {
+            const option = violation.options[violation.selectedIndex];
+            amount.value = option?.value ? option.dataset.amount : '';
+            reason.value = option?.value ? option.dataset.label : '';
+        };
+        violation.onchange = syncViolation;
+        syncViolation();
         $('#ticket')?.classList.remove('hidden');
     },
     hideTicket() { $('#ticket')?.classList.add('hidden'); },

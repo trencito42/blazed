@@ -45,9 +45,9 @@ Status key: **COMPLETE** | **PARTIAL** | **NOT IMPLEMENTED** | **BLOCKED**
 | Civilian jobs (trucker/garbage/courier/fisherman) | COMPLETE | Depot/location-bound loops with server vehicle/coordinate/cooldown validation |
 | Civilian mechanic dispatch | COMPLETE | Active job provider → accepted assigned call → nearby customer vehicle → payout/XP/completion |
 | Faction mechanic repair | PARTIAL | `/repairveh` with distance check; no dispatch accept flow |
-| LSPD wanted / arrest / jail | COMPLETE | DB persistence, server-validated release |
-| LSPD detention (cuff/escort/frisk) | COMPLETE | State machine + proximity validation |
-| LSPD citations / MDC | COMPLETE | Ticket amounts from server config only |
+| LSPD wanted / arrest / jail | COMPLETE (static verification) | Accumulating charges, DB persistence, visible booking points/GPS, explicit validation, server-validated release |
+| LSPD detention (cuff/escort/frisk) | COMPLETE (static verification) | State machine, proximity validation, cuff state hydration and animation enforcement |
+| LSPD citations / MDC | COMPLETE (static verification) | Real violation selector, server-only pricing, single-use atomic pay/refuse; live two-player QA still required |
 | LSPD backup | COMPLETE | `/backup` + `/cbackup` via `sunset_dispatch` police_backup |
 | EMS downed / stabilize / revive | COMPLETE | Distance + downed checks; medic dispatch auto-complete |
 | Fire rescue | PARTIAL | Randomized vehicle-fire incidents, manual incident request, dispatch/GPS and rescue permissions work; no hose/building fire system |

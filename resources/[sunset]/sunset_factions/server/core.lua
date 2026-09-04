@@ -34,6 +34,53 @@ function FactionCore.hasPerm(source, perm)
     return Sunset.HasFactionPerm(factionId, grade, perm)
 end
 
+function FactionCore.accessError(source, perm, action, requiredType)
+    action = action or 'use this action'
+    local char = FactionCore.getChar(source)
+    if not char then
+        return ('Cannot %s: your character is not loaded. Reconnect and select it again.'):format(action)
+    end
+
+    local factionId, grade = FactionCore.getFactionOf(char)
+    if not factionId then
+        return ('Cannot %s: you are not a member of a faction that provides this ability.'):format(action)
+    end
+
+    local faction = Sunset.Factions and Sunset.Factions[factionId]
+    local factionLabel = faction and faction.label or factionId
+    if not FactionCore.isOnDuty(source) then
+        return ('Cannot %s: you are off duty. Go to %s HQ and press E or use /duty.'):format(
+            action, factionLabel)
+    end
+
+    local factionType = Sunset.GetFactionType(factionId)
+    if requiredType and factionType ~= requiredType then
+        return ('Cannot %s: %s is not the required department for this action.'):format(action, factionLabel)
+    end
+    if perm and perm ~= 'invite' and perm ~= 'promote'
+        and not Sunset.CapabilityAllowedForFaction(factionId, perm) then
+        return ('Cannot %s: %s does not have this department capability.'):format(action, factionLabel)
+    end
+    if perm and not Sunset.HasFactionPerm(factionId, grade, perm) then
+        local currentGrade = Sunset.GetFactionGrade(factionId, grade)
+        local requiredGrade, requiredLabel
+        for gradeId, row in pairs((faction and faction.grades) or {}) do
+            local numericGrade = tonumber(gradeId)
+            if numericGrade and row.perms and row.perms[perm]
+                and (not requiredGrade or numericGrade < requiredGrade) then
+                requiredGrade = numericGrade
+                requiredLabel = row.label
+            end
+        end
+        if requiredGrade then
+            return ('Cannot %s: requires %s (rank %d); your rank is %s (rank %d).'):format(
+                action, requiredLabel or 'a higher rank', requiredGrade,
+                currentGrade and currentGrade.label or 'Unknown', tonumber(grade) or 0)
+        end
+    end
+    return ('Cannot %s: the current faction state does not allow it. Toggle duty and try again.'):format(action)
+end
+
 function FactionCore.hasCapability(source, capability)
     local char = FactionCore.getChar(source)
     if not char or not OnDuty[source] then return false end

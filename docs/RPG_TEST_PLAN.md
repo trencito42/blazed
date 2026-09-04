@@ -27,10 +27,13 @@
 
 - [ ] `/su [id] speeding` sets ★1 wanted on target HUD
 - [ ] `/wanted` lists online wanted with decay timer
-- [ ] `/arrest` requires cuff + proximity
+- [ ] `/booking` sets GPS; markers render at MRPD basement and Bolingbroke intake
+- [ ] `/arrest` rejects in order with a precise reason unless target is online, wanted, cuffed, at booking, and within 5m
 - [ ] Arrest pays bounty to officer bank
 - [ ] Jail teleports + disables controls until timer ends
-- [ ] `/ticket` UI issues fine — money removed from target
+- [ ] `/ticket [id]` shows violation selector and server price; pay/refuse works once, repeated requests do not double charge/add wanted
+- [ ] `/so [id]` gives target overlay and a nearby `POLICE ALERT` chat message
+- [ ] Cuff persists through duplicate sync, vehicle enter/exit, animation interruption, and player respawn
 - [ ] `/mdc` UI shows wanted list
 - [ ] `/backup` notifies on-duty LEO, EMS, LSFD with blip via dispatch
 - [ ] `/cbackup` cancels backup and removes blips

@@ -206,7 +206,7 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideMdc();
             break;
         case 'ticketShow':
-            if (window.Panels) Panels.showTicket();
+            if (window.Panels) Panels.showTicket(data || event.data.data);
             break;
         case 'ticketHide':
             if (window.Panels) Panels.hideTicket();

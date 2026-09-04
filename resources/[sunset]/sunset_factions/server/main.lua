@@ -45,7 +45,7 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:toggleDuty', function(source)
     local char = getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Cannot toggle duty: your character is not loaded. Reconnect and select it again.' end
     local factionId = getFactionOf(char)
     local faction = factionId and Sunset.Factions[factionId]
     if not faction or not faction.duty then return nil, 'You are not in a faction with duty shifts' end
@@ -58,7 +58,7 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:joinFactionHQ', function(source, factionId)
     local char = getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Cannot join a faction: your character is not loaded. Reconnect and select it again.' end
     local faction = Sunset.Factions[factionId]
     if not faction then return nil, 'Unknown faction' end
     if faction.type == 'illegal' then return nil, 'This faction is invite-only' end
@@ -84,7 +84,7 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:leaveFaction', function(source)
     local char = getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Cannot leave the faction: your character is not loaded. Reconnect and select it again.' end
     local oldFaction = getFactionOf(char)
     if not oldFaction then return nil, 'You are not in a faction' end
 
@@ -103,16 +103,18 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, targetId)
     local char = getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Cannot recruit: your character is not loaded. Reconnect and select it again.' end
     if not hasPerm(source, 'invite') and not FactionCore.isFactionLeader(char.id, select(1, getFactionOf(char))) then
-        return nil, 'No permission'
+        return nil, FactionCore.accessError(source, 'invite', 'recruit a faction member')
     end
 
     local myFaction = getFactionOf(char)
     if not myFaction then return nil, 'No faction' end
 
     targetId = tonumber(targetId)
-    if not targetId or not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if not targetId or not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
     local target = getChar(targetId)
     if not target then return nil, 'Target has no character' end
     if getFactionOf(target) then return nil, 'Target is already in a faction' end
@@ -125,9 +127,9 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, targetId, newGrade)
     local char = getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Cannot change rank: your character is not loaded. Reconnect and select it again.' end
     if not hasPerm(source, 'promote') and not FactionCore.isFactionLeader(char.id, select(1, getFactionOf(char))) then
-        return nil, 'No permission'
+        return nil, FactionCore.accessError(source, 'promote', 'change a faction member rank')
     end
 
     local myFaction, myGrade = getFactionOf(char)
@@ -136,7 +138,9 @@ exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, t
     targetId = tonumber(targetId)
     newGrade = tonumber(newGrade)
     if not targetId or newGrade == nil then return nil, 'Usage: /fpromote [id] [grade]' end
-    if not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
 
     local target = getChar(targetId)
     local targetFaction, _ = target and getFactionOf(target)
@@ -157,45 +161,7 @@ exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, t
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeFine', function(source, targetId, amount, reason)
-    if not hasPerm(source, 'fine') and not hasPerm(source, 'ticket') then
-        return nil, 'Not on duty or no permission'
-    end
-    targetId = tonumber(targetId)
-    amount = math.floor(tonumber(amount) or 0)
-    if not targetId or amount < 1 or amount > 50000 then return nil, 'Invalid fine' end
-    if not GetPlayerName(targetId) then return nil, 'Player not found' end
-
-    local officerPos = FactionCore.playerCoords(source)
-    local targetPos = FactionCore.playerCoords(targetId)
-    if FactionCore.distBetween(officerPos, targetPos) > 8.0 then
-        return nil, 'You must be near the target'
-    end
-
-    if not exports.sunset_core:RemoveMoney(targetId, 'bank', amount, 'fine') then
-        if not exports.sunset_core:RemoveMoney(targetId, 'cash', amount, 'fine') then
-            return nil, 'Target cannot pay'
-        end
-    end
-
-    local officer = getChar(source)
-    local target = getChar(targetId)
-    if officer and target then
-        MySQL.insert.await(
-            'INSERT INTO faction_fines (officer_character_id, target_character_id, amount, reason) VALUES (?, ?, ?, ?)',
-            { officer.id, target.id, amount, reason or '' }
-        )
-    end
-
-    local commission = math.floor(amount * 0.1)
-    exports.sunset_core:AddMoney(source, 'bank', commission, 'fine_commission')
-    local officerFaction = officer and select(1, Sunset.GetCharacterFaction(officer))
-    local faction = officerFaction and Sunset.Factions[officerFaction]
-    if faction and faction.society then
-        addSociety(faction.society, amount - commission)
-    end
-
-    TriggerClientEvent('sunset:client:notify', targetId, ('Fined $%s: %s'):format(amount, reason or '—'), 'error')
-    return true
+    return nil, 'The old instant fine command is disabled. Use /ticket [id], select an official violation, and let the player pay or refuse it.'
 end)
 
 function HasFactionPerm(source, perm)
@@ -204,15 +170,17 @@ end
 exports('HasFactionPerm', HasFactionPerm)
 
 exports.sunset_core:RegisterCallback('sunset:factionHeal', function(source, targetId)
-    if not hasPerm(source, 'heal') then return nil, 'Not on duty or no permission' end
+    if not hasPerm(source, 'heal') then return nil, FactionCore.accessError(source, 'heal', 'heal a patient') end
     targetId = tonumber(targetId) or source
-    if not FactionCore.isOnline(targetId) then return nil, 'Player not found' end
+    if not FactionCore.isOnline(targetId) then
+        return nil, ('Patient ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
     TriggerClientEvent('sunset:admin:heal', targetId)
     return true
 end)
 
 exports.sunset_core:RegisterCallback('sunset:factionRevive', function(source, targetId)
-    if not hasPerm(source, 'revive') then return nil, 'Not on duty or no permission' end
+    if not hasPerm(source, 'revive') then return nil, FactionCore.accessError(source, 'revive', 'revive a patient') end
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return nil, 'Usage: /revive [player id]' end
 
@@ -261,9 +229,11 @@ exports.sunset_core:RegisterCallback('sunset:factionRequestFleet', function(sour
 end)
 
 exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, targetId)
-    if not hasPerm(source, 'repair') then return nil, 'Not on duty or no permission' end
+    if not hasPerm(source, 'repair') then return nil, FactionCore.accessError(source, 'repair', 'repair a customer vehicle') end
     targetId = tonumber(targetId) or source
-    if not GetPlayerName(targetId) then return nil, 'Player not found' end
+    if not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
 
     local officerPos = FactionCore.playerCoords(source)
     local targetPos = FactionCore.playerCoords(targetId)
@@ -280,7 +250,7 @@ exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, t
 end)
 
 exports.sunset_core:RegisterCallback('sunset:taxiFare', function(source, targetId, amount)
-    if not hasPerm(source, 'fare') then return nil, 'Not on duty or no permission' end
+    if not hasPerm(source, 'fare') then return nil, FactionCore.accessError(source, 'fare', 'charge a taxi fare') end
     targetId = tonumber(targetId)
     amount = math.floor(tonumber(amount) or 0)
     if not targetId or amount < 1 or amount > 25000 then return nil, 'Invalid fare' end
@@ -343,7 +313,7 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:illegalSell', function(source)
     local char = getChar(source)
-    if not char then return nil, 'No character' end
+    if not char then return nil, 'Cannot sell faction goods: your character is not loaded. Reconnect and select it again.' end
     local factionId = getFactionOf(char)
     if not factionId then return nil, 'Not in a faction' end
     return sellIllegalAtHQ(source, factionId)
