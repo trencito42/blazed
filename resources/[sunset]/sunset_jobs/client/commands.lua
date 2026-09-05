@@ -42,6 +42,12 @@ local function startWork()
     if JC.state ~= 'IDLE' then
         if not JC.syncSessionState() then
             -- stale client state cleared
+        elseif JC.jobId == 'fisherman' then
+            if Sunset.Jobs and Sunset.Jobs.EnsureFishermanShift then
+                Sunset.Jobs.EnsureFishermanShift()
+            end
+            JC.notify('Fisherman shift is already active — stand in a blue marker and press E.', 'info')
+            return
         elseif JC.state ~= 'IDLE' then
             JC.notify('Already on a shift — finish or /work cancel', 'error')
             return

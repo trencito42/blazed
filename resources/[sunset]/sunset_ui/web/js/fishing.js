@@ -103,7 +103,7 @@ const Fishing = {
             this._applyState(
                 'state-idle',
                 data.title || 'Fishing',
-                data.message || `Press ${this._keyHtml()} to cast`
+                (data.message && data.message.length) ? data.message : `Press ${this._keyHtml()} to cast`
             );
             if (this._progress) {
                 this._progress.style.transition = 'none';

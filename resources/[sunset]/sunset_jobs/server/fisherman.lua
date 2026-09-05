@@ -44,11 +44,17 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:start', function(source)
     local cfg = Sunset.GetJobConfig('fisherman')
-    local atWork = SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, 12.0)
-    for _, spot in ipairs(cfg.spots or {}) do
-        if SunsetJobs_ValidateCoords(source, spot.coords, (cfg.catchRadius or 8.0) + 4.0) then atWork = true break end
+    local existing = SunsetJobs_GetSession(source)
+    if existing and existing.jobId == 'fisherman' then
+        local level, capacity = fishLevelAndCapacity(source, cfg)
+        local carried, carriedValue = fishInventorySummary(source, cfg)
+        existing.data.level = level
+        existing.data.capacity = capacity
+        existing.data.carried = carried
+        existing.data.pendingValue = carriedValue
+        return existing.data
     end
-    if not atWork then return nil, 'Go to a fishing spot or the fish buyer to start work' end
+
     local level, capacity = fishLevelAndCapacity(source, cfg)
     local carried, carriedValue = fishInventorySummary(source, cfg)
     local session, err = SunsetJobs_StartSession(source, 'fisherman', {
