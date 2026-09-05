@@ -5,7 +5,7 @@
     display: grid;
     place-items: center;
     padding: 4vh 4vw;
-    background: radial-gradient(circle at 50% 50%, rgba(10, 8, 7, .28), rgba(0, 0, 0, .58));
+    background: transparent;
     color: #f8f4ec;
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
 }
@@ -19,9 +19,9 @@
     padding: 24px;
     border-top: 2px solid #ff8a00;
     border-bottom: 1px solid rgba(255, 138, 0, .34);
-    background: linear-gradient(135deg, rgba(12, 10, 9, .89), rgba(17, 13, 16, .74));
-    box-shadow: 0 24px 70px rgba(0, 0, 0, .68), inset 0 0 60px rgba(255, 92, 0, .035);
-    backdrop-filter: blur(9px);
+    background: linear-gradient(135deg, rgba(12, 10, 9, .22), rgba(17, 13, 16, .12));
+    box-shadow: 0 16px 42px rgba(0, 0, 0, .2), inset 0 0 50px rgba(255, 92, 0, .025);
+    backdrop-filter: none;
     animation: faction-in .18s ease-out;
 }
 
@@ -42,13 +42,13 @@
 .faction-close:hover { border-color: #ff8a00; color: #fff; }
 
 .faction-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 22px 0 16px; background: rgba(255,255,255,.08); }
-.faction-summary > div { display: flex; flex-direction: column; gap: 5px; padding: 14px 16px; background: rgba(7,7,8,.76); }
+.faction-summary > div { display: flex; flex-direction: column; gap: 5px; padding: 14px 16px; background: rgba(7,7,8,.22); text-shadow: 0 2px 5px #000; }
 .faction-summary strong { font: 700 16px var(--sunset-display, 'Chakra Petch'); }
 #faction-duty.is-active { color: #55e899; }
 
 .faction-layout { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(430px, 1.2fr); gap: 16px; min-height: 0; }
 .faction-overview { display: grid; align-content: start; gap: 10px; }
-.faction-card { padding: 16px; border-left: 2px solid rgba(255,138,0,.7); background: rgba(255,255,255,.035); }
+.faction-card { padding: 16px; border-left: 2px solid rgba(255,138,0,.7); background: rgba(8,7,8,.15); text-shadow: 0 2px 5px #000; }
 .faction-card p { margin: 8px 0 5px; font-size: 16px; line-height: 1.35; }
 .faction-card small { color: rgba(255,255,255,.54); }
 .faction-card--motd p { color: #ffd39d; font-weight: 600; }
@@ -62,7 +62,7 @@
 .faction-section-title small { color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: 1px; }
 .faction-roster, .faction-directory-list { overflow-y: auto; scrollbar-color: #ff8a00 rgba(255,255,255,.06); }
 .faction-roster { max-height: 49vh; display: grid; gap: 5px; }
-.faction-member { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px; background: rgba(255,255,255,.035); border-left: 2px solid rgba(255,255,255,.15); }
+.faction-member { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px; background: rgba(8,7,8,.14); border-left: 2px solid rgba(255,255,255,.15); text-shadow: 0 2px 5px #000; }
 .faction-member.is-online { border-left-color: #54d78c; }
 .faction-member.is-leader { border-left-color: #ff8a00; background: rgba(255,138,0,.07); }
 .faction-member div { display: flex; flex-direction: column; }
@@ -73,7 +73,7 @@
 .faction-shell--directory { width: min(980px, 94vw); }
 .faction-directory-intro { color: rgba(255,255,255,.58); margin: 8px 0 18px; }
 .faction-directory-list { max-height: 68vh; display: grid; gap: 8px; padding-right: 5px; }
-.faction-directory-card { padding: 15px 17px; border-left: 3px solid #ff8a00; background: rgba(255,255,255,.035); }
+.faction-directory-card { padding: 15px 17px; border-left: 3px solid #ff8a00; background: rgba(8,7,8,.14); text-shadow: 0 2px 5px #000; }
 .faction-directory-card--illegal { border-left-color: #a94dff; }
 .faction-directory-card__top > div { display: flex; flex-direction: column; }
 .faction-directory-card__top strong { font: 700 17px var(--sunset-display, 'Chakra Petch'); }
