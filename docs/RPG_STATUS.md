@@ -57,6 +57,7 @@ Static verification: changed JavaScript parses successfully, literal manifest re
 - Hard crashes without a seatbelt now use a reliable ejection fallback. Self-inflicted collision damage is excluded from faction friendly-fire handling, so a crash no longer produces the misleading same-faction warning.
 - Crafting now validates station proximity server-side, displays owned/required material counts, explains locked recipes, and provides `/crafting` GPS guidance.
 - Corrected the admin coordinate helper nil call, post-delivery Trucker partial-pay exploit, immortal job vehicles, orphaned failed-shift trucks, faction-leader leave ordering, and unpurchased barber preview retention.
+- Replaced the barely perceptible percentage-based fuel drain with class-specific liters/hour consumption. Tank size, RPM, speed, throttle, idle and a nonlinear redline penalty now determine consumption; sports/super/heavy vehicles consume materially more than compacts and motorcycles, while bicycles and trains consume none.
 
 ## Live vehicle/menu corrections (2026-09-04)
 

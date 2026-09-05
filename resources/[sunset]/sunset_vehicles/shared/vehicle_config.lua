@@ -1,9 +1,46 @@
 Sunset = Sunset or {}
 
--- Per vehicle-class tuning (GTA vehicle classes 0–21)
+-- Per vehicle-class tuning (GTA vehicle classes 0–22)
 Sunset.VehicleProfiles = {
-    -- Base fuel drain per second when moving (scaled by RPM + speed)
-    fuelBase = 0.0035,
+    -- Fuel is consumed in liters/hour, then converted to a percentage of the
+    -- vehicle's real handling tank. These are gameplay values: normal driving
+    -- should make fuel relevant without forcing a stop every few minutes.
+    classFuelLitersPerHour = {
+        [0] = 24,   -- Compacts
+        [1] = 30,   -- Sedans
+        [2] = 40,   -- SUVs
+        [3] = 32,   -- Coupes
+        [4] = 42,   -- Muscle
+        [5] = 40,   -- Sports Classics
+        [6] = 46,   -- Sports
+        [7] = 58,   -- Super
+        [8] = 16,   -- Motorcycles
+        [9] = 45,   -- Off-road
+        [10] = 72,  -- Industrial
+        [11] = 38,  -- Utility
+        [12] = 50,  -- Vans
+        [13] = 0,   -- Cycles
+        [14] = 95,  -- Boats
+        [15] = 180, -- Helicopters
+        [16] = 340, -- Planes
+        [17] = 40,  -- Service
+        [18] = 52,  -- Emergency
+        [19] = 75,  -- Military
+        [20] = 88,  -- Commercial
+        [21] = 0,   -- Trains
+        [22] = 65,  -- Open Wheel
+    },
+
+    consumption = {
+        idleLoad = 0.07,
+        baseLoad = 0.45,
+        rpmLoad = 0.75,
+        speedLoad = 0.25,
+        throttleLoad = 0.35,
+        redlineStart = 0.72,
+        redlineLoad = 1.25,
+        speedReferenceKmh = 160.0,
+    },
 
     -- Tank capacity in liters (gas-can pour + display; vehicles.fuel column stays 0–100% for HUD/pump)
     classTankCapacityLiters = {
@@ -29,31 +66,7 @@ Sunset.VehicleProfiles = {
         [19] = 100, -- Military
         [20] = 150, -- Commercial
         [21] = 0,   -- Trains
-    },
-
-    classFuel = {
-        [0] = 0.82,  -- Compacts
-        [1] = 1.00,  -- Sedans
-        [2] = 1.18,  -- SUVs
-        [3] = 0.95,  -- Coupes
-        [4] = 1.12,  -- Muscle
-        [5] = 1.08,  -- Sports Classics
-        [6] = 1.35,  -- Sports
-        [7] = 1.55,  -- Super
-        [8] = 0.55,  -- Motorcycles
-        [9] = 1.22,  -- Off-road
-        [10] = 1.30, -- Industrial
-        [11] = 1.05, -- Utility
-        [12] = 1.15, -- Vans
-        [13] = 0.0,  -- Cycles
-        [14] = 2.40, -- Boats
-        [15] = 3.20, -- Helicopters
-        [16] = 4.50, -- Planes
-        [17] = 1.00, -- Service
-        [18] = 1.10, -- Emergency
-        [19] = 1.25, -- Military
-        [20] = 1.40, -- Commercial
-        [21] = 0.0,  -- Trains
+        [22] = 70,  -- Open Wheel
     },
 
   -- Collision damage multipliers vs sedan baseline
@@ -78,7 +91,7 @@ Sunset.VehicleProfiles = {
     },
 
     -- Optional per-model overrides (hash or model name)
-    modelFuel = {
+    modelFuelMultiplier = {
         taxi = 0.92,
         ambulance = 1.05,
         police = 1.08,
@@ -121,13 +134,20 @@ end
 function Sunset.GetVehicleFuelMultiplier(modelHash, vehicleClass)
     local profiles = Sunset.VehicleProfiles
     if modelHash then
-        for name, mult in pairs(profiles.modelFuel or {}) do
+        for name, mult in pairs(profiles.modelFuelMultiplier or {}) do
             if joaat(name) == modelHash then
                 return mult
             end
         end
     end
-    return (profiles.classFuel or {})[vehicleClass] or 1.0
+    return 1.0
+end
+
+function Sunset.GetVehicleFuelLitersPerHour(modelHash, vehicleClass)
+    local profiles = Sunset.VehicleProfiles or {}
+    local classRate = (profiles.classFuelLitersPerHour or {})[vehicleClass]
+    if classRate == nil then classRate = (profiles.classFuelLitersPerHour or {})[1] or 30 end
+    return math.max(0, classRate * Sunset.GetVehicleFuelMultiplier(modelHash, vehicleClass))
 end
 
 function Sunset.GetVehicleDamageProfile(modelHash, vehicleClass)

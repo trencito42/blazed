@@ -14,6 +14,7 @@ local odometerKm = 0.0
 local odometerPlate = nil
 local lastOdoCoords = nil
 local vehicleProps = {}
+local lastFuelTickAt = nil
 
 -- GTA fuel natives use liters (0..fPetrolTankVolume), not 0–100%. We track percent for HUD/DB.
 local function getNativeTankVolume(veh)
@@ -299,24 +300,40 @@ CreateThread(function()
     end
 end)
 
-local function computeFuelDrain(veh)
+local function computeFuelDrainPerSecond(veh)
     local profiles = Sunset.VehicleProfiles or {}
-    local base = profiles.fuelBase or 0.0035
     local class = GetVehicleClass(veh)
     local model = GetEntityModel(veh)
-    local classMult = Sunset.GetVehicleFuelMultiplier(model, class)
+    local litersPerHour = Sunset.GetVehicleFuelLitersPerHour(model, class)
 
-    if classMult <= 0 then return 0 end
+    if litersPerHour <= 0 or not GetIsVehicleEngineRunning(veh) then return 0 end
 
-    local rpm = GetVehicleCurrentRpm(veh)
+    local tuning = profiles.consumption or {}
+    local rpm = math.max(0.0, math.min(1.0, GetVehicleCurrentRpm(veh)))
     local speedKmh = GetEntitySpeed(veh) * 3.6
-    if speedKmh <= 1.0 and rpm < 0.15 then
-        return base * classMult * 0.15 * rpm
+    local tankLiters = getNativeTankVolume(veh)
+    if tankLiters <= 0 then return 0 end
+
+    local load
+    if speedKmh <= 1.0 and rpm < 0.30 then
+        load = tuning.idleLoad or 0.07
+    else
+        local speedReference = tuning.speedReferenceKmh or 160.0
+        local speedFactor = math.min(speedKmh / speedReference, 1.0)
+        local throttle = math.max(0.0, math.min(1.0, GetControlNormal(0, 71)))
+        local redlineStart = tuning.redlineStart or 0.72
+        local redlineRange = math.max(0.01, 1.0 - redlineStart)
+        local redline = math.max(0.0, (rpm - redlineStart) / redlineRange)
+
+        load = (tuning.baseLoad or 0.45)
+            + (rpm ^ 1.7) * (tuning.rpmLoad or 0.75)
+            + speedFactor * (tuning.speedLoad or 0.25)
+            + throttle * (tuning.throttleLoad or 0.35)
+            + (redline ^ 2) * (tuning.redlineLoad or 1.25)
     end
 
-    local rpmFactor = 0.25 + (rpm * 0.75)
-    local speedFactor = math.min(speedKmh / 160.0, 1.0)
-    return base * classMult * (rpmFactor + speedFactor * 0.35)
+    local litersPerSecond = (litersPerHour / 3600.0) * load
+    return (litersPerSecond / tankLiters) * 100.0
 end
 
 local function applyCollisionDamage(veh)
@@ -351,6 +368,7 @@ CreateThread(function()
         if veh ~= 0 and isDriver() then
             if veh ~= currentVeh then
                 currentVeh = veh
+                lastFuelTickAt = GetGameTimer()
                 fuel = readFuelPercent(veh)
                 writeFuelPercent(veh, fuel)
                 lastBodyHealth = GetVehicleBodyHealth(veh)
@@ -372,7 +390,10 @@ CreateThread(function()
             applyCollisionDamage(veh)
             tickOdometer(veh)
 
-            local drain = computeFuelDrain(veh)
+            local now = GetGameTimer()
+            local elapsedSeconds = lastFuelTickAt and math.min(2.0, math.max(0.0, (now - lastFuelTickAt) / 1000.0)) or 0.0
+            lastFuelTickAt = now
+            local drain = computeFuelDrainPerSecond(veh) * elapsedSeconds
             if drain > 0 then
                 fuel = math.max(0, fuel - drain)
                 writeFuelPercent(veh, fuel)
@@ -381,6 +402,7 @@ CreateThread(function()
             Wait(1000)
         else
             currentVeh = 0
+            lastFuelTickAt = nil
             lastOdoCoords = nil
             Wait(500)
         end
