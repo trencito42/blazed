@@ -8,7 +8,7 @@
     bottom: 80px;
     transform: translateX(-50%);
     z-index: 45;
-    width: min(400px, 92vw);
+    width: min(720px, 94vw);
     pointer-events: none;
     color: var(--sunset-text, #f6f2e9);
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
@@ -126,24 +126,53 @@
     transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
-.fishing__key {
+.fishing__key,
+.fishing__cmd {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-weight: 700;
+    color: #fff;
+    vertical-align: middle;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+.fishing__key {
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-bottom-width: 4px;
     border-radius: 6px;
     min-width: 36px;
     height: 36px;
-    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
     font-size: 20px;
-    font-weight: 700;
-    color: #fff;
     padding: 0 10px;
-    margin: 0 8px;
+    margin: 0 6px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    vertical-align: middle;
+}
+
+.fishing__cmd {
+    background: rgba(255, 138, 0, 0.16);
+    border: 1px solid rgba(255, 138, 0, 0.55);
+    color: #ffb260;
+    border-radius: 4px;
+    min-height: 22px;
+    font-size: 0.82em;
+    letter-spacing: 0.04em;
+    padding: 1px 8px;
+    margin: 0 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.fishing-shell.state-shift .fishing__key,
+.fishing-shell.state-full .fishing__key {
+    min-width: 26px;
+    height: 26px;
+    font-size: 14px;
+    border-bottom-width: 3px;
+    margin: 0 4px;
+    padding: 0 8px;
 }
 
 .fishing__progress {
@@ -171,6 +200,11 @@
 .fishing-shell.state-shift { --f-accent: var(--sunset-orange, #ff8a00); }
 .fishing-shell.state-shift .fishing__title,
 .fishing-shell.state-shift .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+.fishing-shell.state-idle .fishing__progress,
+.fishing-shell.state-shift .fishing__progress {
+    display: none;
+}
+
 .fishing-shell.state-shift .fishing__message {
     font-size: 15px;
     font-weight: 600;

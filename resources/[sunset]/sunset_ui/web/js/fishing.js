@@ -19,6 +19,28 @@ const Fishing = {
         return '<span class="fishing__key">E</span>';
     },
 
+    _escape(text) {
+        return String(text ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[ch]));
+    },
+
+    _highlight(text) {
+        if (text == null || text === '') return '';
+        const raw = String(text);
+        const tokens = [];
+        let html = raw.replace(/<span class="fishing__(?:key|cmd)">[\s\S]*?<\/span>/gi, (match) => {
+            tokens.push(match);
+            return `\u0000${tokens.length - 1}\u0000`;
+        });
+        if (!raw.includes('<span')) {
+            html = this._escape(html);
+        }
+        html = html.replace(/\/[a-z][a-z0-9_]*/gi, (cmd) => `<span class="fishing__cmd">${cmd}</span>`);
+        html = html.replace(/\bE\b/g, this._keyHtml());
+        return html.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] || '');
+    },,
+
     _setBag(carried, capacity) {
         if (!this._bag) return;
         const c = Math.max(0, Number(carried) || 0);
@@ -32,7 +54,7 @@ const Fishing = {
         this._panel.className = `fishing-shell ${stateClass} is-visible`;
         this._state = stateClass.replace('state-', '');
         if (this._title) this._title.textContent = title;
-        if (this._message) this._message.innerHTML = messageHtml;
+        if (this._message) this._message.innerHTML = this._highlight(messageHtml);
     },
 
     _resolveState(data = {}) {
