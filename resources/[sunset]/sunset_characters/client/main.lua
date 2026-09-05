@@ -67,6 +67,12 @@ AddEventHandler('sunset:client:onPlayerReady', function()
     autoEnterGame()
 end)
 
+-- Authentication callbacks and playerReady are separate network messages.
+-- Starting from both is intentional; inCharacterFlow makes this idempotent.
+AddEventHandler('sunset:client:authenticationComplete', function()
+    autoEnterGame()
+end)
+
 AddEventHandler('sunset:client:characterFlowComplete', function()
     inCharacterFlow = false
     RenderScriptCams(false, true, 1000, true, true)

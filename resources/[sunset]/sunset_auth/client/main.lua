@@ -25,6 +25,7 @@ AddEventHandler('sunset:nui:authLogin', function(data)
     end
     authenticated = true
     exports.sunset_ui:Send('authHide', {})
+    TriggerEvent('sunset:client:authenticationComplete')
 end)
 
 AddEventHandler('sunset:nui:authRegister', function(data)
@@ -37,4 +38,5 @@ AddEventHandler('sunset:nui:authRegister', function(data)
     exports.sunset_ui:Notify('Account created! Logging in...', 'success')
     authenticated = true
     exports.sunset_ui:Send('authHide', {})
+    TriggerEvent('sunset:client:authenticationComplete')
 end)
