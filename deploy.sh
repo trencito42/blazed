@@ -61,6 +61,7 @@ if [ -f .env ]; then
   . ./.env
   set +a
 fi
+: "${MARIADB_PASSWORD:?MARIADB_PASSWORD must be set in .env before deployment}"
 
 chmod -R a+rX config docker resources sql
 sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
@@ -77,7 +78,7 @@ docker compose up -d mariadb
 # Apply schema changes before the gameplay resource starts, so a newly added
 # resource never boots against missing tables.
 attempt=0
-until docker compose exec -T mariadb mariadb-admin ping -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" --silent >/dev/null 2>&1; do
+until timeout 5 docker compose exec -T mariadb mariadb-admin --connect-timeout=3 ping -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" --silent >/dev/null 2>&1; do
   attempt=$((attempt + 1))
   if [ "$attempt" -ge 30 ]; then
     echo "[deploy] MariaDB did not become ready in time" >&2
