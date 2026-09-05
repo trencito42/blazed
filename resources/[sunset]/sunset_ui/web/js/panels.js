@@ -660,6 +660,12 @@ const Panels = {
                 ? `${p.renterCount || 0}/${p.maxRenters || 1} rental slots used`
                 : (p.forSale ? `Available for purchase · requires level ${p.minimumLevel || 1}` : 'Sale disabled by administrator');
             details.append(name, meta, rental);
+            if (p.description) {
+                const description = document.createElement('small');
+                description.className = 'house-row__description';
+                description.textContent = `“${p.description}”`;
+                details.appendChild(description);
+            }
             const side = document.createElement('div');
             side.className = 'house-row__side';
             const badge = document.createElement('b');

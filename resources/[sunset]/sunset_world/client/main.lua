@@ -1,5 +1,6 @@
 local activeZone = nil
 local propertyZones = {}
+local propertyBlips = {}
 
 local function hasOx()
     return GetResourceState('ox_lib') == 'started'
@@ -18,6 +19,35 @@ local function hideHint()
 end
 
 local MARKER_DRAW_DIST = 75.0
+
+local function drawPropertyLabel(prop, distance)
+    local priceLine
+    if prop.ownerName then
+        priceLine = ('Owned by %s'):format(prop.ownerName)
+    elseif prop.forSale then
+        priceLine = ('For sale: $%s  |  Level %d'):format(prop.price or 0, prop.minimumLevel or 1)
+    else
+        priceLine = 'Not for sale'
+    end
+    local accessLine = ('%s  |  Renters %d/%d'):format(prop.locked and 'Locked' or 'Unlocked', prop.renterCount or 0, prop.maxRenters or 1)
+    local description = prop.description and prop.description ~= '' and ('~italic~' .. prop.description .. '~italic~') or nil
+    local text = ('~o~%s #%d~s~~n~%s~n~%s'):format(prop.label or 'House', prop.id or 0, priceLine, accessLine)
+    if description then text = text .. '~n~' .. description end
+    text = text .. '~n~~o~[E]~s~ View house'
+
+    SetDrawOrigin(prop.coords.x, prop.coords.y, prop.coords.z + 1.05, 0)
+    local scale = math.max(0.24, math.min(0.34, 0.4 - distance * 0.012))
+    SetTextScale(scale, scale)
+    SetTextFont(4)
+    SetTextCentre(true)
+    SetTextColour(255, 255, 255, 235)
+    SetTextDropshadow(1, 0, 0, 0, 210)
+    SetTextOutline()
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(text)
+    EndTextCommandDisplayText(0.0, 0.0)
+    ClearDrawOrigin()
+end
 
 local function drawMarkerAt(coords, r, g, b)
     DrawMarker(
@@ -171,13 +201,17 @@ end)
 
 RegisterNetEvent('sunset:client:registerPropertyZones', function(properties)
     propertyZones = {}
+    for _, blip in ipairs(propertyBlips) do
+        if DoesBlipExist(blip) then RemoveBlip(blip) end
+    end
+    propertyBlips = {}
     local preset = (Sunset.WorldBlips or {}).property or {}
     for _, prop in ipairs(properties or {}) do
         local entry = prop.entry
         if type(entry) == 'string' then entry = json.decode(entry) end
         if not entry or not entry.x then goto continue end
         local coords = vector3(entry.x, entry.y, entry.z)
-        addBlip(coords, preset, prop.label, false)
+        propertyBlips[#propertyBlips + 1] = addBlip(coords, preset, prop.label, false)
         propertyZones[#propertyZones + 1] = {
             id = prop.id,
             label = prop.label,
@@ -188,6 +222,12 @@ RegisterNetEvent('sunset:client:registerPropertyZones', function(properties)
             locked = prop.locked == true,
             rentEnabled = prop.rentEnabled == true,
             rentPrice = prop.rentPrice,
+            forSale = prop.forSale == true,
+            minimumLevel = prop.minimumLevel,
+            ownerName = prop.ownerName,
+            renterCount = prop.renterCount,
+            maxRenters = prop.maxRenters,
+            description = prop.description,
             price = prop.price,
         }
         ::continue::
@@ -208,9 +248,10 @@ CreateThread(function()
         end
 
         for _, prop in ipairs(propertyZones) do
-            if #(coords - prop.coords) < MARKER_DRAW_DIST then
+            local distance = #(coords - prop.coords)
+            if distance < 16.0 then
                 anyNearby = true
-                drawMarkerAt(prop.coords, 255, 140, 0)
+                drawPropertyLabel(prop, distance)
             end
         end
 

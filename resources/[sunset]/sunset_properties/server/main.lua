@@ -51,7 +51,7 @@ local function publicRow(row, char)
     local owned = tonumber(row.owner_character_id) == tonumber(char.id)
     local rented = activeRental(char.id, row.id) ~= nil
     return {
-        id=row.id, label=row.label, price=tonumber(row.price) or 0, entry=decodePos(row.entry),
+        id=row.id, label=row.label, description=row.description, price=tonumber(row.price) or 0, entry=decodePos(row.entry),
         owner_character_id=row.owner_character_id, ownerName=row.owner_name ~= '' and row.owner_name or nil,
         interior=row.interior, minimumLevel=tonumber(row.minimum_level) or 1,
         locked=dbBool(row.locked), forSale=dbBool(row.for_sale),
@@ -317,6 +317,16 @@ RegisterCommand('houseinterior',function(source,args)
     message(source,('Interior changed to %s. Re-enter to see it.'):format(preset.label),'success')
 end,false)
 
+RegisterCommand('hdescription',function(source,args)
+    local _,prop,err=ownedProperty(source,nil); if not prop then return message(source,err,'error') end
+    local text=table.concat(args,' '):match('^%s*(.-)%s*$')
+    if text=='' then return message(source,'Usage: /hdescription [text], or /hdescription off to remove it. Maximum 160 characters.','error') end
+    if text:lower()=='off' then text=nil elseif #text>160 then return message(source,'House description is too long. Maximum: 160 characters.','error') end
+    MySQL.update.await('UPDATE properties SET description=? WHERE id=?',{text,prop.id})
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    message(source,text and ('House description updated: '..text) or 'House description removed.','success')
+end,false)
+
 RegisterCommand('houserenters',function(source,args)
     local _,prop,err=ownedProperty(source,tonumber(args[1])); if not prop then return message(source,err,'error') end
     local rows=MySQL.query.await([[SELECT r.character_id,TRIM(CONCAT(c.firstname,' ',c.lastname)) name,r.rent_price,r.last_paid_at
@@ -350,10 +360,11 @@ end,false)
 
 RegisterCommand('ahouseedit',function(source,args)
     if source==0 or not exports.sunset_admin:IsAdmin(source,SunsetProperties.AdminLevel) then return message(source,'Admin level 3 is required.','error') end
-    local id,field=tonumber(args[1]),tostring(args[2] or ''):lower(); local fields={price='price',level='minimum_level',name='label',sale='for_sale',enabled='enabled'}
-    if not id or not fields[field] then return message(source,'Usage: /ahouseedit [id] [price|level|name|sale|enabled] [value]','error') end
+    local id,field=tonumber(args[1]),tostring(args[2] or ''):lower(); local fields={price='price',level='minimum_level',name='label',description='description',sale='for_sale',enabled='enabled'}
+    if not id or not fields[field] then return message(source,'Usage: /ahouseedit [id] [price|level|name|description|sale|enabled] [value]','error') end
     local value=table.concat(args,' ',3); if field~='name' then value=tonumber(value) end
-    if value==nil or (field~='name' and value<0) or (field=='name' and #value<3) then return message(source,'Enter a valid value.','error') end
+    if field=='name' or field=='description' then value=table.concat(args,' ',3) end
+    if value==nil or ((field~='name' and field~='description') and value<0) or (field=='name' and #value<3) or (field=='description' and #value>160) then return message(source,'Enter a valid value. Descriptions may contain up to 160 characters.','error') end
     local changed=MySQL.update.await(('UPDATE properties SET %s=? WHERE id=?'):format(fields[field]),{value,id})
     if changed<1 then return message(source,'House not found or value unchanged.','error') end
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('House #%d updated: %s = %s.'):format(id,field,tostring(value)),'success')

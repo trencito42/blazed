@@ -62,6 +62,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/housemaxrenters [1-10] [id]', desc = 'Owner: set available rental slots' },
     { cmd = '/houseinterior [name] [id]', desc = 'Owner: change house interior' },
     { cmd = '/houseinteriors', desc = 'List available house interiors' },
+    { cmd = '/hdescription [text|off]', desc = 'Owner: set the floating house message for renters and visitors' },
     { cmd = '/houserenters [id]', desc = 'Owner: list active renters' },
     { cmd = '/housekickrenter [character id] [house id]', desc = 'Owner: remove a renter' },
     { cmd = '/sellhouse [id] confirm', desc = 'Owner: sell house back for 70% of its price' },

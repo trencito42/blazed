@@ -1,6 +1,7 @@
 -- Full SA:MP-style house ownership and rental model.
 ALTER TABLE `properties`
     ADD COLUMN IF NOT EXISTS `minimum_level` INT UNSIGNED NOT NULL DEFAULT 1 AFTER `price`,
+    ADD COLUMN IF NOT EXISTS `description` VARCHAR(160) NULL AFTER `minimum_level`,
     ADD COLUMN IF NOT EXISTS `for_sale` TINYINT(1) NOT NULL DEFAULT 1 AFTER `locked`,
     ADD COLUMN IF NOT EXISTS `rent_enabled` TINYINT(1) NOT NULL DEFAULT 0 AFTER `for_sale`,
     ADD COLUMN IF NOT EXISTS `rent_price` INT UNSIGNED NOT NULL DEFAULT 100 AFTER `rent_enabled`,

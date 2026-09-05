@@ -5,6 +5,7 @@ Each exterior entrance represents one physical house. Interiors use a curated ca
 ## Player flow
 
 - Press `E` at an entrance to inspect, buy, rent, enter, set spawn, or lock a house when the action applies.
+- Entrances use a compact floating label instead of a large ground cylinder. Owners can publish a renter/visitor message with `/hdescription [text]` and remove it with `/hdescription off`.
 - A character may own one house and hold one active rental. Buying a house ends the active rental.
 - Owners and active renters can enter locked houses. Unlocked houses allow guests.
 - Rent is charged every payday at the price recorded when the rental began. Failure to pay ends the rental and removes that house as home spawn.
