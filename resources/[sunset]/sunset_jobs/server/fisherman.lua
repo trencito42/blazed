@@ -153,6 +153,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     session.data.level = level
 
     SunsetJobs_AddJobXP(source, 'fisherman', cfg.xpPerCatch or 12)
+    TriggerClientEvent('sunset:jobs:stateChanged', source, session.state, session.data)
     return {
         value = value,
         catches = session.data.catches,

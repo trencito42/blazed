@@ -120,6 +120,7 @@ const Fishing = {
         if (data.carried !== undefined || data.capacity !== undefined) {
             this._setBag(data.carried, data.capacity);
         }
+        if (data.bagOnly) return;
         if (data.state === 'bite') {
             this.startBite(data.windowMs || 1500, data);
             return;
