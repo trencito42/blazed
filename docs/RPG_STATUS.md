@@ -17,6 +17,7 @@
 - Reduced M-menu database refreshes to one snapshot per five seconds while keeping local HUD/vehicle state responsive; failed menu queries now produce labeled server diagnostics.
 - Removed hard-coded database selection from incremental migrations, so the configured `MARIADB_DATABASE` is respected.
 - Moved the location/compass above the minimap and reduced M-menu scanline/panel opacity so gameplay remains visible.
+- Reduced fishing interaction to a single compact blue ground marker (1.6 m interaction radius, 0.75 m vertical tolerance), preventing casts from the nearby stairs; successful catches now show the individual fish value and current bag value.
 
 Static verification: changed JavaScript parses successfully, literal manifest references resolve, duplicate NUI switch/forward registrations are absent, and `git diff --check` passes. A full Docker build and in-game multiplayer pass still require the deployment host; no server restart was performed.
 

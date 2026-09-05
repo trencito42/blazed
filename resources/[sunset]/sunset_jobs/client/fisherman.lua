@@ -11,6 +11,10 @@ local function horizontalDist(pos, coords)
     return math.sqrt(dx * dx + dy * dy)
 end
 
+local function verticalDist(pos, coords)
+    return math.abs(pos.z - coords.z)
+end
+
 local function catchRadius(cfg)
     return (cfg and cfg.catchRadius) or 15.0
 end
@@ -125,9 +129,11 @@ local function nearestSpotIndex()
 end
 
 local function atFishingSpot()
-    local _, distance = nearestSpotIndex()
+    local spotIndex, distance = nearestSpotIndex()
     local cfg = Sunset.GetJobConfig('fisherman')
-    return distance <= catchRadius(cfg), distance, cfg
+    local spot = cfg and cfg.spots and cfg.spots[spotIndex]
+    local zDistance = spot and verticalDist(GetEntityCoords(PlayerPedId()), spot.coords) or math.huge
+    return distance <= catchRadius(cfg) and zDistance <= (cfg.catchZTolerance or 0.75), distance, cfg, zDistance
 end
 
 local function alignPlayerAtSpot(spot)
@@ -166,7 +172,7 @@ local function drawShiftMarkers(cfg)
     local drawRadius = markerDrawRadius(cfg)
     for _, spot in ipairs(cfg.spots) do
         if horizontalDist(pos, spot.coords) <= drawRadius then
-            JC.drawFishingMarker(spot.coords, 52, 152, 219)
+            JC.drawFishingMarker(spot.coords, 52, 152, 219, cfg.markerSize)
         end
     end
     local sell = cfg.sellPoint and cfg.sellPoint.coords
@@ -273,7 +279,8 @@ local function attemptFish()
     local spotIdx, spotDist = nearestSpotIndex()
     local cfg = Sunset.GetJobConfig('fisherman')
     local spot = cfg.spots and cfg.spots[spotIdx]
-    if spotDist > catchRadius(cfg) then
+    local spotZDist = spot and verticalDist(GetEntityCoords(PlayerPedId()), spot.coords) or math.huge
+    if spotDist > catchRadius(cfg) or spotZDist > (cfg.catchZTolerance or 0.75) then
         return JC.notify('Stand inside the blue fishing marker', 'error')
     end
     if isBagFull() then
@@ -339,7 +346,8 @@ local function attemptFish()
             if result then
                 applyBagState(result.carried, result.capacity, result.pendingValue)
                 showFishingState('success', {
-                    message = 'You caught a fish!',
+                    message = ('You caught a fish worth $%s!'):format(result.value or 0),
+                    value = result.value,
                     carried = result.carried,
                     capacity = result.capacity,
                 })
@@ -367,8 +375,9 @@ local function attemptFish()
                 result.carried or 0, result.capacity or 2), 'success', 9000)
         else
             refreshSpotUi()
-            JC.notify(('Fresh Fish added (%d/%d). Press E to cast again.'):format(
-                result.carried or 0, result.capacity or 2), 'success', 6000)
+            JC.notify(('Fresh Fish worth $%s added (%d/%d). Bag value: $%s. Press E to cast again.'):format(
+                result.value or 0, result.carried or 0, result.capacity or 2,
+                result.pendingValue or result.value or 0), 'success', 7000)
         end
     else
         refreshSpotUi()

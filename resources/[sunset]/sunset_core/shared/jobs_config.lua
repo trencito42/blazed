@@ -109,7 +109,11 @@ Sunset.JobsConfig = {
         biteDelayMinMs = 2500,
         biteDelayMaxMs = 6500,
         reactionWindowMs = 1500,
-        catchRadius = 15.0,
+        -- Interaction is intentionally tight: the player must be inside the
+        -- visible pier marker, not on nearby stairs or another deck level.
+        catchRadius = 1.6,
+        catchZTolerance = 0.75,
+        markerSize = 2.0,
         markerDrawRadius = 45.0,
         sellRadius = 5.0,
         catchPayMin = 35,

@@ -72,12 +72,11 @@ function JobClient.drawMarker(coords, r, g, b)
         2.0, 2.0, 1.0, r or 255, g or 140, b or 0, 160, false, false, 2, false, nil, nil, false)
 end
 
-function JobClient.drawFishingMarker(coords, r, g, b)
-    local z = coords.z
-    DrawMarker(25, coords.x, coords.y, z + 1.0, 0, 0, 0, 0, 0, 0,
-        2.8, 2.8, 0.35, r or 52, g or 152, b or 219, 200, false, false, 2, true, nil, nil, false)
-    DrawMarker(1, coords.x, coords.y, z - 0.2, 0, 0, 0, 0, 0, 0,
-        3.2, 3.2, 0.8, r or 52, g or 152, b or 219, 120, false, false, 2, false, nil, nil, false)
+function JobClient.drawFishingMarker(coords, r, g, b, size)
+    local diameter = tonumber(size) or 2.0
+    DrawMarker(1, coords.x, coords.y, coords.z - 0.95, 0, 0, 0, 0, 0, 0,
+        diameter, diameter, 0.22, r or 52, g or 152, b or 219, 150,
+        false, false, 2, false, nil, nil, false)
 end
 
 function JobClient.showHelp(text)
