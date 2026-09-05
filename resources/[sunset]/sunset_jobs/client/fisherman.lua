@@ -12,7 +12,7 @@ local function horizontalDist(pos, coords)
 end
 
 local function catchRadius(cfg)
-    return (cfg and cfg.catchRadius) or 12.0
+    return (cfg and cfg.catchRadius) or 15.0
 end
 
 local function markerDrawRadius(cfg)
@@ -21,6 +21,16 @@ end
 
 local function isWithinCatchRadius(distance, cfg)
     return distance <= catchRadius(cfg)
+end
+
+local function atFishingSpot()
+    local _, distance = nearestSpotIndex()
+    local cfg = Sunset.GetJobConfig('fisherman')
+    return isWithinCatchRadius(distance, cfg), distance, cfg
+end
+
+local function contextJustPressed()
+    return IsControlJustPressed(0, 38) or IsDisabledControlJustPressed(0, 38)
 end
 
 local function fishBagProgress(carried, capacity)
@@ -335,7 +345,7 @@ local function attemptFish()
     local early = false
 
     while GetGameTimer() < biteAt do
-        if IsControlJustPressed(0, 38) then
+        if contextJustPressed() then
             early = true
             break
         end
@@ -354,7 +364,7 @@ local function attemptFish()
         local deadline = GetGameTimer() + windowMs
         local reeled = false
         while GetGameTimer() <= deadline do
-            if IsControlJustPressed(0, 38) then reeled = true break end
+            if contextJustPressed() then reeled = true break end
             Wait(0)
         end
 
@@ -416,6 +426,27 @@ RegisterCommand('sellfish', function()
     CreateThread(attemptSell)
 end, false)
 
+-- E must be polled every frame; Wait(400) in the UI loop misses single-frame presses.
+CreateThread(function()
+    while true do
+        if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
+            local atSpot = atFishingSpot()
+            if atSpot then
+                EnableControlAction(0, 38, true)
+                JC.showHelp('Press ~INPUT_CONTEXT~ to cast your line')
+                if contextJustPressed() then
+                    CreateThread(attemptFish)
+                end
+                Wait(0)
+            else
+                Wait(200)
+            end
+        else
+            Wait(400)
+        end
+    end
+end)
+
 CreateThread(function()
     while true do
         if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' then
@@ -426,9 +457,8 @@ CreateThread(function()
             if GetGameTimer() - lastBagSync > 2000 then
                 CreateThread(syncBagFromServer)
             end
-            local _, distance = nearestSpotIndex()
-            local cfg = Sunset.GetJobConfig('fisherman')
-            if isWithinCatchRadius(distance, cfg) then
+            local atSpot = atFishingSpot()
+            if atSpot then
                 local targetMode = spotUiMode()
                 if fishingUiMode ~= targetMode then
                     refreshSpotUi()
@@ -439,9 +469,6 @@ CreateThread(function()
                         capacity = (JC.sessionData or {}).capacity,
                         message = targetMode == 'full' and buildFullBagMessage() or nil,
                     })
-                end
-                if IsControlJustPressed(0, 38) then
-                    CreateThread(attemptFish)
                 end
                 Wait(0)
             else
@@ -455,7 +482,7 @@ CreateThread(function()
                         message = buildShiftMessage(),
                     })
                 end
-                Wait(400)
+                Wait(250)
             end
         else
             if not fishing and fishingUiMode ~= 'hidden' then hideFishingUi() end
@@ -476,7 +503,7 @@ CreateThread(function()
             JC.drawMarker(cfg.sellPoint.coords, 255, 200, 50)
             if JC.isNear(cfg.sellPoint.coords, cfg.sellRadius or 5.0) then
                 JC.showHelp('Press ~INPUT_CONTEXT~ to sell all Fresh Fish in your inventory')
-                if IsControlJustPressed(0, 38) then CreateThread(attemptSell) end
+                if contextJustPressed() then CreateThread(attemptSell) end
             end
             Wait(0)
         else
