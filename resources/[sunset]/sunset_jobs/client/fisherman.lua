@@ -294,6 +294,7 @@ end, false)
 CreateThread(function()
     while true do
         if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
+            JC.hideObjective()
             local _, distance = nearestSpotIndex()
             local cfg = Sunset.GetJobConfig('fisherman')
             if distance <= (cfg.catchRadius or 8.0) then

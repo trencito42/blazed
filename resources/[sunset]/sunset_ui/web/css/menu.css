@@ -4,7 +4,7 @@
     --os-secondary: #f2c15d; --os-secondary-dim: rgba(242,193,93,.18); --os-red: #ff3e36; --os-green: #28ef7d; --os-blue: #3aa7ff;
     --os-panel: rgba(13,10,16,.82); --os-darker: rgba(7,6,10,.9); --os-line: rgba(255,255,255,.1); --os-muted: rgba(255,255,255,.48);
     --os-title: 'Chakra Petch',sans-serif; --os-data: 'Rajdhani',sans-serif;
-    position: fixed; inset: 0; z-index: 60; overflow: hidden; color: #fff; font-family: var(--os-data);
+    position: fixed; inset: 0; z-index: 200; overflow: hidden; color: #fff; font-family: var(--os-data);
     background: transparent;
     backdrop-filter: none;
     pointer-events: none;

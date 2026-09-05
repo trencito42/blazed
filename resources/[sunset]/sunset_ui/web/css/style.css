@@ -47,19 +47,30 @@ body.game-paused #job-objective,
 body.game-paused #taxi-meter,
 body.game-paused #police-order,
 body.game-paused #notifications,
-body.game-paused #progress {
+body.game-paused #progress,
+body.menu-open #hud,
+body.menu-open #job-objective,
+body.menu-open #fishing-panel,
+body.menu-open #chat,
+body.menu-open #taxi-meter,
+body.menu-open #police-order,
+body.menu-open #notifications,
+body.menu-open #progress {
     opacity: 0 !important;
+    visibility: hidden !important;
     filter: blur(3px);
     pointer-events: none !important;
 }
 
 #hud,
 #job-objective,
+#fishing-panel,
+#chat,
 #taxi-meter,
 #police-order,
 #notifications,
 #progress {
-    transition: opacity 220ms ease, filter 220ms ease;
+    transition: opacity 220ms ease, filter 220ms ease, visibility 220ms ease;
 }
 
 .app-bg {

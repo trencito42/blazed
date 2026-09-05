@@ -343,12 +343,14 @@ const Menu = {
     show(data) {
         this.init();
         this.setTab('player');
+        document.body.classList.add('menu-open');
         $('#menu').classList.remove('hidden');
         this.update(data);
     },
 
     hide() {
         $('#menu').classList.add('hidden');
+        document.body.classList.remove('menu-open');
     },
 
     close() {

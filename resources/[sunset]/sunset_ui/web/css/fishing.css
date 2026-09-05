@@ -3,7 +3,7 @@
     left: 50%;
     bottom: 80px;
     transform: translateX(-50%);
-    z-index: 8500;
+    z-index: 45;
     width: min(400px, 92vw);
     padding: 20px 25px;
     display: flex;

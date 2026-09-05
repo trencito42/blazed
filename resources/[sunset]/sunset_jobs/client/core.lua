@@ -327,6 +327,9 @@ function JobClient.syncSessionState()
         JobClient.jobId = data.session.jobId
         JobClient.state = data.session.state or 'ACTIVE'
         JobClient.sessionData = data.session.data
+        if data.session.jobId == 'fisherman' then
+            JobClient.hideObjective()
+        end
         return true
     end
     if JobClient.state ~= 'IDLE' then
