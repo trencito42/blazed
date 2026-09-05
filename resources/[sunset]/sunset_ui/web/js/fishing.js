@@ -39,7 +39,7 @@ const Fishing = {
         html = html.replace(/\/[a-z][a-z0-9_]*/gi, (cmd) => `<span class="fishing__cmd">${cmd}</span>`);
         html = html.replace(/\bE\b/g, this._keyHtml());
         return html.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] || '');
-    },,
+    },
 
     _setBag(carried, capacity) {
         if (!this._bag) return;

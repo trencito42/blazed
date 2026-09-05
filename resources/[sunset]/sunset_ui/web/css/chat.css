@@ -146,11 +146,13 @@ body.chat-ui-open .chat-msg,
 
 .chat-messages {
     max-height: var(--chat-page-height);
+    overflow: hidden;
+    padding: 0 4px;
+    display: block;
+}
+
+.chat.chat-open .chat-messages {
     overflow-y: auto;
-    padding: 0 4px 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
 }
 
 .chat-msg {

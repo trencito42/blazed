@@ -60,12 +60,13 @@ const ChatSettings = {
     apply() {
         const s = this.settings || this.defaults;
         const lineHeight = 1.35;
-        const rowHeight = s.fontSize * lineHeight + 6;
-        const pageHeight = Math.ceil(s.pageSize * rowHeight + 10);
+        const rowHeight = s.fontSize * lineHeight + 2;
+        const pageHeight = Math.ceil(s.pageSize * rowHeight);
         const vars = {
             '--chat-font-size': `${s.fontSize}px`,
             '--chat-time-size': `${Math.max(9, s.fontSize - 2)}px`,
             '--chat-input-size': `${s.fontSize + 1}px`,
+            '--chat-page-size': String(s.pageSize),
             '--chat-page-height': `${pageHeight}px`,
             '--chat-line-height': String(lineHeight),
         };

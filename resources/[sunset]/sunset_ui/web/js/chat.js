@@ -2,9 +2,12 @@ const Chat = {
     messages: [],
     settingsOpen: false,
 
+    pageSize() {
+        return ChatSettings?.settings?.pageSize || 10;
+    },
+
     maxMessages() {
-        const page = ChatSettings?.settings?.pageSize || 10;
-        return Math.max(60, page * 6);
+        return Math.max(80, this.pageSize() * 8);
     },
 
     add(msg) {
@@ -24,7 +27,9 @@ const Chat = {
         const container = $('#chat-messages');
         if (!container) return;
         container.innerHTML = '';
-        this.messages.forEach((m) => {
+        const open = $('#chat')?.classList.contains('chat-open');
+        const visible = open ? this.messages : this.messages.slice(-this.pageSize());
+        visible.forEach((m) => {
             const el = document.createElement('div');
             el.className = 'chat-msg' + (m.type === 'me' ? ' chat-msg--me' : m.type === 'do' ? ' chat-msg--do' : '');
             el.innerHTML = `<span class="chat-msg__time">${m.time || ''}</span><span class="chat-msg__id">[${m.id}]</span><span class="chat-msg__name">${m.name}:</span> ${m.message}`;
@@ -54,6 +59,7 @@ const Chat = {
             document.body.classList.add('chat-ui-open');
             chat.classList.add('chat-open');
             wrap.classList.remove('hidden');
+            this.render();
             setTimeout(() => {
                 input.focus();
                 input.setSelectionRange(input.value.length, input.value.length);
@@ -63,6 +69,7 @@ const Chat = {
             document.body.classList.remove('chat-ui-open');
             chat.classList.remove('chat-open');
             wrap.classList.add('hidden');
+            this.render();
             input.value = '';
             input.blur();
         }
