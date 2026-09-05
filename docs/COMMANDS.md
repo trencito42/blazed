@@ -3,7 +3,8 @@
 ## General
 | Command | Description |
 |---------|-------------|
-| `/faction` | Faction info, rank, salary, your commands |
+| `/faction` | Member dashboard: roster, leaders, rank, duty, MOTD and weekly report |
+| `/factions` | Public directory of factions, leaders and recruitment status |
 | `/duty` | Toggle on/off shift |
 | `/leavefaction` | Leave current faction |
 | `/quitfaction` | Same as `/leavefaction` |
@@ -26,7 +27,8 @@
 | `/fpromote [id] [grade]` | Promote member |
 | `/fgiverank [id] [grade]` | Set member rank |
 | `/fwarn [id] [reason]` | Issue faction warning |
-| `/fmotd [message]` | Set message of the day |
+| `/fmotd` | Show the current faction message of the day in chat |
+| `/fmotd [message]` | Set the MOTD if your rank has permission |
 | `/fmembers` | List online members |
 
 ## LSPD / Law Enforcement

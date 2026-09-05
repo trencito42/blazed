@@ -154,29 +154,28 @@ CreateThread(function()
     while true do
         if radarActive then
             local ped = PlayerPedId()
-            if radarVehicle == 0 or not DoesEntityExist(radarVehicle)
+            local invalidRadarVehicle = radarVehicle == 0 or not DoesEntityExist(radarVehicle)
                 or GetPedInVehicleSeat(radarVehicle, -1) ~= ped
-                or Entity(radarVehicle).state.sunsetFactionVehicle ~= 'police' then
+                or Entity(radarVehicle).state.sunsetFactionVehicle ~= 'police'
+            if invalidRadarVehicle then
                 stopRadar(false)
                 exports.sunset_ui:Notify('Radar stopped because you left the driver seat or patrol vehicle.', 'warning', 6000)
-                goto continue
-            end
-
-            FreezeEntityPosition(radarVehicle, true)
-            SetVehicleHandbrake(radarVehicle, true)
-            local veh, speed = getVehicleInRadarCone()
-            if veh ~= 0 and speed > 0 then
-                local cfg = Sunset.Police and Sunset.Police.radar or {}
-                local now = GetGameTimer()
-                if speed > radarLimitKmh and now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
-                    lastRadarLock = now
-                    local result = Sunset.AwaitCallback('sunset:policeRadarLock', NetworkGetNetworkIdFromEntity(veh))
-                    if result and result.flagged then
-                        exports.sunset_ui:Notify(result.message or ('Radar lock: %d km/h'):format(speed), 'warning', 5000)
+            else
+                FreezeEntityPosition(radarVehicle, true)
+                SetVehicleHandbrake(radarVehicle, true)
+                local veh, speed = getVehicleInRadarCone()
+                if veh ~= 0 and speed > 0 then
+                    local cfg = Sunset.Police and Sunset.Police.radar or {}
+                    local now = GetGameTimer()
+                    if speed > radarLimitKmh and now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
+                        lastRadarLock = now
+                        local result = Sunset.AwaitCallback('sunset:policeRadarLock', NetworkGetNetworkIdFromEntity(veh))
+                        if result and result.flagged then
+                            exports.sunset_ui:Notify(result.message or ('Radar lock: %d km/h'):format(speed), 'warning', 5000)
+                        end
                     end
                 end
             end
-            ::continue::
             Wait((Sunset.Police and Sunset.Police.radar and Sunset.Police.radar.scanIntervalMs) or 750)
         else
             Wait(500)

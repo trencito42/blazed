@@ -309,27 +309,18 @@ RegisterCommand('fence', function()
     else exports.sunset_ui:Notify(err or 'Fence failed', 'error') end
 end, false)
 
-local function showFactionInfo(data)
-    if not data.isFaction and not data.description then
-        exports.sunset_ui:Notify('You are not in a faction. Join at an HQ (LSPD, EMS, Taxi...) or get a civilian job at the Job Center.', 'info', 8000)
-        return
-    end
-
-    local function chat(line)
-        exports.sunset_ui:Send('chatMessage', { id = 0, type = 'faction_info', name = 'FACTION', message = line, time = '' })
-    end
-
-    chat(('=== %s ==='):format(data.label))
-    chat(('Rank: %s | %s | $%s/hr'):format(data.gradeLabel or data.grade, data.onDuty and 'ON DUTY' or 'OFF DUTY', data.salary or 0))
-    if data.motd and data.motd ~= '' then chat('MOTD: ' .. data.motd) end
-    chat(('Fleet: %s | Civilian job: %s'):format(data.depot or 'none', data.civilianJob or 'unemployed'))
-    chat('Open M > Job > Faction Info for details, or use /help for your available commands.')
-end
-
 RegisterCommand('faction', function()
-    local data = Sunset.AwaitCallback('sunset:getFactionPanel')
-    if not data then return end
-    showFactionInfo(data)
+    local data, err = Sunset.AwaitCallback('sunset:factionDashboard')
+    if not data then return exports.sunset_ui:Notify(err or 'Faction panel could not be opened.', 'error', 7000) end
+    exports.sunset_ui:Send('factionPanelShow', data)
+    exports.sunset_ui:SetFocus(true, true)
+end, false)
+
+RegisterCommand('factions', function()
+    local data, err = Sunset.AwaitCallback('sunset:factionDirectory')
+    if not data then return exports.sunset_ui:Notify(err or 'Faction directory could not be opened.', 'error', 7000) end
+    exports.sunset_ui:Send('factionDirectoryShow', { factions = data })
+    exports.sunset_ui:SetFocus(true, true)
 end, false)
 
 AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
@@ -412,7 +403,8 @@ CreateThread(function()
     end
 
     TriggerEvent('chat:addSuggestion', '/duty', 'Toggle faction duty shift')
-    TriggerEvent('chat:addSuggestion', '/faction', 'Show faction info and your commands')
+    TriggerEvent('chat:addSuggestion', '/faction', 'Open your faction dashboard, roster and weekly report')
+    TriggerEvent('chat:addSuggestion', '/factions', 'Browse every server faction and application status')
     TriggerEvent('chat:addSuggestion', '/leavefaction', 'Leave your faction; keeps your civilian job')
     TriggerEvent('chat:addSuggestion', '/quitfaction', 'Same as /leavefaction; keeps your civilian job')
     TriggerEvent('chat:addSuggestion', '/quitgroup', 'Same as /leavefaction; keeps your civilian job')
@@ -442,6 +434,9 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/fence', 'Fence contraband at Syndicate HQ')
     TriggerEvent('chat:addSuggestion', '/pd', 'LSPD commands and help')
     TriggerEvent('chat:addSuggestion', '/pdgarage', 'Spawn MRPD patrol car (on duty)')
+    TriggerEvent('chat:addSuggestion', '/fd', 'LSFD how-to: duty, garage, fires, extinguisher')
+    TriggerEvent('chat:addSuggestion', '/firestart', 'Dispatch a vehicle fire if none is active (LSFD on duty)')
+    TriggerEvent('chat:addSuggestion', '/firecalls', 'List active fire incidents and set GPS (LSFD on duty)')
 end)
 
 local PD_HELP = {
@@ -473,6 +468,26 @@ local PD_HELP = {
 RegisterCommand('pd', function()
     for _, line in ipairs(PD_HELP) do
         exports.sunset_ui:Send('chatMessage', { id = 0, name = 'LSPD', message = line, time = '' })
+    end
+end, false)
+
+local FD_HELP = {
+    '=== LSFD (on duty) ===',
+    '/duty — Toggle shift at LS Fire Department HQ (orange marker)',
+    '[E] at Fire Station Garage — spawn firetruk',
+    '/firestart — Create a vehicle fire if none is active',
+    '/firecalls — List fires and put GPS on the first one',
+    '/calls — Accept civilian /service fire requests',
+    'At the wreck: you get a fire extinguisher — hold LMB and spray until it dies',
+    'Stay within ~8m of the burning car. When health hits 0 you get paid (~$350)',
+    'Engineer+ can /revive, Firefighter+ can /heal, all ranks /stabilize',
+    '/f [msg] — Faction radio  |  /faction — rank, salary, commands',
+    '/help — same commands filtered to your current rank',
+}
+
+RegisterCommand('fd', function()
+    for _, line in ipairs(FD_HELP) do
+        exports.sunset_ui:Send('chatMessage', { id = 0, type = 'faction_info', name = 'LSFD', message = line, time = '' })
     end
 end, false)
 

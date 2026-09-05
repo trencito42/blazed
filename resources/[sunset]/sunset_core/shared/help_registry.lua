@@ -88,6 +88,10 @@ Sunset.HelpDispatchEntries = {
 }
 
 Sunset.HelpFireEntries = {
-    { cmd = '/firecalls', desc = 'List and route to active fire incidents' },
-    { cmd = '/firestart', desc = 'Request an LSFD incident when none is active' },
+    { cmd = '/fd', desc = 'Full LSFD how-to in chat' },
+    { cmd = '/firestart', desc = 'Start a vehicle fire if none is active (on duty)' },
+    { cmd = '/firecalls', desc = 'List fires and set GPS to the first one' },
+    { cmd = '/calls', desc = 'Accept civilian /service fire calls' },
+    { cmd = 'Extinguisher', desc = 'Walk up to the burning wreck — spray LMB until it dies' },
+    { cmd = '[E] garage', desc = 'Spawn the firetruk at Fire Station Garage' },
 }

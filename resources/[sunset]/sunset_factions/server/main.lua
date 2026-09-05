@@ -252,7 +252,12 @@ RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, facti
     if not networkId or ownFaction ~= factionId or not faction or not faction.depot then return end
     if not FactionCore.isOnDuty(src) then return end
 
-    local vehicle = NetworkGetEntityFromNetworkId(networkId)
+    local vehicle = 0
+    for _ = 1, 20 do
+        vehicle = NetworkGetEntityFromNetworkId(networkId)
+        if vehicle ~= 0 and DoesEntityExist(vehicle) then break end
+        Wait(100)
+    end
     local ped = GetPlayerPed(src)
     if vehicle == 0 or not DoesEntityExist(vehicle) or ped == 0 then return end
     if GetPedInVehicleSeat(vehicle, -1) ~= ped then return end
@@ -392,6 +397,155 @@ exports.sunset_core:RegisterCallback('sunset:getFactionPanel', function(source)
         motd = motd,
         isLeader = FactionCore.isFactionLeader(char.id, factionId),
     }
+end)
+
+local function factionRoster(factionId)
+    local leaders = {}
+    for _, row in ipairs(MySQL.query.await([[
+        SELECT fl.character_id, c.firstname, c.lastname
+        FROM faction_leaders fl
+        LEFT JOIN characters c ON c.id = fl.character_id
+        WHERE fl.faction_id = ?
+        ORDER BY fl.assigned_at ASC
+    ]], { factionId }) or {}) do
+        leaders[tonumber(row.character_id)] = true
+    end
+
+    local online = {}
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local member = src and getChar(src)
+        if member and select(1, getFactionOf(member)) == factionId then
+            online[tonumber(member.id)] = { serverId = src, onDuty = FactionCore.isOnDuty(src) }
+        end
+    end
+
+    local roster = {}
+    for _, row in ipairs(MySQL.query.await('SELECT id, firstname, lastname, metadata FROM characters', {}) or {}) do
+        local metadata = row.metadata
+        if type(metadata) == 'string' then
+            local ok, decoded = pcall(json.decode, metadata)
+            metadata = ok and decoded or {}
+        end
+        metadata = type(metadata) == 'table' and metadata or {}
+        if metadata.faction == factionId then
+            local grade = tonumber(metadata.faction_grade) or 0
+            local gradeRow = Sunset.GetFactionGrade(factionId, grade)
+            local presence = online[tonumber(row.id)]
+            roster[#roster + 1] = {
+                characterId = tonumber(row.id),
+                serverId = presence and presence.serverId or nil,
+                name = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('^%s+', ''):gsub('%s+$', ''),
+                grade = grade,
+                gradeLabel = gradeRow and gradeRow.label or ('Rank ' .. grade),
+                leader = leaders[tonumber(row.id)] == true,
+                online = presence ~= nil,
+                onDuty = presence and presence.onDuty or false,
+            }
+        end
+    end
+    table.sort(roster, function(a, b)
+        if a.leader ~= b.leader then return a.leader end
+        if a.online ~= b.online then return a.online end
+        if a.grade ~= b.grade then return a.grade > b.grade end
+        return a.name < b.name
+    end)
+    return roster
+end
+
+exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
+    local char = getChar(source)
+    if not char then return nil, 'Your character is not loaded.' end
+    local factionId, grade = getFactionOf(char)
+    local faction = factionId and Sunset.Factions[factionId]
+    if not faction then return nil, 'You are not a member of a faction. Use /factions to browse them.' end
+    local gradeRow = Sunset.GetFactionGrade(factionId, grade)
+    local motd = ''
+    local motdOk, motdRow = pcall(function()
+        return MySQL.single.await('SELECT message FROM faction_motd WHERE faction_id = ?', { factionId })
+    end)
+    if not motdOk then return nil, 'Faction data could not be read from the database. Please try again.' end
+    if motdRow then motd = tostring(motdRow.message or '') end
+    local activityOk, activity = pcall(function()
+        return MySQL.single.await([[
+            SELECT COUNT(*) AS total FROM faction_audit_log
+            WHERE faction_id = ? AND actor_character_id = ?
+              AND created_at >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+        ]], { factionId, char.id })
+    end)
+    if not activityOk then return nil, 'Weekly faction report could not be read. Please try again.' end
+    local rosterOk, roster = pcall(factionRoster, factionId)
+    if not rosterOk then return nil, 'Faction roster could not be read. Please try again.' end
+    return {
+        id = factionId,
+        label = faction.label,
+        description = faction.description,
+        grade = grade,
+        gradeLabel = gradeRow and gradeRow.label or ('Rank ' .. tostring(grade)),
+        salary = gradeRow and gradeRow.salary or 0,
+        onDuty = FactionCore.isOnDuty(source),
+        leader = FactionCore.isFactionLeader(char.id, factionId),
+        motd = motd,
+        depot = faction.depot and faction.depot.label or 'No fleet garage',
+        report = { current = tonumber(activity and activity.total) or 0, target = faction.weeklyReportTarget or 0 },
+        members = roster,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
+    if not getChar(source) then return nil, 'Your character is not loaded.' end
+    local result, byId = {}, {}
+    for factionId, faction in pairs(Sunset.Factions or {}) do
+        local entry = {
+            id = factionId, label = faction.label, type = faction.type,
+            factionType = faction.factionType, description = faction.description,
+            applicationsOpen = faction.applicationsOpen == true,
+            applicationLabel = faction.type == 'illegal' and 'Invite only'
+                or (faction.applicationsOpen and 'Open — join at HQ' or 'Closed'),
+            online = 0, onDuty = 0, total = 0, leaders = {},
+        }
+        byId[factionId] = entry
+        result[#result + 1] = entry
+    end
+    local charactersOk, characters = pcall(function()
+        return MySQL.query.await('SELECT id, metadata FROM characters', {})
+    end)
+    if not charactersOk then return nil, 'Faction directory could not read member data. Please try again.' end
+    for _, row in ipairs(characters or {}) do
+        local metadata = row.metadata
+        if type(metadata) == 'string' then
+            local ok, decoded = pcall(json.decode, metadata)
+            metadata = ok and decoded or {}
+        end
+        local entry = type(metadata) == 'table' and byId[metadata.faction]
+        if entry then entry.total = entry.total + 1 end
+    end
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local member = src and getChar(src)
+        local factionId = member and select(1, getFactionOf(member))
+        local entry = factionId and byId[factionId]
+        if entry then
+            entry.online = entry.online + 1
+            if FactionCore.isOnDuty(src) then entry.onDuty = entry.onDuty + 1 end
+        end
+    end
+    local leadersOk, leaderRows = pcall(function()
+        return MySQL.query.await([[
+            SELECT fl.faction_id, c.firstname, c.lastname FROM faction_leaders fl
+            LEFT JOIN characters c ON c.id = fl.character_id ORDER BY fl.assigned_at ASC
+        ]], {})
+    end)
+    if not leadersOk then return nil, 'Faction directory could not read leadership data. Please try again.' end
+    for _, row in ipairs(leaderRows or {}) do
+        local entry = byId[row.faction_id]
+        if entry then entry.leaders[#entry.leaders + 1] = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('%s+$', '') end
+    end
+    table.sort(result, function(a, b)
+        if a.type ~= b.type then return a.type == 'legal' end
+        return a.label < b.label
+    end)
+    return result
 end)
 
 AddEventHandler('playerDropped', function()

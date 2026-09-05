@@ -296,6 +296,15 @@ window.addEventListener('message', (event) => {
         case 'helpHide':
             if (window.Panels) Panels.hideHelp();
             break;
+        case 'factionPanelShow':
+            if (window.FactionPanels) FactionPanels.showDashboard(data || event.data.data);
+            break;
+        case 'factionDirectoryShow':
+            if (window.FactionPanels) FactionPanels.showDirectory(data || event.data.data);
+            break;
+        case 'factionPanelsHide':
+            if (window.FactionPanels) FactionPanels.hide();
+            break;
         case 'policeOrderShow':
             if (window.Overlays) Overlays.showPoliceOrder(data || event.data.data);
             break;

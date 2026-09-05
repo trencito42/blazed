@@ -58,10 +58,13 @@ Leaders (or ranks with permission):
 | `/fpromote [id] [grade]` | promote |
 | `/fgiverank [id] [grade]` | giverank |
 | `/fwarn [id] [reason]` | fwarn |
-| `/fmotd [message]` | fmotd |
+| `/fmotd` | Any member can read the current MOTD in chat |
+| `/fmotd [message]` | fmotd permission required to update it |
 | `/fmembers` | members |
 
 ## Data Model
+
+`/faction` opens the member dashboard with roster, leaders, MOTD, duty/rank/salary, fleet and current weekly activity target. `/factions` opens the public server directory with each organization's leaders, population, on-duty count and recruitment status.
 
 - Membership: `characters.metadata.faction`, `metadata.faction_grade`
 - Leaders: `faction_leaders` table

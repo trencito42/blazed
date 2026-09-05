@@ -5,6 +5,8 @@ Sunset = Sunset or {}
 Sunset.Factions = {
     police = {
         label = 'LSPD',
+        applicationsOpen = true,
+        weeklyReportTarget = 20,
         type = 'legal',
         factionType = 'law_enforcement',
         description = 'Los Santos Police Department — patrol, enforce the law, and protect citizens.',
@@ -62,6 +64,8 @@ Sunset.Factions = {
     },
     medic = {
         label = 'Pillbox EMS',
+        applicationsOpen = true,
+        weeklyReportTarget = 15,
         type = 'legal',
         factionType = 'ems',
         description = 'Emergency medical services — heal, revive, and stabilize patients at Pillbox.',
@@ -88,6 +92,8 @@ Sunset.Factions = {
     },
     taxi = {
         label = 'Downtown Cab Co.',
+        applicationsOpen = true,
+        weeklyReportTarget = 20,
         type = 'legal',
         factionType = 'transport',
         description = 'City taxi service — pick up passengers via the Downtown Cab phone app or manual fares.',
@@ -113,6 +119,8 @@ Sunset.Factions = {
     },
     mechanic = {
         label = 'LS Customs',
+        applicationsOpen = true,
+        weeklyReportTarget = 15,
         type = 'legal',
         factionType = 'mechanic',
         description = 'Vehicle repair shop — fix cars at HQ or on the road for other players.',
@@ -138,9 +146,11 @@ Sunset.Factions = {
     },
     lsfd = {
         label = 'LS Fire Department',
+        applicationsOpen = true,
+        weeklyReportTarget = 15,
         type = 'legal',
         factionType = 'fire_rescue',
-        description = 'Fire and rescue — field stabilization and extraction. Revive at Engineer rank and above.',
+        description = 'Fire and rescue — clock in, take the firetruk, answer vehicle fires with the extinguisher. Revive at Engineer rank and above.',
         society = 'lsfd',
         duty = true,
         hq = vector3(1194.82, -1464.01, 34.86),
@@ -164,6 +174,8 @@ Sunset.Factions = {
     },
     sunset_cartel = {
         label = 'Sunset Cartel',
+        applicationsOpen = false,
+        weeklyReportTarget = 10,
         type = 'illegal',
         factionType = 'criminal_org',
         description = 'Organized crime — craft at the lab, move product, stay off the radar.',
@@ -184,6 +196,8 @@ Sunset.Factions = {
     },
     night_syndicate = {
         label = 'Night Syndicate',
+        applicationsOpen = false,
+        weeklyReportTarget = 10,
         type = 'illegal',
         factionType = 'criminal_org',
         description = 'Street syndicate — weapons bench, fencing stolen goods, crew operations.',
@@ -305,7 +319,7 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
             list[#list + 1] = { cmd = '/confiscate [id]', desc = 'Confiscate configured contraband' }
         end
         if Sunset.HasFactionPerm(jobId, grade, 'radar') then
-            list[#list + 1] = { cmd = '/startradar', desc = 'Activate speed radar' }
+            list[#list + 1] = { cmd = '/startradar [limit_kmh]', desc = 'Lock the patrol car and monitor traffic' }
             list[#list + 1] = { cmd = '/stopradar', desc = 'Deactivate speed radar' }
             list[#list + 1] = { cmd = '/radars', desc = 'List fixed speed cameras' }
         end
@@ -316,9 +330,17 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade)
             list[#list + 1] = { cmd = '/backup', desc = 'Request LSPD backup' }
         end
     end
+    if Sunset.FactionTypeMatches(jobId, 'fire_rescue') then
+        list[#list + 1] = { cmd = '/fd', desc = 'LSFD how-to: duty, garage, fires, payout' }
+        list[#list + 1] = { cmd = '/firestart', desc = 'Dispatch a vehicle fire if none is active (on duty)' }
+        list[#list + 1] = { cmd = '/firecalls', desc = 'List active fires and set GPS (on duty)' }
+        list[#list + 1] = { cmd = '/calls', desc = 'Open service calls — accept civilian /service fire' }
+        list[#list + 1] = { cmd = 'Extinguisher', desc = 'At the wreck, spray LMB until the fire is out (~$350)' }
+        list[#list + 1] = { cmd = '[E] garage', desc = 'Spawn firetruk at Fire Station Garage (on duty)' }
+    end
+    list[#list + 1] = { cmd = '/fmotd [message?]', desc = 'Read MOTD; permitted ranks may set it' }
     if Sunset.HasFactionPerm(jobId, grade, 'fmotd') or Sunset.HasFactionPerm(jobId, grade, 'invite') then
         list[#list + 1] = { cmd = '/fmembers', desc = 'List online faction members' }
-        list[#list + 1] = { cmd = '/fmotd [message]', desc = 'Set faction message of the day' }
     end
     if Sunset.HasFactionPerm(jobId, grade, 'fwarn') then
         list[#list + 1] = { cmd = '/fwarn [id] [reason]', desc = 'Issue faction warning' }

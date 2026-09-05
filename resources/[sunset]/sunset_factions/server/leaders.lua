@@ -32,7 +32,13 @@ local function highestFactionGrade(factionId)
 end
 
 local function getFactionMotd(factionId)
-    local row = MySQL.single.await('SELECT message FROM faction_motd WHERE faction_id = ?', { factionId })
+    local ok, row = pcall(function()
+        return MySQL.single.await('SELECT message FROM faction_motd WHERE faction_id = ?', { factionId })
+    end)
+    if not ok then
+        print(('[sunset_factions] Failed to read MOTD for %s: %s'):format(factionId, tostring(row)))
+        return ''
+    end
     return row and tostring(row.message or '') or ''
 end
 
