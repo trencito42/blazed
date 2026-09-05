@@ -205,6 +205,11 @@
     display: none;
 }
 
+.fishing-shell.state-idle .fishing__progress,
+.fishing-shell.state-shift .fishing__progress {
+    display: none;
+}
+
 .fishing-shell.state-shift .fishing__message {
     font-size: 15px;
     font-weight: 600;
