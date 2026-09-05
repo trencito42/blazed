@@ -23,6 +23,7 @@ files {
     'web/css/fuel_pump.css',
     'web/css/fishing.css',
     'web/css/courier.css',
+    'web/css/factions.css',
     'web/css/auth_loading.css',
     'web/css/theme.css',
     'web/js/*.js',
