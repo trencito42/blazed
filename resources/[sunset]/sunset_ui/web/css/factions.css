@@ -74,7 +74,7 @@
 .faction-directory-intro { color: rgba(255,255,255,.58); margin: 8px 0 18px; }
 .faction-directory-list { max-height: 68vh; display: grid; gap: 8px; padding-right: 5px; }
 .faction-directory-card { padding: 15px 17px; border-left: 3px solid #ff8a00; background: rgba(8,7,8,.14); text-shadow: 0 2px 5px #000; }
-.faction-directory-card--illegal { border-left-color: #a94dff; }
+.faction-directory-card--illegal { border-left-color: #d86c18; }
 .faction-directory-card__top > div { display: flex; flex-direction: column; }
 .faction-directory-card__top strong { font: 700 17px var(--sunset-display, 'Chakra Petch'); }
 .faction-directory-card__top span, .faction-directory-card__meta { color: rgba(255,255,255,.48); font-size: 12px; letter-spacing: .6px; }

@@ -25,6 +25,7 @@ files {
     'web/css/courier.css',
     'web/css/factions.css',
     'web/css/auth_loading.css',
+    'web/css/spawn.css',
     'web/css/theme.css',
     'web/js/*.js',
     'web/vendor/**/*',

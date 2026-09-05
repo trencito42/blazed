@@ -172,10 +172,10 @@ body.chat-ui-open .chat-msg,
 .chat-msg--r,
 .chat-msg--d,
 .chat-msg--faction_info {
-    color: #dca8ff;
-    border-left: 2px solid #b900ff;
+    color: #ffc27a;
+    border-left: 2px solid #ff8a1f;
     padding-left: 7px;
-    background: linear-gradient(90deg, rgba(185, 0, 255, .14), transparent 72%);
+    background: linear-gradient(90deg, rgba(255, 138, 31, .14), transparent 72%);
 }
 .chat-msg--gov {
     color: #ffd36a;

@@ -1,13 +1,35 @@
 local inCharacterFlow = false
+local pendingSpawnCharacter = nil
+
+local function showSpawnSelection(char)
+    pendingSpawnCharacter = char
+    local pos = char and char.position
+    exports.sunset_ui:Show('spawn', {
+        hasLastLocation = type(pos) == 'table' and tonumber(pos.x) ~= nil and tonumber(pos.y) ~= nil,
+    })
+end
 
 local function spawnCharacter(char)
     if not char.appearance or not next(char.appearance) then
         TriggerEvent('sunset:client:appearanceRequired', char)
         return
     end
-    exports.sunset_ui:Show('loading')
-    TriggerEvent('sunset:client:spawnCharacter', char)
+    showSpawnSelection(char)
 end
+
+AddEventHandler('sunset:client:spawnSelectionRequired', showSpawnSelection)
+
+AddEventHandler('sunset:nui:spawnSelect', function(data)
+    if not pendingSpawnCharacter then return end
+    local choice = data and data.location
+    if choice ~= 'default' and choice ~= 'last' then
+        return exports.sunset_ui:Notify('Choose Default Spawn or Last Location.', 'error')
+    end
+    local char = pendingSpawnCharacter
+    pendingSpawnCharacter = nil
+    exports.sunset_ui:Show('loading')
+    TriggerEvent('sunset:client:spawnCharacter', char, choice)
+end)
 
 local function showCharacterList()
     local characters, err = Sunset.AwaitCallback('sunset:getCharacters')

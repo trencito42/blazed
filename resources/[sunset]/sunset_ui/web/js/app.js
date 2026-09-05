@@ -131,6 +131,9 @@ window.addEventListener('message', (event) => {
             if (screen === 'loading') {
                 if (window.LoadingScreen) LoadingScreen.start(data);
             }
+            if (screen === 'spawn' && window.SpawnSelector) {
+                SpawnSelector.show(data || {});
+            }
             break;
 
         case 'hide':
@@ -479,6 +482,7 @@ window.addEventListener('message', (event) => {
 // Close character screens on ESC (not menu/chat)
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    if (['auth', 'loading', 'spawn'].includes(App.currentScreen)) return;
     const dealership = $('#dealership');
     if (dealership && !dealership.classList.contains('hidden')) {
         post('dealershipClose');

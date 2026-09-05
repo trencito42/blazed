@@ -232,9 +232,7 @@ local function finishAppearanceAndSpawn(char)
 
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('appearanceHide', {})
-    exports.sunset_ui:Show('loading')
-
-    TriggerEvent('sunset:client:spawnCharacter', char)
+    TriggerEvent('sunset:client:spawnSelectionRequired', char)
 end
 
 AddEventHandler('sunset:nui:appearanceSave', function()

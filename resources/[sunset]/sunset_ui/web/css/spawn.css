@@ -1,0 +1,58 @@
+.screen--spawn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 38px;
+    overflow: hidden;
+    color: #fff;
+    background: transparent;
+}
+
+.spawn-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(8, 7, 6, .04) 20%, rgba(4, 3, 3, .48) 100%);
+}
+
+.spawn-heading { position: relative; z-index: 1; text-align: center; text-shadow: 0 3px 10px #000; }
+.spawn-heading span { color: #ff9a32; font: 700 11px/1 'Chakra Petch', sans-serif; letter-spacing: 4px; text-transform: uppercase; }
+.spawn-heading h1 { margin: 8px 0 5px; font: 700 clamp(32px, 4vw, 54px)/1 'Chakra Petch', sans-serif; letter-spacing: 3px; text-transform: uppercase; }
+.spawn-heading p { color: rgba(255,255,255,.66); font: 600 15px/1.3 'Rajdhani', sans-serif; letter-spacing: 1px; }
+
+.spawn-options { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(2, minmax(250px, 310px)); gap: 20px; }
+.spawn-option {
+    position: relative;
+    display: flex;
+    min-height: 330px;
+    flex-direction: column;
+    align-items: center;
+    padding: 35px 27px 25px;
+    color: #fff;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,.13);
+    border-top: 2px solid rgba(255,255,255,.2);
+    background: linear-gradient(180deg, rgba(20,16,13,.36), rgba(8,7,7,.25));
+    box-shadow: 0 18px 45px rgba(0,0,0,.24);
+    clip-path: polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, opacity .2s ease;
+}
+.spawn-option:hover, .spawn-option.is-selected { transform: translateY(-6px); border-color: rgba(255,145,36,.7); border-top-color: #ff9124; background: linear-gradient(180deg, rgba(255,126,15,.2), rgba(11,9,8,.3)); }
+.spawn-option:disabled { opacity: .38; pointer-events: none; }
+.spawn-option__icon { display: grid; width: 66px; height: 66px; margin-bottom: 25px; place-items: center; color: #ff9a32; border: 1px solid rgba(255,145,36,.45); background: rgba(255,126,15,.1); transform: rotate(45deg); }
+.spawn-option__icon svg { width: 35px; height: 35px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transform: rotate(-45deg); }
+.spawn-option__eyebrow { color: #ff9a32; font: 700 10px/1 'Chakra Petch', sans-serif; letter-spacing: 2px; text-transform: uppercase; }
+.spawn-option strong { margin: 9px 0 10px; font: 700 24px/1 'Chakra Petch', sans-serif; text-transform: uppercase; }
+.spawn-option small { min-height: 40px; color: rgba(255,255,255,.62); font: 500 14px/1.4 'Rajdhani', sans-serif; }
+.spawn-option__action { width: 100%; margin-top: auto; padding-top: 17px; color: rgba(255,255,255,.58); border-top: 1px solid rgba(255,255,255,.1); font: 700 11px/1 'Chakra Petch', sans-serif; letter-spacing: 1.5px; text-transform: uppercase; }
+.spawn-option.is-selected .spawn-option__action { color: #ffad5b; }
+.spawn-option__action b { margin-left: 6px; color: #ff9124; font-size: 17px; }
+.spawn-footer { position: relative; z-index: 1; color: rgba(255,255,255,.5); font: 600 12px/1 'Rajdhani', sans-serif; letter-spacing: 1px; text-shadow: 0 2px 6px #000; }
+.spawn-footer span { color: #ff9a32; }
+
+@media (max-width: 680px) {
+    .screen--spawn { gap: 22px; }
+    .spawn-options { grid-template-columns: repeat(2, minmax(180px, 1fr)); width: 94vw; }
+    .spawn-option { min-height: 285px; padding: 28px 16px 20px; }
+}
