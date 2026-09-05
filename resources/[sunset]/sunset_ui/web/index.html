@@ -203,6 +203,36 @@
             </div>
         </section>
 
+        <section id="screen-spawn" class="screen screen--spawn hidden">
+            <div class="spawn-vignette"></div>
+            <header class="spawn-heading">
+                <span>Sunset entry protocol</span>
+                <h1>Choose your location</h1>
+                <p>Select where your character enters Los Santos.</p>
+            </header>
+            <div class="spawn-options" id="spawn-options">
+                <button type="button" class="spawn-option is-selected" data-spawn="last">
+                    <span class="spawn-option__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
+                    </span>
+                    <span class="spawn-option__eyebrow">Continue journey</span>
+                    <strong>Last Location</strong>
+                    <small>Return to the place where you last disconnected.</small>
+                    <span class="spawn-option__action">Select location <b>→</b></span>
+                </button>
+                <button type="button" class="spawn-option" data-spawn="default">
+                    <span class="spawn-option__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-6h4v6"/></svg>
+                    </span>
+                    <span class="spawn-option__eyebrow">Fresh arrival</span>
+                    <strong>Default Spawn</strong>
+                    <small>Start from the city arrival point.</small>
+                    <span class="spawn-option__action">Select location <b>→</b></span>
+                </button>
+            </div>
+            <footer class="spawn-footer"><span>A / D</span> or arrow keys to navigate · <span>Enter</span> to confirm</footer>
+        </section>
+
         <section id="screen-auth" class="screen screen--auth hidden">
             <div class="auth-vignette"></div>
             <div class="auth-scanlines"></div>
@@ -678,35 +708,6 @@
             </div>
         </section>
 
-        <section id="screen-spawn" class="screen screen--spawn hidden">
-            <div class="spawn-vignette"></div>
-            <header class="spawn-heading">
-                <span>Sunset entry protocol</span>
-                <h1>Choose your location</h1>
-                <p>Select where your character enters Los Santos.</p>
-            </header>
-            <div class="spawn-options" id="spawn-options">
-                <button type="button" class="spawn-option is-selected" data-spawn="last">
-                    <span class="spawn-option__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
-                    </span>
-                    <span class="spawn-option__eyebrow">Continue journey</span>
-                    <strong>Last Location</strong>
-                    <small>Return to the place where you last disconnected.</small>
-                    <span class="spawn-option__action">Select location <b>→</b></span>
-                </button>
-                <button type="button" class="spawn-option" data-spawn="default">
-                    <span class="spawn-option__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-6h4v6"/></svg>
-                    </span>
-                    <span class="spawn-option__eyebrow">Fresh arrival</span>
-                    <strong>Default Spawn</strong>
-                    <small>Start from the city arrival point.</small>
-                    <span class="spawn-option__action">Select location <b>→</b></span>
-                </button>
-            </div>
-            <footer class="spawn-footer"><span>A / D</span> or arrow keys to navigate · <span>Enter</span> to confirm</footer>
-        </section>
     </div>
 
     <div id="faction-directory" class="faction-overlay hidden">
