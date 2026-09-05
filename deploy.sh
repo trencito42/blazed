@@ -52,6 +52,16 @@ pull_repo() {
 
 pull_repo
 
+# Docker Compose reads .env for interpolation, but those values are not exported
+# to this shell. The migration commands below also need the same credentials;
+# without this, `mariadb-admin -p"${MARIADB_PASSWORD}"` becomes bare `-p` and
+# waits forever for an interactive password prompt during unattended deploys.
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
 chmod -R a+rX config docker resources sql
 sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
 chmod +x docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
