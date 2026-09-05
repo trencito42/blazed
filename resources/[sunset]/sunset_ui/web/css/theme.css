@@ -119,6 +119,33 @@ h5,
     pointer-events: auto;
 }
 
+/* Overlay panels — match M-menu typography scale */
+.overlay-panel {
+    font-size: 15px;
+}
+
+.overlay-panel h2,
+.overlay-panel .panel-kicker {
+    font-size: 22px;
+}
+
+.overlay-panel .garage-hint,
+.overlay-panel .field span,
+.overlay-panel .panel-list li,
+.overlay-panel .craft-meta {
+    font-size: 13px;
+}
+
+.overlay-panel .panel-close,
+.overlay-panel .btn {
+    font-size: 12px;
+}
+
+.overlay-panel__box--garage .menu-vcard__top strong { font-size: 16px; }
+.overlay-panel__box--garage .menu-vcard__plate { font-size: 14px; }
+.overlay-panel__box--garage .menu-vcard__meta { font-size: 12px; }
+.overlay-panel__box--garage .menu-vcard__btn { font-size: 10px; }
+
 .overlay-panel__box {
     position: relative;
     background:
@@ -324,8 +351,8 @@ h5,
 
 /* Sunset OS HUD modules — same cut corners, scanlines and segmented data bars. */
 .notifications {
-    top: 22px;
-    right: 22px;
+    top: 118px;
+    right: 25px;
     gap: 9px;
     width: min(390px, 36vw);
     pointer-events: none;

@@ -38,6 +38,8 @@ const Hud = {
         }
         if (data.armor !== undefined) {
             const armor = Math.round(this.clamp(data.armor));
+            const armorWrap = document.querySelector('.status-bar-wrapper--armor');
+            if (armorWrap) armorWrap.classList.toggle('hidden', armor <= 0);
             $('#hud-armor').style.width = `${armor}%`;
         }
         if (data.cash !== undefined) $('#hud-cash').textContent = formatMoney(data.cash);
@@ -102,6 +104,12 @@ const Hud = {
         const engineStat = $('#hud-engine-stat');
         engineStat.classList.toggle('warn', engine <= 50);
         engineStat.classList.toggle('crit', engine <= 25);
+
+        const odoEl = $('#hud-odometer');
+        if (odoEl && data.odometer !== undefined) {
+            const km = Math.max(0, Number(data.odometer) || 0);
+            odoEl.textContent = km >= 1000 ? Math.round(km).toLocaleString('en-US') : km.toFixed(1);
+        }
     },
 };
 

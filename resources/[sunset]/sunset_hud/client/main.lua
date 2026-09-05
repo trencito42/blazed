@@ -125,6 +125,7 @@ local function buildHudData()
         data.rpm = vehState.rpm
         data.fuel = vehState.fuel
         data.engine = vehState.engine
+        data.odometer = vehState.odometer
         data.locked = vehState.locked
         data.seatbelt = vehState.seatbelt
         data.lightMode = vehState.lightMode or 0

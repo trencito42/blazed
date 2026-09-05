@@ -335,7 +335,7 @@ body.game-paused #progress {
 /* ═══ NOTIFICATIONS ═══ */
 .notifications {
     position: fixed;
-    top: 24px;
+    top: 118px;
     right: 24px;
     z-index: 100;
     display: flex;

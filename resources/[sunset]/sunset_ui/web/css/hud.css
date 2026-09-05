@@ -150,11 +150,11 @@
 .money-val { font-size: 13px; font-weight: 700; color: #6cdc6a; }
 .stat-row--time span { font-size: 11px; color: rgba(255,255,255,0.5); }
 
-/* ── Location — dreapta minimap-ului ── */
+/* ── Location — above minimap ── */
 .hud-bl {
     position: absolute;
-    left: 295px;
-    bottom: 28px;
+    left: 18px;
+    bottom: 218px;
 }
 
 .loc-box {
@@ -503,7 +503,7 @@
     .fh-stat__val { font-size: 15px; }
     .hud-player-name,
     .hud-player-id { font-size: 20px; }
-    .hud-bl { left: 260px; bottom: 22px; }
+    .hud-bl { left: 14px; bottom: 198px; }
     .hud-logo-wrap { bottom: 198px; left: 14px; }
     .hud-logo { width: 72px; }
     .taxi-meter { bottom: 220px; }
@@ -725,7 +725,7 @@
     gap: 20px;
     padding: 4px 0;
     background: transparent;
-    border-right: 3px solid var(--screen-accent);
+    border-right: none;
     box-shadow: none;
     clip-path: none;
     backdrop-filter: none;
@@ -767,7 +767,8 @@
     font-size: 14px;
 }
 
-.status-bars-container { display:flex; gap:10px; }
+.status-bars-container { display:flex; gap:10px; justify-content:flex-end; }
+.status-bars-container .status-bar-wrapper.hidden { display: none; }
 .status-bar-wrapper {
     display: flex;
     align-items: center;
@@ -800,11 +801,11 @@
 .fill-armor { width:0; background:var(--screen-secondary); box-shadow:var(--screen-secondary-glow); }
 
 .hud-bl {
-    left: 295px;
-    bottom: 28px;
+    left: 18px;
+    bottom: 218px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
 }
 .compass-heading {
     display: flex;
@@ -814,7 +815,7 @@
     height: 50px;
     color: var(--screen-accent);
     background: transparent;
-    border-left: 2px solid var(--screen-accent);
+    border: none;
     clip-path: none;
     font: 700 22px/1 'Chakra Petch',sans-serif;
     text-shadow: 0 0 8px rgba(255,119,0,.75), 0 2px 6px rgba(0,0,0,.85);
@@ -824,8 +825,8 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 2px 0 2px 12px;
-    border-left: 3px solid var(--screen-secondary);
+    padding: 0;
+    border: none;
     background: transparent;
 }
 .street-name {
@@ -886,6 +887,23 @@
 }
 .speed-val.anim-speed { animation:screenSpeedPulse .15s ease-out; }
 .speed-gear.anim-gear { animation:screenGearPop .3s cubic-bezier(.175,.885,.32,1.275); }
+.speed-odo {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 2px;
+    color: rgba(255,255,255,.42);
+    font: 600 11px/1 'Chakra Petch',sans-serif;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+.speed-odo strong {
+    color: rgba(255,255,255,.78);
+    font: 700 13px/1 'Chakra Petch',sans-serif;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+}
 .rpm-track {
     width: 100%;
     height: 10px;
@@ -941,7 +959,7 @@
 
 @media(max-width:1280px) {
     .hud-tr { top:18px; right:18px; }
-    .hud-bl { left:260px; bottom:22px; }
+    .hud-bl { left:14px; bottom:198px; }
     .hud-bottom-right { right:22px; bottom:22px; }
     .speedo-panel { min-width:235px; padding:13px 20px; }
     .speed-val { font-size:46px; }

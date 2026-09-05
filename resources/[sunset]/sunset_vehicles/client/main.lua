@@ -9,6 +9,9 @@ local lastBodyHealth = 1000.0
 local lastVehSpeed = 0.0
 local engineEnabled = {}
 local lastEjectAt = 0
+local odometerKm = 0.0
+local odometerPlate = nil
+local lastOdoCoords = nil
 
 -- GTA fuel natives use liters (0..fPetrolTankVolume), not 0–100%. We track percent for HUD/DB.
 local function getNativeTankVolume(veh)
@@ -55,8 +58,40 @@ local function isPassenger()
     return GetPedInVehicleSeat(GetVehiclePedIsIn(ped, false), -1) ~= ped
 end
 
+local function buildStoreProps(veh)
+    local props = { odometer = math.floor(odometerKm * 10) / 10 }
+    if veh and veh ~= 0 then props.model = GetEntityModel(veh) end
+    return props
+end
+
+local function decodeVehicleProps(raw)
+    if type(raw) == 'table' then return raw end
+    if type(raw) ~= 'string' or raw == '' then return nil end
+    local ok, props = pcall(json.decode, raw)
+    if ok and type(props) == 'table' then return props end
+    return nil
+end
+
 local function notify(msg, type)
     exports.sunset_ui:Notify(msg, type or 'info')
+end
+
+local function resetOdometerTracking(plate, km)
+    odometerPlate = plate and normalizePlate(plate) or nil
+    odometerKm = math.max(0, tonumber(km) or 0)
+    lastOdoCoords = nil
+end
+
+local function tickOdometer(veh)
+    if not veh or veh == 0 then return end
+    local coords = GetEntityCoords(veh)
+    if lastOdoCoords then
+        local delta = #(coords - lastOdoCoords)
+        if delta > 0.02 and delta < 120.0 then
+            odometerKm = odometerKm + (delta / 1000.0)
+        end
+    end
+    lastOdoCoords = coords
 end
 
 local function blocked()
@@ -283,6 +318,11 @@ CreateThread(function()
                 writeFuelPercent(veh, fuel)
                 lastBodyHealth = GetVehicleBodyHealth(veh)
                 lastVehSpeed = GetEntitySpeed(veh)
+                local plate = normalizePlate(GetVehicleNumberPlateText(veh))
+                if plate ~= odometerPlate then
+                    resetOdometerTracking(plate, 0)
+                end
+                lastOdoCoords = GetEntityCoords(veh)
                 local _, lightsOn, highbeams = GetVehicleLightsState(veh)
                 if highbeams == 1 then lightMode = 2
                 elseif lightsOn == 1 then lightMode = 1
@@ -290,6 +330,7 @@ CreateThread(function()
             end
 
             applyCollisionDamage(veh)
+            tickOdometer(veh)
 
             local drain = computeFuelDrain(veh)
             if drain > 0 then
@@ -300,6 +341,7 @@ CreateThread(function()
             Wait(1000)
         else
             currentVeh = 0
+            lastOdoCoords = nil
             Wait(500)
         end
     end
@@ -324,6 +366,7 @@ function GetVehicleState()
         seatbelt = seatbelt,
         lightMode = lightMode,
         engineOn = GetIsVehicleEngineRunning(veh),
+        odometer = math.floor(odometerKm * 10) / 10,
     }
 end
 
@@ -521,6 +564,9 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     SetVehicleEngineOn(vehicle, false, true, true)
     SetModelAsNoLongerNeeded(model)
 
+    local props = decodeVehicleProps(vehData.props)
+    resetOdometerTracking(vehData.plate, props and props.odometer or 0)
+
     spawnedOwnedVehicle = vehicle
     markProtected(vehicle)
     fuel = vehFuel
@@ -578,7 +624,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         end
 
         local entity = findVehicleByPlate(vehData.plate)
-        local props = { model = joaat(vehData.model) }
+        local props = entity and buildStoreProps(entity) or { model = joaat(vehData.model), odometer = math.floor(odometerKm * 10) / 10 }
         local vehFuel = vehData.fuel or 100.0
         local vehEngine = vehData.engine or 1000.0
         local vehBody = vehData.body or 1000.0
@@ -595,7 +641,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         end
 
         if entity then
-            props.model = GetEntityModel(entity)
+            props = buildStoreProps(entity)
             vehFuel = readFuelPercent(entity)
             vehEngine = GetVehicleEngineHealth(entity)
             vehBody = GetVehicleBodyHealth(entity)
@@ -656,7 +702,7 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
         local parked = captureParkedPosition(veh)
         local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(veh), plate,
-            { model = GetEntityModel(veh) }, fuel, garageId, parked)
+            buildStoreProps(veh), fuel, garageId, parked)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
         if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
@@ -674,7 +720,7 @@ AddEventHandler('sunset:world:garageStore', function(garageId)
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
         local parked = captureParkedPosition(veh)
         local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(veh), plate,
-            { model = GetEntityModel(veh) }, fuel, garageId, parked)
+            buildStoreProps(veh), fuel, garageId, parked)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
         if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
