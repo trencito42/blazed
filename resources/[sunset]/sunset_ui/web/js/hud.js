@@ -4,6 +4,7 @@ const Hud = {
     lastGear: null,
     wasInVehicle: false,
     hintsTimer: null,
+    hintsGroupVisible: false,
     hintState: {
         engine: { label: 'ENGINE OFF', key: '2', ok: false },
         lock: { label: 'UNLOCKED', key: 'N', ok: true },
@@ -183,13 +184,16 @@ const Hud = {
             clearTimeout(this.hintsTimer);
             this.hintsTimer = null;
         }
+        const group = !singleId;
+        this.hintsGroupVisible = group;
         el.classList.toggle('is-single', !!singleId);
         el.querySelectorAll('.veh-hints__row').forEach((row) => {
             row.classList.toggle('is-active', !singleId || row.dataset.hint === singleId);
         });
-        el.classList.remove('is-visible');
-        void el.offsetWidth;
-        el.classList.add('is-visible');
+        if (!el.classList.contains('is-visible')) {
+            void el.offsetWidth;
+            el.classList.add('is-visible');
+        }
         el.setAttribute('aria-hidden', 'false');
         this.hintsTimer = setTimeout(() => this.hideVehicleHints(), 5000);
     },
@@ -205,6 +209,12 @@ const Hud = {
                 };
             });
         }
+        if (this.hintsGroupVisible) {
+            this.renderHintRows();
+            if (this.hintsTimer) clearTimeout(this.hintsTimer);
+            this.hintsTimer = setTimeout(() => this.hideVehicleHints(), 5000);
+            return;
+        }
         this.showVehicleHints(payload.id || null);
     },
 
@@ -214,6 +224,7 @@ const Hud = {
             clearTimeout(this.hintsTimer);
             this.hintsTimer = null;
         }
+        this.hintsGroupVisible = false;
         if (!el) return;
         el.classList.remove('is-visible');
         el.classList.remove('is-single');
