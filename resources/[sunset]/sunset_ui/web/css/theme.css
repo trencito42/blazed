@@ -12,6 +12,9 @@
     --sunset-line-soft: rgba(255, 255, 255, 0.09);
     --sunset-text: #f6f2e9;
     --sunset-muted: rgba(246, 242, 233, 0.54);
+    --sunset-glass: rgba(10, 10, 11, 0.66);
+    --sunset-glass-soft: rgba(14, 13, 13, 0.56);
+    --sunset-glass-blur: 9px;
     --sunset-display: 'Chakra Petch', 'Barlow Condensed', sans-serif;
     --sunset-body: 'Rajdhani', 'Inter', sans-serif;
 
@@ -172,13 +175,29 @@ h5,
     position: relative;
     background:
         repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255, 255, 255, 0.012) 4px),
-        linear-gradient(145deg, rgba(13, 15, 18, 0.78), rgba(7, 8, 10, 0.72));
+        linear-gradient(145deg, rgba(15, 14, 14, 0.72), rgba(8, 8, 9, 0.64));
     border: 1px solid var(--sunset-line);
     border-radius: 2px;
     box-shadow: 0 24px 72px rgba(0, 0, 0, 0.68), inset 3px 0 0 rgba(255, 138, 0, 0.85);
     clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    -webkit-backdrop-filter: blur(var(--sunset-glass-blur)) saturate(.86);
+    backdrop-filter: blur(var(--sunset-glass-blur)) saturate(.86);
+    text-shadow: 0 2px 5px rgba(0,0,0,.92);
+}
+
+/* One readable glass treatment for inventory, stores and central system panels. */
+.overlay-panel--peek .overlay-panel__box {
+    background: linear-gradient(145deg, rgba(15,14,14,.7), rgba(8,8,9,.61));
+    -webkit-backdrop-filter: blur(var(--sunset-glass-blur)) saturate(.86);
+    backdrop-filter: blur(var(--sunset-glass-blur)) saturate(.86);
+}
+
+#inventory-list .inventory-row,
+.shop-card,
+.panel-list li,
+.garage-item {
+    background-color: rgba(9,9,10,.44);
+    text-shadow: 0 2px 4px rgba(0,0,0,.9);
 }
 
 .overlay-panel h2 {
