@@ -183,6 +183,11 @@ RegisterNetEvent('sunset:client:registerPropertyZones', function(properties)
             label = prop.label,
             coords = coords,
             owned = prop.owner_character_id ~= nil,
+            access = prop.access == true,
+            rented = prop.rented == true,
+            locked = prop.locked == true,
+            rentEnabled = prop.rentEnabled == true,
+            rentPrice = prop.rentPrice,
             price = prop.price,
         }
         ::continue::
@@ -205,7 +210,7 @@ CreateThread(function()
         for _, prop in ipairs(propertyZones) do
             if #(coords - prop.coords) < MARKER_DRAW_DIST then
                 anyNearby = true
-                drawMarkerAt(prop.coords, 155, 89, 182)
+                drawMarkerAt(prop.coords, 255, 140, 0)
             end
         end
 
@@ -232,13 +237,16 @@ CreateThread(function()
             local dist = #(coords - prop.coords)
             if dist < 2.5 and dist < closestDist then
                 closestDist = dist
-                local hint = prop.owned and ('[E] ' .. prop.label .. ' (owned)') or ('[E] Buy ' .. prop.label .. ' ($' .. prop.price .. ')')
+                local state = prop.access and (prop.rented and 'your rental' or 'your house')
+                    or (prop.owned and (prop.locked and 'locked' or 'open'))
+                    or ('for sale $' .. prop.price)
+                local hint = ('[E] %s (%s)'):format(prop.label, state)
                 closest = {
                     id = 'property:' .. prop.id,
                     coords = prop.coords,
                     radius = 2.5,
                     hint = hint,
-                    markerColor = { 155, 89, 182 },
+                    markerColor = { 255, 140, 0 },
                     onInteract = function()
                         TriggerEvent('sunset:world:propertyInteract', prop)
                     end,

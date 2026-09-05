@@ -80,7 +80,7 @@ const Panels = {
 
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills', '#help'];
+            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills', '#help', '#properties'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -92,6 +92,7 @@ const Panels = {
                         '#jobs-browser': 'jobsClose',
                         '#skills': 'skillsClose',
                         '#help': 'helpClose',
+                        '#properties': 'propertiesClose',
                     };
                     post(map[sel]);
                     e.preventDefault();
@@ -643,11 +644,45 @@ const Panels = {
         const list = $('#properties-list');
         list.innerHTML = '';
         (data.properties || []).forEach((p) => {
-            const owned = p.owner_character_id ? 'OWNED' : `$${p.price}`;
             const li = document.createElement('li');
-            li.innerHTML = `<span>${p.label}</span><span>${owned}</span>`;
+            li.className = `house-row${Number(data.selectedId) === Number(p.id) ? ' is-selected' : ''}`;
+            const status = p.owned ? 'YOUR HOUSE' : p.rented ? 'YOUR RENTAL'
+                : p.owner_character_id ? (p.rentEnabled ? `RENT $${Number(p.rentPrice).toLocaleString()}/PAYDAY` : 'OWNED')
+                : (p.forSale ? `$${Number(p.price).toLocaleString()}` : 'NOT FOR SALE');
+            const details = document.createElement('div');
+            details.className = 'house-row__details';
+            const name = document.createElement('strong');
+            name.textContent = `#${p.id} ${p.label || 'House'}`;
+            const meta = document.createElement('span');
+            meta.textContent = `Level ${p.minimumLevel || 1} · ${p.interior || 'standard'} · ${p.locked ? 'Locked' : 'Unlocked'}${p.ownerName ? ` · Owner: ${p.ownerName}` : ''}`;
+            const rental = document.createElement('small');
+            rental.textContent = p.owner_character_id
+                ? `${p.renterCount || 0}/${p.maxRenters || 1} rental slots used` : 'Available for purchase';
+            details.append(name, meta, rental);
+            const side = document.createElement('div');
+            side.className = 'house-row__side';
+            const badge = document.createElement('b');
+            badge.textContent = status;
+            side.appendChild(badge);
+            const actions = document.createElement('div');
+            actions.className = 'house-row__actions';
+            const button = (label, action, primary = false) => {
+                const el = document.createElement('button');
+                el.type = 'button'; el.textContent = label;
+                if (primary) el.className = 'is-primary';
+                el.addEventListener('click', () => post('propertyAction', { propertyId: p.id, action }));
+                actions.appendChild(el);
+            };
+            if (p.access || !p.locked) button('Enter', 'enter', true);
+            if (!p.owner_character_id && p.forSale) button('Buy', 'buy', true);
+            if (p.owner_character_id && !p.access && p.rentEnabled && Number(p.renterCount) < Number(p.maxRenters)) button('Rent', 'rent', true);
+            if (p.access) button('Set spawn', 'sethome');
+            if (p.owned) button(p.locked ? 'Unlock' : 'Lock', 'lock');
+            side.appendChild(actions);
+            li.append(details, side);
             list.appendChild(li);
         });
+        if (!(data.properties || []).length) list.innerHTML = '<li class="house-empty">No houses have been created yet. An administrator can use /acreatehouse.</li>';
         $('#properties')?.classList.remove('hidden');
     },
 

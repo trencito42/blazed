@@ -20,6 +20,13 @@ function Sunset.SaveCharacter(source)
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)
     local heading = GetEntityHeading(ped)
+    -- Instanced interiors reuse remote world coordinates. Persist their exterior
+    -- safe position so "Last Location" can never strand a player underground.
+    local safe = Player(source) and Player(source).state.sunsetPropertyExit
+    if type(safe) == 'table' and tonumber(safe.x) then
+        coords = vector3(safe.x, safe.y, safe.z)
+        heading = tonumber(safe.w) or heading
+    end
     local position = json.encode({ x = coords.x, y = coords.y, z = coords.z, w = heading })
 
     MySQL.update.await([[

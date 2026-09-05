@@ -5,10 +5,10 @@ local function applyAppearance(ped, appearance)
     if not appearance or not next(appearance) then return end
 end
 
-local function spawnPlayer(char, spawnChoice)
+local function spawnPlayer(char, spawnPosition)
     spawning = true
 
-    local pos = spawnChoice == 'default' and {} or (char.position or {})
+    local pos = type(spawnPosition) == 'table' and spawnPosition or (char.position or {})
     local x = pos.x or Sunset.Config.DefaultSpawn.x
     local y = pos.y or Sunset.Config.DefaultSpawn.y
     local z = pos.z or Sunset.Config.DefaultSpawn.z
@@ -55,9 +55,9 @@ local function spawnPlayer(char, spawnChoice)
     TriggerEvent('sunset:client:playerSpawned', char)
 end
 
-AddEventHandler('sunset:client:spawnCharacter', function(char, spawnChoice)
+AddEventHandler('sunset:client:spawnCharacter', function(char, spawnPosition)
     CreateThread(function()
-        spawnPlayer(char, spawnChoice)
+        spawnPlayer(char, spawnPosition)
     end)
 end)
 

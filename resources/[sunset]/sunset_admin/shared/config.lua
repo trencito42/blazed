@@ -36,4 +36,6 @@ SunsetAdmin.Commands = {
     givecar = 3,
     setleader = 3,
     removeleader = 3,
+    acreatehouse = 3,
+    ahouseedit = 3,
 }

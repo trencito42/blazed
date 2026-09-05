@@ -229,6 +229,15 @@
                     <small>Start from the city arrival point.</small>
                     <span class="spawn-option__action">Select location <b>→</b></span>
                 </button>
+                <button type="button" class="spawn-option hidden" data-spawn="house" data-property-id="">
+                    <span class="spawn-option__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V21h13V10.5M9 21v-6h6v6"/><path d="M8 11h8"/></svg>
+                    </span>
+                    <span class="spawn-option__eyebrow" id="spawn-house-access">Your residence</span>
+                    <strong id="spawn-house-name">House</strong>
+                    <small id="spawn-house-description">Spawn outside your owned or rented house.</small>
+                    <span class="spawn-option__action">Select location <b>→</b></span>
+                </button>
             </div>
             <footer class="spawn-footer"><span>A / D</span> or arrow keys to navigate · <span>Enter</span> to confirm</footer>
         </section>
@@ -745,8 +754,8 @@
 
     <!-- PROPERTIES -->
     <div id="properties" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide">
-            <h2>Properties</h2>
+        <div class="overlay-panel__box overlay-panel__box--wide house-browser">
+            <div class="house-browser__heading"><div><span class="panel-kicker">SUNSET REAL ESTATE</span><h2>Houses</h2><p>Ownership, rental access and house settings.</p></div></div>
             <ul class="panel-list" id="properties-list"></ul>
             <button type="button" class="panel-close" id="properties-close">Close</button>
         </div>

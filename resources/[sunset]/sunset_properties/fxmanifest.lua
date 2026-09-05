@@ -6,9 +6,12 @@ name 'sunset_properties'
 description 'Buyable properties and home spawn'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_world' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_admin' }
 
-shared_scripts { '@sunset_core/shared/config.lua' }
+shared_scripts {
+    '@sunset_core/shared/config.lua',
+    'shared/config.lua',
+}
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',

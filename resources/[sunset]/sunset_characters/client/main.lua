@@ -10,8 +10,10 @@ local function showSpawnSelection(char)
     trace('spawn_selector_open', char and char.id or 'missing_character')
     pendingSpawnCharacter = char
     local pos = char and char.position
+    local homes = Sunset.AwaitCallback('sunset:getSpawnHomes') or {}
     exports.sunset_ui:Show('spawn', {
         hasLastLocation = type(pos) == 'table' and tonumber(pos.x) ~= nil and tonumber(pos.y) ~= nil,
+        homes = homes,
     })
 end
 
@@ -28,14 +30,16 @@ AddEventHandler('sunset:client:spawnSelectionRequired', showSpawnSelection)
 AddEventHandler('sunset:nui:spawnSelect', function(data)
     if not pendingSpawnCharacter then return end
     local choice = data and data.location
-    if choice ~= 'default' and choice ~= 'last' then
-        return exports.sunset_ui:Notify('Choose Default Spawn or Last Location.', 'error')
+    if choice ~= 'default' and choice ~= 'last' and choice ~= 'house' then
+        return exports.sunset_ui:Notify('Choose one of the available spawn locations.', 'error')
     end
+    local resolved, err = Sunset.AwaitCallback('sunset:resolveSpawnChoice', choice, tonumber(data and data.propertyId))
+    if not resolved then return exports.sunset_ui:Notify(err or 'That spawn location is unavailable.', 'error', 6000) end
     local char = pendingSpawnCharacter
     pendingSpawnCharacter = nil
     trace('spawn_selected', choice)
     exports.sunset_ui:Show('loading')
-    TriggerEvent('sunset:client:spawnCharacter', char, choice)
+    TriggerEvent('sunset:client:spawnCharacter', char, resolved)
 end)
 
 local function showCharacterList()

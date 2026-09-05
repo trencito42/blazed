@@ -1,55 +1,63 @@
 const SpawnSelector = {
-    selected: 'last',
-    busy: false,
-
+    selected: 'last', busy: false,
+    activeCards() { return [...document.querySelectorAll('.spawn-option:not(.hidden)')].filter((card) => !card.disabled); },
     show(data = {}) {
         this.busy = false;
-        const hasLast = data.hasLastLocation !== false;
         const last = document.querySelector('[data-spawn="last"]');
-        if (last) last.disabled = !hasLast;
-        this.select(hasLast ? 'last' : 'default');
+        if (last) last.disabled = data.hasLastLocation === false;
+        const home = Array.isArray(data.homes) ? data.homes[0] : null;
+        const house = document.querySelector('[data-spawn="house"]');
+        if (house) {
+            house.classList.toggle('hidden', !home);
+            house.disabled = !home;
+            house.dataset.propertyId = home?.id || '';
+            const name = document.getElementById('spawn-house-name');
+            const access = document.getElementById('spawn-house-access');
+            const description = document.getElementById('spawn-house-description');
+            if (name) name.textContent = home?.label || 'House';
+            if (access) access.textContent = home?.access_type === 'owner' ? 'Your house' : 'Your rental';
+            if (description) description.textContent = home?.access_type === 'owner'
+                ? 'Spawn outside the house you own.' : 'Spawn outside the house you currently rent.';
+        }
+        this.select(last && !last.disabled ? 'last' : 'default');
     },
-
     select(location) {
         const target = document.querySelector(`[data-spawn="${location}"]`);
-        if (!target || target.disabled) return;
+        if (!target || target.disabled || target.classList.contains('hidden')) return;
         this.selected = location;
-        const cards = [...document.querySelectorAll('.spawn-option')];
-        const centerIndex = cards.indexOf(target);
+        const cards = this.activeCards();
+        const center = cards.indexOf(target);
         cards.forEach((card, index) => {
             card.classList.toggle('is-selected', card === target);
-            card.dataset.pos = String(index - centerIndex);
+            card.dataset.pos = String(index - center);
         });
     },
-
+    move(direction) {
+        const cards = this.activeCards();
+        if (!cards.length) return;
+        const current = Math.max(0, cards.findIndex((card) => card.dataset.spawn === this.selected));
+        this.select(cards[(current + direction + cards.length) % cards.length].dataset.spawn);
+    },
     confirm(location = this.selected) {
         if (this.busy) return;
         const target = document.querySelector(`[data-spawn="${location}"]`);
-        if (!target || target.disabled) return;
+        if (!target || target.disabled || target.classList.contains('hidden')) return;
         this.busy = true;
         target.classList.add('is-confirming');
         document.querySelectorAll('.spawn-option').forEach((card) => { card.disabled = true; });
-        post('spawnSelect', { location });
+        post('spawnSelect', { location, propertyId: Number(target.dataset.propertyId || 0) || null });
     },
 };
-
 document.querySelectorAll('.spawn-option').forEach((card) => {
     card.addEventListener('mouseenter', () => SpawnSelector.select(card.dataset.spawn));
     card.addEventListener('focus', () => SpawnSelector.select(card.dataset.spawn));
-    card.addEventListener('click', () => {
-        if (SpawnSelector.selected !== card.dataset.spawn) {
-            SpawnSelector.select(card.dataset.spawn);
-            return;
-        }
-        SpawnSelector.confirm(card.dataset.spawn);
-    });
+    card.addEventListener('click', () => SpawnSelector.selected === card.dataset.spawn
+        ? SpawnSelector.confirm() : SpawnSelector.select(card.dataset.spawn));
 });
-
 document.addEventListener('keydown', (event) => {
     if (window.App?.currentScreen !== 'spawn') return;
-    if (['ArrowLeft', 'a', 'A'].includes(event.key)) SpawnSelector.select('last');
-    if (['ArrowRight', 'd', 'D'].includes(event.key)) SpawnSelector.select('default');
+    if (['ArrowLeft', 'a', 'A'].includes(event.key)) SpawnSelector.move(-1);
+    if (['ArrowRight', 'd', 'D'].includes(event.key)) SpawnSelector.move(1);
     if (event.key === 'Enter') SpawnSelector.confirm();
 });
-
 window.SpawnSelector = SpawnSelector;
