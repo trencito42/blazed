@@ -283,6 +283,15 @@ window.addEventListener('message', (event) => {
         case 'jobObjectiveHide':
             if (window.Overlays) Overlays.hideJobObjective();
             break;
+        case 'fishingShow':
+            if (window.Fishing) Fishing.show(data || event.data.data);
+            break;
+        case 'fishingUpdate':
+            if (window.Fishing) Fishing.update(data || event.data.data);
+            break;
+        case 'fishingHide':
+            if (window.Fishing) Fishing.hide();
+            break;
         case 'garageShow':
             if (window.Panels) Panels.showGarage(data || event.data.data);
             break;

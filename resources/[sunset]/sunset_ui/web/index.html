@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/phone.css">
     <link rel="stylesheet" href="css/fuel_pump.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/fishing.css">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -90,6 +91,22 @@
         </div>
         <div class="fuel-pump__bar"><div class="fuel-pump__fill" id="fuel-pump-fill"></div></div>
         <p class="fuel-pump__hint">Hold <kbd>E</kbd> to pump — release to pay &amp; stop</p>
+    </div>
+
+    <!-- FISHING MINIGAME -->
+    <div id="fishing-panel" class="fishing hidden state-idle" aria-live="polite">
+        <div class="fishing__header">
+            <svg class="fishing__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                <path d="M16.5 7.5L5.5 18.5"/><path d="M12.5 11.5L9.5 8.5"/><path d="M21 3L16.5 7.5"/>
+                <path d="M16 11l5 5c1 1 1 2.5 0 3.5s-2.5 1-3.5 0l-5-5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M8.5 15.5l-3-3"/>
+            </svg>
+            <div class="fishing__title-wrap">
+                <div class="fishing__title" id="fishing-title">Fishing</div>
+                <div class="fishing__bag" id="fishing-bag">Bag 0/2</div>
+            </div>
+        </div>
+        <div class="fishing__message" id="fishing-message">Press <span class="fishing__key">E</span> to cast</div>
+        <div class="fishing__progress"><div class="fishing__progress-fill" id="fishing-progress"></div></div>
     </div>
 
     <!-- CHARACTER SCREENS -->
@@ -866,5 +883,6 @@
     <script src="js/panels.js"></script>
     <script src="js/overlays.js"></script>
     <script src="js/fuel_pump.js"></script>
+    <script src="js/fishing.js"></script>
 </body>
 </html>

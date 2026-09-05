@@ -1,0 +1,244 @@
+#fishing-panel {
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    z-index: 8500;
+    width: min(400px, 92vw);
+    padding: 20px 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    pointer-events: none;
+    color: var(--sunset-text, #f6f2e9);
+    font-family: var(--sunset-body, 'Rajdhani', sans-serif);
+    background: rgba(10, 5, 15, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+    border-bottom: 4px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    translate: 0 16px;
+}
+
+#fishing-panel.is-visible {
+    opacity: 1;
+    translate: 0 0;
+}
+
+#fishing-panel.hidden {
+    display: none;
+}
+
+.fishing__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.fishing__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.fishing__title-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.fishing__title {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    transition: color 0.2s;
+}
+
+.fishing__bag {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.42);
+    margin-top: 2px;
+}
+
+.fishing__message {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    margin: 2px 0;
+    line-height: 1.2;
+    transition: color 0.2s;
+}
+
+.fishing__key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-bottom-width: 4px;
+    border-radius: 6px;
+    min-width: 36px;
+    height: 36px;
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    padding: 0 10px;
+    margin: 0 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    vertical-align: middle;
+}
+
+.fishing__progress {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+    overflow: hidden;
+}
+
+.fishing__progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #b900ff;
+    -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+    mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+}
+
+/* idle */
+#fishing-panel.state-idle { border-bottom-color: var(--sunset-orange, #ff8a00); }
+#fishing-panel.state-idle .fishing__title,
+#fishing-panel.state-idle .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+
+/* waiting */
+#fishing-panel.state-waiting { border-bottom-color: #b900ff; }
+#fishing-panel.state-waiting .fishing__title,
+#fishing-panel.state-waiting .fishing__icon { color: #b900ff; }
+#fishing-panel.state-waiting .fishing__progress-fill {
+    background: #b900ff;
+    width: 100%;
+    animation: fishingScan 2s infinite linear;
+}
+
+@keyframes fishingScan {
+    0% { transform: translateX(-100%); width: 50%; }
+    100% { transform: translateX(200%); width: 50%; }
+}
+
+/* bite */
+#fishing-panel.state-bite {
+    border-bottom-color: #00ff66;
+    background: rgba(0, 255, 102, 0.12);
+    box-shadow: 0 0 40px rgba(0, 255, 102, 0.28);
+    animation: fishingShake 0.4s infinite cubic-bezier(.36, .07, .19, .97);
+}
+
+#fishing-panel.state-bite .fishing__title,
+#fishing-panel.state-bite .fishing__icon,
+#fishing-panel.state-bite .fishing__message {
+    color: #00ff66;
+    text-shadow: 0 0 10px rgba(0, 255, 102, 0.55);
+}
+
+#fishing-panel.state-bite .fishing__key {
+    border-color: #00ff66;
+    color: #00ff66;
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+    animation: fishingKeyPulse 0.3s infinite alternate;
+}
+
+#fishing-panel.state-bite .fishing__progress-fill {
+    background: #00ff66;
+    width: 100%;
+}
+
+/* failed */
+#fishing-panel.state-failed {
+    border-bottom-color: var(--sunset-red, #ff554f);
+    background: rgba(255, 42, 42, 0.12);
+    box-shadow: 0 0 30px rgba(255, 42, 42, 0.28);
+    animation: fishingGlitch 0.3s ease-out;
+}
+
+#fishing-panel.state-failed .fishing__title,
+#fishing-panel.state-failed .fishing__icon,
+#fishing-panel.state-failed .fishing__message {
+    color: var(--sunset-red, #ff554f);
+    text-shadow: 0 0 10px rgba(255, 42, 42, 0.55);
+}
+
+#fishing-panel.state-failed .fishing__progress-fill {
+    background: var(--sunset-red, #ff554f);
+    width: 0% !important;
+    transition: none;
+}
+
+/* success */
+#fishing-panel.state-success {
+    border-bottom-color: #b900ff;
+    background: rgba(185, 0, 255, 0.12);
+    box-shadow: 0 0 40px rgba(185, 0, 255, 0.35);
+    transform: translateX(-50%) scale(1.03);
+}
+
+#fishing-panel.state-success .fishing__title,
+#fishing-panel.state-success .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+
+#fishing-panel.state-success .fishing__message {
+    color: #b900ff;
+    text-shadow: 0 0 15px rgba(185, 0, 255, 0.65);
+}
+
+#fishing-panel.state-success .fishing__progress-fill {
+    background: var(--sunset-orange, #ff8a00);
+    width: 100% !important;
+    transition: width 0.3s ease;
+}
+
+@keyframes fishingShake {
+    0% { transform: translateX(-50%) translate(1px, 1px) rotate(0deg); }
+    10% { transform: translateX(-50%) translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translateX(-50%) translate(-3px, 0) rotate(1deg); }
+    30% { transform: translateX(-50%) translate(3px, 2px) rotate(0deg); }
+    40% { transform: translateX(-50%) translate(1px, -1px) rotate(1deg); }
+    50% { transform: translateX(-50%) translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translateX(-50%) translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translateX(-50%) translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translateX(-50%) translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translateX(-50%) translate(1px, 2px) rotate(0deg); }
+    100% { transform: translateX(-50%) translate(1px, -2px) rotate(-1deg); }
+}
+
+@keyframes fishingKeyPulse {
+    from { transform: scale(1); background: rgba(0, 255, 102, 0.1); }
+    to { transform: scale(1.12); background: rgba(0, 255, 102, 0.28); }
+}
+
+@keyframes fishingGlitch {
+    0% { transform: translateX(-50%); }
+    20% { transform: translateX(calc(-50% - 10px)) skewX(10deg); }
+    40% { transform: translateX(calc(-50% + 10px)) skewX(-10deg); }
+    60% { transform: translateX(calc(-50% - 5px)); }
+    80% { transform: translateX(calc(-50% + 5px)); }
+    100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 1280px) {
+    #fishing-panel { bottom: 64px; padding: 16px 20px; }
+    .fishing__message { font-size: 20px; }
+}

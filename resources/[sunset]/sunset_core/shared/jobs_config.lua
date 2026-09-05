@@ -97,7 +97,7 @@ Sunset.JobsConfig = {
         label = 'Fisherman',
         help = 'Fish at marked spots, then sell your catch at the pier.',
         spots = {
-            { coords = vector3(-1850.45, -1248.22, 8.62), blip = { sprite = 68, color = 3, scale = 0.75 } },
+            { coords = vector3(-1850.32, -1248.03, 8.62), heading = 138.26, blip = { sprite = 68, color = 3, scale = 0.75 } },
             { coords = vector3(1300.88, 4225.45, 33.91), blip = { sprite = 68, color = 3, scale = 0.75 } },
             { coords = vector3(-1598.22, 5200.45, 4.31), blip = { sprite = 68, color = 3, scale = 0.75 } },
         },

@@ -2,6 +2,7 @@ local JC = Sunset.JobClient
 local fishing = false
 local rod = nil
 local selling = false
+local idleUiVisible = false
 
 local function fishBagProgress(carried, capacity)
     capacity = math.max(tonumber(capacity) or 2, 1)
@@ -12,6 +13,41 @@ end
 local function sessionBagProgress()
     local data = JC.sessionData or {}
     return fishBagProgress(data.carried, data.capacity)
+end
+
+local function sessionBagPayload()
+    local data = JC.sessionData or {}
+    return {
+        carried = data.carried or 0,
+        capacity = data.capacity or 2,
+    }
+end
+
+local function fishingUi(action, data)
+    exports.sunset_ui:Send(action, data or {})
+end
+
+local function hideFishingUi()
+    idleUiVisible = false
+    fishingUi('fishingHide', {})
+end
+
+local function showFishingState(state, extra)
+    local payload = sessionBagPayload()
+    payload.state = state
+    if extra then
+        for k, v in pairs(extra) do payload[k] = v end
+    end
+    fishingUi('fishingShow', payload)
+end
+
+local function alignPlayerAtSpot(spot)
+    if not spot or not spot.coords then return end
+    local ped = PlayerPedId()
+    SetEntityCoordsNoOffset(ped, spot.coords.x, spot.coords.y, spot.coords.z, false, false, false)
+    if spot.heading then
+        SetEntityHeading(ped, spot.heading + 0.0)
+    end
 end
 
 local function removeRod()
@@ -124,6 +160,7 @@ local function startFisherman()
             Wait(0)
         end
         fishing = false
+        hideFishingUi()
         removeRod()
     end)
 end
@@ -135,36 +172,76 @@ local function attemptFish()
     end
     local spotIdx, spotDist = nearestSpotIndex()
     local cfg = Sunset.GetJobConfig('fisherman')
+    local spot = cfg.spots and cfg.spots[spotIdx]
     if spotDist > (cfg.catchRadius or 8.0) then
         return JC.notify('Stand inside a blue fishing marker', 'error')
     end
 
     fishing = true
+    idleUiVisible = false
+    alignPlayerAtSpot(spot)
+
     local cast, err = Sunset.AwaitCallback('sunset:jobs:fisherman:cast', spotIdx)
-    if not cast then fishing = false return JC.notify(err or 'Could not cast', 'error') end
+    if not cast then
+        fishing = false
+        return JC.notify(err or 'Could not cast', 'error')
+    end
 
     equipRod()
     JC.playAnim('amb@world_human_stand_fishing@idle_a', 'idle_c', -1)
-    JC.showObjective('Line cast', 'Wait for a bite…', sessionBagProgress())
-    Wait(tonumber(cast.delayMs) or 3000)
-    PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-    JC.showObjective('BITE!', 'Press E now to reel the fish in', sessionBagProgress())
+    showFishingState('waiting')
 
-    local deadline = GetGameTimer() + (tonumber(cast.windowMs) or 1400)
-    local reeled = false
-    while GetGameTimer() <= deadline do
-        if IsControlJustPressed(0, 38) then reeled = true break end
+    local delayMs = tonumber(cast.delayMs) or 3000
+    local windowMs = tonumber(cast.windowMs) or 1500
+    local token = cast.token
+    local biteAt = GetGameTimer() + delayMs
+    local early = false
+
+    while GetGameTimer() < biteAt do
+        if IsControlJustPressed(0, 38) then
+            early = true
+            break
+        end
         Wait(0)
     end
+
     local result, reelErr
-    if reeled then
-        result, reelErr = Sunset.AwaitCallback('sunset:jobs:fisherman:reel', spotIdx, cast.token)
+    if early then
+        Sunset.AwaitCallback('sunset:jobs:fisherman:miss', token)
+        showFishingState('failed', { message = 'You pulled too early!' })
+        Wait(2200)
     else
-        Sunset.AwaitCallback('sunset:jobs:fisherman:miss', cast.token)
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        showFishingState('bite', { windowMs = windowMs })
+
+        local deadline = GetGameTimer() + windowMs
+        local reeled = false
+        while GetGameTimer() <= deadline do
+            if IsControlJustPressed(0, 38) then reeled = true break end
+            Wait(0)
+        end
+
+        if reeled then
+            result, reelErr = Sunset.AwaitCallback('sunset:jobs:fisherman:reel', spotIdx, token)
+            if result then
+                showFishingState('success', { message = 'You caught a fish!' })
+                Wait(2500)
+            else
+                showFishingState('failed', { message = reelErr or 'The fish escaped' })
+                Wait(2200)
+            end
+        else
+            Sunset.AwaitCallback('sunset:jobs:fisherman:miss', token)
+            showFishingState('failed', { message = 'Too slow — the fish escaped' })
+            Wait(2200)
+        end
     end
+
     removeRod()
     fishing = false
-    if reeled and result then
+    hideFishingUi()
+
+    if result then
         JC.sessionData.pendingValue = result.pendingValue
         JC.sessionData.carried = result.carried
         JC.sessionData.capacity = result.capacity
@@ -177,7 +254,13 @@ local function attemptFish()
             result.carried or 0, result.capacity or 2), 'success', 9000)
     else
         JC.showObjective('Fishing', 'Fish escaped — press E or /fish to cast again', sessionBagProgress())
-        JC.notify(reelErr or 'Too late — the fish escaped', 'warning')
+        if not early and reelErr then
+            JC.notify(reelErr, 'warning')
+        elseif not early then
+            JC.notify('Too late — the fish escaped', 'warning')
+        else
+            JC.notify('Too early — the fish escaped', 'warning')
+        end
     end
 end
 
@@ -193,11 +276,22 @@ CreateThread(function()
     while true do
         if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
             local _, distance = nearestSpotIndex()
-            if distance <= ((Sunset.GetJobConfig('fisherman').catchRadius or 8.0)) and IsControlJustPressed(0, 38) then
-                CreateThread(attemptFish)
+            local cfg = Sunset.GetJobConfig('fisherman')
+            if distance <= (cfg.catchRadius or 8.0) then
+                if not idleUiVisible then
+                    showFishingState('idle')
+                    idleUiVisible = true
+                end
+                if IsControlJustPressed(0, 38) then
+                    CreateThread(attemptFish)
+                end
+                Wait(0)
+            else
+                if idleUiVisible then hideFishingUi() end
+                Wait(200)
             end
-            Wait(0)
         else
+            if not fishing and idleUiVisible then hideFishingUi() end
             Wait(400)
         end
     end
