@@ -93,15 +93,6 @@ $('#chat-settings-btn')?.addEventListener('click', (e) => {
 
 $('#chat-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); Chat.send(); return; }
-    if (e.key === 'Escape') {
-        e.preventDefault();
-        if (Chat.settingsOpen) {
-            Chat.toggleSettings(false);
-            return;
-        }
-        post('chatClose');
-        return;
-    }
     if (e.key === 'ArrowUp') {
         e.preventDefault();
         post('chatHistory', { direction: 'up' });
@@ -112,5 +103,19 @@ $('#chat-input')?.addEventListener('keydown', (e) => {
         post('chatHistory', { direction: 'down' });
     }
 });
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const chat = $('#chat');
+    if (!chat || !chat.classList.contains('chat-open')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (Chat.settingsOpen) {
+        Chat.toggleSettings(false);
+        $('#chat-input')?.focus();
+        return;
+    }
+    post('chatClose');
+}, true);
 
 window.Chat = Chat;

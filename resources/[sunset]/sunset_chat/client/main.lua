@@ -26,6 +26,11 @@ RegisterCommand('sunset_chat', function()
 end, false)
 RegisterKeyMapping('sunset_chat', 'Open chat', 'keyboard', 'T')
 
+RegisterCommand('sunset_chat_close', function()
+    if chatOpen then closeChat() end
+end, false)
+RegisterKeyMapping('sunset_chat_close', 'Close chat', 'keyboard', 'ESCAPE')
+
 AddEventHandler('sunset:nui:chatSend', function(data)
     closeChat()
 
@@ -76,7 +81,13 @@ end)
 
 CreateThread(function()
     while true do
-        Wait(0)
         SetTextChatEnabled(false)
+        if chatOpen then
+            DisableControlAction(0, 199, true)
+            DisableControlAction(0, 200, true)
+            Wait(0)
+        else
+            Wait(200)
+        end
     end
 end)

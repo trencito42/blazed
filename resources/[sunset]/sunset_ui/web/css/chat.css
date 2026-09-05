@@ -1,10 +1,13 @@
 /* ═══ CHAT — SAMP style (stânga sus) ═══ */
-.chat {
+:root {
     --chat-font-size: 13px;
     --chat-time-size: 11px;
     --chat-input-size: 14px;
     --chat-page-height: 188px;
     --chat-line-height: 1.35;
+}
+
+.chat {
     position: fixed;
     top: 120px;
     left: 12px;

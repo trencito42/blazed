@@ -59,16 +59,20 @@ const ChatSettings = {
 
     apply() {
         const s = this.settings || this.defaults;
-        const root = document.documentElement;
         const lineHeight = 1.35;
-        const rowHeight = s.fontSize * lineHeight + 2;
-        const pageHeight = Math.ceil(s.pageSize * rowHeight + 8);
-
-        root.style.setProperty('--chat-font-size', `${s.fontSize}px`);
-        root.style.setProperty('--chat-time-size', `${Math.max(9, s.fontSize - 2)}px`);
-        root.style.setProperty('--chat-input-size', `${s.fontSize + 1}px`);
-        root.style.setProperty('--chat-page-height', `${pageHeight}px`);
-        root.style.setProperty('--chat-line-height', String(lineHeight));
+        const rowHeight = s.fontSize * lineHeight + 6;
+        const pageHeight = Math.ceil(s.pageSize * rowHeight + 10);
+        const vars = {
+            '--chat-font-size': `${s.fontSize}px`,
+            '--chat-time-size': `${Math.max(9, s.fontSize - 2)}px`,
+            '--chat-input-size': `${s.fontSize + 1}px`,
+            '--chat-page-height': `${pageHeight}px`,
+            '--chat-line-height': String(lineHeight),
+        };
+        const targets = [document.documentElement, document.getElementById('chat')].filter(Boolean);
+        targets.forEach((el) => {
+            Object.entries(vars).forEach(([name, value]) => el.style.setProperty(name, value));
+        });
     },
 
     syncControls() {
@@ -98,6 +102,12 @@ const ChatSettings = {
                 this.save({ [key]: value });
                 const label = $(labelSel);
                 if (label) label.textContent = `${this.settings[key]}${suffix}`;
+            });
+            input.addEventListener('change', () => {
+                const chatInput = document.getElementById('chat-input');
+                if (document.body.classList.contains('chat-ui-open') && chatInput) {
+                    chatInput.focus();
+                }
             });
         };
 
