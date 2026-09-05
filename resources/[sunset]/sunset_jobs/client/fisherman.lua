@@ -144,6 +144,7 @@ local function startFisherman()
     end
     JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, cfg.sellPoint.label or 'Fish Buyer')
     JC.sessionData = data
+    JC.hideObjective()
     if (data.carried or 0) > 0 then
         JC.setWaypoint(cfg.sellPoint.coords)
     elseif cfg.spots and cfg.spots[1] then

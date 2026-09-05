@@ -345,7 +345,11 @@ RegisterNetEvent('sunset:jobs:sessionStarted', function(jobId, session)
     JobClient.state = session.state or 'STARTING'
     JobClient.sessionData = session.data
     local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
-    JobClient.showObjective(label, 'Shift started — follow GPS markers')
+    if jobId == 'fisherman' then
+        JobClient.hideObjective()
+    else
+        JobClient.showObjective(label, 'Shift started — follow GPS markers')
+    end
 end)
 
 RegisterNetEvent('sunset:jobs:stateChanged', function(state, data)

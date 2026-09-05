@@ -13,8 +13,8 @@
     pointer-events: none;
     color: var(--sunset-text, #f6f2e9);
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
-    background: rgba(10, 5, 15, 0.28);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(8, 4, 14, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
     border-bottom: 4px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
@@ -66,7 +66,7 @@
     font-weight: 600;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.42);
+    color: rgba(255, 255, 255, 0.72);
     margin-top: 2px;
 }
 
@@ -77,10 +77,14 @@
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 2px;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    text-shadow:
+        0 0 1px rgba(0, 0, 0, 0.95),
+        0 2px 8px rgba(0, 0, 0, 0.85),
+        2px 2px 0 rgba(0, 0, 0, 0.75);
     margin: 2px 0;
     line-height: 1.2;
-    transition: color 0.2s;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
 .fishing__key {
@@ -134,12 +138,14 @@
     letter-spacing: 0.04em;
     text-transform: none;
     line-height: 1.35;
+    color: rgba(255, 255, 255, 0.94);
 }
 
 /* waiting */
 #fishing-panel.state-waiting { border-bottom-color: #b900ff; }
 #fishing-panel.state-waiting .fishing__title,
-#fishing-panel.state-waiting .fishing__icon { color: #b900ff; }
+#fishing-panel.state-waiting .fishing__icon { color: #d46bff; }
+#fishing-panel.state-waiting .fishing__message { color: #f4e8ff; }
 #fishing-panel.state-waiting .fishing__progress-fill {
     background: #b900ff;
     width: 100%;
@@ -154,16 +160,21 @@
 /* bite */
 #fishing-panel.state-bite {
     border-bottom-color: #00ff66;
-    background: rgba(0, 255, 102, 0.12);
+    background: rgba(4, 18, 10, 0.86);
     box-shadow: 0 0 40px rgba(0, 255, 102, 0.28);
     animation: fishingShake 0.4s infinite cubic-bezier(.36, .07, .19, .97);
 }
 
 #fishing-panel.state-bite .fishing__title,
-#fishing-panel.state-bite .fishing__icon,
-#fishing-panel.state-bite .fishing__message {
+#fishing-panel.state-bite .fishing__icon {
     color: #00ff66;
-    text-shadow: 0 0 10px rgba(0, 255, 102, 0.55);
+}
+
+#fishing-panel.state-bite .fishing__message {
+    color: #ffffff;
+    text-shadow:
+        0 0 12px rgba(0, 255, 102, 0.65),
+        0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 #fishing-panel.state-bite .fishing__key {
@@ -181,16 +192,21 @@
 /* failed */
 #fishing-panel.state-failed {
     border-bottom-color: var(--sunset-red, #ff554f);
-    background: rgba(255, 42, 42, 0.12);
+    background: rgba(22, 6, 6, 0.86);
     box-shadow: 0 0 30px rgba(255, 42, 42, 0.28);
     animation: fishingGlitch 0.3s ease-out;
 }
 
 #fishing-panel.state-failed .fishing__title,
-#fishing-panel.state-failed .fishing__icon,
-#fishing-panel.state-failed .fishing__message {
+#fishing-panel.state-failed .fishing__icon {
     color: var(--sunset-red, #ff554f);
-    text-shadow: 0 0 10px rgba(255, 42, 42, 0.55);
+}
+
+#fishing-panel.state-failed .fishing__message {
+    color: #ffffff;
+    text-shadow:
+        0 0 10px rgba(255, 85, 79, 0.55),
+        0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 #fishing-panel.state-failed .fishing__progress-fill {
@@ -201,9 +217,9 @@
 
 /* success */
 #fishing-panel.state-success {
-    border-bottom-color: #b900ff;
-    background: rgba(185, 0, 255, 0.12);
-    box-shadow: 0 0 40px rgba(185, 0, 255, 0.35);
+    border-bottom-color: var(--sunset-orange, #ff8a00);
+    background: rgba(10, 5, 15, 0.88);
+    box-shadow: 0 0 40px rgba(255, 138, 0, 0.35);
     transform: translateX(-50%) scale(1.03);
 }
 
@@ -211,8 +227,10 @@
 #fishing-panel.state-success .fishing__icon { color: var(--sunset-orange, #ff8a00); }
 
 #fishing-panel.state-success .fishing__message {
-    color: #b900ff;
-    text-shadow: 0 0 15px rgba(185, 0, 255, 0.65);
+    color: #ffffff;
+    text-shadow:
+        0 0 14px rgba(255, 138, 0, 0.55),
+        0 2px 10px rgba(0, 0, 0, 0.92);
 }
 
 #fishing-panel.state-success .fishing__progress-fill {
