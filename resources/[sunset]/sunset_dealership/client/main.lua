@@ -210,7 +210,6 @@ AddEventHandler('sunset:nui:dealershipTestDrive', function(data)
             return notify('The test-drive vehicle did not stream in. Try again.', 'error')
         end
         SetEntityAsMissionEntity(testVehicle, true, true)
-        Entity(testVehicle).state:set('sunsetProtectedVehicle', true, false)
         SetVehicleNumberPlateText(testVehicle, 'TESTDRIV')
         SetVehicleDirtLevel(testVehicle, 0.0)
         SetVehicleFuelLevel(testVehicle, GetVehicleHandlingFloat(testVehicle, 'CHandlingData', 'fPetrolTankVolume'))

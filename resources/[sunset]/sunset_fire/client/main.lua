@@ -33,7 +33,6 @@ local function spawnIncidentVehicle(inc)
     if veh == 0 then return nil end
 
     SetEntityAsMissionEntity(veh, true, true)
-    Entity(veh).state:set('sunsetProtectedVehicle', true, false)
     local netId = NetworkGetNetworkIdFromEntity(veh)
     if netId and netId ~= 0 then
         SetNetworkIdCanMigrate(netId, true)

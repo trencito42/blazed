@@ -445,9 +445,14 @@ window.addEventListener('message', (event) => {
 
         case 'authHide':
             if (window.Panels) Panels.hideAuth();
-            showApp(true);
-            showHud(false);
-            showScreen('loading');
+            // playerReady may already have advanced to spawn selection while the
+            // authentication callback was travelling back to this client.
+            // Never let a late auth response replace that newer screen.
+            if (App.currentScreen !== 'spawn') {
+                showApp(true);
+                showHud(false);
+                showScreen('loading');
+            }
             if (window.AuthLoading) AuthLoading._pending = false;
             break;
 

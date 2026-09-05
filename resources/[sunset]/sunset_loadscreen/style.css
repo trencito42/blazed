@@ -129,7 +129,7 @@ html, body {
 .loadscreen__bar-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #b900ff, #ff7700);
+    background: linear-gradient(90deg, #ffb15c, #ff7700);
     box-shadow: 0 0 15px rgba(255, 119, 0, 0.6);
     transition: width 0.2s linear;
     -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 12px);
