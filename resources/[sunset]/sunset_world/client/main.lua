@@ -20,6 +20,32 @@ end
 
 local MARKER_DRAW_DIST = 75.0
 
+local function drawPropertyLine(text, y, scale, r, g, b)
+    SetTextScale(scale, scale)
+    SetTextFont(4)
+    SetTextCentre(true)
+    SetTextColour(r or 255, g or 255, b or 255, 235)
+    SetTextDropshadow(1, 0, 0, 0, 210)
+    SetTextOutline()
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(text)
+    EndTextCommandDisplayText(0.0, y)
+end
+
+local function wrapPropertyDescription(text)
+    local lines, line = {}, ''
+    for word in tostring(text or ''):gmatch('%S+') do
+        if #line > 0 and #line + #word + 1 > 52 then
+            lines[#lines + 1] = line
+            line = word
+        else
+            line = line == '' and word or (line .. ' ' .. word)
+        end
+    end
+    if line ~= '' then lines[#lines + 1] = line end
+    return lines
+end
+
 local function drawPropertyLabel(prop, distance)
     local priceLine
     if prop.ownerName then
@@ -30,22 +56,20 @@ local function drawPropertyLabel(prop, distance)
         priceLine = 'Not for sale'
     end
     local accessLine = ('%s  |  Renters %d/%d'):format(prop.locked and 'Locked' or 'Unlocked', prop.renterCount or 0, prop.maxRenters or 1)
-    local description = prop.description and prop.description ~= '' and ('~italic~' .. prop.description .. '~italic~') or nil
-    local text = ('~o~%s #%d~s~~n~%s~n~%s'):format(prop.label or 'House', prop.id or 0, priceLine, accessLine)
-    if description then text = text .. '~n~' .. description end
-    text = text .. '~n~~o~[E]~s~ View house'
-
-    SetDrawOrigin(prop.coords.x, prop.coords.y, prop.coords.z + 1.05, 0)
+    SetDrawOrigin(prop.coords.x, prop.coords.y, prop.coords.z + 0.38, 0)
     local scale = math.max(0.24, math.min(0.34, 0.4 - distance * 0.012))
-    SetTextScale(scale, scale)
-    SetTextFont(4)
-    SetTextCentre(true)
-    SetTextColour(255, 255, 255, 235)
-    SetTextDropshadow(1, 0, 0, 0, 210)
-    SetTextOutline()
-    BeginTextCommandDisplayText('STRING')
-    AddTextComponentSubstringPlayerName(text)
-    EndTextCommandDisplayText(0.0, 0.0)
+    local y = -0.045
+    drawPropertyLine(('House #%d  |  %s'):format(prop.id or 0, prop.label or 'Residence'), y, scale + 0.025, 255, 145, 36)
+    y = y + 0.021
+    drawPropertyLine(priceLine, y, scale)
+    y = y + 0.019
+    drawPropertyLine(accessLine, y, scale)
+    for _, line in ipairs(wrapPropertyDescription(prop.description)) do
+        y = y + 0.019
+        drawPropertyLine(line, y, scale - 0.015, 255, 190, 125)
+    end
+    y = y + 0.021
+    drawPropertyLine('~o~[E]~s~ View house', y, scale)
     ClearDrawOrigin()
 end
 
@@ -249,7 +273,7 @@ CreateThread(function()
 
         for _, prop in ipairs(propertyZones) do
             local distance = #(coords - prop.coords)
-            if distance < 16.0 then
+            if distance < 10.0 then
                 anyNearby = true
                 drawPropertyLabel(prop, distance)
             end
@@ -288,6 +312,7 @@ CreateThread(function()
                     radius = 2.5,
                     hint = hint,
                     markerColor = { 255, 140, 0 },
+                    floating = true,
                     onInteract = function()
                         TriggerEvent('sunset:world:propertyInteract', prop)
                     end,
@@ -297,8 +322,9 @@ CreateThread(function()
 
         if closest then
             if activeZone ~= closest.id then
+                hideHint()
                 activeZone = closest.id
-                showHint(closest.hint)
+                if not closest.floating then showHint(closest.hint) end
             end
             if IsControlJustReleased(0, 38) and not IsNuiFocused() then
                 if closest.onInteract then closest.onInteract() end
