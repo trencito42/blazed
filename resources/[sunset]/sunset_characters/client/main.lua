@@ -1,7 +1,13 @@
 local inCharacterFlow = false
 local pendingSpawnCharacter = nil
 
+local function trace(stage, detail)
+    print(('[SunsetFlow] %s%s'):format(stage, detail and (' | ' .. tostring(detail)) or ''))
+    TriggerServerEvent('sunset:server:flowTrace', stage, detail and tostring(detail) or '')
+end
+
 local function showSpawnSelection(char)
+    trace('spawn_selector_open', char and char.id or 'missing_character')
     pendingSpawnCharacter = char
     local pos = char and char.position
     exports.sunset_ui:Show('spawn', {
@@ -27,6 +33,7 @@ AddEventHandler('sunset:nui:spawnSelect', function(data)
     end
     local char = pendingSpawnCharacter
     pendingSpawnCharacter = nil
+    trace('spawn_selected', choice)
     exports.sunset_ui:Show('loading')
     TriggerEvent('sunset:client:spawnCharacter', char, choice)
 end)
@@ -46,16 +53,19 @@ end
 local function autoEnterGame()
     if inCharacterFlow then return end
     inCharacterFlow = true
+    trace('character_request_started')
 
     DoScreenFadeOut(300)
     Wait(400)
 
     local result, err = Sunset.AwaitCallback('sunset:enterGame')
     if result and result.character then
+        trace('character_request_complete', result.character.id)
         spawnCharacter(result.character)
         return
     end
 
+    trace('character_request_failed', err or 'empty_response')
     inCharacterFlow = false
     exports.sunset_ui:Hide()
     exports.sunset_ui:Notify(err or 'Could not load your character', 'error')

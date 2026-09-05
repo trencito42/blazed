@@ -2,12 +2,24 @@ Sunset = Sunset or {}
 
 local PendingCallbacks = {}
 local RequestId = 0
+local ResourceRequestBase = math.abs(GetHashKey(GetCurrentResourceName())) * 100000
+
+local function nextRequestId()
+    RequestId = RequestId + 1
+    if RequestId >= 99999 then RequestId = 1 end
+    return ResourceRequestBase + RequestId
+end
 
 function TriggerCallback(name, cb, ...)
-    RequestId = RequestId + 1
-    local id = RequestId
+    local id = nextRequestId()
     PendingCallbacks[id] = cb
     TriggerServerEvent('sunset:server:triggerCallback', name, id, ...)
+    SetTimeout(15000, function()
+        local pending = PendingCallbacks[id]
+        if not pending then return end
+        PendingCallbacks[id] = nil
+        pending(nil, ('%s timed out after 15 seconds. Reopen the screen and try again.'):format(name))
+    end)
 end
 exports('TriggerCallback', TriggerCallback)
 

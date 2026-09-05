@@ -131,7 +131,6 @@ const Panels = {
         $('#screen-auth')?.classList.add('hidden');
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
         if (window.AuthLoading) AuthLoading._pending = false;
-        if (window.LoadingScreen) LoadingScreen.reset();
     },
 
     showInventory(data) {

@@ -2,6 +2,17 @@ local Players = {}
 local Callbacks = {}
 local Sessions = {}
 local CallbackRate = {}
+local FlowTraceRate = {}
+
+RegisterNetEvent('sunset:server:flowTrace', function(stage, detail)
+    local source = source
+    if type(stage) ~= 'string' or #stage > 64 or type(detail) ~= 'string' or #detail > 160 then return end
+    local now = GetGameTimer()
+    local previous = FlowTraceRate[source] or 0
+    if now - previous < 100 then return end
+    FlowTraceRate[source] = now
+    print(('[SunsetFlow:%d] %s%s'):format(source, stage, detail ~= '' and (' | ' .. detail) or ''))
+end)
 
 Sunset.GetPlayer = function(source) return Players[source] end
 Sunset.GetCharacter = function(source)
