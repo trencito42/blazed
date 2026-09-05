@@ -29,7 +29,7 @@ const Fishing = {
 
     _applyState(stateClass, title, messageHtml) {
         if (!this._panel) return;
-        this._panel.className = `${stateClass} is-visible`;
+        this._panel.className = `fishing-shell ${stateClass} is-visible`;
         this._state = stateClass.replace('state-', '');
         if (this._title) this._title.textContent = title;
         if (this._message) this._message.innerHTML = messageHtml;
@@ -153,8 +153,7 @@ const Fishing = {
     hide() {
         this.init();
         if (!this._panel) return;
-        this._panel.classList.add('hidden');
-        this._panel.classList.remove('is-visible');
+        this._panel.className = 'fishing-shell hidden';
         this._state = null;
         if (this._progress) {
             this._progress.style.transition = 'none';
