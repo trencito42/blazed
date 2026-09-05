@@ -62,17 +62,76 @@ function Sunset.SaveCharacter(source)
     return true
 end
 
+local PersistentStatFields = {
+    character = {
+        cash = true, bank = true, level = true, xp = true,
+        respect_points = true, paydays_received = true,
+        hunger = true, thirst = true, stress = true,
+    },
+    player = { playtime = true },
+    account = { premium_points = true },
+}
+
+function Sunset.SetPersistentStat(source, scope, field, value)
+    local player = Sunset.GetPlayer(source)
+    local char = player and player.character
+    local allowed = PersistentStatFields[scope]
+    if not player or not char then return false, 'Character data is unavailable.' end
+    if not allowed or not allowed[field] then return false, 'That persistent field is not allowed.' end
+    value = math.floor(tonumber(value) or -1)
+    if value < 0 then return false, 'The value must be zero or greater.' end
+
+    local tableName, rowId, cache
+    if scope == 'character' then
+        tableName, rowId, cache = 'characters', char.id, char
+    elseif scope == 'player' then
+        tableName, rowId, cache = 'players', player.id, player
+    else
+        tableName, rowId, cache = 'accounts', player.account_id, player
+    end
+
+    local changed = MySQL.update.await(('UPDATE %s SET %s = ? WHERE id = ?'):format(tableName, field), { value, rowId })
+    if changed == nil then return false, 'The database rejected the update.' end
+    cache[field] = value
+    if scope == 'player' and field == 'playtime' then player.sessionStart = os.time() end
+
+    if scope == 'character' then
+        TriggerClientEvent('sunset:client:updateCharacter', source, char)
+        if field == 'cash' or field == 'bank' then
+            TriggerClientEvent('sunset:client:updateMoney', source, char.cash or 0, char.bank or 0)
+        end
+    end
+    return true
+end
+
+function Sunset.SetHomeProperty(source, propertyId)
+    local char = Sunset.GetCharacter(source)
+    if not char then return false end
+    propertyId = propertyId and tonumber(propertyId) or nil
+    local changed = MySQL.update.await('UPDATE characters SET home_property_id = ? WHERE id = ?', { propertyId, char.id })
+    if changed == nil then return false end
+    char.home_property_id = propertyId
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    return true
+end
+
 function Sunset.AddMoney(source, account, amount, reason)
     local char = Sunset.GetCharacter(source)
+    amount = math.floor(tonumber(amount) or 0)
     if not char or amount <= 0 then return false end
 
+    local field
     if account == 'cash' then
-        char.cash = (char.cash or 0) + amount
+        field = 'cash'
     elseif account == 'bank' then
-        char.bank = (char.bank or 0) + amount
+        field = 'bank'
     else
         return false
     end
+
+    local changed = MySQL.update.await(('UPDATE characters SET %s = %s + ? WHERE id = ?'):format(field, field), { amount, char.id })
+    if not changed or changed < 1 then return false end
+    char[field] = (tonumber(char[field]) or 0) + amount
 
     TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
@@ -81,17 +140,26 @@ end
 
 function Sunset.RemoveMoney(source, account, amount, reason)
     local char = Sunset.GetCharacter(source)
+    amount = math.floor(tonumber(amount) or 0)
     if not char or amount <= 0 then return false end
 
+    local field
     if account == 'cash' then
         if (char.cash or 0) < amount then return false end
-        char.cash = char.cash - amount
+        field = 'cash'
     elseif account == 'bank' then
         if (char.bank or 0) < amount then return false end
-        char.bank = char.bank - amount
+        field = 'bank'
     else
         return false
     end
+
+    local changed = MySQL.update.await(
+        ('UPDATE characters SET %s = %s - ? WHERE id = ? AND %s >= ?'):format(field, field, field),
+        { amount, char.id, amount }
+    )
+    if not changed or changed < 1 then return false end
+    char[field] = (tonumber(char[field]) or 0) - amount
 
     TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
@@ -233,6 +301,8 @@ exports('SaveCharacter', Sunset.SaveCharacter)
 exports('AddMoney', Sunset.AddMoney)
 exports('RemoveMoney', Sunset.RemoveMoney)
 exports('GetMoney', Sunset.GetMoney)
+exports('SetPersistentStat', Sunset.SetPersistentStat)
+exports('SetHomeProperty', Sunset.SetHomeProperty)
 exports('SetJob', Sunset.SetJob)
 exports('SetFaction', Sunset.SetFaction)
 exports('AddXP', Sunset.AddXP)

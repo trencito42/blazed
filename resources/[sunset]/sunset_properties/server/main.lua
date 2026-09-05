@@ -104,8 +104,9 @@ local function charge(source, amount, reason)
     local account
     if exports.sunset_core:GetMoney(source,'bank')>=amount then account='bank'
     elseif exports.sunset_core:GetMoney(source,'cash')>=amount then account='cash' end
-    if not account then return false end
-    return exports.sunset_core:RemoveMoney(source,account,amount,reason)
+    if not account then return nil end
+    if not exports.sunset_core:RemoveMoney(source,account,amount,reason) then return nil end
+    return account
 end
 
 local function creditOwner(characterId, amount)
@@ -126,8 +127,7 @@ local function clearHome(characterId, propertyId, reason)
         local src = tonumber(playerId)
         local online = exports.sunset_core:GetCharacter(src)
         if online and tonumber(online.id) == tonumber(characterId) and tonumber(online.home_property_id) == tonumber(propertyId) then
-            online.home_property_id = nil
-            TriggerClientEvent('sunset:client:updateCharacter', src, online)
+            exports.sunset_core:SetHomeProperty(src, nil)
             if reason then message(src, reason, 'error') end
             break
         end
@@ -142,20 +142,27 @@ exports.sunset_core:RegisterCallback('sunset:buyProperty', function(source,id)
     if not nearby(source,prop) then return nil,'Stand inside this house entrance marker to buy it.' end
     if not dbBool(prop.for_sale) then return nil,'This house is not for sale. An admin can enable it with /ahouseedit '..prop.id..' sale 1.' end
     if prop.owner_character_id then return nil,'This house already has an owner.' end
-    if (tonumber(char.level) or 1)<(tonumber(prop.minimum_level) or 1) then return nil,('You need level %d to buy it.'):format(prop.minimum_level) end
+    local currentLevel, requiredLevel = tonumber(char.level) or 1, tonumber(prop.minimum_level) or 1
+    if currentLevel < requiredLevel then
+        return nil,('Purchase blocked: this house requires level %d, but you are level %d. No money was charged. Earn RP at payday and use /buylevel.'):format(requiredLevel,currentLevel)
+    end
     if MySQL.scalar.await('SELECT 1 FROM properties WHERE owner_character_id=? LIMIT 1',{char.id}) then return nil,'You already own a house. Sell it before buying another.' end
     local price=tonumber(prop.price) or 0
-    if exports.sunset_core:GetMoney(source,'bank')<price and exports.sunset_core:GetMoney(source,'cash')<price then return nil,('You need $%d in bank or cash.'):format(price) end
+    local bank, cash = exports.sunset_core:GetMoney(source,'bank'), exports.sunset_core:GetMoney(source,'cash')
+    if bank<price and cash<price then return nil,('Purchase blocked: the house costs $%d. You have $%d in bank and $%d cash; the full price must be in one account. No money was charged.'):format(price,bank,cash) end
     local claimed=MySQL.update.await('UPDATE properties SET owner_character_id=?,locked=1 WHERE id=? AND owner_character_id IS NULL',{char.id,prop.id})
     if claimed~=1 then return nil,'Another player bought this house first.' end
-    if not charge(source,price,'house_purchase') then
+    local paidFrom = charge(source,price,'house_purchase')
+    if not paidFrom then
         MySQL.update.await('UPDATE properties SET owner_character_id=NULL WHERE id=? AND owner_character_id=?',{prop.id,char.id})
         return nil,'Payment failed; ownership was rolled back and you were not charged.'
     end
     MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=?',{char.id})
-    char.home_property_id=prop.id
-    MySQL.update.await('UPDATE characters SET home_property_id=? WHERE id=?',{prop.id,char.id})
-    exports.sunset_core:SaveCharacter(source)
+    if not exports.sunset_core:SetHomeProperty(source, prop.id) then
+        MySQL.update.await('UPDATE properties SET owner_character_id=NULL WHERE id=? AND owner_character_id=?',{prop.id,char.id})
+        exports.sunset_core:AddMoney(source,paidFrom,price,'house_purchase_rollback')
+        return nil,'The house could not be saved to your character. Ownership was rolled back and the full payment was refunded.'
+    end
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,('You bought %s for $%d.'):format(prop.label,price)
 end)
@@ -175,14 +182,17 @@ exports.sunset_core:RegisterCallback('sunset:rentProperty', function(source,id)
     MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=?',{char.id})
     MySQL.query.await([[INSERT INTO property_rentals(property_id,character_id,rent_price,active,last_paid_at)
       VALUES(?,?,?,1,NOW()) ON DUPLICATE KEY UPDATE property_id=VALUES(property_id),rent_price=VALUES(rent_price),active=1,started_at=NOW(),last_paid_at=NOW()]],{prop.id,char.id,price})
-    if not charge(source,price,'house_rent') then
+    local paidFrom = charge(source,price,'house_rent')
+    if not paidFrom then
         MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=? AND property_id=?',{char.id,prop.id})
         return nil,'Rent payment failed; the agreement was cancelled and you were not charged.'
     end
+    if not exports.sunset_core:SetHomeProperty(source, prop.id) then
+        MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=? AND property_id=?',{char.id,prop.id})
+        exports.sunset_core:AddMoney(source,paidFrom,price,'house_rent_rollback')
+        return nil,'The rental could not be saved. The agreement was cancelled and the payment was refunded.'
+    end
     creditOwner(prop.owner_character_id,price)
-    char.home_property_id=prop.id
-    MySQL.update.await('UPDATE characters SET home_property_id=? WHERE id=?',{prop.id,char.id})
-    exports.sunset_core:SaveCharacter(source)
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,('You now rent %s for $%d each payday.'):format(prop.label,price)
 end)
@@ -193,7 +203,7 @@ exports.sunset_core:RegisterCallback('sunset:leaveRental', function(source)
     local rent=activeRental(char.id)
     if not rent then return nil,'You do not currently rent a house.' end
     MySQL.update.await('UPDATE property_rentals SET active=0 WHERE id=?',{rent.id})
-    if tonumber(char.home_property_id)==tonumber(rent.property_id) then char.home_property_id=nil; MySQL.update.await('UPDATE characters SET home_property_id=NULL WHERE id=?',{char.id}) end
+    if tonumber(char.home_property_id)==tonumber(rent.property_id) then exports.sunset_core:SetHomeProperty(source,nil) end
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,'Rental ended. Your civilian job and faction were not changed.'
 end)
@@ -202,8 +212,7 @@ exports.sunset_core:RegisterCallback('sunset:setHome', function(source,id)
     local char=exports.sunset_core:GetCharacter(source)
     local prop=property(id)
     if not char or not prop or not accessible(char,prop) then return nil,'You must own or actively rent that house.' end
-    char.home_property_id=prop.id
-    MySQL.update.await('UPDATE characters SET home_property_id=? WHERE id=?',{prop.id,char.id})
+    if not exports.sunset_core:SetHomeProperty(source,prop.id) then return nil,'The home spawn could not be saved. Please try again.' end
     return true,('Home spawn set to %s.'):format(prop.label)
 end)
 
@@ -254,7 +263,7 @@ exports.sunset_core:RegisterCallback('sunset:propertyAction', function(source,ac
     elseif action=='sethome' then
         local char=exports.sunset_core:GetCharacter(source); local prop=property(id)
         if not char or not prop or not accessible(char,prop) then return nil,'You do not have access to this house.' end
-        char.home_property_id=prop.id; MySQL.update.await('UPDATE characters SET home_property_id=? WHERE id=?',{prop.id,char.id})
+        if not exports.sunset_core:SetHomeProperty(source,prop.id) then return nil,'The home spawn could not be saved. Please try again.' end
         return true,('Home spawn set to %s.'):format(prop.label)
     end
     return nil,'Unknown house action.'
@@ -354,7 +363,7 @@ RegisterCommand('sellhouse',function(source,args)
     for _,renter in ipairs(renters) do clearHome(renter.character_id,prop.id,('Your rental at %s ended because the house was sold.'):format(prop.label)) end
     MySQL.update.await('UPDATE characters SET home_property_id=NULL WHERE home_property_id=?',{prop.id})
     MySQL.update.await('UPDATE properties SET owner_character_id=NULL,locked=1,rent_enabled=0 WHERE id=? AND owner_character_id=?',{prop.id,owner.id})
-    local char=exports.sunset_core:GetCharacter(source); char.home_property_id=nil; exports.sunset_core:AddMoney(source,'bank',refund,'house_sale')
+    exports.sunset_core:SetHomeProperty(source,nil); exports.sunset_core:AddMoney(source,'bank',refund,'house_sale')
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('House sold. $%d was deposited in your bank.'):format(refund),'success')
 end,false)
 
@@ -374,7 +383,7 @@ RegisterCommand('renthouse',function(source) message(source,'Stand at a house, p
 RegisterCommand('unrent',function(source)
     local char=exports.sunset_core:GetCharacter(source); if not char then return end; local rent=activeRental(char.id)
     if not rent then return message(source,'You do not currently rent a house.','error') end
-    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE id=?',{rent.id}); if tonumber(char.home_property_id)==tonumber(rent.property_id) then char.home_property_id=nil; MySQL.update.await('UPDATE characters SET home_property_id=NULL WHERE id=?',{char.id}) end
+    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE id=?',{rent.id}); if tonumber(char.home_property_id)==tonumber(rent.property_id) then exports.sunset_core:SetHomeProperty(source,nil) end
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,'Rental ended. Your civilian job and faction are unchanged.','success')
 end,false)
 

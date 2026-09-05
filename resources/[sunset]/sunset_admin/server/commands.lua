@@ -190,23 +190,15 @@ local function setPlayerStat(source, args, forcedStat)
     local oldValue
     if definition.scope == 'character' then
         oldValue = math.floor(tonumber(char[definition.field]) or 0)
-        char[definition.field] = value
-        MySQL.update.await(('UPDATE characters SET %s = ? WHERE id = ?'):format(definition.field), { value, char.id })
-        TriggerClientEvent('sunset:client:updateCharacter', target, char)
-        if stat == 'cash' or stat == 'bank' then
-            TriggerClientEvent('sunset:client:updateMoney', target, char.cash or 0, char.bank or 0)
-        end
     elseif definition.scope == 'player' then
         oldValue = math.floor(tonumber(player[definition.field]) or 0)
-        player[definition.field] = value
-        -- Make the value entered by the admin the exact new playtime baseline;
-        -- otherwise the unflushed part of the current session is added on top.
-        if stat == 'playtime' then player.sessionStart = os.time() end
-        MySQL.update.await(('UPDATE players SET %s = ? WHERE id = ?'):format(definition.field), { value, player.id })
     else
         oldValue = math.floor(tonumber(player[definition.field]) or 0)
-        player[definition.field] = value
-        MySQL.update.await(('UPDATE accounts SET %s = ? WHERE id = ?'):format(definition.field), { value, player.account_id })
+    end
+
+    local saved, saveError = exports.sunset_core:SetPersistentStat(target, definition.scope, definition.field, value)
+    if not saved then
+        return commandOutput(source, saveError or 'The statistic could not be saved. No value was changed.', 'error')
     end
 
     auditStatChange(source, player, char, stat, oldValue, value)

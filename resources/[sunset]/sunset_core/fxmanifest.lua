@@ -51,6 +51,8 @@ server_exports {
     'AddMoney',
     'RemoveMoney',
     'GetMoney',
+    'SetPersistentStat',
+    'SetHomeProperty',
     'SetJob',
     'SetFaction',
     'AddXP',
