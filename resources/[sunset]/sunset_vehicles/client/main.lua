@@ -87,11 +87,13 @@ local function showVehicleHint(id)
         end
     end
     local lights = { 'LIGHTS OFF', 'LIGHTS LOW', 'LIGHTS HIGH' }
+    local lightTones = { 'off', 'low', 'high' }
+    local mode = lightMode or 0
     local rows = {
-        engine = { label = engineOn and 'ENGINE ON' or 'ENGINE OFF', key = '2', ok = engineOn },
-        lock = { label = locked and 'LOCKED' or 'UNLOCKED', key = 'N', ok = not locked },
-        seatbelt = { label = seatbelt and 'SEATBELT ON' or 'SEATBELT OFF', key = 'K', ok = seatbelt },
-        lights = { label = lights[(lightMode or 0) + 1] or 'LIGHTS OFF', key = 'H', ok = (lightMode or 0) > 0 },
+        engine = { label = engineOn and 'ENGINE ON' or 'ENGINE OFF', key = '2', ok = engineOn, tone = engineOn and 'on' or 'off' },
+        lock = { label = locked and 'LOCKED' or 'UNLOCKED', key = 'N', ok = not locked, tone = locked and 'off' or 'on' },
+        seatbelt = { label = seatbelt and 'SEATBELT ON' or 'SEATBELT OFF', key = 'K', ok = seatbelt, tone = seatbelt and 'on' or 'off' },
+        lights = { label = lights[mode + 1] or 'LIGHTS OFF', key = 'H', ok = mode > 0, tone = lightTones[mode + 1] or 'off' },
     }
     exports.sunset_ui:Send('vehicleHint', { id = id, rows = rows })
 end

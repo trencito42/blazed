@@ -135,21 +135,25 @@ const Hud = {
             label: data.engineOn ? 'ENGINE ON' : 'ENGINE OFF',
             key: '2',
             ok: !!data.engineOn,
+            tone: data.engineOn ? 'on' : 'off',
         };
         this.hintState.lock = {
             label: data.locked ? 'LOCKED' : 'UNLOCKED',
             key: 'N',
             ok: !data.locked,
+            tone: data.locked ? 'off' : 'on',
         };
         this.hintState.seatbelt = {
             label: data.seatbelt ? 'SEATBELT ON' : 'SEATBELT OFF',
             key: 'K',
             ok: !!data.seatbelt,
+            tone: data.seatbelt ? 'on' : 'off',
         };
         this.hintState.lights = {
             label: lights[mode],
             key: 'H',
             ok: mode > 0,
+            tone: mode === 2 ? 'high' : (mode === 1 ? 'low' : 'off'),
         };
         this.renderHintRows();
     },
@@ -162,8 +166,12 @@ const Hud = {
             const key = el.querySelector('.veh-hints__key');
             if (label) label.textContent = row.label;
             if (key) key.textContent = row.key;
-            el.classList.toggle('is-on', row.ok === true);
-            el.classList.toggle('is-off', row.ok === false);
+            const tone = row.tone || (row.ok ? 'on' : 'off');
+            el.classList.toggle('is-on', tone === 'on' || tone === 'low');
+            el.classList.toggle('is-off', tone === 'off');
+            el.classList.toggle('is-high', tone === 'high');
+            el.classList.toggle('is-low', tone === 'low');
+            el.classList.toggle('is-dim', tone === 'off' && id === 'lights');
         });
     },
 
@@ -193,6 +201,7 @@ const Hud = {
                     label: row.label,
                     key: row.key,
                     ok: row.ok === true,
+                    tone: row.tone || (row.ok ? 'on' : 'off'),
                 };
             });
         }

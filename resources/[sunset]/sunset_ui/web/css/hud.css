@@ -1047,3 +1047,27 @@
     background: rgba(255, 42, 42, 0.12);
     box-shadow: 0 0 12px rgba(255, 42, 42, 0.25);
 }
+
+.veh-hints__row.is-dim .veh-hints__label { color: #b8b8b8; }
+.veh-hints__row.is-dim .veh-hints__key {
+    color: #c8c8c8;
+    border-color: rgba(200, 200, 200, 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.veh-hints__row.is-low .veh-hints__label { color: #6cff8f; }
+.veh-hints__row.is-low .veh-hints__key {
+    color: #6cff8f;
+    border-color: rgba(108, 255, 143, 0.55);
+    background: rgba(0, 255, 102, 0.12);
+    box-shadow: 0 0 12px rgba(0, 255, 102, 0.25);
+}
+
+.veh-hints__row.is-high .veh-hints__label { color: #6ec8ff; }
+.veh-hints__row.is-high .veh-hints__key {
+    color: #6ec8ff;
+    border-color: rgba(80, 180, 255, 0.6);
+    background: rgba(40, 140, 255, 0.16);
+    box-shadow: 0 0 14px rgba(60, 160, 255, 0.35);
+}
