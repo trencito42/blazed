@@ -657,7 +657,8 @@ const Panels = {
             meta.textContent = `Level ${p.minimumLevel || 1} · ${p.interior || 'standard'} · ${p.locked ? 'Locked' : 'Unlocked'}${p.ownerName ? ` · Owner: ${p.ownerName}` : ''}`;
             const rental = document.createElement('small');
             rental.textContent = p.owner_character_id
-                ? `${p.renterCount || 0}/${p.maxRenters || 1} rental slots used` : 'Available for purchase';
+                ? `${p.renterCount || 0}/${p.maxRenters || 1} rental slots used`
+                : (p.forSale ? `Available for purchase · requires level ${p.minimumLevel || 1}` : 'Sale disabled by administrator');
             details.append(name, meta, rental);
             const side = document.createElement('div');
             side.className = 'house-row__side';

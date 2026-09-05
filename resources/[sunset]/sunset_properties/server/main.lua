@@ -1,5 +1,9 @@
 local Inside = {}
 
+local function dbBool(value)
+    return value == true or value == 1 or value == '1'
+end
+
 local function decodePos(raw)
     if type(raw) == 'table' then return raw end
     if not raw then return nil end
@@ -50,8 +54,8 @@ local function publicRow(row, char)
         id=row.id, label=row.label, price=tonumber(row.price) or 0, entry=decodePos(row.entry),
         owner_character_id=row.owner_character_id, ownerName=row.owner_name ~= '' and row.owner_name or nil,
         interior=row.interior, minimumLevel=tonumber(row.minimum_level) or 1,
-        locked=tonumber(row.locked)==1, forSale=tonumber(row.for_sale)==1,
-        rentEnabled=tonumber(row.rent_enabled)==1, rentPrice=tonumber(row.rent_price) or 0,
+        locked=dbBool(row.locked), forSale=dbBool(row.for_sale),
+        rentEnabled=dbBool(row.rent_enabled), rentPrice=tonumber(row.rent_price) or 0,
         renterCount=tonumber(row.renter_count) or 0, maxRenters=tonumber(row.max_renters) or 1,
         owned=owned, rented=rented, access=owned or rented,
     }
@@ -88,7 +92,7 @@ exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(sourc
     elseif choice=='last' then pos=char.position
     elseif choice=='house' then
         local prop=property(propertyId)
-        if not prop or tonumber(prop.enabled)~=1 then return nil,'That house is no longer available.' end
+        if not prop or not dbBool(prop.enabled) then return nil,'That house is no longer available.' end
         if not accessible(char,prop) then return nil,'You no longer own or rent that house.' end
         pos=decodePos(prop.entry)
     else return nil,'Invalid spawn location.' end
@@ -134,9 +138,9 @@ exports.sunset_core:RegisterCallback('sunset:buyProperty', function(source,id)
     local char=exports.sunset_core:GetCharacter(source)
     local prop=property(id)
     if not char then return nil,'Character data is unavailable.' end
-    if not prop or tonumber(prop.enabled)~=1 then return nil,'This house does not exist or is disabled.' end
+    if not prop or not dbBool(prop.enabled) then return nil,'This house does not exist or is disabled.' end
     if not nearby(source,prop) then return nil,'Stand inside this house entrance marker to buy it.' end
-    if tonumber(prop.for_sale)~=1 then return nil,'This house is not for sale.' end
+    if not dbBool(prop.for_sale) then return nil,'This house is not for sale. An admin can enable it with /ahouseedit '..prop.id..' sale 1.' end
     if prop.owner_character_id then return nil,'This house already has an owner.' end
     if (tonumber(char.level) or 1)<(tonumber(prop.minimum_level) or 1) then return nil,('You need level %d to buy it.'):format(prop.minimum_level) end
     if MySQL.scalar.await('SELECT 1 FROM properties WHERE owner_character_id=? LIMIT 1',{char.id}) then return nil,'You already own a house. Sell it before buying another.' end
@@ -163,7 +167,7 @@ exports.sunset_core:RegisterCallback('sunset:rentProperty', function(source,id)
     if not prop or not prop.owner_character_id then return nil,'This house has no owner and cannot be rented.' end
     if not nearby(source,prop) then return nil,'Stand inside this house entrance marker to rent it.' end
     if tonumber(prop.owner_character_id)==tonumber(char.id) then return nil,'You own this house already.' end
-    if tonumber(prop.rent_enabled)~=1 then return nil,'The owner is not accepting renters.' end
+    if not dbBool(prop.rent_enabled) then return nil,'The owner is not accepting renters.' end
     if tonumber(prop.renter_count)>=tonumber(prop.max_renters) then return nil,'This house has no free rental slots.' end
     if activeRental(char.id,prop.id) then return nil,'You already rent this house.' end
     local price=tonumber(prop.rent_price) or 0
@@ -207,9 +211,9 @@ local function enter(source,id)
     local char=exports.sunset_core:GetCharacter(source)
     local prop=property(id)
     if not char then return nil,'Character data is unavailable.' end
-    if not prop or tonumber(prop.enabled)~=1 then return nil,'This house is unavailable.' end
+    if not prop or not dbBool(prop.enabled) then return nil,'This house is disabled. Ask an administrator to enable it.' end
     if not nearby(source,prop) then return nil,'Stand inside the entrance marker to enter.' end
-    if tonumber(prop.locked)==1 and not accessible(char,prop) then return nil,'The door is locked. Only the owner and active renters may enter.' end
+    if dbBool(prop.locked) and not accessible(char,prop) then return nil,'The door is locked. Only the owner and active renters may enter.' end
     local preset=SunsetProperties.Interiors[prop.interior]
     local interior=preset and preset.coords or decodePos(prop.interior_pos)
     if not interior then return nil,'No valid interior is configured. Contact an administrator.' end
@@ -238,7 +242,7 @@ end
 local function toggleLock(source,id)
     local _,prop,err=ownedProperty(source,id)
     if not prop then return nil,err end
-    local locked=tonumber(prop.locked)==1 and 0 or 1
+    local locked=dbBool(prop.locked) and 0 or 1
     MySQL.update.await('UPDATE properties SET locked=? WHERE id=?',{locked,prop.id})
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,locked==1 and 'House door locked.' or 'House door unlocked; guests may enter.'
