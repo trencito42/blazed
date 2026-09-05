@@ -2,6 +2,23 @@ local JC = Sunset.JobClient
 
 local packageProp = nil
 local carryAnimActive = false
+local courierUiKey = nil
+
+local function hideCourierUi()
+    courierUiKey = nil
+    exports.sunset_ui:Send('courierHide', {})
+end
+
+local function showCourierUi(state, data, force)
+    data = data or {}
+    data.state = state
+    data.title = data.title or 'Courier'
+    local key = table.concat({ state or '', data.counter or '', data.message or '', data.detail or '',
+        tostring(data.progress or 0), data.key or '' }, '|')
+    if not force and courierUiKey == key then return end
+    courierUiKey = key
+    exports.sunset_ui:Send('courierShow', data)
+end
 
 local function pointToDelivery(cfg, target, label)
     if not target then return end
@@ -60,14 +77,23 @@ local function updateObjective(cfg, data)
     local total = data.total or 1
     local delivered = data.delivered or 0
     local pct = math.floor((delivered / math.max(total, 1)) * 100)
+    local idx = math.min(data.deliveryIndex or (delivered + 1), total)
 
     if data.hasPackage then
-        local idx = data.deliveryIndex or 1
         local target = data.deliveries and data.deliveries[idx]
-        JC.showObjective('Courier', ('Deliver package %d/%d to %s'):format(
-            idx, total, target and target.label or 'the address'), pct)
+        showCourierUi('route', {
+            counter = ('Package %d/%d'):format(idx, total),
+            message = 'Follow GPS to delivery',
+            detail = target and target.label or 'Delivery address',
+            progress = pct,
+        })
     elseif data.stage == 'pickup' or (data.stage == 'delivering' and not data.hasPackage) then
-        JC.showObjective('Courier', 'Pick up a package at the warehouse (E)', pct)
+        showCourierUi('route', {
+            counter = ('Package %d/%d'):format(idx, total),
+            message = 'Return to the warehouse',
+            detail = 'Loading dock marked on GPS',
+            progress = pct,
+        })
     end
 end
 
@@ -83,6 +109,7 @@ local function startCourier()
     JC.addBlip(cfg.warehouse.coords, cfg.warehouse.blip, 'Courier Warehouse')
     JC.sessionData = data
     JC.setWaypoint(cfg.warehouse.coords)
+    JC.hideObjective()
     updateObjective(cfg, data)
     JC.notify('Go to the warehouse loading dock to pick up packages', 'info')
 
@@ -94,12 +121,27 @@ local function startCourier()
 
             if stage == 'pickup' or (stage == 'delivering' and session and not session.hasPackage) then
                 JC.drawMarker(cfg.warehouse.coords, 255, 180, 0)
-                if JC.isNear(cfg.warehouse.coords, cfg.pickupRadius)
-                    and not busy
-                    and not IsPedInAnyVehicle(PlayerPedId(), false) then
-                    JC.showHelp('Press ~INPUT_CONTEXT~ to pick up a package')
+                local nearPickup = JC.isNear(cfg.warehouse.coords, cfg.pickupRadius)
+                local inVehicle = IsPedInAnyVehicle(PlayerPedId(), false)
+                local total = session and session.total or 1
+                local idx = math.min((session and session.deliveryIndex) or ((session and session.delivered or 0) + 1), total)
+                local pct = math.floor(((session and session.delivered or 0) / math.max(total, 1)) * 100)
+                if nearPickup and not busy and not inVehicle then
+                    showCourierUi('prompt', {
+                        counter = ('Package %d/%d'):format(idx, total),
+                        message = 'Press {key} to pick up package',
+                        detail = 'Courier Warehouse · Loading Dock',
+                        progress = pct,
+                        key = 'E',
+                    })
                     if IsControlJustPressed(0, 38) then
                         busy = true
+                        showCourierUi('working', {
+                            counter = ('Package %d/%d'):format(idx, total),
+                            message = 'Collecting package',
+                            detail = 'Preparing delivery manifest',
+                            progress = pct,
+                        }, true)
                         JC.playAnim('anim@heists@box_carry@', 'idle', 2000)
                         local newData, err2 = Sunset.AwaitCallback('sunset:jobs:courier:pickup')
                         busy = false
@@ -115,8 +157,18 @@ local function startCourier()
                             end
                         else
                             JC.notify(err2 or 'Could not pick up package at the warehouse', 'error')
+                            courierUiKey = nil
                         end
                     end
+                elseif nearPickup and inVehicle then
+                    showCourierUi('blocked', {
+                        counter = ('Package %d/%d'):format(idx, total),
+                        message = 'Exit the vehicle',
+                        detail = 'Pick up the package on foot',
+                        progress = pct,
+                    })
+                else
+                    updateObjective(cfg, session)
                 end
             elseif stage == 'delivering' and session and session.hasPackage then
                 local idx = session.deliveryIndex or 1
@@ -124,18 +176,39 @@ local function startCourier()
                 if target then
                     local pos = vector3(target.coords.x, target.coords.y, target.coords.z)
                     JC.drawMarker(pos, 46, 204, 113)
-                    if JC.isNear(pos, cfg.deliveryRadius)
-                        and not busy
-                        and not IsPedInAnyVehicle(PlayerPedId(), false) then
-                        JC.showHelp('Press ~INPUT_CONTEXT~ to deliver the package')
+                    local nearDelivery = JC.isNear(pos, cfg.deliveryRadius)
+                    local inVehicle = IsPedInAnyVehicle(PlayerPedId(), false)
+                    local total = session.total or 1
+                    local pct = math.floor(((session.delivered or 0) / math.max(total, 1)) * 100)
+                    if nearDelivery and not busy and not inVehicle then
+                        showCourierUi('prompt', {
+                            counter = ('Package %d/%d'):format(idx, total),
+                            message = 'Press {key} to deliver package',
+                            detail = target.label or 'Delivery address',
+                            progress = pct,
+                            key = 'E',
+                        })
                         if IsControlJustPressed(0, 38) then
                             busy = true
+                            showCourierUi('working', {
+                                counter = ('Package %d/%d'):format(idx, total),
+                                message = 'Handing over package',
+                                detail = target.label or 'Delivery address',
+                                progress = pct,
+                            }, true)
                             JC.playAnim('anim@heists@box_carry@', 'idle', 2000)
                             local result, err2 = Sunset.AwaitCallback('sunset:jobs:courier:deliver')
                             busy = false
                             if result then
                                 detachPackage()
                                 JC.notify(('Delivered +$%s'):format(result.pay or 0), 'success')
+                                showCourierUi(result.completed and 'complete' or 'success', {
+                                    counter = ('Package %d/%d'):format(idx, total),
+                                    message = result.completed and 'Route complete' or ('Delivered · +$%s'):format(result.pay or 0),
+                                    detail = result.completed and 'All packages delivered successfully' or 'Return to warehouse for the next package',
+                                    progress = math.floor((idx / math.max(total, 1)) * 100),
+                                }, true)
+                                Wait(result.completed and 1700 or 1000)
                                 if result.completed then
                                     JC.clearBlips()
                                     JC.hideObjective()
@@ -150,15 +223,33 @@ local function startCourier()
                                 end
                             else
                                 JC.notify(err2 or 'Could not deliver the package', 'error')
+                                courierUiKey = nil
                             end
                         end
+                    elseif nearDelivery and inVehicle then
+                        showCourierUi('blocked', {
+                            counter = ('Package %d/%d'):format(idx, total),
+                            message = 'Exit the vehicle',
+                            detail = 'Deliver the package on foot at ' .. (target.label or 'the address'),
+                            progress = pct,
+                        })
+                    else
+                        updateObjective(cfg, session)
                     end
                 end
             end
             Wait(0)
         end
         detachPackage()
+        hideCourierUi()
+        JC.hideObjective()
     end)
 end
+
+RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId)
+    if jobId ~= 'courier' then return end
+    detachPackage()
+    hideCourierUi()
+end)
 
 Sunset.Jobs.StartCourier = startCourier

@@ -329,6 +329,15 @@ window.addEventListener('message', (event) => {
         case 'fishingHide':
             if (window.Fishing) Fishing.hide();
             break;
+        case 'courierShow':
+            if (window.Courier) Courier.show(data || event.data.data);
+            break;
+        case 'courierUpdate':
+            if (window.Courier) Courier.update(data || event.data.data);
+            break;
+        case 'courierHide':
+            if (window.Courier) Courier.hide();
+            break;
         case 'garageShow':
             if (window.Panels) Panels.showGarage(data || event.data.data);
             break;

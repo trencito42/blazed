@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/fuel_pump.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/fishing.css">
+    <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/auth_loading.css">
 </head>
 <body>
@@ -68,30 +69,62 @@
         <div class="progress__track"><div class="progress__fill"></div></div>
     </div>
 
-    <div id="fuel-pump" class="hidden" aria-hidden="true">
+    <div id="fuel-pump" class="hidden" aria-hidden="true" aria-live="polite">
         <div class="fuel-pump__header">
-            <div>
-                <div class="fuel-pump__brand">Fuel Pump</div>
-                <div class="fuel-pump__station" id="fuel-pump-station">Gas Station</div>
+            <div class="fuel-pump__identity">
+                <svg class="fuel-pump__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                    <path d="M3 22V8a5 5 0 0 1 10 0v14M3 22h10M8 22v-8M17 5v14M21 9v10M17 5h4"/>
+                    <path d="M17 5a2 2 0 0 0-2-2M21 9a2 2 0 0 0 2-2 2 2 0 0 0-2-2"/>
+                </svg>
+                <div>
+                    <div class="fuel-pump__brand">Sunset Fuel</div>
+                    <div class="fuel-pump__station" id="fuel-pump-station">Gas Station</div>
+                </div>
             </div>
-            <div class="fuel-pump__icon"><img src="assets/items/jerry_can.webp" alt=""></div>
+            <div class="fuel-pump__price">
+                <span>PRICE</span>
+                <strong id="fuel-pump-price">$0.00 / UNIT</strong>
+            </div>
         </div>
         <div class="fuel-pump__display">
-            <div class="fuel-pump__row">
-                <span class="fuel-pump__label">Liters</span>
-                <span class="fuel-pump__value" id="fuel-pump-liters">0.0</span>
+            <div class="fuel-pump__metric">
+                <span class="fuel-pump__label">Delivered</span>
+                <strong class="fuel-pump__value"><span id="fuel-pump-liters">0.00</span><small>L</small></strong>
             </div>
-            <div class="fuel-pump__row">
-                <span class="fuel-pump__label">Total</span>
-                <span class="fuel-pump__value fuel-pump__value--cost" id="fuel-pump-cost">$0.00</span>
-            </div>
-            <div class="fuel-pump__row">
-                <span class="fuel-pump__label">Tank</span>
-                <span class="fuel-pump__value" id="fuel-pump-tank">0%</span>
+            <div class="fuel-pump__divider"></div>
+            <div class="fuel-pump__metric fuel-pump__metric--cost">
+                <span class="fuel-pump__label">Total sale</span>
+                <strong class="fuel-pump__value"><small>$</small><span id="fuel-pump-cost">0.00</span></strong>
             </div>
         </div>
-        <div class="fuel-pump__bar"><div class="fuel-pump__fill" id="fuel-pump-fill"></div></div>
-        <p class="fuel-pump__hint">Hold <kbd>E</kbd> to pump — release to pay &amp; stop</p>
+        <div class="fuel-pump__tank">
+            <div class="fuel-pump__tank-head">
+                <span>Tank level</span>
+                <strong id="fuel-pump-tank">0%</strong>
+            </div>
+            <div class="fuel-pump__bar"><div class="fuel-pump__fill" id="fuel-pump-fill"></div></div>
+        </div>
+        <div class="fuel-pump__prompt" id="fuel-pump-prompt">
+            <span>HOLD</span><kbd>E</kbd><span>TO REFUEL</span>
+        </div>
+    </div>
+
+    <!-- COURIER ACTION HUD -->
+    <div id="courier-panel" class="courier-shell hidden state-route" aria-live="polite">
+        <div class="courier-panel__body">
+            <div class="courier__header">
+                <svg class="courier__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                    <path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/><path d="M8 5l8 4"/>
+                </svg>
+                <div class="courier__title-wrap">
+                    <div class="courier__title" id="courier-title">Courier</div>
+                    <div class="courier__counter" id="courier-counter">Package 0/0</div>
+                </div>
+            </div>
+            <div class="courier__message" id="courier-message">Follow the GPS route</div>
+            <div class="courier__detail" id="courier-detail"></div>
+            <div class="courier__progress"><div class="courier__progress-fill" id="courier-progress"></div></div>
+        </div>
     </div>
 
     <!-- FISHING MINIGAME -->
@@ -974,5 +1007,6 @@
     <script src="js/auth_loading.js"></script>
     <script src="js/fuel_pump.js"></script>
     <script src="js/fishing.js"></script>
+    <script src="js/courier.js"></script>
 </body>
 </html>

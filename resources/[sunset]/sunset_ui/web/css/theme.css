@@ -342,20 +342,16 @@ h5,
 /* Other always-on UI inherits the same palette without gaining a fullscreen layer. */
 .job-objective,
 .taxi-meter,
-.police-order__inner,
-#fuel-pump {
+.police-order__inner {
     font-family: var(--sunset-body);
     border-radius: 2px !important;
 }
 
 .job-objective,
-.taxi-meter,
-#fuel-pump {
+.taxi-meter {
     border-color: var(--sunset-line) !important;
     background: linear-gradient(145deg, rgba(18, 20, 24, 0.94), rgba(7, 8, 10, 0.91)) !important;
 }
-
-.fuel-pump__icon img { width: 38px; height: 38px; object-fit: contain; }
 
 .phone-wallpaper {
     background:

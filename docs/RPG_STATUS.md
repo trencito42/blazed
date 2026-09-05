@@ -58,6 +58,8 @@ Static verification: changed JavaScript parses successfully, literal manifest re
 - Crafting now validates station proximity server-side, displays owned/required material counts, explains locked recipes, and provides `/crafting` GPS guidance.
 - Corrected the admin coordinate helper nil call, post-delivery Trucker partial-pay exploit, immortal job vehicles, orphaned failed-shift trucks, faction-leader leave ordering, and unpurchased barber preview retention.
 - Replaced the barely perceptible percentage-based fuel drain with class-specific liters/hour consumption. Tank size, RPM, speed, throttle, idle and a nonlinear redline penalty now determine consumption; sports/super/heavy vehicles consume materially more than compacts and motorcycles, while bicycles and trains consume none.
+- Rebuilt the Courier HUD around the centered transparent Fisherman interaction language, with route, on-foot prompt, blocked, processing, paid-delivery and completion states; the legacy corner objective and GTA help prompt are no longer used for Courier shifts.
+- Adapted the supplied fuel-pump reference into a transparent Sunset HUD with live delivered liters, price, cost, tank capacity, segmented fill state and the same centered-style E keycap language used by fishing. Proximity prompts no longer depend on the visually inconsistent ox_lib text box.
 
 ## Live vehicle/menu corrections (2026-09-04)
 

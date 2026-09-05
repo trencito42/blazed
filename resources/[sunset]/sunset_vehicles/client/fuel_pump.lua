@@ -105,6 +105,42 @@ local function showPumpUi(station, startFuel, tankLabel)
         liters = 0,
         cost = 0,
         tankLabel = tankLabel,
+        mode = 'pumping',
+        priceUnit = fillingCan and 'L' or '% TANK',
+    })
+end
+
+local function showVehiclePumpPrompt(station, veh)
+    local current = getFuelLevel()
+    local class = GetVehicleClass(veh)
+    local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
+    local tankLiters = Sunset.PercentToTankLiters(current, class)
+    exports.sunset_ui:Send('fuelPumpShow', {
+        station = station.label or 'Gas Station',
+        pricePerLiter = pricePerPercent(),
+        priceUnit = '% TANK',
+        fuel = current,
+        liters = 0,
+        cost = 0,
+        tankLabel = ('%.0f%% — %.1f/%.0f L'):format(current, tankLiters, tankCap),
+        mode = current >= 99.9 and 'full' or 'ready',
+        promptLabel = current >= 99.9 and 'TANK FULL' or 'TO REFUEL',
+    })
+end
+
+local function showCanPumpPrompt(station, currentLiters)
+    local maxLiters = maxCanLiters()
+    local pct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0
+    exports.sunset_ui:Send('fuelPumpShow', {
+        station = station.label or 'Gas Station',
+        pricePerLiter = pricePerLiter(),
+        priceUnit = 'L',
+        fuel = pct,
+        liters = 0,
+        cost = 0,
+        tankLabel = ('Gas can %.1f/%.0f L'):format(currentLiters, maxLiters),
+        mode = currentLiters >= maxLiters - 0.05 and 'full' or 'ready',
+        promptLabel = currentLiters >= maxLiters - 0.05 and 'GAS CAN FULL' or 'WITH GAS CAN',
     })
 end
 
@@ -115,7 +151,9 @@ local function updatePumpUi(station, fuel, liters, cost, tankLabel)
         liters = liters,
         cost = cost,
         pricePerLiter = fillingCan and pricePerLiter() or pricePerPercent(),
+        priceUnit = fillingCan and 'L' or '% TANK',
         tankLabel = tankLabel,
+        mode = 'pumping',
     })
 end
 
@@ -136,9 +174,9 @@ end
 local function finishRefuel(veh, startFuel, endFuel, station)
     refueling = false
     sessionVeh = 0
-    hidePumpUi()
 
     if endFuel <= startFuel + 0.05 then
+        hidePumpUi()
         notify('Refueling cancelled', 'warning')
         setFuelLevel(veh, startFuel)
         return
@@ -147,17 +185,27 @@ local function finishRefuel(veh, startFuel, endFuel, station)
     local plate = normalizePlate(GetVehicleNumberPlateText(veh))
     local result, err = Sunset.AwaitCallback('sunset:refuelVehiclePartial', startFuel, endFuel, plate)
     if not result then
+        hidePumpUi()
         setFuelLevel(veh, startFuel)
         notify(err or 'Payment failed', 'error')
         return
     end
 
     setFuelLevel(veh, result.newFuel or endFuel)
+    local finalFuel = result.newFuel or endFuel
+    local class = GetVehicleClass(veh)
+    local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
+    updatePumpUi(station, finalFuel, (finalFuel - startFuel) / 100.0 * tankCap, result.cost or 0,
+        ('%.0f%% — %.1f/%.0f L'):format(finalFuel, Sunset.PercentToTankLiters(finalFuel, class), tankCap))
+    exports.sunset_ui:Send('fuelPumpUpdate', { mode = finalFuel >= 99.9 and 'full' or 'complete',
+        promptLabel = finalFuel >= 99.9 and 'TANK FULL' or 'PAYMENT COMPLETE' })
     notify(('Refueled +%d%% — paid $%s (tank %d%%)'):format(
         math.floor((result.newFuel or endFuel) - startFuel),
         result.cost or 0,
         math.floor(result.newFuel or endFuel)
     ), 'success')
+    Wait(900)
+    hidePumpUi()
 end
 
 local function startRefuel(station)
@@ -181,22 +229,30 @@ end
 
 local function finishCanFill(endLiters)
     fillingCan = false
-    hidePumpUi()
 
     if endLiters <= canSessionStartLiters + 0.05 then
+        hidePumpUi()
         notify('Gas can fill cancelled', 'warning')
         return
     end
 
     local result, err = Sunset.AwaitCallback('sunset:fillGasCan', endLiters)
     if not result then
+        hidePumpUi()
         notify(err or 'Payment failed', 'error')
         return
     end
 
     local maxLiters = result.maxLiters or maxCanLiters()
+    local pct = maxLiters > 0 and ((result.liters or endLiters) / maxLiters) * 100.0 or 0
+    updatePumpUi(sessionStation, pct, result.added or (endLiters - canSessionStartLiters), result.cost or 0,
+        ('Gas can %.1f/%.0f L'):format(result.liters or endLiters, maxLiters))
+    exports.sunset_ui:Send('fuelPumpUpdate', { mode = pct >= 99.9 and 'full' or 'complete',
+        promptLabel = pct >= 99.9 and 'GAS CAN FULL' or 'PAYMENT COMPLETE' })
     notify(('Gas can: %.0f/%.0f L — paid $%s'):format(
         result.liters or endLiters, maxLiters, result.cost or 0), 'success')
+    Wait(900)
+    hidePumpUi()
 end
 
 local function startCanFill(station)
@@ -227,9 +283,7 @@ CreateThread(function()
 
                 if not pumpHintShown then
                     pumpHintShown = true
-                    if GetResourceState('ox_lib') == 'started' then
-                        exports.ox_lib:showTextUI('Hold [E] at pump — release to stop', { position = 'bottom-center' })
-                    end
+                    showVehiclePumpPrompt(station, veh)
                 end
 
                 if not IsControlPressed(0, 38) then
@@ -241,9 +295,7 @@ CreateThread(function()
             else
                 if pumpHintShown then
                     pumpHintShown = false
-                    if GetResourceState('ox_lib') == 'started' then
-                        exports.ox_lib:hideTextUI()
-                    end
+                    hidePumpUi()
                 end
                 Wait(350)
             end
@@ -252,9 +304,7 @@ CreateThread(function()
         else
             if pumpHintShown then
                 pumpHintShown = false
-                if GetResourceState('ox_lib') == 'started' then
-                    exports.ox_lib:hideTextUI()
-                end
+                if not refueling then hidePumpUi() end
             end
             Wait(450)
         end
@@ -271,9 +321,8 @@ CreateThread(function()
 
                 if not canHintShown then
                     canHintShown = true
-                    if GetResourceState('ox_lib') == 'started' then
-                        exports.ox_lib:showTextUI('Hold [E] with gas can — release to stop', { position = 'bottom-center' })
-                    end
+                    local currentLiters = Sunset.AwaitCallback('sunset:getGasCanLiters') or 0
+                    showCanPumpPrompt(station, currentLiters)
                 end
 
                 if not IsControlPressed(0, 38) then
@@ -291,18 +340,14 @@ CreateThread(function()
             else
                 if canHintShown then
                     canHintShown = false
-                    if GetResourceState('ox_lib') == 'started' then
-                        exports.ox_lib:hideTextUI()
-                    end
+                    hidePumpUi()
                 end
                 Wait(350)
             end
         else
             if canHintShown then
                 canHintShown = false
-                if GetResourceState('ox_lib') == 'started' then
-                    exports.ox_lib:hideTextUI()
-                end
+                if not fillingCan then hidePumpUi() end
             end
             Wait(450)
         end
@@ -375,8 +420,5 @@ AddEventHandler('onResourceStop', function(res)
         hidePumpUi()
     else
         hidePumpUi()
-    end
-    if GetResourceState('ox_lib') == 'started' then
-        exports.ox_lib:hideTextUI()
     end
 end)
