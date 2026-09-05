@@ -76,6 +76,10 @@ local function notify(msg, type)
     exports.sunset_ui:Notify(msg, type or 'info')
 end
 
+local function normalizePlate(plate)
+    return (plate or ''):gsub('%s+', ''):upper()
+end
+
 local function resetOdometerTracking(plate, km)
     odometerPlate = plate and normalizePlate(plate) or nil
     odometerKm = math.max(0, tonumber(km) or 0)
@@ -382,10 +386,6 @@ end
 
 local function unmarkProtected(veh)
     if veh then protectedVehicles[veh] = nil end
-end
-
-local function normalizePlate(plate)
-    return (plate or ''):gsub('%s+', ''):upper()
 end
 
 local function deleteVehicleEntity(veh)
