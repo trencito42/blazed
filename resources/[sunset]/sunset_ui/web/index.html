@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/fuel_pump.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/fishing.css">
+    <link rel="stylesheet" href="css/auth_loading.css">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -146,34 +147,48 @@
             </div>
         </section>
         <section id="screen-loading" class="screen screen--loading hidden">
-            <img class="panel-logo panel-logo--sm" src="assets/logo.png" alt="">
-            <div class="loading-bar"><div class="loading-bar__fill" id="loading-fill"></div></div>
-            <p class="loading-text" id="loading-text">Loading...</p>
-        </section>
-
-        <section id="screen-auth" class="screen hidden">
-            <div class="panel panel--left auth-panel">
-                <img class="panel-logo" src="assets/logo.png" alt="SunsetMP">
-                <p class="auth-eyebrow">Welcome to Los Santos</p>
-                <h2 class="auth-heading">Sunset Roleplay</h2>
-                <p class="auth-sub">Enter the city. Your story starts at sunset.</p>
-                <div class="auth-tabs">
-                    <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">LOGIN</button>
-                    <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">REGISTER</button>
+            <div class="auth-vignette"></div>
+            <div class="auth-scanlines"></div>
+            <div class="loading-stage">
+                <div class="loading-info">
+                    <div>
+                        <div class="loading-title">Loading assets</div>
+                        <div class="loading-subtext" id="loading-status">Connecting to server instance...</div>
+                    </div>
+                    <div class="loading-percent" id="loading-pct">0%</div>
                 </div>
-                <div id="auth-form-login" class="auth-form">
-                    <label class="field"><span>Username</span><input type="text" id="auth-login-user" maxlength="20" autocomplete="username"></label>
-                    <label class="field"><span>Password</span><input type="password" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
-                    <button type="button" class="btn btn--primary" id="auth-login-btn">ENTER CITY</button>
-                </div>
-                <div id="auth-form-register" class="auth-form hidden">
-                    <label class="field"><span>Username</span><input type="text" id="auth-reg-user" maxlength="20"></label>
-                    <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64"></label>
-                    <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64"></label>
-                    <button type="button" class="btn btn--primary" id="auth-register-btn">CREATE ACCOUNT</button>
+                <div class="loading-bar-container">
+                    <div class="loading-bar__fill" id="loading-fill"></div>
                 </div>
             </div>
-            <div class="auth-footer">SunsetMP — FiveM Roleplay</div>
+        </section>
+
+        <section id="screen-auth" class="screen screen--auth hidden">
+            <div class="auth-vignette"></div>
+            <div class="auth-scanlines"></div>
+            <div id="auth-panel" class="auth-panel">
+                <div class="auth-brand">
+                    <div class="auth-brand__eyebrow">Welcome to Los Santos</div>
+                    <div class="auth-brand__title">Sunset Roleplay</div>
+                    <p class="auth-brand__desc">Enter the city. Your story starts at sunset.</p>
+                </div>
+                <div class="auth-tabs">
+                    <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">Login</button>
+                    <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">Register</button>
+                </div>
+                <div id="auth-form-login" class="auth-form is-active">
+                    <label class="field"><span>Username</span><input type="text" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
+                    <label class="field"><span>Password</span><input type="password" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
+                    <button type="button" class="btn btn--primary" id="auth-login-btn">Enter City</button>
+                </div>
+                <div id="auth-form-register" class="auth-form hidden">
+                    <label class="field"><span>Choose Username</span><input type="text" id="auth-reg-user" maxlength="20" spellcheck="false"></label>
+                    <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64"></label>
+                    <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64"></label>
+                    <button type="button" class="btn btn--primary" id="auth-register-btn">Create Account</button>
+                </div>
+                <div class="auth-footer">SunsetMP — FiveM Roleplay</div>
+            </div>
         </section>
     </div>
 
@@ -882,6 +897,7 @@
     <script src="js/phone.js"></script>
     <script src="js/panels.js"></script>
     <script src="js/overlays.js"></script>
+    <script src="js/auth_loading.js"></script>
     <script src="js/fuel_pump.js"></script>
     <script src="js/fishing.js"></script>
 </body>

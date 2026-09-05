@@ -19,6 +19,7 @@ end)
 AddEventHandler('sunset:nui:authLogin', function(data)
     local result, err = Sunset.AwaitCallback('sunset:authLogin', data.username, data.password)
     if not result then
+        exports.sunset_ui:Send('authError', { message = err })
         exports.sunset_ui:Notify(err or 'Login failed', 'error')
         return
     end
@@ -30,6 +31,7 @@ end)
 AddEventHandler('sunset:nui:authRegister', function(data)
     local result, err = Sunset.AwaitCallback('sunset:authRegister', data.username, data.password, data.passwordConfirm)
     if not result then
+        exports.sunset_ui:Send('authError', { message = err })
         exports.sunset_ui:Notify(err or 'Registration failed', 'error')
         return
     end

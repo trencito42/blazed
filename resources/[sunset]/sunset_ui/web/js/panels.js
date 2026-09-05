@@ -32,12 +32,14 @@ const Panels = {
         $('#auth-tab-login')?.addEventListener('click', () => this.setAuthTab('login'));
         $('#auth-tab-register')?.addEventListener('click', () => this.setAuthTab('register'));
         $('#auth-login-btn')?.addEventListener('click', () => {
+            if (window.AuthLoading) AuthLoading.beginSubmit();
             post('authLogin', {
                 username: $('#auth-login-user')?.value,
                 password: $('#auth-login-pass')?.value,
             });
         });
         $('#auth-register-btn')?.addEventListener('click', () => {
+            if (window.AuthLoading) AuthLoading.beginSubmit();
             post('authRegister', {
                 username: $('#auth-reg-user')?.value,
                 password: $('#auth-reg-pass')?.value,
@@ -112,17 +114,24 @@ const Panels = {
 
     setAuthTab(tab) {
         $$('.auth-tab').forEach((el) => el.classList.toggle('is-active', el.dataset.tab === tab));
+        $('#auth-form-login')?.classList.toggle('is-active', tab === 'login');
         $('#auth-form-login')?.classList.toggle('hidden', tab !== 'login');
+        $('#auth-form-register')?.classList.toggle('is-active', tab === 'register');
         $('#auth-form-register')?.classList.toggle('hidden', tab !== 'register');
     },
 
     showAuth() {
         this.init();
         this.setAuthTab('login');
+        document.getElementById('auth-panel')?.classList.remove('is-hidden');
+        if (window.LoadingScreen) LoadingScreen.reset();
     },
 
     hideAuth() {
         $('#screen-auth')?.classList.add('hidden');
+        document.getElementById('auth-panel')?.classList.remove('is-hidden');
+        if (window.AuthLoading) AuthLoading._pending = false;
+        if (window.LoadingScreen) LoadingScreen.reset();
     },
 
     showInventory(data) {

@@ -1,28 +1,35 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SunsetMP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="loadscreen" id="loadscreen">
-        <img class="bg" src="assets/bg.png" alt="">
-        <div class="overlay"></div>
+        <img class="loadscreen__bg" src="assets/bg.png" alt="">
+        <div class="loadscreen__vignette"></div>
+        <div class="loadscreen__scanlines"></div>
 
-        <img class="logo" src="assets/logo.png" alt="SunsetMP">
+        <div class="loadscreen__brand">
+            <img class="loadscreen__logo" src="assets/logo.png" alt="Sunset Roleplay">
+            <p class="loadscreen__tag">Welcome to Los Santos</p>
+        </div>
 
-        <div class="bottom">
-            <div class="bar">
-                <div class="bar__fill" id="progress-fill"></div>
+        <div class="loadscreen__stage">
+            <div class="loadscreen__info">
+                <div>
+                    <div class="loadscreen__title">Loading assets</div>
+                    <div class="loadscreen__status" id="status-text">Connecting to server instance...</div>
+                </div>
+                <div class="loadscreen__percent" id="progress-percent">0%</div>
             </div>
-            <div class="meta">
-                <span id="status-text">Loading</span>
-                <span id="progress-percent">0%</span>
+            <div class="loadscreen__bar">
+                <div class="loadscreen__bar-fill" id="progress-fill"></div>
             </div>
         </div>
     </div>

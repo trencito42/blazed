@@ -118,7 +118,7 @@ window.addEventListener('message', (event) => {
                 Characters.initCreate(data);
             }
             if (screen === 'loading') {
-                LoadingScreen.start(data);
+                if (window.LoadingScreen) LoadingScreen.start(data);
             }
             break;
 
@@ -393,9 +393,20 @@ window.addEventListener('message', (event) => {
 
         case 'authHide':
             if (window.Panels) {
-                Panels.hideAuth();
-                showApp(false);
+                const hideAll = () => {
+                    Panels.hideAuth();
+                    showApp(false);
+                };
+                if (window.AuthLoading) {
+                    AuthLoading.onAuthSuccess(hideAll);
+                } else {
+                    hideAll();
+                }
             }
+            break;
+
+        case 'authError':
+            if (window.AuthLoading) AuthLoading.reset();
             break;
 
         case 'hudEditToggle':
@@ -421,30 +432,6 @@ window.addEventListener('message', (event) => {
             break;
     }
 });
-
-// Loading screen helper
-const LoadingScreen = {
-    start(data) {
-        const fill = $('#loading-fill');
-        const text = $('#loading-text');
-        const steps = data?.steps || [
-            { progress: 30, text: 'Connecting to server...' },
-            { progress: 60, text: 'Loading character...' },
-            { progress: 90, text: 'Preparing world...' },
-            { progress: 100, text: 'Ready!' },
-        ];
-
-        let i = 0;
-        const next = () => {
-            if (i >= steps.length) return;
-            const step = steps[i++];
-            fill.style.width = step.progress + '%';
-            text.textContent = step.text;
-            setTimeout(next, data?.stepDelay || 600);
-        };
-        next();
-    },
-};
 
 // Close character screens on ESC (not menu/chat)
 document.addEventListener('keydown', (e) => {

@@ -4,20 +4,21 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-family: 'Inter', sans-serif;
-    background: #000;
+    font-family: 'Rajdhani', sans-serif;
+    background: #07030c;
+    color: #fff;
 }
 
 .loadscreen {
     position: fixed;
     inset: 0;
     opacity: 1;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.8s ease;
 }
 
 .loadscreen.fade-out { opacity: 0; }
 
-.bg {
+.loadscreen__bg {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -25,61 +26,118 @@ html, body {
     object-fit: cover;
 }
 
-.overlay {
+.loadscreen__vignette {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        180deg,
-        rgba(0,0,0,0.15) 0%,
-        rgba(0,0,0,0.05) 40%,
-        rgba(0,0,0,0.55) 100%
+    background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.82) 100%);
+    pointer-events: none;
+}
+
+.loadscreen__scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.42;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0) 2px,
+        rgba(0, 0, 0, 0.18) 2px,
+        rgba(0, 0, 0, 0.18) 4px
     );
 }
 
-.logo {
+.loadscreen__brand {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -55%);
-    width: min(420px, 55vw);
+    transform: translate(-50%, -58%);
+    text-align: center;
+    z-index: 2;
+}
+
+.loadscreen__logo {
+    width: min(380px, 52vw);
     height: auto;
-    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55));
 }
 
-.bottom {
+.loadscreen__tag {
+    margin-top: 18px;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #ff7700;
+    text-shadow: 0 0 15px rgba(255, 119, 0, 0.55);
+}
+
+.loadscreen__stage {
     position: absolute;
-    bottom: 48px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(480px, 80vw);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding: 80px;
+    background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.55) 100%);
 }
 
-.bar {
-    height: 2px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 1px;
+.loadscreen__info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 18px;
+}
+
+.loadscreen__title {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    color: #ff7700;
+    text-shadow: 0 0 15px rgba(255, 119, 0, 0.6);
+}
+
+.loadscreen__status {
+    margin-top: 6px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.62);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.loadscreen__percent {
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 0.85;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.loadscreen__bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
     overflow: hidden;
 }
 
-.bar__fill {
+.loadscreen__bar-fill {
     height: 100%;
     width: 0%;
-    background: #fff;
-    transition: width 0.25s ease;
+    background: linear-gradient(90deg, #b900ff, #ff7700);
+    box-shadow: 0 0 15px rgba(255, 119, 0, 0.6);
+    transition: width 0.2s linear;
+    -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 12px);
+    mask-image: repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 12px);
 }
 
-.meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.45);
-}
-
-#progress-percent {
-    color: rgba(255,255,255,0.7);
-    font-variant-numeric: tabular-nums;
+@media (max-width: 768px) {
+    .loadscreen__stage { padding: 40px 20px; }
+    .loadscreen__percent { font-size: 36px; }
+    .loadscreen__title { font-size: 18px; }
 }

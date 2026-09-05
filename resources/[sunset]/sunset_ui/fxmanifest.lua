@@ -22,6 +22,7 @@ files {
     'web/css/phone.css',
     'web/css/fuel_pump.css',
     'web/css/fishing.css',
+    'web/css/auth_loading.css',
     'web/css/theme.css',
     'web/js/*.js',
     'web/vendor/**/*',
