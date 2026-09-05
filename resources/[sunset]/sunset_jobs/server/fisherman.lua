@@ -23,6 +23,25 @@ local function fishInventorySummary(source, cfg)
     return count, value
 end
 
+exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:bagStatus', function(source)
+    local cfg = Sunset.GetJobConfig('fisherman')
+    local level, capacity = fishLevelAndCapacity(source, cfg)
+    local carried, carriedValue = fishInventorySummary(source, cfg)
+    local session = SunsetJobs_GetSession(source)
+    if session and session.jobId == 'fisherman' then
+        session.data.carried = carried
+        session.data.capacity = capacity
+        session.data.pendingValue = carriedValue
+        session.data.level = level
+    end
+    return {
+        carried = carried,
+        capacity = capacity,
+        pendingValue = carriedValue,
+        full = carried >= capacity,
+    }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:start', function(source)
     local cfg = Sunset.GetJobConfig('fisherman')
     local atWork = SunsetJobs_ValidateCoords(source, cfg.sellPoint.coords, 12.0)

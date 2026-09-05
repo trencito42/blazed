@@ -1,4 +1,6 @@
 #fishing-panel {
+    --f-cut: 20px;
+    --f-edge: rgba(255, 255, 255, 0.18);
     position: fixed;
     left: 50%;
     bottom: 80px;
@@ -14,13 +16,55 @@
     color: var(--sunset-text, #f6f2e9);
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
     background: rgba(8, 4, 14, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+    border: none;
+    clip-path: polygon(
+        var(--f-cut) 0,
+        100% 0,
+        100% calc(100% - var(--f-cut)),
+        calc(100% - var(--f-cut)) 100%,
+        0 100%,
+        0 var(--f-cut)
+    );
     border-bottom: 4px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
     transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     opacity: 0;
     translate: 0 16px;
+    overflow: visible;
+    isolation: isolate;
+}
+
+#fishing-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    clip-path: inherit;
+    background:
+        linear-gradient(var(--f-edge), var(--f-edge)) var(--f-cut) 0 / calc(100% - var(--f-cut)) 1px no-repeat,
+        linear-gradient(var(--f-edge), var(--f-edge)) 100% 0 / 1px calc(100% - var(--f-cut)) no-repeat,
+        linear-gradient(var(--f-edge), var(--f-edge)) 0 calc(100% - 1px) / calc(100% - var(--f-cut)) 1px no-repeat,
+        linear-gradient(var(--f-edge), var(--f-edge)) 0 var(--f-cut) / 1px calc(100% - var(--f-cut)) no-repeat,
+        linear-gradient(
+            135deg,
+            transparent calc(50% - 0.6px),
+            var(--f-edge) calc(50% - 0.6px),
+            var(--f-edge) calc(50% + 0.6px),
+            transparent calc(50% + 0.6px)
+        ) 0 0 / calc(var(--f-cut) * 1.42) calc(var(--f-cut) * 1.42) no-repeat,
+        linear-gradient(
+            -45deg,
+            transparent calc(50% - 0.6px),
+            var(--f-edge) calc(50% - 0.6px),
+            var(--f-edge) calc(50% + 0.6px),
+            transparent calc(50% + 0.6px)
+        ) 100% 100% / calc(var(--f-cut) * 1.42) calc(var(--f-cut) * 1.42) no-repeat;
+}
+
+#fishing-panel > * {
+    position: relative;
+    z-index: 1;
 }
 
 #fishing-panel.is-visible {
@@ -142,7 +186,10 @@
 }
 
 /* full — bag at capacity, must sell before casting */
-#fishing-panel.state-full { border-bottom-color: #ffb21c; }
+#fishing-panel.state-full {
+    border-bottom-color: #ffb21c;
+    --f-edge: rgba(255, 178, 28, 0.42);
+}
 #fishing-panel.state-full .fishing__title,
 #fishing-panel.state-full .fishing__icon { color: #ffb21c; }
 #fishing-panel.state-full .fishing__message {
@@ -159,7 +206,10 @@
 }
 
 /* waiting */
-#fishing-panel.state-waiting { border-bottom-color: #b900ff; }
+#fishing-panel.state-waiting {
+    border-bottom-color: #b900ff;
+    --f-edge: rgba(185, 0, 255, 0.35);
+}
 #fishing-panel.state-waiting .fishing__title,
 #fishing-panel.state-waiting .fishing__icon { color: #d46bff; }
 #fishing-panel.state-waiting .fishing__message { color: #f4e8ff; }
@@ -177,6 +227,7 @@
 /* bite */
 #fishing-panel.state-bite {
     border-bottom-color: #00ff66;
+    --f-edge: rgba(0, 255, 102, 0.42);
     background: rgba(4, 18, 10, 0.86);
     box-shadow: 0 0 40px rgba(0, 255, 102, 0.28);
     animation: fishingShake 0.4s infinite cubic-bezier(.36, .07, .19, .97);
@@ -209,6 +260,7 @@
 /* failed */
 #fishing-panel.state-failed {
     border-bottom-color: var(--sunset-red, #ff554f);
+    --f-edge: rgba(255, 85, 79, 0.42);
     background: rgba(22, 6, 6, 0.86);
     box-shadow: 0 0 30px rgba(255, 42, 42, 0.28);
     animation: fishingGlitch 0.3s ease-out;
@@ -235,6 +287,7 @@
 /* success */
 #fishing-panel.state-success {
     border-bottom-color: var(--sunset-orange, #ff8a00);
+    --f-edge: rgba(255, 138, 0, 0.42);
     background: rgba(10, 5, 15, 0.88);
     box-shadow: 0 0 40px rgba(255, 138, 0, 0.35);
     transform: translateX(-50%) scale(1.03);

@@ -35,6 +35,22 @@ const Fishing = {
         if (this._message) this._message.innerHTML = messageHtml;
     },
 
+    _resolveState(data = {}) {
+        const c = Math.max(0, Number(data.carried) || 0);
+        const cap = Math.max(1, Number(data.capacity) || 2);
+        let state = data.state || 'idle';
+        if ((state === 'idle' || state === 'shift') && c >= cap) {
+            return 'full';
+        }
+        return state;
+    },
+
+    _fullMessage(data = {}) {
+        const c = Math.max(0, Number(data.carried) || 0);
+        const cap = Math.max(1, Number(data.capacity) || 2);
+        return data.message || `Bag full ${c}/${cap} — yellow marker or /sellfish to sell`;
+    },
+
     show(data = {}) {
         this.init();
         if (!this._panel) return;
@@ -42,7 +58,7 @@ const Fishing = {
         this._setBag(data.carried, data.capacity);
         this._panel.classList.remove('hidden');
 
-        const state = data.state || 'idle';
+        const state = this._resolveState(data);
         if (state === 'waiting') {
             this._applyState('state-waiting', data.title || 'Line cast', data.message || 'Waiting for a bite…');
             if (this._progress) {
@@ -67,7 +83,7 @@ const Fishing = {
             this._applyState(
                 'state-full',
                 data.title || 'Bag Full',
-                data.message || 'Sell your fish before casting again'
+                this._fullMessage(data)
             );
             if (this._progress) {
                 this._progress.style.transition = 'none';
@@ -108,7 +124,8 @@ const Fishing = {
             this.startBite(data.windowMs || 1500, data);
             return;
         }
-        if (data.state) this.show(data);
+        const resolved = this._resolveState(data);
+        this.show({ ...data, state: resolved });
     },
 
     startBite(windowMs, data = {}) {

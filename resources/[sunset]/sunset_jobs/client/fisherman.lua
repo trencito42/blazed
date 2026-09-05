@@ -35,6 +35,21 @@ local function isBagFull()
     return carried >= capacity
 end
 
+local lastBagSync = 0
+
+local function syncBagFromServer()
+    local now = GetGameTimer()
+    if now - lastBagSync < 750 then return end
+    lastBagSync = now
+    local status = Sunset.AwaitCallback('sunset:jobs:fisherman:bagStatus')
+    if not status or not JC.sessionData then return end
+    JC.sessionData.carried = status.carried
+    JC.sessionData.capacity = status.capacity
+    if status.pendingValue ~= nil then
+        JC.sessionData.pendingValue = status.pendingValue
+    end
+end
+
 local function buildFullBagMessage()
     local carried, capacity = bagCounts()
     local cfg = Sunset.GetJobConfig('fisherman')
@@ -94,6 +109,13 @@ local function spotUiMode()
 end
 
 local function showFishingState(state, extra)
+    syncBagFromServer()
+    if state == 'idle' and isBagFull() then
+        state = 'full'
+        extra = extra or {}
+        extra.title = extra.title or 'Bag Full'
+        extra.message = extra.message or buildFullBagMessage()
+    end
     local payload = sessionBagPayload()
     payload.state = state
     if extra then
@@ -240,6 +262,7 @@ local function attemptFish()
         return JC.notify('Stand inside a blue fishing marker', 'error')
     end
 
+    syncBagFromServer()
     if isBagFull() then
         local carried, capacity = bagCounts()
         JC.setWaypoint(cfg.sellPoint.coords)
@@ -361,6 +384,7 @@ CreateThread(function()
     while true do
         if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
             JC.hideObjective()
+            syncBagFromServer()
             local _, distance = nearestSpotIndex()
             local cfg = Sunset.GetJobConfig('fisherman')
             if distance <= (cfg.catchRadius or 8.0) then
