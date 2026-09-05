@@ -76,6 +76,26 @@ local function notify(msg, type)
     exports.sunset_ui:Notify(msg, type or 'info')
 end
 
+local function showVehicleHint(id)
+    local engineOn = false
+    local veh = getVeh()
+    if veh ~= 0 then
+        if engineEnabled[veh] ~= nil then
+            engineOn = engineEnabled[veh] == true
+        else
+            engineOn = GetIsVehicleEngineRunning(veh)
+        end
+    end
+    local lights = { 'LIGHTS OFF', 'LIGHTS LOW', 'LIGHTS HIGH' }
+    local rows = {
+        engine = { label = engineOn and 'ENGINE ON' or 'ENGINE OFF', key = '2', ok = engineOn },
+        lock = { label = locked and 'LOCKED' or 'UNLOCKED', key = 'N', ok = not locked },
+        seatbelt = { label = seatbelt and 'SEATBELT ON' or 'SEATBELT OFF', key = 'K', ok = seatbelt },
+        lights = { label = lights[(lightMode or 0) + 1] or 'LIGHTS OFF', key = 'H', ok = (lightMode or 0) > 0 },
+    }
+    exports.sunset_ui:Send('vehicleHint', { id = id, rows = rows })
+end
+
 local function normalizePlate(plate)
     return (plate or ''):gsub('%s+', ''):upper()
 end
@@ -135,7 +155,7 @@ RegisterCommand('sunset_lock', function()
 
     locked = not locked
     SetVehicleDoorsLocked(veh, locked and 2 or 1)
-    notify(locked and 'Locked' or 'Unlocked', locked and 'success' or 'info')
+    showVehicleHint('lock')
 end, false)
 RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'N')
 
@@ -144,7 +164,7 @@ RegisterCommand('sunset_seatbelt', function()
     if blocked() then return end
     if not IsPedInAnyVehicle(PlayerPedId(), false) then return end
     seatbelt = not seatbelt
-    notify(seatbelt and 'Seatbelt ON' or 'Seatbelt OFF', seatbelt and 'success' or 'warning')
+    showVehicleHint('seatbelt')
 end, false)
 RegisterKeyMapping('sunset_seatbelt', 'Seatbelt', 'keyboard', 'K')
 
@@ -157,7 +177,7 @@ RegisterCommand('sunset_engine', function()
     local on = engineEnabled[veh] ~= true
     engineEnabled[veh] = on
     SetVehicleEngineOn(veh, on, true, true)
-    notify(on and 'Engine on' or 'Engine off', 'info')
+    showVehicleHint('engine')
 end, false)
 RegisterKeyMapping('sunset_engine', 'Motor on/off', 'keyboard', '2')
 
@@ -186,6 +206,7 @@ RegisterCommand('sunset_lights', function()
         SetVehicleLights(veh, 2)
         SetVehicleFullbeam(veh, true)
     end
+    showVehicleHint('lights')
 end, false)
 RegisterKeyMapping('sunset_lights', 'Vehicle lights', 'keyboard', 'H')
 

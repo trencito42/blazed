@@ -4,6 +4,12 @@ const Hud = {
     lastGear: null,
     wasInVehicle: false,
     hintsTimer: null,
+    hintState: {
+        engine: { label: 'ENGINE OFF', key: '2', ok: false },
+        lock: { label: 'UNLOCKED', key: 'N', ok: true },
+        seatbelt: { label: 'SEATBELT OFF', key: 'K', ok: false },
+        lights: { label: 'LIGHTS OFF', key: 'H', ok: false },
+    },
 
     init() {
         if (this._ready) return;
@@ -71,6 +77,7 @@ const Hud = {
             return;
         }
 
+        this.syncHintState(data);
         if (!this.wasInVehicle) {
             this.showVehicleHints();
         }
@@ -121,18 +128,75 @@ const Hud = {
         }
     },
 
-    showVehicleHints() {
+    syncHintState(data = {}) {
+        const lights = ['LIGHTS OFF', 'LIGHTS LOW', 'LIGHTS HIGH'];
+        const mode = Math.max(0, Math.min(2, Number(data.lightMode) || 0));
+        this.hintState.engine = {
+            label: data.engineOn ? 'ENGINE ON' : 'ENGINE OFF',
+            key: '2',
+            ok: !!data.engineOn,
+        };
+        this.hintState.lock = {
+            label: data.locked ? 'LOCKED' : 'UNLOCKED',
+            key: 'N',
+            ok: !data.locked,
+        };
+        this.hintState.seatbelt = {
+            label: data.seatbelt ? 'SEATBELT ON' : 'SEATBELT OFF',
+            key: 'K',
+            ok: !!data.seatbelt,
+        };
+        this.hintState.lights = {
+            label: lights[mode],
+            key: 'H',
+            ok: mode > 0,
+        };
+        this.renderHintRows();
+    },
+
+    renderHintRows() {
+        Object.entries(this.hintState).forEach(([id, row]) => {
+            const el = document.querySelector(`[data-hint="${id}"]`);
+            if (!el) return;
+            const label = el.querySelector('.veh-hints__label');
+            const key = el.querySelector('.veh-hints__key');
+            if (label) label.textContent = row.label;
+            if (key) key.textContent = row.key;
+            el.classList.toggle('is-on', row.ok === true);
+            el.classList.toggle('is-off', row.ok === false);
+        });
+    },
+
+    showVehicleHints(singleId) {
         const el = $('#veh-hints');
         if (!el) return;
+        this.renderHintRows();
         if (this.hintsTimer) {
             clearTimeout(this.hintsTimer);
             this.hintsTimer = null;
         }
+        el.classList.toggle('is-single', !!singleId);
+        el.querySelectorAll('.veh-hints__row').forEach((row) => {
+            row.classList.toggle('is-active', !singleId || row.dataset.hint === singleId);
+        });
         el.classList.remove('is-visible');
         void el.offsetWidth;
         el.classList.add('is-visible');
         el.setAttribute('aria-hidden', 'false');
         this.hintsTimer = setTimeout(() => this.hideVehicleHints(), 5000);
+    },
+
+    flashVehicleHint(payload = {}) {
+        if (payload.rows) {
+            Object.entries(payload.rows).forEach(([id, row]) => {
+                this.hintState[id] = {
+                    label: row.label,
+                    key: row.key,
+                    ok: row.ok === true,
+                };
+            });
+        }
+        this.showVehicleHints(payload.id || null);
     },
 
     hideVehicleHints() {
@@ -143,6 +207,7 @@ const Hud = {
         }
         if (!el) return;
         el.classList.remove('is-visible');
+        el.classList.remove('is-single');
         el.setAttribute('aria-hidden', 'true');
     },
 };

@@ -167,6 +167,10 @@ window.addEventListener('message', (event) => {
             if (window.Hud) Hud.update(data || event.data.data);
             break;
 
+        case 'vehicleHint':
+            if (window.Hud) Hud.flashVehicleHint(data || event.data.data || {});
+            break;
+
         case 'showScoreboard':
             if (window.Scoreboard) Scoreboard.show(event.data.data || data);
             break;

@@ -1011,6 +1011,9 @@
         0 4px 12px rgba(0, 0, 0, 0.85);
 }
 
+.veh-hints.is-single .veh-hints__row { display: none; }
+.veh-hints.is-single .veh-hints__row.is-active { display: flex; }
+
 .veh-hints__key {
     display: inline-flex;
     align-items: center;
@@ -1027,4 +1030,20 @@
     font-size: 20px;
     font-weight: 700;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.veh-hints__row.is-on .veh-hints__label { color: #6cff8f; }
+.veh-hints__row.is-on .veh-hints__key {
+    color: #6cff8f;
+    border-color: rgba(108, 255, 143, 0.55);
+    background: rgba(0, 255, 102, 0.12);
+    box-shadow: 0 0 12px rgba(0, 255, 102, 0.25);
+}
+
+.veh-hints__row.is-off .veh-hints__label { color: #ff6b66; }
+.veh-hints__row.is-off .veh-hints__key {
+    color: #ff6b66;
+    border-color: rgba(255, 85, 79, 0.55);
+    background: rgba(255, 42, 42, 0.12);
+    box-shadow: 0 0 12px rgba(255, 42, 42, 0.25);
 }
