@@ -105,13 +105,17 @@ local function openPhone()
 end
 
 local function closePhone()
-    if not phoneOpen then return end
+    local shouldAnimate = phoneOpen or (phoneProp and DoesEntityExist(phoneProp))
     phoneOpen = false
     phoneOpening = false
-    playPhoneSound('close')
-    CreateThread(function()
-        playPhoneAnim(false)
-    end)
+    if shouldAnimate then
+        playPhoneSound('close')
+        CreateThread(function()
+            playPhoneAnim(false)
+        end)
+    else
+        removePhoneProp()
+    end
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('phoneHide', {})
 end
@@ -142,9 +146,6 @@ CreateThread(function()
 end)
 
 AddEventHandler('sunset:nui:phoneClose', function()
-    local now = GetGameTimer()
-    if now - lastToggleAt < TOGGLE_COOLDOWN_MS then return end
-    lastToggleAt = now
     closePhone()
 end)
 

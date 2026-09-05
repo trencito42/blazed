@@ -78,7 +78,7 @@ const Phone = {
             dragging = false;
 
             if (delta > 30) {
-                this.goHomeOrClose();
+                post('phoneClose', {});
             } else if (!moved) {
                 this.goHomeOrClose();
             }
@@ -192,8 +192,11 @@ const Phone = {
     },
 
     goHomeOrClose() {
-        if (this.screen === 'home') post('phoneClose', {});
-        else this.goHome();
+        if (this.screen === 'home') {
+            post('phoneClose', {});
+        } else {
+            this.goHome();
+        }
     },
 
     openApp(app) {
