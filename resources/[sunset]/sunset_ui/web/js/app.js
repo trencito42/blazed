@@ -21,6 +21,8 @@ function showScreen(name) {
     if (screen) {
         screen.classList.remove('hidden');
         App.currentScreen = name;
+        const app = $('#app');
+        if (app) app.dataset.screen = name;
     }
 }
 
@@ -493,4 +495,12 @@ document.addEventListener('keydown', (e) => {
     if (app && !app.classList.contains('hidden')) {
         post('close');
     }
+});
+
+// Local/browser visual QA only; FiveM never supplies this query parameter.
+document.addEventListener('DOMContentLoaded', () => {
+    if (new URLSearchParams(window.location.search).get('qa') !== 'spawn') return;
+    showApp(true);
+    showScreen('spawn');
+    window.SpawnSelector?.show({ hasLastLocation: true });
 });

@@ -14,8 +14,11 @@ const SpawnSelector = {
         const target = document.querySelector(`[data-spawn="${location}"]`);
         if (!target || target.disabled) return;
         this.selected = location;
-        document.querySelectorAll('.spawn-option').forEach((card) => {
+        const cards = [...document.querySelectorAll('.spawn-option')];
+        const centerIndex = cards.indexOf(target);
+        cards.forEach((card, index) => {
             card.classList.toggle('is-selected', card === target);
+            card.dataset.pos = String(index - centerIndex);
         });
     },
 
@@ -24,6 +27,7 @@ const SpawnSelector = {
         const target = document.querySelector(`[data-spawn="${location}"]`);
         if (!target || target.disabled) return;
         this.busy = true;
+        target.classList.add('is-confirming');
         document.querySelectorAll('.spawn-option').forEach((card) => { card.disabled = true; });
         post('spawnSelect', { location });
     },
@@ -32,7 +36,13 @@ const SpawnSelector = {
 document.querySelectorAll('.spawn-option').forEach((card) => {
     card.addEventListener('mouseenter', () => SpawnSelector.select(card.dataset.spawn));
     card.addEventListener('focus', () => SpawnSelector.select(card.dataset.spawn));
-    card.addEventListener('click', () => SpawnSelector.confirm(card.dataset.spawn));
+    card.addEventListener('click', () => {
+        if (SpawnSelector.selected !== card.dataset.spawn) {
+            SpawnSelector.select(card.dataset.spawn);
+            return;
+        }
+        SpawnSelector.confirm(card.dataset.spawn);
+    });
 });
 
 document.addEventListener('keydown', (event) => {
