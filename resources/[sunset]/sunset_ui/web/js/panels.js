@@ -897,8 +897,10 @@ const Panels = {
 
     showDealership(data) {
         this.init();
+        const opening = $('#dealership')?.classList.contains('hidden');
         this._dealerData = { ...(this._dealerData || {}), ...(data || {}) };
         this._dealerVehicles = this._dealerData.vehicles || [];
+        if (opening) this._dealerSelected = null;
         $('#dealership-title').textContent = this._dealerData.dealership || 'Vehicle Dealership';
         const money = this._dealerData.money;
         $('#dealership-balance').textContent = money
@@ -956,6 +958,9 @@ const Panels = {
         };
         this._renderDealership();
         $('#dealership')?.classList.remove('hidden');
+        if (opening && this._dealerSelected) {
+            post('dealershipSelect', { model: this._dealerSelected });
+        }
     },
 
     _renderDealership() {
@@ -1007,15 +1012,10 @@ const Panels = {
             empty.textContent = 'No vehicles match these filters.';
             list.appendChild(empty);
         }
-        const previousSelection = this._dealerSelected;
         let selected = rows.find((v) => v.model === this._dealerSelected);
         if (!selected && rows.length) {
             selected = rows[0];
             this._dealerSelected = selected.model;
-        }
-        if (selected && previousSelection !== selected.model) {
-            post('dealershipSelect', { model: selected.model });
-            if (this._dealerData.admin) this._fillDealerAdmin(selected);
         }
         this._renderDealerDetail(selected);
     },

@@ -135,12 +135,12 @@
 /* Dealership keeps the right side transparent for the live in-world preview. */
 .dealership { position: fixed; inset: 0; z-index: 82; font-family: 'Inter', sans-serif; color: #f6f6f6; pointer-events: none; }
 .dealership.hidden { display: none; }
-.dealership__panel { pointer-events: auto; width: min(620px, 48vw); height: 100vh; box-sizing: border-box; padding: 28px; overflow-y: auto; background: linear-gradient(110deg, rgba(11,12,15,.99) 0%, rgba(16,17,21,.97) 78%, rgba(16,17,21,.82) 100%); border-right: 1px solid rgba(255,140,0,.3); box-shadow: 30px 0 70px rgba(0,0,0,.38); }
-.dealership__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
-.dealership__header h2 { margin: 3px 0 0; font-size: 23px; text-transform: uppercase; letter-spacing: .04em; }
+.dealership__panel { pointer-events: auto; width: min(620px, 48vw); height: 100vh; box-sizing: border-box; padding: 28px; overflow-y: auto; background: linear-gradient(110deg, rgba(11,12,15,.94) 0%, rgba(16,17,21,.88) 72%, rgba(16,17,21,.55) 100%); border-right: 1px solid rgba(255,140,0,.35); box-shadow: 30px 0 70px rgba(0,0,0,.28); }
+.dealership__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 4px; }
+.dealership__header h2 { margin: 3px 0 0; font-family: 'Chakra Petch', 'Inter', sans-serif; font-size: 23px; text-transform: uppercase; letter-spacing: .06em; color: #fff; }
 .dealership__eyebrow { color: #ff8c00; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
 .dealership__close { border: 0; background: rgba(255,255,255,.07); color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; }
-.dealership__balance { margin: 16px 0; padding: 10px 12px; background: rgba(255,255,255,.045); border-left: 3px solid #ff8c00; color: #bbb; font-size: 12px; }
+.dealership__balance { margin: 16px 0; padding: 10px 12px; background: rgba(255,140,0,.08); border-left: 3px solid #ff8c00; color: #ddd; font-size: 12px; letter-spacing: .04em; }
 .dealership__filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .dealership__filters input, .dealership__filters select, .dealership__admin input { box-sizing: border-box; width: 100%; border: 1px solid rgba(255,255,255,.11); background: rgba(0,0,0,.32); color: #fff; border-radius: 5px; padding: 10px; }
 .dealership__filters input[type="search"] { grid-column: 1 / -1; }
@@ -149,8 +149,9 @@
 .dealership__stock-filter input { width: auto; }
 .dealership__content { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 300px; }
 .dealership__list { max-height: 410px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.dealership-card { text-align: left; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); color: #eee; padding: 10px 12px; border-radius: 6px; }
-.dealership-card.is-active { border-color: rgba(255,140,0,.75); background: rgba(255,140,0,.11); }
+.dealership-card { text-align: left; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); color: #eee; padding: 10px 12px; border-radius: 0; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); transition: border-color .15s, background .15s, transform .15s; cursor: pointer; }
+.dealership-card:hover { border-color: rgba(255,140,0,.45); background: rgba(255,140,0,.06); transform: translateX(2px); }
+.dealership-card.is-active { border-color: rgba(255,140,0,.85); background: rgba(255,140,0,.12); box-shadow: inset 3px 0 0 #ff8c00; }
 .dealership-card__top { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
 .dealership-card__meta { display: flex; justify-content: space-between; margin-top: 5px; color: #999; font-size: 10px; text-transform: uppercase; }
 .dealership-card__stock--out { color: #ff625a; }
@@ -265,6 +266,7 @@
 }
 
 .overlay-panel__box--garage .menu-vehicle-grid {
+    grid-template-columns: 1fr;
     max-height: 55vh;
     overflow-y: auto;
     padding-right: 4px;
@@ -272,6 +274,24 @@
 
 .overlay-panel__box--garage .menu-vcard {
     list-style: none;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: start;
+}
+
+.overlay-panel__box--garage .menu-vcard__body {
+    min-width: 0;
+}
+
+.overlay-panel__box--garage .menu-vcard__actions {
+    flex-wrap: wrap;
+}
+
+.overlay-panel__box--garage .menu-vcard__btn {
+    flex: 1 1 calc(33.33% - 6px);
+    min-width: 64px;
+    padding: 6px 8px;
+    font-size: 9px;
+    white-space: nowrap;
 }
 
 .panel-close {

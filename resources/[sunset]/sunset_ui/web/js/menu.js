@@ -330,7 +330,8 @@ const Menu = {
         const avatar = $('#menu-avatar');
         if (avatar) {
             if (data.avatar) {
-                avatar.style.backgroundImage = `url(${data.avatar})`;
+                avatar.style.backgroundImage = `url("${data.avatar}")`;
+                avatar.style.backgroundSize = 'cover';
                 avatar.textContent = '';
             } else {
                 avatar.style.backgroundImage = '';

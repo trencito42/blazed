@@ -108,6 +108,17 @@ h5,
     animation: sunset-overlay-in 160ms ease-out both;
 }
 
+/* Garage / world panels — keep the game visible behind the UI card */
+.overlay-panel--peek {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    pointer-events: none;
+}
+
+.overlay-panel--peek .overlay-panel__box {
+    pointer-events: auto;
+}
+
 .overlay-panel__box {
     position: relative;
     background:

@@ -8,23 +8,32 @@ local function captureMugshot()
     end
 
     local ped = PlayerPedId()
-    local handle = RegisterPedheadshot(ped)
-    local timeout = GetGameTimer() + 2500
-    while (not IsPedheadshotReady(handle) or not IsPedheadshotValid(handle)) and GetGameTimer() < timeout do
-        Wait(10)
-    end
+    for attempt = 1, 2 do
+        local handle = RegisterPedheadshot(ped)
+        local timeout = GetGameTimer() + (attempt == 1 and 2500 or 4500)
+        while (not IsPedheadshotReady(handle) or not IsPedheadshotValid(handle)) and GetGameTimer() < timeout do
+            Wait(10)
+        end
 
-    if not IsPedheadshotValid(handle) then
+        if IsPedheadshotValid(handle) then
+            local txd = GetPedheadshotTxdString(handle)
+            UnregisterPedheadshot(handle)
+            cachedMugshot = ('https://nui-img/%s/%s'):format(txd, txd)
+            mugshotAt = GetGameTimer()
+            return cachedMugshot
+        end
+
         UnregisterPedheadshot(handle)
-        return nil
+        if attempt == 1 then Wait(350) end
     end
 
-    local txd = GetPedheadshotTxdString(handle)
-    UnregisterPedheadshot(handle)
-    cachedMugshot = ('https://nui-img/%s/%s'):format(txd, txd)
-    mugshotAt = GetGameTimer()
-    return cachedMugshot
+    return nil
 end
+
+AddEventHandler('sunset:client:onCharacterLoaded', function()
+    cachedMugshot = nil
+    mugshotAt = 0
+end)
 
 local function controlsBlocked()
     return IsNuiFocused() or IsPauseMenuActive()

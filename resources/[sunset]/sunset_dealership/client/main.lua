@@ -2,6 +2,7 @@ local dealerOpen = false
 local adminMode = false
 local previewVehicle = 0
 local previewCamera = 0
+local previewBusy = false
 local testVehicle = 0
 local testDriveActive = false
 
@@ -19,6 +20,19 @@ local function loadVehicleModel(modelName)
     while not HasModelLoaded(hash) and GetGameTimer() < timeout do Wait(10) end
     if not HasModelLoaded(hash) then return nil, 'The vehicle model did not finish loading. Try again.' end
     return hash
+end
+
+local function cleanupPreviewArea()
+    local p = Sunset.Dealership.preview
+    local center = vector3(p.x, p.y, p.z)
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if veh ~= previewVehicle and DoesEntityExist(veh) then
+            if #(GetEntityCoords(veh) - center) < 5.0 then
+                SetEntityAsMissionEntity(veh, true, true)
+                DeleteVehicle(veh)
+            end
+        end
+    end
 end
 
 local function deletePreview()
@@ -43,13 +57,22 @@ local function closeDealer()
 end
 
 local function showPreview(modelName)
+    if previewBusy then return end
+    previewBusy = true
     deletePreview()
+    cleanupPreviewArea()
+
     local hash, err = loadVehicleModel(modelName)
-    if not hash then return notify(err, 'error') end
+    if not hash then
+        previewBusy = false
+        return notify(err, 'error')
+    end
+
     local p = Sunset.Dealership.preview
     previewVehicle = CreateVehicle(hash, p.x, p.y, p.z, p.w, false, false)
     if previewVehicle == 0 then
         SetModelAsNoLongerNeeded(hash)
+        previewBusy = false
         return notify('The preview vehicle could not be created.', 'error')
     end
     SetEntityAsMissionEntity(previewVehicle, true, true)
@@ -59,13 +82,7 @@ local function showPreview(modelName)
     SetVehicleOnGroundProperly(previewVehicle)
     FreezeEntityPosition(previewVehicle, true)
     SetModelAsNoLongerNeeded(hash)
-
-    local cam = Sunset.Dealership.camera
-    previewCamera = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
-    SetCamCoord(previewCamera, cam.x, cam.y, cam.z)
-    PointCamAtEntity(previewCamera, previewVehicle, 0.0, 0.0, 0.35, true)
-    SetCamFov(previewCamera, 48.0)
-    RenderScriptCams(true, true, 350, true, true)
+    previewBusy = false
 end
 
 local function openDealer(asAdmin)
@@ -76,7 +93,6 @@ local function openDealer(asAdmin)
     adminMode = asAdmin == true
     exports.sunset_ui:Send('dealershipShow', data)
     exports.sunset_ui:SetFocus(true, true)
-    if data.vehicles and data.vehicles[1] then showPreview(data.vehicles[1].model) end
 end
 
 RegisterCommand('dealership', function()
