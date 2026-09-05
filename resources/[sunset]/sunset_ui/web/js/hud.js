@@ -227,7 +227,6 @@ const Hud = {
         this.hintsGroupVisible = false;
         if (!el) return;
         el.classList.remove('is-visible');
-        el.classList.remove('is-single');
         el.setAttribute('aria-hidden', 'true');
     },
 };
