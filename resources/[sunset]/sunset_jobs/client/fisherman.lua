@@ -2,7 +2,7 @@ local JC = Sunset.JobClient
 local fishing = false
 local rod = nil
 local selling = false
-local idleUiVisible = false
+local fishingUiMode = 'hidden'
 
 local function fishBagProgress(carried, capacity)
     capacity = math.max(tonumber(capacity) or 2, 1)
@@ -28,8 +28,25 @@ local function fishingUi(action, data)
 end
 
 local function hideFishingUi()
-    idleUiVisible = false
+    fishingUiMode = 'hidden'
     fishingUi('fishingHide', {})
+end
+
+local function buildShiftMessage()
+    local data = JC.sessionData or {}
+    local pending = tonumber(data.pendingValue) or 0
+    if pending > 0 then
+        return ('Fish worth $%d — yellow marker or /sellfish to sell'):format(pending)
+    end
+    return 'Blue marker: E or /fish · /sellfish marks the buyer'
+end
+
+local function showFishingShift(message)
+    fishingUiMode = 'shift'
+    showFishingState('shift', {
+        title = 'Fisherman',
+        message = message or buildShiftMessage(),
+    })
 end
 
 local function showFishingState(state, extra)
@@ -105,9 +122,7 @@ local function attemptSell()
             if spot then
                 JC.setWaypoint(spot.coords)
             end
-            JC.showObjective('Fishing', ('Bag %d/%d — blue marker: E or /fish · buyer: /sellfish'):format(
-                result.session.carried or 0, result.session.capacity or 2),
-                fishBagProgress(result.session.carried, result.session.capacity))
+            showFishingShift()
             JC.notify('Shift still active — cast at the nearest blue fishing marker.', 'info', 7000)
         end
     else
@@ -134,8 +149,7 @@ local function startFisherman()
     elseif cfg.spots and cfg.spots[1] then
         JC.setWaypoint(cfg.spots[1].coords)
     end
-    JC.showObjective('Fishing', ('Bag %d/%d — blue marker: E or /fish · buyer: /sellfish'):format(
-        data.carried or 0, data.capacity or 2), fishBagProgress(data.carried, data.capacity))
+    showFishingShift()
     JC.notify(('Fishing bag: %d/%d. Catch with E or /fish; use /sellfish at any time to mark the buyer.'):format(
         data.carried or 0, data.capacity or 2), 'info', 9000)
 
@@ -178,7 +192,7 @@ local function attemptFish()
     end
 
     fishing = true
-    idleUiVisible = false
+    fishingUiMode = 'hidden'
     alignPlayerAtSpot(spot)
 
     local cast, err = Sunset.AwaitCallback('sunset:jobs:fisherman:cast', spotIdx)
@@ -239,7 +253,6 @@ local function attemptFish()
 
     removeRod()
     fishing = false
-    hideFishingUi()
 
     if result then
         JC.sessionData.pendingValue = result.pendingValue
@@ -247,13 +260,18 @@ local function attemptFish()
         JC.sessionData.capacity = result.capacity
         local sellLabel = cfg.sellPoint.label or 'Fish Buyer'
         JC.setWaypoint(cfg.sellPoint.coords)
-        JC.showObjective('Sell fish or keep fishing', ('Bag %d/%d · value $%s — %s, press E'):format(
-            result.carried or 0, result.capacity or 2, result.pendingValue, sellLabel),
-            fishBagProgress(result.carried, result.capacity))
+        showFishingShift(('Caught! Bag %d/%d · %s — /sellfish'):format(
+            result.carried or 0, result.capacity or 2, sellLabel))
         JC.notify(('Fresh Fish added to inventory (%d/%d). Buyer marked on GPS; press E or /sellfish there.'):format(
             result.carried or 0, result.capacity or 2), 'success', 9000)
     else
-        JC.showObjective('Fishing', 'Fish escaped — press E or /fish to cast again', sessionBagProgress())
+        local _, distance = nearestSpotIndex()
+        if distance <= (cfg.catchRadius or 8.0) then
+            showFishingState('idle')
+            fishingUiMode = 'idle'
+        else
+            showFishingShift()
+        end
         if not early and reelErr then
             JC.notify(reelErr, 'warning')
         elseif not early then
@@ -278,20 +296,29 @@ CreateThread(function()
             local _, distance = nearestSpotIndex()
             local cfg = Sunset.GetJobConfig('fisherman')
             if distance <= (cfg.catchRadius or 8.0) then
-                if not idleUiVisible then
+                if fishingUiMode ~= 'idle' then
                     showFishingState('idle')
-                    idleUiVisible = true
+                    fishingUiMode = 'idle'
                 end
                 if IsControlJustPressed(0, 38) then
                     CreateThread(attemptFish)
                 end
                 Wait(0)
             else
-                if idleUiVisible then hideFishingUi() end
-                Wait(200)
+                if fishingUiMode ~= 'shift' then
+                    showFishingShift()
+                else
+                    fishingUi('fishingUpdate', {
+                        state = 'shift',
+                        carried = (JC.sessionData or {}).carried,
+                        capacity = (JC.sessionData or {}).capacity,
+                        message = buildShiftMessage(),
+                    })
+                end
+                Wait(400)
             end
         else
-            if not fishing and idleUiVisible then hideFishingUi() end
+            if not fishing and fishingUiMode ~= 'hidden' then hideFishingUi() end
             Wait(400)
         end
     end

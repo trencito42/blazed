@@ -46,16 +46,23 @@ function notify(message, type = 'info', duration = 4000) {
     const container = $('#notifications');
     if (!container) return;
     const safeType = ['info', 'success', 'warning', 'error'].includes(type) ? type : 'info';
+    const labels = {
+        info: 'NOTICE',
+        success: 'CONFIRMED',
+        warning: 'ATTENTION',
+        error: 'ALERT',
+    };
     const el = document.createElement('div');
     el.className = `notification notification--${safeType}`;
     el.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
     const signal = document.createElement('span');
     signal.className = 'notification__signal';
+    signal.setAttribute('aria-hidden', 'true');
     const body = document.createElement('div');
     body.className = 'notification__body';
     const title = document.createElement('strong');
     title.className = 'notification__title';
-    title.textContent = safeType === 'error' ? 'SYSTEM ERROR' : safeType === 'warning' ? 'ATTENTION' : safeType === 'success' ? 'CONFIRMED' : 'SYSTEM MESSAGE';
+    title.textContent = labels[safeType];
     const copy = document.createElement('span');
     copy.className = 'notification__message';
     copy.textContent = String(message ?? '');
@@ -63,11 +70,14 @@ function notify(message, type = 'info', duration = 4000) {
     el.append(signal, body);
     container.appendChild(el);
 
+    const maxVisible = 5;
+    while (container.children.length > maxVisible) {
+        container.firstElementChild?.remove();
+    }
+
     setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateX(40px)';
-        el.style.transition = 'all 0.3s ease';
-        setTimeout(() => el.remove(), 300);
+        el.classList.add('is-leaving');
+        setTimeout(() => el.remove(), 280);
     }, duration);
 }
 

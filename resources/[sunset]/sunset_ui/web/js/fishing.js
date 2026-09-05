@@ -63,6 +63,16 @@ const Fishing = {
                 this._progress.style.transition = 'none';
                 this._progress.style.width = '0%';
             }
+        } else if (state === 'shift') {
+            this._applyState(
+                'state-shift',
+                data.title || 'Fisherman',
+                data.message || 'Blue marker: E or /fish · /sellfish marks the buyer'
+            );
+            if (this._progress) {
+                this._progress.style.transition = 'none';
+                this._progress.style.width = '0%';
+            }
         } else {
             this._applyState(
                 'state-idle',

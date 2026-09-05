@@ -13,9 +13,8 @@
     pointer-events: none;
     color: var(--sunset-text, #f6f2e9);
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
-    background: rgba(10, 5, 15, 0.82);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: rgba(10, 5, 15, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
     border-bottom: 4px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
@@ -124,6 +123,18 @@
 #fishing-panel.state-idle { border-bottom-color: var(--sunset-orange, #ff8a00); }
 #fishing-panel.state-idle .fishing__title,
 #fishing-panel.state-idle .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+
+/* shift — on-duty guidance away from the pier */
+#fishing-panel.state-shift { border-bottom-color: var(--sunset-orange, #ff8a00); }
+#fishing-panel.state-shift .fishing__title,
+#fishing-panel.state-shift .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+#fishing-panel.state-shift .fishing__message {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    line-height: 1.35;
+}
 
 /* waiting */
 #fishing-panel.state-waiting { border-bottom-color: #b900ff; }
