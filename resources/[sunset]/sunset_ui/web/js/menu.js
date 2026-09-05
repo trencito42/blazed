@@ -57,7 +57,7 @@ const Menu = {
     factionTips(jobId) {
         const common = [
             '<li>Civilian jobs are hired at the Job Center.</li>',
-            '<li>Factions (LSPD, EMS, Taxi, gangs) join at HQ — press <strong>[E]</strong> for duty.</li>',
+            '<li>Faction membership requires a leader invitation after an accepted Discord/site application. Members use <strong>[E]</strong> at HQ for duty.</li>',
         ];
         const perJob = {
             police: [

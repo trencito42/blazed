@@ -77,7 +77,7 @@ const FactionPanels = {
             title.append(name, category);
             const status = document.createElement('em');
             status.className = faction.applicationsOpen ? 'is-open' : '';
-            status.textContent = faction.applicationLabel || 'Closed';
+            status.textContent = faction.applicationLabel || 'Applications closed';
             top.append(title, status);
             const description = document.createElement('p');
             description.textContent = faction.description || 'No public information.';

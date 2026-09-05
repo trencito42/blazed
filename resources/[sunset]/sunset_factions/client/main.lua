@@ -234,8 +234,41 @@ end, false)
 
 RegisterCommand('finvite', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:factionInvite', tonumber(args[1]))
-    if ok then exports.sunset_ui:Notify('Member recruited', 'success')
+    if ok then exports.sunset_ui:Notify(('%s was invited to %s and has %d seconds to accept.'):format(ok.target, ok.label, ok.expiresIn), 'success', 8000)
     else exports.sunset_ui:Notify(err or 'Recruitment failed. Check your leader permission and the target ID.', 'error') end
+end, false)
+
+RegisterNetEvent('sunset:faction:inviteReceived', function(invite)
+    exports.sunset_ui:Notify(
+        ('%s invited you to %s. Use /acceptfaction or /declinefaction within %d seconds.'):format(
+            invite.leader or 'The leader', invite.label or 'a faction', invite.expiresIn or 120),
+        'info', 12000)
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0, type = 'faction_info', name = 'FACTION INVITATION',
+        message = ('%s invited you to %s. Type /acceptfaction to join or /declinefaction to refuse.'):format(
+            invite.leader or 'The leader', invite.label or 'a faction'), time = '',
+    })
+end)
+
+local function acceptFactionInvite()
+    local result, err = Sunset.AwaitCallback('sunset:factionAcceptInvite')
+    if not result then return exports.sunset_ui:Notify(err or 'The faction invitation could not be accepted.', 'error', 8000) end
+    exports.sunset_ui:Notify(('You joined %s. Your civilian job is unchanged. Go to HQ and press E to start duty.'):format(result.label), 'success', 10000)
+    refreshIllegalBlip()
+end
+
+RegisterCommand('acceptfaction', acceptFactionInvite, false)
+RegisterCommand('accept', function(_, args)
+    if string.lower(tostring(args[1] or '')) ~= 'faction' then
+        return exports.sunset_ui:Notify('Usage: /accept faction', 'error')
+    end
+    acceptFactionInvite()
+end, false)
+
+RegisterCommand('declinefaction', function()
+    local ok, err = Sunset.AwaitCallback('sunset:factionDeclineInvite')
+    if ok then exports.sunset_ui:Notify('Faction invitation declined.', 'info')
+    else exports.sunset_ui:Notify(err or 'The faction invitation could not be declined.', 'error') end
 end, false)
 
 RegisterCommand('fpromote', function(_, args)
@@ -352,19 +385,14 @@ AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
 
     if myFaction then
         local myLabel = Sunset.Factions[myFaction] and Sunset.Factions[myFaction].label or myFaction
-        exports.sunset_ui:Notify(
-            ('You are in %s. Use /leavefaction first to join %s.'):format(myLabel, label),
-            'warning', 9000)
-        return
+        return exports.sunset_ui:Notify(('You are a member of %s; this is %s HQ.'):format(myLabel, label), 'warning', 7000)
     end
 
-    local ok, err = Sunset.AwaitCallback('sunset:joinFactionHQ', factionId)
-    if ok then
-        exports.sunset_ui:Notify('Joined ' .. label .. ' — you are ON DUTY. Use /duty to toggle shift.', 'success')
-        refreshIllegalBlip()
-    else
-        exports.sunset_ui:Notify(err or 'Could not join', 'error')
-    end
+    exports.sunset_ui:Notify(
+        faction.applicationsOpen
+            and ('%s recruitment uses applications on Discord/the website. After acceptance, the leader invites you in-game.'):format(label)
+            or ('%s is not accepting public applications. Only its leader can invite members.'):format(label),
+        'info', 10000)
 end)
 
 AddEventHandler('sunset:world:factionDepot', function(factionId, depot)
@@ -416,7 +444,9 @@ CreateThread(function()
         { name = 'message', help = 'optional details' },
     })
     TriggerEvent('chat:addSuggestion', '/gov', 'Government channel', { { name = 'message' } })
-    TriggerEvent('chat:addSuggestion', '/finvite', 'Recruit player', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/finvite', 'Leader: invite an accepted applicant nearby', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/acceptfaction', 'Accept your pending faction invitation')
+    TriggerEvent('chat:addSuggestion', '/declinefaction', 'Decline your pending faction invitation')
     TriggerEvent('chat:addSuggestion', '/funinvite', 'Remove member', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/fgiverank', 'Set member rank', { { name = 'id' }, { name = 'grade' } })
     TriggerEvent('chat:addSuggestion', '/fwarn', 'Faction warning', { { name = 'id' }, { name = 'reason' } })

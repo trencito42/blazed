@@ -39,4 +39,4 @@ server_scripts {
     'server/friendlyfire.lua',
 }
 
-exports { 'IsOnDuty', 'GetDutyState', 'HasFactionPerm', 'IsCuffed', 'GetWantedState', 'IsJailed', 'GetDetentionState' }
+exports { 'IsOnDuty', 'GetDutyState', 'IsFactionLeader', 'HasFactionPerm', 'IsCuffed', 'GetWantedState', 'IsJailed', 'GetDetentionState' }

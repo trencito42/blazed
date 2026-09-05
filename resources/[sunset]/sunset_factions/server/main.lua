@@ -10,6 +10,9 @@ local function hasPerm(source, perm)
     return FactionCore.hasPerm(source, perm)
 end
 
+local PendingFactionInvites = {}
+local FACTION_INVITE_SECONDS = 120
+
 local function addSociety(societyName, amount)
     if not societyName or amount <= 0 then return end
     pcall(function()
@@ -57,29 +60,11 @@ exports.sunset_core:RegisterCallback('sunset:toggleDuty', function(source)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:joinFactionHQ', function(source, factionId)
-    local char = getChar(source)
-    if not char then return nil, 'Cannot join a faction: your character is not loaded. Reconnect and select it again.' end
     local faction = Sunset.Factions[factionId]
     if not faction then return nil, 'Unknown faction' end
-    if faction.type == 'illegal' then return nil, 'This faction is invite-only' end
-    if not nearFactionPoint(source, faction, 'hq', 6.0) then
-        return nil, 'You must be at this faction HQ'
-    end
-
-    local currentFaction = getFactionOf(char)
-    if currentFaction and currentFaction ~= factionId then
-        local currentLabel = Sunset.Factions[currentFaction] and Sunset.Factions[currentFaction].label or currentFaction
-        return nil, ('You are in %s. Use /leavefaction first.'):format(currentLabel)
-    end
-    if currentFaction == factionId then return nil, 'You are already a member — use /duty' end
-
-    if not exports.sunset_core:SetFaction(source, factionId, 0) then
-        return nil, 'Could not join faction'
-    end
-    if faction.duty then
-        setDuty(source, true)
-    end
-    return true
+    return nil, faction.applicationsOpen
+        and ('You cannot join %s at the HQ. Apply on Discord or the website; if accepted, its leader must invite you with /finvite.'):format(faction.label)
+        or ('%s is not recruiting publicly. Membership requires a leader invitation.'):format(faction.label)
 end)
 
 local function leaveFactionForSource(source)
@@ -118,24 +103,91 @@ end)
 exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, targetId)
     local char = getChar(source)
     if not char then return nil, 'Cannot recruit: your character is not loaded. Reconnect and select it again.' end
-    if not hasPerm(source, 'invite') and not FactionCore.isFactionLeader(char.id, select(1, getFactionOf(char))) then
-        return nil, FactionCore.accessError(source, 'invite', 'recruit a faction member')
-    end
-
     local myFaction = getFactionOf(char)
     if not myFaction then return nil, 'No faction' end
+    if not FactionCore.isFactionLeader(char.id, myFaction) then
+        return nil, 'Only the faction leader appointed by an administrator can invite applicants.'
+    end
 
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then
         return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
     end
+    if targetId == source then return nil, 'You cannot invite yourself.' end
     local target = getChar(targetId)
-    if not target then return nil, 'Target has no character' end
-    if getFactionOf(target) then return nil, 'Target is already in a faction' end
+    if not target then return nil, 'That player has not loaded a character yet.' end
+    local targetFaction = getFactionOf(target)
+    if targetFaction then
+        local label = Sunset.Factions[targetFaction] and Sunset.Factions[targetFaction].label or targetFaction
+        return nil, ('That player is already a member of %s.'):format(label)
+    end
+    if FactionCore.distBetween(FactionCore.playerCoords(source), FactionCore.playerCoords(targetId)) > 10.0 then
+        return nil, 'Meet the accepted applicant first; they must be within 10 metres when you invite them.'
+    end
+    local existing = PendingFactionInvites[targetId]
+    if existing and existing.expiresAt > os.time() then
+        return nil, 'That player already has a pending faction invitation. They must accept or decline it first.'
+    end
 
-    exports.sunset_core:SetFaction(targetId, myFaction, 0)
-    FactionCore.auditLog(myFaction, char.id, 'invite', target.id, {})
-    TriggerClientEvent('sunset:client:notify', targetId, 'You joined ' .. (Sunset.Factions[myFaction].label or myFaction), 'success')
+    local faction = Sunset.Factions[myFaction]
+    PendingFactionInvites[targetId] = {
+        factionId = myFaction,
+        inviterSource = source,
+        inviterCharacterId = char.id,
+        targetCharacterId = target.id,
+        expiresAt = os.time() + FACTION_INVITE_SECONDS,
+    }
+    FactionCore.auditLog(myFaction, char.id, 'invite_sent', target.id, { expiresIn = FACTION_INVITE_SECONDS })
+    TriggerClientEvent('sunset:faction:inviteReceived', targetId, {
+        factionId = myFaction,
+        label = faction and faction.label or myFaction,
+        leader = exports.sunset_core:GetPlayerDisplayName(source),
+        expiresIn = FACTION_INVITE_SECONDS,
+    })
+    return {
+        label = faction and faction.label or myFaction,
+        target = exports.sunset_core:GetPlayerDisplayName(targetId),
+        expiresIn = FACTION_INVITE_SECONDS,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:factionAcceptInvite', function(source)
+    local invite = PendingFactionInvites[source]
+    if not invite then return nil, 'You do not have a pending faction invitation.' end
+    PendingFactionInvites[source] = nil
+    if invite.expiresAt <= os.time() then return nil, 'Your faction invitation expired. Ask the leader to invite you again.' end
+
+    local char = getChar(source)
+    if not char or tonumber(char.id) ~= tonumber(invite.targetCharacterId) then
+        return nil, 'The invitation belongs to a different or unloaded character.'
+    end
+    if getFactionOf(char) then return nil, 'You are already a member of a faction.' end
+    local leader = getChar(invite.inviterSource)
+    if not leader or select(1, getFactionOf(leader)) ~= invite.factionId
+        or not FactionCore.isFactionLeader(leader.id, invite.factionId) then
+        return nil, 'The inviting leader is no longer available. Ask them to send a new invitation.'
+    end
+    if not exports.sunset_core:SetFaction(source, invite.factionId, 0) then
+        return nil, 'Faction membership could not be saved. Please try again.'
+    end
+
+    local faction = Sunset.Factions[invite.factionId]
+    FactionCore.auditLog(invite.factionId, leader.id, 'invite_accepted', char.id, {})
+    TriggerClientEvent('sunset:client:notify', invite.inviterSource,
+        ('%s accepted the invitation to %s.'):format(exports.sunset_core:GetPlayerDisplayName(source), faction.label), 'success', 7000)
+    return { factionId = invite.factionId, label = faction.label }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:factionDeclineInvite', function(source)
+    local invite = PendingFactionInvites[source]
+    if not invite then return nil, 'You do not have a pending faction invitation.' end
+    PendingFactionInvites[source] = nil
+    local char = getChar(source)
+    FactionCore.auditLog(invite.factionId, char and char.id or nil, 'invite_declined', invite.targetCharacterId, {})
+    if GetPlayerName(invite.inviterSource) then
+        TriggerClientEvent('sunset:client:notify', invite.inviterSource,
+            ('%s declined the faction invitation.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 6000)
+    end
     return true
 end)
 
@@ -391,7 +443,7 @@ exports.sunset_core:RegisterCallback('sunset:getFactionPanel', function(source)
         onDuty = FactionCore.isOnDuty(source),
         salary = gradeRow and gradeRow.salary or 0,
         depot = faction.depot and faction.depot.label or nil,
-        commands = Sunset.GetFactionCommandsForGrade(factionId, grade),
+        commands = Sunset.GetFactionCommandsForGrade(factionId, grade, FactionCore.isFactionLeader(char.id, factionId)),
         isFaction = true,
         civilianJob = select(1, Sunset.GetCharacterJob(char)),
         motd = motd,
@@ -501,7 +553,7 @@ exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
             factionType = faction.factionType, description = faction.description,
             applicationsOpen = faction.applicationsOpen == true,
             applicationLabel = faction.type == 'illegal' and 'Invite only'
-                or (faction.applicationsOpen and 'Open — join at HQ' or 'Closed'),
+                or (faction.applicationsOpen and 'Applications open — Discord / website' or 'Applications closed'),
             online = 0, onDuty = 0, total = 0, leaders = {},
         }
         byId[factionId] = entry
@@ -549,6 +601,10 @@ exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
 end)
 
 AddEventHandler('playerDropped', function()
+    PendingFactionInvites[source] = nil
+    for target, invite in pairs(PendingFactionInvites) do
+        if invite.inviterSource == source then PendingFactionInvites[target] = nil end
+    end
     FactionCore.setOnDuty(source, false)
     if Detention and Detention.clear then Detention.clear(source) end
 end)
@@ -567,5 +623,12 @@ function GetDutyState(source)
     return FactionCore.isOnDuty(source)
 end
 exports('GetDutyState', GetDutyState)
+
+function IsFactionLeader(source)
+    local char = getChar(source)
+    local factionId = char and select(1, getFactionOf(char))
+    return factionId ~= nil and FactionCore.isFactionLeader(char.id, factionId)
+end
+exports('IsFactionLeader', IsFactionLeader)
 
 exports('AddSocietyMoney', addSociety)

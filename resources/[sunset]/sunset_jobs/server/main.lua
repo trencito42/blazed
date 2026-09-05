@@ -21,7 +21,7 @@ end
 exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
-    if not Sunset.CivilianJobs[jobId] then return nil, 'Invalid job — factions join at HQ (LSPD, EMS, etc.)' end
+    if not Sunset.CivilianJobs[jobId] then return nil, 'Invalid civilian job. Factions require an invitation from their admin-appointed leader.' end
 
     if jobId == 'unemployed' then
         return quitCivilianJob(source, 'Resigned at Job Center')

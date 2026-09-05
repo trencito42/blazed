@@ -84,7 +84,9 @@ local function buildFactionCategory(source, char)
     local faction = Sunset.Factions[factionId]
     if not faction then return nil end
 
-    local entries = copyEntries(Sunset.GetFactionCommandsForGrade(factionId, grade))
+    local leader = false
+    pcall(function() leader = exports.sunset_factions:IsFactionLeader(source) == true end)
+    local entries = copyEntries(Sunset.GetFactionCommandsForGrade(factionId, grade, leader))
 
     if isOnDuty(source) then
         entries[#entries + 1] = { cmd = '/r [message]', desc = 'Faction radio (on-duty members)' }

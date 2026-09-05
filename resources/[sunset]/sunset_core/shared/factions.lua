@@ -13,7 +13,7 @@ Sunset.Factions = {
         society = 'police',
         duty = true,
         hq = vector3(441.15, -981.95, 30.69),
-        hqHint = '[E] LSPD — join / toggle duty',
+        hqHint = '[E] LSPD HQ — members: toggle duty | applications: Discord/site',
         blip = { sprite = 60, color = 29, scale = 0.9 },
         marker = { 0, 100, 200 },
         depot = {
@@ -72,7 +72,7 @@ Sunset.Factions = {
         society = 'medic',
         duty = true,
         hq = vector3(298.0, -584.0, 43.28),
-        hqHint = '[E] Pillbox EMS — join / toggle duty (exterior)',
+        hqHint = '[E] Pillbox EMS HQ — members: toggle duty | applications: Discord/site',
         blip = { sprite = 61, color = 1, scale = 0.9 },
         marker = { 255, 50, 50 },
         depot = {
@@ -100,7 +100,7 @@ Sunset.Factions = {
         society = 'taxi',
         duty = true,
         hq = vector3(903.32, -170.14, 74.08),
-        hqHint = '[E] Downtown Cab — join / toggle duty',
+        hqHint = '[E] Downtown Cab HQ — members: toggle duty | applications: Discord/site',
         blip = { sprite = 198, color = 5, scale = 0.85 },
         marker = { 255, 200, 0 },
         depot = {
@@ -127,7 +127,7 @@ Sunset.Factions = {
         society = 'mechanic',
         duty = true,
         hq = vector3(-337.52, -136.57, 39.01),
-        hqHint = '[E] LS Customs — repair in vehicle ($250) / join on foot',
+        hqHint = '[E] LS Customs — vehicle repair $250 | members: toggle duty',
         blip = { sprite = 446, color = 47, scale = 0.85 },
         marker = { 255, 140, 0 },
         depot = {
@@ -154,7 +154,7 @@ Sunset.Factions = {
         society = 'lsfd',
         duty = true,
         hq = vector3(1194.82, -1464.01, 34.86),
-        hqHint = '[E] LS Fire Department — join / toggle duty',
+        hqHint = '[E] LSFD HQ — members: toggle duty | applications: Discord/site',
         blip = { sprite = 436, color = 1, scale = 0.85 },
         marker = { 255, 80, 0 },
         depot = {
@@ -227,7 +227,7 @@ Sunset.FactionCommandCatalog = {
     { perm = 'fare', cmd = '/fare [id] [amount]', desc = 'Charge a manual taxi fare' },
     { perm = 'sell', cmd = '/sellpouch', desc = 'Sell sealed pouches at HQ (Cartel)' },
     { perm = 'fence', cmd = '/fence', desc = 'Fence contraband at HQ (Syndicate)' },
-    { perm = 'invite', cmd = '/finvite [id]', desc = 'Recruit unemployed player' },
+    { perm = 'invite', cmd = '/finvite [id]', desc = 'Leader: invite an accepted applicant nearby' },
     { perm = 'promote', cmd = '/fpromote [id] [grade]', desc = 'Promote a faction member' },
 }
 
@@ -265,10 +265,14 @@ function Sunset.GetFactionGrade(jobId, grade)
     return f.grades[grade or 0]
 end
 
-function Sunset.GetFactionCommandsForGrade(jobId, grade)
+function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
     local list = {}
     for _, row in ipairs(Sunset.FactionCommandCatalog or {}) do
-        if Sunset.HasFactionPerm(jobId, grade, row.perm) then
+        -- Recruitment is an explicit leader responsibility, regardless of a
+        -- rank's older generic permissions.
+        if row.perm == 'invite' and isLeader then
+            list[#list + 1] = row
+        elseif row.perm ~= 'invite' and Sunset.HasFactionPerm(jobId, grade, row.perm) then
             list[#list + 1] = row
         end
     end
