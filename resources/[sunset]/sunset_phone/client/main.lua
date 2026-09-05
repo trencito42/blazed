@@ -1,5 +1,6 @@
 local phoneOpen = false
 local phoneProp = nil
+local phoneBusy = false
 local PHONE_MODEL = `prop_amb_phone`
 
 local function playPhoneSound(name)
@@ -45,6 +46,14 @@ local function removePhoneProp()
     phoneProp = nil
 end
 
+local function clearPhoneAnim(ped)
+    local dict = 'cellphone@'
+    StopAnimTask(ped, dict, 'cellphone_text_read_base', 1.0)
+    StopAnimTask(ped, dict, 'cellphone_text_in', 1.0)
+    StopAnimTask(ped, dict, 'cellphone_text_out', 1.0)
+    ClearPedSecondaryTask(ped)
+end
+
 local function playPhoneAnim(open)
     local ped = PlayerPedId()
     local dict = 'cellphone@'
@@ -53,22 +62,23 @@ local function playPhoneAnim(open)
         if not loadAnimDict(dict) then return end
         TaskPlayAnim(ped, dict, 'cellphone_text_in', 3.0, -1, -1, 50, 0, false, false, false)
         Wait(400)
+        if not phoneOpen then return end
         attachPhoneProp(ped)
         TaskPlayAnim(ped, dict, 'cellphone_text_read_base', 3.0, 3.0, -1, 49, 0, false, false, false)
     else
-        if loadAnimDict(dict) then
-            TaskPlayAnim(ped, dict, 'cellphone_text_out', 3.0, -1, -1, 50, 0, false, false, false)
-            Wait(300)
-        end
         removePhoneProp()
-        StopAnimTask(ped, dict, 'cellphone_text_read_base', 1.0)
-        StopAnimTask(ped, dict, 'cellphone_text_in', 1.0)
-        StopAnimTask(ped, dict, 'cellphone_text_out', 1.0)
+        clearPhoneAnim(ped)
+        if loadAnimDict(dict) then
+            TaskPlayAnim(ped, dict, 'cellphone_text_out', 3.0, 1000, -1, 50, 0, false, false, false)
+            Wait(250)
+            clearPhoneAnim(ped)
+        end
     end
 end
 
 local function openPhone()
-    if phoneOpen then return end
+    if phoneOpen or phoneBusy then return end
+    phoneBusy = true
 
     CreateThread(function()
         if IsNuiFocused() then
@@ -84,11 +94,13 @@ local function openPhone()
 
         local data, err = Sunset.AwaitCallback('sunset:getPhoneData')
         if not data then
+            phoneBusy = false
             exports.sunset_ui:Notify(err or 'Could not load phone data', 'error')
             return
         end
 
         phoneOpen = true
+        phoneBusy = false
         DisablePlayerFiring(PlayerId(), true)
         playPhoneSound('open')
         playPhoneAnim(true)
@@ -98,26 +110,35 @@ local function openPhone()
 end
 
 local function closePhone()
-    if not phoneOpen then return end
+    if phoneBusy then return end
+    if not phoneOpen and not phoneProp then return end
+
+    phoneBusy = true
     phoneOpen = false
     playPhoneSound('close')
-    playPhoneAnim(false)
+    removePhoneProp()
+    clearPhoneAnim(PlayerPedId())
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('phoneHide', {})
+
+    CreateThread(function()
+        playPhoneAnim(false)
+        phoneBusy = false
+    end)
 end
 
 local function togglePhone()
+    if phoneBusy then return end
     if phoneOpen then closePhone() else openPhone() end
 end
 
 RegisterCommand('phone', togglePhone, false)
 
--- P is GTA's primary pause binding. Capture that control directly so pressing P
--- opens only the phone; ESC remains available for the pause menu.
+-- P opens/closes phone in-world only. When NUI has focus, the web UI handles P/Escape.
 CreateThread(function()
     while true do
         DisableControlAction(0, 199, true) -- INPUT_FRONTEND_PAUSE (P)
-        if IsDisabledControlJustReleased(0, 199) then
+        if not IsNuiFocused() and IsDisabledControlJustReleased(0, 199) then
             togglePhone()
         end
         Wait(0)
@@ -182,6 +203,7 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     removePhoneProp()
+    clearPhoneAnim(PlayerPedId())
 end)
 
 exports('Open', openPhone)

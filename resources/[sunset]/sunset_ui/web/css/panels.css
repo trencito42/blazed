@@ -9,6 +9,10 @@
     background: rgba(0, 0, 0, 0.55);
     font-family: 'Inter', sans-serif;
 }
+.overlay-panel.overlay-panel--peek {
+    background: transparent;
+    backdrop-filter: none;
+}
 .overlay-panel.hidden { display: none; }
 
 .overlay-panel__box {
