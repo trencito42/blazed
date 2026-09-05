@@ -743,27 +743,25 @@
 .clock-display svg { display: none; }
 
 .money-display {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: 18px max-content;
+    align-items: center;
+    justify-items: start;
+    column-gap: 8px;
+    row-gap: 5px;
     padding-left: 15px;
     border-left: 1px solid rgba(255,255,255,.1);
     min-height: 38px;
 }
 
 .money-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 7px;
+    display: contents;
 }
 
 .money-icon {
     width: 16px;
     height: 16px;
-    flex-shrink: 0;
+    justify-self: center;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
 
@@ -783,8 +781,8 @@
 }
 
 .money-bank {
-    color: rgba(255,255,255,.6);
-    font-size: 14px;
+    color: rgba(255,255,255,.72);
+    font: 700 17px/1 'Chakra Petch',sans-serif;
 }
 
 .status-bars-container { display:flex; gap:10px; justify-content:flex-end; }
