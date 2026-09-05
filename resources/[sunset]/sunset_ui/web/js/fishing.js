@@ -113,14 +113,21 @@ const Fishing = {
     },
 
     update(data = {}) {
-        if (!this._panel || this._panel.classList.contains('hidden')) {
+        this.init();
+        if (!this._panel) return;
+
+        const hasBag = data.carried !== undefined || data.capacity !== undefined;
+        if (hasBag) {
+            this._setBag(data.carried, data.capacity);
+        }
+
+        const hasContent = data.state || data.message || data.title || data.windowMs;
+        if (!hasContent) return;
+
+        if (this._panel.classList.contains('hidden')) {
             this.show(data);
             return;
         }
-        if (data.carried !== undefined || data.capacity !== undefined) {
-            this._setBag(data.carried, data.capacity);
-        }
-        if (data.bagOnly) return;
         if (data.state === 'bite') {
             this.startBite(data.windowMs || 1500, data);
             return;

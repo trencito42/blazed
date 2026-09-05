@@ -4,6 +4,7 @@ local rod = nil
 local selling = false
 local fishingUiMode = 'hidden'
 local shiftLoopActive = false
+local lastPanelKey = ''
 
 local function horizontalDist(pos, coords)
     local dx = pos.x - coords.x
@@ -23,33 +24,8 @@ local function isWithinCatchRadius(distance, cfg)
     return distance <= catchRadius(cfg)
 end
 
-local function atFishingSpot()
-    local _, distance = nearestSpotIndex()
-    local cfg = Sunset.GetJobConfig('fisherman')
-    return isWithinCatchRadius(distance, cfg), distance, cfg
-end
-
 local function contextJustPressed()
     return IsControlJustPressed(0, 38) or IsDisabledControlJustPressed(0, 38)
-end
-
-local function fishBagProgress(carried, capacity)
-    capacity = math.max(tonumber(capacity) or 2, 1)
-    carried = math.max(0, tonumber(carried) or 0)
-    return math.floor((carried / capacity) * 100)
-end
-
-local function sessionBagProgress()
-    local data = JC.sessionData or {}
-    return fishBagProgress(data.carried, data.capacity)
-end
-
-local function sessionBagPayload()
-    local data = JC.sessionData or {}
-    return {
-        carried = data.carried or 0,
-        capacity = data.capacity or 2,
-    }
 end
 
 local function bagCounts()
@@ -64,6 +40,15 @@ local function isBagFull()
     return carried >= capacity
 end
 
+local function sessionBagPayload()
+    local carried, capacity = bagCounts()
+    return { carried = carried, capacity = capacity }
+end
+
+local function isFishermanShift()
+    return JC.jobId == 'fisherman' and JC.state and JC.state ~= 'IDLE'
+end
+
 local lastBagSync = 0
 local lastCatchAt = 0
 
@@ -74,28 +59,14 @@ local function applyBagState(carried, capacity, pendingValue)
     if pendingValue ~= nil then JC.sessionData.pendingValue = pendingValue end
 end
 
-local function pushFishingBagUi()
-    local carried, capacity = bagCounts()
-    fishingUi('fishingUpdate', {
-        bagOnly = true,
-        carried = carried,
-        capacity = capacity,
-    })
+local function fishingUi(action, data)
+    exports.sunset_ui:Send(action, data or {})
 end
 
-local function syncBagFromServer()
-    local now = GetGameTimer()
-    if now - lastBagSync < 2000 then return end
-    if fishing then return end
-    if now - lastCatchAt < 4000 then return end
-    lastBagSync = now
-    if JC.jobId ~= 'fisherman' or JC.state == 'IDLE' then return end
-    local status = Sunset.AwaitCallback('sunset:jobs:fisherman:bagStatus')
-    if not status then return end
-    applyBagState(status.carried, status.capacity, status.pendingValue)
-    if fishingUiMode ~= 'hidden' and not fishing then
-        pushFishingBagUi()
-    end
+local function hideFishingUi()
+    fishingUiMode = 'hidden'
+    lastPanelKey = ''
+    fishingUi('fishingHide', {})
 end
 
 local function buildFullBagMessage()
@@ -104,15 +75,6 @@ local function buildFullBagMessage()
     local sellLabel = cfg and cfg.sellPoint and cfg.sellPoint.label or 'Fish Buyer'
     return ('Bag full %d/%d — yellow marker or /sellfish to sell at %s'):format(
         carried, capacity, sellLabel)
-end
-
-local function fishingUi(action, data)
-    exports.sunset_ui:Send(action, data or {})
-end
-
-local function hideFishingUi()
-    fishingUiMode = 'hidden'
-    fishingUi('fishingHide', {})
 end
 
 local function buildShiftMessage()
@@ -127,35 +89,6 @@ local function buildShiftMessage()
     return 'Blue marker: E or /fish · /sellfish marks the buyer'
 end
 
-local function showFishingShift(message)
-    fishingUiMode = 'shift'
-    showFishingState('shift', {
-        title = 'Fisherman',
-        message = message or buildShiftMessage(),
-    })
-end
-
-local function showFishingFull(message)
-    fishingUiMode = 'full'
-    showFishingState('full', {
-        title = 'Bag Full',
-        message = message or buildFullBagMessage(),
-    })
-end
-
-local function refreshSpotUi()
-    if isBagFull() then
-        showFishingFull()
-    else
-        showFishingState('idle')
-        fishingUiMode = 'idle'
-    end
-end
-
-local function spotUiMode()
-    return isBagFull() and 'full' or 'idle'
-end
-
 local function showFishingState(state, extra)
     if state == 'idle' and isBagFull() then
         state = 'full'
@@ -168,7 +101,94 @@ local function showFishingState(state, extra)
     if extra then
         for k, v in pairs(extra) do payload[k] = v end
     end
+    fishingUiMode = state
+    if state ~= 'waiting' and state ~= 'bite' and state ~= 'success' and state ~= 'failed' then
+        local carried, capacity = bagCounts()
+        lastPanelKey = ('%s:%d:%d'):format(state, carried, capacity)
+    end
     fishingUi('fishingShow', payload)
+end
+
+local function showFishingShift(message)
+    showFishingState('shift', {
+        title = 'Fisherman',
+        message = message or buildShiftMessage(),
+    })
+end
+
+local function showFishingFull(message)
+    showFishingState('full', {
+        title = 'Bag Full',
+        message = message or buildFullBagMessage(),
+    })
+end
+
+local function refreshSpotUi()
+    if isBagFull() then
+        showFishingFull()
+    else
+        showFishingState('idle')
+    end
+end
+
+local function pushFishingBagUi()
+    local carried, capacity = bagCounts()
+    fishingUi('fishingUpdate', {
+        carried = carried,
+        capacity = capacity,
+    })
+end
+
+local function syncFishingPanel(forceState, extra)
+    if not isFishermanShift() or fishing then return end
+
+    local atSpot = false
+    if not forceState then
+        local _, distance = nearestSpotIndex()
+        local cfg = Sunset.GetJobConfig('fisherman')
+        atSpot = isWithinCatchRadius(distance, cfg)
+    end
+
+    local state = forceState
+    if not state then
+        if isBagFull() then
+            state = 'full'
+        elseif atSpot then
+            state = 'idle'
+        else
+            state = 'shift'
+        end
+    end
+
+    local carried, capacity = bagCounts()
+    local panelKey = ('%s:%d:%d'):format(state, carried, capacity)
+    if panelKey == lastPanelKey and not extra then return end
+    lastPanelKey = panelKey
+
+    local payload = {
+        title = state == 'full' and 'Bag Full' or (state == 'shift' and 'Fisherman' or 'Fishing'),
+        message = state == 'full' and buildFullBagMessage()
+            or (state == 'shift' and buildShiftMessage() or nil),
+    }
+    if extra then
+        for k, v in pairs(extra) do payload[k] = v end
+    end
+    showFishingState(state, payload)
+end
+
+local function syncBagFromServer()
+    local now = GetGameTimer()
+    if now - lastBagSync < 2000 then return end
+    if fishing then return end
+    if now - lastCatchAt < 3000 then return end
+    lastBagSync = now
+    if not isFishermanShift() then return end
+    local status = Sunset.AwaitCallback('sunset:jobs:fisherman:bagStatus')
+    if not status then return end
+    applyBagState(status.carried, status.capacity, status.pendingValue)
+    if fishingUiMode ~= 'hidden' then
+        syncFishingPanel()
+    end
 end
 
 local function alignPlayerAtSpot(spot)
@@ -202,7 +222,7 @@ local function equipRod()
 end
 
 local function nearestSpotIndex()
-    local cfg = Sunset.GetJobConfig('fisherman')
+    local cfg = Sunset.GetJobConfig('fisherman') or {}
     local ped = PlayerPedId()
     local pos = GetEntityCoords(ped)
     local best, bestDist = 1, 999999.0
@@ -211,6 +231,12 @@ local function nearestSpotIndex()
         if d < bestDist then bestDist = d; best = i end
     end
     return best, bestDist
+end
+
+local function atFishingSpot()
+    local _, distance = nearestSpotIndex()
+    local cfg = Sunset.GetJobConfig('fisherman')
+    return isWithinCatchRadius(distance, cfg), distance, cfg
 end
 
 local function drawShiftMarkers(cfg)
@@ -235,7 +261,7 @@ local function ensureFishermanShiftLoop()
     shiftLoopActive = true
 
     CreateThread(function()
-        while JC.jobId == 'fisherman' and JC.state ~= 'IDLE' do
+        while isFishermanShift() do
             local cfg = Sunset.GetJobConfig('fisherman')
             drawShiftMarkers(cfg)
 
@@ -269,13 +295,12 @@ local function attemptSell()
         if result.session then
             applyBagState(result.session.carried, result.session.capacity, result.session.pendingValue)
             lastCatchAt = 0
-            local cfg = Sunset.GetJobConfig('fisherman')
             local spotIdx = nearestSpotIndex()
             local spot = cfg.spots and cfg.spots[spotIdx]
             if spot then
                 JC.setWaypoint(spot.coords)
             end
-            refreshSpotUi()
+            syncFishingPanel()
             JC.notify('Shift still active — cast at the nearest blue fishing marker.', 'info', 7000)
         end
     else
@@ -291,6 +316,8 @@ local function startFisherman()
     end
 
     local cfg = Sunset.GetJobConfig('fisherman')
+    JC.jobId = 'fisherman'
+    JC.state = 'STARTING'
     JC.clearBlips()
     for i, spot in ipairs(cfg.spots or {}) do
         JC.addBlip(spot.coords, spot.blip or { sprite = 68, color = 3 }, 'Fishing Spot ' .. i)
@@ -303,20 +330,16 @@ local function startFisherman()
     elseif cfg.spots and cfg.spots[1] then
         JC.setWaypoint(cfg.spots[1].coords)
     end
-    if isBagFull() then
-        showFishingFull()
-    else
-        showFishingShift()
-    end
-    JC.notify(('Fishing bag: %d/%d. Catch with E or /fish; use /sellfish at any time to mark the buyer.'):format(
-        data.carried or 0, data.capacity or 2), 'info', 9000)
 
     ensureFishermanShiftLoop()
+    syncFishingPanel()
+    JC.notify(('Fishing bag: %d/%d. Catch with E or /fish; use /sellfish at any time to mark the buyer.'):format(
+        data.carried or 0, data.capacity or 2), 'info', 9000)
 end
 
 local function attemptFish()
     if fishing then return JC.notify('Your line is already cast', 'warning') end
-    if JC.jobId ~= 'fisherman' or JC.state == 'IDLE' then
+    if not isFishermanShift() then
         return JC.notify('Start a fisherman shift with /work first', 'error')
     end
     local spotIdx, spotDist = nearestSpotIndex()
@@ -330,13 +353,12 @@ local function attemptFish()
     if isBagFull() then
         local carried, capacity = bagCounts()
         JC.setWaypoint(cfg.sellPoint.coords)
-        refreshSpotUi()
+        syncFishingPanel('full')
         return JC.notify(('Fishing bag full (%d/%d). Head to the Fish Buyer or use /sellfish.'):format(
             carried, capacity), 'warning', 8000)
     end
 
     fishing = true
-    fishingUiMode = 'hidden'
     alignPlayerAtSpot(spot)
 
     local cast, err = Sunset.AwaitCallback('sunset:jobs:fisherman:cast', spotIdx)
@@ -344,9 +366,9 @@ local function attemptFish()
         fishing = false
         if err and string.find(string.lower(err), 'bag full', 1, true) then
             JC.setWaypoint(cfg.sellPoint.coords)
-            refreshSpotUi()
+            syncFishingPanel('full')
         else
-            refreshSpotUi()
+            syncFishingPanel()
         end
         local notifyType = err and string.find(string.lower(err), 'bag full', 1, true) and 'warning' or 'error'
         return JC.notify(err or 'Could not cast', notifyType, 8000)
@@ -392,7 +414,6 @@ local function attemptFish()
                 applyBagState(result.carried, result.capacity, result.pendingValue)
                 lastCatchAt = GetGameTimer()
                 lastBagSync = lastCatchAt
-                pushFishingBagUi()
                 showFishingState('success', {
                     message = 'You caught a fish!',
                     carried = result.carried,
@@ -418,13 +439,9 @@ local function attemptFish()
         local sellLabel = cfg.sellPoint.label or 'Fish Buyer'
         JC.setWaypoint(cfg.sellPoint.coords)
         if isBagFull() then
-            showFishingFull()
+            syncFishingPanel('full')
         else
-            refreshSpotUi()
-            fishingUi('fishingUpdate', {
-                state = 'idle',
-                carried = result.carried,
-                capacity = result.capacity,
+            syncFishingPanel('idle', {
                 message = ('Caught! Bag %d/%d · %s — /sellfish'):format(
                     result.carried or 0, result.capacity or 2, sellLabel),
             })
@@ -432,12 +449,7 @@ local function attemptFish()
         JC.notify(('Fresh Fish added to inventory (%d/%d). Buyer marked on GPS; press E or /sellfish there.'):format(
             result.carried or 0, result.capacity or 2), 'success', 9000)
     else
-        local _, distance = nearestSpotIndex()
-        if distance <= catchRadius(cfg) then
-            refreshSpotUi()
-        else
-            showFishingShift()
-        end
+        syncFishingPanel()
         if not early and reelErr then
             JC.notify(reelErr, 'warning')
         elseif not early then
@@ -456,66 +468,35 @@ RegisterCommand('sellfish', function()
     CreateThread(attemptSell)
 end, false)
 
--- E must be polled every frame; Wait(400) in the UI loop misses single-frame presses.
 CreateThread(function()
     while true do
-        if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
-            local atSpot = atFishingSpot()
-            if atSpot then
-                EnableControlAction(0, 38, true)
-                JC.showHelp('Press ~INPUT_CONTEXT~ to cast your line')
-                if contextJustPressed() then
-                    CreateThread(attemptFish)
-                end
-                Wait(0)
-            else
-                Wait(200)
-            end
-        else
-            Wait(400)
-        end
-    end
-end)
-
-CreateThread(function()
-    while true do
-        if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' then
+        if isFishermanShift() then
             ensureFishermanShiftLoop()
-        end
-        if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
-            JC.hideObjective()
-            if GetGameTimer() - lastBagSync > 2000 then
-                CreateThread(syncBagFromServer)
-            end
-            local atSpot = atFishingSpot()
-            if atSpot then
-                local targetMode = spotUiMode()
-                if fishingUiMode ~= targetMode then
-                    refreshSpotUi()
-                else
-                    fishingUi('fishingUpdate', {
-                        state = targetMode,
-                        carried = (JC.sessionData or {}).carried,
-                        capacity = (JC.sessionData or {}).capacity,
-                        message = targetMode == 'full' and buildFullBagMessage() or nil,
-                    })
+
+            if not fishing then
+                JC.hideObjective()
+                if GetGameTimer() - lastBagSync > 2500 then
+                    CreateThread(syncBagFromServer)
+                end
+
+                local atSpot = atFishingSpot()
+                syncFishingPanel()
+
+                if atSpot then
+                    EnableControlAction(0, 38, true)
+                    JC.showHelp('Press ~INPUT_CONTEXT~ to cast your line')
+                    if contextJustPressed() then
+                        CreateThread(attemptFish)
+                    end
                 end
                 Wait(0)
             else
-                if fishingUiMode ~= 'shift' then
-                    showFishingShift()
-                else
-                    fishingUi('fishingUpdate', {
-                        state = 'shift',
-                        carried = (JC.sessionData or {}).carried,
-                        capacity = (JC.sessionData or {}).capacity,
-                        message = buildShiftMessage(),
-                    })
-                end
-                Wait(250)
+                Wait(0)
             end
         else
-            if not fishing and fishingUiMode ~= 'hidden' then hideFishingUi() end
+            if fishingUiMode ~= 'hidden' then
+                hideFishingUi()
+            end
             if JC.jobId ~= 'fisherman' or JC.state == 'IDLE' then
                 fishing = false
                 removeRod()
@@ -548,22 +529,20 @@ TriggerEvent('chat:addSuggestion', '/sellfish', 'Mark the Fish Buyer or sell fis
 AddEventHandler('sunset:jobs:stateChanged', function(_, data)
     if JC.jobId ~= 'fisherman' or fishing or not data then return end
     applyBagState(data.carried, data.capacity, data.pendingValue)
-    if fishingUiMode == 'hidden' then return end
-    if isBagFull() then
-        showFishingFull()
-    else
-        pushFishingBagUi()
+    if fishingUiMode ~= 'hidden' then
+        syncFishingPanel()
     end
+end)
+
+RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId)
+    if jobId ~= 'fisherman' then return end
+    hideFishingUi()
+    fishing = false
+    removeRod()
 end)
 
 Sunset.Jobs.StartFisherman = startFisherman
 Sunset.Jobs.EnsureFishermanShift = function()
     ensureFishermanShiftLoop()
-    if fishingUiMode == 'hidden' and not fishing then
-        if isBagFull() then
-            showFishingFull()
-        else
-            showFishingShift()
-        end
-    end
+    syncFishingPanel()
 end
