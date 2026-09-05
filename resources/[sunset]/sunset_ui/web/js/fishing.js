@@ -63,6 +63,16 @@ const Fishing = {
                 this._progress.style.transition = 'none';
                 this._progress.style.width = '0%';
             }
+        } else if (state === 'full') {
+            this._applyState(
+                'state-full',
+                data.title || 'Bag Full',
+                data.message || 'Sell your fish before casting again'
+            );
+            if (this._progress) {
+                this._progress.style.transition = 'none';
+                this._progress.style.width = '100%';
+            }
         } else if (state === 'shift') {
             this._applyState(
                 'state-shift',

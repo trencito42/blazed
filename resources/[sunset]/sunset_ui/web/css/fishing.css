@@ -141,6 +141,23 @@
     color: rgba(255, 255, 255, 0.94);
 }
 
+/* full — bag at capacity, must sell before casting */
+#fishing-panel.state-full { border-bottom-color: #ffb21c; }
+#fishing-panel.state-full .fishing__title,
+#fishing-panel.state-full .fishing__icon { color: #ffb21c; }
+#fishing-panel.state-full .fishing__message {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.96);
+}
+#fishing-panel.state-full .fishing__progress-fill {
+    background: #ffb21c;
+    width: 100% !important;
+}
+
 /* waiting */
 #fishing-panel.state-waiting { border-bottom-color: #b900ff; }
 #fishing-panel.state-waiting .fishing__title,
