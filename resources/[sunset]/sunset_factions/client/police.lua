@@ -2,9 +2,13 @@ local jailed = false
 local jailReleaseAt = 0
 local radarActive = false
 local lastRadarLock = 0
+local radarVehicle = 0
+local radarLimitKmh = 0
 
-local function chatLine(name, message)
-    exports.sunset_ui:Send('chatMessage', { id = 0, name = name, message = message, time = '' })
+local function chatLine(name, message, messageType)
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0, type = messageType or 'police_alert', name = name, message = message, time = '',
+    })
 end
 
 local function actionError(err, fallback)
@@ -25,24 +29,24 @@ end
 
 RegisterNetEvent('sunset:police:chatAlert', function(data)
     data = data or {}
-    chatLine(data.tag or 'POLICE ALERT', data.message or 'Police activity nearby.')
+    chatLine(data.tag or 'POLICE ALERT', data.message or 'Police activity nearby.', data.type)
 end)
 
-local function mphFromEntity(entity)
-    return math.floor(GetEntitySpeed(entity) * 2.236936 + 0.5)
+local function kmhFromEntity(entity)
+    return math.floor(GetEntitySpeed(entity) * 3.6 + 0.5)
 end
 
 local function getVehicleInRadarCone()
-    local ped = PlayerPedId()
-    local origin = GetEntityCoords(ped)
-    local forward = GetEntityForwardVector(ped)
+    if radarVehicle == 0 or not DoesEntityExist(radarVehicle) then return 0, 0 end
+    local origin = GetEntityCoords(radarVehicle)
+    local forward = GetEntityForwardVector(radarVehicle)
     local cfg = Sunset.Police and Sunset.Police.radar or {}
     local range = cfg.mobileRange or 45.0
-    local bestVeh, bestSpeed, bestPlate = 0, 0, nil
+    local bestVeh, bestSpeed = 0, 0
     local bestDot = -1.0
 
     for _, veh in ipairs(GetGamePool('CVehicle')) do
-        if DoesEntityExist(veh) then
+        if veh ~= radarVehicle and DoesEntityExist(veh) then
             local vehCoords = GetEntityCoords(veh)
             local delta = vehCoords - origin
             local dist = #(delta)
@@ -54,15 +58,24 @@ local function getVehicleInRadarCone()
                     if driver ~= 0 and IsPedAPlayer(driver) then
                         bestDot = dot
                         bestVeh = veh
-                        bestSpeed = mphFromEntity(veh)
-                        bestPlate = GetVehicleNumberPlateText(veh)
+                        bestSpeed = kmhFromEntity(veh)
                     end
                 end
             end
         end
     end
 
-    return bestVeh, bestSpeed, bestPlate
+    return bestVeh, bestSpeed
+end
+
+local function stopRadar(showMessage)
+    if radarVehicle ~= 0 and DoesEntityExist(radarVehicle) then
+        FreezeEntityPosition(radarVehicle, false)
+        SetVehicleHandbrake(radarVehicle, false)
+    end
+    if radarActive then Sunset.AwaitCallback('sunset:policeRadarStop') end
+    radarActive, radarVehicle, radarLimitKmh = false, 0, 0
+    if showMessage then exports.sunset_ui:Notify('Speed radar stopped — patrol vehicle unlocked.', 'info') end
 end
 
 RegisterNetEvent('sunset:police:summonAlert', function(data)
@@ -140,19 +153,30 @@ end)
 CreateThread(function()
     while true do
         if radarActive then
-            local veh, speed, plate = getVehicleInRadarCone()
+            local ped = PlayerPedId()
+            if radarVehicle == 0 or not DoesEntityExist(radarVehicle)
+                or GetPedInVehicleSeat(radarVehicle, -1) ~= ped
+                or Entity(radarVehicle).state.sunsetFactionVehicle ~= 'police' then
+                stopRadar(false)
+                exports.sunset_ui:Notify('Radar stopped because you left the driver seat or patrol vehicle.', 'warning', 6000)
+                goto continue
+            end
+
+            FreezeEntityPosition(radarVehicle, true)
+            SetVehicleHandbrake(radarVehicle, true)
+            local veh, speed = getVehicleInRadarCone()
             if veh ~= 0 and speed > 0 then
                 local cfg = Sunset.Police and Sunset.Police.radar or {}
-                local limit = cfg.defaultLimitMph or 55
                 local now = GetGameTimer()
-                if speed > limit and now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
+                if speed > radarLimitKmh and now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
                     lastRadarLock = now
-                    local result = Sunset.AwaitCallback('sunset:policeRadarLock', speed, plate)
+                    local result = Sunset.AwaitCallback('sunset:policeRadarLock', NetworkGetNetworkIdFromEntity(veh))
                     if result and result.flagged then
-                        exports.sunset_ui:Notify(result.message or ('Radar lock: %d mph'):format(speed), 'warning', 5000)
+                        exports.sunset_ui:Notify(result.message or ('Radar lock: %d km/h'):format(speed), 'warning', 5000)
                     end
                 end
             end
+            ::continue::
             Wait((Sunset.Police and Sunset.Police.radar and Sunset.Police.radar.scanIntervalMs) or 750)
         else
             Wait(500)
@@ -291,19 +315,39 @@ RegisterCommand('confiscate', function(_, args)
     exports.sunset_ui:Notify('Contraband confiscated', 'success')
 end, false)
 
-RegisterCommand('startradar', function()
-    local violations, err = Sunset.AwaitCallback('sunset:policeViolations')
-    if violations == nil then
-        return actionError(err, 'Cannot start radar: go on duty as law enforcement first.')
+RegisterCommand('startradar', function(_, args)
+    if radarActive then
+        return exports.sunset_ui:Notify(('Radar is already active at %d km/h. Use /stopradar first.'):format(radarLimitKmh), 'warning')
     end
+    local cfg = Sunset.Police and Sunset.Police.radar or {}
+    local limit = tonumber(args[1])
+    if not limit then
+        return exports.sunset_ui:Notify(('Usage: /startradar [limit_kmh] — example: /startradar %d'):format(cfg.defaultLimitKmh or 90), 'error', 8000)
+    end
+    local ped = PlayerPedId()
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    if vehicle == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then
+        return exports.sunset_ui:Notify('You must be in the driver seat of an LSPD patrol vehicle.', 'error', 7000)
+    end
+    if Entity(vehicle).state.sunsetFactionVehicle ~= 'police' then
+        return exports.sunset_ui:Notify('Mobile radar only works in an LSPD vehicle spawned at the MRPD garage.', 'error', 7000)
+    end
+    local result, err = Sunset.AwaitCallback('sunset:policeRadarStart', NetworkGetNetworkIdFromEntity(vehicle), limit)
+    if not result then return actionError(err, 'Cannot start radar.') end
+
     radarActive = true
+    radarVehicle = vehicle
+    radarLimitKmh = result.limitKmh
     lastRadarLock = 0
-    exports.sunset_ui:Notify('Speed radar active — aim at oncoming traffic', 'success')
+    FreezeEntityPosition(vehicle, true)
+    SetVehicleHandbrake(vehicle, true)
+    chatLine('RADAR', ('Mobile radar active: %d km/h limit. Patrol vehicle is locked until /stopradar.'):format(radarLimitKmh), 'radar')
+    exports.sunset_ui:Notify(('Radar active at %d km/h — vehicle locked. Use /stopradar before pursuing.'):format(radarLimitKmh), 'success', 8000)
 end, false)
 
 RegisterCommand('stopradar', function()
-    radarActive = false
-    exports.sunset_ui:Notify('Speed radar deactivated', 'info')
+    if not radarActive then return exports.sunset_ui:Notify('Radar is not active. Start it with /startradar [limit_kmh].', 'info') end
+    stopRadar(true)
 end, false)
 
 RegisterCommand('radars', function()
@@ -385,7 +429,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)', { { name = 'id', help = 'optional target ID' } })
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
-    TriggerEvent('chat:addSuggestion', '/startradar', 'Activate mobile speed radar')
+    TriggerEvent('chat:addSuggestion', '/startradar', 'Lock an LSPD patrol vehicle and monitor speed', { { name = 'limit_kmh', help = '20-250' } })
     TriggerEvent('chat:addSuggestion', '/stopradar', 'Deactivate mobile speed radar')
     TriggerEvent('chat:addSuggestion', '/radars', 'List fixed speed cameras')
     TriggerEvent('chat:addSuggestion', '/m', 'Megaphone', { { name = 'message' } })

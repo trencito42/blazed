@@ -80,6 +80,13 @@ body.menu-open #progress {
     transition: opacity 220ms ease, filter 220ms ease, visibility 220ms ease;
 }
 
+body.fuel-pump-open #courier-panel,
+body.fuel-pump-open #fishing-panel,
+body.fuel-pump-open #job-objective {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
 .app-bg {
     position: absolute;
     inset: 0;

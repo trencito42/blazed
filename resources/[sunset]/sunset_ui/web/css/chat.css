@@ -168,6 +168,38 @@ body.chat-ui-open .chat-msg,
 .chat-msg__name { color: rgba(255,255,255,0.65); margin-right: 4px; }
 .chat-msg--me { color: #c9a0ff; font-style: italic; }
 .chat-msg--do { color: #7ec8e3; font-style: italic; }
+.chat-msg--f,
+.chat-msg--r,
+.chat-msg--d,
+.chat-msg--faction_info {
+    color: #dca8ff;
+    border-left: 2px solid #b900ff;
+    padding-left: 7px;
+    background: linear-gradient(90deg, rgba(185, 0, 255, .14), transparent 72%);
+}
+.chat-msg--gov {
+    color: #ffd36a;
+    border-left: 2px solid #ffb21c;
+    padding-left: 7px;
+    background: linear-gradient(90deg, rgba(255, 178, 28, .15), transparent 72%);
+}
+.chat-msg--megaphone,
+.chat-msg--police_alert,
+.chat-msg--radar {
+    color: #fff;
+    font-weight: 700;
+    border-left: 3px solid #ff554f;
+    padding: 2px 0 2px 8px;
+    background: linear-gradient(90deg, rgba(255, 42, 42, .22), rgba(255, 138, 0, .08), transparent 78%);
+}
+.chat-msg--f .chat-msg__name,
+.chat-msg--r .chat-msg__name,
+.chat-msg--d .chat-msg__name,
+.chat-msg--faction_info .chat-msg__name { color: #e8c7ff; font-weight: 700; }
+.chat-msg--gov .chat-msg__name { color: #ffe8a8; font-weight: 700; }
+.chat-msg--megaphone .chat-msg__name,
+.chat-msg--police_alert .chat-msg__name,
+.chat-msg--radar .chat-msg__name { color: #ffb260; font-weight: 700; }
 
 .chat-input-wrap {
     margin-top: 6px;

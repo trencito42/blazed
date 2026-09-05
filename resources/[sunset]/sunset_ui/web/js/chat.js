@@ -31,7 +31,9 @@ const Chat = {
         const visible = open ? this.messages : this.messages.slice(-this.pageSize());
         visible.forEach((m) => {
             const el = document.createElement('div');
-            el.className = 'chat-msg' + (m.type === 'me' ? ' chat-msg--me' : m.type === 'do' ? ' chat-msg--do' : '');
+            const type = String(m.type || '').toLowerCase().replace(/[^a-z_]/g, '');
+            const highlighted = new Set(['me', 'do', 'f', 'r', 'd', 'gov', 'megaphone', 'police_alert', 'faction_info', 'radar']);
+            el.className = 'chat-msg' + (highlighted.has(type) ? ` chat-msg--${type}` : '');
             const time = document.createElement('span');
             time.className = 'chat-msg__time';
             time.textContent = String(m.time ?? '');

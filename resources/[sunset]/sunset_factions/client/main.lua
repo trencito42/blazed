@@ -97,6 +97,8 @@ local function spawnFleetVehicle(depot, factionId)
 
     fleetVehicle = veh
     TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
+    Wait(0)
+    TriggerServerEvent('sunset:factionRegisterFleetVehicle', NetworkGetNetworkIdFromEntity(veh), factionId)
     exports.sunset_ui:Notify((depot.label or 'Fleet') .. ' vehicle ready', 'success')
 end
 
@@ -120,6 +122,44 @@ function IsOnDutyLocal()
     return onDuty
 end
 exports('IsOnDuty', function() return onDuty end)
+
+local fleetAccessWarningAt = 0
+CreateThread(function()
+    while true do
+        local ped = PlayerPedId()
+        local current = GetVehiclePedIsIn(ped, false)
+        local entering = GetVehiclePedIsTryingToEnter(ped)
+        local vehicle = current ~= 0 and current or entering
+        local wait = 500
+
+        if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+            local restrictedTo = Entity(vehicle).state.sunsetFactionVehicle
+            if restrictedTo then
+                wait = 100
+                local char = exports.sunset_core:GetCharacter()
+                local factionId = char and Sunset.GetCharacterFaction(char)
+                local allowed = factionId == restrictedTo
+                SetVehicleDoorsLockedForPlayer(vehicle, PlayerId(), not allowed)
+                if not allowed then
+                    if current == vehicle then
+                        TaskLeaveVehicle(ped, vehicle, 16)
+                    else
+                        ClearPedTasks(ped)
+                    end
+                    local now = GetGameTimer()
+                    if now >= fleetAccessWarningAt then
+                        fleetAccessWarningAt = now + 4000
+                        local faction = Sunset.Factions and Sunset.Factions[restrictedTo]
+                        exports.sunset_ui:Notify(
+                            ('This vehicle is reserved for %s members.'):format(faction and faction.label or restrictedTo),
+                            'error', 6000)
+                    end
+                end
+            end
+        end
+        Wait(wait)
+    end
+end)
 
 local function blocked()
     return IsNuiFocused()
@@ -227,7 +267,15 @@ end, false)
 
 RegisterCommand('fmotd', function(_, args)
     local msg = table.concat(args, ' ')
-    if msg == '' then return exports.sunset_ui:Notify('Usage: /fmotd [message]', 'error') end
+    if msg == '' then
+        local data, err = Sunset.AwaitCallback('sunset:factionGetMotd')
+        if not data then return exports.sunset_ui:Notify(err or 'Faction MOTD could not be loaded.', 'error') end
+        exports.sunset_ui:Send('chatMessage', {
+            id = 0, type = 'faction_info', name = (data.label or 'FACTION') .. ' MOTD',
+            message = data.message ~= '' and data.message or 'No message of the day has been set.', time = '',
+        })
+        return
+    end
     local ok, err = Sunset.AwaitCallback('sunset:factionSetMotd', msg)
     if ok then exports.sunset_ui:Notify('Faction MOTD updated', 'success')
     else exports.sunset_ui:Notify(err or 'MOTD update failed. Check your faction permission and message.', 'error') end
@@ -268,19 +316,14 @@ local function showFactionInfo(data)
     end
 
     local function chat(line)
-        exports.sunset_ui:Send('chatMessage', { id = 0, name = 'FACTION', message = line, time = '' })
+        exports.sunset_ui:Send('chatMessage', { id = 0, type = 'faction_info', name = 'FACTION', message = line, time = '' })
     end
 
     chat(('=== %s ==='):format(data.label))
-    if data.description and data.description ~= '' then chat(data.description) end
     chat(('Rank: %s | %s | $%s/hr'):format(data.gradeLabel or data.grade, data.onDuty and 'ON DUTY' or 'OFF DUTY', data.salary or 0))
-    if data.depot then chat('Fleet garage: ' .. data.depot) end
-    if data.commands and #data.commands > 0 then
-        chat('Your commands:')
-        for _, row in ipairs(data.commands) do
-            chat(row.cmd .. ' — ' .. (row.desc or ''))
-        end
-    end
+    if data.motd and data.motd ~= '' then chat('MOTD: ' .. data.motd) end
+    chat(('Fleet: %s | Civilian job: %s'):format(data.depot or 'none', data.civilianJob or 'unemployed'))
+    chat('Open M > Job > Faction Info for details, or use /help for your available commands.')
 end
 
 RegisterCommand('faction', function()
@@ -386,7 +429,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/fgiverank', 'Set member rank', { { name = 'id' }, { name = 'grade' } })
     TriggerEvent('chat:addSuggestion', '/fwarn', 'Faction warning', { { name = 'id' }, { name = 'reason' } })
     TriggerEvent('chat:addSuggestion', '/fmembers', 'List online faction members')
-    TriggerEvent('chat:addSuggestion', '/fmotd', 'Set faction MOTD', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/fmotd', 'Read MOTD, or set it if you have permission', { { name = 'message', help = 'optional new MOTD' } })
     TriggerEvent('chat:addSuggestion', '/fine', 'Issue fine (PD)', { { name = 'id' }, { name = 'amount' }, { name = 'reason' } })
     TriggerEvent('chat:addSuggestion', '/cuff', 'Cuff player (PD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/uncuff', 'Uncuff player (PD)', { { name = 'id' } })
@@ -418,7 +461,7 @@ local PD_HELP = {
     '/ticket [id] (or /fine [id]) — choose an official citation in UI',
     '/mdc — Mobile data terminal',
     '/confiscate [id] — Confiscate contraband',
-    '/startradar — Activate speed radar',
+    '/startradar [limit_kmh] — Lock patrol car and monitor traffic',
     '/stopradar — Deactivate speed radar',
     '/radars — List fixed speed cameras',
     '/f [msg] — Faction radio',

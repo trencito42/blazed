@@ -2,13 +2,16 @@ Police = Police or {}
 
 local WantedOnline = {}
 local JailedOnline = {}
+local RadarSessions = {}
 
 local function notify(source, msg, typ, duration)
     FactionCore.notify(source, msg, typ or 'info', duration)
 end
 
-local function policeChat(target, tag, message)
-    TriggerClientEvent('sunset:police:chatAlert', target, { tag = tag, message = message })
+local function policeChat(target, tag, message, messageType)
+    TriggerClientEvent('sunset:police:chatAlert', target, {
+        tag = tag, message = message, type = messageType or 'police_alert',
+    })
 end
 
 local function broadcastToPolice(tag, message)
@@ -375,12 +378,15 @@ exports.sunset_core:RegisterCallback('sunset:policeSummon', function(source, tar
     local targetName = exports.sunset_core:GetPlayerDisplayName(targetId)
     local chatMessage = ('Officer %s (#%d) ordered %s (#%d) to stop and comply.'):format(
         officerName, source, targetName, targetId)
+    policeChat(source, 'STOP ORDER', chatMessage, 'police_alert')
+    policeChat(targetId, 'POLICE ORDER', chatMessage, 'police_alert')
     for _, id in ipairs(GetPlayers()) do
         local viewer = tonumber(id)
         local viewerPos = viewer and FactionCore.playerCoords(viewer)
-        if viewerPos and (FactionCore.distBetween(viewerPos, officerPos) <= 80.0
+        if viewer ~= source and viewer ~= targetId and viewerPos
+            and (FactionCore.distBetween(viewerPos, officerPos) <= 80.0
             or FactionCore.distBetween(viewerPos, targetPos) <= 80.0) then
-            policeChat(viewer, 'POLICE ALERT', chatMessage)
+            policeChat(viewer, 'POLICE ALERT', chatMessage, 'police_alert')
         end
     end
     notify(source, ('Stop order sent to %s (#%d); nearby players saw the chat alert.'):format(
@@ -511,25 +517,90 @@ exports.sunset_core:RegisterCallback('sunset:policeConfiscate', function(source,
     return removed
 end)
 
-exports.sunset_core:RegisterCallback('sunset:policeRadarLock', function(source, speedMph, plate)
+local function validateRadarVehicle(source, networkId)
     if not FactionCore.hasPerm(source, 'radar') then
         return nil, FactionCore.accessError(source, 'radar', 'use the speed radar', 'law_enforcement')
     end
-    speedMph = math.floor(tonumber(speedMph) or 0)
-    if speedMph < 1 then return nil, 'Invalid reading' end
+    local vehicle = NetworkGetEntityFromNetworkId(tonumber(networkId) or 0)
+    local ped = GetPlayerPed(source)
+    if vehicle == 0 or not DoesEntityExist(vehicle) or ped == 0 then
+        return nil, 'You must be driving a valid LSPD patrol vehicle.'
+    end
+    if GetPedInVehicleSeat(vehicle, -1) ~= ped then
+        return nil, 'You must be in the driver seat of the LSPD patrol vehicle.'
+    end
+    if Entity(vehicle).state.sunsetFactionVehicle ~= 'police' then
+        return nil, 'Mobile radar only works in an LSPD fleet vehicle from the MRPD garage.'
+    end
+    local depot = Sunset.Factions.police and Sunset.Factions.police.depot
+    if not depot or GetEntityModel(vehicle) ~= joaat(depot.vehicle) then
+        return nil, 'This is not an authorized LSPD radar vehicle.'
+    end
+    return vehicle
+end
 
-    local limit = Sunset.Police.radar and Sunset.Police.radar.defaultLimitMph or 55
-    if speedMph <= limit then
-        return { speed = speedMph, limit = limit, flagged = false }
+exports.sunset_core:RegisterCallback('sunset:policeRadarStart', function(source, networkId, requestedLimit)
+    local vehicle, err = validateRadarVehicle(source, networkId)
+    if not vehicle then return nil, err end
+    local cfg = Sunset.Police.radar or {}
+    local limit = math.floor(tonumber(requestedLimit) or 0)
+    if limit < (cfg.minLimitKmh or 20) or limit > (cfg.maxLimitKmh or 250) then
+        return nil, ('Choose a speed limit between %d and %d km/h. Example: /startradar 90'):format(
+            cfg.minLimitKmh or 20, cfg.maxLimitKmh or 250)
+    end
+    RadarSessions[source] = { networkId = NetworkGetNetworkIdFromEntity(vehicle), limitKmh = limit, lastPlate = '', lastAt = 0 }
+    return { limitKmh = limit }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeRadarStop', function(source)
+    RadarSessions[source] = nil
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeRadarLock', function(source, targetNetworkId)
+    local session = RadarSessions[source]
+    if not session then return nil, 'Radar is not active. Use /startradar [limit_kmh] first.' end
+    local radarVehicle, err = validateRadarVehicle(source, session.networkId)
+    if not radarVehicle then
+        RadarSessions[source] = nil
+        return nil, err
     end
 
-    return {
-        speed = speedMph,
-        limit = limit,
-        flagged = true,
-        plate = plate or 'UNKNOWN',
-        message = ('Speed violation: %d mph in a %d mph zone'):format(speedMph, limit),
-    }
+    local targetVehicle = NetworkGetEntityFromNetworkId(tonumber(targetNetworkId) or 0)
+    if targetVehicle == 0 or targetVehicle == radarVehicle or not DoesEntityExist(targetVehicle) then
+        return nil, 'Radar target is no longer available.'
+    end
+    local cfg = Sunset.Police.radar or {}
+    if #(GetEntityCoords(targetVehicle) - GetEntityCoords(radarVehicle)) > (cfg.mobileRange or 45.0) + 10.0 then
+        return nil, 'Radar target is out of range.'
+    end
+
+    local speed = math.floor(GetEntitySpeed(targetVehicle) * 3.6 + 0.5)
+    local limit = session.limitKmh
+    if speed <= limit then return { speed = speed, limit = limit, flagged = false } end
+    local plate = GetVehicleNumberPlateText(targetVehicle) or 'UNKNOWN'
+    local now = os.time()
+    if session.lastPlate == plate and now - session.lastAt < 4 then
+        return { speed = speed, limit = limit, flagged = false }
+    end
+    session.lastPlate, session.lastAt = plate, now
+
+    local over = speed - limit
+    local message = ('Radar: %s caught at %d km/h (limit %d, +%d).'):format(plate, speed, limit, over)
+    policeChat(source, 'RADAR', message, 'radar')
+
+    local driver = GetPedInVehicleSeat(targetVehicle, -1)
+    for _, id in ipairs(GetPlayers()) do
+        local targetSource = tonumber(id)
+        if targetSource and GetPlayerPed(targetSource) == driver then
+            policeChat(targetSource, 'RADAR ALERT',
+                ('LSPD recorded your vehicle at %d km/h in a %d km/h zone (+%d).'):format(speed, limit, over),
+                'radar')
+            break
+        end
+    end
+
+    return { speed = speed, limit = limit, flagged = true, plate = plate, message = message }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeFixedRadars', function(source)
@@ -627,6 +698,7 @@ AddEventHandler('playerDropped', function()
     local src = source
     WantedOnline[src] = nil
     JailedOnline[src] = nil
+    RadarSessions[src] = nil
 end)
 
 CreateThread(function()

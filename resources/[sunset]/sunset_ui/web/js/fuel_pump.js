@@ -53,6 +53,7 @@ const FuelPump = (() => {
         const panel = root();
         if (!panel) return;
         update(data);
+        document.body.classList.add('fuel-pump-open');
         panel.classList.remove('hidden');
         requestAnimationFrame(() => panel.classList.add('is-visible'));
         panel.setAttribute('aria-hidden', 'false');
@@ -61,6 +62,7 @@ const FuelPump = (() => {
     function hide() {
         const panel = root();
         if (!panel) return;
+        document.body.classList.remove('fuel-pump-open');
         panel.classList.remove('is-visible', 'is-pumping', 'is-full');
         panel.setAttribute('aria-hidden', 'true');
         setTimeout(() => {

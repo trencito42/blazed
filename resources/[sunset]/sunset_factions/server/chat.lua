@@ -14,7 +14,9 @@ local function sendFactionChat(source, channel, args, filterFn)
     end
 
     local msg = table.concat(args, ' ')
-    if msg == '' then return end
+    if msg == '' then
+        return FactionCore.notify(source, ('Usage: /%s [message]'):format(channel), 'error')
+    end
     if #msg > 256 then
         return FactionCore.notify(source, 'Message too long', 'error')
     end
@@ -75,8 +77,7 @@ RegisterCommand('gov', function(source, args)
         return FactionCore.notify(source, 'On-duty government factions only', 'error')
     end
     sendFactionChat(source, 'gov', args, function(src, c)
-        local fId = select(1, FactionCore.getFactionOf(c))
-        return fId and Sunset.IsLegalFaction(fId) and FactionCore.isOnDuty(src)
+        return src ~= nil and c ~= nil
     end)
 end, false)
 
@@ -88,7 +89,8 @@ RegisterCommand('m', function(source, args)
     if not FactionCore.checkRateLimit(source, 'megaphone', 2000) then return end
 
     local msg = table.concat(args, ' ')
-    if msg == '' then return end
+    if msg == '' then return FactionCore.notify(source, 'Usage: /m [message]', 'error') end
+    if #msg > 256 then return FactionCore.notify(source, 'Megaphone message is too long (maximum 256 characters)', 'error') end
 
     local name = exports.sunset_core:GetPlayerDisplayName(source)
     local pos = FactionCore.playerCoords(source)

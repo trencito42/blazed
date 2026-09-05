@@ -59,7 +59,9 @@ Sunset.Police = {
         mobileRange = 45.0,
         mobileCone = 18.0,
         scanIntervalMs = 750,
-        defaultLimitMph = 55,
+        defaultLimitKmh = 90,
+        minLimitKmh = 20,
+        maxLimitKmh = 250,
         lockCooldownMs = 4000,
     },
 

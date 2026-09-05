@@ -31,6 +31,23 @@ local function highestFactionGrade(factionId)
     return highest
 end
 
+local function getFactionMotd(factionId)
+    local row = MySQL.single.await('SELECT message FROM faction_motd WHERE faction_id = ?', { factionId })
+    return row and tostring(row.message or '') or ''
+end
+
+local function sendFactionInfo(factionId, name, message)
+    for _, id in ipairs(GetPlayers()) do
+        local target = tonumber(id)
+        local targetChar = target and FactionCore.getChar(target)
+        if targetChar and select(1, FactionCore.getFactionOf(targetChar)) == factionId then
+            TriggerClientEvent('sunset:chat:message', target, {
+                type = 'faction_info', name = name, message = message,
+            })
+        end
+    end
+end
+
 RegisterCommand('setleader', function(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
         return FactionCore.notify(source, 'No permission', 'error')
@@ -156,15 +173,31 @@ end)
 exports.sunset_core:RegisterCallback('sunset:factionSetMotd', function(source, message)
     local char, factionId = requireLeaderPerm(source, 'fmotd')
     if not char then return nil, factionId end
-    message = tostring(message or ''):sub(1, 512)
-    pcall(function()
+    message = tostring(message or ''):gsub('^%s+', ''):gsub('%s+$', ''):sub(1, 512)
+    if message == '' then return nil, 'The MOTD cannot be empty. Use /fmotd with no text to read it.' end
+    local saved, saveError = pcall(function()
         MySQL.insert.await([[
             INSERT INTO faction_motd (faction_id, message, updated_by) VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE message = VALUES(message), updated_by = VALUES(updated_by)
         ]], { factionId, message, char.id })
     end)
+    if not saved then
+        print(('[sunset_factions] Failed to save MOTD for %s: %s'):format(factionId, tostring(saveError)))
+        return nil, 'The faction MOTD could not be saved. Please try again or contact staff.'
+    end
     FactionCore.auditLog(factionId, char.id, 'fmotd', nil, { message = message })
-    return true
+    local faction = Sunset.Factions[factionId]
+    sendFactionInfo(factionId, ('%s MOTD'):format(faction and faction.label or 'FACTION'), message)
+    return { message = message }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:factionGetMotd', function(source)
+    local char = FactionCore.getChar(source)
+    if not char then return nil, 'Your character is not loaded. Reconnect and select it again.' end
+    local factionId = select(1, FactionCore.getFactionOf(char))
+    if not factionId then return nil, 'You are not a member of a faction.' end
+    local faction = Sunset.Factions[factionId]
+    return { label = faction and faction.label or factionId, message = getFactionMotd(factionId) }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:factionMembers', function(source)
@@ -173,11 +206,7 @@ exports.sunset_core:RegisterCallback('sunset:factionMembers', function(source)
     local factionId = select(1, FactionCore.getFactionOf(char))
     if not factionId then return nil, 'No faction' end
 
-    local motd = ''
-    pcall(function()
-        local row = MySQL.single.await('SELECT message FROM faction_motd WHERE faction_id = ?', { factionId })
-        motd = row and row.message or ''
-    end)
+    local motd = getFactionMotd(factionId)
 
     local members = {}
     for _, id in ipairs(GetPlayers()) do

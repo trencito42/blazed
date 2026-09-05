@@ -169,6 +169,8 @@ local function spawnDepotVehicle()
 
     depotVehicle = veh
     TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
+    Wait(0)
+    TriggerServerEvent('sunset:factionRegisterFleetVehicle', NetworkGetNetworkIdFromEntity(veh), 'taxi')
     notify('Cab ready — open Downtown Cab app for rides', 'success')
 end
 

@@ -1,20 +1,20 @@
 #fuel-pump {
     --pump-accent: var(--sunset-orange, #ff8a00);
     position: fixed;
-    right: 6vw;
-    top: 50%;
+    left: 50%;
+    bottom: 80px;
     width: min(390px, 90vw);
     z-index: 46;
     color: #fff;
     pointer-events: none;
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
     opacity: 0;
-    transform: translate(45px, -50%);
+    transform: translate(-50%, 16px);
     filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .95)) drop-shadow(0 12px 24px rgba(0, 0, 0, .72));
     transition: opacity .22s ease, transform .28s cubic-bezier(.2, .9, .2, 1);
 }
 
-#fuel-pump.is-visible { opacity: 1; transform: translate(0, -50%); }
+#fuel-pump.is-visible { opacity: 1; transform: translate(-50%, 0); }
 
 .fuel-pump__header,
 .fuel-pump__identity,
@@ -170,6 +170,6 @@
 }
 
 @media (max-width: 1280px) {
-    #fuel-pump { right: 4vw; width: 340px; }
+    #fuel-pump { bottom: 64px; width: 340px; }
     .fuel-pump__value { font-size: 27px; }
 }

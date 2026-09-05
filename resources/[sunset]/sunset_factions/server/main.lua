@@ -242,6 +242,27 @@ exports.sunset_core:RegisterCallback('sunset:factionRequestFleet', function(sour
     return { vehicle = faction.depot.vehicle, platePrefix = faction.depot.platePrefix }
 end)
 
+RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, factionId)
+    local src = source
+    networkId = tonumber(networkId)
+    factionId = tostring(factionId or '')
+    local char = getChar(src)
+    local ownFaction = char and select(1, getFactionOf(char))
+    local faction = ownFaction and Sunset.Factions[ownFaction]
+    if not networkId or ownFaction ~= factionId or not faction or not faction.depot then return end
+    if not FactionCore.isOnDuty(src) then return end
+
+    local vehicle = NetworkGetEntityFromNetworkId(networkId)
+    local ped = GetPlayerPed(src)
+    if vehicle == 0 or not DoesEntityExist(vehicle) or ped == 0 then return end
+    if GetPedInVehicleSeat(vehicle, -1) ~= ped then return end
+    if GetEntityModel(vehicle) ~= joaat(faction.depot.vehicle) then return end
+    if FactionCore.distBetween(GetEntityCoords(vehicle), faction.depot.spawn) > 25.0 then return end
+
+    Entity(vehicle).state:set('sunsetFactionVehicle', factionId, true)
+    Entity(vehicle).state:set('sunsetProtectedVehicle', true, true)
+end)
+
 exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, targetId)
     if not hasPerm(source, 'repair') then return nil, FactionCore.accessError(source, 'repair', 'repair a customer vehicle') end
     targetId = tonumber(targetId) or source
