@@ -116,6 +116,9 @@ fi
 if [ -f sql/14-respect-progression.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/14-respect-progression.sql
 fi
+if [ -f sql/15-admin-stat-audit.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/15-admin-stat-audit.sql
+fi
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem

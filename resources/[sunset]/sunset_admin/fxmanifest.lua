@@ -11,6 +11,7 @@ shared_scripts {
     '@sunset_core/shared/utils.lua',
     '@sunset_core/shared/factions.lua',
     '@sunset_core/shared/items.lua',
+    '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/jobs_config.lua',
     '@sunset_core/shared/crafting.lua',
     'shared/config.lua',

@@ -31,6 +31,9 @@ Sunset.HelpAdminDescriptions = {
     removeleader = 'Revoke faction leader role from a member',
     acreatehouse = 'Create a house at your current position: price, interior, minimum level, name',
     ahouseedit = 'Edit a house price, level, name, sale status, or enabled status',
+    astats = 'Inspect an online player\'s character, economy and job progression',
+    setstat = 'Set an online player stat: cash, bank, level, rp, paydays, playtime, premium, hunger, thirst, stress',
+    setjobstat = 'Set civilian job progress: /setjobstat [id] [job] [xp|level|tasks|earned] [value]',
 }
 
 Sunset.HelpGeneralEntries = {

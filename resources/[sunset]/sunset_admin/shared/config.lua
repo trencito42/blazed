@@ -38,4 +38,7 @@ SunsetAdmin.Commands = {
     removeleader = 3,
     acreatehouse = 3,
     ahouseedit = 3,
+    astats = 2,
+    setstat = 3,
+    setjobstat = 3,
 }
