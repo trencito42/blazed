@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 INSERT IGNORE INTO `societies` (`name`, `label`, `balance`) VALUES
     ('lsfd', 'Los Santos Fire Dept', 12000),
     ('sunset_cartel', 'Sunset Cartel', 0),

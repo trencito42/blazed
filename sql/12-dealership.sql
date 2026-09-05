@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 CREATE TABLE IF NOT EXISTS `dealership_vehicles` (
     `model` VARCHAR(64) NOT NULL,
     `label` VARCHAR(80) NOT NULL,

@@ -77,7 +77,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:catch', function(sou
     local spot = cfg.spots[tonumber(spotIndex) or 1]
     if not spot then return nil, 'Invalid fishing spot' end
 
-    if not spot or not SunsetJobs_ValidateCoordsHorizontal(source, spot.coords, cfg.catchRadius or 15.0) then
+    if not spot or not SunsetJobs_ValidateCoordsCylinder(source, spot.coords, cfg.catchRadius or 15.0, 4.0) then
         return nil, 'Not at a fishing spot'
     end
     return nil, 'Cast first with /fish'
@@ -90,7 +90,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     local cfg = Sunset.GetJobConfig('fisherman')
     spotIndex = tonumber(spotIndex) or 1
     local spot = cfg.spots[spotIndex]
-    if not spot or not SunsetJobs_ValidateCoordsHorizontal(source, spot.coords, cfg.catchRadius or 15.0) then
+    if not spot or not SunsetJobs_ValidateCoordsCylinder(source, spot.coords, cfg.catchRadius or 15.0, 4.0) then
         return nil, 'Stand inside a fishing marker'
     end
     local level, capacity = fishLevelAndCapacity(source, cfg)
@@ -126,7 +126,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     local cfg = Sunset.GetJobConfig('fisherman')
     spotIndex = tonumber(spotIndex) or 1
     local spot = cfg.spots[spotIndex]
-    if not spot or not SunsetJobs_ValidateCoordsHorizontal(source, spot.coords, cfg.catchRadius or 15.0) then
+    if not spot or not SunsetJobs_ValidateCoordsCylinder(source, spot.coords, cfg.catchRadius or 15.0, 4.0) then
         session.data.fishingChallenge = nil
         return nil, 'You moved away from the fishing spot'
     end

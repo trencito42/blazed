@@ -2,6 +2,7 @@ const App = {
     currentScreen: null,
     data: {},
 };
+window.App = App;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -133,6 +134,12 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'hide':
+            if (window.LoadingScreen) LoadingScreen.reset();
+            if (window.AuthLoading) {
+                AuthLoading._pending = false;
+                clearTimeout(AuthLoading._safety);
+                AuthLoading._safety = null;
+            }
             showApp(false);
             break;
 
@@ -155,10 +162,22 @@ window.addEventListener('message', (event) => {
         case 'enterGameplay': {
             const app = $('#app');
             const transitionMs = Math.max(250, Number(data?.duration) || 800);
-            if (app) {
+            const fadeOut = () => {
+                if (!app) {
+                    showApp(false);
+                    return;
+                }
                 app.style.setProperty('--enter-duration', `${transitionMs}ms`);
                 app.classList.add('app--enter-game');
-                setTimeout(() => showApp(false), transitionMs);
+                setTimeout(() => {
+                    if (window.LoadingScreen) LoadingScreen.reset();
+                    showApp(false);
+                }, transitionMs);
+            };
+            if (window.LoadingScreen) {
+                LoadingScreen.finish(fadeOut, 350);
+            } else {
+                fadeOut();
             }
             break;
         }
@@ -260,10 +279,10 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideServiceCalls();
             break;
         case 'jobsShow':
-            if (window.Panels) Panels.showJobsBrowser(data || event.data.data);
+            if (window.Panels) Panels.showJobsPanel(data || event.data.data);
             break;
         case 'jobsHide':
-            if (window.Panels) Panels.hideJobsBrowser();
+            if (window.Panels) Panels.hideJobsPanel();
             break;
         case 'skillsShow':
             if (window.Panels) Panels.showSkills(data || event.data.data);
@@ -365,12 +384,6 @@ window.addEventListener('message', (event) => {
         case 'jobCenterHide':
             if (window.Panels) Panels.hideJobCenter();
             break;
-        case 'jobsShow':
-            if (window.Panels) Panels.showJobsPanel(data || event.data.data);
-            break;
-        case 'jobsHide':
-            if (window.Panels) Panels.hideJobsPanel();
-            break;
         case 'craftingShow':
             if (window.Panels) Panels.showCrafting(data || event.data.data);
             break;
@@ -410,17 +423,11 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'authHide':
-            if (window.Panels) {
-                const hideAll = () => {
-                    Panels.hideAuth();
-                    showApp(false);
-                };
-                if (window.AuthLoading) {
-                    AuthLoading.onAuthSuccess(hideAll);
-                } else {
-                    hideAll();
-                }
-            }
+            if (window.Panels) Panels.hideAuth();
+            showApp(true);
+            showHud(false);
+            showScreen('loading');
+            if (window.AuthLoading) AuthLoading._pending = false;
             break;
 
         case 'authError':

@@ -131,7 +131,7 @@ function JobClient.spawnVehicle(model, spawn, warp)
 
     SetVehicleNumberPlateText(veh, 'JOB' .. math.random(100, 999))
     SetEntityAsMissionEntity(veh, true, true)
-    Entity(veh).state:set('sunsetProtectedVehicle', true, true)
+    Entity(veh).state:set('sunsetProtectedVehicle', true, false)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
     protectJobVehicle(veh)
     SetVehicleNeedsToBeHotwired(veh, false)
@@ -150,12 +150,12 @@ function JobClient.attachTrailer(truck, trailerModel, spawn)
     local trailer = CreateVehicle(thash, s.x, s.y, s.z, s.w or 0.0, true, false)
     if trailer == 0 then return nil end
     SetEntityAsMissionEntity(trailer, true, true)
-    Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
+    Entity(trailer).state:set('sunsetProtectedVehicle', true, false)
     SetVehicleHasBeenOwnedByPlayer(trailer, true)
     protectJobVehicle(trailer)
     AttachVehicleToTrailer(truck, trailer, 1.0)
-    Entity(truck).state:set('sunsetTrailerAttached', true, true)
-    Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
+    Entity(truck).state:set('sunsetTrailerAttached', true, false)
+    Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), false)
     JobClient.vehicles[#JobClient.vehicles + 1] = trailer
     SetModelAsNoLongerNeeded(thash)
     return trailer
@@ -248,8 +248,8 @@ function JobClient.monitorVehicles()
 
             if truck and trailer and truckAlive and trailerAlive then
                 local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
-                Entity(truck).state:set('sunsetTrailerAttached', attached and attachedEntity == trailer, true)
-                Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
+                Entity(truck).state:set('sunsetTrailerAttached', attached and attachedEntity == trailer, false)
+                Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), false)
             end
 
             if truckAlive and trailer and not trailerAlive and JobClient.jobId == 'trucker'

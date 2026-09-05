@@ -32,7 +32,19 @@ const Chat = {
         visible.forEach((m) => {
             const el = document.createElement('div');
             el.className = 'chat-msg' + (m.type === 'me' ? ' chat-msg--me' : m.type === 'do' ? ' chat-msg--do' : '');
-            el.innerHTML = `<span class="chat-msg__time">${m.time || ''}</span><span class="chat-msg__id">[${m.id}]</span><span class="chat-msg__name">${m.name}:</span> ${m.message}`;
+            const time = document.createElement('span');
+            time.className = 'chat-msg__time';
+            time.textContent = String(m.time ?? '');
+
+            const id = document.createElement('span');
+            id.className = 'chat-msg__id';
+            id.textContent = `[${String(m.id ?? '?')}]`;
+
+            const name = document.createElement('span');
+            name.className = 'chat-msg__name';
+            name.textContent = `${String(m.name ?? 'Player')}:`;
+
+            el.append(time, id, name, document.createTextNode(` ${String(m.message ?? '')}`));
             container.appendChild(el);
         });
         container.scrollTop = container.scrollHeight;

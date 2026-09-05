@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 -- Police-specific tables (wanted/jail use sql/09-dispatch-wanted-jail.sql)
 
 CREATE TABLE IF NOT EXISTS `police_confiscations` (

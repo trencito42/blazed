@@ -38,13 +38,30 @@ fi
 # Merge resurse GTA default + resursele noastre (mount-ul e read-only separat)
 mkdir -p /config/resources
 if [ -d /opt/cfx-server-data/resources ]; then
+  for bundled_dependency in ox_lib pma-voice bob74_ipl; do
+    if [ -d "/opt/cfx-server-data/resources/${bundled_dependency}" ]; then
+      rm -rf "/config/resources/${bundled_dependency}"
+      cp -r "/opt/cfx-server-data/resources/${bundled_dependency}" "/config/resources/${bundled_dependency}"
+    fi
+  done
   cp -rn /opt/cfx-server-data/resources/* /config/resources/ 2>/dev/null || true
 fi
 if [ -d /config/resources-custom ]; then
+  # Replace each custom top-level resource group atomically from the image input.
+  # A plain recursive copy leaves deleted/renamed files in the persistent volume,
+  # which can make production run code that no longer exists in Git.
+  for custom_entry in /config/resources-custom/*; do
+    [ -e "${custom_entry}" ] || continue
+    custom_name="$(basename "${custom_entry}")"
+    case "${custom_name}" in
+      ''|'.'|'..') continue ;;
+    esac
+    rm -rf "/config/resources/${custom_name}"
+  done
   cp -rf /config/resources-custom/* /config/resources/ 2>/dev/null || true
 fi
 echo "[sunsetmp] resources merged"
 
 export NO_DEFAULT_CONFIG=1
 export NO_LICENSE_KEY=1
-exec /sbin/tini -- /usr/bin/entrypoint +exec /config/server.cfg
+exec /sbin/tini -- /usr/bin/entrypoint +set onesync on +set onesync_population false +exec /config/server.cfg

@@ -35,17 +35,46 @@ local function cleanupPreviewArea()
     end
 end
 
+local function clearPreviewCamera()
+    ClearFocus()
+    ClearHdArea()
+    if previewCamera ~= 0 then
+        RenderScriptCams(false, true, 300, true, true)
+        if DoesCamExist(previewCamera) then
+            SetCamActive(previewCamera, false)
+            DestroyCam(previewCamera, false)
+        end
+        previewCamera = 0
+    end
+end
+
+local function setupPreviewCamera(vehicle)
+    if vehicle == 0 or not DoesEntityExist(vehicle) then return end
+    local camPos = Sunset.Dealership.camera
+    local coords = GetEntityCoords(vehicle)
+    local minDim, maxDim = GetModelDimensions(GetEntityModel(vehicle))
+    local lookZ = coords.z + math.max(0.45, ((maxDim.z + minDim.z) * 0.5) + 0.25)
+
+    SetFocusPosAndVel(coords.x, coords.y, coords.z, 0.0, 0.0, 0.0)
+    SetHdArea(coords.x, coords.y, coords.z, 50.0)
+
+    if previewCamera == 0 or not DoesCamExist(previewCamera) then
+        previewCamera = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    end
+    SetCamCoord(previewCamera, camPos.x, camPos.y, camPos.z)
+    PointCamAtCoord(previewCamera, coords.x, coords.y, lookZ)
+    SetCamFov(previewCamera, 40.0)
+    SetCamActive(previewCamera, true)
+    RenderScriptCams(true, true, 400, true, true)
+end
+
 local function deletePreview()
     if previewVehicle ~= 0 and DoesEntityExist(previewVehicle) then
         SetEntityAsMissionEntity(previewVehicle, true, true)
         DeleteVehicle(previewVehicle)
     end
     previewVehicle = 0
-    if previewCamera ~= 0 then
-        RenderScriptCams(false, true, 300, true, true)
-        DestroyCam(previewCamera, false)
-        previewCamera = 0
-    end
+    clearPreviewCamera()
 end
 
 local function closeDealer()
@@ -59,7 +88,11 @@ end
 local function showPreview(modelName)
     if previewBusy then return end
     previewBusy = true
-    deletePreview()
+    if previewVehicle ~= 0 and DoesEntityExist(previewVehicle) then
+        SetEntityAsMissionEntity(previewVehicle, true, true)
+        DeleteVehicle(previewVehicle)
+        previewVehicle = 0
+    end
     cleanupPreviewArea()
 
     local hash, err = loadVehicleModel(modelName)
@@ -81,7 +114,11 @@ local function showPreview(modelName)
     SetVehicleDirtLevel(previewVehicle, 0.0)
     SetVehicleOnGroundProperly(previewVehicle)
     FreezeEntityPosition(previewVehicle, true)
+    SetVehicleEngineHealth(previewVehicle, 1000.0)
+    SetVehicleBodyHealth(previewVehicle, 1000.0)
+    SetVehiclePetrolTankHealth(previewVehicle, 1000.0)
     SetModelAsNoLongerNeeded(hash)
+    setupPreviewCamera(previewVehicle)
     previewBusy = false
 end
 
@@ -173,7 +210,7 @@ AddEventHandler('sunset:nui:dealershipTestDrive', function(data)
             return notify('The test-drive vehicle did not stream in. Try again.', 'error')
         end
         SetEntityAsMissionEntity(testVehicle, true, true)
-        Entity(testVehicle).state:set('sunsetProtectedVehicle', true, true)
+        Entity(testVehicle).state:set('sunsetProtectedVehicle', true, false)
         SetVehicleNumberPlateText(testVehicle, 'TESTDRIV')
         SetVehicleDirtLevel(testVehicle, 0.0)
         SetVehicleFuelLevel(testVehicle, GetVehicleHandlingFloat(testVehicle, 'CHandlingData', 'fPetrolTankVolume'))

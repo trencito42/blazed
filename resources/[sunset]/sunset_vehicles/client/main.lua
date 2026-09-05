@@ -7,11 +7,13 @@ local spawnedOwnedVehicle = nil
 local protectedVehicles = {}
 local lastBodyHealth = 1000.0
 local lastVehSpeed = 0.0
+local spawnGraceUntil = 0
 local engineEnabled = {}
 local lastEjectAt = 0
 local odometerKm = 0.0
 local odometerPlate = nil
 local lastOdoCoords = nil
+local vehicleProps = {}
 
 -- GTA fuel natives use liters (0..fPetrolTankVolume), not 0–100%. We track percent for HUD/DB.
 local function getNativeTankVolume(veh)
@@ -59,7 +61,9 @@ local function isPassenger()
 end
 
 local function buildStoreProps(veh)
-    local props = { odometer = math.floor(odometerKm * 10) / 10 }
+    local props = {}
+    for key, value in pairs(vehicleProps or {}) do props[key] = value end
+    props.odometer = math.floor(odometerKm * 10) / 10
     if veh and veh ~= 0 then props.model = GetEntityModel(veh) end
     return props
 end
@@ -102,9 +106,10 @@ local function normalizePlate(plate)
     return (plate or ''):gsub('%s+', ''):upper()
 end
 
-local function resetOdometerTracking(plate, km)
+local function resetOdometerTracking(plate, km, props)
     odometerPlate = plate and normalizePlate(plate) or nil
     odometerKm = math.max(0, tonumber(km) or 0)
+    vehicleProps = type(props) == 'table' and props or {}
     lastOdoCoords = nil
 end
 
@@ -289,7 +294,7 @@ CreateThread(function()
         if veh ~= 0 and isDriver() and spawnedOwnedVehicle == veh and DoesEntityExist(veh) then
             local plate = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
             Sunset.AwaitCallback('sunset:syncOwnedVehicleState', VehToNet(veh),
-                plate, fuel)
+                plate, fuel, odometerKm)
         end
     end
 end)
@@ -315,6 +320,11 @@ local function computeFuelDrain(veh)
 end
 
 local function applyCollisionDamage(veh)
+    if GetGameTimer() < spawnGraceUntil then
+        lastBodyHealth = GetVehicleBodyHealth(veh)
+        lastVehSpeed = GetEntitySpeed(veh)
+        return
+    end
     local body = GetVehicleBodyHealth(veh)
     local speed = GetEntitySpeed(veh)
     local bodyLoss = lastBodyHealth - body
@@ -347,7 +357,10 @@ CreateThread(function()
                 lastVehSpeed = GetEntitySpeed(veh)
                 local plate = normalizePlate(GetVehicleNumberPlateText(veh))
                 if plate ~= odometerPlate then
-                    resetOdometerTracking(plate, 0)
+                    local ownedState = Sunset.AwaitCallback('sunset:getDrivenOwnedVehicleState', VehToNet(veh), plate)
+                    local props = ownedState and decodeVehicleProps(ownedState.props) or nil
+                    resetOdometerTracking(plate, props and props.odometer or 0, props)
+                    if ownedState then spawnedOwnedVehicle = veh end
                 end
                 lastOdoCoords = GetEntityCoords(veh)
                 local _, lightsOn, highbeams = GetVehicleLightsState(veh)
@@ -380,7 +393,14 @@ function GetVehicleState()
 
     local speed = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
     local gear = GetVehicleCurrentGear(veh)
-    local rpm = GetVehicleCurrentRpm(veh)
+    local rawRpm = GetVehicleCurrentRpm(veh)
+    -- GTA idle sits around 0.2 with no throttle; remap so the bar is empty at idle.
+    local rpm = 0.0
+    if GetIsVehicleEngineRunning(veh) then
+        rpm = (rawRpm - 0.2) / 0.8
+        if rpm < 0.0 then rpm = 0.0 end
+        if rpm > 1.0 then rpm = 1.0 end
+    end
 
     return {
         inVehicle = true,
@@ -581,14 +601,22 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     SetVehicleDirtLevel(vehicle, 0.0)
     SetVehiclePetrolTankHealth(vehicle, 1000.0)
     writeFuelPercent(vehicle, vehFuel)
+    SetVehicleOnGroundProperly(vehicle)
+    Wait(150)
+    SetVehicleFixed(vehicle)
+    SetVehicleDeformationFixed(vehicle)
     SetVehicleEngineHealth(vehicle, vehEngine)
     SetVehicleBodyHealth(vehicle, vehBody)
+    SetVehiclePetrolTankHealth(vehicle, 1000.0)
+    spawnGraceUntil = GetGameTimer() + 4000
+    lastBodyHealth = vehBody
+    lastVehSpeed = 0.0
     engineEnabled[vehicle] = false
     SetVehicleEngineOn(vehicle, false, true, true)
     SetModelAsNoLongerNeeded(model)
 
     local props = decodeVehicleProps(vehData.props)
-    resetOdometerTracking(vehData.plate, props and props.odometer or 0)
+    resetOdometerTracking(vehData.plate, props and props.odometer or 0, props)
 
     spawnedOwnedVehicle = vehicle
     markProtected(vehicle)

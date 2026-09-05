@@ -5,6 +5,12 @@ const Phone = {
     screen: 'home',
     chatTarget: null,
 
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[char]));
+    },
+
     init() {
         if (this._ready) return;
         this._ready = true;
@@ -294,13 +300,13 @@ const Phone = {
             const lastMsg = t.messages[0];
             const timeStr = lastMsg ? this.formatMsgTime(lastMsg.created_at) : '';
             btn.innerHTML = `
-                <div class="phone-thread__avatar">${initial}</div>
+                <div class="phone-thread__avatar">${this.escapeHtml(initial)}</div>
                 <div class="phone-thread__body">
                     <div class="phone-thread__row">
-                        <span class="phone-thread__name">${t.name}</span>
-                        ${timeStr ? `<span class="phone-thread__time">${timeStr}</span>` : ''}
+                        <span class="phone-thread__name">${this.escapeHtml(t.name)}</span>
+                        ${timeStr ? `<span class="phone-thread__time">${this.escapeHtml(timeStr)}</span>` : ''}
                     </div>
-                    <div class="phone-thread__preview">${t.preview || ''}</div>
+                    <div class="phone-thread__preview">${this.escapeHtml(t.preview || '')}</div>
                 </div>
                 <span class="phone-thread__chevron">›</span>`;
             btn.addEventListener('click', () => this.openChat({
@@ -334,9 +340,9 @@ const Phone = {
             btn.className = 'phone-contact';
             const initial = (c.name || '?').charAt(0).toUpperCase();
             btn.innerHTML = `
-                <div class="phone-thread__avatar">${initial}</div>
+                <div class="phone-thread__avatar">${this.escapeHtml(initial)}</div>
                 <div class="phone-thread__body">
-                    <div class="phone-thread__name">${c.name}</div>
+                    <div class="phone-thread__name">${this.escapeHtml(c.name)}</div>
                     <div class="phone-contact__meta">${c.online !== false ? '● Online' : 'Offline'}</div>
                 </div>`;
             btn.addEventListener('click', () => this.openChat({
@@ -605,7 +611,7 @@ const Phone = {
 
         const d = this.taxiData;
         if (!d || !d.destinations) {
-            body.innerHTML = `<p class="phone-empty">${d?.error || 'Loading cab app...'}</p>`;
+            body.innerHTML = `<p class="phone-empty">${this.escapeHtml(d?.error || 'Loading cab app...')}</p>`;
             if (title) title.textContent = 'Downtown Cab';
             return;
         }
@@ -640,10 +646,10 @@ const Phone = {
                     offers.forEach((offer) => {
                         html += `<div class="phone-taxi-offer">
                             <div class="phone-taxi-offer__top">
-                                <strong>${offer.passengerName || 'Passenger'}</strong>
+                                <strong>${this.escapeHtml(offer.passengerName || 'Passenger')}</strong>
                                 <span class="phone-taxi-fare">${this.formatMoney(offer.fare)}</span>
                             </div>
-                            <div class="phone-taxi-offer__route">→ ${offer.destination?.label || 'Destination'}</div>
+                            <div class="phone-taxi-offer__route">→ ${this.escapeHtml(offer.destination?.label || 'Destination')}</div>
                             <div class="phone-taxi-offer__meta">${(offer.distanceKm || 0).toFixed(1)} km</div>
                             <button type="button" class="phone-taxi-btn phone-taxi-btn--primary" data-taxi-accept="${offer.id}">Accept ride</button>
                         </div>`;

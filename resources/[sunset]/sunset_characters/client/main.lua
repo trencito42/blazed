@@ -9,6 +9,18 @@ local function spawnCharacter(char)
     TriggerEvent('sunset:client:spawnCharacter', char)
 end
 
+local function showCharacterList()
+    local characters, err = Sunset.AwaitCallback('sunset:getCharacters')
+    if type(characters) ~= 'table' then
+        exports.sunset_ui:Notify(err or 'Could not load your characters', 'error')
+        return
+    end
+    exports.sunset_ui:Show('characters', {
+        characters = characters,
+        maxSlots = Sunset.Config.MaxCharacters or 1,
+    })
+end
+
 local function autoEnterGame()
     if inCharacterFlow then return end
     inCharacterFlow = true
@@ -23,6 +35,7 @@ local function autoEnterGame()
     end
 
     inCharacterFlow = false
+    exports.sunset_ui:Hide()
     exports.sunset_ui:Notify(err or 'Could not load your character', 'error')
     DoScreenFadeIn(500)
 end
@@ -38,4 +51,50 @@ AddEventHandler('sunset:client:characterFlowComplete', function()
     DestroyAllCams(true)
     exports.sunset_ui:Hide()
     DisplayRadar(true)
+end)
+
+AddEventHandler('sunset:client:loadingTimedOut', function()
+    inCharacterFlow = false
+end)
+
+AddEventHandler('sunset:nui:characterCreate', function()
+    exports.sunset_ui:Show('create', { firstLogin = false })
+end)
+
+AddEventHandler('sunset:nui:characterBack', function()
+    CreateThread(showCharacterList)
+end)
+
+AddEventHandler('sunset:nui:select', function(data)
+    CreateThread(function()
+        local char, err = Sunset.AwaitCallback('sunset:selectCharacter', tonumber(data and data.charId))
+        if not char then
+            exports.sunset_ui:Notify(err or 'Could not select that character', 'error')
+            return
+        end
+        spawnCharacter(char)
+    end)
+end)
+
+AddEventHandler('sunset:nui:create', function(data)
+    CreateThread(function()
+        local char, err = Sunset.AwaitCallback('sunset:createCharacter', data or {})
+        if not char then
+            exports.sunset_ui:Notify(err or 'Could not create the character', 'error')
+            return
+        end
+        spawnCharacter(char)
+    end)
+end)
+
+AddEventHandler('sunset:nui:delete', function(data)
+    CreateThread(function()
+        local deleted, err = Sunset.AwaitCallback('sunset:deleteCharacter', tonumber(data and data.charId))
+        if not deleted then
+            exports.sunset_ui:Notify(err or 'Could not delete that character', 'error')
+            return
+        end
+        exports.sunset_ui:Notify('Character deleted', 'success')
+        showCharacterList()
+    end)
 end)

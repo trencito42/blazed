@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 CREATE TABLE IF NOT EXISTS `admins` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `license` VARCHAR(64) NOT NULL,

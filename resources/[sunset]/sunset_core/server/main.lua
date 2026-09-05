@@ -164,19 +164,6 @@ function GetPlayerDisplayName(source)
 end
 exports('GetPlayerDisplayName', GetPlayerDisplayName)
 
-local function syncCharacterAccountName(char, accountName)
-    if not char or not accountName or accountName == '' then return char end
-    if char.firstname == accountName and (not char.lastname or char.lastname == '') then
-        return char
-    end
-    MySQL.update.await('UPDATE characters SET firstname = ?, lastname = ? WHERE id = ?', {
-        accountName, '', char.id
-    })
-    char.firstname = accountName
-    char.lastname = ''
-    return char
-end
-
 local function grantStarterItems(characterId)
     local starter = { { 'water', 2, 1 }, { 'bread', 2, 2 }, { 'id_card', 1, 3 }, { 'phone', 1, 4 } }
     for _, row in ipairs(starter) do
@@ -221,7 +208,6 @@ local function loadCharacterForPlayer(source, player, charId)
         )
         char._profileMigrated = nil
     end
-    char = syncCharacterAccountName(char, player.name)
     char.last_played_before = char.last_played
     MySQL.update.await('UPDATE characters SET last_played = NOW() WHERE id = ?', { charId })
     Players[source].character = char
@@ -310,13 +296,29 @@ RegisterCallback('sunset:createCharacter', function(source, data)
     end
 
     data = data or {}
-    data.firstname = player.name
-    data.lastname = ''
-    data.dateofbirth = data.dateofbirth or '1990-01-01'
-    data.gender = data.gender or 0
-    data.nationality = data.nationality or 'American'
+    local function validNamePart(value)
+        value = type(value) == 'string' and value:match('^%s*(.-)%s*$') or ''
+        if #value < 2 or #value > 24 or not value:match("^[%a][%a'%-]+$") then return nil end
+        return value:sub(1, 1):upper() .. value:sub(2):lower()
+    end
+    data.firstname = validNamePart(data.firstname) or validNamePart(player.name) or 'Player'
+    data.lastname = validNamePart(data.lastname) or ''
+    data.dateofbirth = type(data.dateofbirth) == 'string' and data.dateofbirth or '1990-01-01'
+    local year, month, day = data.dateofbirth:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
+    year, month, day = tonumber(year), tonumber(month), tonumber(day)
+    local daysInMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+    if year and (year % 400 == 0 or (year % 4 == 0 and year % 100 ~= 0)) then daysInMonth[2] = 29 end
+    if not year or year < 1900 or year > tonumber(os.date('%Y')) - 16
+        or month < 1 or month > 12 or day < 1 or day > daysInMonth[month] then
+        return nil, 'Enter a valid date of birth; characters must be at least 16 years old'
+    end
+    data.gender = math.max(0, math.min(1, tonumber(data.gender) or 0))
+    data.nationality = type(data.nationality) == 'string' and data.nationality:sub(1, 32) or 'American'
+    if not data.nationality:match("^[%a%s'%-]+$") then
+        return nil, 'Select a valid nationality'
+    end
 
-    local slot = data.slot or (count + 1)
+    local slot = count + 1
     local spawn = Sunset.Config.DefaultSpawn
 
     local charId = MySQL.insert.await([[

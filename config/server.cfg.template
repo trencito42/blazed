@@ -14,9 +14,6 @@ sets locale "en-US"
 sv_maxclients 48
 sv_enforceGameBuild 3751 # mp2025_02 — A Safehouse in the Hills
 
-set onesync on
-set onesync_population false
-
 sv_licenseKey "__LICENSE_KEY__"
 set mysql_connection_string "__MYSQL_CONNECTION_STRING__"
 
@@ -29,10 +26,11 @@ ensure hardcap
 ensure ox_lib
 ensure pma-voice
 setr voice_useNativeAudio true
-setr voice_useSendingRangeOnly true
+setr voice_useSendingRangeOnly false
 setr voice_enableUi 1
 setr voice_enableRadios 1
 setr voice_enablePhones 1
+setr sv_stateBagStrictMode true
 
 # ox_inventory optional — enable after bridge migration
 # ensure ox_inventory

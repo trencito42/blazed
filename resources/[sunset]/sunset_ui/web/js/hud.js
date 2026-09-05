@@ -3,8 +3,7 @@ const Hud = {
     lastSpeed: null,
     lastGear: null,
     wasInVehicle: false,
-    hintsTimer: null,
-    hintsGroupVisible: false,
+    hintTimers: {},
     hintState: {
         engine: { label: 'ENGINE OFF', key: '2', ok: false },
         lock: { label: 'UNLOCKED', key: 'N', ok: true },
@@ -176,26 +175,34 @@ const Hud = {
         });
     },
 
-    showVehicleHints(singleId) {
-        const el = $('#veh-hints');
-        if (!el) return;
+    showVehicleHints() {
         this.renderHintRows();
-        if (this.hintsTimer) {
-            clearTimeout(this.hintsTimer);
-            this.hintsTimer = null;
-        }
-        const group = !singleId;
-        this.hintsGroupVisible = group;
-        el.classList.toggle('is-single', !!singleId);
-        el.querySelectorAll('.veh-hints__row').forEach((row) => {
-            row.classList.toggle('is-active', !singleId || row.dataset.hint === singleId);
-        });
-        if (!el.classList.contains('is-visible')) {
-            void el.offsetWidth;
-            el.classList.add('is-visible');
-        }
+        ['engine', 'lock', 'seatbelt', 'lights'].forEach((id) => this.armHintRow(id));
+    },
+
+    armHintRow(id) {
+        const el = $('#veh-hints');
+        const row = el?.querySelector(`[data-hint="${id}"]`);
+        if (!row) return;
+        row.classList.add('is-active');
+        el.classList.add('is-visible');
         el.setAttribute('aria-hidden', 'false');
-        this.hintsTimer = setTimeout(() => this.hideVehicleHints(), 5000);
+        if (this.hintTimers[id]) clearTimeout(this.hintTimers[id]);
+        this.hintTimers[id] = setTimeout(() => this.hideHintRow(id), 5000);
+    },
+
+    hideHintRow(id) {
+        if (this.hintTimers[id]) {
+            clearTimeout(this.hintTimers[id]);
+            delete this.hintTimers[id];
+        }
+        const row = document.querySelector(`[data-hint="${id}"]`);
+        if (row) row.classList.remove('is-active');
+        const wrap = $('#veh-hints');
+        if (!wrap) return;
+        const any = wrap.querySelector('.veh-hints__row.is-active');
+        wrap.classList.toggle('is-visible', !!any);
+        wrap.setAttribute('aria-hidden', any ? 'false' : 'true');
     },
 
     flashVehicleHint(payload = {}) {
@@ -209,23 +216,22 @@ const Hud = {
                 };
             });
         }
-        if (this.hintsGroupVisible) {
-            this.renderHintRows();
-            if (this.hintsTimer) clearTimeout(this.hintsTimer);
-            this.hintsTimer = setTimeout(() => this.hideVehicleHints(), 5000);
+        this.renderHintRows();
+        if (payload.id) {
+            this.armHintRow(payload.id);
             return;
         }
-        this.showVehicleHints(payload.id || null);
+        this.showVehicleHints();
     },
 
     hideVehicleHints() {
+        Object.keys(this.hintTimers).forEach((id) => {
+            clearTimeout(this.hintTimers[id]);
+            delete this.hintTimers[id];
+        });
         const el = $('#veh-hints');
-        if (this.hintsTimer) {
-            clearTimeout(this.hintsTimer);
-            this.hintsTimer = null;
-        }
-        this.hintsGroupVisible = false;
         if (!el) return;
+        el.querySelectorAll('.veh-hints__row').forEach((row) => row.classList.remove('is-active'));
         el.classList.remove('is-visible');
         el.setAttribute('aria-hidden', 'true');
     },

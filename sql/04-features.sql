@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 ALTER TABLE `accounts`
     ADD COLUMN IF NOT EXISTS `premium_points` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `password_salt`,
     ADD COLUMN IF NOT EXISTS `admin_level` TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER `premium_points`;

@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 -- ═══ ACCOUNTS (SAMP-style username/password) ═══
 CREATE TABLE IF NOT EXISTS `accounts` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,

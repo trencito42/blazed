@@ -11,7 +11,7 @@
 }
 .menu.hidden { display: none; }
 .menu > * { pointer-events: auto; }
-.menu::after { content:''; position:absolute; inset:0; z-index:6; pointer-events:none; background:repeating-linear-gradient(to bottom,transparent,transparent 2px,rgba(0,0,0,.14) 2px,rgba(0,0,0,.14) 4px); opacity:.58; }
+.menu::after { content:''; position:absolute; inset:0; z-index:6; pointer-events:none; background:repeating-linear-gradient(to bottom,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px); opacity:.18; }
 .menu-wrap { position:absolute; top:50%; left:50%; z-index:3; transform:translate(-50%,-50%); width:90vw; max-width:1400px; height:85vh; display:grid; grid-template-columns:320px minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr) auto; gap:20px; padding:20px; }
 .menu-brand { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; margin-bottom:-10px; color:#fff; font:700 24px/1 var(--os-title); letter-spacing:6px; text-transform:uppercase; text-shadow:var(--os-accent-glow); }
 .menu-brand>div span { color:var(--os-accent); }
@@ -26,7 +26,7 @@
 .menu-exit-btn { margin-left:auto; min-width:44px; padding:8px 13px; color:var(--os-muted); font-size:22px; }
 .menu-exit-btn:hover { color:#fff; background:rgba(255,62,54,.16); }
 
-.tech-panel { position:relative; min-width:0; min-height:0; padding:20px; border-left:2px solid var(--os-secondary-dim); background:rgba(13,10,16,.9); clip-path:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px); }
+.tech-panel { position:relative; min-width:0; min-height:0; padding:20px; border-left:2px solid var(--os-secondary-dim); background:rgba(13,10,16,.74); clip-path:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px); backdrop-filter:blur(3px); }
 .tech-panel::before { content:''; position:absolute; top:0; left:20px; width:40px; height:2px; background:var(--os-secondary); box-shadow:0 0 12px rgba(242,193,93,.45); }
 .tech-panel.accent-orange { border-left-color:var(--os-accent-dim); }
 .tech-panel.accent-orange::before { background:var(--os-accent); box-shadow:var(--os-accent-glow); }

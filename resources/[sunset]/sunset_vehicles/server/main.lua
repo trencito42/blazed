@@ -15,6 +15,13 @@ local function normalizePlate(plate)
     return type(plate) == 'string' and plate:gsub('%s+', ''):upper() or ''
 end
 
+local function decodeProps(raw)
+    if type(raw) == 'table' then return raw end
+    if type(raw) ~= 'string' or raw == '' then return {} end
+    local ok, value = pcall(json.decode, raw)
+    return ok and type(value) == 'table' and value or {}
+end
+
 local function plateTextMatches(a, b)
     a = normalizePlate(a)
     b = normalizePlate(b)
@@ -167,14 +174,21 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
 
     plate = normalizePlate(plate)
     if plate == '' or #plate > 8 or type(props) ~= 'table' then return nil, 'Invalid vehicle data' end
-    local encodedProps = json.encode(props)
-    if #encodedProps > 32768 then return nil, 'Vehicle data is too large' end
 
     local owned = MySQL.single.await(
-        'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?',
+        'SELECT id, props FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?',
         { plate, char.id }
     )
     if not owned then return nil, 'This vehicle is not owned by your character' end
+
+    local storedProps = decodeProps(owned.props)
+    for key, value in pairs(storedProps) do
+        if props[key] == nil then props[key] = value end
+    end
+    local previousOdometer = math.max(0, tonumber(storedProps.odometer) or 0)
+    props.odometer = math.max(previousOdometer, tonumber(props.odometer) or previousOdometer)
+    local encodedProps = json.encode(props)
+    if #encodedProps > 32768 then return nil, 'Vehicle data is too large' end
 
     local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
     if vehicle == 0 or not DoesEntityExist(vehicle)
@@ -218,7 +232,27 @@ exports.sunset_core:RegisterCallback('sunset:storeOwnedVehicle', function(source
     return storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageId, parked)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:syncOwnedVehicleState', function(source, netId, plate, reportedFuel)
+exports.sunset_core:RegisterCallback('sunset:getDrivenOwnedVehicleState', function(source, netId, plate)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character' end
+    plate = normalizePlate(plate)
+    if plate == '' then return nil, 'Invalid vehicle plate' end
+
+    local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+    local ped = GetPlayerPed(source)
+    if vehicle == 0 or not DoesEntityExist(vehicle) or ped == 0
+        or GetPedInVehicleSeat(vehicle, -1) ~= ped
+        or normalizePlate(GetVehicleNumberPlateText(vehicle)) ~= plate then
+        return nil, 'You must be driving the vehicle'
+    end
+
+    return MySQL.single.await(
+        'SELECT id, props, fuel, engine, body FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ? AND stored = 0',
+        { plate, char.id }
+    )
+end)
+
+exports.sunset_core:RegisterCallback('sunset:syncOwnedVehicleState', function(source, netId, plate, reportedFuel, reportedOdometer)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
     local now = GetGameTimer()
@@ -227,7 +261,7 @@ exports.sunset_core:RegisterCallback('sunset:syncOwnedVehicleState', function(so
 
     plate = normalizePlate(plate)
     local row = MySQL.single.await(
-        'SELECT id, fuel FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ? AND stored = 0',
+        'SELECT id, fuel, props FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ? AND stored = 0',
         { plate, char.id }
     )
     if not row then return nil, 'Owned vehicle not active' end
@@ -243,8 +277,13 @@ exports.sunset_core:RegisterCallback('sunset:syncOwnedVehicleState', function(so
     local fuelValue = math.max(0, math.min(previousFuel + 0.5, tonumber(reportedFuel) or previousFuel))
     local engine = math.max(-4000, math.min(1000, GetVehicleEngineHealth(vehicle)))
     local body = math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
-    MySQL.update.await('UPDATE vehicles SET fuel = ?, engine = ?, body = ? WHERE id = ? AND character_id = ?',
-        { fuelValue, engine, body, row.id, char.id })
+    local props = decodeProps(row.props)
+    local previousOdometer = math.max(0, tonumber(props.odometer) or 0)
+    local requestedOdometer = math.max(previousOdometer, tonumber(reportedOdometer) or previousOdometer)
+    -- With a 30-second client interval, 8 km is already over 900 km/h.
+    props.odometer = math.min(requestedOdometer, previousOdometer + 8.0)
+    MySQL.update.await('UPDATE vehicles SET fuel = ?, engine = ?, body = ?, props = ? WHERE id = ? AND character_id = ?',
+        { fuelValue, engine, body, json.encode(props), row.id, char.id })
     return true
 end)
 

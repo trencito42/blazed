@@ -1,11 +1,25 @@
 local menuOpen = false
 local cachedMugshot = nil
 local mugshotAt = 0
+local mugshotHandle = nil
+local cachedExtras = nil
+local cachedExtrasAt = 0
+
+local function releaseMugshot()
+    if mugshotHandle then
+        UnregisterPedheadshot(mugshotHandle)
+        mugshotHandle = nil
+    end
+    cachedMugshot = nil
+    mugshotAt = 0
+end
 
 local function captureMugshot()
     if cachedMugshot and (GetGameTimer() - mugshotAt) < 45000 then
         return cachedMugshot
     end
+
+    releaseMugshot()
 
     local ped = PlayerPedId()
     for attempt = 1, 2 do
@@ -17,7 +31,7 @@ local function captureMugshot()
 
         if IsPedheadshotValid(handle) then
             local txd = GetPedheadshotTxdString(handle)
-            UnregisterPedheadshot(handle)
+            mugshotHandle = handle
             cachedMugshot = ('https://nui-img/%s/%s'):format(txd, txd)
             mugshotAt = GetGameTimer()
             return cachedMugshot
@@ -31,27 +45,37 @@ local function captureMugshot()
 end
 
 AddEventHandler('sunset:client:onCharacterLoaded', function()
-    cachedMugshot = nil
-    mugshotAt = 0
+    releaseMugshot()
+end)
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() then releaseMugshot() end
 end)
 
 local function controlsBlocked()
     return IsNuiFocused() or IsPauseMenuActive()
 end
 
-local function fetchMenuExtras()
+local function fetchMenuExtras(force)
+    if not force and cachedExtras and (GetGameTimer() - cachedExtrasAt) < 5000 then
+        return cachedExtras
+    end
     local ok, data = pcall(function()
         return Sunset.AwaitCallback('sunset:getMenuData')
     end)
-    if ok and type(data) == 'table' then return data end
-    return {}
+    if ok and type(data) == 'table' then
+        cachedExtras = data
+        cachedExtrasAt = GetGameTimer()
+        return data
+    end
+    return cachedExtras or {}
 end
 
-local function buildMenuData()
+local function buildMenuData(forceExtras)
     local char = exports.sunset_core:GetCharacter()
     if not char then return nil end
 
-    local extras = fetchMenuExtras()
+    local extras = fetchMenuExtras(forceExtras)
 
     pcall(function()
         local ped = PlayerPedId()
@@ -157,7 +181,7 @@ local function openMenu(initialTab)
         end
         return
     end
-    local ok, data = pcall(buildMenuData)
+    local ok, data = pcall(buildMenuData, true)
     if not ok or not data then
         exports.sunset_ui:Notify('Could not open menu', 'error')
         return
@@ -256,10 +280,13 @@ AddEventHandler('sunset:nui:menuJobAction', function(data)
             local state, err = Sunset.AwaitCallback('sunset:toggleDuty')
             if state == nil then
                 exports.sunset_ui:Notify(err or 'Cannot toggle duty', 'error')
+            else
+                cachedExtrasAt = 0
             end
         elseif data.action == 'leave' then
             local ok, err = Sunset.AwaitCallback('sunset:leaveFaction')
             if ok then
+                cachedExtrasAt = 0
                 closeMenu()
             else
                 exports.sunset_ui:Notify(err or 'Failed', 'error')
@@ -267,6 +294,7 @@ AddEventHandler('sunset:nui:menuJobAction', function(data)
         elseif data.action == 'quit_civilian' then
             local ok, err = Sunset.AwaitCallback('sunset:quitCivilianJob')
             if ok then
+                cachedExtrasAt = 0
                 closeMenu()
             else
                 exports.sunset_ui:Notify(err or 'Could not quit civilian job', 'error')

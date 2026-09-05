@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 -- Unified dispatch queue (schema matches sunset_dispatch/server/service_core.lua).
 CREATE TABLE IF NOT EXISTS `service_calls` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,

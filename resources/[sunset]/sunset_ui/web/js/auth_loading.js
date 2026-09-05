@@ -47,6 +47,10 @@ const LoadingScreen = {
     },
 
     start(data = {}) {
+        // Login already started this bar; spawn/appearance must not restart it.
+        if (this._interval || this._finishTimer || this._progress > 5) {
+            return;
+        }
         this.reset();
         const steps = data.steps;
         if (steps && steps.length) {
@@ -66,14 +70,15 @@ const LoadingScreen = {
         const tickMs = 50;
         const increment = 100 / (totalMs / tickMs);
 
+        const holdAt = data.holdAt == null ? 92 : Number(data.holdAt);
         this._interval = setInterval(() => {
             let next = this._progress + increment;
             if (Math.random() > 0.82) next -= increment * 0.75;
-            if (next >= 100) {
-                next = 100;
+            if (next >= holdAt) {
+                next = holdAt;
                 clearInterval(this._interval);
                 this._interval = null;
-                this._setProgress(100, data.completeText || 'Entering Los Santos...');
+                this._setProgress(holdAt, data.holdText || 'Awaiting game state...');
                 return;
             }
             const msgIndex = Math.min(messages.length - 1, Math.floor((next / 100) * messages.length));
@@ -95,16 +100,27 @@ const LoadingScreen = {
 
 const AuthLoading = {
     _pending: false,
+    _safety: null,
 
     beginSubmit() {
         this._pending = true;
         document.getElementById('auth-panel')?.classList.add('is-hidden');
         if (typeof showScreen === 'function') showScreen('loading');
-        LoadingScreen.start({ duration: 4500 });
+        LoadingScreen.start({ duration: 8000, holdAt: 92, holdText: 'Awaiting game state...' });
+        clearTimeout(this._safety);
+        this._safety = setTimeout(() => {
+            const app = document.getElementById('app');
+            if (app && !app.classList.contains('hidden') && window.App?.currentScreen === 'loading') {
+                LoadingScreen.reset();
+                post('loadingTimeout');
+            }
+        }, 18000);
     },
 
     reset() {
         this._pending = false;
+        clearTimeout(this._safety);
+        this._safety = null;
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
         LoadingScreen.reset();
         if (typeof showScreen === 'function') showScreen('auth');

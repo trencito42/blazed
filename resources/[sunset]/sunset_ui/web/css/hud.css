@@ -820,7 +820,8 @@
 
 .hud-bl {
     left: 18px;
-    bottom: 218px;
+    /* Keep the location block above GTA's minimap at common aspect ratios. */
+    bottom: calc(20vh + 32px);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -977,7 +978,7 @@
 
 @media(max-width:1280px) {
     .hud-tr { top:18px; right:18px; }
-    .hud-bl { left:14px; bottom:198px; }
+    .hud-bl { left:14px; bottom:calc(20vh + 28px); }
     .hud-bottom-right { right:22px; bottom:22px; }
     .speedo-panel { min-width:235px; padding:13px 20px; }
     .speed-val { font-size:46px; }
@@ -1015,6 +1016,20 @@
     align-items: center;
     justify-content: flex-end;
     gap: 10px;
+    max-height: 0;
+    margin: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    transform: translateX(8px);
+    transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease, max-height 0.4s ease, margin 0.4s ease;
+}
+
+.veh-hints__row.is-active {
+    max-height: 40px;
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
 }
 
 .veh-hints__label {
@@ -1028,9 +1043,6 @@
         0 1px 2px rgba(0, 0, 0, 1),
         0 4px 12px rgba(0, 0, 0, 0.85);
 }
-
-.veh-hints.is-single .veh-hints__row { display: none; }
-.veh-hints.is-single .veh-hints__row.is-active { display: flex; }
 
 .veh-hints__key {
     display: inline-flex;

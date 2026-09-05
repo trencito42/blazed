@@ -86,6 +86,18 @@ function SunsetJobs_ValidateCoordsHorizontal(source, target, radius)
     return math.sqrt(dx * dx + dy * dy) <= (radius or 5.0)
 end
 
+
+function SunsetJobs_ValidateCoordsCylinder(source, target, horizontalRadius, verticalRadius)
+    local pos = playerCoords(source)
+    if not pos then return false end
+    local t = type(target) == 'vector3' and target or vector3(target.x, target.y, target.z)
+    local dx = pos.x - t.x
+    local dy = pos.y - t.y
+    local dz = math.abs(pos.z - t.z)
+    return math.sqrt(dx * dx + dy * dy) <= (horizontalRadius or 5.0)
+        and dz <= (verticalRadius or 4.0)
+end
+
 function SunsetJobs_ValidateVehicle(source, expectedModel, mustDrive, maxDistance)
     local session = Sessions[source]
     if not session or not session.vehicleNetId then return false end
@@ -404,6 +416,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
     local cfg = Sunset.GetJobConfig(session.jobId)
     local expected = cfg and (cfg.truckModel or cfg.vehicleModel)
     if expected and GetEntityModel(entity) ~= joaat(expected) then return nil, 'Invalid work vehicle' end
+    Entity(entity).state:set('sunsetProtectedVehicle', true, true)
     session.vehicleNetId = vehicleNetId
     session.trailerNetId = trailerNetId and tonumber(trailerNetId) or nil
     if cfg and cfg.trailerModel then
@@ -421,6 +434,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
             session.trailerNetId = nil
             return nil, 'Work trailer is too far from the truck'
         end
+        Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
     end
     if session.state == 'STARTING' then
         SunsetJobs_SetState(source, 'ACTIVE')
@@ -520,6 +534,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerTrailer', function(sou
     end
 
     session.trailerNetId = trailerNetId
+    Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
     session.trailerDetachSince = nil
     session.trailerWarned = nil
     session.trailerDestroyHandled = nil

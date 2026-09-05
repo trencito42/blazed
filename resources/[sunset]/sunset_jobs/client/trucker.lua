@@ -79,8 +79,8 @@ local function recoverTrailer()
     Wait(250)
     local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
     local recovered = attached and attachedEntity == trailer
-    Entity(truck).state:set('sunsetTrailerAttached', recovered, true)
-    Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), true)
+    Entity(truck).state:set('sunsetTrailerAttached', recovered, false)
+    Entity(truck).state:set('sunsetTrailerNetId', NetworkGetNetworkIdFromEntity(trailer), false)
     if not recovered then
         return JC.notify('Trailer is upright but could not attach automatically — reverse into it', 'warning')
     end

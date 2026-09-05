@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 ALTER TABLE `vehicles`
     ADD COLUMN IF NOT EXISTS `parked_x` FLOAT NULL DEFAULT NULL AFTER `garage`,
     ADD COLUMN IF NOT EXISTS `parked_y` FLOAT NULL DEFAULT NULL AFTER `parked_x`,

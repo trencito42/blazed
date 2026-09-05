@@ -60,25 +60,36 @@ local function getNextPaydayTime()
     return ('%02d:00'):format(nextH)
 end
 
+local function menuAttempt(label, fn)
+    local ok, value = pcall(fn)
+    if not ok then
+        print(('[sunset_menu] %s failed: %s'):format(label, tostring(value)))
+        return false, nil
+    end
+    return true, value
+end
+
 exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
     local player = exports.sunset_core:GetPlayer(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not player or not char then return {} end
 
     local properties = 0
-    pcall(function()
-        properties = MySQL.scalar.await(
+    local propertiesOk, propertiesValue = menuAttempt('property count query', function()
+        return MySQL.scalar.await(
             'SELECT COUNT(*) FROM properties WHERE owner_character_id = ?',
             { char.id }
-        ) or 0
+        )
     end)
+    if propertiesOk then properties = propertiesValue or 0 end
 
     local home = nil
-    pcall(function()
+    local homeOk, homeValue = menuAttempt('home property query', function()
         if char.home_property_id then
-            home = MySQL.single.await('SELECT label FROM properties WHERE id = ?', { char.home_property_id })
+            return MySQL.single.await('SELECT label FROM properties WHERE id = ?', { char.home_property_id })
         end
     end)
+    if homeOk then home = homeValue end
 
     local jobId, jobGrade = Sunset.GetCharacterJob(char)
     local civilianJob = Sunset.CivilianJobs[jobId]
@@ -88,12 +99,13 @@ exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
     local civilianGrade = civilianJob and civilianJob.grades[jobGrade or 0]
 
     local vehicles = {}
-    pcall(function()
-        vehicles = MySQL.query.await(
+    local vehiclesOk, vehiclesValue = menuAttempt('vehicle list query', function()
+        return MySQL.query.await(
             'SELECT id, plate, model, stored, garage, fuel, engine, body FROM vehicles WHERE character_id = ? ORDER BY id',
             { char.id }
-        ) or {}
+        )
     end)
+    if vehiclesOk then vehicles = vehiclesValue or {} end
 
     local onDuty = false
     pcall(function()
@@ -107,14 +119,15 @@ exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
     local totalPlaytime = (tonumber(player.playtime) or 0) + sessionMin
 
     local career = { completed_tasks = 0, total_earned = 0, skill_levels = 0 }
-    pcall(function()
-        career = MySQL.single.await([[
+    local careerOk, careerValue = menuAttempt('job progress query', function()
+        return MySQL.single.await([[
             SELECT COALESCE(SUM(completed_tasks), 0) AS completed_tasks,
                    COALESCE(SUM(total_earned), 0) AS total_earned,
                    COALESCE(SUM(level), 0) AS skill_levels
             FROM job_progress WHERE character_id = ?
-        ]], { char.id }) or career
+        ]], { char.id })
     end)
+    if careerOk and careerValue then career = careerValue end
 
     return {
         playtime = totalPlaytime,

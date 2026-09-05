@@ -4,7 +4,9 @@ local currentScreen = nil
 function Show(screen, data)
     isOpen = true
     currentScreen = screen
-    SetNuiFocus(true, true)
+    if screen ~= 'loading' then
+        SetNuiFocus(true, true)
+    end
     SendNUIMessage({
         action = 'show',
         screen = screen,
@@ -111,14 +113,24 @@ RegisterNUICallback('playSound', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('loadingTimeout', function(_, cb)
+    if currentScreen == 'loading' then
+        Hide()
+        DoScreenFadeIn(500)
+        Notify('Character loading took too long. Your controls were restored; reconnect if the character still does not appear.', 'error', 8000)
+        TriggerEvent('sunset:client:loadingTimedOut')
+    end
+    cb('ok')
+end)
+
 -- ESC handling
 CreateThread(function()
     while true do
-        if isOpen then
+        if isOpen and currentScreen ~= 'loading' then
             DisableAllControlActions(0)
             EnableControlAction(0, 249, true) -- PTT
             EnableControlAction(0, 46, true)  -- E
         end
-        Wait(isOpen and 0 or 500)
+        Wait(isOpen and currentScreen ~= 'loading' and 0 or 500)
     end
 end)

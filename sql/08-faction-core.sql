@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 CREATE TABLE IF NOT EXISTS `faction_leaders` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `character_id` INT UNSIGNED NOT NULL,

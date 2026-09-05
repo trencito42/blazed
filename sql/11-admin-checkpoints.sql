@@ -1,5 +1,3 @@
-USE `sunsetmp`;
-
 CREATE TABLE IF NOT EXISTS `admin_checkpoints` (
     `id` VARCHAR(64) NOT NULL,
     `label` VARCHAR(128) DEFAULT NULL,

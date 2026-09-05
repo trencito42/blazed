@@ -3,6 +3,23 @@
 **Last updated:** 2026-09-05
 **Code baseline:** runtime commit `e1836d3`, deployed to Coolify on 2026-09-05
 
+## Post-Cursor hardening pass (2026-09-05, not deployed)
+
+- Made deployments replace custom resource groups instead of merging indefinitely; deleted and renamed files can no longer survive in the persistent production volume.
+- Pinned `ox_lib` 3.39.0, `pma-voice` 7.0.1 and `bob74_ipl` 2.7.0 in the FiveM image, removing the hidden dependency on old live-volume copies.
+- Enabled strict state-bag security, moved replicated job-vehicle protection state to the server and stopped clients from publishing authoritative state bags.
+- Removed chat HTML injection and escaped player/message previews in the phone UI.
+- Added an 18-second loading recovery path that closes Lua NUI state, restores controls and resets the character flow instead of leaving a hidden blocking overlay.
+- Kept the M-menu ped-headshot handle alive for the lifetime of its NUI image and release it safely on expiry/resource stop.
+- Made vehicle odometer and existing JSON properties survive periodic sync, resource restart, vehicle re-entry and garage storage, with ownership/driver checks and monotonic server bounds.
+- Added vertical server validation to fishing spots and restored functional character select/create/delete NUI handlers.
+- Removed the unreachable duplicate `/jobs` UI branch; `/jobs` now opens the panel that exposes the active shift and Work/Cancel actions.
+- Reduced M-menu database refreshes to one snapshot per five seconds while keeping local HUD/vehicle state responsive; failed menu queries now produce labeled server diagnostics.
+- Removed hard-coded database selection from incremental migrations, so the configured `MARIADB_DATABASE` is respected.
+- Moved the location/compass above the minimap and reduced M-menu scanline/panel opacity so gameplay remains visible.
+
+Static verification: changed JavaScript parses successfully, literal manifest references resolve, duplicate NUI switch/forward registrations are absent, and `git diff --check` passes. A full Docker build and in-game multiplayer pass still require the deployment host; no server restart was performed.
+
 ## Faithful `onscreenhud.txt` integration (2026-09-05, not deployed)
 
 - Replaced the permanent legacy HUD composition with the supplied three-module screen HUD: top-right clock/money/health/armor, bottom-left compass/street/zone, and bottom-right speed/gear/RPM/engine/fuel.
