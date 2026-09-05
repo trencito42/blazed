@@ -21,6 +21,8 @@ const Menu = {
                 post('menuAction', { action: btn.dataset.action });
             });
         });
+
+        if (window.ChatSettings) ChatSettings.init();
     },
 
     setTab(tab) {
@@ -28,6 +30,10 @@ const Menu = {
         this.activeTab = tab;
         $$('.menu-tab').forEach((el) => el.classList.toggle('is-active', el.dataset.tab === tab));
         $$('.menu-panel-view').forEach((el) => el.classList.toggle('is-active', el.dataset.panel === tab));
+        if (tab === 'settings' && window.ChatSettings) {
+            ChatSettings.init();
+            ChatSettings.syncControls();
+        }
         const activePanel = $(`.menu-panel-view[data-panel="${tab}"]`);
         const profile = $('.menu-profile');
         [activePanel, profile].forEach((panel) => {
@@ -342,10 +348,10 @@ const Menu = {
 
     show(data) {
         this.init();
-        this.setTab('player');
         document.body.classList.add('menu-open');
         $('#menu').classList.remove('hidden');
         this.update(data);
+        this.setTab(data?.initialTab || 'player');
     },
 
     hide() {

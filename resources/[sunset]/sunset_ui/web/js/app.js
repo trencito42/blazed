@@ -192,6 +192,10 @@ window.addEventListener('message', (event) => {
             if (window.Menu) Menu.show(data || event.data.data);
             break;
 
+        case 'menuSetTab':
+            if (window.Menu) Menu.setTab((data || event.data.data)?.tab);
+            break;
+
         case 'menuUpdate':
             if (window.Menu) Menu.update(data || event.data.data);
             break;

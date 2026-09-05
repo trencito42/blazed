@@ -297,6 +297,26 @@
 
     <!-- CHAT -->
     <div id="chat" class="chat">
+        <div class="chat-toolbar" id="chat-toolbar">
+            <button type="button" class="chat-settings-btn" id="chat-settings-btn" title="Chat display settings" aria-label="Chat settings">⚙</button>
+            <div class="chat-settings-popover hidden" id="chat-settings-popover">
+                <div class="chat-settings-popover__title">Chat display</div>
+                <label class="chat-settings-row">
+                    <span>Font size</span>
+                    <input type="range" id="chat-popover-font" min="10" max="20" step="1" value="13">
+                    <strong id="chat-popover-font-val">13px</strong>
+                </label>
+                <label class="chat-settings-row">
+                    <span>Visible rows</span>
+                    <input type="range" id="chat-popover-page" min="4" max="20" step="1" value="10">
+                    <strong id="chat-popover-page-val">10 rows</strong>
+                </label>
+                <div class="chat-settings-popover__actions">
+                    <button type="button" class="chat-settings-reset" id="chat-popover-reset">Reset</button>
+                    <span class="chat-settings-hint">Or use <strong>M → CONFIG</strong></span>
+                </div>
+            </div>
+        </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-wrap hidden" id="chat-input-wrap">
             <input type="text" class="chat-input" id="chat-input" placeholder="Type a message... (/help for commands)" maxlength="256">
@@ -377,7 +397,35 @@
                     <div class="menu-placeholder"><h3>REAL ESTATE_</h3><div class="menu-placeholder__row"><span>OWNED</span><strong id="menu-property-count">0</strong></div><div class="menu-placeholder__row"><span>HOME SPAWN</span><strong id="menu-home-label">None</strong></div><p>Use <strong>/properties</strong> or interact at a property marker.</p></div>
                 </section>
                 <section class="menu-panel-view tech-panel" data-panel="settings">
-                    <div class="menu-placeholder"><h3>SYSTEM CONFIG_</h3><p><strong>/hudedit</strong> — move HUD modules</p><p><strong>/help</strong> — command reference</p></div>
+                    <div class="menu-config">
+                        <h3 class="menu-config__title">SYSTEM CONFIG_</h3>
+                        <p class="menu-config__lead">Interface preferences — changes apply immediately.</p>
+
+                        <div class="menu-config__section">
+                            <h4>Chat</h4>
+                            <label class="menu-config-row">
+                                <span>Font size</span>
+                                <input type="range" id="chat-setting-font" min="10" max="20" step="1" value="13">
+                                <strong id="chat-setting-font-val">13px</strong>
+                            </label>
+                            <label class="menu-config-row">
+                                <span>Visible rows</span>
+                                <input type="range" id="chat-setting-page" min="4" max="20" step="1" value="10">
+                                <strong id="chat-setting-page-val">10 rows</strong>
+                            </label>
+                            <div class="menu-config__actions">
+                                <button type="button" class="menu-job-btn" id="chat-setting-reset">Reset chat defaults</button>
+                                <span class="menu-config__hint">Press <strong>T</strong> and use the ⚙ button for a live preview while typing.</span>
+                            </div>
+                        </div>
+
+                        <div class="menu-config__section">
+                            <h4>HUD &amp; help</h4>
+                            <p><strong>/hudedit</strong> — move HUD modules</p>
+                            <p><strong>/help</strong> — command reference</p>
+                            <p><strong>/chatsettings</strong> — open this tab</p>
+                        </div>
+                    </div>
                 </section>
             </main>
 
@@ -889,6 +937,7 @@
     <script src="js/hud.js"></script>
     <script src="js/hud_editor.js"></script>
     <script src="js/scoreboard.js"></script>
+    <script src="js/chat_settings.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/menu.js"></script>
     <script src="vendor/leaflet/leaflet.js"></script>

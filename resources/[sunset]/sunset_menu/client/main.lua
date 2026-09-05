@@ -150,12 +150,20 @@ local function buildMenuData()
     }
 end
 
-local function openMenu()
-    if menuOpen then return end
+local function openMenu(initialTab)
+    if menuOpen then
+        if initialTab then
+            exports.sunset_ui:Send('menuSetTab', { tab = initialTab })
+        end
+        return
+    end
     local ok, data = pcall(buildMenuData)
     if not ok or not data then
         exports.sunset_ui:Notify('Could not open menu', 'error')
         return
+    end
+    if initialTab then
+        data.initialTab = initialTab
     end
     menuOpen = true
     exports.sunset_ui:SetFocus(true, true, false)
@@ -174,6 +182,11 @@ RegisterCommand('sunset_menu', function()
     openMenu()
 end, false)
 RegisterKeyMapping('sunset_menu', 'Open player menu', 'keyboard', 'M')
+
+RegisterCommand('chatsettings', function()
+    openMenu('settings')
+end, false)
+TriggerEvent('chat:addSuggestion', '/chatsettings', 'Open chat font size and visible row settings')
 
 RegisterCommand('sunset_menu_close', function()
     closeMenu()
