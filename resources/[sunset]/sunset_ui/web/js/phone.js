@@ -57,13 +57,6 @@ const Phone = {
                 e.preventDefault();
                 e.stopPropagation();
                 this.goHomeOrClose();
-                return;
-            }
-            if (e.key === 'p' || e.key === 'P') {
-                if (e.target.matches('input, textarea')) return;
-                e.preventDefault();
-                e.stopPropagation();
-                post('phoneClose', {});
             }
         });
     },

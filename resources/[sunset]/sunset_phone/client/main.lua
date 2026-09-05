@@ -1,7 +1,9 @@
 local phoneOpen = false
+local phoneOpening = false
 local phoneProp = nil
-local phoneBusy = false
+local lastToggleAt = 0
 local PHONE_MODEL = `prop_amb_phone`
+local TOGGLE_COOLDOWN_MS = 450
 
 local function playPhoneSound(name)
     if name == 'open' then
@@ -46,14 +48,6 @@ local function removePhoneProp()
     phoneProp = nil
 end
 
-local function clearPhoneAnim(ped)
-    local dict = 'cellphone@'
-    StopAnimTask(ped, dict, 'cellphone_text_read_base', 1.0)
-    StopAnimTask(ped, dict, 'cellphone_text_in', 1.0)
-    StopAnimTask(ped, dict, 'cellphone_text_out', 1.0)
-    ClearPedSecondaryTask(ped)
-end
-
 local function playPhoneAnim(open)
     local ped = PlayerPedId()
     local dict = 'cellphone@'
@@ -66,19 +60,20 @@ local function playPhoneAnim(open)
         attachPhoneProp(ped)
         TaskPlayAnim(ped, dict, 'cellphone_text_read_base', 3.0, 3.0, -1, 49, 0, false, false, false)
     else
-        removePhoneProp()
-        clearPhoneAnim(ped)
         if loadAnimDict(dict) then
-            TaskPlayAnim(ped, dict, 'cellphone_text_out', 3.0, 1000, -1, 50, 0, false, false, false)
-            Wait(250)
-            clearPhoneAnim(ped)
+            TaskPlayAnim(ped, dict, 'cellphone_text_out', 3.0, -1, -1, 50, 0, false, false, false)
+            Wait(300)
         end
+        removePhoneProp()
+        StopAnimTask(ped, dict, 'cellphone_text_read_base', 1.0)
+        StopAnimTask(ped, dict, 'cellphone_text_in', 1.0)
+        StopAnimTask(ped, dict, 'cellphone_text_out', 1.0)
     end
 end
 
 local function openPhone()
-    if phoneOpen or phoneBusy then return end
-    phoneBusy = true
+    if phoneOpen or phoneOpening then return end
+    phoneOpening = true
 
     CreateThread(function()
         if IsNuiFocused() then
@@ -94,13 +89,13 @@ local function openPhone()
 
         local data, err = Sunset.AwaitCallback('sunset:getPhoneData')
         if not data then
-            phoneBusy = false
+            phoneOpening = false
             exports.sunset_ui:Notify(err or 'Could not load phone data', 'error')
             return
         end
 
         phoneOpen = true
-        phoneBusy = false
+        phoneOpening = false
         DisablePlayerFiring(PlayerId(), true)
         playPhoneSound('open')
         playPhoneAnim(true)
@@ -110,35 +105,36 @@ local function openPhone()
 end
 
 local function closePhone()
-    if phoneBusy then return end
-    if not phoneOpen and not phoneProp then return end
-
-    phoneBusy = true
+    if not phoneOpen then return end
     phoneOpen = false
+    phoneOpening = false
     playPhoneSound('close')
-    removePhoneProp()
-    clearPhoneAnim(PlayerPedId())
-    exports.sunset_ui:SetFocus(false, false, false)
-    exports.sunset_ui:Send('phoneHide', {})
-
     CreateThread(function()
         playPhoneAnim(false)
-        phoneBusy = false
     end)
+    exports.sunset_ui:SetFocus(false, false, false)
+    exports.sunset_ui:Send('phoneHide', {})
 end
 
 local function togglePhone()
-    if phoneBusy then return end
-    if phoneOpen then closePhone() else openPhone() end
+    local now = GetGameTimer()
+    if now - lastToggleAt < TOGGLE_COOLDOWN_MS then return end
+    lastToggleAt = now
+
+    if phoneOpen then
+        closePhone()
+    else
+        openPhone()
+    end
 end
 
 RegisterCommand('phone', togglePhone, false)
 
--- P opens/closes phone in-world only. When NUI has focus, the web UI handles P/Escape.
+-- P opens/closes phone. Lua owns the binding so it still works while NUI focus is on.
 CreateThread(function()
     while true do
         DisableControlAction(0, 199, true) -- INPUT_FRONTEND_PAUSE (P)
-        if not IsNuiFocused() and IsDisabledControlJustReleased(0, 199) then
+        if IsDisabledControlJustReleased(0, 199) then
             togglePhone()
         end
         Wait(0)
@@ -146,6 +142,9 @@ CreateThread(function()
 end)
 
 AddEventHandler('sunset:nui:phoneClose', function()
+    local now = GetGameTimer()
+    if now - lastToggleAt < TOGGLE_COOLDOWN_MS then return end
+    lastToggleAt = now
     closePhone()
 end)
 
@@ -188,6 +187,9 @@ CreateThread(function()
             DisablePlayerFiring(PlayerId(), true)
 
             local ped = PlayerPedId()
+            if not phoneProp or not DoesEntityExist(phoneProp) then
+                attachPhoneProp(ped)
+            end
             if not IsEntityPlayingAnim(ped, 'cellphone@', 'cellphone_text_read_base', 3) then
                 if loadAnimDict('cellphone@') then
                     TaskPlayAnim(ped, 'cellphone@', 'cellphone_text_read_base', 3.0, 3.0, -1, 49, 0, false, false, false)
@@ -203,7 +205,6 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     removePhoneProp()
-    clearPhoneAnim(PlayerPedId())
 end)
 
 exports('Open', openPhone)
