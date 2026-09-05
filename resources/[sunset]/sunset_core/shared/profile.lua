@@ -1,5 +1,13 @@
 Sunset = Sunset or {}
 
+function Sunset.GetLevelRespectCost(level)
+    return math.max(1, tonumber(level) or 1) * (Sunset.Config.LevelRespectMultiplier or 4)
+end
+
+function Sunset.GetLevelMoneyCost(level)
+    return math.max(1, tonumber(level) or 1) * (Sunset.Config.LevelPriceBase or 2500)
+end
+
 --- Faction membership lives in character.metadata (SAMP-style: job + faction are separate).
 function Sunset.GetCharacterFaction(char)
     if not char then return nil, 0 end

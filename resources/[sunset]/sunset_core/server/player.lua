@@ -8,6 +8,8 @@ local function decodeChar(char)
     char.stress = tonumber(char.stress) or 0
     char.level = tonumber(char.level) or 1
     char.xp = tonumber(char.xp) or 0
+    char.respect_points = tonumber(char.respect_points) or 0
+    char.paydays_received = tonumber(char.paydays_received) or 0
     char = Sunset.MigrateCharacterProfile(char)
     return char
 end
@@ -33,7 +35,7 @@ function Sunset.SaveCharacter(source)
         UPDATE characters SET
             cash = ?, bank = ?, job = ?, job_grade = ?,
             position = ?, appearance = ?, metadata = ?,
-            hunger = ?, thirst = ?, stress = ?, level = ?, xp = ?,
+            hunger = ?, thirst = ?, stress = ?, level = ?, xp = ?, respect_points = ?, paydays_received = ?,
             is_dead = ?, home_property_id = ?, last_played = NOW()
         WHERE id = ? AND player_id = ?
     ]], {
@@ -49,6 +51,8 @@ function Sunset.SaveCharacter(source)
         char.stress or 0,
         char.level or 1,
         char.xp or 0,
+        char.respect_points or 0,
+        char.paydays_received or 0,
         char.is_dead and 1 or 0,
         char.home_property_id,
         char.id,
@@ -166,6 +170,47 @@ function Sunset.AddXP(source, amount)
     return true
 end
 
+function Sunset.AddRespectPoints(source, amount)
+    local char = Sunset.GetCharacter(source)
+    amount = math.floor(tonumber(amount) or 0)
+    if not char or amount <= 0 then return false end
+    char.respect_points = (tonumber(char.respect_points) or 0) + amount
+    char.paydays_received = (tonumber(char.paydays_received) or 0) + 1
+    MySQL.update.await('UPDATE characters SET respect_points=?, paydays_received=? WHERE id=?', {
+        char.respect_points, char.paydays_received, char.id
+    })
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    return true
+end
+
+RegisterCommand('buylevel', function(source)
+    if source == 0 then return end
+    local char = Sunset.GetCharacter(source)
+    if not char then return end
+    local rpCost = Sunset.GetLevelRespectCost(char.level)
+    local moneyCost = Sunset.GetLevelMoneyCost(char.level)
+    if (char.respect_points or 0) < rpCost then
+        return TriggerClientEvent('sunset:client:notify', source,
+            ('Level %d requires %d RP; you have %d. You earn 1 RP at every payday.'):format((char.level or 1) + 1, rpCost, char.respect_points or 0), 'error', 7000)
+    end
+    local account
+    if Sunset.GetMoney(source, 'bank') >= moneyCost then account = 'bank'
+    elseif Sunset.GetMoney(source, 'cash') >= moneyCost then account = 'cash' end
+    if not account then
+        return TriggerClientEvent('sunset:client:notify', source,
+            ('Level %d costs $%d. Keep the full amount in bank or cash.'):format((char.level or 1) + 1, moneyCost), 'error', 7000)
+    end
+    if not Sunset.RemoveMoney(source, account, moneyCost, 'buy_level') then return end
+    char.respect_points = char.respect_points - rpCost
+    char.level = (char.level or 1) + 1
+    MySQL.update.await('UPDATE characters SET level=?, respect_points=?, cash=?, bank=? WHERE id=?', {
+        char.level, char.respect_points, char.cash or 0, char.bank or 0, char.id
+    })
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    TriggerClientEvent('sunset:client:notify', source,
+        ('Level purchased! You are now level %d. Paid %d RP and $%d; %d RP remain.'):format(char.level, rpCost, moneyCost, char.respect_points), 'success', 9000)
+end, false)
+
 function Sunset.GetSpawnPosition(char)
     if char.home_property_id then
         local prop = MySQL.single.await('SELECT entry FROM properties WHERE id = ? AND owner_character_id = ?', {
@@ -191,4 +236,5 @@ exports('GetMoney', Sunset.GetMoney)
 exports('SetJob', Sunset.SetJob)
 exports('SetFaction', Sunset.SetFaction)
 exports('AddXP', Sunset.AddXP)
+exports('AddRespectPoints', Sunset.AddRespectPoints)
 exports('GetSpawnPosition', Sunset.GetSpawnPosition)

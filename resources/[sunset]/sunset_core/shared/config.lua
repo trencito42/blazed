@@ -11,6 +11,9 @@ Sunset.Config = {
     -- Economy
     PaydayInterval = 60 * 60, -- hourly SA:MP-style payday
     TaxRate = 0.05, -- 5% on bank payday deposits
+    RespectPerPayday = 1,
+    LevelRespectMultiplier = 4, -- level 1->2 costs 4 RP, 2->3 costs 8 RP
+    LevelPriceBase = 2500, -- level 1->2 costs $2,500, then scales with level
 
     -- Survival
     HungerDrain = 0.8,  -- per minute

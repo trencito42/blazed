@@ -113,6 +113,9 @@ fi
 if [ -f sql/13-properties-rentals.sql ]; then
   docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/13-properties-rentals.sql
 fi
+if [ -f sql/14-respect-progression.sql ]; then
+  docker compose exec -T mariadb mariadb -u"${MARIADB_USER:-sunset}" -p"${MARIADB_PASSWORD}" "${MARIADB_DATABASE:-sunsetmp}" < sql/14-respect-progression.sql
+fi
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem

@@ -289,7 +289,9 @@ const Menu = {
         $('#menu-lastlogin').textContent = data.lastLogin || '—';
 
         $('#menu-stats-level').textContent = String(data.level || 1);
-        $('#menu-stats-xp').textContent = `${this.formatXp(data.xp || 0)} / ${this.formatXp(data.xpMax || 5000)} XP`;
+        $('#menu-stats-xp').textContent = `${this.formatXp(data.respectPoints || 0)} / ${this.formatXp(data.respectRequired || 4)} RP`;
+        $('#menu-stats-paydays').textContent = String(data.paydaysReceived || 0);
+        $('#menu-buy-level').textContent = `BUY LEVEL ${Number(data.level || 1) + 1} · ${this.formatXp(data.respectRequired || 4)} RP · ${formatMoney(data.levelPrice || 2500)}`;
         $('#menu-stats-playtime').textContent = data.playtime || '0H 0M';
         $('#menu-stats-session').textContent = data.sessionTime || '0H 0M';
         $('#menu-stats-created').textContent = data.characterCreated || '—';
@@ -300,10 +302,10 @@ const Menu = {
         $('#menu-stats-assets').textContent = `${data.vehicleCount || 0} vehicles · ${data.propertyCount || 0} properties`;
         $('#menu-stats-home').textContent = `Home: ${data.homeLabel || 'None'}`;
 
-        const xp = data.xp || 0;
-        const xpMax = data.xpMax || 5000;
+        const xp = data.respectPoints || 0;
+        const xpMax = data.respectRequired || 4;
         const level = data.level || 1;
-        $('#menu-xp-text').textContent = `${this.formatXp(xp)} / ${this.formatXp(xpMax)} XP`;
+        $('#menu-xp-text').textContent = `${this.formatXp(xp)} / ${this.formatXp(xpMax)} RP`;
         $('#menu-level').textContent = `LEVEL ${level}`;
         const xpBar = $('#menu-xp-bar');
         if (xpBar) xpBar.style.width = `${Math.min(100, (xp / xpMax) * 100)}%`;

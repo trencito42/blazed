@@ -54,6 +54,7 @@ server_exports {
     'SetJob',
     'SetFaction',
     'AddXP',
+    'AddRespectPoints',
     'GetSpawnPosition',
     'CompleteAuthentication',
 }

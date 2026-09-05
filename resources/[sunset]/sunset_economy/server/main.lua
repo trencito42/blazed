@@ -29,14 +29,14 @@ local function processPayday(source)
     local net = salary - tax
     if net > 0 then
         exports.sunset_core:AddMoney(source, 'bank', net, 'payday')
-        exports.sunset_core:AddXP(source, 50)
     end
     local rent = { charged = 0 }
     if GetResourceState('sunset_properties') == 'started' then
         local ok, result = pcall(function() return exports.sunset_properties:ProcessRentPayday(source) end)
         if ok and type(result) == 'table' then rent = result end
     end
-    if salary <= 0 and (rent.charged or 0) <= 0 and not rent.evicted then return end
+    local respect = Sunset.Config.RespectPerPayday or 1
+    exports.sunset_core:AddRespectPoints(source, respect)
     TriggerClientEvent('sunset:client:payday', source, net, tax, {
         civilian = civilianSalary,
         faction = factionSalary,
@@ -44,6 +44,7 @@ local function processPayday(source)
         rent = rent.charged or 0,
         rentProperty = rent.label,
         rentEvicted = rent.evicted == true,
+        respect = respect,
     })
 end
 

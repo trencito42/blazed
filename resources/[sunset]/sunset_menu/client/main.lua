@@ -117,8 +117,8 @@ local function buildMenuData(forceExtras)
 
     local playtimeMin = extras.playtime or 0
     local level = extras.level or char.level or 1
-    local xp = extras.xp or char.xp or 0
-    local xpMax = math.max(5000, level * 5000)
+    local respect = extras.respectPoints or char.respect_points or 0
+    local respectRequired = extras.respectRequired or Sunset.GetLevelRespectCost(level)
 
     local playerData = exports.sunset_core:GetPlayer()
     local displayName = playerData and playerData.name
@@ -129,8 +129,10 @@ local function buildMenuData(forceExtras)
         name = displayName,
         rank = playtimeMin >= 3000 and 'LOYAL PLAYER' or 'PLAYER',
         level = level,
-        xp = xp % xpMax,
-        xpMax = xpMax,
+        respectPoints = respect,
+        respectRequired = respectRequired,
+        levelPrice = extras.levelPrice or Sunset.GetLevelMoneyCost(level),
+        paydaysReceived = extras.paydaysReceived or char.paydays_received or 0,
         cash = char.cash,
         bank = char.bank,
         premium = extras.premium or (playerData and playerData.premium) or 0,
@@ -210,6 +212,9 @@ RegisterKeyMapping('sunset_menu', 'Open player menu', 'keyboard', 'M')
 RegisterCommand('chatsettings', function()
     openMenu('settings')
 end, false)
+RegisterCommand('stats', function() openMenu('statistics') end, false)
+TriggerEvent('chat:addSuggestion', '/stats', 'Open character statistics and Respect Point progression')
+TriggerEvent('chat:addSuggestion', '/buylevel', 'Buy the next level using the required Respect Points and money')
 TriggerEvent('chat:addSuggestion', '/chatsettings', 'Open chat font size and visible row settings')
 
 RegisterCommand('sunset_menu_close', function()
@@ -248,6 +253,11 @@ AddEventHandler('sunset:nui:menuAction', function(data)
             Wait(150)
             exports.sunset_phone:Open()
         end)
+        return
+    end
+    if data.action == 'buy_level' then
+        closeMenu()
+        ExecuteCommand('buylevel')
         return
     end
 end)

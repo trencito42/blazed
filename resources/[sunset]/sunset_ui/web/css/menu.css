@@ -154,3 +154,4 @@
 @keyframes menu-glitch { 0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(2px,-2px)}60%{opacity:.84;filter:saturate(1.5)}100%{transform:translate(0);opacity:1;filter:none} }
 @media(max-width:1100px){.menu-wrap{grid-template-columns:280px minmax(0,1fr);gap:12px;width:96vw}.menu-actions{grid-template-columns:repeat(2,minmax(150px,1fr))}.menu-statusbar{gap:7px}.menu-stat-icon{min-width:0;flex:1;padding:7px 9px}.menu-tab{padding:9px 16px}}
 @media(max-height:760px){.menu-wrap{height:94vh;gap:10px;padding:10px}.menu-brand{font-size:19px}.menu-tabs{padding-bottom:7px}.menu-tab{padding-top:8px;padding-bottom:8px}.menu-action{min-height:116px}.menu-info-list li{min-height:48px}}
+.menu-stats-buylevel{margin-top:18px;padding:12px 20px;color:#17100a;border:1px solid #ff941f;background:#ff941f;font:700 12px/1 'Chakra Petch',sans-serif;letter-spacing:1px;cursor:pointer}

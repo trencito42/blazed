@@ -35,6 +35,8 @@ Sunset.HelpAdminDescriptions = {
 
 Sunset.HelpGeneralEntries = {
     { cmd = '/help', desc = 'Open this command guide' },
+    { cmd = '/stats', desc = 'Open character statistics, level and Respect Point progress' },
+    { cmd = '/buylevel', desc = 'Spend the required RP and money to purchase your next level' },
     { cmd = '/me [text]', desc = 'Roleplay action visible to nearby players' },
     { cmd = '/do [text]', desc = 'Describe the scene or environment' },
     { cmd = 'M', desc = 'Player menu — stats, vehicle, job, settings' },

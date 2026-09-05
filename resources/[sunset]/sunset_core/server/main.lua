@@ -251,7 +251,6 @@ CreateThread(function()
                     player.playtime = (tonumber(player.playtime) or 0) + mins
                     player.sessionStart = os.time()
                     if player.character then
-                        Sunset.AddXP(src, math.max(5, mins * 2))
                         if player.character._profileMigrated then
                             Sunset.SaveCharacter(src)
                             player.character._profileMigrated = nil
@@ -287,7 +286,7 @@ RegisterCallback('sunset:getCharacters', function(source)
     if not player then return {} end
 
     local chars = MySQL.query.await(
-        'SELECT id, slot, firstname, lastname, dateofbirth, gender, nationality, cash, bank, job, job_grade, position, appearance, last_played, hunger, thirst, stress, level, xp, home_property_id FROM characters WHERE player_id = ? ORDER BY slot',
+        'SELECT id, slot, firstname, lastname, dateofbirth, gender, nationality, cash, bank, job, job_grade, position, appearance, last_played, hunger, thirst, stress, level, xp, respect_points, paydays_received, home_property_id FROM characters WHERE player_id = ? ORDER BY slot',
         { player.id }
     )
 
