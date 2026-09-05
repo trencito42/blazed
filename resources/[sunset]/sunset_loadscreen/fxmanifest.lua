@@ -4,7 +4,7 @@ game 'gta5'
 name 'sunset_loadscreen'
 author 'SunsetMP'
 description 'Custom loading screen'
-version '1.2.0'
+version '1.3.0'
 
 loadscreen 'index.html'
 loadscreen_manual_shutdown 'yes'

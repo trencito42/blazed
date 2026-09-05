@@ -108,14 +108,40 @@ body.fuel-pump-open #job-objective {
 
 .app[data-screen="loading"] .app-bg { filter: blur(0); transform: scale(1); }
 .app[data-screen="loading"] .app-overlay { background: rgba(0, 0, 0, .14); }
+.app[data-screen="handoff"] .app-bg { filter: blur(0); transform: scale(1); }
+.app[data-screen="handoff"] .app-overlay { background: transparent; }
 .app[data-screen="auth"] .app-bg { filter: blur(11px); transform: scale(1.045); animation: authBgIn 750ms ease both; }
 .app[data-screen="auth"] .app-overlay { background: rgba(0, 0, 0, .56); }
 .app[data-screen="spawn"] .app-bg { filter: blur(5px); transform: scale(1.022); }
 .app[data-screen="spawn"] .app-overlay { background: rgba(0, 0, 0, .38); }
 
 @keyframes authBgIn {
-    from { opacity: 0; filter: blur(18px); transform: scale(1.08); }
-    to { opacity: 1; filter: blur(11px); transform: scale(1.045); }
+    from { filter: blur(0); transform: scale(1); }
+    to { filter: blur(11px); transform: scale(1.045); }
+}
+
+.screen--handoff { overflow: hidden; }
+
+.handoff-vignette,
+.handoff-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.handoff-vignette {
+    background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.82) 100%);
+}
+
+.handoff-scanlines {
+    opacity: 0.42;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0) 2px,
+        rgba(0, 0, 0, 0.18) 2px,
+        rgba(0, 0, 0, 0.18) 4px
+    );
 }
 
 .screen {

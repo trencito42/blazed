@@ -7,7 +7,19 @@ Sunset.Ready = false
 CreateThread(function()
     while not NetworkIsPlayerActive(PlayerId()) do Wait(100) end
 
-    -- Inchide loading screen-ul custom
+    -- Keep the same preloaded background underneath the FiveM loadscreen.
+    -- This prevents a world/black-frame flash while the independent NUIs swap.
+    local uiDeadline = GetGameTimer() + 5000
+    while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < uiDeadline do
+        Wait(50)
+    end
+    if GetResourceState('sunset_ui') == 'started' then
+        exports.sunset_ui:Show('handoff', {})
+        Wait(150)
+        SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
+        Wait(650)
+    end
+
     ShutdownLoadingScreenNui()
     ShutdownLoadingScreen()
 

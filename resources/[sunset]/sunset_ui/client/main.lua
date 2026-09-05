@@ -4,8 +4,11 @@ local currentScreen = nil
 function Show(screen, data)
     isOpen = true
     currentScreen = screen
-    if screen ~= 'loading' then
+    if screen ~= 'loading' and screen ~= 'handoff' then
         SetNuiFocus(true, true)
+    else
+        SetNuiFocus(false, false)
+        SetNuiFocusKeepInput(false)
     end
     SendNUIMessage({
         action = 'show',

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/fonts.css">
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=3">
     <link rel="stylesheet" href="css/hud.css">
     <link rel="stylesheet" href="css/scoreboard.css">
     <link rel="stylesheet" href="css/chat.css?v=2">
@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="css/fishing.css?v=2">
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=5">
-    <link rel="stylesheet" href="css/auth_loading.css?v=2">
+    <link rel="stylesheet" href="css/auth_loading.css?v=3">
     <link rel="stylesheet" href="css/spawn.css?v=2">
 </head>
 <body>
@@ -154,6 +154,11 @@
     <div id="app" class="app hidden">
         <img class="app-bg" src="assets/bg.png?v=2" alt="">
         <div class="app-overlay"></div>
+        <!-- Background-only bridge rendered below FiveM's separate loadscreen NUI. -->
+        <section id="screen-handoff" class="screen screen--handoff hidden" aria-hidden="true">
+            <div class="handoff-vignette"></div>
+            <div class="handoff-scanlines"></div>
+        </section>
         <section id="screen-characters" class="screen hidden">
             <div class="panel panel--left">
                 <img class="panel-logo" src="assets/logo.png" alt="SunsetMP">
@@ -1068,7 +1073,7 @@
         </aside>
     </div>
 
-    <script src="js/app.js?v=4"></script>
+    <script src="js/app.js?v=5"></script>
     <script src="js/characters.js"></script>
     <script src="js/hud.js"></script>
     <script src="js/hud_editor.js"></script>
