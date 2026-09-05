@@ -2,6 +2,8 @@ const Hud = {
     smooth: { speed: 0, rpm: 0 },
     lastSpeed: null,
     lastGear: null,
+    wasInVehicle: false,
+    hintsTimer: null,
 
     init() {
         if (this._ready) return;
@@ -60,12 +62,19 @@ const Hud = {
         if (!speedo) return;
         if (!data.inVehicle) {
             speedo.classList.add('hidden');
+            this.hideVehicleHints();
+            this.wasInVehicle = false;
             this.smooth.speed = 0;
             this.smooth.rpm = 0;
             this.lastSpeed = null;
             this.lastGear = null;
             return;
         }
+
+        if (!this.wasInVehicle) {
+            this.showVehicleHints();
+        }
+        this.wasInVehicle = true;
 
         speedo.classList.remove('hidden');
         const targetSpeed = Math.max(0, Number(data.speed) || 0);
@@ -110,6 +119,31 @@ const Hud = {
             const km = Math.max(0, Number(data.odometer) || 0);
             odoEl.textContent = km >= 1000 ? Math.round(km).toLocaleString('en-US') : km.toFixed(1);
         }
+    },
+
+    showVehicleHints() {
+        const el = $('#veh-hints');
+        if (!el) return;
+        if (this.hintsTimer) {
+            clearTimeout(this.hintsTimer);
+            this.hintsTimer = null;
+        }
+        el.classList.remove('is-visible');
+        void el.offsetWidth;
+        el.classList.add('is-visible');
+        el.setAttribute('aria-hidden', 'false');
+        this.hintsTimer = setTimeout(() => this.hideVehicleHints(), 5000);
+    },
+
+    hideVehicleHints() {
+        const el = $('#veh-hints');
+        if (this.hintsTimer) {
+            clearTimeout(this.hintsTimer);
+            this.hintsTimer = null;
+        }
+        if (!el) return;
+        el.classList.remove('is-visible');
+        el.setAttribute('aria-hidden', 'true');
     },
 };
 
