@@ -77,6 +77,15 @@ function SunsetJobs_ValidateCoords(source, target, radius)
     return dist(pos, t) <= (radius or 5.0)
 end
 
+function SunsetJobs_ValidateCoordsHorizontal(source, target, radius)
+    local pos = playerCoords(source)
+    if not pos then return false end
+    local t = type(target) == 'vector3' and target or vector3(target.x, target.y, target.z)
+    local dx = pos.x - t.x
+    local dy = pos.y - t.y
+    return math.sqrt(dx * dx + dy * dy) <= (radius or 5.0)
+end
+
 function SunsetJobs_ValidateVehicle(source, expectedModel, mustDrive, maxDistance)
     local session = Sessions[source]
     if not session or not session.vehicleNetId then return false end

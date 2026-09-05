@@ -3,6 +3,25 @@ local fishing = false
 local rod = nil
 local selling = false
 local fishingUiMode = 'hidden'
+local shiftLoopActive = false
+
+local function horizontalDist(pos, coords)
+    local dx = pos.x - coords.x
+    local dy = pos.y - coords.y
+    return math.sqrt(dx * dx + dy * dy)
+end
+
+local function catchRadius(cfg)
+    return (cfg and cfg.catchRadius) or 12.0
+end
+
+local function markerDrawRadius(cfg)
+    return (cfg and cfg.markerDrawRadius) or 45.0
+end
+
+local function isWithinCatchRadius(distance, cfg)
+    return distance <= catchRadius(cfg)
+end
 
 local function fishBagProgress(carried, capacity)
     capacity = math.max(tonumber(capacity) or 2, 1)
@@ -39,10 +58,12 @@ local lastBagSync = 0
 
 local function syncBagFromServer()
     local now = GetGameTimer()
-    if now - lastBagSync < 750 then return end
+    if now - lastBagSync < 2000 then return end
     lastBagSync = now
+    if JC.jobId ~= 'fisherman' or JC.state == 'IDLE' then return end
     local status = Sunset.AwaitCallback('sunset:jobs:fisherman:bagStatus')
-    if not status or not JC.sessionData then return end
+    if not status then return end
+    JC.sessionData = JC.sessionData or {}
     JC.sessionData.carried = status.carried
     JC.sessionData.capacity = status.capacity
     if status.pendingValue ~= nil then
@@ -109,7 +130,6 @@ local function spotUiMode()
 end
 
 local function showFishingState(state, extra)
-    syncBagFromServer()
     if state == 'idle' and isBagFull() then
         state = 'full'
         extra = extra or {}
@@ -160,10 +180,49 @@ local function nearestSpotIndex()
     local pos = GetEntityCoords(ped)
     local best, bestDist = 1, 999999.0
     for i, spot in ipairs(cfg.spots or {}) do
-        local d = #(pos - spot.coords)
+        local d = horizontalDist(pos, spot.coords)
         if d < bestDist then bestDist = d; best = i end
     end
     return best, bestDist
+end
+
+local function drawShiftMarkers(cfg)
+    if not cfg or not cfg.spots then return end
+    local pos = GetEntityCoords(PlayerPedId())
+    local drawRadius = markerDrawRadius(cfg)
+    for _, spot in ipairs(cfg.spots) do
+        if horizontalDist(pos, spot.coords) <= drawRadius then
+            JC.drawFishingMarker(spot.coords, 52, 152, 219)
+        end
+    end
+    local sell = cfg.sellPoint and cfg.sellPoint.coords
+    if sell and (JC.sessionData and (JC.sessionData.pendingValue or 0) > 0) then
+        if horizontalDist(pos, sell) <= drawRadius then
+            JC.drawMarker(sell, 255, 200, 50)
+        end
+    end
+end
+
+local function ensureFishermanShiftLoop()
+    if shiftLoopActive then return end
+    shiftLoopActive = true
+
+    CreateThread(function()
+        while JC.jobId == 'fisherman' and JC.state ~= 'IDLE' do
+            local cfg = Sunset.GetJobConfig('fisherman')
+            drawShiftMarkers(cfg)
+
+            local sell = cfg and cfg.sellPoint and cfg.sellPoint.coords
+            if sell and (JC.sessionData and (JC.sessionData.pendingValue or 0) > 0) then
+                if JC.isNear(sell, cfg.sellRadius or 5.0) then
+                    JC.showHelp(('Press ~INPUT_CONTEXT~ to sell your fish ($%d before buyer bonus)'):format(
+                        JC.sessionData.pendingValue or 0))
+                end
+            end
+            Wait(0)
+        end
+        shiftLoopActive = false
+    end)
 end
 
 local function attemptSell()
@@ -224,30 +283,7 @@ local function startFisherman()
     JC.notify(('Fishing bag: %d/%d. Catch with E or /fish; use /sellfish at any time to mark the buyer.'):format(
         data.carried or 0, data.capacity or 2), 'info', 9000)
 
-    CreateThread(function()
-        while JC.jobId == 'fisherman' and JC.state ~= 'IDLE' do
-            local spotIdx, spotDist = nearestSpotIndex()
-            local cfg2 = Sunset.GetJobConfig('fisherman')
-            local spot = cfg2.spots[spotIdx]
-
-            if spot and spotDist <= (cfg2.catchRadius or 8.0) then
-                JC.drawMarker(spot.coords, 52, 152, 219)
-            end
-
-            local sell = cfg2.sellPoint.coords
-            if (JC.sessionData.pendingValue or 0) > 0 then
-                JC.drawMarker(sell, 255, 200, 50)
-                if JC.isNear(sell, cfg2.sellRadius or 5.0) then
-                    JC.showHelp(('Press ~INPUT_CONTEXT~ to sell your fish ($%d before buyer bonus)'):format(
-                        JC.sessionData.pendingValue or 0))
-                end
-            end
-            Wait(0)
-        end
-        fishing = false
-        hideFishingUi()
-        removeRod()
-    end)
+    ensureFishermanShiftLoop()
 end
 
 local function attemptFish()
@@ -258,8 +294,8 @@ local function attemptFish()
     local spotIdx, spotDist = nearestSpotIndex()
     local cfg = Sunset.GetJobConfig('fisherman')
     local spot = cfg.spots and cfg.spots[spotIdx]
-    if spotDist > (cfg.catchRadius or 8.0) then
-        return JC.notify('Stand inside a blue fishing marker', 'error')
+    if spotDist > catchRadius(cfg) then
+        return JC.notify('Stand inside the blue fishing marker', 'error')
     end
 
     syncBagFromServer()
@@ -357,7 +393,7 @@ local function attemptFish()
             result.carried or 0, result.capacity or 2), 'success', 9000)
     else
         local _, distance = nearestSpotIndex()
-        if distance <= (cfg.catchRadius or 8.0) then
+        if distance <= catchRadius(cfg) then
             refreshSpotUi()
         else
             showFishingShift()
@@ -382,12 +418,17 @@ end, false)
 
 CreateThread(function()
     while true do
+        if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' then
+            ensureFishermanShiftLoop()
+        end
         if JC.jobId == 'fisherman' and JC.state ~= 'IDLE' and not fishing then
             JC.hideObjective()
-            syncBagFromServer()
+            if GetGameTimer() - lastBagSync > 2000 then
+                CreateThread(syncBagFromServer)
+            end
             local _, distance = nearestSpotIndex()
             local cfg = Sunset.GetJobConfig('fisherman')
-            if distance <= (cfg.catchRadius or 8.0) then
+            if isWithinCatchRadius(distance, cfg) then
                 local targetMode = spotUiMode()
                 if fishingUiMode ~= targetMode then
                     refreshSpotUi()
@@ -418,6 +459,10 @@ CreateThread(function()
             end
         else
             if not fishing and fishingUiMode ~= 'hidden' then hideFishingUi() end
+            if JC.jobId ~= 'fisherman' or JC.state == 'IDLE' then
+                fishing = false
+                removeRod()
+            end
             Wait(400)
         end
     end
@@ -444,3 +489,13 @@ TriggerEvent('chat:addSuggestion', '/fish', 'Cast your fishing rod at a marked f
 TriggerEvent('chat:addSuggestion', '/sellfish', 'Mark the Fish Buyer or sell fish at Del Perro Pier')
 
 Sunset.Jobs.StartFisherman = startFisherman
+Sunset.Jobs.EnsureFishermanShift = function()
+    ensureFishermanShiftLoop()
+    if fishingUiMode == 'hidden' and not fishing then
+        if isBagFull() then
+            showFishingFull()
+        else
+            showFishingShift()
+        end
+    end
+end
