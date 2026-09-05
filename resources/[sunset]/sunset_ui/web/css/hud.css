@@ -734,25 +734,46 @@
 .clock-display {
     display: flex;
     align-items: center;
-    gap: 8px;
     color: #fff;
-    font: 700 24px/1 'Chakra Petch',sans-serif;
+    font: 700 38px/1 'Chakra Petch',sans-serif;
+    letter-spacing: 0.04em;
     text-shadow: 0 0 5px rgba(255,255,255,.5);
 }
 
-.clock-display svg {
-    width: 20px;
-    height: 20px;
-    color: var(--screen-accent);
-    filter: drop-shadow(var(--screen-accent-glow));
-}
+.clock-display svg { display: none; }
 
 .money-display {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
     padding-left: 15px;
     border-left: 1px solid rgba(255,255,255,.1);
+    min-height: 38px;
+}
+
+.money-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.money-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+
+.money-row--cash .money-icon {
+    color: var(--screen-green);
+    filter: drop-shadow(0 0 6px rgba(0, 255, 102, 0.45));
+}
+
+.money-row--bank .money-icon {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .money-cash {
@@ -762,7 +783,6 @@
 }
 
 .money-bank {
-    margin-top: 4px;
     color: rgba(255,255,255,.6);
     font-size: 14px;
 }
