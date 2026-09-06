@@ -532,13 +532,14 @@ registerServerCommand('revive', function(source, args)
     notify(source, 'Revived ' .. (GetPlayerName(target) or '?') .. ' (ID ' .. target .. ')', 'success')
 end, false)
 
--- /arespawn [id] — open spawn menu for a player (admin)
--- /arespawn [id] hospital — hospital respawn without menu
+-- /arespawn [id] — respawn player at their saved spawn point (home, last location, or default)
+-- /arespawn [id] hospital — hospital respawn with bill
+-- /arespawn [id] menu — open spawn location picker
 registerServerCommand('arespawn', function(source, args)
     if source ~= 0 and not requirePerm(source, 'arespawn') then return end
     local target = resolveTarget(source, args[1])
     if not target then
-        notify(source, 'Usage: /arespawn [server id] or /arespawn [server id] hospital', 'error')
+        notify(source, 'Usage: /arespawn [server id] | hospital | menu', 'error')
         return
     end
     local mode = string.lower(tostring(args[2] or ''))
@@ -554,11 +555,33 @@ registerServerCommand('arespawn', function(source, args)
         end
         return
     end
+    if mode == 'menu' then
+        pcall(function() exports.sunset_death:RevivePlayer(target) end)
+        TriggerClientEvent('sunset:client:openSpawnMenu', target)
+        notify(source, ('Opened spawn menu for #%d.'):format(target), 'success')
+        if target ~= source then
+            TriggerClientEvent('sunset:client:notify', target, 'An administrator opened your spawn menu — choose a location.', 'info')
+        end
+        return
+    end
+
+    local char = exports.sunset_core:GetCharacter(target)
+    if not char then
+        notify(source, ('Player #%d has no character loaded.'):format(target), 'error')
+        return
+    end
+
     pcall(function() exports.sunset_death:RevivePlayer(target) end)
-    TriggerClientEvent('sunset:client:openSpawnMenu', target)
-    notify(source, ('Opened spawn menu for #%d.'):format(target), 'success')
+    local pos = exports.sunset_core:GetSpawnPosition(char)
+    if not pos or not pos.x then
+        notify(source, ('Could not resolve a spawn point for #%d.'):format(target), 'error')
+        return
+    end
+
+    TriggerClientEvent('sunset:death:forceHospital', target, pos, 0)
+    notify(source, ('Respawned #%d at their spawn point.'):format(target), 'success')
     if target ~= source then
-        TriggerClientEvent('sunset:client:notify', target, 'An administrator opened your spawn menu — choose a location.', 'info')
+        TriggerClientEvent('sunset:client:notify', target, 'An administrator respawned you at your spawn point.', 'info')
     end
 end, false)
 

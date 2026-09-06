@@ -367,15 +367,31 @@ end)
 
 function Sunset.GetSpawnPosition(char)
     if char.home_property_id then
-        local prop = MySQL.single.await('SELECT entry FROM properties WHERE id = ? AND owner_character_id = ?', {
-            char.home_property_id, char.id
-        })
+        local prop = MySQL.single.await(
+            'SELECT id, entry, owner_character_id, enabled FROM properties WHERE id = ? LIMIT 1',
+            { char.home_property_id }
+        )
         if prop and prop.entry then
-            local entry = json.decode(prop.entry)
-            if entry then return entry end
+            local enabled = prop.enabled == true or prop.enabled == 1 or prop.enabled == '1'
+            local isOwner = tonumber(prop.owner_character_id) == tonumber(char.id)
+            local isRenter = false
+            if not isOwner then
+                isRenter = MySQL.scalar.await(
+                    'SELECT 1 FROM property_rentals WHERE property_id = ? AND character_id = ? AND active = 1 LIMIT 1',
+                    { char.home_property_id, char.id }
+                ) ~= nil
+            end
+            if enabled and (isOwner or isRenter) then
+                local entry = type(prop.entry) == 'string' and json.decode(prop.entry) or prop.entry
+                if entry and entry.x then return entry end
+            end
         end
     end
     local pos = char.position or {}
+    if type(pos) == 'string' then
+        local ok, decoded = pcall(json.decode, pos)
+        pos = ok and decoded or {}
+    end
     if pos.x then return pos end
     local spawn = Sunset.Config.DefaultSpawn
     return { x = spawn.x, y = spawn.y, z = spawn.z, w = spawn.w }
