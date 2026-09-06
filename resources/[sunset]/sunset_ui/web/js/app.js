@@ -563,6 +563,18 @@ window.addEventListener('message', (event) => {
             if (window.AuthLoading) AuthLoading.beginSubmit();
             break;
 
+        case 'authNeedsEmail':
+            if (window.AuthEmail) AuthEmail.onNeedsEmail(data || event.data.data || {});
+            break;
+
+        case 'authEmailError':
+            if (window.AuthEmail) AuthEmail.onError(data || event.data.data || {});
+            break;
+
+        case 'authEmailSaved':
+            if (window.AuthEmail) AuthEmail.onSaved();
+            break;
+
         case 'hudEditToggle':
             if (window.HudEditor) HudEditor.toggle();
             break;

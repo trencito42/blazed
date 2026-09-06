@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=8">
     <link rel="stylesheet" href="css/clans.css?v=4">
-    <link rel="stylesheet" href="css/auth_loading.css?v=5">
+    <link rel="stylesheet" href="css/auth_loading.css?v=6">
     <link rel="stylesheet" href="css/spawn.css?v=3">
 </head>
 <body>
@@ -320,9 +320,10 @@
                         <button type="button" class="btn btn--primary" id="auth-login-btn">Enter City</button>
                     </div>
                     <div id="auth-form-register" class="auth-form hidden">
-                        <label class="field"><span>Choose Username</span><input type="text" id="auth-reg-user" maxlength="20" spellcheck="false"></label>
-                        <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64"></label>
-                        <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64"></label>
+                        <label class="field"><span>Choose Username</span><input type="text" id="auth-reg-user" maxlength="20" spellcheck="false" autocomplete="username"></label>
+                        <label class="field"><span>Email</span><input type="email" id="auth-reg-email" maxlength="254" spellcheck="false" autocomplete="email" placeholder="you@example.com"></label>
+                        <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64" autocomplete="new-password"></label>
+                        <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64" autocomplete="new-password"></label>
                         <label class="auth-remember">
                             <input type="checkbox" id="auth-reg-remember-quick" checked>
                             <span>Quick login next time</span>
@@ -331,6 +332,19 @@
                     </div>
                 </div>
                 <div class="auth-footer">SunsetMP — FiveM Roleplay</div>
+            </div>
+            <div id="auth-email-modal" class="auth-email-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-email-title">
+                <div class="auth-email-modal__panel">
+                    <div class="auth-email-modal__eyebrow">Account sync</div>
+                    <h2 id="auth-email-title" class="auth-email-modal__title">Link your email</h2>
+                    <p class="auth-email-modal__desc">We need an email on <strong id="auth-email-username">your account</strong> for recovery and account security.</p>
+                    <label class="field">
+                        <span>Email address</span>
+                        <input type="email" id="auth-email-input" maxlength="254" spellcheck="false" autocomplete="email" placeholder="you@example.com">
+                    </label>
+                    <p class="auth-email-modal__error hidden" id="auth-email-error"></p>
+                    <button type="button" class="btn btn--primary" id="auth-email-submit">Save &amp; continue</button>
+                </div>
             </div>
         </section>
     </div>
@@ -1345,7 +1359,8 @@
     <script src="js/phone.js?v=2"></script>
     <script src="js/panels.js?v=6"></script>
     <script src="js/overlays.js?v=2"></script>
-    <script src="js/auth_accounts.js?v=1"></script>
+    <script src="js/auth_accounts.js?v=2"></script>
+    <script src="js/auth_email.js?v=1"></script>
     <script src="js/auth_loading.js?v=3"></script>
     <script src="js/spawn.js?v=3"></script>
     <script src="js/fuel_pump.js"></script>

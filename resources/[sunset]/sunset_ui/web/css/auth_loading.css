@@ -400,6 +400,69 @@
 .auth-account-list::-webkit-scrollbar { width: 3px; }
 .auth-account-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }
 
+.auth-email-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.auth-email-modal.hidden {
+    display: none;
+}
+
+.auth-email-modal__panel {
+    width: min(420px, 92vw);
+    padding: 34px 32px 28px;
+    background: linear-gradient(180deg, rgba(24, 20, 18, 0.92), rgba(9, 8, 8, 0.95));
+    border-top: 2px solid rgba(255, 119, 0, 0.55);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    animation: authPanelIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-email-modal__eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #ff7700;
+    margin-bottom: 8px;
+}
+
+.auth-email-modal__title {
+    margin: 0 0 10px;
+    font: 700 24px/1.1 'Chakra Petch', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+}
+
+.auth-email-modal__desc {
+    margin: 0 0 18px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.auth-email-modal__desc strong {
+    color: #ffb15c;
+}
+
+.auth-email-modal__error {
+    margin: -6px 0 10px;
+    color: #ff9a9a;
+    font-size: 13px;
+}
+
+.auth-email-modal__error.hidden {
+    display: none;
+}
+
 .screen--loading,
 .loading-stage,
 .loading-stage * {

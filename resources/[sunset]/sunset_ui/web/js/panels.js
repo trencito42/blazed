@@ -43,6 +43,7 @@ const Panels = {
             if (window.AuthLoading) AuthLoading.beginSubmit();
             post('authRegister', {
                 username: $('#auth-reg-user')?.value,
+                email: $('#auth-reg-email')?.value,
                 password: $('#auth-reg-pass')?.value,
                 passwordConfirm: $('#auth-reg-pass2')?.value,
                 rememberQuickLogin: window.AuthAccounts?.rememberEnabled?.() ?? true,
@@ -55,7 +56,7 @@ const Panels = {
             if (registerOpen) $('#auth-register-btn')?.click();
             else $('#auth-login-btn')?.click();
         };
-        ['auth-login-user', 'auth-login-pass', 'auth-reg-user', 'auth-reg-pass', 'auth-reg-pass2'].forEach((id) => {
+        ['auth-login-user', 'auth-login-pass', 'auth-reg-user', 'auth-reg-email', 'auth-reg-pass', 'auth-reg-pass2'].forEach((id) => {
             document.getElementById(id)?.addEventListener('keydown', submitAuth);
         });
 
@@ -155,6 +156,7 @@ const Panels = {
 
     showAuth(data = {}) {
         this.init();
+        if (window.AuthEmail) AuthEmail.close();
         if (window.AuthAccounts) {
             AuthAccounts.bind();
             AuthAccounts.init(data);
