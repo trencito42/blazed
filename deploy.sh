@@ -89,66 +89,18 @@ until [ -n "$mariadb_container" ] && [ "$(docker inspect -f '{{.State.Health.Sta
 done
 
 # Run SQL migrations (idempotent where possible)
-if [ -f sql/03-foundation.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/03-foundation.sql 2>/dev/null || true
-fi
-if [ -f sql/04-features.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/04-features.sql 2>/dev/null || true
-fi
-if [ -f sql/05-factions-crafting.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/05-factions-crafting.sql 2>/dev/null || true
-fi
-if [ -f sql/06-taxi.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/06-taxi.sql 2>/dev/null || true
-fi
-if [ -f sql/07-vehicle-parked.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/07-vehicle-parked.sql 2>/dev/null || true
-fi
-if [ -f sql/08-faction-core.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/08-faction-core.sql 2>/dev/null || true
-fi
-if [ -f sql/09-dispatch-wanted-jail.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-dispatch-wanted-jail.sql 2>/dev/null || true
-fi
-if [ -f sql/09-jobs.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/09-jobs.sql 2>/dev/null || true
-fi
-if [ -f sql/10-police-persist.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/10-police-persist.sql 2>/dev/null || true
-fi
-if [ -f sql/11-admin-checkpoints.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/11-admin-checkpoints.sql 2>/dev/null || true
-fi
-if [ -f sql/12-dealership.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/12-dealership.sql
-fi
-if [ -f sql/13-properties-rentals.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/13-properties-rentals.sql
-fi
-if [ -f sql/14-respect-progression.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/14-respect-progression.sql
-fi
-if [ -f sql/15-admin-stat-audit.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/15-admin-stat-audit.sql
-fi
-if [ -f sql/16-robbery-security.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/16-robbery-security.sql
-fi
-if [ -f sql/17-sunset-pass.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/17-sunset-pass.sql
-fi
-if [ -f sql/18-wanted-surrender.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/18-wanted-surrender.sql
-fi
-if [ -f sql/19-clans.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/19-clans.sql
-fi
-if [ -f sql/20-fib-sheriff.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/20-fib-sheriff.sql
-fi
-if [ -f sql/21-faction-grade-labels.sql ]; then
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/21-faction-grade-labels.sql
-fi
+echo "[deploy] applying SQL migrations..."
+for migration in sql/[0-9][0-9]-*.sql; do
+  [ -f "$migration" ] || continue
+  base="$(basename "$migration")"
+  case "$base" in
+    01-sunset.sql) continue ;;
+  esac
+  echo "[deploy] -> $base"
+  if ! docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < "$migration"; then
+    echo "[deploy] warning: $base returned errors (may be ok if already applied)" >&2
+  fi
+done
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem
