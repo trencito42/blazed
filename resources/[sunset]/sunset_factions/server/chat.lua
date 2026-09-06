@@ -79,7 +79,7 @@ RegisterCommand('d', function(source, args)
     local char = FactionCore.getChar(source)
     local factionId = char and select(1, FactionCore.getFactionOf(char))
     if not factionId or not isEmergencyDepartment(factionId) then
-        return FactionCore.notify(source, 'Department radio is for LSPD, EMS, and LSFD', 'error')
+        return FactionCore.notify(source, 'Department radio is for LSPD, Sheriff, FIB, EMS, and LSFD', 'error')
     end
     sendFactionChat(source, 'd', args, function(_, c)
         local id = select(1, FactionCore.getFactionOf(c))

@@ -87,7 +87,10 @@ AddEventHandler('sunset:nui:spawnSelect', function(data)
         return exports.sunset_ui:Notify('Choose one of the available spawn locations.', 'error')
     end
     local resolved, err = Sunset.AwaitCallback('sunset:resolveSpawnChoice', choice, tonumber(data and data.propertyId))
-    if not resolved then return exports.sunset_ui:Notify(err or 'That spawn location is unavailable.', 'error', 6000) end
+    if not resolved then
+        exports.sunset_ui:Send('spawnSelectFailed', {})
+        return exports.sunset_ui:Notify(err or 'That spawn location is unavailable.', 'error', 6000)
+    end
     local char = pendingSpawnCharacter
     pendingSpawnCharacter = nil
     trace('spawn_selected', choice)

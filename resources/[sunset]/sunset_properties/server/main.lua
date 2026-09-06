@@ -109,7 +109,7 @@ exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(sourc
     end
     local pos
     if choice=='default' then pos=Sunset.Config.DefaultSpawn
-    elseif choice=='last' then pos=char.position
+    elseif choice=='last' then pos=decodePos(char.position)
     elseif choice=='house' then
         local prop=property(propertyId)
         if not prop or not dbBool(prop.enabled) then return nil,'That house is no longer available.' end

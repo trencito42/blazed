@@ -1,10 +1,27 @@
 const SpawnSelector = {
     selected: 'last', busy: false,
     activeCards() { return [...document.querySelectorAll('.spawn-option:not(.hidden)')].filter((card) => !card.disabled); },
-    show(data = {}) {
+    reset() {
         this.busy = false;
+        document.querySelectorAll('.spawn-option').forEach((card) => {
+            card.classList.remove('is-confirming');
+            if (card.classList.contains('hidden')) return;
+            if (card.dataset.spawn === 'last' && card.hasAttribute('data-force-disabled')) {
+                card.disabled = true;
+                return;
+            }
+            card.disabled = false;
+        });
+    },
+    show(data = {}) {
+        this.reset();
         const last = document.querySelector('[data-spawn="last"]');
-        if (last) last.disabled = data.hasLastLocation === false;
+        if (last) {
+            const disabled = data.hasLastLocation === false;
+            last.disabled = disabled;
+            if (disabled) last.setAttribute('data-force-disabled', '1');
+            else last.removeAttribute('data-force-disabled');
+        }
         const home = Array.isArray(data.homes) ? data.homes[0] : null;
         const house = document.querySelector('[data-spawn="house"]');
         if (house) {

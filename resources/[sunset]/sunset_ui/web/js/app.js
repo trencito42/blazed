@@ -145,6 +145,10 @@ window.addEventListener('message', (event) => {
             }
             break;
 
+        case 'spawnSelectFailed':
+            if (window.SpawnSelector) SpawnSelector.reset();
+            break;
+
         case 'hide':
             if (window.LoadingScreen) LoadingScreen.reset();
             if (window.AuthLoading) {
