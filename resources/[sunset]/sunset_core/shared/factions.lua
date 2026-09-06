@@ -9,7 +9,7 @@ Sunset.Factions = {
         weeklyReportTarget = 20,
         type = 'legal',
         factionType = 'law_enforcement',
-        description = 'Los Santos Police Department — patrol, enforce the law, and protect citizens.',
+        description = 'Los Santos Police Department — patrol, citations, and city-wide law enforcement.',
         society = 'police',
         duty = true,
         hq = vector3(441.15, -981.95, 30.69),
@@ -23,44 +23,73 @@ Sunset.Factions = {
             vehicle = 'police',
             platePrefix = 'LSPD',
         },
-        loadout = {
-            armor = 100,
-            male = {
-                [1] = { drawable = 0, texture = 0 },
-                [3] = { drawable = 0, texture = 0 },
-                [4] = { drawable = 35, texture = 0 },
-                [6] = { drawable = 25, texture = 0 },
-                [8] = { drawable = 58, texture = 0 },
-                [11] = { drawable = 55, texture = 0 },
-            },
-            female = {
-                [1] = { drawable = 0, texture = 0 },
-                [3] = { drawable = 0, texture = 0 },
-                [4] = { drawable = 34, texture = 0 },
-                [6] = { drawable = 25, texture = 0 },
-                [8] = { drawable = 35, texture = 0 },
-                [11] = { drawable = 48, texture = 0 },
-            },
-            weapons = {
-                { weapon = 'WEAPON_NIGHTSTICK', ammo = 0 },
-                { weapon = 'WEAPON_FLASHLIGHT', ammo = 0 },
-                { weapon = 'WEAPON_STUNGUN', ammo = 0 },
-                { weapon = 'WEAPON_COMBATPISTOL', ammo = 90 },
-            },
-            gradeWeapons = {
-                [2] = {
-                    { weapon = 'WEAPON_CARBINERIFLE', ammo = 120 },
-                    { weapon = 'WEAPON_PUMPSHOTGUN', ammo = 24 },
-                },
-            },
+        loadout = Sunset.BuildLawEnforcementLoadout('lspd', 'police'),
+        grades = Sunset.BuildLawEnforcementGrades(1.0),
+    },
+    sheriff = {
+        label = 'San Andreas Sheriff',
+        applicationsOpen = true,
+        weeklyReportTarget = 18,
+        type = 'legal',
+        factionType = 'law_enforcement',
+        robberyDispatch = true,
+        description = 'County sheriff department — robbery response, warrants, and high-risk pursuits.',
+        society = 'sheriff',
+        duty = true,
+        hq = vector3(361.89, -1592.35, 29.29),
+        hqHint = '[E] Sheriff Station — members: toggle duty | robbery priority unit',
+        blip = { sprite = 60, color = 46, scale = 0.9 },
+        marker = { 160, 110, 40 },
+        depot = {
+            label = 'Sheriff Fleet Garage',
+            coords = vector3(372.45, -1607.80, 29.29),
+            spawn = vector4(372.45, -1607.80, 29.29, 230.0),
+            vehicle = 'sheriff',
+            platePrefix = 'SASD',
         },
-        grades = {
-            [0] = { label = 'Cadet', salary = 400, perms = { cuff = true, uncuff = true, escort = true, frisk = true, members = true } },
-            [1] = { label = 'Officer', salary = 550, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, members = true } },
-            [2] = { label = 'Sergeant', salary = 700, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, members = true } },
-            [3] = { label = 'Lieutenant', salary = 900, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, giverank = true, fwarn = true, fmotd = true, members = true } },
-            [4] = { label = 'Chief', salary = 1200, perms = { cuff = true, uncuff = true, escort = true, vehicle_detain = true, frisk = true, fine = true, ticket = true, wanted = true, clear_wanted = true, arrest = true, backup = true, mdc = true, megaphone = true, radar = true, confiscate = true, invite = true, promote = true, giverank = true, uninvite = true, fwarn = true, fmotd = true, members = true } },
+        loadout = Sunset.BuildLawEnforcementLoadout('sheriff', 'sheriff2'),
+        grades = Sunset.BuildLawEnforcementGrades(0.95),
+    },
+    fib = {
+        label = 'FIB',
+        applicationsOpen = true,
+        weeklyReportTarget = 15,
+        type = 'legal',
+        factionType = 'law_enforcement',
+        description = 'Federal Investigation Bureau — investigations, raids, and federal warrants.',
+        society = 'fib',
+        duty = true,
+        hq = vector3(105.52, -745.12, 45.75),
+        hqHint = '[E] FIB HQ — members: toggle duty | federal investigations',
+        blip = { sprite = 60, color = 0, scale = 0.85 },
+        marker = { 20, 20, 20 },
+        depot = {
+            label = 'FIB Motor Pool',
+            coords = vector3(110.20, -736.40, 45.75),
+            spawn = vector4(110.20, -736.40, 45.75, 160.0),
+            vehicle = 'fbi',
+            platePrefix = 'FIB',
         },
+        loadout = Sunset.BuildLawEnforcementLoadout('fib', 'fbi2', {
+            [4] = {
+                { weapon = 'WEAPON_CARBINERIFLE', ammo = 180 },
+                { weapon = 'WEAPON_SMG', ammo = 150 },
+            },
+            [5] = {
+                { weapon = 'WEAPON_CARBINERIFLE', ammo = 210 },
+                { weapon = 'WEAPON_SMG', ammo = 180 },
+            },
+            [6] = {
+                { weapon = 'WEAPON_CARBINERIFLE', ammo = 240 },
+                { weapon = 'WEAPON_SMG', ammo = 210 },
+            },
+            [7] = {
+                { weapon = 'WEAPON_CARBINERIFLE', ammo = 270 },
+                { weapon = 'WEAPON_SMG', ammo = 240 },
+                { weapon = 'WEAPON_PUMPSHOTGUN', ammo = 48 },
+            },
+        }),
+        grades = Sunset.BuildLawEnforcementGrades(1.05),
     },
     medic = {
         label = 'Pillbox EMS',
@@ -82,12 +111,13 @@ Sunset.Factions = {
             vehicle = 'ambulance',
             platePrefix = 'EMS',
         },
-        grades = {
-            [0] = { label = 'Trainee', salary = 350, perms = { stabilize = true } },
-            [1] = { label = 'Paramedic', salary = 500, perms = { stabilize = true, heal = true, revive = true } },
-            [2] = { label = 'Doctor', salary = 650, perms = { stabilize = true, heal = true, revive = true, invite = true } },
-            [3] = { label = 'Surgeon', salary = 800, perms = { stabilize = true, heal = true, revive = true, invite = true } },
-            [4] = { label = 'Chief Medical', salary = 1000, perms = { stabilize = true, heal = true, revive = true, invite = true, promote = true } },
+        grades = Sunset.BuildEmsGrades(),
+        loadout = {
+            armor = 0,
+            gradeOutfits = Sunset.BuildEmsGradeOutfits(),
+            weapons = {
+                { weapon = 'WEAPON_FLASHLIGHT', ammo = 0 },
+            },
         },
     },
     taxi = {
@@ -110,12 +140,9 @@ Sunset.Factions = {
             vehicle = 'taxi',
             platePrefix = 'CAB',
         },
-        grades = {
-            [0] = { label = 'Driver', salary = 180, perms = { fare = true } },
-            [1] = { label = 'Senior Driver', salary = 250, perms = { fare = true } },
-            [2] = { label = 'Dispatcher', salary = 320, perms = { fare = true, invite = true } },
-            [3] = { label = 'Fleet Manager', salary = 400, perms = { fare = true, invite = true, promote = true } },
-        },
+        grades = Sunset.BuildServiceGrades('fare', {
+            'Driver', 'Senior Driver', 'Dispatcher', 'Fleet Specialist', 'Shift Lead', 'Operations Lead', 'Deputy Manager', 'Owner',
+        }, { 180, 250, 320, 400, 480, 560, 640, 750 }),
     },
     mechanic = {
         label = 'LS Customs',
@@ -137,12 +164,9 @@ Sunset.Factions = {
             vehicle = 'towtruck',
             platePrefix = 'LSC',
         },
-        grades = {
-            [0] = { label = 'Apprentice', salary = 220, perms = { repair = true } },
-            [1] = { label = 'Mechanic', salary = 320, perms = { repair = true } },
-            [2] = { label = 'Foreman', salary = 450, perms = { repair = true, invite = true } },
-            [3] = { label = 'Shop Manager', salary = 600, perms = { repair = true, invite = true, promote = true } },
-        },
+        grades = Sunset.BuildServiceGrades('repair', {
+            'Apprentice', 'Mechanic', 'Journeyman', 'Senior Mechanic', 'Foreman', 'Shop Lead', 'Deputy Manager', 'Shop Manager',
+        }, { 220, 320, 400, 480, 560, 640, 720, 800 }),
     },
     lsfd = {
         label = 'LS Fire Department',
@@ -164,12 +188,13 @@ Sunset.Factions = {
             vehicle = 'firetruk',
             platePrefix = 'LSFD',
         },
-        grades = {
-            [0] = { label = 'Probationary', salary = 300, perms = { stabilize = true } },
-            [1] = { label = 'Firefighter', salary = 420, perms = { stabilize = true, heal = true } },
-            [2] = { label = 'Engineer', salary = 550, perms = { stabilize = true, heal = true, revive = true, invite = true } },
-            [3] = { label = 'Captain', salary = 750, perms = { stabilize = true, heal = true, revive = true, invite = true } },
-            [4] = { label = 'Battalion Chief', salary = 950, perms = { stabilize = true, heal = true, revive = true, invite = true, promote = true } },
+        grades = Sunset.BuildFireGrades(),
+        loadout = {
+            armor = 25,
+            gradeOutfits = Sunset.BuildFireGradeOutfits(),
+            weapons = {
+                { weapon = 'WEAPON_FLASHLIGHT', ammo = 0 },
+            },
         },
     },
     sunset_cartel = {
@@ -186,13 +211,7 @@ Sunset.Factions = {
         blip = { sprite = 84, color = 1, scale = 0.8 },
         marker = { 180, 0, 0 },
         stash = vector3(1392.10, 1144.20, 114.33),
-        grades = {
-            [0] = { label = 'Runner', salary = 0, perms = {} },
-            [1] = { label = 'Soldier', salary = 0, perms = { craft_illegal = true, sell = true } },
-            [2] = { label = 'Enforcer', salary = 0, perms = { craft_illegal = true, sell = true, invite = true } },
-            [3] = { label = 'Underboss', salary = 0, perms = { craft_illegal = true, sell = true, invite = true } },
-            [4] = { label = 'Boss', salary = 0, perms = { craft_illegal = true, sell = true, invite = true, promote = true } },
-        },
+        grades = Sunset.BuildCriminalGrades({ craft_illegal = 1, sell = 1 }),
     },
     night_syndicate = {
         label = 'Night Syndicate',
@@ -208,13 +227,7 @@ Sunset.Factions = {
         blip = { sprite = 84, color = 40, scale = 0.8 },
         marker = { 80, 0, 120 },
         stash = vector3(-1517.40, 851.10, 181.59),
-        grades = {
-            [0] = { label = 'Associate', salary = 0, perms = {} },
-            [1] = { label = 'Soldier', salary = 0, perms = { craft_illegal = true, fence = true } },
-            [2] = { label = 'Capo', salary = 0, perms = { craft_illegal = true, fence = true, invite = true } },
-            [3] = { label = 'Consigliere', salary = 0, perms = { craft_illegal = true, fence = true, invite = true } },
-            [4] = { label = 'Don', salary = 0, perms = { craft_illegal = true, fence = true, invite = true, promote = true } },
-        },
+        grades = Sunset.BuildCriminalGrades({ craft_illegal = 1, fence = 1 }),
     },
 }
 
@@ -286,14 +299,14 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }
         list[#list + 1] = { cmd = '/so [id]', desc = 'Summon nearby suspect' }
         list[#list + 1] = { cmd = '/wanted', desc = 'List active wanted players' }
-        list[#list + 1] = { cmd = '/find [id]', desc = 'Set GPS on a wanted player' }
+        list[#list + 1] = { cmd = '/find [id]', desc = 'Set GPS on a wanted player (limited ranks: up to ★2)' }
         if Sunset.HasFactionPerm(jobId, grade, 'cuff') then
             list[#list + 1] = { cmd = '/cuff [id]', desc = 'Restrain a nearby suspect' }
         end
         if Sunset.HasFactionPerm(jobId, grade, 'uncuff') then
             list[#list + 1] = { cmd = '/uncuff [id]', desc = 'Remove a nearby suspect’s restraints' }
         end
-        if Sunset.HasFactionPerm(jobId, grade, 'wanted') then
+        if Sunset.HasFactionPerm(jobId, grade, 'wanted') or Sunset.HasFactionPerm(jobId, grade, 'wanted_limited') then
             list[#list + 1] = { cmd = '/su [id] [reason]', desc = 'Add a persisted wanted charge' }
         end
         if Sunset.HasFactionPerm(jobId, grade, 'arrest') then

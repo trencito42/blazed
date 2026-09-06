@@ -1,6 +1,8 @@
 RobberyPolice = {}
 
-local function eachPoliceMember(fn)
+local function collectLawEnforcement()
+    local priority = {}
+    local regular = {}
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         local char = RobberyAdapter.getCharacter(src)
@@ -8,9 +10,15 @@ local function eachPoliceMember(fn)
         local onDuty = false
         pcall(function() onDuty = exports.sunset_factions:IsOnDuty(src) == true end)
         if onDuty and factionId and Sunset.FactionTypeMatches(factionId, 'law_enforcement') then
-            fn(src)
+            local faction = Sunset.Factions[factionId]
+            if faction and faction.robberyDispatch then
+                priority[#priority + 1] = src
+            else
+                regular[#regular + 1] = src
+            end
         end
     end
+    return priority, regular
 end
 
 function RobberyPolice.alert(session, stage)
@@ -39,12 +47,14 @@ function RobberyPolice.alert(session, stage)
         vehicle = ('%s — %s near %s.'):format(title, session.policeSnapshot.vehicle, loc.street),
     }
     local text = lines[stage] or lines.first
-    eachPoliceMember(function(src)
-        RobberyAdapter.notify(src, text, 'warning', 9000)
+
+    local function notifyOfficer(src, priority)
+        local dispatchText = priority and ('[PRIORITY] %s'):format(text) or text
+        RobberyAdapter.notify(src, dispatchText, 'warning', 9000)
         TriggerClientEvent('sunset:chat:message', src, {
             id = 0,
-            name = '[DISPATCH]',
-            message = text,
+            name = priority and '[ROBBERY DISPATCH]' or '[DISPATCH]',
+            message = dispatchText,
             time = os.date('%H:%M'),
             type = 'police_alert',
         })
@@ -52,10 +62,15 @@ function RobberyPolice.alert(session, stage)
             TriggerClientEvent('sunset:robbery:policePing', src, {
                 x = loc.coords.x, y = loc.coords.y, z = loc.coords.z,
                 label = loc.label,
-                radius = 55.0,
+                radius = priority and 65.0 or 55.0,
             })
         end
-    end)
+    end
+
+    local priority, regular = collectLawEnforcement()
+    for _, src in ipairs(priority) do notifyOfficer(src, true) end
+    for _, src in ipairs(regular) do notifyOfficer(src, false) end
+
     if stage == 'first' and GetResourceState('sunset_dispatch') == 'started' then
         pcall(function()
             exports.sunset_dispatch:CreateServiceCall(session.source, 'police_backup', loc.coords, {

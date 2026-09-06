@@ -32,7 +32,7 @@ function ApplyFactionLoadout(factionId, grade)
     removeDutyWeapons(ped)
 
     local gender = char.gender or 0
-    local clothes = (gender == 1 and loadout.female) or loadout.male
+    local clothes = Sunset.ResolveFactionOutfit(loadout, grade, gender)
     if clothes then
         for slot, row in pairs(clothes) do
             SetPedComponentVariation(ped, tonumber(slot), row.drawable or 0, row.texture or 0, 0)

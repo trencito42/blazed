@@ -13,6 +13,8 @@ shared_scripts {
     'shared/jobs_config.lua',
     'shared/profile.lua',
     'shared/faction_core.lua',
+    'shared/faction_grades.lua',
+    'shared/faction_outfits.lua',
     'shared/dispatch.lua',
     'shared/job_session.lua',
     'shared/factions.lua',

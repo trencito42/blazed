@@ -193,8 +193,26 @@ function Police.clearJailFromDb(characterId)
     )
 end
 
+local LIMITED_WANTED_MAX = 2
+
+local function hasFullWantedPerm(source)
+    return FactionCore.hasPerm(source, 'wanted')
+end
+
+local function hasLimitedWantedPerm(source)
+    return FactionCore.hasPerm(source, 'wanted_limited')
+end
+
+local function canIssueWanted(source)
+    return hasFullWantedPerm(source) or hasLimitedWantedPerm(source)
+end
+
+local function wantedCapFor(source)
+    if hasFullWantedPerm(source) then return 5 end
+    return LIMITED_WANTED_MAX
+end
+
 local function applyWanted(source, data)
-    if data.decayAt then
         data.decayRemaining = math.max(1, data.decayAt - os.time())
     end
     data.characterId = data.characterId or charId(source)
@@ -209,10 +227,10 @@ local function applyWanted(source, data)
     syncWantedClient(source, data.level, data.reason)
 end
 
-local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issuedBy, silent, surrenderable)
+local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issuedBy, silent, surrenderable, maxLevel)
     local previous = WantedOnline[targetId]
     local addedLevel = math.max(1, tonumber(level) or 1)
-    level = math.max(1, math.min(5, (previous and previous.level or 0) + addedLevel))
+    level = math.max(1, math.min(maxLevel or 5, (previous and previous.level or 0) + addedLevel))
     local combinedReason = reason or 'Unknown'
     if previous and previous.reason and previous.reason ~= '' then
         combinedReason = previous.reason .. '; ' .. combinedReason
@@ -489,7 +507,7 @@ function Police.hydratePlayer(source, characterId)
 end
 
 exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, targetId, reasonCode)
-    if not FactionCore.hasPerm(source, 'wanted') then
+    if not canIssueWanted(source) then
         return nil, FactionCore.accessError(source, 'wanted', 'add a wanted charge', 'law_enforcement')
     end
 
@@ -509,8 +527,16 @@ exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, 
         return nil, ('Invalid reason. Use: %s'):format(table.concat(codes, ', '))
     end
 
+    local maxLevel = wantedCapFor(source)
+    local previous = WantedOnline[targetId]
+    local currentLevel = previous and previous.level or 0
+    local projected = math.min(maxLevel, currentLevel + reasonRow.stars)
+    if projected <= currentLevel and not hasFullWantedPerm(source) then
+        return nil, ('Your rank can only raise suspects up to ★%d wanted. Request supervisory backup for higher charges.'):format(LIMITED_WANTED_MAX)
+    end
+
     local wanted = setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes,
-        charId(source), false, reasonRow.surrenderable ~= false)
+        charId(source), false, reasonRow.surrenderable ~= false, maxLevel)
 
     notify(targetId, ('New charge: %s (+★%d). Total wanted: ★%d — %s. One star expires per 15 minutes online.'):format(
         reasonRow.label, reasonRow.stars, wanted.level,
@@ -589,7 +615,9 @@ exports.sunset_core:RegisterCallback('sunset:policeWantedList', function(source)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeFindWanted', function(source, targetId)
-    if not FactionCore.isLawEnforcement(source) then
+    if not FactionCore.hasPerm(source, 'mdc')
+        and not FactionCore.hasPerm(source, 'wanted')
+        and not FactionCore.hasPerm(source, 'wanted_limited') then
         return nil, FactionCore.accessError(source, 'mdc', 'track wanted suspects', 'law_enforcement')
     end
     targetId = tonumber(targetId)

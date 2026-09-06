@@ -16,7 +16,9 @@ Sunset.FactionCapabilities = {
     cuff = 'law_enforcement',
     uncuff = 'law_enforcement',
     fine = 'law_enforcement',
+    ticket = 'law_enforcement',
     wanted = 'law_enforcement',
+    wanted_limited = 'law_enforcement',
     arrest = 'law_enforcement',
     frisk = 'law_enforcement',
     escort = 'law_enforcement',
@@ -92,6 +94,12 @@ end
 function Sunset.IsGovernmentFaction(factionId)
     return Sunset.FactionTypeMatches(factionId, 'government')
         or Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+end
+
+function Sunset.IsEmergencyDepartment(factionId)
+    return Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+        or Sunset.FactionTypeMatches(factionId, 'ems')
+        or Sunset.FactionTypeMatches(factionId, 'fire_rescue')
 end
 
 function Sunset.GetGovernmentFactions()

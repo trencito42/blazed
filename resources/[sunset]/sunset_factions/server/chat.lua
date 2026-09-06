@@ -3,7 +3,7 @@ local MEGAPHONE_RANGE = 35.0
 
 local function isGovEligible(source, char)
     local factionId = char and select(1, FactionCore.getFactionOf(char))
-    if not factionId or not Sunset.IsLegalFaction(factionId) then return false end
+    if not factionId or not Sunset.IsEmergencyDepartment(factionId) then return false end
     return FactionCore.isOnDuty(source)
 end
 
