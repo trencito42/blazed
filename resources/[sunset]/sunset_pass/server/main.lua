@@ -29,6 +29,10 @@ local function getPlayer(source)
     return exports.sunset_core:GetPlayer(source)
 end
 
+local function setPremiumPoints(source, value)
+    return exports.sunset_core:SetPersistentStat(source, 'account', 'premium_points', value)
+end
+
 local function maxTier()
     return #(SunsetPass.Tiers or {})
 end
@@ -117,7 +121,7 @@ local function grantReward(source, reward)
         local amount = math.floor(tonumber(reward.amount) or 0)
         if amount <= 0 then return false, 'Invalid coin amount.' end
         local nextValue = (tonumber(player.premium_points) or 0) + amount
-        local ok, err = Sunset.SetPersistentStat(source, 'account', 'premium_points', nextValue)
+        local ok, err = setPremiumPoints(source, nextValue)
         if not ok then return false, err or 'Could not add Sunset Coins.' end
         return true
     end
@@ -312,7 +316,7 @@ exports.sunset_core:RegisterCallback('sunset:pass:buyPremium', function(source)
             return nil, ('You need %d Sunset Coins (you have %d).'):format(cost, balance)
         end
 
-        local ok, err = Sunset.SetPersistentStat(source, 'account', 'premium_points', balance - cost)
+        local ok, err = setPremiumPoints(source, balance - cost)
         if not ok then return nil, err or 'Payment failed.' end
 
         saveRow(char.id, tonumber(row.xp) or 0, true, decodeJson(row.claimed), decodeJson(row.mission_progress))
