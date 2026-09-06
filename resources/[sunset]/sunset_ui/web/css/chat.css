@@ -181,15 +181,15 @@ body.chat-ui-open .chat-msg,
     font-weight: 600;
 }
 
-/* Radio — fixed pink tone (B-Zone style) */
+/* Faction radio — per-faction colors */
 .chat-msg--r {
-    color: #f0a0a8;
+    color: #ffc27a;
     font-weight: 600;
 }
 
-/* Department — faction colors */
+/* Department — fixed pink (B-Zone style inter-agency) */
 .chat-msg--d {
-    color: #ffc27a;
+    color: #f0a0a8;
     font-weight: 600;
 }
 
@@ -205,51 +205,51 @@ body.chat-ui-open .chat-msg,
     font-weight: 600;
 }
 
-/* Per-faction colors (department + faction chat) */
+/* Per-faction colors (faction radio + faction chat) */
 .chat-msg--faction-police.chat-msg--f,
-.chat-msg--faction-police.chat-msg--d,
+.chat-msg--faction-police.chat-msg--r,
 .chat-msg--faction-police.chat-msg--gov,
 .chat-msg--faction-police.chat-msg--faction_action {
     color: #8ec8ff;
 }
 
 .chat-msg--faction-medic.chat-msg--f,
-.chat-msg--faction-medic.chat-msg--d,
+.chat-msg--faction-medic.chat-msg--r,
 .chat-msg--faction-medic.chat-msg--gov,
 .chat-msg--faction-medic.chat-msg--faction_action {
     color: #ff9a9a;
 }
 
 .chat-msg--faction-lsfd.chat-msg--f,
-.chat-msg--faction-lsfd.chat-msg--d,
+.chat-msg--faction-lsfd.chat-msg--r,
 .chat-msg--faction-lsfd.chat-msg--gov,
 .chat-msg--faction-lsfd.chat-msg--faction_action {
     color: #ff9b6a;
 }
 
 .chat-msg--faction-taxi.chat-msg--f,
-.chat-msg--faction-taxi.chat-msg--d,
+.chat-msg--faction-taxi.chat-msg--r,
 .chat-msg--faction-taxi.chat-msg--gov,
 .chat-msg--faction-taxi.chat-msg--faction_action {
     color: #ffe566;
 }
 
 .chat-msg--faction-mechanic.chat-msg--f,
-.chat-msg--faction-mechanic.chat-msg--d,
+.chat-msg--faction-mechanic.chat-msg--r,
 .chat-msg--faction-mechanic.chat-msg--gov,
 .chat-msg--faction-mechanic.chat-msg--faction_action {
     color: #ffbf66;
 }
 
 .chat-msg--faction-sunset_cartel.chat-msg--f,
-.chat-msg--faction-sunset_cartel.chat-msg--d,
+.chat-msg--faction-sunset_cartel.chat-msg--r,
 .chat-msg--faction-sunset_cartel.chat-msg--gov,
 .chat-msg--faction-sunset_cartel.chat-msg--faction_action {
     color: #d8b4fe;
 }
 
 .chat-msg--faction-night_syndicate.chat-msg--f,
-.chat-msg--faction-night_syndicate.chat-msg--d,
+.chat-msg--faction-night_syndicate.chat-msg--r,
 .chat-msg--faction-night_syndicate.chat-msg--gov,
 .chat-msg--faction-night_syndicate.chat-msg--faction_action {
     color: #c4b5fd;
