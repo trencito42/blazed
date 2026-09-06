@@ -349,7 +349,7 @@ const Panels = {
                 li.innerHTML = `
                     <div>
                         <strong>#${row.id} ${row.name || 'Unknown'}</strong>
-                        <div class="mdc-time">${row.reason || '—'} · ${mins}m left</div>
+                        <div class="mdc-time">${row.reason || '—'} · ${row.surrenderable === false ? 'NO SURRENDER' : 'SURRENDER ALLOWED'} · ${mins}m to next star</div>
                     </div>
                     <span class="mdc-stars">★${row.level || 1}</span>`;
                 list.appendChild(li);

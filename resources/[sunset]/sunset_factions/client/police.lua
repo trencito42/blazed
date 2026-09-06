@@ -312,7 +312,9 @@ RegisterCommand('su', function(_, args)
         chatLine('LSPD', '=== Set Wanted (/su [id] [reason]) ===')
         if reasons then
             for _, row in ipairs(reasons) do
-                chatLine('LSPD', ('%s — %s (★%d, %d min)'):format(row.code, row.label, row.stars, row.jailMinutes))
+                chatLine('LSPD', ('%s — %s (★%d, %d min if arrested, %s)'):format(
+                    row.code, row.label, row.stars, row.jailMinutes,
+                    row.surrenderable == false and 'NO SURRENDER' or 'surrender allowed'))
             end
         else
             actionError(err, 'Cannot view wanted reasons: go on duty as law enforcement first.')
@@ -377,8 +379,9 @@ RegisterCommand('wanted', function()
     for _, row in ipairs(list) do
         local mins = math.ceil((row.remainingSec or 0) / 60)
         local status = row.online and ('#' .. tostring(row.id)) or ('CID ' .. tostring(row.characterId) .. ' [offline]')
-        chatLine('LSPD', ('%s %s — ★%d %s (%d min left)'):format(
-            status, row.name or 'Unknown', row.level, row.reason or '—', mins))
+        chatLine('LSPD', ('%s %s — ★%d %s — %s (%d min to next star)'):format(
+            status, row.name or 'Unknown', row.level, row.reason or '—',
+            row.surrenderable == false and 'NO SURRENDER' or 'surrender allowed', mins))
     end
 end, false)
 

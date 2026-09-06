@@ -52,7 +52,7 @@ const Hud = {
         wantedEl.classList.toggle('hidden', wanted <= 0);
         const levelEl = $('#hud-wanted-level');
         if (levelEl) {
-            levelEl.textContent = '★'.repeat(Math.min(wanted, 6));
+            levelEl.textContent = '★'.repeat(Math.min(wanted, 5));
             levelEl.setAttribute('aria-label', `Wanted level ${wanted}`);
         }
 

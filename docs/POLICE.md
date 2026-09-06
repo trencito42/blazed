@@ -33,9 +33,16 @@ All enforcement actions validate **proximity** and **law_enforcement capability*
 
 ## Wanted & Arrest
 
+- Wanted is capped at five GTA V stars.
+- One star expires after 15 minutes actually played online. Disconnecting pauses the current star timer.
+- Every active record stores its level, reason, right-to-surrender state and time remaining to the next star reduction.
+- Robbery and murder issue ★5 with no right to surrender. A no-surrender suspect or a wanted suspect downed near an on-duty officer receives the severe sentence table.
+- Arrest sentences by star: 4, 8, 10, 14, 18 minutes.
+- No-surrender/death sentences by star: 8m20s, 16m40s, 25m, 33m20s, 50m.
+
 | Command | Description |
 |---------|-------------|
-| `/su [id] [reason]` | Add a wanted charge (type `/su` for reason codes); stars and jail time accumulate up to configured caps — **persisted** |
+| `/su [id] [reason]` | Add a wanted charge; level, reason, surrender right and online-only decay are **persisted** |
 | `/so [id]` | Summon suspect (range check), target overlay, and visible nearby `POLICE ALERT` chat line |
 | `/wanted` | Chat list of active wanted (online + offline DB records) |
 | `/clear [id]` | Clear wanted (Sergeant+) — **persisted** |
@@ -89,7 +96,7 @@ Reason codes: `speeding`, `reckless`, `assault`, `robbery`, `evading`, `murder`
 
 | Bag | Scope | Purpose |
 |-----|-------|---------|
-| `sunsetWanted` | Player | `{ level, reason, reasonCode, decayAt }` |
+| `sunsetWanted` | Player | `{ level, reason, reasonCode, decayAt, surrenderable }` |
 | `sunsetJailed` | Player | `{ releaseAt, minutes }` |
 | `sunsetDetention` | Player | `FREE` / `COMPLIANT` / `CUFFED` / `ESCORTED` / `IN_VEHICLE` / `JAILED` |
 | `sunsetCuffed` | Player | boolean |

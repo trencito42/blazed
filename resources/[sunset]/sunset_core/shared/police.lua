@@ -13,12 +13,24 @@ Sunset.Police = {
         { label = 'Bolingbroke Reception — front processing gate', coords = vector3(1845.91, 2585.84, 45.67) },
     },
 
-    decayMinutes = {
-        [1] = 15,
-        [2] = 25,
-        [3] = 40,
-        [4] = 55,
-        [5] = 75,
+    wantedStarSeconds = 15 * 60,
+
+    -- GTA V has five stars, so the SA:MP six-star scale is compressed while
+    -- preserving the severe maximum sentence at ★5.
+    arrestJailSeconds = {
+        [1] = 4 * 60,
+        [2] = 8 * 60,
+        [3] = 10 * 60,
+        [4] = 14 * 60,
+        [5] = 18 * 60,
+    },
+
+    noSurrenderJailSeconds = {
+        [1] = 8 * 60 + 20,
+        [2] = 16 * 60 + 40,
+        [3] = 25 * 60,
+        [4] = 33 * 60 + 20,
+        [5] = 50 * 60,
     },
 
     bounties = {
@@ -30,12 +42,12 @@ Sunset.Police = {
     },
 
     reasons = {
-        speeding = { label = 'Speeding', stars = 1, jailMinutes = 2 },
-        reckless = { label = 'Reckless Driving', stars = 2, jailMinutes = 4 },
-        assault = { label = 'Assault', stars = 2, jailMinutes = 5 },
-        robbery = { label = 'Robbery', stars = 3, jailMinutes = 10 },
-        evading = { label = 'Evading Police', stars = 3, jailMinutes = 8 },
-        murder = { label = 'Murder', stars = 5, jailMinutes = 20 },
+        speeding = { label = 'Speeding', stars = 1, surrenderable = true },
+        reckless = { label = 'Reckless Driving', stars = 2, surrenderable = true },
+        assault = { label = 'Assault', stars = 2, surrenderable = true },
+        robbery = { label = 'Robbery', stars = 5, surrenderable = false },
+        evading = { label = 'Runner / Evading Police', stars = 5, surrenderable = false },
+        murder = { label = 'Murder', stars = 5, surrenderable = false },
     },
 
     violations = {

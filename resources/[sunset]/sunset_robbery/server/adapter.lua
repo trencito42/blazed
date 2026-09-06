@@ -256,8 +256,8 @@ function RobberyAdapter.issueWanted(source, reasonCode, silent)
     end)
     if ok and wanted then
         local message = silent
-            and ('You are wanted ★%d for robbery. The charge is recorded; the security alert is still tracing.'):format(wanted.level)
-            or ('You are wanted ★%d for robbery. LSPD was alerted — this stays until they clear you.'):format(wanted.level)
+            and ('You are wanted ★%d for robbery with no right to surrender. One star expires every 15 minutes online.'):format(wanted.level)
+            or ('You are wanted ★%d for robbery with no right to surrender. LSPD was alerted; one star expires every 15 minutes online.'):format(wanted.level)
         RobberyAdapter.notify(source, message, 'error', 9000)
     end
 end

@@ -5,6 +5,24 @@ local JailedOnline = {}
 local RadarSessions = {}
 local DeathCapturePending = {}
 
+local function wantedStarSeconds()
+    return math.max(60, math.floor(tonumber(Sunset.Police and Sunset.Police.wantedStarSeconds) or 900))
+end
+
+local function jailSecondsFor(level, surrenderable, deathCapture)
+    level = math.max(1, math.min(5, math.floor(tonumber(level) or 1)))
+    local tableName = (deathCapture or surrenderable == false) and 'noSurrenderJailSeconds' or 'arrestJailSeconds'
+    local durations = Sunset.Police and Sunset.Police[tableName] or {}
+    return math.max(60, math.floor(tonumber(durations[level]) or level * 4 * 60))
+end
+
+local function formatDuration(seconds)
+    seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+    local minutes = math.floor(seconds / 60)
+    local remaining = seconds % 60
+    return remaining > 0 and ('%dm %02ds'):format(minutes, remaining) or ('%d min'):format(minutes)
+end
+
 local function notify(source, msg, typ, duration)
     FactionCore.notify(source, msg, typ or 'info', duration)
 end
@@ -44,10 +62,9 @@ end
 function Police.loadWantedFromDb(characterId)
     local row = MySQL.single.await([[
         SELECT id, character_id, level, reason_code, reason_label, jail_minutes,
-               UNIX_TIMESTAMP(expires_at) AS expires_at
+               surrenderable, decay_remaining_seconds
         FROM wanted_records
         WHERE character_id = ? AND active = 1
-          AND (expires_at IS NULL OR expires_at > NOW())
         ORDER BY id DESC LIMIT 1
     ]], { characterId })
     if not row then return nil end
@@ -56,7 +73,8 @@ function Police.loadWantedFromDb(characterId)
         reason = row.reason_label,
         reasonCode = row.reason_code,
         jailMinutes = row.jail_minutes,
-        decayAt = row.expires_at,
+        surrenderable = tonumber(row.surrenderable) ~= 0,
+        decayRemaining = math.max(1, tonumber(row.decay_remaining_seconds) or wantedStarSeconds()),
         recordId = row.id,
         characterId = row.character_id,
     }
@@ -69,8 +87,9 @@ function Police.saveWantedToDb(characterId, data, issuedBy)
     )
     MySQL.insert.await([[
         INSERT INTO wanted_records
-            (character_id, level, reason_code, reason_label, issued_by_character_id, jail_minutes, active, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, 1, FROM_UNIXTIME(?))
+            (character_id, level, reason_code, reason_label, issued_by_character_id, jail_minutes,
+             surrenderable, decay_remaining_seconds, active, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, FROM_UNIXTIME(?))
     ]], {
         characterId,
         data.level,
@@ -78,6 +97,8 @@ function Police.saveWantedToDb(characterId, data, issuedBy)
         data.reason,
         issuedBy,
         data.jailMinutes,
+        data.surrenderable == false and 0 or 1,
+        math.max(1, math.floor(tonumber(data.decayRemaining) or wantedStarSeconds())),
         data.decayAt,
     })
 end
@@ -99,16 +120,16 @@ function Police.loadJailFromDb(characterId)
     ]], { characterId })
 end
 
-function Police.saveJailToDb(characterId, releaseAt, minutes, reason, officerCharId)
+function Police.saveJailToDb(characterId, releaseAt, seconds, reason, officerCharId)
     MySQL.update.await(
         "UPDATE jail_sentences SET status = 'served', released_at = NOW() WHERE character_id = ? AND status = 'active'",
         { characterId }
     )
     MySQL.insert.await([[
         INSERT INTO jail_sentences
-            (character_id, officer_character_id, reason, duration_minutes, started_at, ends_at, status)
-        VALUES (?, ?, ?, ?, NOW(), FROM_UNIXTIME(?), 'active')
-    ]], { characterId, officerCharId, reason or '', minutes, releaseAt })
+            (character_id, officer_character_id, reason, duration_minutes, duration_seconds, started_at, ends_at, status)
+        VALUES (?, ?, ?, ?, ?, NOW(), FROM_UNIXTIME(?), 'active')
+    ]], { characterId, officerCharId, reason or '', math.ceil(seconds / 60), seconds, releaseAt })
 end
 
 function Police.clearJailFromDb(characterId)
@@ -119,17 +140,22 @@ function Police.clearJailFromDb(characterId)
 end
 
 local function applyWanted(source, data)
+    if data.decayAt then
+        data.decayRemaining = math.max(1, data.decayAt - os.time())
+    end
+    data.characterId = data.characterId or charId(source)
     WantedOnline[source] = data
     syncWantedBag(source, {
         level = data.level,
         reason = data.reason,
         reasonCode = data.reasonCode,
         decayAt = data.decayAt,
+        surrenderable = data.surrenderable ~= false,
     })
     syncWantedClient(source, data.level, data.reason)
 end
 
-local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issuedBy, silent)
+local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issuedBy, silent, surrenderable)
     local previous = WantedOnline[targetId]
     local addedLevel = math.max(1, tonumber(level) or 1)
     level = math.max(1, math.min(5, (previous and previous.level or 0) + addedLevel))
@@ -138,14 +164,17 @@ local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issue
         combinedReason = previous.reason .. '; ' .. combinedReason
         if #combinedReason > 128 then combinedReason = combinedReason:sub(-128) end
     end
-    local persist = reasonCode == 'robbery' or (previous and previous.decayAt == nil)
-    local decayMin = (Sunset.Police and Sunset.Police.decayMinutes[level]) or 15
+    local canSurrender = surrenderable ~= false
+    if previous and previous.surrenderable == false then canSurrender = false end
+    local decaySeconds = wantedStarSeconds()
     local data = {
         level = level,
         reason = combinedReason,
         reasonCode = reasonCode or '',
-        jailMinutes = math.min(60, (previous and previous.jailMinutes or 0) + (jailMinutes or 2)),
-        decayAt = persist and nil or (os.time() + decayMin * 60),
+        jailMinutes = math.ceil(jailSecondsFor(level, canSurrender, false) / 60),
+        surrenderable = canSurrender,
+        decayRemaining = decaySeconds,
+        decayAt = os.time() + decaySeconds,
     }
 
     local cid = charId(targetId)
@@ -158,7 +187,8 @@ local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issue
         name = exports.sunset_core:GetPlayerDisplayName(targetId) or name
     end)
     if not silent then
-        broadcastToPolice('WANTED', ('%s (#%d) is now wanted ★%d — %s'):format(name, targetId, data.level, data.reason))
+        broadcastToPolice('WANTED', ('%s (#%d) is now wanted ★%d — %s — %s'):format(
+            name, targetId, data.level, data.reason, data.surrenderable and 'RIGHT TO SURRENDER' or 'NO RIGHT TO SURRENDER'))
     end
     return data
 end
@@ -170,7 +200,11 @@ function AddWantedCharge(targetId, reasonCode, issuedBy, options)
     local reasonRow = Sunset.GetPoliceReason(reasonCode)
     if not reasonRow then return nil, 'Unknown wanted reason' end
     local silent = type(options) == 'table' and options.silent == true
-    return setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes, issuedBy, silent)
+    local surrenderable = reasonRow.surrenderable ~= false
+    if type(options) == 'table' and options.surrenderable ~= nil then
+        surrenderable = options.surrenderable == true
+    end
+    return setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes, issuedBy, silent, surrenderable)
 end
 exports('AddWantedCharge', AddWantedCharge)
 
@@ -191,17 +225,18 @@ function Police.isJailed(source)
     return JailedOnline[source] ~= nil
 end
 
-local function beginJail(targetId, minutes, reason, officerSource)
-    minutes = math.max(1, tonumber(minutes) or 2)
-    local releaseAt = os.time() + minutes * 60
+local function beginJail(targetId, seconds, reason, officerSource)
+    seconds = math.max(60, math.floor(tonumber(seconds) or 120))
+    local minutes = math.ceil(seconds / 60)
+    local releaseAt = os.time() + seconds
     local targetCharId = charId(targetId)
     local officerCharId = officerSource and charId(officerSource)
 
     if targetCharId then
-        Police.saveJailToDb(targetCharId, releaseAt, minutes, reason, officerCharId)
+        Police.saveJailToDb(targetCharId, releaseAt, seconds, reason, officerCharId)
     end
 
-    JailedOnline[targetId] = { releaseAt = releaseAt, minutes = minutes, reason = reason }
+    JailedOnline[targetId] = { releaseAt = releaseAt, minutes = minutes, seconds = seconds, reason = reason }
     syncJailBag(targetId, { releaseAt = releaseAt, minutes = minutes })
 
     if Detention then
@@ -259,7 +294,7 @@ local function captureWantedAfterDeath(targetId)
     if not officer then return false end
 
     DeathCapturePending[targetId] = true
-    local minutes = math.max(1, tonumber(wanted.jailMinutes) or 2)
+    local sentenceSeconds = jailSecondsFor(wanted.level, wanted.surrenderable, true)
     local reason = wanted.reason or 'Active wanted status'
     local level = math.max(1, tonumber(wanted.level) or 1)
 
@@ -273,20 +308,20 @@ local function captureWantedAfterDeath(targetId)
     end
 
     clearWanted(targetId, charId(officer))
-    beginJail(targetId, minutes, reason, officer)
+    beginJail(targetId, sentenceSeconds, reason, officer)
     DeathCapturePending[targetId] = nil
 
     local suspectName = exports.sunset_core:GetPlayerDisplayName(targetId)
     local officerName = exports.sunset_core:GetPlayerDisplayName(officer)
-    notify(targetId, ('You died while wanted near law enforcement — jailed for %d minutes (former wanted ★%d).'):format(
-        minutes, level), 'error', 10000)
+    notify(targetId, ('You died while wanted near law enforcement — jailed for %s (former wanted ★%d, no-surrender sentence).'):format(
+        formatDuration(sentenceSeconds), level), 'error', 10000)
     notify(officer, ('Wanted suspect %s (#%d) was taken into custody after being downed nearby.'):format(
         suspectName, targetId), 'success', 8000)
-    broadcastToPolice('SUSPECT IN CUSTODY', ('%s (#%d) was downed near %s (#%d) and jailed for %d minutes: %s.'):format(
-        suspectName, targetId, officerName, officer, minutes, reason))
+    broadcastToPolice('SUSPECT IN CUSTODY', ('%s (#%d) was downed near %s (#%d) and jailed for %s: %s.'):format(
+        suspectName, targetId, officerName, officer, formatDuration(sentenceSeconds), reason))
     FactionCore.auditLog('police', charId(officer), 'wanted_death_capture', charId(targetId), {
         wantedLevel = level,
-        jailMinutes = minutes,
+        jailSeconds = sentenceSeconds,
         distance = math.floor((distance or 0.0) * 10 + 0.5) / 10,
         reason = reason,
     })
@@ -331,11 +366,11 @@ local function buildWantedListRows()
     local now = os.time()
     local rows = MySQL.query.await([[
         SELECT wr.character_id, wr.level, wr.reason_label AS reason, wr.reason_code, wr.jail_minutes,
-               UNIX_TIMESTAMP(wr.expires_at) AS decay_at,
+               wr.surrenderable, wr.decay_remaining_seconds,
                c.firstname, c.lastname
         FROM wanted_records wr
         INNER JOIN characters c ON c.id = wr.character_id
-        WHERE wr.active = 1 AND (wr.expires_at IS NULL OR wr.expires_at > NOW())
+        WHERE wr.active = 1
         ORDER BY wr.level DESC
     ]]) or {}
 
@@ -349,7 +384,11 @@ local function buildWantedListRows()
     local list = {}
     for _, row in ipairs(rows) do
         local src = onlineByChar[row.character_id]
-        local remaining = math.max(0, (row.decay_at or now) - now)
+        local onlineState = src and WantedOnline[src]
+        local remaining = onlineState and math.max(0, (onlineState.decayAt or now) - now)
+            or math.max(0, tonumber(row.decay_remaining_seconds) or wantedStarSeconds())
+        local surrenderable = tonumber(row.surrenderable) ~= 0
+        if onlineState then surrenderable = onlineState.surrenderable ~= false end
         list[#list + 1] = {
             id = src,
             characterId = row.character_id,
@@ -358,6 +397,7 @@ local function buildWantedListRows()
             reason = row.reason,
             reasonCode = row.reason_code,
             remainingSec = remaining,
+            surrenderable = surrenderable,
             online = src ~= nil,
         }
     end
@@ -385,13 +425,8 @@ function Police.hydratePlayer(source, characterId)
 
     local wanted = Police.loadWantedFromDb(characterId)
     if wanted then
-        if wanted.decayAt and wanted.decayAt <= os.time() then
-            Police.deleteWantedFromDb(characterId, nil)
-            syncWantedBag(source, nil)
-            syncWantedClient(source, 0, '')
-        else
-            applyWanted(source, wanted)
-        end
+        wanted.decayAt = os.time() + math.max(1, wanted.decayRemaining or wantedStarSeconds())
+        applyWanted(source, wanted)
     else
         syncWantedBag(source, nil)
         syncWantedClient(source, 0, '')
@@ -420,11 +455,14 @@ exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, 
         return nil, ('Invalid reason. Use: %s'):format(table.concat(codes, ', '))
     end
 
-    local wanted = setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes, charId(source))
+    local wanted = setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes,
+        charId(source), false, reasonRow.surrenderable ~= false)
 
-    notify(targetId, ('New charge: %s (+★%d). Total wanted: ★%d.'):format(
-        reasonRow.label, reasonRow.stars, wanted.level), 'error', 8000)
-    notify(source, ('Wanted charge added to #%d — now ★%d'):format(targetId, wanted.level), 'success')
+    notify(targetId, ('New charge: %s (+★%d). Total wanted: ★%d — %s. One star expires per 15 minutes online.'):format(
+        reasonRow.label, reasonRow.stars, wanted.level,
+        wanted.surrenderable and 'you may surrender' or 'no right to surrender'), 'error', 10000)
+    notify(source, ('Wanted charge added to #%d — now ★%d, %s'):format(
+        targetId, wanted.level, wanted.surrenderable and 'surrender allowed' or 'no surrender'), 'success')
     return true
 end)
 
@@ -528,19 +566,23 @@ exports.sunset_core:RegisterCallback('sunset:policeArrest', function(source, tar
 
     local w = WantedOnline[targetId]
     local level = w and w.level or 1
-    local minutes = w and w.jailMinutes or 2
+    local surrenderable = not w or w.surrenderable ~= false
+    local sentenceSeconds = jailSecondsFor(level, surrenderable, false)
     local reason = w and w.reason or 'Arrest'
     local bounty = (Sunset.Police and Sunset.Police.bounties[level]) or 100
 
     clearWanted(targetId, charId(source))
-    beginJail(targetId, minutes, reason, source)
+    beginJail(targetId, sentenceSeconds, reason, source)
 
     exports.sunset_core:AddMoney(source, 'bank', bounty, 'arrest_bounty')
-    notify(source, ('Suspect arrested — %d min jail, $%s bounty'):format(minutes, bounty), 'success')
-    notify(targetId, ('You have been arrested — %d minutes'):format(minutes), 'error', 8000)
-    broadcastToPolice('ARREST', ('%s (#%d) arrested %s (#%d): %s, %d minutes.'):format(
+    notify(source, ('Suspect arrested — %s jail (%s), $%s bounty'):format(
+        formatDuration(sentenceSeconds), surrenderable and 'surrender sentence' or 'no-surrender sentence', bounty), 'success')
+    notify(targetId, ('You have been arrested — %s (%s).'):format(
+        formatDuration(sentenceSeconds), surrenderable and 'right-to-surrender sentence' or 'no-surrender sentence'), 'error', 10000)
+    broadcastToPolice('ARREST', ('%s (#%d) arrested %s (#%d): %s, %s, %s.'):format(
         exports.sunset_core:GetPlayerDisplayName(source), source,
-        exports.sunset_core:GetPlayerDisplayName(targetId), targetId, reason, minutes))
+        exports.sunset_core:GetPlayerDisplayName(targetId), targetId, reason,
+        formatDuration(sentenceSeconds), surrenderable and 'surrenderable' or 'no surrender'))
     return true
 end)
 
@@ -554,7 +596,8 @@ exports.sunset_core:RegisterCallback('sunset:policeReasons', function(source)
             code = code,
             label = row.label,
             stars = row.stars,
-            jailMinutes = row.jailMinutes,
+            jailMinutes = math.ceil(jailSecondsFor(row.stars, row.surrenderable ~= false, false) / 60),
+            surrenderable = row.surrenderable ~= false,
         }
     end
     table.sort(list, function(a, b) return a.stars < b.stars end)
@@ -811,6 +854,12 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
+    local wanted = WantedOnline[src]
+    if wanted then
+        wanted.decayRemaining = math.max(1, (tonumber(wanted.decayAt) or os.time()) - os.time())
+        local cid = wanted.characterId or charId(src)
+        if cid then Police.saveWantedToDb(cid, wanted, nil) end
+    end
     WantedOnline[src] = nil
     JailedOnline[src] = nil
     RadarSessions[src] = nil
@@ -819,7 +868,7 @@ end)
 
 CreateThread(function()
     while true do
-        Wait(60000)
+        Wait(10000)
         local now = os.time()
         for src, w in pairs(WantedOnline) do
             if not GetPlayerName(src) then
@@ -831,12 +880,23 @@ CreateThread(function()
                     clearWanted(src, nil)
                     notify(src, 'Your wanted level has expired', 'success')
                 else
-                    local decayMin = (Sunset.Police and Sunset.Police.decayMinutes[newLevel]) or 15
                     w.level = newLevel
-                    w.decayAt = now + decayMin * 60
+                    w.decayRemaining = wantedStarSeconds()
+                    w.decayAt = now + w.decayRemaining
+                    w.jailMinutes = math.ceil(jailSecondsFor(newLevel, w.surrenderable, false) / 60)
                     if cid then Police.saveWantedToDb(cid, w, nil) end
                     applyWanted(src, w)
-                    notify(src, ('Wanted level reduced to %d'):format(newLevel), 'info')
+                    notify(src, ('Wanted reduced to ★%d. Next star expires after 15 more minutes online.'):format(newLevel), 'info')
+                end
+            elseif w.decayAt then
+                w.decayRemaining = math.max(1, w.decayAt - now)
+                local cid = w.characterId or charId(src)
+                if cid and (not w.lastPersistAt or now - w.lastPersistAt >= 60) then
+                    w.lastPersistAt = now
+                    MySQL.update.await(
+                        'UPDATE wanted_records SET decay_remaining_seconds = ?, expires_at = FROM_UNIXTIME(?) WHERE character_id = ? AND active = 1',
+                        { w.decayRemaining, w.decayAt, cid }
+                    )
                 end
             end
         end
@@ -854,8 +914,8 @@ exports('IsJailed', function(source) return Police.isJailed(source) end)
 AddEventHandler('sunset:police:autoWanted', function(targetId, reasonCode, reasonLabel)
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return end
-    setWanted(targetId, 5, reasonLabel or 'Murder', reasonCode or 'murder', 20, nil)
-    notify(targetId, 'WANTED: first-degree murder', 'error', 10000)
+    setWanted(targetId, 5, reasonLabel or 'Murder', reasonCode or 'murder', 50, nil, false, false)
+    notify(targetId, 'WANTED ★5: first-degree murder — no right to surrender. One star expires every 15 minutes online.', 'error', 10000)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:getJailSpawnLock', function(source)
@@ -1030,7 +1090,7 @@ exports.sunset_core:RegisterCallback('sunset:policeRefuseTicket', function(sourc
     local refused = MySQL.update.await('UPDATE tickets SET paid = 2, paid_at = NOW() WHERE id = ? AND paid = 0', { ticketId })
     if not refused or refused < 1 then return nil, 'This citation was already handled; no new wanted charge was added.' end
 
-    local wanted = setWanted(source, 1, 'Refused citation: ' .. (row.reason or ''), 'evading', 4, nil)
+    local wanted = setWanted(source, 1, 'Refused citation: ' .. (row.reason or ''), 'evading', 4, nil, false, false)
     notify(source, ('You refused citation #%d — wanted increased to ★%d.'):format(ticketId, wanted.level), 'error')
     broadcastToPolice('CITATION REFUSED', ('%s (#%d) refused citation #%d (%s); wanted is now ★%d.'):format(
         exports.sunset_core:GetPlayerDisplayName(source), source, ticketId, row.reason or 'violation', wanted.level))
