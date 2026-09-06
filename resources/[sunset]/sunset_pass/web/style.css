@@ -31,7 +31,17 @@ html, body {
     font-family: var(--sunset-body);
 }
 
-.hidden { display: none !important; }
+.pass-shell,
+.pass-mission,
+.pass-reward {
+    contain: layout paint style;
+}
+
+#pass-root.hidden {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
 
 #pass-root {
     position: fixed;

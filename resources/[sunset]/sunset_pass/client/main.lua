@@ -88,15 +88,6 @@ RegisterNetEvent('sunset:pass:refresh', function()
     if data then send('passUpdate', { state = data }) end
 end)
 
-CreateThread(function()
-    while true do
-        if isOpen and (IsControlJustReleased(0, 200) or IsControlJustReleased(0, 322)) then
-            closePass()
-        end
-        Wait(isOpen and 0 or 250)
-    end
-end)
-
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     closePass()

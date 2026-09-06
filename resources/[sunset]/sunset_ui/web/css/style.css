@@ -28,6 +28,12 @@ html, body {
 
 .hidden { display: none !important; }
 
+#app:not(.hidden) .screen.hidden,
+#hud.hidden,
+.overlay-panel.hidden {
+    content-visibility: hidden;
+}
+
 /* ═══ APP ═══ */
 .app {
     position: fixed;
