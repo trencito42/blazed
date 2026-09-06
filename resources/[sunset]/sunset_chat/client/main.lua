@@ -115,6 +115,7 @@ RegisterNetEvent('sunset:chat:message', function(payload)
     elseif msgType ~= 'say' then
         return
     end
+    if id == GetPlayerServerId(PlayerId()) then return end
     Overhead[id] = { text = text, untilAt = GetGameTimer() + OVERHEAD_MS }
 end)
 
@@ -137,10 +138,13 @@ CreateThread(function()
         local now = GetGameTimer()
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
+        local myServerId = GetPlayerServerId(PlayerId())
         local drew = false
 
         for serverId, row in pairs(Overhead) do
-            if not row or now > (row.untilAt or 0) then
+            if serverId == myServerId then
+                Overhead[serverId] = nil
+            elseif not row or now > (row.untilAt or 0) then
                 Overhead[serverId] = nil
             else
                 local player = GetPlayerFromServerId(serverId)
