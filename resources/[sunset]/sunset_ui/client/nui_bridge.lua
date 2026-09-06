@@ -40,6 +40,9 @@ forward('jobsSelect')
 forward('skillsClose')
 forward('helpClose')
 forward('factionPanelsClose')
+forward('factionManage')
+forward('clanPanelsClose')
+forward('clanManage')
 forward('garageSpawn')
 forward('garageStore')
 forward('garageLocate')
@@ -154,7 +157,7 @@ end)
 
 -- NUI close handlers — release focus
 local closePanels = {
-    'mdcClose', 'ticketClose', 'serviceCallsClose', 'jobsClose', 'skillsClose', 'helpClose', 'factionPanelsClose',
+    'mdcClose', 'ticketClose', 'serviceCallsClose', 'jobsClose', 'skillsClose', 'helpClose', 'factionPanelsClose', 'clanPanelsClose',
 }
 for _, name in ipairs(closePanels) do
     AddEventHandler('sunset:nui:' .. name, function()
@@ -172,6 +175,8 @@ for _, name in ipairs(closePanels) do
             Send('helpHide', {})
         elseif name == 'factionPanelsClose' then
             Send('factionPanelsHide', {})
+        elseif name == 'clanPanelsClose' then
+            Send('clanPanelsHide', {})
         end
         SetFocus(false, false)
     end)

@@ -25,6 +25,7 @@ files {
     'web/css/radar.css',
     'web/css/courier.css',
     'web/css/factions.css',
+    'web/css/clans.css',
     'web/css/auth_loading.css',
     'web/css/spawn.css',
     'web/css/theme.css',

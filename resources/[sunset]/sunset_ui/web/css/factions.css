@@ -1,90 +1,450 @@
-.faction-overlay {
-    position: fixed;
-    inset: 0;
+/* Faction panels — same glass shell as M menu / inventory */
+.menu--solo-faction {
     z-index: 115;
-    display: grid;
-    place-items: center;
-    padding: 4vh 4vw;
-    background: transparent;
-    color: #f8f4ec;
-    font-family: var(--sunset-body, 'Rajdhani', sans-serif);
+    pointer-events: none;
 }
 
-.faction-overlay.hidden { display: none; }
+.menu--solo-faction > * { pointer-events: auto; }
 
-.faction-shell {
-    width: min(1120px, 94vw);
-    max-height: 88vh;
+.menu--solo-faction .menu-wrap {
+    width: min(1080px, 94vw);
+    max-height: 78vh;
+}
+
+.menu-wrap--faction-dir .menu-wrap,
+.menu-wrap--faction-dir {
+    width: min(1120px, 96vw);
+}
+
+.faction-dashboard,
+.faction-directory-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    max-height: 62vh;
     overflow: hidden;
-    padding: 24px;
-    border-top: 2px solid #ff8a00;
-    border-bottom: 1px solid rgba(255, 138, 0, .34);
-    background: linear-gradient(135deg, rgba(18, 14, 10, .30), rgba(8, 8, 9, .18));
-    box-shadow: 0 18px 48px rgba(0, 0, 0, .18), inset 0 0 50px rgba(255, 92, 0, .025);
-    animation: faction-in .18s ease-out;
 }
 
-.faction-head, .faction-directory-card__top, .faction-section-title {
+.faction-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.faction-tab {
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.28);
+    color: var(--os-muted, rgba(255, 255, 255, 0.58));
+    font: 700 11px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 120ms, color 120ms, background 120ms;
+}
+
+.faction-tab:hover,
+.faction-tab.is-active {
+    color: #fff;
+    border-color: rgba(255, 119, 0, 0.45);
+    background: rgba(255, 119, 0, 0.12);
+}
+
+.faction-tab-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.faction-tab-panel.is-active { display: flex; }
+
+.faction-section-label {
+    color: var(--os-accent-bright, #ffb21c);
+    font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.faction-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.faction-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.34);
+    border-top: 2px solid rgba(255, 119, 0, 0.35);
+}
+
+.faction-stat span {
+    color: var(--os-muted);
+    font: 600 9px/1 var(--os-title);
+    letter-spacing: 0.14em;
+}
+
+.faction-stat strong {
+    color: #fff;
+    font: 700 15px/1.2 var(--os-title);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+#faction-duty.is-active { color: var(--os-green, #00ff66); }
+
+.faction-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.faction-card {
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.32);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.faction-card > span {
+    color: var(--os-accent-bright);
+    font: 700 9px/1 var(--os-title);
+    letter-spacing: 0.14em;
+}
+
+.faction-card p {
+    margin: 8px 0 4px;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.4;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+}
+
+.faction-card small { color: var(--os-muted); font-size: 12px; }
+.faction-card--motd p { color: #ffd9a8; font-weight: 600; }
+
+.faction-report strong { display: block; margin-bottom: 8px; color: #fff; }
+.faction-report i { display: block; height: 5px; background: rgba(255, 255, 255, 0.12); }
+.faction-report b { display: block; height: 100%; background: linear-gradient(90deg, var(--os-accent), var(--os-accent-bright)); }
+
+.faction-command-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.faction-command-list li {
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.28);
+    border-left: 2px solid rgba(255, 119, 0, 0.35);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.faction-command-list code {
+    color: var(--os-accent-bright);
+    font: 700 11px/1.2 var(--os-title);
+}
+
+.faction-roster {
+    display: grid;
+    gap: 6px;
+    max-height: 48vh;
+    overflow-y: auto;
+}
+
+.faction-member {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 2px solid rgba(255, 255, 255, 0.14);
+    cursor: default;
 }
 
-.faction-head h2 { margin: 2px 0 0; font: 700 28px var(--sunset-display, 'Chakra Petch'); letter-spacing: 2px; text-transform: uppercase; }
-.faction-kicker, .faction-card > span, .faction-summary span, .faction-section-title span {
-    color: #ff9b27;
-    font: 700 11px var(--sunset-display, 'Chakra Petch');
-    letter-spacing: 2px;
+.faction-member.is-online { border-left-color: var(--os-green); }
+.faction-member.is-leader { border-left-color: var(--os-accent); background: rgba(255, 119, 0, 0.08); }
+
+.faction-member div { display: flex; flex-direction: column; gap: 2px; }
+.faction-member strong { color: #fff; font-size: 14px; }
+.faction-member span { color: var(--os-muted); font-size: 12px; }
+.faction-member em {
+    color: var(--os-muted);
+    font: 700 10px/1 var(--os-title);
+    font-style: normal;
+    letter-spacing: 0.1em;
 }
-.faction-close { border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.04); color: #ddd; padding: 8px 13px; font-weight: 700; cursor: pointer; }
-.faction-close:hover { border-color: #ff8a00; color: #fff; }
 
-.faction-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 22px 0 16px; background: rgba(255,255,255,.08); }
-.faction-summary > div { display: flex; flex-direction: column; gap: 5px; padding: 14px 16px; background: rgba(7,7,8,.28); text-shadow: 0 2px 5px #000; }
-.faction-summary strong { font: 700 16px var(--sunset-display, 'Chakra Petch'); }
-#faction-duty.is-active { color: #55e899; }
+.faction-member.is-leader em { color: var(--os-accent-bright); }
 
-.faction-layout { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(430px, 1.2fr); gap: 16px; min-height: 0; }
-.faction-overview { display: grid; align-content: start; gap: 10px; }
-.faction-card { padding: 16px; border-left: 2px solid rgba(255,138,0,.7); background: rgba(8,7,8,.24); text-shadow: 0 2px 5px #000; }
-.faction-card p { margin: 8px 0 5px; font-size: 16px; line-height: 1.35; }
-.faction-card small { color: rgba(255,255,255,.54); }
-.faction-card--motd p { color: #ffd39d; font-weight: 600; }
-.faction-report { margin-top: 10px; }
-.faction-report strong { display: block; margin-bottom: 8px; }
-.faction-report i { display: block; height: 5px; background: rgba(255,255,255,.1); }
-.faction-report b { display: block; height: 100%; background: linear-gradient(90deg, #ff6200, #ffb33d); }
+.faction-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
 
-.faction-roster-wrap { min-height: 0; }
-.faction-section-title { margin: 0 2px 9px; }
-.faction-section-title small { color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: 1px; }
-.faction-roster, .faction-directory-list { overflow-y: auto; scrollbar-color: #ff8a00 rgba(255,255,255,.06); }
-.faction-roster { max-height: 49vh; display: grid; gap: 5px; }
-.faction-member { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px; background: rgba(8,7,8,.24); border-left: 2px solid rgba(255,255,255,.15); text-shadow: 0 2px 5px #000; }
-.faction-member.is-online { border-left-color: #54d78c; }
-.faction-member.is-leader { border-left-color: #ff8a00; background: rgba(255,138,0,.07); }
-.faction-member div { display: flex; flex-direction: column; }
-.faction-member span { color: rgba(255,255,255,.5); font-size: 13px; }
-.faction-member em { color: rgba(255,255,255,.54); font: 700 11px var(--sunset-display, 'Chakra Petch'); font-style: normal; letter-spacing: 1px; }
-.faction-member.is-leader em { color: #ffad4d; }
+.faction-manage-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.32);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
 
-.faction-shell--directory { width: min(980px, 94vw); }
-.faction-directory-intro { color: rgba(255,255,255,.58); margin: 8px 0 18px; }
-.faction-directory-list { max-height: 68vh; display: grid; gap: 8px; padding-right: 5px; }
-.faction-directory-card { padding: 15px 17px; border-left: 3px solid #ff8a00; background: linear-gradient(90deg, rgba(12,10,9,.34), rgba(8,7,8,.16)); text-shadow: 0 2px 5px #000; }
-.faction-directory-card--illegal { border-left-color: #d86c18; }
-.faction-directory-card__top > div { display: flex; flex-direction: column; }
-.faction-directory-card__top strong { font: 700 17px var(--sunset-display, 'Chakra Petch'); }
-.faction-directory-card__top span, .faction-directory-card__meta { color: rgba(255,255,255,.48); font-size: 12px; letter-spacing: .6px; }
-.faction-directory-card__top em { color: #ff715f; font-style: normal; font-weight: 700; text-transform: uppercase; }
-.faction-directory-card__top em.is-open { color: #55e899; }
-.faction-directory-card p { margin: 9px 0; color: rgba(255,255,255,.77); }
-.faction-empty { color: rgba(255,255,255,.48); text-align: center; padding: 28px; }
+.faction-manage-form strong { color: #fff; font: 700 13px/1.2 var(--os-title); letter-spacing: 0.06em; }
+.faction-manage-form p { margin: 0; color: var(--os-muted); font-size: 12px; line-height: 1.35; }
 
-@keyframes faction-in { from { opacity: 0; transform: translateY(12px) scale(.99); } }
-@media (max-width: 780px) {
-    .faction-summary { grid-template-columns: repeat(2, 1fr); }
-    .faction-layout { grid-template-columns: 1fr; overflow-y: auto; max-height: 65vh; }
-    .faction-roster { max-height: 36vh; }
+.faction-manage-form input,
+.faction-manage-form select,
+.faction-manage-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font: 600 13px/1.3 var(--os-data);
+    outline: none;
+}
+
+.faction-manage-form input:focus,
+.faction-manage-form select:focus,
+.faction-manage-form textarea:focus {
+    border-color: rgba(255, 119, 0, 0.5);
+}
+
+.faction-manage-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.faction-manage-form button {
+    padding: 9px 12px;
+    border: none;
+    background: var(--os-accent);
+    color: #17100a;
+    font: 700 11px/1 var(--os-title);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+}
+
+.faction-manage-form button:hover { filter: brightness(1.08); }
+.faction-manage-form button.is-danger { background: #ff554f; color: #fff; }
+
+.faction-directory-intro {
+    margin: 0;
+    color: var(--os-muted);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.faction-directory-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+    gap: 12px;
+    min-height: 0;
+    flex: 1;
+}
+
+.faction-directory-layout.is-detail-open {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.faction-directory-layout.is-detail-open .faction-directory-list { display: none; }
+
+.faction-directory-list {
+    display: grid;
+    gap: 8px;
+    max-height: 52vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.faction-directory-card {
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.34);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 3px solid var(--os-accent);
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms, transform 120ms;
+    text-align: left;
+}
+
+.faction-directory-card:hover,
+.faction-directory-card.is-selected {
+    background: rgba(255, 119, 0, 0.1);
+    border-color: rgba(255, 119, 0, 0.35);
+    transform: translateY(-1px);
+}
+
+.faction-directory-card--illegal { border-left-color: #ff715f; }
+
+.faction-directory-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.faction-directory-card__top strong {
+    display: block;
+    color: #fff;
+    font: 700 16px/1.2 var(--os-title);
+    letter-spacing: 0.04em;
+}
+
+.faction-directory-card__top span {
+    color: var(--os-muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.faction-directory-card__top em {
+    flex-shrink: 0;
+    color: #ff715f;
+    font: 700 10px/1 var(--os-title);
+    font-style: normal;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.faction-directory-card__top em.is-open { color: var(--os-green); }
+
+.faction-directory-card p {
+    margin: 0 0 8px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.faction-directory-card__meta {
+    color: var(--os-muted);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+}
+
+.faction-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 52vh;
+    overflow-y: auto;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.38);
+    border-top: 2px solid rgba(255, 119, 0, 0.4);
+}
+
+.faction-detail.hidden { display: none; }
+
+.faction-detail__back {
+    align-self: flex-start;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: transparent;
+    color: var(--os-muted);
+    font: 600 11px/1 var(--os-title);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+}
+
+.faction-detail__back:hover { color: #fff; border-color: rgba(255, 119, 0, 0.4); }
+
+.faction-detail h3 {
+    margin: 0;
+    color: #fff;
+    font: 700 22px/1.1 var(--os-title);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.faction-detail__type {
+    color: var(--os-accent-bright);
+    font: 700 10px/1 var(--os-title);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.faction-detail__status {
+    display: inline-block;
+    padding: 5px 10px;
+    background: rgba(255, 119, 0, 0.12);
+    color: var(--os-accent-bright);
+    font: 700 10px/1 var(--os-title);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.faction-detail__status.is-open { background: rgba(0, 255, 102, 0.1); color: var(--os-green); }
+
+.faction-detail__block {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.28);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.faction-detail__block span {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--os-muted);
+    font: 700 9px/1 var(--os-title);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.faction-detail__block p {
+    margin: 0;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.faction-detail__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.faction-detail__stat {
+    padding: 10px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.faction-detail__stat strong {
+    display: block;
+    color: #fff;
+    font: 700 18px/1 var(--os-title);
+}
+
+.faction-detail__stat span {
+    color: var(--os-muted);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.faction-manage-form.hidden { display: none; }
+
+.faction-empty {
+    color: var(--os-muted);
+    text-align: center;
+    padding: 28px;
+}
+
+@media (max-width: 900px) {
+    .faction-stats,
+    .faction-cards,
+    .faction-manage-grid,
+    .faction-command-list { grid-template-columns: 1fr; }
+    .faction-directory-layout { grid-template-columns: 1fr; }
 }

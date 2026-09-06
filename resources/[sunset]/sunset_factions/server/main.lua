@@ -528,6 +528,23 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
     if not activityOk then return nil, 'Weekly faction report could not be read. Please try again.' end
     local rosterOk, roster = pcall(factionRoster, factionId)
     if not rosterOk then return nil, 'Faction roster could not be read. Please try again.' end
+    local isLeader = FactionCore.isFactionLeader(char.id, factionId)
+    local permissions = {
+        leader = isLeader,
+        invite = isLeader,
+        motd = isLeader or FactionCore.hasPerm(source, 'fmotd'),
+        giverank = isLeader or FactionCore.hasPerm(source, 'giverank'),
+        uninvite = isLeader or FactionCore.hasPerm(source, 'uninvite'),
+        promote = isLeader or FactionCore.hasPerm(source, 'promote'),
+        warn = isLeader or FactionCore.hasPerm(source, 'fwarn'),
+    }
+    local grades = {}
+    for grade, row in pairs(faction.grades or {}) do
+        if type(grade) == 'number' then
+            grades[#grades + 1] = { grade = grade, label = row.label or ('Rank ' .. grade) }
+        end
+    end
+    table.sort(grades, function(a, b) return a.grade < b.grade end)
     return {
         id = factionId,
         label = faction.label,
@@ -536,7 +553,10 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         gradeLabel = gradeRow and gradeRow.label or ('Rank ' .. tostring(grade)),
         salary = gradeRow and gradeRow.salary or 0,
         onDuty = FactionCore.isOnDuty(source),
-        leader = FactionCore.isFactionLeader(char.id, factionId),
+        leader = isLeader,
+        permissions = permissions,
+        grades = grades,
+        commands = Sunset.GetFactionCommandsForGrade(factionId, grade, isLeader),
         motd = motd,
         depot = faction.depot and faction.depot.label or 'No fleet garage',
         report = { current = tonumber(activity and activity.total) or 0, target = faction.weeklyReportTarget or 0 },

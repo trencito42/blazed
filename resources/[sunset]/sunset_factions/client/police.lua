@@ -61,28 +61,60 @@ local function isAuthorizedRadarVehicle(vehicle)
 end
 
 local function radarFeedback(message, kind)
-    chatLine('RADAR', message, 'radar')
+    local msgType = 'command_info'
+    if kind == 'error' then
+        msgType = 'command_error'
+    elseif kind == 'warning' then
+        msgType = 'command_warn'
+    end
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0,
+        type = msgType,
+        name = 'RADAR',
+        message = message,
+        time = os.date('%H:%M:%S'),
+    })
     exports.sunset_ui:Notify(message, kind or 'info', 8000)
 end
 
-local function getVehicleInRadarCone()
-    if radarVehicle == 0 or not DoesEntityExist(radarVehicle) then return 0, 0 end
-    local origin = GetEntityCoords(radarVehicle)
-    local forward = GetEntityForwardVector(radarVehicle)
+local function rotationToDirection(rot)
+    local z = math.rad(rot.z)
+    local x = math.rad(rot.x)
+    local num = math.abs(math.cos(x))
+    return vector3(-math.sin(z) * num, math.cos(z) * num, math.sin(x))
+end
+
+local function getVehicleInCameraView()
     local cfg = Sunset.Police and Sunset.Police.radar or {}
     local range = cfg.mobileRange or 45.0
-    local bestVeh, bestSpeed = 0, 0
-    local bestDot = -1.0
+    local camCoord = GetGameplayCamCoord()
+    local camRot = GetGameplayCamRot(2)
+    local direction = rotationToDirection(camRot)
+    local dest = camCoord + (direction * range)
 
+    local handle = StartShapeTestRay(
+        camCoord.x, camCoord.y, camCoord.z,
+        dest.x, dest.y, dest.z,
+        10, radarVehicle, 7
+    )
+    local _, hit, _, _, entityHit = GetShapeTestResult(handle)
+    if hit == 1 and entityHit and entityHit ~= 0 and IsEntityAVehicle(entityHit) and entityHit ~= radarVehicle then
+        local driver = GetPedInVehicleSeat(entityHit, -1)
+        if driver ~= 0 and IsPedAPlayer(driver) then
+            return entityHit, kmhFromEntity(entityHit)
+        end
+    end
+
+    local bestVeh, bestSpeed, bestDot = 0, 0, -1.0
     for _, veh in ipairs(GetGamePool('CVehicle')) do
-        if veh ~= radarVehicle and DoesEntityExist(veh) then
+        if veh ~= radarVehicle and DoesEntityExist(veh) and IsEntityOnScreen(veh) then
             local vehCoords = GetEntityCoords(veh)
-            local delta = vehCoords - origin
+            local delta = vehCoords - camCoord
             local dist = #(delta)
             if dist <= range and dist > 2.0 then
                 local dir = delta / dist
-                local dot = forward.x * dir.x + forward.y * dir.y + forward.z * dir.z
-                if dot >= 0.92 and dot > bestDot then
+                local dot = direction.x * dir.x + direction.y * dir.y + direction.z * dir.z
+                if dot >= 0.82 and dot > bestDot then
                     local driver = GetPedInVehicleSeat(veh, -1)
                     if driver ~= 0 and IsPedAPlayer(driver) then
                         bestDot = dot
@@ -109,7 +141,8 @@ local function radarTargetInfo(veh, speed)
         if player ~= -1 then
             local sid = GetPlayerServerId(player)
             local tagged = Player(sid).state.sunsetName
-            name = (tagged and tagged ~= '' and tagged) or GetPlayerName(player) or ('#' .. sid)
+            local display = (tagged and tagged ~= '' and tagged) or GetPlayerName(player) or 'Player'
+            name = ('%s (%d)'):format(display, sid)
         end
     end
     return { plate = plate ~= '' and plate or '--------', name = name, speed = speed or 0 }
@@ -121,7 +154,7 @@ local function pushRadarUi(extra)
     exports.sunset_ui:Send('radarShow', {
         state = extra.state or 'scan',
         title = extra.title or 'Mobile Radar',
-        message = extra.message or 'Scanning lane…',
+        message = extra.message or 'Aim at a vehicle…',
         limit = radarLimitKmh,
         speed = info.speed or 0,
         plate = info.plate,
@@ -259,7 +292,7 @@ CreateThread(function()
             else
                 FreezeEntityPosition(radarVehicle, true)
                 SetVehicleHandbrake(radarVehicle, true)
-                local veh, speed = getVehicleInRadarCone()
+                local veh, speed = getVehicleInCameraView()
                 if veh ~= 0 and speed > 0 then
                     local info = radarTargetInfo(veh, speed)
                     local cfg = Sunset.Police and Sunset.Police.radar or {}
@@ -294,7 +327,7 @@ CreateThread(function()
                         pushRadarUi({
                             state = 'track',
                             title = 'Mobile Radar',
-                            message = ('%s in cone — legal'):format(info.plate),
+                            message = ('%s in view — legal'):format(info.plate),
                             info = info,
                         })
                     end
@@ -302,7 +335,7 @@ CreateThread(function()
                     pushRadarUi({
                         state = 'scan',
                         title = 'Mobile Radar',
-                        message = 'Scanning lane…',
+                        message = 'Aim at a vehicle…',
                     })
                 end
             end
@@ -371,6 +404,22 @@ RegisterCommand('unjail', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:policeUnjail', target)
     if ok then exports.sunset_ui:Notify(('Released #%d from jail'):format(target), 'success')
     else actionError(err, 'Prisoner could not be released.') end
+end, false)
+
+RegisterCommand('find', function(_, args)
+    local target = tonumber(args[1])
+    if not target then
+        exports.sunset_ui:Notify('Usage: /find [id]', 'error')
+        return
+    end
+    local result, err = Sunset.AwaitCallback('sunset:policeFindWanted', target)
+    if not result then
+        return actionError(err, 'Could not track that suspect. Go on duty as law enforcement and use a valid wanted player ID.')
+    end
+    SetNewWaypoint(result.x + 0.0, result.y + 0.0)
+    exports.sunset_ui:Notify(
+        ('GPS set on %s (%d) — wanted ★%d (%s).'):format(result.name or 'Suspect', target, result.level or 1, result.reason or 'active'),
+        'success', 10000)
 end, false)
 
 RegisterCommand('wanted', function()
@@ -573,6 +622,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/su', 'Set wanted level (LSPD)', { { name = 'id' }, { name = 'reason_code' } })
     TriggerEvent('chat:addSuggestion', '/so', 'Summon suspect nearby (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/clear', 'Clear wanted status (LSPD)', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/find', 'Set GPS on a wanted player (LSPD on duty)', { { name = 'id', help = 'Server ID from /wanted or F10' } })
     TriggerEvent('chat:addSuggestion', '/wanted', 'List active wanted players (LSPD)')
     TriggerEvent('chat:addSuggestion', '/arrest', 'Arrest restrained suspect at jail zone (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/booking', 'Set GPS to the nearest police booking marker')
@@ -582,6 +632,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)', { { name = 'id', help = 'optional target ID' } })
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/startradar', 'Lock an LSPD patrol vehicle and monitor speed', { { name = 'limit_kmh', help = '20-250, default 90' } })
+    TriggerEvent('chat:addSuggestion', '/setradar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/radar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/stopradar', 'Deactivate mobile speed radar')
     TriggerEvent('chat:addSuggestion', '/radars', 'List fixed speed cameras')

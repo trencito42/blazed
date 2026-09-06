@@ -44,6 +44,7 @@ ensure sunset_core
 ensure sunset_ui
 ensure sunset_world
 ensure sunset_factions
+ensure sunset_clans
 ensure sunset_dispatch
 ensure sunset_crafting
 ensure sunset_auth

@@ -1,0 +1,326 @@
+/* Clan panels — same glass shell as factions */
+.menu--solo-clan {
+    z-index: 115;
+    pointer-events: none;
+}
+
+.menu--solo-clan > * { pointer-events: auto; }
+
+.menu--solo-clan .menu-wrap {
+    width: min(1080px, 94vw);
+    max-height: 78vh;
+}
+
+.clan-dashboard,
+.clan-directory-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    max-height: 62vh;
+    overflow: hidden;
+}
+
+.clan-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.clan-tab {
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.28);
+    color: var(--os-muted, rgba(255, 255, 255, 0.58));
+    font: 700 11px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 120ms, color 120ms, background 120ms;
+}
+
+.clan-tab:hover,
+.clan-tab.is-active {
+    color: #fff;
+    border-color: rgba(255, 140, 0, 0.45);
+    background: rgba(255, 140, 0, 0.12);
+}
+
+.clan-tab-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.clan-tab-panel.is-active { display: flex; }
+
+.clan-section-label {
+    color: var(--os-accent-bright, #ffb21c);
+    font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.clan-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.clan-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.clan-stat span {
+    color: rgba(255, 255, 255, 0.45);
+    font: 700 9px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.14em;
+}
+
+.clan-stat strong {
+    font: 600 14px/1.2 var(--font, 'Inter', sans-serif);
+    color: #fff;
+}
+
+.clan-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.clan-card {
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.clan-card span {
+    color: var(--os-accent-bright, #ffb21c);
+    font: 700 9px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.clan-card p,
+.clan-card small {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.clan-preview {
+    padding: 14px;
+    border: 1px dashed rgba(255, 140, 0, 0.35);
+    background: rgba(255, 140, 0, 0.06);
+    font: 600 16px/1.3 var(--font, 'Inter', sans-serif);
+}
+
+.clan-preview-label {
+    display: block;
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.5);
+    font: 700 9px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.clan-preview-name {
+    word-break: break-word;
+}
+
+.clan-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.clan-member {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.clan-member.is-online { border-color: rgba(80, 220, 120, 0.25); }
+.clan-member.is-leader { border-color: rgba(255, 140, 0, 0.35); }
+
+.clan-member strong {
+    display: block;
+    font-size: 14px;
+    color: #fff;
+}
+
+.clan-member span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.clan-member em {
+    font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.55);
+    font-style: normal;
+}
+
+.clan-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.clan-manage-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.clan-manage-form strong {
+    font-size: 13px;
+    color: #fff;
+}
+
+.clan-manage-form p {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.4;
+}
+
+.clan-manage-form input,
+.clan-manage-form textarea,
+.clan-manage-form select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font: 500 13px/1.3 var(--font, 'Inter', sans-serif);
+}
+
+.clan-manage-form input[type="color"] {
+    height: 38px;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.clan-manage-form button {
+    margin-top: 4px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 140, 0, 0.4);
+    background: rgba(255, 140, 0, 0.15);
+    color: #fff;
+    font: 700 11px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.1em;
+    cursor: pointer;
+}
+
+.clan-manage-form button.is-danger {
+    border-color: rgba(255, 80, 80, 0.45);
+    background: rgba(255, 80, 80, 0.12);
+}
+
+.clan-manage-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.clan-create-cost {
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 200, 80, 0.25);
+    background: rgba(255, 200, 80, 0.08);
+    color: #ffd27a;
+    font-size: 13px;
+}
+
+.clan-directory-intro {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.clan-directory-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+    overflow-y: auto;
+    max-height: 52vh;
+    padding-right: 4px;
+}
+
+.clan-directory-card {
+    text-align: left;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.28);
+    color: #fff;
+    cursor: pointer;
+    transition: border-color 120ms, background 120ms;
+}
+
+.clan-directory-card:hover,
+.clan-directory-card.is-selected {
+    border-color: rgba(255, 140, 0, 0.4);
+    background: rgba(255, 140, 0, 0.08);
+}
+
+.clan-directory-card strong {
+    display: block;
+    font-size: 15px;
+}
+
+.clan-directory-card__tag {
+    display: inline-block;
+    margin-top: 4px;
+    font: 700 11px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.1em;
+}
+
+.clan-directory-card p {
+    margin-top: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.4;
+}
+
+.clan-directory-card__meta {
+    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.clan-empty {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 13px;
+    padding: 12px 0;
+}
+
+@media (max-width: 900px) {
+    .clan-stats,
+    .clan-cards,
+    .clan-manage-grid {
+        grid-template-columns: 1fr;
+    }
+}

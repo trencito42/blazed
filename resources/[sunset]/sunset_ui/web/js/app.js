@@ -215,7 +215,7 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'chatToggle':
-            if (window.Chat) Chat.toggle(data?.open);
+            if (window.Chat) Chat.toggle(data?.open, data || event.data.data);
             break;
 
         case 'chatMessage':
@@ -319,6 +319,15 @@ window.addEventListener('message', (event) => {
             break;
         case 'factionPanelsHide':
             if (window.FactionPanels) FactionPanels.hide();
+            break;
+        case 'clanPanelShow':
+            if (window.ClanPanels) ClanPanels.showDashboard(data || event.data.data);
+            break;
+        case 'clanDirectoryShow':
+            if (window.ClanPanels) ClanPanels.showDirectory(data || event.data.data);
+            break;
+        case 'clanPanelsHide':
+            if (window.ClanPanels) ClanPanels.hide();
             break;
         case 'policeOrderShow':
             if (window.Overlays) Overlays.showPoliceOrder(data || event.data.data);

@@ -18,13 +18,15 @@ function RobberyPolice.alert(session, stage)
     if not session.policeSnapshot then
         local snapshot = { description = 'Unknown suspect', vehicle = 'No getaway vehicle identified' }
         pcall(function()
-            local ped = GetPlayerPed(session.source)
+            local src = session.source
+            local name = exports.sunset_core:GetPlayerDisplayName(src) or ('Player %s'):format(src)
+            snapshot.description = ('Suspect %s (%s)'):format(name, src)
+            local ped = GetPlayerPed(src)
             if ped and ped ~= 0 then
-                snapshot.description = ('Suspect model %s'):format(tostring(GetEntityModel(ped)))
                 local vehicle = GetVehiclePedIsIn(ped, false)
                 if vehicle and vehicle ~= 0 then
                     local plate = tostring(GetVehicleNumberPlateText(vehicle) or 'UNKNOWN'):gsub('^%s*(.-)%s*$', '%1')
-                    snapshot.vehicle = ('Vehicle model %s, plate %s'):format(tostring(GetEntityModel(vehicle)), plate)
+                    snapshot.vehicle = ('Getaway vehicle, plate %s'):format(plate)
                 end
             end
         end)

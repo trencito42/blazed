@@ -335,7 +335,7 @@ local function localRpName()
 end
 
 local function applyPauseHeader()
-    AddTextEntry('FE_THDR_GTAO', ('%s #%s'):format(localRpName(), GetPlayerServerId(PlayerId())))
+    AddTextEntry('FE_THDR_GTAO', ('%s (%s)'):format(localRpName(), GetPlayerServerId(PlayerId())))
 end
 
 CreateThread(function()
@@ -378,11 +378,24 @@ local function drawHpBar3d(x, y, z, pct)
     DrawRect(sx - ((w - fw) * 0.5), sy, fw, h, r, g, b, 230)
 end
 
+local function isLawEnforcementOnDuty()
+    if not LocalPlayer.state.sunsetOnDuty then return false end
+    local factionId = LocalPlayer.state.sunsetFaction
+    return factionId and Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+end
+
+local function wantedLevelForPlayer(serverId)
+    local bag = Player(serverId) and Player(serverId).state and Player(serverId).state.sunsetWanted
+    if type(bag) ~= 'table' then return 0 end
+    return math.max(0, math.min(5, tonumber(bag.level) or 0))
+end
+
 CreateThread(function()
     while true do
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
         local myId = PlayerId()
+        local policeView = isLawEnforcementOnDuty()
         for _, player in ipairs(GetActivePlayers()) do
             if player ~= myId then
                 local ped = GetPlayerPed(player)
@@ -395,10 +408,17 @@ CreateThread(function()
                         local pct = math.max(0, math.floor((hp / math.max(1, maxHp)) * 100))
                         local label = GetPlayerName(player)
                         local st = Player(serverId) and Player(serverId).state
-                        if st and type(st.sunsetName) == 'string' and st.sunsetName ~= '' then
+                        if st and type(st.sunsetDisplayName) == 'string' and st.sunsetDisplayName ~= '' then
+                            label = st.sunsetDisplayName
+                        elseif st and type(st.sunsetName) == 'string' and st.sunsetName ~= '' then
                             label = st.sunsetName
                         end
-                        drawText3d(coords.x, coords.y, coords.z + 1.18, ('%s #%d'):format(label, serverId), 0.34)
+                        local wantedLevel = wantedLevelForPlayer(serverId)
+                        local nameY = coords.z + 1.18
+                        if policeView and wantedLevel > 0 then
+                            drawText3d(coords.x, coords.y, nameY + 0.14, ('★%d'):format(wantedLevel), 0.30, 255, 80, 80)
+                        end
+                        drawText3d(coords.x, coords.y, nameY, ('%s (%d)'):format(label, serverId), 0.34)
                         drawHpBar3d(coords.x, coords.y, coords.z + 1.02, pct)
                     end
                 end

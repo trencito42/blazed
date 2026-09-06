@@ -286,6 +286,7 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
         list[#list + 1] = { cmd = '/pd', desc = 'LSPD command list' }
         list[#list + 1] = { cmd = '/so [id]', desc = 'Summon nearby suspect' }
         list[#list + 1] = { cmd = '/wanted', desc = 'List active wanted players' }
+        list[#list + 1] = { cmd = '/find [id]', desc = 'Set GPS on a wanted player' }
         if Sunset.HasFactionPerm(jobId, grade, 'cuff') then
             list[#list + 1] = { cmd = '/cuff [id]', desc = 'Restrain a nearby suspect' }
         end
@@ -324,6 +325,7 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
         end
         if Sunset.HasFactionPerm(jobId, grade, 'radar') then
             list[#list + 1] = { cmd = '/startradar [limit_kmh]', desc = 'Lock the patrol car and monitor traffic' }
+            list[#list + 1] = { cmd = '/setradar [limit_kmh]', desc = 'Alias for /startradar' }
             list[#list + 1] = { cmd = '/stopradar', desc = 'Deactivate speed radar' }
             list[#list + 1] = { cmd = '/radars', desc = 'List fixed speed cameras' }
         end

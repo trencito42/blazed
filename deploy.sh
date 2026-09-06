@@ -140,6 +140,9 @@ fi
 if [ -f sql/18-wanted-surrender.sql ]; then
   docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/18-wanted-surrender.sql
 fi
+if [ -f sql/19-clans.sql ]; then
+  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/19-clans.sql
+fi
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem

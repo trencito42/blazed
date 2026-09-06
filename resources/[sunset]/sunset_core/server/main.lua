@@ -163,16 +163,29 @@ exports('GetCharacter', GetCharacter)
 
 function GetPlayerDisplayName(source)
     local char = GetCharacter(source)
+    local base
     if char then
         local full = ((char.firstname or '') .. (char.lastname and char.lastname ~= '' and (' ' .. char.lastname) or ''))
             :gsub('^%s+', ''):gsub('%s+$', '')
-        if full ~= '' then return full end
+        if full ~= '' then base = full end
     end
-    local player = Players[source]
-    if player and player.name and player.name ~= '' then
-        return player.name
+    if not base then
+        local player = Players[source]
+        if player and player.name and player.name ~= '' then
+            base = player.name
+        else
+            base = GetPlayerName(source) or 'Player'
+        end
     end
-    return GetPlayerName(source) or 'Player'
+    if GetResourceState('sunset_clans') == 'started' then
+        local ok, formatted = pcall(function()
+            return exports.sunset_clans:FormatDisplayName(source, base)
+        end)
+        if ok and type(formatted) == 'string' and formatted ~= '' then
+            return formatted
+        end
+    end
+    return base
 end
 exports('GetPlayerDisplayName', GetPlayerDisplayName)
 

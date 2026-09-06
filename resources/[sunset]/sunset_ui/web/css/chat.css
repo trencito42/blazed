@@ -14,7 +14,7 @@
     width: min(560px, 44vw);
     z-index: 40;
     pointer-events: none;
-    font-family: Tahoma, Arial, 'Segoe UI', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .chat-toolbar {
@@ -174,63 +174,79 @@ body.chat-ui-open .chat-msg,
 .chat-msg--me { color: #c9a0ff; font-style: italic; }
 .chat-msg--do { color: #7ec8e3; font-style: italic; }
 
-/* Faction radio default */
+/* Faction chat default */
 .chat-msg--f,
-.chat-msg--r,
-.chat-msg--d,
 .chat-msg--gov,
 .chat-msg--faction_info {
     color: #ffc27a;
     font-weight: 600;
 }
 
-/* Per-faction colors (B-Zone style) */
+/* Radio — fixed pink tone (B-Zone style) */
+.chat-msg--r {
+    color: #f0a0a8;
+    font-weight: 600;
+}
+
+/* Department — faction colors */
+.chat-msg--d {
+    color: #ffc27a;
+    font-weight: 600;
+}
+
+/* Faction action lines (radar placed, etc.) */
+.chat-msg--faction_action {
+    color: #8ec8ff;
+    font-weight: 600;
+}
+
+/* Per-faction colors (department + faction chat) */
 .chat-msg--faction-police.chat-msg--f,
-.chat-msg--faction-police.chat-msg--r,
 .chat-msg--faction-police.chat-msg--d,
-.chat-msg--faction-police.chat-msg--gov {
-    color: #c9b6ff;
+.chat-msg--faction-police.chat-msg--gov,
+.chat-msg--faction-police.chat-msg--faction_action {
+    color: #8ec8ff;
 }
 
 .chat-msg--faction-medic.chat-msg--f,
-.chat-msg--faction-medic.chat-msg--r,
 .chat-msg--faction-medic.chat-msg--d,
-.chat-msg--faction-medic.chat-msg--gov {
+.chat-msg--faction-medic.chat-msg--gov,
+.chat-msg--faction-medic.chat-msg--faction_action {
     color: #ff9a9a;
 }
 
 .chat-msg--faction-lsfd.chat-msg--f,
-.chat-msg--faction-lsfd.chat-msg--r,
 .chat-msg--faction-lsfd.chat-msg--d,
-.chat-msg--faction-lsfd.chat-msg--gov {
+.chat-msg--faction-lsfd.chat-msg--gov,
+.chat-msg--faction-lsfd.chat-msg--faction_action {
     color: #ff9b6a;
 }
 
 .chat-msg--faction-taxi.chat-msg--f,
-.chat-msg--faction-taxi.chat-msg--r,
 .chat-msg--faction-taxi.chat-msg--d,
-.chat-msg--faction-taxi.chat-msg--gov {
+.chat-msg--faction-taxi.chat-msg--gov,
+.chat-msg--faction-taxi.chat-msg--faction_action {
     color: #ffe566;
 }
 
 .chat-msg--faction-mechanic.chat-msg--f,
-.chat-msg--faction-mechanic.chat-msg--r,
 .chat-msg--faction-mechanic.chat-msg--d,
-.chat-msg--faction-mechanic.chat-msg--gov {
+.chat-msg--faction-mechanic.chat-msg--gov,
+.chat-msg--faction-mechanic.chat-msg--faction_action {
     color: #ffbf66;
 }
 
 .chat-msg--faction-sunset_cartel.chat-msg--f,
-.chat-msg--faction-sunset_cartel.chat-msg--r,
 .chat-msg--faction-sunset_cartel.chat-msg--d,
-.chat-msg--faction-sunset_cartel.chat-msg--gov {
+.chat-msg--faction-sunset_cartel.chat-msg--gov,
+.chat-msg--faction-sunset_cartel.chat-msg--faction_action {
     color: #d8b4fe;
 }
 
 .chat-msg--faction-night_syndicate.chat-msg--f,
-.chat-msg--faction-night_syndicate.chat-msg--r,
 .chat-msg--faction-night_syndicate.chat-msg--d,
-.chat-msg--faction-night_syndicate.chat-msg--gov {
+.chat-msg--faction-night_syndicate.chat-msg--gov,
+.chat-msg--faction-night_syndicate.chat-msg--faction_action {
     color: #c4b5fd;
 }
 
@@ -254,10 +270,19 @@ body.chat-ui-open .chat-msg,
 
 /* Megaphone / police orders */
 .chat-msg--megaphone,
-.chat-msg--police_alert,
-.chat-msg--radar {
+.chat-msg--police_alert {
     color: #ffffff;
     font-weight: 700;
+}
+
+.chat-msg--radar,
+.chat-msg--radar_alert {
+    color: #6eb5ff;
+    font-weight: 700;
+}
+
+.chat-msg--draft {
+    opacity: 0.55;
 }
 
 .chat-msg--command_error { color: #ff8a8a; font-weight: 700; }
@@ -278,7 +303,7 @@ body.chat-ui-open .chat-msg,
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-left: 3px solid #e85d2a;
     color: #fff;
-    font-family: Tahoma, Arial, 'Segoe UI', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: var(--chat-input-size);
     outline: none;
     user-select: text;

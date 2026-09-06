@@ -35,6 +35,58 @@ local function policeChat(target, tag, message, messageType)
     })
 end
 
+local function findVehicleDriverSource(vehicle)
+    if not vehicle or vehicle == 0 then return nil end
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src then
+            local ped = GetPlayerPed(src)
+            if ped and ped ~= 0
+                and GetVehiclePedIsIn(ped, false) == vehicle
+                and GetPedInVehicleSeat(vehicle, -1) == ped then
+                return src
+            end
+        end
+    end
+    return nil
+end
+
+local function officerRadarIdentity(source)
+    local char = FactionCore.getChar(source)
+    local factionId = char and select(1, FactionCore.getFactionOf(char))
+    local faction = factionId and Sunset.Factions[factionId]
+    local _, grade = FactionCore.getFactionOf(char)
+    local gradeInfo = factionId and Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
+    return {
+        id = source,
+        name = exports.sunset_core:GetPlayerDisplayName(source),
+        factionId = factionId,
+        factionLabel = faction and faction.label or 'LSPD',
+        rank = (gradeInfo and gradeInfo.label) or 'Officer',
+    }
+end
+
+local function notifyRadarCaught(driverSource, officer, speed, limit, over)
+    local header = ('%s %s %s'):format(officer.factionLabel, officer.rank, officer.name)
+    local detail = ('caught you at %d km/h in a %d km/h zone (+%d).'):format(speed, limit, over)
+    local chatMessage = ('%s (%d) %s'):format(header, officer.id, detail)
+
+    TriggerClientEvent('sunset:chat:message', driverSource, {
+        id = officer.id,
+        name = officer.name,
+        message = detail,
+        time = os.date('%H:%M:%S'),
+        type = 'radar_alert',
+        factionId = officer.factionId,
+        factionLabel = officer.factionLabel,
+        rank = officer.rank,
+        speed = speed,
+        limit = limit,
+        over = over,
+    })
+    TriggerClientEvent('sunset:client:notify', driverSource, chatMessage, 'error', 10000)
+end
+
 local function broadcastToPolice(tag, message)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
@@ -536,6 +588,33 @@ exports.sunset_core:RegisterCallback('sunset:policeWantedList', function(source)
     return buildWantedListRows()
 end)
 
+exports.sunset_core:RegisterCallback('sunset:policeFindWanted', function(source, targetId)
+    if not FactionCore.isLawEnforcement(source) then
+        return nil, FactionCore.accessError(source, 'mdc', 'track wanted suspects', 'law_enforcement')
+    end
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then
+        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
+    local wanted = WantedOnline[targetId]
+    if not wanted then
+        return nil, ('Player (%d) has no active wanted status.'):format(targetId)
+    end
+    local coords = FactionCore.playerCoords(targetId)
+    if not coords then
+        return nil, 'Could not locate that player.'
+    end
+    return {
+        id = targetId,
+        name = exports.sunset_core:GetPlayerDisplayName(targetId),
+        level = wanted.level or 1,
+        reason = wanted.reason or 'Active wanted',
+        x = coords.x,
+        y = coords.y,
+        z = coords.z,
+    }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:policeArrest', function(source, targetId)
     if not FactionCore.hasPerm(source, 'arrest') then
         return nil, FactionCore.accessError(source, 'arrest', 'arrest a suspect', 'law_enforcement')
@@ -657,6 +736,34 @@ exports.sunset_core:RegisterCallback('sunset:policeConfiscate', function(source,
     return removed
 end)
 
+local function broadcastFactionAction(source, message, factionId)
+    local char = FactionCore.getChar(source)
+    if not char then return end
+    factionId = factionId or select(1, FactionCore.getFactionOf(char))
+    if not factionId then return end
+
+    local name = exports.sunset_core:GetPlayerDisplayName(source)
+    local faction = Sunset.Factions[factionId]
+    local label = faction and faction.label or factionId
+    local _, grade = FactionCore.getFactionOf(char)
+    local gradeInfo = Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
+    local rank = (gradeInfo and gradeInfo.label) or 'Member'
+    local payload = {
+        id = source,
+        name = name,
+        message = message,
+        time = os.date('%H:%M:%S'),
+        type = 'faction_action',
+        factionId = factionId,
+        factionLabel = label,
+        rank = rank,
+    }
+
+    for _, id in ipairs(GetPlayers()) do
+        TriggerClientEvent('sunset:chat:message', tonumber(id), payload)
+    end
+end
+
 local function validateRadarVehicle(source, networkId)
     if not FactionCore.hasPerm(source, 'radar') then
         return nil, FactionCore.accessError(source, 'radar', 'use the speed radar', 'law_enforcement')
@@ -696,6 +803,7 @@ exports.sunset_core:RegisterCallback('sunset:policeRadarStart', function(source,
             cfg.minLimitKmh or 20, cfg.maxLimitKmh or 250)
     end
     RadarSessions[source] = { networkId = NetworkGetNetworkIdFromEntity(vehicle), limitKmh = limit, lastPlate = '', lastAt = 0 }
+    broadcastFactionAction(source, ('placed a speed radar with a %d km/h limit.'):format(limit), 'police')
     return { limitKmh = limit }
 end)
 
@@ -709,6 +817,7 @@ local function radarCommand(source, args)
     TriggerClientEvent('sunset:police:tryStartRadar', source, args[1])
 end
 RegisterCommand('startradar', radarCommand, false)
+RegisterCommand('setradar', radarCommand, false)
 RegisterCommand('radar', radarCommand, false)
 RegisterCommand('stopradar', function(source)
     if source == 0 then return end
@@ -744,18 +853,14 @@ exports.sunset_core:RegisterCallback('sunset:policeRadarLock', function(source, 
     session.lastPlate, session.lastAt = plate, now
 
     local over = speed - limit
-    local message = ('Radar: %s caught at %d km/h (limit %d, +%d).'):format(plate, speed, limit, over)
-    policeChat(source, 'RADAR', message, 'radar')
+    local officer = officerRadarIdentity(source)
+    local message = ('%s (%d) recorded %s at %d km/h (limit %d, +%d).'):format(
+        officer.name, officer.id, plate, speed, limit, over)
+    policeChat(source, 'HQ', message, 'hq')
 
-    local driver = GetPedInVehicleSeat(targetVehicle, -1)
-    for _, id in ipairs(GetPlayers()) do
-        local targetSource = tonumber(id)
-        if targetSource and GetPlayerPed(targetSource) == driver then
-            policeChat(targetSource, 'RADAR ALERT',
-                ('LSPD recorded your vehicle at %d km/h in a %d km/h zone (+%d).'):format(speed, limit, over),
-                'radar')
-            break
-        end
+    local driverSource = findVehicleDriverSource(targetVehicle)
+    if driverSource and driverSource ~= source then
+        notifyRadarCaught(driverSource, officer, speed, limit, over)
     end
 
     return { speed = speed, limit = limit, flagged = true, plate = plate, message = message }

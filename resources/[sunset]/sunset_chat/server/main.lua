@@ -30,6 +30,9 @@ end
 
 RegisterNetEvent('sunset:chat:typing', function(message)
     local src = source
+    local isAdmin = false
+    pcall(function() isAdmin = exports.sunset_admin:IsAdmin(src, 1) == true end)
+    if not isAdmin then return end
     local text = cleanChatText(message, 80) or ''
     if text:sub(1, 1) == '/' then text = '' end
     sendNearby(src, {
@@ -38,15 +41,42 @@ RegisterNetEvent('sunset:chat:typing', function(message)
     }, CHAT_RANGE, 'sunset:chat:typing')
 end)
 
+local function chatIdentity(source)
+    local payload = {}
+    if GetResourceState('sunset_clans') == 'started' then
+        local ok, base = pcall(function()
+            return exports.sunset_clans:GetPlayerBaseName(source)
+        end)
+        if ok and type(base) == 'string' and base ~= '' then
+            payload.name = base
+        end
+        local okMeta, meta = pcall(function()
+            return exports.sunset_clans:GetClanChatMeta(source)
+        end)
+        if okMeta and type(meta) == 'table' then
+            payload.clanTag = meta.clanTag
+            payload.clanTagColor = meta.clanTagColor
+            payload.clanTagStyle = meta.clanTagStyle
+        end
+    end
+    if not payload.name then
+        payload.name = exports.sunset_core:GetPlayerDisplayName(source)
+    end
+    return payload
+end
+
 RegisterNetEvent('sunset:chat:send', function(message)
     local src = source
     message = cleanChatText(message, 256)
     if not message then return end
 
-    local name = exports.sunset_core:GetPlayerDisplayName(src)
+    local identity = chatIdentity(src)
     sendNearby(src, {
         id = src,
-        name = name,
+        name = identity.name,
+        clanTag = identity.clanTag,
+        clanTagColor = identity.clanTagColor,
+        clanTagStyle = identity.clanTagStyle,
         message = message,
         time = os.date('%H:%M:%S'),
         type = 'say',
@@ -57,10 +87,13 @@ end)
 RegisterCommand('me', function(source, args)
     local msg = cleanChatText(table.concat(args, ' '), 256)
     if not msg then return end
-    local name = exports.sunset_core:GetPlayerDisplayName(source)
+    local identity = chatIdentity(source)
     sendNearby(source, {
         id = source,
-        name = name,
+        name = identity.name,
+        clanTag = identity.clanTag,
+        clanTagColor = identity.clanTagColor,
+        clanTagStyle = identity.clanTagStyle,
         message = msg,
         time = os.date('%H:%M:%S'),
         type = 'me',

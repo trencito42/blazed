@@ -1,6 +1,10 @@
 const Chat = {
     messages: [],
     settingsOpen: false,
+    playerId: 0,
+    playerName: '',
+    draftText: '',
+    isAdmin: false,
 
     pageSize() {
         return ChatSettings?.settings?.pageSize || 10;
@@ -30,6 +34,40 @@ const Chat = {
         return `[${raw}]`;
     },
 
+    splitClanParts(m) {
+        const tag = String(m.clanTag || '').trim();
+        const name = String(m.name || 'Player').trim();
+        const style = String(m.clanTagStyle || 'brackets');
+        const color = String(m.clanTagColor || '#FF8C00');
+        if (!tag) return { prefix: '', name, suffix: '', color };
+        switch (style) {
+            case 'prefix_dot': return { prefix: `${tag}.`, name, suffix: '', color };
+            case 'suffix_brackets': return { prefix: '', name, suffix: `[${tag}]`, color };
+            case 'suffix_dot': return { prefix: '', name, suffix: `.${tag}`, color };
+            case 'glued_prefix': return { prefix: tag, name, suffix: '', color };
+            case 'glued_suffix': return { prefix: '', name, suffix: tag, color };
+            default: return { prefix: `[${tag}]`, name, suffix: '', color };
+        }
+    },
+
+    formatClanNameHtml(m) {
+        const parts = this.splitClanParts(m);
+        const esc = (v) => this.escapeHtml(v);
+        return [
+            parts.prefix ? `<span class="chat-clan-tag" style="color:${esc(parts.color)}">${esc(parts.prefix)}</span>` : '',
+            esc(parts.name),
+            parts.suffix ? `<span class="chat-clan-tag" style="color:${esc(parts.color)}">${esc(parts.suffix)}</span>` : '',
+        ].join('');
+    },
+
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    },
+
     formatLine(m) {
         const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
         const time = this.formatTime(m);
@@ -55,26 +93,41 @@ const Chat = {
         }
 
         if (type === 'r' || type === 'd') {
-            const key = type === 'd' ? 'D' : 'S';
             let text = msg;
             if (type === 'r' && text && !/over\.?$/i.test(text.trim())) {
                 text = `${text.replace(/[.,\s]+$/, '')}, over.`;
             }
             const header = [faction, rank, name].filter(Boolean).join(' ');
-            return `${prefix}** (${id}) ${header} (${key}): ${text} **`;
+            const idPart = id > 0 ? `(${id}) ` : '';
+            return `${prefix}** ${idPart}${header}: ${text} **`;
         }
 
         if (type === 'f' || type === 'gov') {
             const header = [faction, rank, name].filter(Boolean).join(' ');
-            return `${prefix}** (${id}) ${header}: ${msg} **`;
+            const idPart = id > 0 ? `(${id}) ` : '';
+            return `${prefix}** ${idPart}${header}: ${msg} **`;
+        }
+
+        if (type === 'faction_action') {
+            const header = [faction, rank, name].filter(Boolean).join(' ');
+            const idPart = id > 0 ? ` (${id})` : '';
+            return `${prefix}${header}${idPart} ${msg}`.trim();
         }
 
         if (type === 'say' || type === '') {
-            return `${prefix}${name} says: ${msg}`;
+            const idPart = id > 0 ? ` (${id})` : '';
+            if (m.clanTag) {
+                return `${prefix}${this.formatClanNameHtml(m)}${idPart} says: ${this.escapeHtml(msg)}`;
+            }
+            return `${prefix}${name}${idPart} says: ${msg}`;
         }
 
         if (type === 'me') {
-            return `${prefix}* ${name} ${msg}`;
+            const idPart = id > 0 ? ` (${id})` : '';
+            if (m.clanTag) {
+                return `${prefix}* ${this.formatClanNameHtml(m)}${idPart} ${this.escapeHtml(msg)}`;
+            }
+            return `${prefix}* ${name}${idPart} ${msg}`;
         }
 
         if (type === 'do') {
@@ -87,8 +140,13 @@ const Chat = {
         }
 
         if (type === 'radar') {
-            const tag = name || 'RADAR';
-            return `${prefix}${tag}: ${msg}`;
+            return `${prefix}HQ: ${msg}`;
+        }
+
+        if (type === 'radar_alert') {
+            const header = [faction, rank, name].filter(Boolean).join(' ');
+            const idPart = id > 0 ? ` (${id})` : '';
+            return `${prefix}${header}${idPart}: ${msg}`;
         }
 
         if (type === 'police_alert') {
@@ -117,7 +175,7 @@ const Chat = {
             const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
             const highlighted = new Set([
                 'say', 'me', 'do', 'f', 'r', 'd', 'gov', 'announce', 'sms', 'hq',
-                'megaphone', 'police_alert', 'faction_info', 'radar',
+                'megaphone', 'police_alert', 'faction_info', 'faction_action', 'radar', 'radar_alert',
                 'command_error', 'command_warn', 'command_info',
             ]);
             const classes = ['chat-msg'];
@@ -127,10 +185,29 @@ const Chat = {
 
             const line = document.createElement('span');
             line.className = 'chat-msg__line';
-            line.textContent = this.formatLine(m);
+            const formatted = this.formatLine(m);
+            if (m.clanTag && (type === 'say' || type === 'me' || type === '')) {
+                line.innerHTML = formatted;
+            } else {
+                line.textContent = formatted;
+            }
             el.appendChild(line);
             container.appendChild(el);
         });
+
+        const draft = String(this.draftText || '').trim();
+        if (open && this.isAdmin && draft && draft.charAt(0) !== '/') {
+            const draftEl = document.createElement('div');
+            draftEl.className = 'chat-msg chat-msg--say chat-msg--draft';
+            const line = document.createElement('span');
+            line.className = 'chat-msg__line';
+            const idPart = this.playerId > 0 ? ` (${this.playerId})` : '';
+            const who = this.playerName || 'You';
+            line.textContent = `${this.formatTime({ time: new Date().toTimeString().slice(0, 8) })} ${who}${idPart} says: ${draft}`;
+            draftEl.appendChild(line);
+            container.appendChild(draftEl);
+        }
+
         container.scrollTop = container.scrollHeight;
     },
 
@@ -146,11 +223,19 @@ const Chat = {
         }
     },
 
-    toggle(open) {
+    setContext(data) {
+        const row = data || {};
+        this.playerId = Number(row.playerId) || 0;
+        this.playerName = String(row.playerName || '').trim();
+        this.isAdmin = Boolean(row.isAdmin);
+    },
+
+    toggle(open, data) {
         const chat = $('#chat');
         const wrap = $('#chat-input-wrap');
         const input = $('#chat-input');
         if (open) {
+            this.setContext(data);
             ChatSettings.init();
             document.body.classList.add('chat-ui-open');
             chat.classList.add('chat-open');
@@ -165,6 +250,7 @@ const Chat = {
             document.body.classList.remove('chat-ui-open');
             chat.classList.remove('chat-open');
             wrap.classList.add('hidden');
+            this.draftText = '';
             this.render();
             input.value = '';
             input.blur();
@@ -175,8 +261,10 @@ const Chat = {
         const input = $('#chat-input');
         if (!input) return;
         input.value = text || '';
+        this.draftText = input.value;
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
+        this.render();
     },
 
     send() {
@@ -198,9 +286,13 @@ const emitChatPreview = () => {
     post('chatPreview', { text });
 };
 
-$('#chat-input')?.addEventListener('input', () => {
+$('#chat-input')?.addEventListener('input', (e) => {
+    Chat.draftText = e.target?.value ?? '';
+    if (Chat.isAdmin) Chat.render();
     clearTimeout(previewTimer);
-    previewTimer = setTimeout(emitChatPreview, 70);
+    if (Chat.isAdmin) {
+        previewTimer = setTimeout(emitChatPreview, 70);
+    }
 });
 
 $('#chat-settings-btn')?.addEventListener('click', (e) => {

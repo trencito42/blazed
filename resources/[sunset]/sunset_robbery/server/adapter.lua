@@ -21,11 +21,23 @@ function RobberyAdapter.isPoliceRestricted(source)
     if not char then return true end
     local factionId = select(1, Sunset.GetCharacterFaction(char))
     if factionId and SunsetRobbery.BlockedFactions[factionId] then return true end
-    local onDuty = false
-    pcall(function()
-        onDuty = exports.sunset_factions:IsOnDuty(source) == true
+    return factionId and Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+end
+
+function RobberyAdapter.isWanted(source)
+    if GetResourceState('sunset_factions') ~= 'started' then return false end
+    local ok, wanted = pcall(function()
+        return exports.sunset_factions:GetWantedState(source)
     end)
-    return onDuty and factionId and Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+    return ok and type(wanted) == 'table' and (tonumber(wanted.level) or 0) > 0
+end
+
+function RobberyAdapter.isJailed(source)
+    if GetResourceState('sunset_factions') ~= 'started' then return false end
+    local ok, jailed = pcall(function()
+        return exports.sunset_factions:IsJailed(source) == true
+    end)
+    return ok and jailed == true
 end
 
 function RobberyAdapter.policeCount()

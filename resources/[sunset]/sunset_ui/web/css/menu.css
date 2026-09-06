@@ -661,10 +661,27 @@
     grid-template-columns: 58px minmax(0, 1fr) auto;
     gap: 14px;
     min-height: 66px;
-    padding: 7px 10px 7px 7px;
-    background: rgba(10, 9, 8, 0.18);
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 8px 12px 8px 8px;
+    background: rgba(0, 0, 0, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 119, 0, 0.18);
+}
+
+.menu--solo-inventory .tech-panel {
+    background: rgba(8, 7, 8, 0.52);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
+    border-top: 2px solid rgba(255, 119, 0, 0.42);
+}
+
+.menu--solo-inventory .menu-mgmt__head h3,
+.menu--solo-inventory .inventory-row__details strong {
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.menu--solo-inventory .inventory-row__details span {
+    color: rgba(255, 255, 255, 0.62);
 }
 
 .menu-inventory-list .inventory-row button {

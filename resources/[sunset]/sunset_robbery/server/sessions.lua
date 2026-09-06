@@ -54,7 +54,9 @@ function RobberySessions.canStart(source, locationId, skipGates)
     if not char or not tonumber(char.id) then return nil, 'Your character is not loaded. Reconnect and try again.' end
     if skipGates or RobberyAdapter.isAdmin(source) then return loc, nil, char end
     if RobberyAdapter.isDead(source) then return nil, 'You cannot start a robbery right now' end
-    if RobberyAdapter.isPoliceRestricted(source) then return nil, 'You cannot rob on duty as law enforcement' end
+    if RobberyAdapter.isPoliceRestricted(source) then return nil, 'Law enforcement cannot commit robberies' end
+    if RobberyAdapter.isJailed(source) then return nil, 'You cannot start a robbery while in custody' end
+    if RobberyAdapter.isWanted(source) then return nil, 'You cannot start a robbery while wanted' end
     local now = os.time()
     local characterId = tonumber(char.id)
     local storedPlayerCd = RobberyAdapter.getCooldown('character', characterId)

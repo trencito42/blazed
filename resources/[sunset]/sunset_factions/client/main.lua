@@ -358,6 +358,43 @@ RegisterCommand('factions', function()
     exports.sunset_ui:SetFocus(true, true)
 end, false)
 
+AddEventHandler('sunset:nui:factionManage', function(data)
+    data = data or {}
+    local action = data.action
+    local ok, err
+
+    if action == 'invite' then
+        ok, err = Sunset.AwaitCallback('sunset:factionInvite', tonumber(data.targetId))
+        if ok then
+            exports.sunset_ui:Notify(('%s was invited to %s.'):format(ok.target, ok.label), 'success', 8000)
+        end
+    elseif action == 'motd' then
+        ok, err = Sunset.AwaitCallback('sunset:factionSetMotd', data.message)
+        if ok then exports.sunset_ui:Notify('Faction MOTD updated.', 'success') end
+    elseif action == 'rank' then
+        ok, err = Sunset.AwaitCallback('sunset:factionGiveRank', tonumber(data.targetId), tonumber(data.grade))
+    elseif action == 'kick' then
+        ok, err = Sunset.AwaitCallback('sunset:factionUninvite', tonumber(data.targetId))
+        if ok then exports.sunset_ui:Notify('Member removed from faction.', 'success') end
+    elseif action == 'warn' then
+        ok, err = Sunset.AwaitCallback('sunset:factionWarn', tonumber(data.targetId), data.reason)
+        if ok then exports.sunset_ui:Notify('Faction warning issued.', 'success') end
+    else
+        return exports.sunset_ui:Notify('Unknown faction action.', 'error')
+    end
+
+    if not ok then
+        return exports.sunset_ui:Notify(err or 'Faction action failed.', 'error', 8000)
+    end
+
+    local dashboard, dashErr = Sunset.AwaitCallback('sunset:factionDashboard')
+    if dashboard then
+        exports.sunset_ui:Send('factionPanelShow', dashboard)
+    elseif dashErr then
+        exports.sunset_ui:Notify(dashErr, 'error', 7000)
+    end
+end)
+
 AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
     if blocked() then return end
     local label = faction.label or factionId

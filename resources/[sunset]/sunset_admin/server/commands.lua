@@ -244,7 +244,7 @@ registerServerCommand('setstat', function(source, args) setPlayerStat(source, ar
 local statAliases = {
     setcash = 'cash', setmoney = 'cash', setbank = 'bank', setlevel = 'level',
     setrp = 'rp', setrespect = 'rp', setpaydays = 'paydays', setplaytime = 'playtime',
-    setpremium = 'premium', setsunsetcoins = 'premium', sethunger = 'hunger',
+    setpremium = 'premium', setsunsetcoins = 'premium', setsc = 'premium', setpp = 'premium', sethunger = 'hunger',
     setthirst = 'thirst', setstress = 'stress', setrob = 'rob', setrobpoints = 'rob',
 }
 for command, stat in pairs(statAliases) do
