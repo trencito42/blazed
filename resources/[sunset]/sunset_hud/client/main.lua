@@ -345,39 +345,6 @@ CreateThread(function()
     end
 end)
 
-local function drawText3d(x, y, z, text, scale, r, g, b)
-    local onScreen, sx, sy = World3dToScreen2d(x, y, z)
-    if not onScreen then return sx, sy, false end
-    SetTextScale(scale or 0.32, scale or 0.32)
-    SetTextFont(4)
-    SetTextProportional(true)
-    SetTextColour(r or 255, g or 255, b or 255, 215)
-    SetTextCentre(true)
-    SetTextOutline()
-    BeginTextCommandDisplayText('STRING')
-    AddTextComponentSubstringPlayerName(text)
-    EndTextCommandDisplayText(sx, sy)
-    return sx, sy, true
-end
-
-local function drawHpBar3d(x, y, z, pct)
-    local onScreen, sx, sy = World3dToScreen2d(x, y, z)
-    if not onScreen then return end
-    local w, h = 0.046, 0.008
-    DrawRect(sx, sy, w + 0.0022, h + 0.0028, 0, 0, 0, 190)
-    DrawRect(sx, sy, w, h, 28, 28, 28, 170)
-    local fill = math.max(0.0, math.min(1.0, (tonumber(pct) or 0) / 100.0))
-    if fill <= 0.001 then return end
-    local fw = w * fill
-    local r, g, b = 40, 220, 90
-    if pct <= 25 then
-        r, g, b = 220, 50, 50
-    elseif pct <= 50 then
-        r, g, b = 230, 180, 40
-    end
-    DrawRect(sx - ((w - fw) * 0.5), sy, fw, h, r, g, b, 230)
-end
-
 local function isLawEnforcementOnDuty()
     if not LocalPlayer.state.sunsetOnDuty then return false end
     local factionId = LocalPlayer.state.sunsetFaction
@@ -405,35 +372,91 @@ local function playerNametagLabel(serverId, fallbackName)
     return label
 end
 
+-- Native gamer tags are attached to the network ped by the game itself. Unlike
+-- manually projected 3D text, they keep up with players in vehicles and in the
+-- air, and the engine lays out the name, health, voice and wanted components.
+local NAMETAG_DISTANCE = 22.0
+local NAMETAG_REFRESH_MS = 100
+local gamerTags = {}
+
+local function removeGamerTag(player)
+    local entry = gamerTags[player]
+    if not entry then return end
+    if entry.tag and IsMpGamerTagActive(entry.tag) then
+        RemoveMpGamerTag(entry.tag)
+    end
+    gamerTags[player] = nil
+end
+
+local function ensureGamerTag(player, ped, label)
+    local entry = gamerTags[player]
+    if entry and (entry.ped ~= ped or entry.label ~= label or not IsMpGamerTagActive(entry.tag)) then
+        removeGamerTag(player)
+        entry = nil
+    end
+    if entry then return entry end
+
+    local tag = CreateMpGamerTagWithCrewColor(ped, label, false, false, '', 0, 0, 0, 0)
+    entry = { tag = tag, ped = ped, label = label }
+    gamerTags[player] = entry
+    SetMpGamerTagHealthBarColour(tag, 18)
+    return entry
+end
+
+local function setGamerTagVisible(entry, visible, wantedLevel, isTalking, alpha)
+    local tag = entry.tag
+    SetMpGamerTagVisibility(tag, 0, visible) -- player name + server ID
+    SetMpGamerTagVisibility(tag, 2, visible) -- native health/armour bar
+    SetMpGamerTagVisibility(tag, 4, visible and isTalking) -- voice icon
+    SetMpGamerTagVisibility(tag, 7, visible and wantedLevel > 0) -- wanted star
+    if visible then
+        SetMpGamerTagWantedLevel(tag, wantedLevel)
+        SetMpGamerTagAlpha(tag, 0, alpha)
+        SetMpGamerTagAlpha(tag, 2, alpha)
+        SetMpGamerTagAlpha(tag, 4, alpha)
+        SetMpGamerTagAlpha(tag, 7, alpha)
+    end
+end
+
 CreateThread(function()
     while true do
+        local myPlayer = PlayerId()
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
-        local myId = PlayerId()
         local policeView = isLawEnforcementOnDuty()
+        local active = {}
+        local hideAll = IsPauseMenuActive() or IsScreenFadedOut()
+
         for _, player in ipairs(GetActivePlayers()) do
-            if player ~= myId then
+            if player ~= myPlayer and NetworkIsPlayerActive(player) then
+                active[player] = true
                 local ped = GetPlayerPed(player)
-                if ped ~= 0 and DoesEntityExist(ped) and HasEntityClearLosToEntity(myPed, ped, 17) then
-                    local coords = GetEntityCoords(ped)
-                    if #(myCoords - coords) < 22.0 then
-                        local serverId = GetPlayerServerId(player)
-                        local hp = GetEntityHealth(ped)
-                        local maxHp = GetEntityMaxHealth(ped)
-                        local pct = math.max(0, math.floor((hp / math.max(1, maxHp)) * 100))
-                        local label = playerNametagLabel(serverId, GetPlayerName(player))
-                        local wantedLevel = wantedLevelForPlayer(serverId)
-                        local nameZ = coords.z + 1.08
-                        local hpZ = coords.z + 0.90
-                        if policeView and wantedLevel > 0 then
-                            drawText3d(coords.x, coords.y, nameZ + 0.16, ('★%d'):format(wantedLevel), 0.28, 255, 80, 80)
-                        end
-                        drawText3d(coords.x, coords.y, nameZ, label, 0.32)
-                        drawHpBar3d(coords.x, coords.y, hpZ, pct)
-                    end
+                if ped ~= 0 and DoesEntityExist(ped) then
+                    local serverId = GetPlayerServerId(player)
+                    local label = playerNametagLabel(serverId, GetPlayerName(player))
+                    local entry = ensureGamerTag(player, ped, label)
+                    local distance = #(myCoords - GetEntityCoords(ped))
+                    local visible = not hideAll
+                        and distance <= NAMETAG_DISTANCE
+                        and HasEntityClearLosToEntity(myPed, ped, 17)
+                    local wantedLevel = policeView and wantedLevelForPlayer(serverId) or 0
+                    local fade = math.max(0.0, math.min(1.0, (NAMETAG_DISTANCE - distance) / 7.0))
+                    local alpha = math.floor(145 + (110 * fade))
+                    setGamerTagVisible(entry, visible, wantedLevel, NetworkIsPlayerTalking(player), alpha)
+                else
+                    removeGamerTag(player)
                 end
             end
         end
-        Wait(0)
+
+        for player in pairs(gamerTags) do
+            if not active[player] then removeGamerTag(player) end
+        end
+        Wait(NAMETAG_REFRESH_MS)
     end
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    for player in pairs(gamerTags) do removeGamerTag(player) end
 end)
