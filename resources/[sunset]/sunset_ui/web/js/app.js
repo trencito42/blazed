@@ -366,6 +366,15 @@ window.addEventListener('message', (event) => {
                 post('clanPanelsClose');
             }
             break;
+        case 'clanBrowseInline':
+            if (window.ClanPanels) {
+                try {
+                    ClanPanels.showBrowseInline(data || event.data.data);
+                } catch (err) {
+                    console.error('[ClanPanels] showBrowseInline failed', err);
+                }
+            }
+            break;
         case 'clanPanelsHide':
             if (window.ClanPanels) ClanPanels.hide();
             document.body.classList.remove('clan-panels-open');

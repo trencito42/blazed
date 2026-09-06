@@ -11,7 +11,11 @@ const ClanPanels = {
         });
 
         document.querySelectorAll('[data-clan-tab]').forEach((tab) => {
-            tab.addEventListener('click', () => this.setTab(tab.dataset.clanTab));
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.clanTab;
+                this.setTab(tabId);
+                if (tabId === 'browse') this.requestBrowse();
+            });
         });
 
         document.querySelectorAll('[data-clan-action]').forEach((form) => {
@@ -34,10 +38,6 @@ const ClanPanels = {
                 settingsForm.addEventListener(evt, () => this.updateSettingsPreview());
             });
         }
-
-        document.querySelector('[data-clan-tab="browse"]')?.addEventListener('click', () => {
-            post('clanBrowse');
-        });
 
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
@@ -180,6 +180,48 @@ const ClanPanels = {
         if (!members?.length) roster.innerHTML = '<p class="clan-empty">No members found.</p>';
     },
 
+    renderDirectoryCards(list, clans) {
+        if (!list) return;
+        list.innerHTML = '';
+        (clans || []).forEach((clan) => {
+            const card = document.createElement('article');
+            card.className = 'clan-directory-card';
+            const title = document.createElement('strong');
+            title.textContent = clan.name || 'Clan';
+            const tag = document.createElement('span');
+            tag.className = 'clan-directory-card__tag';
+            tag.style.color = clan.tagColor || '#FF8C00';
+            tag.textContent = clan.preview || `[${clan.tag}]Player`;
+            const description = document.createElement('p');
+            description.textContent = clan.description || 'No description.';
+            const meta = document.createElement('div');
+            meta.className = 'clan-directory-card__meta';
+            meta.textContent = `${clan.online || 0}/${clan.total || 0} online · tag ${clan.tag || '?'}`;
+            card.append(title, tag, description, meta);
+            list.appendChild(card);
+        });
+        if (!list.children.length) list.innerHTML = '<p class="clan-empty">No clans have been created yet.</p>';
+    },
+
+    requestBrowse() {
+        if (this._browseLoading) return;
+        const list = $('#clan-browse-list');
+        if (!list) return;
+        if (this._browseLoaded) return;
+        this._browseLoading = true;
+        list.innerHTML = '<p class="clan-empty">Loading clans...</p>';
+        post('clanBrowse');
+    },
+
+    showBrowseInline(payload = {}) {
+        this.init();
+        this._browseLoading = false;
+        this._browseLoaded = true;
+        this.directory = Array.isArray(payload.clans) ? payload.clans : [];
+        this.renderDirectoryCards($('#clan-browse-list'), this.directory);
+        this.setTab('browse');
+    },
+
     showDashboard(data = {}) {
         this.init();
         const panel = $('#clan-panel');
@@ -189,6 +231,8 @@ const ClanPanels = {
         }
 
         $('#clan-directory')?.classList.add('hidden');
+        this._browseLoaded = false;
+        this._browseLoading = false;
         this.dashboard = data || {};
         const inClan = Boolean(this.dashboard.inClan);
         const perms = this.dashboard.permissions || {};
@@ -298,27 +342,7 @@ const ClanPanels = {
         this.directory = Array.isArray(payload.clans) ? payload.clans : [];
         const list = $('#clan-directory-list');
         if (!list) return false;
-        list.innerHTML = '';
-
-        this.directory.forEach((clan) => {
-            const card = document.createElement('article');
-            card.className = 'clan-directory-card';
-            const title = document.createElement('strong');
-            title.textContent = clan.name || 'Clan';
-            const tag = document.createElement('span');
-            tag.className = 'clan-directory-card__tag';
-            tag.style.color = clan.tagColor || '#FF8C00';
-            tag.textContent = clan.preview || `[${clan.tag}]Player`;
-            const description = document.createElement('p');
-            description.textContent = clan.description || 'No description.';
-            const meta = document.createElement('div');
-            meta.className = 'clan-directory-card__meta';
-            meta.textContent = `${clan.online || 0}/${clan.total || 0} online · tag ${clan.tag || '?'}`;
-            card.append(title, tag, description, meta);
-            list.appendChild(card);
-        });
-
-        if (!list.children.length) list.innerHTML = '<p class="clan-empty">No clans have been created yet.</p>';
+        this.renderDirectoryCards(list, this.directory);
         directory.classList.remove('hidden');
         this.setBodyOpen(true);
         this.focusReady();

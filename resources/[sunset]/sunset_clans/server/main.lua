@@ -251,21 +251,52 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
     local existing = MySQL.scalar.await('SELECT id FROM clans WHERE LOWER(name) = LOWER(?) OR LOWER(tag) = LOWER(?) LIMIT 1', { name, tag })
     if existing then return nil, 'That clan name or tag is already taken.' end
 
+    local player = exports.sunset_core:GetPlayer(source)
+    local balanceBefore = player and tonumber(player.premium_points) or 0
     local cost = SunsetClans.CreationCost
     local paid, payErr = spendCoins(source, cost)
     if not paid then return nil, payErr end
 
-    local clanId = MySQL.insert.await([[
-        INSERT INTO clans (name, tag, description, tag_color, tag_style, owner_character_id, max_members)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ]], { name, tag, description, tagColor, tagStyle, cid, SunsetClans.MaxMembers })
+    local function refundCoins()
+        if cost > 0 then
+            Sunset.SetPersistentStat(source, 'account', 'premium_points', balanceBefore)
+        end
+    end
 
-    MySQL.insert.await('INSERT INTO clan_members (clan_id, character_id, rank) VALUES (?, ?, ?)', {
-        clanId, cid, 'leader',
-    })
-    audit(clanId, cid, 'create', { name = name, tag = tag, cost = cost })
+    local clanId
+    local insertOk, insertErr = pcall(function()
+        clanId = MySQL.insert.await([[
+            INSERT INTO clans (name, tag, description, tag_color, tag_style, owner_character_id, max_members)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ]], { name, tag, description, tagColor, tagStyle, cid, SunsetClans.MaxMembers })
+    end)
+    if not insertOk or not clanId then
+        refundCoins()
+        print(('[sunset_clans] clanCreate insert failed for %s: %s'):format(source, tostring(insertErr or clanId)))
+        return nil, 'Could not create clan in the database. Your Sunset Coins were refunded.'
+    end
+
+    local memberOk, memberErr = pcall(function()
+        MySQL.insert.await('INSERT INTO clan_members (clan_id, character_id, rank) VALUES (?, ?, ?)', {
+            clanId, cid, 'leader',
+        })
+    end)
+    if not memberOk then
+        pcall(function() MySQL.update.await('DELETE FROM clans WHERE id = ?', { clanId }) end)
+        refundCoins()
+        print(('[sunset_clans] clanCreate member insert failed for %s: %s'):format(source, tostring(memberErr)))
+        return nil, 'Could not add you as clan leader. Your Sunset Coins were refunded.'
+    end
+
+    pcall(function()
+        audit(clanId, cid, 'create', { name = name, tag = tag, cost = cost })
+    end)
     ClanDisplay.sync(source)
-    return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+    local row = ClanDisplay.getMembership(cid)
+    if not row then
+        return nil, 'Clan was created but could not be loaded. Reopen /clan.'
+    end
+    return dashboardPayload(source, row, cid)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, payload)

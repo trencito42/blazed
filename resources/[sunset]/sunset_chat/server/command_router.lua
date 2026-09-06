@@ -77,6 +77,11 @@ local function tryRunAdminCommand(src, cmd, rest)
     end)
     if ok and result then return true end
 
+    ok, result = pcall(function()
+        return exports.sunset_factions:ExecutePlayerCommand(src, cmd, args)
+    end)
+    if ok and result then return true end
+
     return false
 end
 
@@ -126,7 +131,9 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
             return
         end
         if serverCommands[cmd] then
-            TriggerClientEvent('sunset:chat:executeCommand', src, line)
+            chatSystem(src,
+                ('/%s could not be run from chat. Use the server console or contact staff.'):format(cmd),
+                'error')
             return
         end
         chatSystem(src,

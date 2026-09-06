@@ -54,7 +54,7 @@ local function sendFactionInfo(factionId, name, message)
     end
 end
 
-RegisterCommand('setleader', function(source, args)
+local function handleSetLeader(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
         return exports.sunset_core:CommandDenyAdmin(source, 'setleader')
     end
@@ -63,25 +63,26 @@ RegisterCommand('setleader', function(source, args)
     if not target or not factionId then
         local msg = 'Usage: /setleader [server id|username] [faction]'
         if source == 0 then print(msg) else exports.sunset_core:CommandReply(source, msg, 'error') end
-        return
+        return true
     end
     if not Sunset.Factions[factionId] then
         local list = exports.sunset_core:CommandListKeys(Sunset.Factions, 10)
         exports.sunset_core:CommandReply(source,
             ('Unknown faction "%s". Valid factions: %s'):format(factionId, list), 'error')
-        return
+        return true
     end
     local char = FactionCore.getChar(target)
     if not char then
         exports.sunset_core:CommandNoCharacter(source, target)
-        return
+        return true
     end
     local current = select(1, FactionCore.getFactionOf(char))
     if current ~= factionId then
         if not exports.sunset_core:SetFaction(target, factionId, highestFactionGrade(factionId)) then
-            return exports.sunset_core:CommandReply(source,
+            exports.sunset_core:CommandReply(source,
                 ('Could not add %s (#%d) to %s — invalid faction grade in config.'):format(
                     GetPlayerName(target) or '?', target, factionId), 'error')
+            return true
         end
     end
     MySQL.insert.await(
@@ -94,9 +95,10 @@ RegisterCommand('setleader', function(source, args)
         exports.sunset_core:CommandReply(source,
             ('Made %s (#%d) leader of %s.'):format(GetPlayerName(target) or '?', target, factionId), 'success')
     end
-end, false)
+    return true
+end
 
-RegisterCommand('removeleader', function(source, args)
+local function handleRemoveLeader(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
         return exports.sunset_core:CommandDenyAdmin(source, 'removeleader')
     end
@@ -105,18 +107,18 @@ RegisterCommand('removeleader', function(source, args)
     if not target or not factionId then
         local msg = 'Usage: /removeleader [server id|username] [faction]'
         if source == 0 then print(msg) else exports.sunset_core:CommandReply(source, msg, 'error') end
-        return
+        return true
     end
     if not Sunset.Factions[factionId] then
         local list = exports.sunset_core:CommandListKeys(Sunset.Factions, 10)
         exports.sunset_core:CommandReply(source,
             ('Unknown faction "%s". Valid factions: %s'):format(factionId, list), 'error')
-        return
+        return true
     end
     local char = FactionCore.getChar(target)
     if not char then
         exports.sunset_core:CommandNoCharacter(source, target)
-        return
+        return true
     end
     MySQL.update.await('DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?', { char.id, factionId })
     FactionCore.auditLog(factionId, char.id, 'removeleader', char.id, { by = source })
@@ -125,7 +127,24 @@ RegisterCommand('removeleader', function(source, args)
         exports.sunset_core:CommandReply(source,
             ('Removed %s (#%d) as leader of %s.'):format(GetPlayerName(target) or '?', target, factionId), 'success')
     end
+    return true
+end
+
+RegisterCommand('setleader', function(source, args)
+    handleSetLeader(source, args)
 end, false)
+
+RegisterCommand('removeleader', function(source, args)
+    handleRemoveLeader(source, args)
+end, false)
+
+function ExecutePlayerCommand(source, name, args)
+    name = string.lower(tostring(name or ''))
+    if name == 'setleader' then return handleSetLeader(source, args or {}) end
+    if name == 'removeleader' then return handleRemoveLeader(source, args or {}) end
+    return false
+end
+exports('ExecutePlayerCommand', ExecutePlayerCommand)
 
 exports.sunset_core:RegisterCallback('sunset:factionUninvite', function(source, targetId)
     local char, factionId = requireLeaderPerm(source, 'uninvite')

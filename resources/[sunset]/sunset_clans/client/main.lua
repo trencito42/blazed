@@ -28,7 +28,12 @@ AddEventHandler('sunset:nui:clanPanelsReady', function()
 end)
 
 AddEventHandler('sunset:nui:clanBrowse', function()
-    openClanDirectory()
+    local data, err = Sunset.AwaitCallback('sunset:clanDirectory')
+    if not data then
+        exports.sunset_ui:Send('clanBrowseInline', { clans = {}, error = err })
+        return exports.sunset_ui:Notify(err or 'Clan directory could not be loaded.', 'error', 7000)
+    end
+    exports.sunset_ui:Send('clanBrowseInline', { clans = data })
 end)
 
 RegisterCommand('acceptclan', function()
