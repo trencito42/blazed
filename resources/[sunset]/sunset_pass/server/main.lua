@@ -207,6 +207,7 @@ local function buildPayload(source, row)
             description = mission.description,
             goal = mission.goal,
             xp = mission.xp,
+            icon = mission.icon,
             progress = progress,
             completed = entry.completed == true,
         }

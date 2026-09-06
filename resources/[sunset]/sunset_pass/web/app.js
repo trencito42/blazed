@@ -128,29 +128,46 @@ function renderTiers(data) {
     }
 }
 
+function missionIconSrc(icon) {
+    const key = ICON_ALIASES[icon] || icon || 'backpack';
+    return `${ITEM_ICON_ROOT}${key}.webp`;
+}
+
 function renderMissions(data) {
     const container = document.getElementById('pass-missions');
     if (!container || !data) return;
 
     container.innerHTML = (data.missions || []).map((mission) => {
         const pct = mission.goal > 0 ? Math.min(100, (mission.progress / mission.goal) * 100) : 0;
-        const xpLabel = mission.completed ? 'COMPLETED' : `+${mission.xp} XP`;
+        const xpLabel = mission.completed ? 'DONE' : `+${mission.xp} XP`;
+        const iconSrc = missionIconSrc(mission.icon);
         return `
             <article class="pass-mission ${mission.completed ? 'is-complete' : ''}">
-                <div class="pass-mission__head">
-                    <div>
-                        <div class="pass-mission__title">${mission.title}</div>
-                        <div class="pass-mission__desc">${mission.description}</div>
-                    </div>
-                    <div class="pass-mission__xp">${xpLabel}</div>
+                <div class="pass-mission__icon">
+                    <img src="${iconSrc}" alt="" loading="eager">
                 </div>
-                <div class="pass-mission__progress-text">${mission.progress} / ${mission.goal}</div>
-                <div class="pass-mission__bar">
-                    <div class="pass-mission__fill" style="width:${pct}%"></div>
+                <div class="pass-mission__body">
+                    <div class="pass-mission__row">
+                        <div class="pass-mission__title">${mission.title}</div>
+                        <div class="pass-mission__xp">${xpLabel}</div>
+                    </div>
+                    <div class="pass-mission__desc">${mission.description}</div>
+                    <div class="pass-mission__progress">
+                        <div class="pass-mission__bar">
+                            <div class="pass-mission__fill" style="width:${pct}%"></div>
+                        </div>
+                        <span class="pass-mission__count">${mission.progress} / ${mission.goal}</span>
+                    </div>
                 </div>
             </article>
         `;
     }).join('');
+
+    container.querySelectorAll('.pass-mission__icon img').forEach((img) => {
+        img.addEventListener('error', () => {
+            if (!img.src.endsWith('backpack.webp')) img.src = ITEM_ICON_FALLBACK;
+        }, { once: true });
+    });
 }
 
 function renderHeader(data) {

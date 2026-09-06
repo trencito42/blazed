@@ -45,6 +45,7 @@ SunsetPass.Missions = {
         description = 'Complete a luxury-store robbery and sell loot at the fence.',
         goal = 1,
         xp = 500,
+        icon = 'golden_watch',
     },
     {
         id = 'fish_catch',
@@ -52,6 +53,7 @@ SunsetPass.Missions = {
         description = 'Catch 10 fish while on a fisherman shift.',
         goal = 10,
         xp = 400,
+        icon = 'cooked_fish',
     },
     {
         id = 'courier_deliveries',
@@ -59,6 +61,7 @@ SunsetPass.Missions = {
         description = 'Complete 5 courier deliveries.',
         goal = 5,
         xp = 600,
+        icon = 'backpack',
     },
     {
         id = 'paydays',
@@ -66,5 +69,6 @@ SunsetPass.Missions = {
         description = 'Receive 2 paydays.',
         goal = 2,
         xp = 350,
+        icon = 'cash_stack',
     },
 }
