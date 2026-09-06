@@ -1,14 +1,14 @@
 /* Sunset OS — shared visual language inspired by the approved dashboard mock. */
 :root {
-    --sunset-orange: #ff8a00;
-    --sunset-amber: #ffb21c;
-    --sunset-hot: #ff5a1f;
+    --sunset-orange: #ff7700;
+    --sunset-amber: #ffb15c;
+    --sunset-hot: #ff941f;
     --sunset-green: #54e38e;
     --sunset-red: #ff554f;
     --sunset-ink: #08090b;
     --sunset-panel: rgba(13, 15, 18, 0.965);
     --sunset-panel-soft: rgba(21, 24, 29, 0.94);
-    --sunset-line: rgba(255, 138, 0, 0.32);
+    --sunset-line: rgba(255, 119, 0, 0.34);
     --sunset-line-soft: rgba(255, 255, 255, 0.09);
     --sunset-text: #f6f2e9;
     --sunset-muted: rgba(246, 242, 233, 0.54);
@@ -22,9 +22,9 @@
     --screen-accent: #ff7700;
     --screen-accent-dim: rgba(255, 119, 0, 0.2);
     --screen-accent-glow: 0 0 10px rgba(255, 119, 0, 0.55);
-    --screen-secondary: #ffb21c;
-    --screen-secondary-dim: rgba(255, 178, 28, 0.2);
-    --screen-secondary-glow: 0 0 10px rgba(255, 178, 28, 0.45);
+    --screen-secondary: #ffb15c;
+    --screen-secondary-dim: rgba(255, 177, 92, 0.2);
+    --screen-secondary-glow: 0 0 10px rgba(255, 177, 92, 0.45);
     --screen-green: #00ff66;
     --screen-red: #ff2a2a;
     --screen-glass: linear-gradient(180deg, rgba(24, 20, 18, 0.55), rgba(9, 8, 8, 0.62));

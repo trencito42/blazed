@@ -2,6 +2,25 @@ local function notify(source, message, kind)
     TriggerClientEvent('sunset:client:notify', source, message, kind or 'info', 5000)
 end
 
+local CharacterLocks = {}
+
+local function withCharacterLock(characterId, operation)
+    local key = tostring(characterId)
+    if CharacterLocks[key] then
+        return nil, 'Your Sunset Pass is already processing another action. Try again in a moment.'
+    end
+
+    CharacterLocks[key] = true
+    local result = table.pack(xpcall(operation, debug.traceback))
+    CharacterLocks[key] = nil
+
+    if not result[1] then
+        print(('[sunset_pass] operation failed for character %s: %s'):format(key, tostring(result[2])))
+        return nil, 'Sunset Pass could not process the action. No second request was accepted.'
+    end
+    return table.unpack(result, 2, result.n)
+end
+
 local function getCharacter(source)
     return exports.sunset_core:GetCharacter(source)
 end
@@ -124,22 +143,24 @@ function AddMissionProgress(source, missionId, amount)
     local mission = missionById(missionId)
     if not mission then return false end
 
-    local row = loadRow(char.id)
-    local missionProgress = decodeJson(row.mission_progress)
-    local entry = missionProgress[missionId] or { progress = 0, completed = false }
-    if entry.completed then return false end
+    return withCharacterLock(char.id, function()
+        local row = loadRow(char.id)
+        local missionProgress = decodeJson(row.mission_progress)
+        local entry = missionProgress[missionId] or { progress = 0, completed = false }
+        if entry.completed then return false end
 
-    entry.progress = math.min(mission.goal, (tonumber(entry.progress) or 0) + amount)
-    local xp = tonumber(row.xp) or 0
-    if entry.progress >= mission.goal then
-        entry.completed = true
-        xp = xp + (mission.xp or 0)
-    end
-    missionProgress[missionId] = entry
+        entry.progress = math.min(mission.goal, (tonumber(entry.progress) or 0) + amount)
+        local xp = tonumber(row.xp) or 0
+        if entry.progress >= mission.goal then
+            entry.completed = true
+            xp = xp + (mission.xp or 0)
+        end
+        missionProgress[missionId] = entry
 
-    saveRow(char.id, xp, tonumber(row.premium) == 1, decodeJson(row.claimed), missionProgress)
-    TriggerClientEvent('sunset:pass:refresh', source)
-    return true
+        saveRow(char.id, xp, tonumber(row.premium) == 1, decodeJson(row.claimed), missionProgress)
+        TriggerClientEvent('sunset:pass:refresh', source)
+        return true
+    end)
 end
 
 exports('AddMissionProgress', AddMissionProgress)
@@ -242,30 +263,33 @@ exports.sunset_core:RegisterCallback('sunset:pass:claim', function(source, data)
 
     local level = tonumber(data and data.level)
     local track = data and data.track
-    if not level or (track ~= 'free' and track ~= 'premium') then
+    if not level or level ~= math.floor(level) or level < 1 or level > maxTier()
+        or (track ~= 'free' and track ~= 'premium') then
         return nil, 'Invalid claim request.'
     end
 
-    local row = loadRow(char.id)
-    local xp = tonumber(row.xp) or 0
-    local premium = tonumber(row.premium) == 1
-    local claimed = decodeJson(row.claimed)
-    local key = claimKey(level, track)
+    return withCharacterLock(char.id, function()
+        local row = loadRow(char.id)
+        local xp = tonumber(row.xp) or 0
+        local premium = tonumber(row.premium) == 1
+        local claimed = decodeJson(row.claimed)
+        local key = claimKey(level, track)
 
-    if claimed[key] then return nil, 'Reward already claimed.' end
-    if level > tierFromXp(xp) then return nil, 'Tier not unlocked yet.' end
-    if track == 'premium' and not premium then return nil, 'Premium pass required.' end
+        if claimed[key] then return nil, 'Reward already claimed.' end
+        if level > tierFromXp(xp) then return nil, 'Tier not unlocked yet.' end
+        if track == 'premium' and not premium then return nil, 'Premium pass required.' end
 
-    local reward = tierReward(level, track)
-    if not reward then return nil, 'No reward on this tier.' end
+        local reward = tierReward(level, track)
+        if not reward then return nil, 'No reward on this tier.' end
 
-    local ok, err = grantReward(source, reward)
-    if not ok then return nil, err or 'Could not grant reward.' end
+        local ok, err = grantReward(source, reward)
+        if not ok then return nil, err or 'Could not grant reward.' end
 
-    claimed[key] = true
-    saveRow(char.id, xp, premium, claimed, decodeJson(row.mission_progress))
-    notify(source, ('Claimed: %s'):format(reward.label or 'reward'), 'success')
-    return buildPayload(source, loadRow(char.id))
+        claimed[key] = true
+        saveRow(char.id, xp, premium, claimed, decodeJson(row.mission_progress))
+        notify(source, ('Claimed: %s'):format(reward.label or 'reward'), 'success')
+        return buildPayload(source, loadRow(char.id))
+    end)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:pass:buyPremium', function(source)
@@ -273,22 +297,28 @@ exports.sunset_core:RegisterCallback('sunset:pass:buyPremium', function(source)
     local player = getPlayer(source)
     if not char or not player then return nil, 'Character not loaded.' end
 
-    local row = loadRow(char.id)
-    if tonumber(row.premium) == 1 then return nil, 'Premium pass already unlocked.' end
+    return withCharacterLock(char.id, function()
+        local row = loadRow(char.id)
+        if tonumber(row.premium) == 1 then return nil, 'Premium pass already unlocked.' end
 
-    local cost = math.floor(tonumber(SunsetPass.PremiumCost) or 0)
-    local balance = tonumber(player.premium_points) or 0
-    if cost <= 0 then return nil, 'Premium pass is not for sale yet.' end
-    if balance < cost then
-        return nil, ('You need %d Sunset Coins (you have %d).'):format(cost, balance)
-    end
+        -- Refresh the account inside the lock; a stale balance must never overwrite
+        -- coins changed by another server action.
+        player = getPlayer(source)
+        if not player then return nil, 'Account data unavailable.' end
+        local cost = math.floor(tonumber(SunsetPass.PremiumCost) or 0)
+        local balance = tonumber(player.premium_points) or 0
+        if cost <= 0 then return nil, 'Premium pass is not for sale yet.' end
+        if balance < cost then
+            return nil, ('You need %d Sunset Coins (you have %d).'):format(cost, balance)
+        end
 
-    local ok, err = Sunset.SetPersistentStat(source, 'account', 'premium_points', balance - cost)
-    if not ok then return nil, err or 'Payment failed.' end
+        local ok, err = Sunset.SetPersistentStat(source, 'account', 'premium_points', balance - cost)
+        if not ok then return nil, err or 'Payment failed.' end
 
-    saveRow(char.id, tonumber(row.xp) or 0, true, decodeJson(row.claimed), decodeJson(row.mission_progress))
-    notify(source, 'Premium pass unlocked for this season.', 'success')
-    return buildPayload(source, loadRow(char.id))
+        saveRow(char.id, tonumber(row.xp) or 0, true, decodeJson(row.claimed), decodeJson(row.mission_progress))
+        notify(source, 'Premium pass unlocked for this season.', 'success')
+        return buildPayload(source, loadRow(char.id))
+    end)
 end)
 
 -- Payday mission hook (safe, isolated from robbery edits).

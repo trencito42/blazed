@@ -1,19 +1,19 @@
 :root {
     /* Sunset palette */
-    --sunset-void: #0a0a12;
-    --sunset-deep: #12101f;
-    --sunset-dusk: #1a1530;
-    --sunset-purple: #6b3fa0;
-    --sunset-magenta: #c4457a;
-    --sunset-coral: #ff6b4a;
-    --sunset-gold: #ffb347;
+    --sunset-void: #080808;
+    --sunset-deep: #11100f;
+    --sunset-dusk: #1b1713;
+    --sunset-purple: #b85b12;
+    --sunset-magenta: #e56f12;
+    --sunset-coral: #ff7700;
+    --sunset-gold: #ffb15c;
     --sunset-peach: #ffd4a8;
     --sunset-cream: #fff5eb;
 
     /* Semantic */
     --color-primary: var(--sunset-coral);
-    --color-primary-glow: rgba(255, 107, 74, 0.4);
-    --color-secondary: var(--sunset-magenta);
+    --color-primary-glow: rgba(255, 119, 0, 0.4);
+    --color-secondary: var(--sunset-gold);
     --color-accent: var(--sunset-gold);
     --color-success: #4ade80;
     --color-warning: var(--sunset-gold);
@@ -21,7 +21,7 @@
     --color-info: #60a5fa;
 
     /* Surfaces */
-    --glass-bg: rgba(18, 16, 31, 0.65);
+    --glass-bg: rgba(10, 9, 8, 0.68);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-highlight: rgba(255, 255, 255, 0.04);
     --glass-blur: 24px;

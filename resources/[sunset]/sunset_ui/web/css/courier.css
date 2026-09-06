@@ -101,15 +101,15 @@
     mask-image: repeating-linear-gradient(to right, #000 0, #000 6px, transparent 6px, transparent 8px);
     transition: width .3s ease;
 }
-#courier-panel.state-prompt { --courier-accent: #00ff66; }
-.courier-shell.state-prompt .courier__key { border-color: #00ff66; color: #00ff66; animation: courierKeyPulse .45s ease-in-out infinite alternate; }
-#courier-panel.state-working { --courier-accent: #d46bff; }
+#courier-panel.state-prompt { --courier-accent: var(--sunset-orange, #ff7700); }
+.courier-shell.state-prompt .courier__key { border-color: var(--sunset-orange, #ff7700); color: var(--sunset-amber, #ffb15c); animation: courierKeyPulse .45s ease-in-out infinite alternate; }
+#courier-panel.state-working { --courier-accent: var(--sunset-orange, #ff7700); }
 .courier-shell.state-working .courier__progress-fill { width: 45% !important; animation: courierScan 1.1s linear infinite; }
 #courier-panel.state-blocked { --courier-accent: #ffb21c; }
 #courier-panel.state-success,
-#courier-panel.state-complete { --courier-accent: #00ff66; transform: translateX(-50%) scale(1.03); }
+#courier-panel.state-complete { --courier-accent: var(--sunset-orange, #ff7700); transform: translateX(-50%) scale(1.03); }
 
-@keyframes courierKeyPulse { to { transform: scale(1.12); background: rgba(0, 255, 102, .22); } }
+@keyframes courierKeyPulse { to { transform: scale(1.12); background: rgba(255, 119, 0, .2); } }
 @keyframes courierScan { from { transform: translateX(-120%); } to { transform: translateX(240%); } }
 
 @media (max-width: 1280px) {

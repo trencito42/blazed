@@ -77,7 +77,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--sunset-coral), var(--sunset-magenta), var(--sunset-purple));
+    background: linear-gradient(90deg, var(--sunset-coral), var(--sunset-gold));
     opacity: 0;
     transition: opacity var(--duration-fast);
 }
@@ -94,7 +94,7 @@
     width: 64px;
     height: 64px;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--sunset-dusk), var(--sunset-purple));
+    background: linear-gradient(135deg, var(--sunset-dusk), rgba(255, 119, 0, 0.28));
     display: flex;
     align-items: center;
     justify-content: center;

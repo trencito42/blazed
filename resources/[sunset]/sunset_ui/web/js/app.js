@@ -537,6 +537,17 @@ document.addEventListener('DOMContentLoaded', () => {
         showApp(true);
         showScreen('spawn');
         window.SpawnSelector?.show({ hasLastLocation: true });
+    } else if (qa === 'menu') {
+        window.Menu?.show({
+            id: 2, cid: 14, name: 'Trencito', rank: 'PLAYER', level: 2,
+            respectPoints: 37, respectRequired: 8, levelPrice: 5000,
+            cash: 106209, bank: 5316, premium: 0, playtime: '39H 41M',
+            lastLogin: 'TODAY', health: 100, armor: 0, hunger: 82, thirst: 74,
+            stress: 6, vehicleCount: 1, propertyCount: 0, homeLabel: 'None',
+            avatar: 'assets/logo.png', jobId: 'fisherman', job: 'Fisherman',
+            jobGradeLabel: 'Angler', jobSalary: 120, completedTasks: 17,
+            careerEarnings: 28400, combinedSkillLevels: 4,
+        });
     } else if (qa === 'jobs') {
         window.Panels?.showJobsPanel({
             currentJob: { id: 'fisherman', label: 'Fisherman' },

@@ -22,6 +22,10 @@ const Menu = {
             });
         });
 
+        $('#menu-profile-buy-level')?.addEventListener('click', () => {
+            post('menuAction', { action: 'buy_level' });
+        });
+
         if (window.ChatSettings) ChatSettings.init();
     },
 
@@ -292,6 +296,11 @@ const Menu = {
         $('#menu-stats-xp').textContent = `${this.formatXp(data.respectPoints || 0)} / ${this.formatXp(data.respectRequired || 4)} RP`;
         $('#menu-stats-paydays').textContent = String(data.paydaysReceived || 0);
         $('#menu-buy-level').textContent = `BUY LEVEL ${Number(data.level || 1) + 1} · ${this.formatXp(data.respectRequired || 4)} RP · ${formatMoney(data.levelPrice || 2500)}`;
+        const profileLevelButton = $('#menu-profile-buy-level');
+        if (profileLevelButton) {
+            const nextLevel = Number(data.level || 1) + 1;
+            profileLevelButton.innerHTML = `BUY LEVEL ${nextLevel}<small>${this.formatXp(data.respectRequired || 4)} RP · ${formatMoney(data.levelPrice || 2500)}</small>`;
+        }
         $('#menu-stats-playtime').textContent = data.playtime || '0H 0M';
         $('#menu-stats-session').textContent = data.sessionTime || '0H 0M';
         $('#menu-stats-created').textContent = data.characterCreated || '—';

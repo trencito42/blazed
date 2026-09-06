@@ -238,3 +238,32 @@ window.addEventListener('message', (event) => {
             break;
     }
 });
+
+if (new URLSearchParams(window.location.search).get('qa') === '1') {
+    const rewards = [
+        { type: 'cash', label: '$2,500 Cash', icon: 'cash', amount: 2500 },
+        { type: 'item', label: 'Water x5', icon: 'water_bottle', count: 5 },
+        { type: 'item', label: 'Bread x5', icon: 'bread', count: 5 },
+        { type: 'item', label: 'Bandage x3', icon: 'bandage', count: 3 },
+        { type: 'bank', label: '$7,500 Bank', icon: 'bank', amount: 7500 },
+        { type: 'premium_points', label: '10 Sunset Coins', icon: 'coins', amount: 10 },
+    ];
+    show({
+        tab: 'rewards',
+        state: {
+            seasonLabel: 'Season 01', tier: 2, tierXp: 350, tierGoal: 500,
+            premium: false, premiumCost: 250, accountCoins: 0,
+            tiers: rewards.map((reward, index) => ({
+                level: index + 1, unlocked: index < 2, current: index === 1,
+                free: { ...reward, level: index + 1, claimed: index < 2, canClaim: false },
+                premium: { ...reward, level: index + 1, claimed: false, locked: true, canClaim: false },
+            })),
+            missions: [
+                { title: 'Jewelry Run', description: 'Complete a luxury-store robbery and sell loot at the fence.', progress: 0, goal: 1, xp: 500, icon: 'golden_watch' },
+                { title: 'Angler', description: 'Catch 10 fish while on a fisherman shift.', progress: 7, goal: 10, xp: 400, icon: 'cooked_fish' },
+                { title: 'Dedicated Courier', description: 'Complete 5 courier deliveries.', progress: 2, goal: 5, xp: 600, icon: 'backpack' },
+                { title: 'Steady Earner', description: 'Receive 2 paydays.', progress: 1, goal: 2, xp: 350, icon: 'cash_stack' },
+            ],
+        },
+    });
+}

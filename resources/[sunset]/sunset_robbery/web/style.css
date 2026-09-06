@@ -1,5 +1,5 @@
 :root {
-    --r-accent: #ff8a1f;
+    --r-accent: #ff7700;
     --r-red: #ff4d3a;
     --r-text: #f6f2e9;
     --r-muted: rgba(246, 242, 233, 0.55);
@@ -53,10 +53,11 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
     width: min(920px, 92vw);
     height: min(650px, 86vh);
     transform: translate(-50%, -50%);
-    background: linear-gradient(145deg, rgba(8, 8, 10, .93), rgba(4, 4, 6, .88));
-    border: 1px solid rgba(255, 138, 31, .35);
+    background: linear-gradient(145deg, rgba(10, 9, 8, .88), rgba(4, 4, 4, .82));
+    border: 1px solid rgba(255, 119, 0, .35);
     border-top: 2px solid var(--r-accent);
-    box-shadow: 0 28px 80px rgba(0,0,0,.76), inset 0 0 60px rgba(255,138,31,.035);
+    box-shadow: 0 28px 80px rgba(0,0,0,.76), inset 0 0 60px rgba(255,119,0,.035);
+    backdrop-filter: blur(12px);
     overflow: hidden;
     clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
     animation: hack-in .26s ease-out both;
@@ -91,10 +92,10 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .hack__meters b { margin-top: 5px; color: #fff; font: 700 20px/1 'Chakra Petch', sans-serif; }
 .hack__meters i { display: block; width: 88px; height: 3px; margin-top: 7px; background: rgba(255,255,255,.1); }
 .hack__meters em { display: block; width: 0; height: 100%; background: var(--r-red); box-shadow: 0 0 9px var(--r-red); transition: width .2s ease; }
-.hack__signal b { color: var(--r-accent); text-shadow: 0 0 12px rgba(255,138,31,.45); }
+.hack__signal b { color: var(--r-accent); text-shadow: 0 0 12px rgba(255,119,0,.45); }
 .hack__status {
     position: relative; z-index: 2; margin: 0 26px; padding: 8px 12px;
-    border-left: 2px solid var(--r-accent); background: rgba(255,138,31,.055);
+    border-left: 2px solid var(--r-accent); background: rgba(255,119,0,.055);
     color: rgba(246,242,233,.72); font: 600 11px/1 'Chakra Petch', sans-serif; letter-spacing: .12em;
 }
 .hack__status.is-alert { border-color: var(--r-red); color: #ff7465; background: rgba(255,77,58,.07); }
@@ -103,8 +104,8 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .hack__board { position: relative; height: calc(100% - 180px); margin: 4px 22px 0; }
 .hack__lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .hack-edge { stroke: rgba(255,255,255,.12); stroke-width: .3; vector-effect: non-scaling-stroke; transition: stroke .2s, opacity .2s; }
-.hack-edge.is-live { stroke: rgba(255,138,31,.92); stroke-width: .72; filter: drop-shadow(0 0 3px rgba(255,138,31,.75)); stroke-dasharray: 1.2 1; animation: edge-flow .5s linear infinite; }
-.hack-edge.is-passed { stroke: rgba(255,138,31,.52); stroke-width: .5; }
+.hack-edge.is-live { stroke: rgba(255,119,0,.92); stroke-width: .72; filter: drop-shadow(0 0 3px rgba(255,119,0,.75)); stroke-dasharray: 1.2 1; animation: edge-flow .5s linear infinite; }
+.hack-edge.is-passed { stroke: rgba(255,119,0,.52); stroke-width: .5; }
 @keyframes edge-flow { to { stroke-dashoffset: -2.2; } }
 .hack-node {
     position: absolute;
@@ -119,7 +120,7 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
     cursor: pointer;
     transition: transform .15s, border-color .15s, background .15s, opacity .15s;
 }
-.hack-node:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.06); border-color: #fff; background: rgba(255,138,31,.12); }
+.hack-node:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.06); border-color: #fff; background: rgba(255,119,0,.12); }
 .hack-node:disabled { cursor: default; }
 .hack-node small { display: block; color: var(--r-muted); font-size: 8px; margin-top: 5px; letter-spacing: .08em; }
 .hack-node.is-source { border-color: #52df91; color: #75f6aa; }
@@ -128,13 +129,13 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .hack-node.is-timed small { color: #ffd27b; }
 .hack-node.is-corrupted { border-color: rgba(255,77,58,.48); }
 .hack-node.is-decoy { opacity: .72; }
-.hack-node.is-available { box-shadow: 0 0 0 1px rgba(255,138,31,.18), 0 0 16px rgba(255,138,31,.08); }
+.hack-node.is-available { box-shadow: 0 0 0 1px rgba(255,119,0,.18), 0 0 16px rgba(255,119,0,.08); }
 .hack-node.is-offroute { opacity: .32; }
-.hack-node.is-on { background: rgba(255,138,31,.2); border-color: var(--r-accent); opacity: 1; box-shadow: 0 0 18px rgba(255,138,31,.28); }
+.hack-node.is-on { background: rgba(255,119,0,.2); border-color: var(--r-accent); opacity: 1; box-shadow: 0 0 18px rgba(255,119,0,.28); }
 .hack-node.is-armed { animation: armed .34s steps(2) infinite; border-color: #fff; }
 .hack-node.is-error { animation: node-error .34s ease; }
 .hack-node.is-dead { opacity: .35; }
-@keyframes armed { 50% { background: rgba(255,138,31,.34); } }
+@keyframes armed { 50% { background: rgba(255,119,0,.34); } }
 @keyframes node-error { 50% { transform: translate(-50%, -50%) scale(.92); background: rgba(255,77,58,.45); border-color: var(--r-red); } }
 .hack__foot { justify-content: flex-start; gap: 22px; padding-top: 6px; color: var(--r-muted); letter-spacing: .09em; font-size: 9px; }
 .hack__foot span { display: flex; align-items: center; gap: 6px; }
@@ -185,7 +186,7 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 }
 .loot-item, .fence-row {
     padding: 8px 9px;
-    border-left: 2px solid rgba(255,138,31,.7);
+    border-left: 2px solid rgba(255,119,0,.7);
     background: rgba(8,7,8,.34);
     text-align: left;
     color: #fff;

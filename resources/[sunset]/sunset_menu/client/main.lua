@@ -271,6 +271,14 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         ExecuteCommand('buylevel')
         return
     end
+    if data.action == 'pass' then
+        closeMenu()
+        CreateThread(function()
+            Wait(150)
+            ExecuteCommand('pass')
+        end)
+        return
+    end
 end)
 
 AddEventHandler('sunset:nui:menuVehicleAction', function(data)

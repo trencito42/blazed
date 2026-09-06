@@ -36,9 +36,9 @@ html, body {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255, 107, 74, 0.25) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(196, 69, 122, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 40% at 10% 80%, rgba(107, 63, 160, 0.2) 0%, transparent 50%),
+        radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255, 119, 0, 0.20) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(255, 177, 92, 0.10) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 40% at 10% 80%, rgba(184, 91, 18, 0.12) 0%, transparent 50%),
         linear-gradient(180deg, var(--sunset-void) 0%, var(--sunset-deep) 40%, var(--sunset-dusk) 100%);
 }
 

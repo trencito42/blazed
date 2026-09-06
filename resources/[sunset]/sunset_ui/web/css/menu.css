@@ -17,7 +17,9 @@
     overflow: hidden;
     color: #fff;
     font-family: var(--os-data);
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.28) 55%, rgba(0, 0, 0, 0.45) 100%);
+    background:
+        radial-gradient(ellipse at 50% 66%, transparent 22%, rgba(0, 0, 0, 0.18) 68%, rgba(0, 0, 0, 0.34) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.22) 42%, rgba(0, 0, 0, 0.76) 100%);
     pointer-events: none;
 }
 
@@ -149,7 +151,37 @@
     overflow: hidden;
 }
 
-.menu-id-card { display: none; }
+.menu-id-card {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    min-height: 92px;
+    overflow: hidden;
+    border-top: 2px solid rgba(255, 119, 0, 0.48);
+    background: linear-gradient(110deg, rgba(255, 119, 0, 0.12), rgba(0, 0, 0, 0.3));
+}
+
+.menu-id-card__photo {
+    display: grid;
+    min-height: 92px;
+    place-items: center;
+    color: var(--os-accent-bright);
+    background-color: rgba(0, 0, 0, 0.42);
+    background-position: center;
+    background-repeat: no-repeat;
+    font: 700 28px/1 var(--os-title);
+    text-shadow: var(--os-accent-glow);
+}
+
+.menu-id-card__labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 5px;
+    padding: 12px;
+}
+
+.menu-id-card__labels span { color: #fff; font: 700 11px/1 var(--os-title); letter-spacing: 0.12em; }
+.menu-id-card__labels small { color: var(--os-muted); font: 600 9px/1 var(--os-title); letter-spacing: 0.14em; }
 
 .menu-profile__name-row {
     display: flex;
@@ -348,6 +380,29 @@
     font-size: 10px;
     letter-spacing: 0.06em;
 }
+
+.menu-action__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.menu-profile-level-up {
+    width: 100%;
+    padding: 9px 10px;
+    color: #16100a;
+    border: 0;
+    border-top: 2px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(90deg, var(--os-accent), var(--os-accent-bright));
+    font: 700 10px/1.2 var(--os-title);
+    letter-spacing: 0.075em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu-profile-level-up:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.menu-profile-level-up small { display: block; margin-top: 4px; color: rgba(20, 12, 5, 0.68); font-size: 9px; }
 
 .menu-mgmt { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .menu-mgmt__head { flex: 0 0 auto; }

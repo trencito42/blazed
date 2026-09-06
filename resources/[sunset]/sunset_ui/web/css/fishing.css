@@ -186,7 +186,7 @@
 .fishing__progress-fill {
     height: 100%;
     width: 0%;
-    background: #ff8a1f;
+    background: var(--sunset-orange, #ff7700);
     -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
     mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
 }
@@ -241,14 +241,14 @@
 
 /* waiting */
 .fishing-shell.state-waiting {
-    --f-accent: #ff8a1f;
-    --f-edge: rgba(255, 138, 31, 0.38);
+    --f-accent: var(--sunset-orange, #ff7700);
+    --f-edge: rgba(255, 119, 0, 0.38);
 }
 .fishing-shell.state-waiting .fishing__title,
-.fishing-shell.state-waiting .fishing__icon { color: #ffad5b; }
+.fishing-shell.state-waiting .fishing__icon { color: var(--sunset-amber, #ffb15c); }
 .fishing-shell.state-waiting .fishing__message { color: #fff1df; }
 .fishing-shell.state-waiting .fishing__progress-fill {
-    background: #ff8a1f;
+    background: var(--sunset-orange, #ff7700);
     width: 100%;
     animation: fishingScan 2s infinite linear;
 }
