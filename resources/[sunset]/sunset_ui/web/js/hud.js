@@ -36,6 +36,47 @@ const Hud = {
         element.classList.add(className);
     },
 
+    formatWantedTimer(seconds) {
+        const total = Math.max(0, Math.round(Number(seconds) || 0));
+        const mins = Math.floor(total / 60);
+        const secs = total % 60;
+        return `${mins}:${String(secs).padStart(2, '0')}`;
+    },
+
+    updateWantedDisplay(data) {
+        const wanted = Math.max(0, Math.round(Number(data.wanted) || 0));
+        const wantedEl = $('#hud-wanted');
+        const timerEl = $('#hud-wanted-timer');
+        if (!wantedEl) return;
+
+        wantedEl.classList.toggle('hidden', wanted <= 0);
+        const levelEl = $('#hud-wanted-level');
+        if (levelEl) levelEl.textContent = wanted;
+
+        if (!timerEl) return;
+        if (wanted <= 0) {
+            timerEl.classList.add('hidden');
+            timerEl.textContent = '';
+            return;
+        }
+
+        if (data.wantedPersistent) {
+            timerEl.textContent = 'UNTIL CLEARED';
+            timerEl.classList.remove('hidden');
+            return;
+        }
+
+        const remaining = Number(data.wantedRemainingSec);
+        if (Number.isFinite(remaining) && remaining > 0) {
+            timerEl.textContent = `${this.formatWantedTimer(remaining)} LEFT`;
+            timerEl.classList.remove('hidden');
+            return;
+        }
+
+        timerEl.classList.add('hidden');
+        timerEl.textContent = '';
+    },
+
     update(data) {
         if (!data) return;
         this.init();
@@ -57,11 +98,11 @@ const Hud = {
         if (data.zone) $('#hud-zone').textContent = data.zone;
         if (data.heading) $('#hud-heading').textContent = data.heading;
 
-        const wanted = Math.max(0, Math.round(Number(data.wanted) || 0));
-        const wantedEl = $('#hud-wanted');
-        if (wantedEl) {
-            wantedEl.classList.toggle('hidden', wanted <= 0);
-            $('#hud-wanted-level').textContent = wanted;
+        if (data.wanted !== undefined
+            || data.wantedRemainingSec !== undefined
+            || data.wantedDecayAt !== undefined
+            || data.wantedPersistent !== undefined) {
+            this.updateWantedDisplay(data);
         }
 
         const speedo = $('#hud-speedo');

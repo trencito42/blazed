@@ -1,24 +1,42 @@
 -- Lume RP: fără NPC-uri/trafic, fără wanted automat GTA
 local customWanted = 0
+local customWantedDecayAt = nil
 
 exports('GetWantedLevel', function()
     return customWanted
 end)
 
+exports('GetWantedDecayAt', function()
+    return customWantedDecayAt
+end)
+
+exports('GetWantedRemainingSec', function()
+    if not customWantedDecayAt then return nil end
+    return math.max(0, customWantedDecayAt - GetCloudTimeAsInt())
+end)
+
 exports('SetWantedLevel', function(level)
     customWanted = math.max(0, math.min(5, tonumber(level) or 0))
+    if customWanted <= 0 then
+        customWantedDecayAt = nil
+    end
 end)
 
 local function applyWantedFromBag(value)
     if value and value.level then
         customWanted = math.max(0, math.min(5, tonumber(value.level) or 0))
+        customWantedDecayAt = value.decayAt
     else
         customWanted = 0
+        customWantedDecayAt = nil
     end
 end
 
 RegisterNetEvent('sunset:client:wantedUpdate', function(level, reason)
     customWanted = math.max(0, math.min(5, tonumber(level) or 0))
+    if customWanted <= 0 then
+        customWantedDecayAt = nil
+    end
 end)
 
 AddStateBagChangeHandler('sunsetWanted', nil, function(bagName, _, value)

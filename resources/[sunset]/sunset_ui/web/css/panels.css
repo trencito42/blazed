@@ -6,8 +6,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.2);
-    font-family: 'Inter', sans-serif;
+    background: rgba(0, 0, 0, 0.18);
+    font-family: var(--sunset-body, 'Rajdhani', sans-serif);
 }
 .overlay-panel.overlay-panel--peek {
     background: transparent;
@@ -19,8 +19,8 @@
     width: min(520px, 92vw);
     max-height: 80vh;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
+    border: none;
+    border-radius: 0;
     padding: 24px;
     color: #f2f2f2;
 }

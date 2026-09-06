@@ -41,7 +41,7 @@
 }
 
 .hud-player-name {
-    font-family: 'Pricedown', 'Inter', sans-serif;
+    font-family: 'Chakra Petch', 'Rajdhani', sans-serif;
     font-size: 22px;
     font-weight: normal;
     color: rgba(255, 255, 255, 0.95);
@@ -55,7 +55,7 @@
 }
 
 .hud-player-id {
-    font-family: 'Pricedown', 'Inter', sans-serif;
+    font-family: 'Chakra Petch', 'Rajdhani', sans-serif;
     font-size: 22px;
     font-weight: normal;
     color: #e85d2a;
@@ -101,16 +101,33 @@
 
 .hud-wanted {
     display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 6px 12px;
+    margin-bottom: 2px;
+    background: rgba(20, 5, 8, 0.55);
+    border: none;
+    border-left: 3px solid var(--screen-red, #ff2a2a);
+    border-radius: 0;
+}
+
+.hud-wanted__row {
+    display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 10px;
-    margin-bottom: 2px;
-    background: rgba(180, 30, 30, 0.35);
-    border: 1px solid rgba(255, 80, 80, 0.45);
-    border-radius: 3px;
 }
 
 .hud-wanted.hidden { display: none; }
+
+.hud-wanted__timer {
+    color: rgba(255, 190, 190, 0.82);
+    font: 600 10px/1 'Chakra Petch', sans-serif;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.hud-wanted__timer.hidden { display: none; }
 
 .hud-wanted__label {
     font-size: 8px;
@@ -1011,17 +1028,19 @@
 .veh-mini-stat.crit .veh-mini-bar-fill { background:var(--screen-red); box-shadow:0 0 8px rgba(255,42,42,.6); }
 
 .hud-wanted {
-    gap: 8px;
+    gap: 4px;
     margin: 0;
     padding: 6px 12px;
-    background: rgba(20,5,8,.72);
-    border: 1px solid rgba(255,42,42,.45);
-    border-right: 3px solid var(--screen-red);
+    background: rgba(20, 5, 8, 0.55);
+    border: none;
+    border-left: 3px solid var(--screen-red);
     border-radius: 0;
-    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    clip-path: none;
 }
 .hud-wanted__label { color:rgba(255,190,190,.9); font-family:'Chakra Petch',sans-serif; }
 .hud-wanted__level { color:var(--screen-red); font-family:'Chakra Petch',sans-serif; }
+.hud-wanted__timer { color:rgba(255,190,190,.82); font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:.16em; text-transform:uppercase; }
+.hud-wanted__timer.hidden { display:none; }
 
 .hud-boot { animation:screenHudBoot 1s cubic-bezier(.2,.8,.2,1) both; }
 .hud-boot--location { animation-delay:.2s; }

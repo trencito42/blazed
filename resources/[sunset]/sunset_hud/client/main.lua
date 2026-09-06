@@ -111,6 +111,9 @@ local function buildHudData()
         heading = getCompassDirection(ped),
         inVehicle = false,
         wanted = exports['sunset_hud']:GetWantedLevel(),
+        wantedDecayAt = exports['sunset_hud']:GetWantedDecayAt(),
+        wantedRemainingSec = exports['sunset_hud']:GetWantedRemainingSec(),
+        wantedPersistent = exports['sunset_hud']:GetWantedLevel() > 0 and exports['sunset_hud']:GetWantedDecayAt() == nil,
     }
 
     local vehState = nil
