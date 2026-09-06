@@ -16,6 +16,11 @@ local function sendTypingPreview(text)
     TriggerServerEvent('sunset:chat:typing', text)
 end
 
+local function viewerCanSeeChatPreview()
+    local ok, level = pcall(function() return exports.sunset_admin:GetAdminLevel() end)
+    return ok and (tonumber(level) or 0) > 0
+end
+
 local function openChat()
     if chatOpen then return end
     chatOpen = true
