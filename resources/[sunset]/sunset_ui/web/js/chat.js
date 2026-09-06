@@ -102,7 +102,7 @@ const Chat = {
 
         if (type === 'r' || type === 'd' || type === 'gov') {
             let text = msg;
-            if (type === 'r' && text && !/over\.?$/i.test(text.trim())) {
+            if ((type === 'r' || type === 'd') && text && !/over\.?$/i.test(text.trim())) {
                 text = `${text.replace(/[.,\s]+$/, '')}, over.`;
             }
             const header = [faction, rank, this.nameWithId(name, id)].filter(Boolean).join(' ');

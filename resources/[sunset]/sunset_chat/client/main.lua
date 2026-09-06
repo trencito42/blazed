@@ -127,11 +127,6 @@ local Typing = {}
 local Overhead = {}
 local OVERHEAD_MS = 5000
 
-local function viewerCanSeeChatPreview()
-    local ok, level = pcall(function() return exports.sunset_admin:GetAdminLevel() end)
-    return ok and (tonumber(level) or 0) > 0
-end
-
 RegisterNetEvent('sunset:chat:message', function(payload)
     exports.sunset_ui:Send('chatMessage', payload)
     local msgType = payload and payload.type or 'say'

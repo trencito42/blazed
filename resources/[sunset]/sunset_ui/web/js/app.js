@@ -321,10 +321,34 @@ window.addEventListener('message', (event) => {
             if (window.FactionPanels) FactionPanels.hide();
             break;
         case 'clanPanelShow':
-            if (window.ClanPanels) ClanPanels.showDashboard(data || event.data.data);
+            if (window.ClanPanels) {
+                try {
+                    if (!ClanPanels.showDashboard(data || event.data.data)) {
+                        post('clanPanelsClose');
+                    }
+                } catch (err) {
+                    console.error('[ClanPanels] showDashboard failed', err);
+                    post('clanPanelsClose');
+                }
+            } else {
+                console.error('[ClanPanels] clans.js not loaded');
+                post('clanPanelsClose');
+            }
             break;
         case 'clanDirectoryShow':
-            if (window.ClanPanels) ClanPanels.showDirectory(data || event.data.data);
+            if (window.ClanPanels) {
+                try {
+                    if (!ClanPanels.showDirectory(data || event.data.data)) {
+                        post('clanPanelsClose');
+                    }
+                } catch (err) {
+                    console.error('[ClanPanels] showDirectory failed', err);
+                    post('clanPanelsClose');
+                }
+            } else {
+                console.error('[ClanPanels] clans.js not loaded');
+                post('clanPanelsClose');
+            }
             break;
         case 'clanPanelsHide':
             if (window.ClanPanels) ClanPanels.hide();

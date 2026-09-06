@@ -105,7 +105,7 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties'];
+            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -119,6 +119,10 @@ const Panels = {
                         '#skills': 'skillsClose',
                         '#help': 'helpClose',
                         '#properties': 'propertiesClose',
+                        '#clan-panel': 'clanPanelsClose',
+                        '#clan-directory': 'clanPanelsClose',
+                        '#faction-panel': 'factionPanelsClose',
+                        '#faction-directory': 'factionPanelsClose',
                     };
                     post(map[sel]);
                     e.preventDefault();

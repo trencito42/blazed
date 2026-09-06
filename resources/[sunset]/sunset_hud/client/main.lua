@@ -390,6 +390,21 @@ local function wantedLevelForPlayer(serverId)
     return math.max(0, math.min(5, tonumber(bag.level) or 0))
 end
 
+local function playerNametagLabel(serverId, fallbackName)
+    local sid = tonumber(serverId) or 0
+    local label = tostring(fallbackName or 'Player')
+    local st = sid > 0 and Player(sid) and Player(sid).state
+    if st and type(st.sunsetDisplayName) == 'string' and st.sunsetDisplayName ~= '' then
+        label = st.sunsetDisplayName
+    elseif st and type(st.sunsetName) == 'string' and st.sunsetName ~= '' then
+        label = st.sunsetName
+    end
+    if sid > 0 and not label:match('%(%d+%)%s*$') then
+        label = ('%s (%d)'):format(label, sid)
+    end
+    return label
+end
+
 CreateThread(function()
     while true do
         local myPed = PlayerPedId()
@@ -406,15 +421,7 @@ CreateThread(function()
                         local hp = GetEntityHealth(ped)
                         local maxHp = GetEntityMaxHealth(ped)
                         local pct = math.max(0, math.floor((hp / math.max(1, maxHp)) * 100))
-                        local label = GetPlayerName(player)
-                        local st = Player(serverId) and Player(serverId).state
-                        if st and type(st.sunsetDisplayName) == 'string' and st.sunsetDisplayName ~= '' then
-                            label = st.sunsetDisplayName
-                        elseif st and type(st.sunsetName) == 'string' and st.sunsetName ~= '' then
-                            label = ('%s (%d)'):format(st.sunsetName, serverId)
-                        else
-                            label = ('%s (%d)'):format(label, serverId)
-                        end
+                        local label = playerNametagLabel(serverId, GetPlayerName(player))
                         local wantedLevel = wantedLevelForPlayer(serverId)
                         local nameY = coords.z + 1.18
                         if policeView and wantedLevel > 0 then

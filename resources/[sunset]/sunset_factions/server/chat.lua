@@ -27,7 +27,7 @@ local function sendFactionChat(source, channel, args, filterFn)
         return FactionCore.notify(source, 'Message too long', 'error')
     end
 
-    local name = exports.sunset_core:GetPlayerDisplayName(source)
+    local name = exports.sunset_core:GetPlayerBaseName(source)
     local faction = Sunset.Factions[factionId]
     local label = faction and faction.label or factionId
     local _, grade = FactionCore.getFactionOf(char)
@@ -106,7 +106,7 @@ RegisterCommand('m', function(source, args)
     if msg == '' then return FactionCore.notify(source, 'Usage: /m [message]', 'error') end
     if #msg > 256 then return FactionCore.notify(source, 'Megaphone message is too long (maximum 256 characters)', 'error') end
 
-    local name = exports.sunset_core:GetPlayerDisplayName(source)
+    local name = exports.sunset_core:GetPlayerBaseName(source)
     local pos = FactionCore.playerCoords(source)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)

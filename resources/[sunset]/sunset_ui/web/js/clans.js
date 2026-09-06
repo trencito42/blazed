@@ -49,6 +49,19 @@ const ClanPanels = {
     hide() {
         $('#clan-panel')?.classList.add('hidden');
         $('#clan-directory')?.classList.add('hidden');
+        document.body.classList.remove('clan-panels-open');
+    },
+
+    openPanel() {
+        const panel = $('#clan-panel');
+        if (!panel) {
+            console.error('[ClanPanels] #clan-panel is missing from index.html');
+            return false;
+        }
+        $('#clan-directory')?.classList.add('hidden');
+        panel.classList.remove('hidden');
+        document.body.classList.add('clan-panels-open');
+        return true;
     },
 
     setTab(tabId) {
@@ -169,15 +182,22 @@ const ClanPanels = {
 
     showDashboard(data = {}) {
         this.init();
-        this.hide();
-        this.dashboard = data;
-        const inClan = Boolean(data.inClan);
-        const perms = data.permissions || {};
+        if (!this.openPanel()) {
+            post('clanPanelsClose');
+            return false;
+        }
 
+        this.dashboard = data || {};
+        const inClan = Boolean(this.dashboard.inClan);
+        const perms = this.dashboard.permissions || {};
+
+        const title = $('#clan-panel-title');
+        if (title) {
+            title.innerHTML = inClan
+                ? `${this.escape(this.dashboard.name || 'Clan')} <span>${this.escape(this.dashboard.tag || '')}</span>`
+                : 'CREATE <span>CLAN</span>';
+        }
         $('#clan-panel')?.classList.toggle('clan-panel--guest', !inClan);
-        $('#clan-panel-title')?.innerHTML = inClan
-            ? `${this.escape(data.name || 'Clan')} <span>${this.escape(data.tag || '')}</span>`
-            : 'CREATE <span>CLAN</span>';
 
         document.querySelector('.clan-tab--overview')?.classList.toggle('hidden', !inClan);
         document.querySelector('.clan-tab--roster')?.classList.toggle('hidden', !inClan);
@@ -187,59 +207,86 @@ const ClanPanels = {
         document.querySelector('.clan-tab--create')?.classList.toggle('hidden', inClan);
         document.querySelector('.clan-tab--browse')?.classList.toggle('hidden', false);
 
+        document.querySelectorAll('[data-clan-action]').forEach((form) => {
+            const action = form.dataset.clanAction;
+            if (!inClan) {
+                form.classList.toggle('hidden', action !== 'create');
+                return;
+            }
+            let allowed = false;
+            if (action === 'invite') allowed = perms.invite;
+            else if (action === 'motd') allowed = perms.motd;
+            else if (action === 'settings') allowed = perms.settings;
+            else if (action === 'kick') allowed = perms.kick;
+            else if (action === 'promote') allowed = perms.promote;
+            else if (action === 'leave') allowed = perms.leave;
+            else if (action === 'dissolve') allowed = perms.dissolve;
+            else if (action === 'create') allowed = false;
+            form.classList.toggle('hidden', action !== 'create' && !allowed);
+        });
+
         if (inClan) {
-            $('#clan-rank').textContent = data.rankLabel || 'Member';
-            $('#clan-member-count').textContent = `${data.memberCount || 0} / ${data.maxMembers || 25}`;
-            $('#clan-motd').textContent = data.motd || 'No message of the day has been set.';
-            $('#clan-description').textContent = data.description || 'No clan description.';
+            const rankEl = $('#clan-rank');
+            if (rankEl) rankEl.textContent = this.dashboard.rankLabel || 'Member';
+            const countEl = $('#clan-member-count');
+            if (countEl) {
+                countEl.textContent = `${this.dashboard.memberCount || 0} / ${this.dashboard.maxMembers || 25}`;
+            }
+            const motdEl = $('#clan-motd');
+            if (motdEl) motdEl.textContent = this.dashboard.motd || 'No message of the day has been set.';
+            const descEl = $('#clan-description');
+            if (descEl) descEl.textContent = this.dashboard.description || 'No clan description.';
             const preview = $('#clan-overview-preview');
-            this.paintPreview(preview, data.tag, 'Player', data.tagStyle, data.tagColor);
+            this.paintPreview(
+                preview,
+                this.dashboard.tag,
+                'Player',
+                this.dashboard.tagStyle,
+                this.dashboard.tagColor
+            );
 
-            this.renderRoster(data.members);
+            this.renderRoster(this.dashboard.members);
 
-            const motdForm = document.querySelector('[data-clan-action="motd"]');
             const settingsForm = document.querySelector('[data-clan-action="settings"]');
             if (settingsForm) {
-                settingsForm.querySelector('[name="description"]').value = data.description || '';
-                settingsForm.querySelector('[name="tagColor"]').value = data.tagColor || '#FF8C00';
-                this.fillStyleSelect(settingsForm.querySelector('[name="tagStyle"]'), data.tagStyles, data.tagStyle);
+                const descInput = settingsForm.querySelector('[name="description"]');
+                if (descInput) descInput.value = this.dashboard.description || '';
+                const colorInput = settingsForm.querySelector('[name="tagColor"]');
+                if (colorInput) colorInput.value = this.dashboard.tagColor || '#FF8C00';
+                this.fillStyleSelect(
+                    settingsForm.querySelector('[name="tagStyle"]'),
+                    this.dashboard.tagStyles,
+                    this.dashboard.tagStyle
+                );
             }
             this.updateSettingsPreview();
-
-            document.querySelectorAll('[data-clan-action]').forEach((form) => {
-                const action = form.dataset.clanAction;
-                let allowed = false;
-                if (action === 'invite') allowed = perms.invite;
-                else if (action === 'motd') allowed = perms.motd;
-                else if (action === 'settings') allowed = perms.settings;
-                else if (action === 'kick') allowed = perms.kick;
-                else if (action === 'promote') allowed = perms.promote;
-                else if (action === 'leave') allowed = perms.leave;
-                else if (action === 'dissolve') allowed = perms.dissolve;
-                else if (action === 'create') allowed = false;
-                form.classList.toggle('hidden', action !== 'create' && !allowed);
-            });
-
             this.setTab('overview');
         } else {
             const createForm = document.querySelector('[data-clan-action="create"]');
             if (createForm) {
-                this.fillStyleSelect(createForm.querySelector('[name="tagStyle"]'), data.tagStyles, 'brackets');
-                $('#clan-create-cost').textContent = `Cost: ${Number(data.creationCost || 500).toLocaleString()} Sunset Coins — you have ${Number(data.accountCoins || 0).toLocaleString()} SC`;
+                this.fillStyleSelect(
+                    createForm.querySelector('[name="tagStyle"]'),
+                    this.dashboard.tagStyles,
+                    'brackets'
+                );
+                const costEl = $('#clan-create-cost');
+                if (costEl) {
+                    costEl.textContent = `Cost: ${Number(this.dashboard.creationCost || 500).toLocaleString()} Sunset Coins — you have ${Number(this.dashboard.accountCoins || 0).toLocaleString()} SC`;
+                }
             }
             this.updateCreatePreview();
             this.setTab('create');
         }
 
-        $('#clan-panel')?.classList.remove('hidden');
+        return true;
     },
 
     showDirectory(payload = {}) {
         this.init();
-        this.hide();
+        $('#clan-panel')?.classList.add('hidden');
         this.directory = Array.isArray(payload.clans) ? payload.clans : [];
         const list = $('#clan-directory-list');
-        if (!list) return;
+        if (!list) return false;
         list.innerHTML = '';
 
         this.directory.forEach((clan) => {
@@ -261,7 +308,10 @@ const ClanPanels = {
         });
 
         if (!list.children.length) list.innerHTML = '<p class="clan-empty">No clans have been created yet.</p>';
-        $('#clan-directory')?.classList.remove('hidden');
+        const directory = $('#clan-directory');
+        directory?.classList.remove('hidden');
+        document.body.classList.add('clan-panels-open');
+        return Boolean(directory);
     },
 
     submitForm(form) {

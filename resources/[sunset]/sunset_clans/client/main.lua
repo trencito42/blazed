@@ -6,7 +6,6 @@ local function openClanPanel()
     exports.sunset_ui:Send('clanPanelShow', data)
     exports.sunset_ui:SetFocus(true, true)
 end
-
 RegisterCommand('clan', openClanPanel, false)
 TriggerEvent('chat:addSuggestion', '/clan', 'Open your clan page — members, settings, and management')
 
