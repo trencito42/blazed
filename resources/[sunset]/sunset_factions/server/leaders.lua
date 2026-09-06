@@ -56,7 +56,8 @@ end
 
 local function handleSetLeader(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        return exports.sunset_core:CommandDenyAdmin(source, 'setleader')
+        exports.sunset_core:CommandDenyAdmin(source, 'setleader')
+        return true
     end
     local target = resolvePlayer(source, args[1])
     local factionId = args[2] and string.lower(args[2]) or nil
@@ -100,7 +101,8 @@ end
 
 local function handleRemoveLeader(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        return exports.sunset_core:CommandDenyAdmin(source, 'removeleader')
+        exports.sunset_core:CommandDenyAdmin(source, 'removeleader')
+        return true
     end
     local target = resolvePlayer(source, args[1])
     local factionId = args[2] and string.lower(args[2]) or nil
@@ -140,8 +142,12 @@ end, false)
 
 function ExecutePlayerCommand(source, name, args)
     name = string.lower(tostring(name or ''))
-    if name == 'setleader' then return handleSetLeader(source, args or {}) end
-    if name == 'removeleader' then return handleRemoveLeader(source, args or {}) end
+    if name == 'setleader' then
+        return handleSetLeader(source, args or {}) == true
+    end
+    if name == 'removeleader' then
+        return handleRemoveLeader(source, args or {}) == true
+    end
     return false
 end
 exports('ExecutePlayerCommand', ExecutePlayerCommand)

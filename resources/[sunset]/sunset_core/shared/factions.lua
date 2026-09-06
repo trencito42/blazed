@@ -1,5 +1,54 @@
 Sunset = Sunset or {}
 
+local function ensureFactionBuilders()
+    if type(Sunset.BuildLawEnforcementLoadout) == 'function'
+        and type(Sunset.BuildLawEnforcementGrades) == 'function' then
+        return
+    end
+
+    local function runCoreShared(path)
+        local chunk = LoadResourceFile('sunset_core', path)
+        if not chunk then return false end
+        local fn, err = load(chunk, '@sunset_core/' .. path)
+        if not fn then
+            print(('[sunset_factions] Failed to load %s: %s'):format(path, tostring(err)))
+            return false
+        end
+        fn()
+        return true
+    end
+
+    runCoreShared('shared/faction_outfits.lua')
+    runCoreShared('shared/faction_grades.lua')
+
+    if type(Sunset.BuildLawEnforcementGrades) ~= 'function' then
+        function Sunset.BuildLawEnforcementGrades(salaryScale)
+            salaryScale = tonumber(salaryScale) or 1.0
+            local grades = {}
+            for grade = 0, 7 do
+                grades[grade] = {
+                    label = ('Grade %d'):format(grade),
+                    salary = math.floor(450 * salaryScale * (grade + 1)),
+                }
+            end
+            return grades
+        end
+    end
+
+    if type(Sunset.BuildLawEnforcementLoadout) ~= 'function' then
+        function Sunset.BuildLawEnforcementLoadout(_, vehicle)
+            return {
+                armor = 100,
+                weapons = {},
+                gradeOutfits = {},
+                vehicle = vehicle,
+            }
+        end
+    end
+end
+
+ensureFactionBuilders()
+
 -- type: legal | illegal
 -- duty: must clock in at HQ for faction abilities + full salary
 Sunset.Factions = {

@@ -31,6 +31,7 @@ function Sunset.CommandDenyAdmin(source, cmd)
     push(source, ('/%s requires %s (admin level %d). Your level: %d.'):format(
         tostring(cmd or 'command'), label, need, level
     ), 'error')
+    return true
 end
 
 function Sunset.CommandDenyHeal(source)

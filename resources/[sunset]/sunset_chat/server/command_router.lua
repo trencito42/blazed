@@ -131,9 +131,18 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
             return
         end
         if serverCommands[cmd] then
-            chatSystem(src,
-                ('/%s could not be run from chat. Use the server console or contact staff.'):format(cmd),
-                'error')
+            local args = parseArgs(rest)
+            local ok, err = pcall(function()
+                if exports.sunset_factions:ExecutePlayerCommand(src, cmd, args) then
+                    return
+                end
+                error('command handler returned false')
+            end)
+            if not ok then
+                chatSystem(src,
+                    ('/%s failed on the server: %s'):format(cmd, tostring(err)),
+                    'error')
+            end
             return
         end
         chatSystem(src,
