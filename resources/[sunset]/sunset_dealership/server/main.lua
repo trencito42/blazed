@@ -119,7 +119,7 @@ RegisterNetEvent('sunset:dealership:endTestDrive', function(netId)
     if DoesEntityExist(vehicle) then DeleteEntity(vehicle) end
 end)
 
-exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(source, model)
+exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(source, model, color)
     if PurchaseLocks[source] then return nil, 'Your previous purchase is still being processed.' end
     if not nearDealership(source) then return nil, 'Purchase the vehicle from the dealership marker.' end
     model = cleanModel(model)
@@ -178,6 +178,12 @@ exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(sour
         MySQL.update.await('UPDATE dealership_vehicles SET stock = stock + 1 WHERE model = ?', { model })
         return finish(nil, 'The purchase could not be saved. Your money and dealership stock were restored.')
     end
+    pcall(function()
+        local colorId = math.max(0, math.min(160, math.floor(tonumber(color) or 0)))
+        MySQL.update.await('UPDATE vehicles SET props = ?, engine = 1000, body = 1000, fuel = 100 WHERE id = ?', {
+            json.encode({ color1 = colorId, color2 = colorId }), vehicleId
+        })
+    end)
 
     pcall(function()
         MySQL.update.await('UPDATE characters SET cash = ?, bank = ? WHERE id = ?',

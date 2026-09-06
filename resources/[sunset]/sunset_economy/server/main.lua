@@ -37,6 +37,8 @@ local function processPayday(source)
     end
     local respect = Sunset.Config.RespectPerPayday or 1
     exports.sunset_core:AddRespectPoints(source, respect)
+    local robPts = 1
+    exports.sunset_core:AddRobPoints(source, robPts)
     TriggerClientEvent('sunset:client:payday', source, net, tax, {
         civilian = civilianSalary,
         faction = factionSalary,
@@ -45,6 +47,7 @@ local function processPayday(source)
         rentProperty = rent.label,
         rentEvicted = rent.evicted == true,
         respect = respect,
+        robPoints = robPts,
     })
 end
 

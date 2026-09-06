@@ -175,3 +175,19 @@ exports('ClearDead', function()
     respawning = false
     bleedoutEndsAt = 0
 end)
+
+AddEventHandler('gameEventTriggered', function(name, args)
+    if name ~= 'CEventNetworkEntityDamage' then return end
+    local victim = args[1]
+    local attacker = args[2]
+    if attacker ~= PlayerPedId() or victim == attacker then return end
+    if not IsPedAPlayer(victim) then return end
+    if GetEntityHealth(victim) > 0 and not IsPedDeadOrDying(victim, true) then return end
+    local idx = NetworkGetPlayerIndexFromPed(victim)
+    if idx == -1 then return end
+    TriggerServerEvent('sunset:death:playerKilled', GetPlayerServerId(idx))
+end)
+
+RegisterCommand('112', function()
+    TriggerServerEvent('sunset:death:call112')
+end, false)

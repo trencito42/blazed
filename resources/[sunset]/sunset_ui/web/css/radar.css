@@ -1,0 +1,197 @@
+#radar-panel,
+.radar-shell {
+    --r-accent: var(--sunset-orange, #ff8a00);
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    z-index: 45;
+    width: min(720px, 94vw);
+    pointer-events: none;
+    color: var(--sunset-text, #f6f2e9);
+    font-family: var(--sunset-body, 'Rajdhani', sans-serif);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
+    opacity: 0;
+    translate: 0 16px;
+}
+
+.radar-panel__body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 8px;
+}
+
+.radar-panel__body::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--r-accent);
+}
+
+#radar-panel.is-visible,
+.radar-shell.is-visible {
+    opacity: 1;
+    translate: 0 0;
+}
+
+#radar-panel.hidden,
+.radar-shell.hidden {
+    display: none;
+}
+
+.radar__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.radar__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.radar__title-wrap { flex: 1; min-width: 0; }
+
+.radar__title {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 1), 0 4px 12px rgba(0, 0, 0, 0.85);
+}
+
+.radar__meta {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #fff;
+    margin-top: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 1), 0 4px 10px rgba(0, 0, 0, 0.8);
+}
+
+.radar__message {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow:
+        0 0 1px rgba(0, 0, 0, 0.95),
+        0 2px 8px rgba(0, 0, 0, 0.85),
+        2px 2px 0 rgba(0, 0, 0, 0.75);
+    line-height: 1.2;
+}
+
+.radar__stats {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    width: 100%;
+}
+
+.radar__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 90px;
+}
+
+.radar__stat-label {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.radar__stat-value {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+}
+
+.radar__progress {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+    overflow: hidden;
+}
+
+.radar__progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #ff8a1f;
+    mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+    -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+    transition: width 180ms linear;
+}
+
+.radar__hits {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.radar__hits.hidden { display: none; }
+
+.radar__hit {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.82);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.radar__hit-over { color: #ff6b64; }
+
+.radar-shell.state-scan { --r-accent: var(--sunset-orange, #ff8a00); }
+.radar-shell.state-scan .radar__title,
+.radar-shell.state-scan .radar__icon { color: var(--sunset-orange, #ff8a00); }
+
+.radar-shell.state-track { --r-accent: #ffad5b; }
+.radar-shell.state-track .radar__title,
+.radar-shell.state-track .radar__icon { color: #ffad5b; }
+
+.radar-shell.state-lock {
+    --r-accent: #ff554f;
+    animation: radar-lock 0.7s ease-in-out infinite;
+}
+.radar-shell.state-lock .radar__title,
+.radar-shell.state-lock .radar__icon,
+.radar-shell.state-lock .radar__message { color: #ff6b64; }
+.radar-shell.state-lock .radar__progress-fill { background: #ff554f; }
+
+@keyframes radar-lock {
+    0%, 100% { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95)); }
+    50% { filter: drop-shadow(0 0 10px rgba(255, 85, 79, 0.45)); }
+}
+
+@media (max-width: 720px) {
+    #radar-panel, .radar-shell { bottom: 64px; }
+    .radar__message { font-size: 18px; }
+}

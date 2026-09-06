@@ -234,6 +234,13 @@
     letter-spacing: 2px;
 }
 
+.screen--loading,
+.loading-stage,
+.loading-stage * {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 .loading-stage {
     position: absolute;
     inset: 0;

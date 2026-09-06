@@ -263,6 +263,15 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
     local char = not isSystem and getChar(source) or nil
     if not isSystem and not char then return nil, 'No character' end
     if not isSystem then
+        local providers = 0
+        for _, id in ipairs(GetPlayers()) do
+            if ServiceCore.isProviderForType(tonumber(id), callType) then
+                providers = providers + 1
+            end
+        end
+        if providers < 1 then
+            return nil, ('No one is on duty for %s right now.'):format(callType)
+        end
         local rateKey = callType == 'police_backup' and 'backupMs' or 'createMs'
         if not checkRateLimit(source, rateKey) then
             return nil, callType == 'police_backup'

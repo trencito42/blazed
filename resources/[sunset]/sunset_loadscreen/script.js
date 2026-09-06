@@ -55,5 +55,21 @@ window.addEventListener('message', (e) => {
     }
 });
 
+const blockSelect = (event) => {
+    event.preventDefault();
+    return false;
+};
+
+document.addEventListener('selectstart', blockSelect, true);
+document.addEventListener('dragstart', blockSelect, true);
+document.addEventListener('copy', blockSelect, true);
+window.addEventListener('keydown', (event) => {
+    const key = String(event.key || '').toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && (key === 'a' || key === 'c' || key === 'x')) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}, true);
+
 setProgress(1);
 startSimulation();

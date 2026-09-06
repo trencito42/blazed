@@ -510,6 +510,60 @@
     .job-objective { left: 260px; bottom: 90px; max-width: 280px; }
 }
 
+/* ── Server announcement overlay ── */
+.server-announce {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 91;
+    pointer-events: none;
+    animation: policeOrderIn 0.45s ease-out;
+}
+.server-announce.hidden { display: none; }
+.server-announce__inner {
+    display: flex;
+    background: linear-gradient(180deg, rgba(28, 16, 8, 0.96) 0%, rgba(20, 12, 6, 0.84) 100%);
+    border-bottom: 2px solid #f59e0b;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+}
+.server-announce__stripe {
+    width: 6px;
+    background: repeating-linear-gradient(
+        180deg,
+        #f59e0b 0px, #f59e0b 12px,
+        #fff7ed 12px, #fff7ed 24px
+    );
+    animation: policeStripePulse 1.2s ease-in-out infinite;
+}
+.server-announce__content {
+    flex: 1;
+    padding: 16px 24px;
+    text-align: center;
+}
+.server-announce__badge {
+    display: inline-block;
+    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #fbbf24;
+    text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+    animation: policeBadgePulse 1.5s ease-in-out infinite;
+}
+.server-announce__msg {
+    margin: 6px 0 4px;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: 0.02em;
+}
+.server-announce__meta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
 /* ── Police Order overlay ── */
 .police-order {
     position: fixed;
@@ -797,8 +851,8 @@
     clip-path: none;
     backdrop-filter: none;
 }
-.status-bar-wrapper--hp { border-bottom:2px solid var(--screen-green); }
-.status-bar-wrapper--armor { border-bottom:2px solid var(--screen-secondary); }
+.status-bar-wrapper--hp,
+.status-bar-wrapper--armor { border: none; }
 .status-icon { width:16px; height:16px; flex:0 0 auto; }
 .status-bar-wrapper--hp .status-icon { color:var(--screen-green); }
 .status-bar-wrapper--armor .status-icon { color:var(--screen-secondary); filter:drop-shadow(var(--screen-secondary-glow)); }
@@ -881,7 +935,7 @@
     min-width: 260px;
     padding: 8px 4px;
     background: transparent;
-    border-bottom: 3px solid var(--screen-accent);
+    border: none;
     box-shadow: none;
     clip-path: none;
     backdrop-filter: none;

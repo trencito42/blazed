@@ -102,11 +102,7 @@ const AuthLoading = {
     _pending: false,
     _safety: null,
 
-    beginSubmit() {
-        this._pending = true;
-        document.getElementById('auth-panel')?.classList.add('is-hidden');
-        if (typeof showScreen === 'function') showScreen('loading');
-        LoadingScreen.start({ duration: 8000, holdAt: 92, holdText: 'Awaiting game state...' });
+    armSafety(ms) {
         clearTimeout(this._safety);
         this._safety = setTimeout(() => {
             const app = document.getElementById('app');
@@ -114,13 +110,25 @@ const AuthLoading = {
                 LoadingScreen.reset();
                 post('loadingTimeout');
             }
-        }, 18000);
+        }, Math.max(30000, Number(ms) || 120000));
+    },
+
+    clearSafety() {
+        clearTimeout(this._safety);
+        this._safety = null;
+    },
+
+    beginSubmit() {
+        this._pending = true;
+        document.getElementById('auth-panel')?.classList.add('is-hidden');
+        if (typeof showScreen === 'function') showScreen('loading');
+        LoadingScreen.start({ duration: 8000, holdAt: 92, holdText: 'Awaiting game state...' });
+        this.armSafety(120000);
     },
 
     reset() {
         this._pending = false;
-        clearTimeout(this._safety);
-        this._safety = null;
+        this.clearSafety();
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
         LoadingScreen.reset();
         if (typeof showScreen === 'function') showScreen('auth');

@@ -199,9 +199,13 @@ CreateThread(function()
             DisableControlAction(0, 263, true)
             DisableControlAction(0, 264, true)
             DisableControlAction(0, 257, true)
-            if IsPedInAnyVehicle(ped, false) then
-                DisableControlAction(0, 75, true)
-                DisableControlAction(0, 23, true)
+            DisableControlAction(0, 23, true)
+            DisableControlAction(0, 75, true)
+            if isCuffed then
+                local trying = GetVehiclePedIsTryingToEnter(ped)
+                if trying ~= 0 then
+                    ClearPedTasksImmediately(ped)
+                end
             end
             if isCuffed and not IsPedInAnyVehicle(ped, false) and not IsPedRagdoll(ped)
                 and not IsEntityPlayingAnim(ped, CUFF_DICT, CUFF_ANIM, 3) and loadAnimDict(CUFF_DICT) then

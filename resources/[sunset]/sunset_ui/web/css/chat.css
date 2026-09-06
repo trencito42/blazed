@@ -177,7 +177,8 @@ body.chat-ui-open .chat-msg,
     padding-left: 7px;
     background: linear-gradient(90deg, rgba(255, 138, 31, .14), transparent 72%);
 }
-.chat-msg--gov {
+.chat-msg--gov,
+.chat-msg--announce {
     color: #ffd36a;
     border-left: 2px solid #ffb21c;
     padding-left: 7px;
@@ -196,7 +197,8 @@ body.chat-ui-open .chat-msg,
 .chat-msg--r .chat-msg__name,
 .chat-msg--d .chat-msg__name,
 .chat-msg--faction_info .chat-msg__name { color: #e8c7ff; font-weight: 700; }
-.chat-msg--gov .chat-msg__name { color: #ffe8a8; font-weight: 700; }
+.chat-msg--gov .chat-msg__name,
+.chat-msg--announce .chat-msg__name { color: #ffe8a8; font-weight: 700; }
 .chat-msg--megaphone .chat-msg__name,
 .chat-msg--police_alert .chat-msg__name,
 .chat-msg--radar .chat-msg__name { color: #ffb260; font-weight: 700; }

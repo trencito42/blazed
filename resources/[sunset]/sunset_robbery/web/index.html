@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset Robbery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="rob-hud" class="rob-hud hidden">
+        <div class="rob-hud__tag" id="rob-hud-stage">DUFFEL</div>
+        <div class="rob-hud__row"><span>BAG</span><strong id="rob-hud-bag">0 / 12</strong></div>
+        <div class="rob-hud__row"><span>EST. VALUE</span><strong id="rob-hud-value">$0</strong></div>
+        <div class="rob-hud__row"><span>RESPONSE</span><strong id="rob-hud-response">--:--</strong></div>
+        <div class="rob-hud__bar"><i id="rob-hud-fill"></i></div>
+    </div>
+
+    <div id="hack" class="hack hidden">
+        <div class="hack__noise"></div>
+        <div class="hack__scan"></div>
+        <header class="hack__head">
+            <div>
+                <span class="hack__kicker">SECURITY SYSTEM</span>
+                <strong>NODE 04-B</strong>
+            </div>
+            <div class="hack__meters">
+                <span>TRACE <b id="hack-trace">0%</b></span>
+                <span>TIME <b id="hack-time">26.0</b></span>
+            </div>
+        </header>
+        <div id="hack-board" class="hack__board"></div>
+        <footer class="hack__foot">CONNECT SOURCE → RELAY → CORE · WRONG NODE RAISES TRACE</footer>
+    </div>
+
+    <div id="loot" class="loot hidden">
+        <div class="loot__head">
+            <span id="loot-title">DISPLAY</span>
+            <strong id="loot-bag">0 / 12</strong>
+        </div>
+        <div id="loot-grid" class="loot__grid"></div>
+        <button type="button" class="loot__leave" id="loot-leave">LEAVE CASE</button>
+    </div>
+
+    <div id="fence" class="fence hidden">
+        <div class="fence__head">
+            <span>FENCE</span>
+            <p>“Got anything worth my time?”</p>
+        </div>
+        <div id="fence-list" class="fence__list"></div>
+        <button type="button" class="fence__leave" id="fence-leave">LEAVE</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -86,7 +86,8 @@ const Hud = {
         speedo.classList.remove('hidden');
         const targetSpeed = Math.max(0, Number(data.speed) || 0);
         const targetRpm = this.clamp(data.rpm, 0, 1);
-        this.smooth.speed = this.lerp(this.smooth.speed, targetSpeed, 0.22);
+        const speedLerp = targetSpeed >= 180 ? 0.62 : (targetSpeed >= 120 ? 0.4 : 0.28);
+        this.smooth.speed = this.lerp(this.smooth.speed, targetSpeed, speedLerp);
         this.smooth.rpm = this.lerp(this.smooth.rpm, targetRpm, 0.28);
 
         const displaySpeed = Math.round(this.smooth.speed);
@@ -98,7 +99,11 @@ const Hud = {
         }
 
         const rawGear = Number(data.gear);
-        const gearText = displaySpeed === 0 ? 'N' : (rawGear === 0 ? 'R' : `G${Math.max(1, Math.round(rawGear || 1))}`);
+        const vehicleClass = Number(data.vehicleClass);
+        const noGears = vehicleClass === 14 || vehicleClass === 15 || vehicleClass === 16;
+        const gearText = noGears
+            ? (displaySpeed === 0 ? 'N' : '—')
+            : (displaySpeed === 0 ? 'N' : (rawGear === 0 ? 'R' : `G${Math.max(1, Math.round(rawGear || 1))}`));
         const gearEl = $('#hud-gear');
         gearEl.textContent = gearText;
         if (gearText !== this.lastGear) {
@@ -111,6 +116,7 @@ const Hud = {
         const fuel = Math.round(this.clamp(data.fuel));
         $('#hud-fuel').style.width = `${fuel}%`;
         const fuelStat = $('#hud-fuel-stat');
+        fuelStat.classList.toggle('hidden', data.showFuel === false);
         fuelStat.classList.toggle('warn', fuel <= 15);
         fuelStat.classList.toggle('crit', fuel <= 5);
 
@@ -122,7 +128,9 @@ const Hud = {
         engineStat.classList.toggle('crit', engine <= 25);
 
         const odoEl = $('#hud-odometer');
-        if (odoEl && data.odometer !== undefined) {
+        const odoWrap = document.querySelector('.speed-odo');
+        if (odoWrap) odoWrap.classList.toggle('hidden', data.showOdometer === false || data.odometer === undefined);
+        if (odoEl && data.odometer !== undefined && data.showOdometer !== false) {
             const km = Math.max(0, Number(data.odometer) || 0);
             odoEl.textContent = km >= 1000 ? Math.round(km).toLocaleString('en-US') : km.toFixed(1);
         }

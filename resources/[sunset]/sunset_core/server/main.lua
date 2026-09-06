@@ -162,14 +162,15 @@ end
 exports('GetCharacter', GetCharacter)
 
 function GetPlayerDisplayName(source)
+    local char = GetCharacter(source)
+    if char then
+        local full = ((char.firstname or '') .. (char.lastname and char.lastname ~= '' and (' ' .. char.lastname) or ''))
+            :gsub('^%s+', ''):gsub('%s+$', '')
+        if full ~= '' then return full end
+    end
     local player = Players[source]
     if player and player.name and player.name ~= '' then
         return player.name
-    end
-    local char = GetCharacter(source)
-    if char then
-        local full = (char.firstname or '') .. (char.lastname and char.lastname ~= '' and (' ' .. char.lastname) or '')
-        if full ~= '' then return full end
     end
     return GetPlayerName(source) or 'Player'
 end
@@ -222,6 +223,7 @@ local function loadCharacterForPlayer(source, player, charId)
     char.last_played_before = char.last_played
     MySQL.update.await('UPDATE characters SET last_played = NOW() WHERE id = ?', { charId })
     Players[source].character = char
+    Player(source).state:set('sunsetName', GetPlayerDisplayName(source), true)
     TriggerEvent('sunset:server:characterSelected', source, charId)
     return char
 end

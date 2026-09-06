@@ -46,6 +46,16 @@ const Panels = {
                 passwordConfirm: $('#auth-reg-pass2')?.value,
             });
         });
+        const submitAuth = (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const registerOpen = $('#auth-register') && !$('#auth-register').classList.contains('hidden');
+            if (registerOpen) $('#auth-register-btn')?.click();
+            else $('#auth-login-btn')?.click();
+        };
+        ['auth-login-user', 'auth-login-pass', 'auth-reg-user', 'auth-reg-pass', 'auth-reg-pass2'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('keydown', submitAuth);
+        });
 
         $('#inventory-close')?.addEventListener('click', () => post('inventoryClose'));
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
@@ -80,7 +90,7 @@ const Panels = {
 
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#skills', '#help', '#properties'];
+            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -90,6 +100,7 @@ const Panels = {
                         '#ticket': 'ticketClose',
                         '#servicecalls': 'serviceCallsClose',
                         '#jobs-browser': 'jobsClose',
+                        '#jobs-panel': 'jobsClose',
                         '#skills': 'skillsClose',
                         '#help': 'helpClose',
                         '#properties': 'propertiesClose',
@@ -861,11 +872,13 @@ const Panels = {
         this.init();
         const d = data || {};
         $('#jobs-panel-title').textContent = 'Jobs';
-        $('#jobs-panel-current').textContent = `Current: ${d.currentJobLabel || d.currentJob || 'Unemployed'}`;
+        const currentId = typeof d.currentJob === 'object' ? d.currentJob?.id : d.currentJob;
+        const currentLabel = d.currentJobLabel || d.currentJob?.label || currentId || 'Unemployed';
+        $('#jobs-panel-current').textContent = currentLabel;
 
         const sessionEl = $('#jobs-panel-session');
         if (d.session) {
-            sessionEl.textContent = `Active shift: ${d.session.jobId} (${d.session.state})`;
+            sessionEl.querySelector('strong').textContent = `${d.session.state || 'Active'} · ${d.session.jobId || currentLabel}`;
             sessionEl.classList.remove('hidden');
         } else {
             sessionEl.classList.add('hidden');
@@ -874,15 +887,53 @@ const Panels = {
         const list = $('#jobs-panel-list');
         list.innerHTML = '';
         (d.jobs || []).forEach((job) => {
-            const prog = job.progress;
-            const skill = prog ? `Lv.${prog.level} · ${prog.completedTasks || 0} tasks` : 'No XP yet';
-            const li = document.createElement('li');
-            li.innerHTML = `<div class="craft-row"><strong>${job.label}</strong><span class="craft-meta">$${job.salary || 0}/hr · ${skill}</span><span class="craft-meta">${job.description || ''}</span></div>`;
-            list.appendChild(li);
+            const prog = job.progress || {};
+            const level = Number(prog.level || job.level || 1);
+            const xp = Math.max(0, Number(prog.xp || job.xp || 0));
+            const xpNext = Math.max(1, Number(prog.xpToNext || job.xpNext || 100));
+            const card = document.createElement('article');
+            card.className = `jobs-menu__card${job.id === currentId ? ' is-current' : ''}`;
+
+            const top = document.createElement('div');
+            top.className = 'jobs-menu__card-top';
+            const identity = document.createElement('div');
+            const title = document.createElement('h3');
+            title.textContent = job.label || job.id || 'Job';
+            const description = document.createElement('p');
+            description.textContent = job.description || job.help || 'Civilian career';
+            identity.append(title, description);
+            const pay = document.createElement('strong');
+            pay.className = 'jobs-menu__pay';
+            pay.textContent = `$${Number(job.salary || 0).toLocaleString()}/hr`;
+            top.append(identity, pay);
+
+            const meta = document.createElement('div');
+            meta.className = 'jobs-menu__meta';
+            const levelText = document.createElement('span');
+            levelText.textContent = `Skill level ${level}`;
+            const taskText = document.createElement('span');
+            taskText.textContent = `${Number(prog.completedTasks || 0)} completed tasks`;
+            const badge = document.createElement('span');
+            badge.className = 'jobs-menu__badge';
+            badge.textContent = job.id === currentId ? 'Employed' : 'Job Center';
+            meta.append(levelText, taskText, badge);
+
+            const progress = document.createElement('div');
+            progress.className = 'jobs-menu__progress';
+            const fill = document.createElement('i');
+            fill.style.width = `${Math.min(100, (xp / xpNext) * 100)}%`;
+            progress.appendChild(fill);
+            card.append(top, meta, progress);
+            list.appendChild(card);
         });
 
-        $('#jobs-panel-work').onclick = () => post('jobsStartWork');
-        $('#jobs-panel-cancel').onclick = () => post('jobsCancelWork');
+        const work = $('#jobs-panel-work');
+        work.disabled = !currentId || currentId === 'unemployed' || Boolean(d.session);
+        work.textContent = d.session ? 'Shift already active' : (work.disabled ? 'Choose a job at Job Center' : `Start ${currentLabel}`);
+        work.onclick = () => { if (!work.disabled) post('jobsStartWork'); };
+        const cancel = $('#jobs-panel-cancel');
+        cancel.disabled = !d.session;
+        cancel.onclick = () => { if (!cancel.disabled) post('jobsCancelWork'); };
         $('#jobs-panel-close').onclick = () => post('jobsClose');
         $('#jobs-panel')?.classList.remove('hidden');
     },
@@ -1088,14 +1139,28 @@ const Panels = {
         const stock = document.createElement('div');
         stock.className = 'dealership__detail-stock';
         stock.textContent = Number(vehicle.stock) > 0 ? `${vehicle.stock} vehicle(s) currently available` : 'Currently sold out';
-        detail.append(brand, name, price, stock);
+        const colorLabel = document.createElement('label');
+        colorLabel.className = 'dealership__detail-stock';
+        colorLabel.textContent = 'Paint';
+        const color = document.createElement('select');
+        color.id = 'dealership-color';
+        [
+            [0, 'Black'], [111, 'White'], [27, 'Red'], [64, 'Blue'],
+            [53, 'Green'], [88, 'Yellow'], [38, 'Orange'], [147, 'Carbon'],
+        ].forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            color.appendChild(option);
+        });
+        detail.append(brand, name, price, stock, colorLabel, color);
         if (!this._dealerData.admin) {
             const actions = document.createElement('div');
             actions.className = 'dealership__detail-actions';
             const buy = document.createElement('button');
             buy.textContent = Number(vehicle.stock) > 0 ? 'BUY — STORED AT LEGION' : 'SOLD OUT';
             buy.disabled = Number(vehicle.stock) <= 0;
-            buy.onclick = () => post('dealershipBuy', { model: vehicle.model });
+            buy.onclick = () => post('dealershipBuy', { model: vehicle.model, color: Number(color.value) || 0 });
             const test = document.createElement('button');
             test.className = 'secondary';
             test.textContent = `TEST DRIVE — ${this._dealerData.testDriveSeconds || 60}s`;

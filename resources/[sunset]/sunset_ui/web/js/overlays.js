@@ -1,9 +1,30 @@
 const Overlays = {
     _policeTimer: null,
+    _announceTimer: null,
 
     init() {
         if (this._ready) return;
         this._ready = true;
+    },
+
+    showAnnouncement(data) {
+        this.init();
+        const el = $('#server-announce');
+        if (!el) return;
+
+        $('#server-announce-badge').textContent = data?.badge || 'ANNOUNCEMENT';
+        $('#server-announce-msg').textContent = data?.message || '';
+        $('#server-announce-meta').textContent = data?.meta || '';
+
+        el.classList.remove('hidden');
+        clearTimeout(this._announceTimer);
+        const duration = data?.duration || 14000;
+        this._announceTimer = setTimeout(() => this.hideAnnouncement(), duration);
+    },
+
+    hideAnnouncement() {
+        clearTimeout(this._announceTimer);
+        $('#server-announce')?.classList.add('hidden');
     },
 
     showPoliceOrder(data) {

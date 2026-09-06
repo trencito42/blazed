@@ -110,11 +110,13 @@ RegisterNetEvent('sunset:client:characterLoaded', function()
     refreshIllegalBlip()
 end)
 
-RegisterNetEvent('sunset:client:dutyState', function(state, job)
+RegisterNetEvent('sunset:client:dutyState', function(state, job, silent)
     onDuty = state == true
     myFaction = job
+    if silent then return end
     local faction = job and Sunset.Factions[job]
-    local label = faction and faction.label or 'Faction'
+    if not faction or faction.duty ~= true then return end
+    local label = faction.label or 'Faction'
     exports.sunset_ui:Notify(onDuty and ('ON DUTY — ' .. label) or ('OFF DUTY — ' .. label), onDuty and 'success' or 'info')
 end)
 

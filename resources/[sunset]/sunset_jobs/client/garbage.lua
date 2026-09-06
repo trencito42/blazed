@@ -1,7 +1,22 @@
 local JC = Sunset.JobClient
 
 local bagProp = nil
+local worldBag = nil
 local carryAnimActive = false
+
+local function spawnWorldBag(pos)
+    if worldBag and DoesEntityExist(worldBag) then
+        DeleteObject(worldBag)
+        worldBag = nil
+    end
+    if not pos then return end
+    local model = joaat('prop_cs_rub_binbag_01')
+    if not JC.loadModel(model) then return end
+    worldBag = CreateObject(model, pos.x, pos.y, pos.z - 0.95, false, false, false)
+    FreezeEntityPosition(worldBag, true)
+    SetEntityCollision(worldBag, false, false)
+    SetModelAsNoLongerNeeded(model)
+end
 
 local function pointToBin(cfg, bin, label)
     if not bin then return end
@@ -142,6 +157,9 @@ local function startGarbage()
                 if bin then
                     local pos = vector3(bin.x, bin.y, bin.z)
                     JC.drawMarker(pos, 46, 204, 113)
+                    if not worldBag or not DoesEntityExist(worldBag) then
+                        spawnWorldBag(pos)
+                    end
                     if JC.isNear(pos, cfg.collectRadius or 3.0)
                         and not IsPedInAnyVehicle(PlayerPedId(), false)
                         and not busy

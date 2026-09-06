@@ -32,7 +32,8 @@ Sunset.HelpAdminDescriptions = {
     acreatehouse = 'Create a house at your current position: price, interior, minimum level, name',
     ahouseedit = 'Edit a house price, level, name, sale status, or enabled status',
     astats = 'Inspect an online player\'s character, economy and job progression',
-    setstat = 'Set an online player stat: cash, bank, level, rp, paydays, playtime, premium, hunger, thirst, stress',
+    setstat = 'Set an online player stat: cash, bank, level, rp, rob, paydays, playtime, premium, hunger, thirst, stress',
+    setrob = 'Set a player robbery points: /setrob [id] [value]',
     setjobstat = 'Set civilian job progress: /setjobstat [id] [job] [xp|level|tasks|earned] [value]',
 }
 
@@ -99,6 +100,9 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/respawn', desc = 'Respawn when dead (if allowed)' },
     { cmd = '/hudedit', desc = 'Move HUD panels' },
     { cmd = '/hudreset', desc = 'Reset HUD layout to default' },
+    { cmd = '/rob', desc = 'Start a store robbery at a marked jewelry / luxury store (costs rob points)' },
+    { cmd = '[E] robbery', desc = 'Start robbery, hack the terminal, smash displays, then escape 300m' },
+    { cmd = '[E] fence', desc = 'Sell stolen watches and jewelry to the dockside fence' },
 }
 
 Sunset.HelpDispatchEntries = {

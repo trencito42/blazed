@@ -162,7 +162,7 @@ end
 AddEventHandler('sunset:nui:dealershipBuy', function(data)
     if not dealerOpen or adminMode or not data or not data.model then return end
     CreateThread(function()
-        local result, err = Sunset.AwaitCallback('sunset:dealership:purchase', data.model)
+        local result, err = Sunset.AwaitCallback('sunset:dealership:purchase', data.model, tonumber(data.color) or 0)
         if not result then
             notify(err or 'The vehicle could not be purchased.', 'error', 7000)
             refreshDealer()
@@ -205,6 +205,10 @@ AddEventHandler('sunset:nui:dealershipTestDrive', function(data)
             if testVehicle == 0 then Wait(100) end
         end
         SetModelAsNoLongerNeeded(hash)
+        if testVehicle == 0 or not DoesEntityExist(testVehicle) then
+            local s = Sunset.Dealership.testDriveSpawn
+            testVehicle = CreateVehicle(hash, s.x, s.y, s.z, s.w or 0.0, true, false)
+        end
         if testVehicle == 0 or not DoesEntityExist(testVehicle) then
             TriggerServerEvent('sunset:dealership:endTestDrive', drive.netId)
             return notify('The test-drive vehicle did not stream in. Try again.', 'error')

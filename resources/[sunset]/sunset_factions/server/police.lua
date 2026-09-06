@@ -17,7 +17,9 @@ end
 local function broadcastToPolice(tag, message)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
-        if src and FactionCore.isLawEnforcement(src) then policeChat(src, tag, message) end
+        if src and FactionCore.isLawEnforcementMember(src) then
+            policeChat(src, tag, message, 'police_alert')
+        end
     end
 end
 
@@ -135,13 +137,14 @@ local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issue
         combinedReason = previous.reason .. '; ' .. combinedReason
         if #combinedReason > 128 then combinedReason = combinedReason:sub(-128) end
     end
+    local persist = reasonCode == 'robbery' or (previous and previous.decayAt == nil)
     local decayMin = (Sunset.Police and Sunset.Police.decayMinutes[level]) or 15
     local data = {
         level = level,
         reason = combinedReason,
         reasonCode = reasonCode or '',
         jailMinutes = math.min(60, (previous and previous.jailMinutes or 0) + (jailMinutes or 2)),
-        decayAt = os.time() + decayMin * 60,
+        decayAt = persist and nil or (os.time() + decayMin * 60),
     }
 
     local cid = charId(targetId)
@@ -149,8 +152,23 @@ local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issue
         Police.saveWantedToDb(cid, data, issuedBy)
     end
     applyWanted(targetId, data)
+    local name = 'Unknown'
+    pcall(function()
+        name = exports.sunset_core:GetPlayerDisplayName(targetId) or name
+    end)
+    broadcastToPolice('WANTED', ('%s (#%d) is now wanted ★%d — %s'):format(name, targetId, data.level, data.reason))
     return data
 end
+
+function AddWantedCharge(targetId, reasonCode, issuedBy)
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then return nil, 'Player is not online' end
+    reasonCode = string.lower(tostring(reasonCode or 'robbery'))
+    local reasonRow = Sunset.GetPoliceReason(reasonCode)
+    if not reasonRow then return nil, 'Unknown wanted reason' end
+    return setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes, issuedBy)
+end
+exports('AddWantedCharge', AddWantedCharge)
 
 local function clearWanted(targetId, clearedBy)
     local cid = charId(targetId)
@@ -329,9 +347,6 @@ exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, 
 
     notify(targetId, ('New charge: %s (+★%d). Total wanted: ★%d.'):format(
         reasonRow.label, reasonRow.stars, wanted.level), 'error', 8000)
-    local alert = ('%s (#%d) — %s (+★%d), total ★%d'):format(
-        exports.sunset_core:GetPlayerDisplayName(targetId), targetId, reasonRow.label, reasonRow.stars, wanted.level)
-    broadcastToPolice('WANTED', alert)
     notify(source, ('Wanted charge added to #%d — now ★%d'):format(targetId, wanted.level), 'success')
     return true
 end)
@@ -344,6 +359,9 @@ exports.sunset_core:RegisterCallback('sunset:policeClearWanted', function(source
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then
         return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    end
+    if not WantedOnline[targetId] then
+        return nil, 'That player has no active wanted status.'
     end
     clearWanted(targetId, charId(source))
     notify(targetId, 'Your wanted status has been cleared', 'success')
@@ -529,12 +547,19 @@ local function validateRadarVehicle(source, networkId)
     if GetPedInVehicleSeat(vehicle, -1) ~= ped then
         return nil, 'You must be in the driver seat of the LSPD patrol vehicle.'
     end
-    if Entity(vehicle).state.sunsetFactionVehicle ~= 'police' then
-        return nil, 'Mobile radar only works in an LSPD fleet vehicle from the MRPD garage.'
-    end
+    local isFleet = Entity(vehicle).state.sunsetFactionVehicle == 'police'
+    local model = GetEntityModel(vehicle)
     local depot = Sunset.Factions.police and Sunset.Factions.police.depot
-    if not depot or GetEntityModel(vehicle) ~= joaat(depot.vehicle) then
-        return nil, 'This is not an authorized LSPD radar vehicle.'
+    local isDepotModel = depot and depot.vehicle and model == joaat(depot.vehicle)
+    local allowed = false
+    for _, name in ipairs((Sunset.Police.radar and Sunset.Police.radar.allowedModels) or {}) do
+        if model == joaat(name) then
+            allowed = true
+            break
+        end
+    end
+    if not isFleet and not isDepotModel and not allowed then
+        return nil, 'Get in an LSPD patrol car (MRPD garage or a marked cruiser) and try again.'
     end
     return vehicle
 end
@@ -556,6 +581,17 @@ exports.sunset_core:RegisterCallback('sunset:policeRadarStop', function(source)
     RadarSessions[source] = nil
     return true
 end)
+
+local function radarCommand(source, args)
+    if source == 0 then return end
+    TriggerClientEvent('sunset:police:tryStartRadar', source, args[1])
+end
+RegisterCommand('startradar', radarCommand, false)
+RegisterCommand('radar', radarCommand, false)
+RegisterCommand('stopradar', function(source)
+    if source == 0 then return end
+    TriggerClientEvent('sunset:police:tryStopRadar', source)
+end, false)
 
 exports.sunset_core:RegisterCallback('sunset:policeRadarLock', function(source, targetNetworkId)
     local session = RadarSessions[source]
@@ -734,6 +770,39 @@ CreateThread(function()
 end)
 
 exports('IsJailed', function(source) return Police.isJailed(source) end)
+
+AddEventHandler('sunset:police:autoWanted', function(targetId, reasonCode, reasonLabel)
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then return end
+    setWanted(targetId, 5, reasonLabel or 'Murder', reasonCode or 'murder', 20, nil)
+    notify(targetId, 'WANTED: first-degree murder', 'error', 10000)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:getJailSpawnLock', function(source)
+    if not Police.isJailed(source) then return { locked = false } end
+    local jail = Sunset.Police and Sunset.Police.jailCoords
+    if not jail then return { locked = true, x = 1845.0, y = 2585.0, z = 45.7, w = 270.0 } end
+    return { locked = true, x = jail.x, y = jail.y, z = jail.z, w = jail.w or 0.0 }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeUnjail', function(source, targetId)
+    local isAdmin = false
+    pcall(function() isAdmin = exports.sunset_admin:IsAdmin(source, 2) == true end)
+    if not isAdmin and not FactionCore.hasPerm(source, 'arrest') and not FactionCore.isLawEnforcement(source) then
+        return nil, 'You cannot release prisoners.'
+    end
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then
+        return nil, 'That player is not online.'
+    end
+    if not JailedOnline[targetId] then
+        return nil, 'That player is not in jail.'
+    end
+    endJail(targetId)
+    notify(targetId, 'You have been released from jail', 'success')
+    notify(source, ('Released #%d from jail'):format(targetId), 'success')
+    return true
+end)
 
 exports.sunset_core:RegisterCallback('sunset:policeMdcLookup', function(source, targetId)
     if not FactionCore.hasPerm(source, 'mdc') and not FactionCore.isLawEnforcement(source) then

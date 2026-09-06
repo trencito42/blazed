@@ -52,7 +52,9 @@ local function publicRow(row, char)
     local rented = activeRental(char.id, row.id) ~= nil
     return {
         id=row.id, label=row.label, description=row.description, price=tonumber(row.price) or 0, entry=decodePos(row.entry),
-        owner_character_id=row.owner_character_id, ownerName=row.owner_name ~= '' and row.owner_name or nil,
+        owner_character_id=row.owner_character_id,
+        ownerName=(row.owner_name and row.owner_name ~= '' and not tostring(row.owner_name):find('license:') and row.owner_name)
+            or (row.owner_character_id and ('Resident #' .. row.owner_character_id) or nil),
         interior=row.interior, minimumLevel=tonumber(row.minimum_level) or 1,
         locked=dbBool(row.locked), forSale=dbBool(row.for_sale),
         rentEnabled=dbBool(row.rent_enabled), rentPrice=tonumber(row.rent_price) or 0,
@@ -84,9 +86,22 @@ exports.sunset_core:RegisterCallback('sunset:getSpawnHomes', function(source)
       ORDER BY access_type,p.id]], {char.id,char.id,char.id}) or {}
 end)
 
+local function spawnCoords(pos)
+    if not pos then return nil end
+    local x, y, z = tonumber(pos.x), tonumber(pos.y), tonumber(pos.z)
+    if not x or not y or not z then return nil end
+    return { x = x, y = y, z = z, w = tonumber(pos.w) or 0.0 }
+end
+
 exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(source, choice, propertyId)
     local char=exports.sunset_core:GetCharacter(source)
     if not char then return nil,'Character data is unavailable. Please reconnect.' end
+    local jailed = false
+    pcall(function() jailed = exports.sunset_factions:IsJailed(source) == true end)
+    if jailed and Sunset.Police and Sunset.Police.jailCoords then
+        local jail = spawnCoords(Sunset.Police.jailCoords)
+        if jail then return jail end
+    end
     local pos
     if choice=='default' then pos=Sunset.Config.DefaultSpawn
     elseif choice=='last' then pos=char.position
@@ -95,9 +110,18 @@ exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(sourc
         if not prop or not dbBool(prop.enabled) then return nil,'That house is no longer available.' end
         if not accessible(char,prop) then return nil,'You no longer own or rent that house.' end
         pos=decodePos(prop.entry)
+    elseif choice=='hq' then
+        local ok, hq = pcall(function()
+            return exports.sunset_factions:GetLeaderHqSpawn(source)
+        end)
+        if not ok or type(hq) ~= 'table' then
+            return nil, 'Faction HQ spawn is only available to faction leaders.'
+        end
+        pos = hq
     else return nil,'Invalid spawn location.' end
-    if type(pos)~='table' or not tonumber(pos.x) then return nil,'That spawn location has invalid coordinates.' end
-    return {x=pos.x,y=pos.y,z=pos.z,w=pos.w or 0.0}
+    local resolved = spawnCoords(pos)
+    if not resolved then return nil,'That spawn location has invalid coordinates.' end
+    return resolved
 end)
 
 local function charge(source, amount, reason)

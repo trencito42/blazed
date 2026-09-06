@@ -41,4 +41,5 @@ SunsetAdmin.Commands = {
     astats = 2,
     setstat = 3,
     setjobstat = 3,
+    setrob = 3,
 }

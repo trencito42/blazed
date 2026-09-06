@@ -57,6 +57,9 @@ server_exports {
     'SetFaction',
     'AddXP',
     'AddRespectPoints',
+    'GetRobPoints',
+    'SetRobPoints',
+    'AddRobPoints',
     'GetSpawnPosition',
     'CompleteAuthentication',
 }

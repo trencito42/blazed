@@ -24,6 +24,13 @@ function showScreen(name) {
         const app = $('#app');
         if (app) app.dataset.screen = name;
     }
+    if (window.AuthLoading) {
+        if (name === 'loading') {
+            AuthLoading.armSafety(120000);
+        } else {
+            AuthLoading.clearSafety();
+        }
+    }
 }
 
 function showApp(visible) {
@@ -142,8 +149,7 @@ window.addEventListener('message', (event) => {
             if (window.LoadingScreen) LoadingScreen.reset();
             if (window.AuthLoading) {
                 AuthLoading._pending = false;
-                clearTimeout(AuthLoading._safety);
-                AuthLoading._safety = null;
+                AuthLoading.clearSafety();
             }
             showApp(false);
             break;
@@ -165,6 +171,10 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'enterGameplay': {
+            if (window.AuthLoading) {
+                AuthLoading._pending = false;
+                AuthLoading.clearSafety();
+            }
             const app = $('#app');
             const transitionMs = Math.max(250, Number(data?.duration) || 800);
             const fadeOut = () => {
@@ -316,6 +326,12 @@ window.addEventListener('message', (event) => {
         case 'policeOrderHide':
             if (window.Overlays) Overlays.hidePoliceOrder();
             break;
+        case 'announcementShow':
+            if (window.Overlays) Overlays.showAnnouncement(data || event.data.data);
+            break;
+        case 'announcementHide':
+            if (window.Overlays) Overlays.hideAnnouncement();
+            break;
         case 'taxiMeterShow':
             if (window.Overlays) Overlays.showTaxiMeter(data || event.data.data);
             break;
@@ -342,6 +358,15 @@ window.addEventListener('message', (event) => {
             break;
         case 'fishingHide':
             if (window.Fishing) Fishing.hide();
+            break;
+        case 'radarShow':
+            if (window.RadarHud) RadarHud.show(data || event.data.data);
+            break;
+        case 'radarUpdate':
+            if (window.RadarHud) RadarHud.update(data || event.data.data);
+            break;
+        case 'radarHide':
+            if (window.RadarHud) RadarHud.hide();
             break;
         case 'courierShow':
             if (window.Courier) Courier.show(data || event.data.data);
@@ -482,6 +507,14 @@ window.addEventListener('message', (event) => {
     }
 });
 
+document.addEventListener('keydown', (e) => {
+    const key = String(e.key || '').toLowerCase();
+    if (!(e.ctrlKey || e.metaKey) || key !== 'a') return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+    e.preventDefault();
+}, true);
+
 // Close character screens on ESC (not menu/chat)
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -499,8 +532,23 @@ document.addEventListener('keydown', (e) => {
 
 // Local/browser visual QA only; FiveM never supplies this query parameter.
 document.addEventListener('DOMContentLoaded', () => {
-    if (new URLSearchParams(window.location.search).get('qa') !== 'spawn') return;
-    showApp(true);
-    showScreen('spawn');
-    window.SpawnSelector?.show({ hasLastLocation: true });
+    const qa = new URLSearchParams(window.location.search).get('qa');
+    if (qa === 'spawn') {
+        showApp(true);
+        showScreen('spawn');
+        window.SpawnSelector?.show({ hasLastLocation: true });
+    } else if (qa === 'jobs') {
+        window.Panels?.showJobsPanel({
+            currentJob: { id: 'fisherman', label: 'Fisherman' },
+            currentJobLabel: 'Fisherman',
+            session: { jobId: 'fisherman', state: 'ACTIVE' },
+            jobs: [
+                { id: 'courier', label: 'Courier', salary: 110, description: 'Pick up packages and deliver them on foot.', progress: { level: 1, xp: 20, xpToNext: 100, completedTasks: 2 } },
+                { id: 'fisherman', label: 'Fisherman', salary: 120, description: 'Fish at coastal spots and sell your catch.', progress: { level: 4, xp: 72, xpToNext: 100, completedTasks: 17 } },
+                { id: 'garbage', label: 'Garbage Collector', salary: 130, description: 'Collect bins on city routes and unload at the depot.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
+                { id: 'mechanic', label: 'Roadside Mechanic', salary: 140, description: 'Respond to service calls and repair vehicles.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
+                { id: 'trucker', label: 'Trucker', salary: 150, description: 'Haul cargo across San Andreas.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
+            ],
+        });
+    }
 });

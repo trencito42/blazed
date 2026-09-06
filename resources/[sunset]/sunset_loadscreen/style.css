@@ -1,4 +1,13 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+}
 
 html, body {
     width: 100%;
@@ -7,6 +16,14 @@ html, body {
     font-family: 'Rajdhani', sans-serif;
     background: #07030c;
     color: #fff;
+}
+
+::selection,
+*::selection,
+::-moz-selection,
+*::-moz-selection {
+    background: transparent !important;
+    color: inherit !important;
 }
 
 .loadscreen {
@@ -38,9 +55,8 @@ html, body {
 .loadscreen__bg {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    pointer-events: none;
+    background: #07030c url('assets/bg.png') center / cover no-repeat;
 }
 
 .loadscreen__vignette {
@@ -75,7 +91,10 @@ html, body {
 
 .loadscreen__logo {
     width: min(380px, 52vw);
-    height: auto;
+    height: 110px;
+    margin: 0 auto;
+    pointer-events: none;
+    background: url('assets/logo.png') center / contain no-repeat;
     filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55));
 }
 

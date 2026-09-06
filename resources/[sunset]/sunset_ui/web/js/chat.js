@@ -32,7 +32,7 @@ const Chat = {
         visible.forEach((m) => {
             const el = document.createElement('div');
             const type = String(m.type || '').toLowerCase().replace(/[^a-z_]/g, '');
-            const highlighted = new Set(['me', 'do', 'f', 'r', 'd', 'gov', 'megaphone', 'police_alert', 'faction_info', 'radar']);
+            const highlighted = new Set(['me', 'do', 'f', 'r', 'd', 'gov', 'announce', 'megaphone', 'police_alert', 'faction_info', 'radar']);
             el.className = 'chat-msg' + (highlighted.has(type) ? ` chat-msg--${type}` : '');
             const time = document.createElement('span');
             time.className = 'chat-msg__time';
@@ -101,10 +101,25 @@ const Chat = {
         const input = $('#chat-input');
         const msg = input.value.trim();
         if (!msg) { post('chatClose'); return; }
+        post('chatPreview', { text: '' });
         post('chatSend', { message: msg });
         input.value = '';
     },
 };
+
+let previewTimer = null;
+let lastPreviewSent = null;
+const emitChatPreview = () => {
+    const text = $('#chat-input')?.value ?? '';
+    if (text === lastPreviewSent) return;
+    lastPreviewSent = text;
+    post('chatPreview', { text });
+};
+
+$('#chat-input')?.addEventListener('input', () => {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(emitChatPreview, 70);
+});
 
 $('#chat-settings-btn')?.addEventListener('click', (e) => {
     e.preventDefault();

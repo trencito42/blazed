@@ -125,6 +125,8 @@ local StatDefinitions = {
     thirst = { scope = 'character', field = 'thirst', min = 0, max = 100, label = 'thirst' },
     stress = { scope = 'character', field = 'stress', min = 0, max = 100, label = 'stress' },
     playtime = { scope = 'player', field = 'playtime', min = 0, max = 10000000, label = 'playtime minutes' },
+    rob = { scope = 'rob_points', field = 'rob_points', min = 0, max = 1000000, label = 'Rob Points' },
+    robpoints = { alias = 'rob' },
     premium = { scope = 'account', field = 'premium_points', min = 0, max = 2000000000, label = 'Sunset Coins' },
     sunsetcoins = { alias = 'premium' },
 }
@@ -167,7 +169,7 @@ local function setPlayerStat(source, args, forcedStat)
     end
     if not definition then
         return commandOutput(source,
-            'Unknown stat. Available: cash, bank, level, rp, paydays, playtime, premium, hunger, thirst, stress.', 'error')
+            'Unknown stat. Available: cash, bank, level, rp, rob, paydays, playtime, premium, hunger, thirst, stress.', 'error')
     end
 
     local rawValue = tonumber(args[valueArgIndex])
@@ -188,15 +190,21 @@ local function setPlayerStat(source, args, forcedStat)
     end
 
     local oldValue
-    if definition.scope == 'character' then
+    local saved, saveError
+    if definition.scope == 'rob_points' then
+        oldValue = exports.sunset_core:GetRobPoints(target)
+        saved = exports.sunset_core:SetRobPoints(target, value)
+        if not saved then saveError = 'Rob points could not be saved.' end
+    elseif definition.scope == 'character' then
         oldValue = math.floor(tonumber(char[definition.field]) or 0)
+        saved, saveError = exports.sunset_core:SetPersistentStat(target, definition.scope, definition.field, value)
     elseif definition.scope == 'player' then
         oldValue = math.floor(tonumber(player[definition.field]) or 0)
+        saved, saveError = exports.sunset_core:SetPersistentStat(target, definition.scope, definition.field, value)
     else
         oldValue = math.floor(tonumber(player[definition.field]) or 0)
+        saved, saveError = exports.sunset_core:SetPersistentStat(target, definition.scope, definition.field, value)
     end
-
-    local saved, saveError = exports.sunset_core:SetPersistentStat(target, definition.scope, definition.field, value)
     if not saved then
         return commandOutput(source, saveError or 'The statistic could not be saved. No value was changed.', 'error')
     end
@@ -216,7 +224,7 @@ local statAliases = {
     setcash = 'cash', setmoney = 'cash', setbank = 'bank', setlevel = 'level',
     setrp = 'rp', setrespect = 'rp', setpaydays = 'paydays', setplaytime = 'playtime',
     setpremium = 'premium', setsunsetcoins = 'premium', sethunger = 'hunger',
-    setthirst = 'thirst', setstress = 'stress',
+    setthirst = 'thirst', setstress = 'stress', setrob = 'rob', setrobpoints = 'rob',
 }
 for command, stat in pairs(statAliases) do
     RegisterCommand(command, function(source, args) setPlayerStat(source, args, stat) end, false)
@@ -234,8 +242,8 @@ RegisterCommand('astats', function(source, args)
         return commandOutput(source, 'That player has not selected a character yet.', 'error')
     end
     local name = exports.sunset_core:GetPlayerDisplayName(target)
-    local line = ('%s [ID %d/CID %d] | Level %d | RP %d | Paydays %d | Cash $%d | Bank $%d | SC %d | Playtime %dh %dm'):format(
-        name, target, char.id, char.level or 1, char.respect_points or 0, char.paydays_received or 0,
+    local line = ('%s [ID %d/CID %d] | Level %d | RP %d | Rob %d | Paydays %d | Cash $%d | Bank $%d | SC %d | Playtime %dh %dm'):format(
+        name, target, char.id, char.level or 1, char.respect_points or 0, exports.sunset_core:GetRobPoints(target), char.paydays_received or 0,
         char.cash or 0, char.bank or 0, player.premium_points or 0,
         math.floor((player.playtime or 0) / 60), (player.playtime or 0) % 60)
     commandOutput(source, line, 'info')
@@ -462,7 +470,23 @@ RegisterCommand('announce', function(source, args)
     if source ~= 0 and not hasPerm(source, 'announce') then return notify(source, 'No permission', 'error') end
     local msg = table.concat(args, ' ')
     if msg == '' then return end
-    TriggerClientEvent('sunset:client:notify', -1, msg, 'warning')
+    local from = 'SERVER'
+    if source ~= 0 then
+        from = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or 'Admin'
+    end
+    TriggerClientEvent('sunset:chat:message', -1, {
+        id = source,
+        name = '[ANNOUNCEMENT]',
+        message = msg,
+        time = os.date('%H:%M'),
+        type = 'announce',
+    })
+    TriggerClientEvent('sunset:ui:announcement', -1, {
+        badge = 'ANNOUNCEMENT',
+        message = msg,
+        meta = from,
+        duration = 14000,
+    })
 end, false)
 
 -- /setadmin [id|username] [level]

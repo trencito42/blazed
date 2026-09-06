@@ -24,7 +24,19 @@ local function sendFactionChat(source, channel, args, filterFn)
     local name = exports.sunset_core:GetPlayerDisplayName(source)
     local faction = Sunset.Factions[factionId]
     local label = faction and faction.label or factionId
-    local prefix = channel == 'f' and ('[' .. label .. '] ') or ('[' .. string.upper(channel) .. '|' .. label .. '] ')
+    local _, grade = FactionCore.getFactionOf(char)
+    local gradeInfo = Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
+    local rank = (gradeInfo and gradeInfo.label) or 'Member'
+    local prefix
+    if channel == 'f' then
+        prefix = '[' .. label .. '] '
+    elseif channel == 'r' then
+        prefix = ('[R|%s|%s] '):format(label, rank)
+    elseif channel == 'd' then
+        prefix = ('[D|%s|%s] '):format(label, rank)
+    else
+        prefix = ('[%s|%s] '):format(string.upper(channel), label)
+    end
 
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
@@ -50,22 +62,27 @@ end, false)
 
 RegisterCommand('r', function(source, args)
     if source == 0 then return end
-    if not FactionCore.isOnDuty(source) then
-        return FactionCore.notify(source, 'You must be on duty for radio', 'error')
-    end
-    local myFaction = select(1, FactionCore.getFactionOf(FactionCore.getChar(source)))
-    sendFactionChat(source, 'r', args, function(src, c, factionId)
-        return select(1, FactionCore.getFactionOf(c)) == factionId and FactionCore.isOnDuty(src)
+    sendFactionChat(source, 'r', args, function(_, c, factionId)
+        return select(1, FactionCore.getFactionOf(c)) == factionId
     end)
 end, false)
 
+local function isEmergencyDepartment(factionId)
+    return Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+        or Sunset.FactionTypeMatches(factionId, 'ems')
+        or Sunset.FactionTypeMatches(factionId, 'fire_rescue')
+end
+
 RegisterCommand('d', function(source, args)
     if source == 0 then return end
-    if not FactionCore.isLawEnforcement(source) then
-        return FactionCore.notify(source, 'Law enforcement radio only', 'error')
+    local char = FactionCore.getChar(source)
+    local factionId = char and select(1, FactionCore.getFactionOf(char))
+    if not factionId or not isEmergencyDepartment(factionId) then
+        return FactionCore.notify(source, 'Department radio is for LSPD, EMS, and LSFD', 'error')
     end
-    sendFactionChat(source, 'd', args, function(src, c)
-        return FactionCore.isLawEnforcement(src)
+    sendFactionChat(source, 'd', args, function(_, c)
+        local id = select(1, FactionCore.getFactionOf(c))
+        return id and isEmergencyDepartment(id)
     end)
 end, false)
 

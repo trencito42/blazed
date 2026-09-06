@@ -65,6 +65,7 @@ ensure sunset_taxi
 ensure sunset_fire
 ensure sunset_documents
 ensure sunset_jobs
+ensure sunset_robbery
 ensure sunset_hud
 ensure sunset_dealership
 ensure sunset_scoreboard

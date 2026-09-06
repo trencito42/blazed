@@ -7,7 +7,13 @@
     --font: 'Inter', sans-serif;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-user-select: none;
+    user-select: none;
+}
 
 html, body {
     width: 100%;
@@ -46,8 +52,10 @@ body.game-paused #hud,
 body.game-paused #job-objective,
 body.game-paused #courier-panel,
 body.game-paused #fishing-panel,
+body.game-paused #radar-panel,
 body.game-paused #fuel-pump,
 body.game-paused #taxi-meter,
+body.game-paused #server-announce,
 body.game-paused #police-order,
 body.game-paused #notifications,
 body.game-paused #progress,
@@ -55,9 +63,11 @@ body.menu-open #hud,
 body.menu-open #job-objective,
 body.menu-open #courier-panel,
 body.menu-open #fishing-panel,
+body.menu-open #radar-panel,
 body.menu-open #fuel-pump,
 body.menu-open #chat,
 body.menu-open #taxi-meter,
+body.menu-open #server-announce,
 body.menu-open #police-order,
 body.menu-open #notifications,
 body.menu-open #progress {
@@ -71,9 +81,11 @@ body.menu-open #progress {
 #job-objective,
 #courier-panel,
 #fishing-panel,
+#radar-panel,
 #fuel-pump,
 #chat,
 #taxi-meter,
+#server-announce,
 #police-order,
 #notifications,
 #progress {
@@ -82,6 +94,7 @@ body.menu-open #progress {
 
 body.fuel-pump-open #courier-panel,
 body.fuel-pump-open #fishing-panel,
+body.fuel-pump-open #radar-panel,
 body.fuel-pump-open #job-objective {
     opacity: 0 !important;
     visibility: hidden !important;

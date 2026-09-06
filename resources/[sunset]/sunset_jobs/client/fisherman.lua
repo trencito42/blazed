@@ -431,8 +431,8 @@ CreateThread(function()
                 else
                     if isBagFull() then
                         if fishingUiMode ~= 'full' then showFishingFull() end
-                    elseif fishingUiMode ~= 'shift' then
-                        showFishingShift()
+                    elseif fishingUiMode ~= 'hidden' then
+                        hideFishingUi()
                     end
                     Wait(200)
                 end

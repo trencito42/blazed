@@ -149,21 +149,35 @@ local function syncLockState(veh)
 end
 
 -- ═══ LOCK (N) ═══
+local function plateOf(veh)
+    return (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
+end
+
+local function hasKeysFor(veh)
+    if veh == 0 then return false end
+    if spawnedOwnedVehicle == veh then return true end
+    local ok = Sunset.AwaitCallback('sunset:hasVehicleKeys', plateOf(veh))
+    return ok == true
+end
+
 RegisterCommand('sunset_lock', function()
     if blocked() then return end
-    if isPassenger() then return notify('Only the driver can do that', 'error') end
-
     local ped = PlayerPedId()
     local veh = getVeh()
     if veh == 0 then
         local coords = GetEntityCoords(ped)
-        veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71)
+        veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 0)
     end
     if veh == 0 then return notify('No vehicle nearby', 'error') end
-
-    locked = not locked
-    SetVehicleDoorsLocked(veh, locked and 2 or 1)
-    showVehicleHint('lock')
+    CreateThread(function()
+        if not hasKeysFor(veh) then
+            return notify('You do not have keys for this vehicle', 'error')
+        end
+        locked = not locked
+        SetVehicleDoorsLocked(veh, locked and 2 or 1)
+        SetVehicleDoorsLockedForPlayer(veh, PlayerId(), false)
+        showVehicleHint('lock')
+    end)
 end, false)
 RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'N')
 
@@ -185,6 +199,7 @@ RegisterCommand('sunset_engine', function()
     local on = engineEnabled[veh] ~= true
     engineEnabled[veh] = on
     SetVehicleEngineOn(veh, on, true, true)
+    SetVehicleKeepEngineOnWhenAbandoned(veh, on)
     showVehicleHint('engine')
 end, false)
 RegisterKeyMapping('sunset_engine', 'Motor on/off', 'keyboard', '2')
@@ -193,6 +208,7 @@ AddEventHandler('sunset:vehicles:setEngineState', function(veh, enabled)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
     engineEnabled[veh] = enabled == true
     SetVehicleEngineOn(veh, enabled == true, true, true)
+    SetVehicleKeepEngineOnWhenAbandoned(veh, enabled == true)
 end)
 
 -- ═══ LIGHTS (H) — off → low → high ═══
@@ -238,13 +254,16 @@ CreateThread(function()
         if IsPedInAnyVehicle(ped, false) then
             local veh = GetVehiclePedIsIn(ped, false)
             local driver = GetPedInVehicleSeat(veh, -1) == ped
+            SetPedConfigFlag(ped, 184, true)
             if driver and engineEnabled[veh] == nil then
-                -- Engine state is deliberate on SunsetMP: entering a vehicle or
-                -- pressing accelerate must not silently start it.
-                engineEnabled[veh] = false
-                SetVehicleEngineOn(veh, false, true, true)
+                engineEnabled[veh] = GetIsVehicleEngineRunning(veh) == true
+                SetVehicleKeepEngineOnWhenAbandoned(veh, engineEnabled[veh] == true)
             elseif driver and engineEnabled[veh] == false then
                 SetVehicleEngineOn(veh, false, true, true)
+                SetVehicleKeepEngineOnWhenAbandoned(veh, false)
+            elseif driver and engineEnabled[veh] == true then
+                SetVehicleEngineOn(veh, true, true, true)
+                SetVehicleKeepEngineOnWhenAbandoned(veh, true)
             end
 
             syncLockState(veh)
@@ -388,17 +407,23 @@ CreateThread(function()
             end
 
             applyCollisionDamage(veh)
-            tickOdometer(veh)
+            if spawnedOwnedVehicle == veh then
+                tickOdometer(veh)
+            end
 
             local now = GetGameTimer()
             local elapsedSeconds = lastFuelTickAt and math.min(2.0, math.max(0.0, (now - lastFuelTickAt) / 1000.0)) or 0.0
             lastFuelTickAt = now
-            local drain = computeFuelDrainPerSecond(veh) * elapsedSeconds
-            if drain > 0 then
-                fuel = math.max(0, fuel - drain)
-                writeFuelPercent(veh, fuel)
+            local class = GetVehicleClass(veh)
+            local fuelExempt = class == 14 or class == 15 or class == 16
+            if not fuelExempt then
+                local drain = computeFuelDrainPerSecond(veh) * elapsedSeconds
+                if drain > 0 then
+                    fuel = math.max(0, fuel - drain)
+                    writeFuelPercent(veh, fuel)
+                end
+                if fuel <= 0.05 then SetVehicleEngineOn(veh, false, false, true) end
             end
-            if fuel <= 0.05 then SetVehicleEngineOn(veh, false, false, true) end
             Wait(1000)
         else
             currentVeh = 0
@@ -416,26 +441,33 @@ function GetVehicleState()
     local speed = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
     local gear = GetVehicleCurrentGear(veh)
     local rawRpm = GetVehicleCurrentRpm(veh)
-    -- GTA idle sits around 0.2 with no throttle; remap so the bar is empty at idle.
     local rpm = 0.0
-    if GetIsVehicleEngineRunning(veh) then
+    local engineOn = engineEnabled[veh] == true
+    local throttle = GetControlNormal(0, 71)
+    local brake = GetControlNormal(0, 72)
+    if engineOn and not (throttle > 0.4 and brake > 0.4 and speed < 3) then
         rpm = (rawRpm - 0.2) / 0.8
         if rpm < 0.0 then rpm = 0.0 end
         if rpm > 1.0 then rpm = 1.0 end
     end
+    local class = GetVehicleClass(veh)
+    local fuelExempt = class == 14 or class == 15 or class == 16
 
     return {
         inVehicle = true,
         speed = speed,
         gear = gear,
         rpm = rpm,
-        fuel = fuel,
+        fuel = fuelExempt and 100 or fuel,
+        showFuel = not fuelExempt,
         engine = GetVehicleEngineHealth(veh),
         locked = locked,
         seatbelt = seatbelt,
         lightMode = lightMode,
-        engineOn = GetIsVehicleEngineRunning(veh),
-        odometer = math.floor(odometerKm * 10) / 10,
+        engineOn = engineOn,
+        odometer = spawnedOwnedVehicle == veh and (math.floor(odometerKm * 10) / 10) or nil,
+        showOdometer = spawnedOwnedVehicle == veh,
+        vehicleClass = class,
     }
 end
 
@@ -533,9 +565,13 @@ local function normalizeVehicleStats(vehData)
     local engine = tonumber(vehData.engine)
     local body = tonumber(vehData.body)
 
-    if not fuel or fuel < 0 or fuel > 100 then fuel = 100.0 end
-    if not engine or engine < 150 or engine > 1000 then engine = 1000.0 end
-    if not body or body < 150 or body > 1000 then body = 1000.0 end
+    -- Missing values only (new purchase). Never heal a stored damaged car.
+    if fuel == nil then fuel = 100.0 end
+    if engine == nil then engine = 1000.0 end
+    if body == nil then body = 1000.0 end
+    fuel = math.max(0.0, math.min(100.0, fuel))
+    engine = math.max(0.0, math.min(1000.0, engine))
+    body = math.max(0.0, math.min(1000.0, body))
 
     return fuel, engine, body
 end
@@ -625,11 +661,23 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     writeFuelPercent(vehicle, vehFuel)
     SetVehicleOnGroundProperly(vehicle)
     Wait(150)
-    SetVehicleFixed(vehicle)
-    SetVehicleDeformationFixed(vehicle)
+    -- Only fully repair brand-new / full-health records. Damaged cars keep saved HP.
+    if vehEngine >= 999.0 and vehBody >= 999.0 then
+        SetVehicleFixed(vehicle)
+        SetVehicleDeformationFixed(vehicle)
+    end
     SetVehicleEngineHealth(vehicle, vehEngine)
     SetVehicleBodyHealth(vehicle, vehBody)
     SetVehiclePetrolTankHealth(vehicle, 1000.0)
+    writeFuelPercent(vehicle, vehFuel)
+    local spawnProps = decodeVehicleProps(vehData.props)
+    if spawnProps and (spawnProps.color1 or spawnProps.color2) then
+        SetVehicleColours(vehicle, tonumber(spawnProps.color1) or 0, tonumber(spawnProps.color2) or 0)
+    end
+    Wait(50)
+    SetVehicleEngineHealth(vehicle, vehEngine)
+    SetVehicleBodyHealth(vehicle, vehBody)
+    writeFuelPercent(vehicle, vehFuel)
     spawnGraceUntil = GetGameTimer() + 4000
     lastBodyHealth = vehBody
     lastVehSpeed = 0.0
@@ -682,6 +730,70 @@ AddEventHandler('sunset:nui:garageSpawn', function(data)
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('garageHide', {})
     end)
+end)
+
+RegisterCommand('givekeys', function(_, args)
+    CreateThread(function()
+        local target = tonumber(args[1])
+        local veh = getVeh()
+        if veh == 0 then
+            local coords = GetEntityCoords(PlayerPedId())
+            veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 0)
+        end
+        if not target or veh == 0 then return notify('Usage: /givekeys [id] near your vehicle', 'error') end
+        local ok, err = Sunset.AwaitCallback('sunset:giveVehicleKeys', target, plateOf(veh))
+        if ok then notify('Keys given', 'success') else notify(err or 'Could not give keys', 'error') end
+    end)
+end, false)
+
+RegisterCommand('takekeys', function(_, args)
+    CreateThread(function()
+        local target = tonumber(args[1])
+        local veh = getVeh()
+        if veh == 0 then
+            local coords = GetEntityCoords(PlayerPedId())
+            veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 0)
+        end
+        if not target or veh == 0 then return notify('Usage: /takekeys [id] near your vehicle', 'error') end
+        local ok, err = Sunset.AwaitCallback('sunset:takeVehicleKeys', target, plateOf(veh))
+        if ok then notify('Keys taken', 'success') else notify(err or 'Could not take keys', 'error') end
+    end)
+end, false)
+
+RegisterCommand('park', function()
+    CreateThread(function()
+        local veh = getVeh()
+        if veh == 0 or not isDriver() then return notify('Sit in the driver seat of your vehicle to park it', 'error') end
+        if spawnedOwnedVehicle ~= veh then return notify('You can only park your personal vehicle', 'error') end
+        local ok, err = Sunset.AwaitCallback('sunset:parkOwnedVehicle', plateOf(veh))
+        if ok then notify('Vehicle parked here — it will spawn at this spot', 'success')
+        else notify(err or 'Could not park', 'error') end
+    end)
+end, false)
+
+CreateThread(function()
+    while true do
+        local ped = PlayerPedId()
+        local trying = GetVehiclePedIsTryingToEnter(ped)
+        if trying ~= 0 then
+            local lockedState = GetVehicleDoorLockStatus(trying)
+            local mine = spawnedOwnedVehicle == trying
+            if mine then
+                SetVehicleDoorsLockedForPlayer(trying, PlayerId(), false)
+            elseif lockedState > 1 then
+                local keys = Sunset.AwaitCallback('sunset:hasVehicleKeys', plateOf(trying))
+                if keys then
+                    SetVehicleDoorsLockedForPlayer(trying, PlayerId(), false)
+                else
+                    ClearPedTasks(ped)
+                    notify('This is not your vehicle', 'error')
+                end
+            elseif spawnedOwnedVehicle ~= trying then
+                -- unlocked but not yours: allow enter, just inform once
+            end
+        end
+        Wait(200)
+    end
 end)
 
 AddEventHandler('sunset:nui:garageStore', function(data)

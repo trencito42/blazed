@@ -28,6 +28,9 @@ end)
 
 RegisterCommand('quitjob', function()
     CreateThread(function()
+        if Sunset.JobClient and Sunset.JobClient.cleanup then
+            Sunset.JobClient.cleanup()
+        end
         local ok, err = Sunset.AwaitCallback('sunset:quitCivilianJob')
         if not ok then exports.sunset_ui:Notify(err or 'Could not quit civilian job', 'error') end
     end)

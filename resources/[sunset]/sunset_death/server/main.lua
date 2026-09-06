@@ -102,8 +102,65 @@ RegisterNetEvent('sunset:server:requestRespawn', function()
     respawnPlayer(source, Sunset.Config.HospitalBill or 0)
 end)
 
+local MurderWindow = {}
+
+local function isOnDutyPolice(src)
+    local onDuty = false
+    pcall(function()
+        onDuty = exports.sunset_factions:IsOnDuty(src) == true
+    end)
+    if not onDuty then return false end
+    local char = exports.sunset_core:GetCharacter(src)
+    if not char then return false end
+    local md = type(char.metadata) == 'table' and char.metadata or {}
+    local factionId = md.faction or char.job
+    if factionId == 'police' then return true end
+    if Sunset.GetCharacterFaction then
+        factionId = select(1, Sunset.GetCharacterFaction(char)) or factionId
+    end
+    return Sunset.FactionTypeMatches
+        and Sunset.FactionTypeMatches(factionId, 'law_enforcement') == true
+end
+
+RegisterNetEvent('sunset:death:playerKilled', function(victimId)
+    local killer = source
+    victimId = tonumber(victimId)
+    if not victimId or victimId == killer or not GetPlayerName(victimId) then return end
+    if isOnDutyPolice(killer) then return end
+    if MurderWindow[victimId] then return end
+    MurderWindow[victimId] = { killerId = killer, expires = os.time() + 60 }
+    TriggerClientEvent('sunset:client:notify', victimId, 'You have 60 seconds to /112 or your attacker will be wanted for first-degree murder.', 'error', 8000)
+    SetTimeout(61000, function()
+        local pending = MurderWindow[victimId]
+        if not pending or pending.killerId ~= killer then return end
+        MurderWindow[victimId] = nil
+        if GetPlayerName(killer) then
+            TriggerEvent('sunset:police:autoWanted', killer, 'murder', 'First-degree murder')
+        end
+    end)
+end)
+
+RegisterNetEvent('sunset:death:call112', function()
+    local src = source
+    local pending = MurderWindow[src]
+    if not pending or os.time() > pending.expires then
+        TriggerClientEvent('sunset:client:notify', src, 'No emergency window is open.', 'error')
+        return
+    end
+    MurderWindow[src] = nil
+    local ped = GetPlayerPed(src)
+    local coords = ped ~= 0 and GetEntityCoords(ped) or nil
+    if coords and GetResourceState('sunset_dispatch') == 'started' then
+        pcall(function()
+            exports.sunset_dispatch:CreateServiceCall(src, 'medic', coords, { system = true, emergency = '112' }, '112 emergency')
+        end)
+    end
+    TriggerClientEvent('sunset:client:notify', src, '112 received — medic dispatched.', 'success')
+end)
+
 AddEventHandler('playerDropped', function()
     Downed[source] = nil
+    MurderWindow[source] = nil
 end)
 
 exports.sunset_core:RegisterCallback('sunset:revivePlayer', function(source, targetId)

@@ -34,7 +34,18 @@ RegisterNetEvent('sunset:admin:deleteVehicle', function()
     local veh = GetVehiclePedIsIn(ped, false)
     if veh == 0 then
         local coords = GetEntityCoords(ped)
-        veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71)
+        veh = GetClosestVehicle(coords.x, coords.y, coords.z, 20.0, 0, 0)
+        if veh == 0 then
+            local closest, closestDist = 0, 20.0
+            for _, candidate in ipairs(GetGamePool('CVehicle')) do
+                local dist = #(coords - GetEntityCoords(candidate))
+                if dist < closestDist then
+                    closest = candidate
+                    closestDist = dist
+                end
+            end
+            veh = closest
+        end
     end
     if veh ~= 0 then DeleteEntity(veh) end
 end)
@@ -110,24 +121,32 @@ CreateThread(function()
         if noclip then
             local ped = PlayerPedId()
             local coords = GetEntityCoords(ped)
-            local heading = GetEntityHeading(ped)
-            local speed = 1.5
-            if IsControlPressed(0, 21) then speed = 4.0 end
+            local cam = GetGameplayCamRot(2)
+            local heading = cam.z
+            local pitch = cam.x
+            local speed = 1.8
+            if IsControlPressed(0, 21) then speed = 6.0 end
 
             SetEntityVelocity(ped, 0.0, 0.0, 0.0)
             SetEntityCollision(ped, false, false)
             FreezeEntityPosition(ped, true)
+            SetEntityHeading(ped, heading)
 
-            if IsControlPressed(0, 32) then -- W
-                local rad = math.rad(heading)
-                coords = vector3(coords.x - math.sin(rad) * speed, coords.y + math.cos(rad) * speed, coords.z)
+            local function camForward()
+                local rz, rx = math.rad(heading), math.rad(pitch)
+                return vector3(-math.sin(rz) * math.cos(rx), math.cos(rz) * math.cos(rx), math.sin(rx))
             end
-            if IsControlPressed(0, 33) then -- S
-                local rad = math.rad(heading)
-                coords = vector3(coords.x + math.sin(rad) * speed, coords.y - math.cos(rad) * speed, coords.z)
+            local function camRight()
+                local rz = math.rad(heading)
+                return vector3(math.cos(rz), math.sin(rz), 0.0)
             end
-            if IsControlPressed(0, 44) then coords = vector3(coords.x, coords.y, coords.z + speed) end -- Q up
-            if IsControlPressed(0, 38) then coords = vector3(coords.x, coords.y, coords.z - speed) end -- E down
+
+            if IsControlPressed(0, 32) then coords = coords + camForward() * speed end
+            if IsControlPressed(0, 33) then coords = coords - camForward() * speed end
+            if IsControlPressed(0, 34) then coords = coords - camRight() * speed end
+            if IsControlPressed(0, 35) then coords = coords + camRight() * speed end
+            if IsControlPressed(0, 44) then coords = vector3(coords.x, coords.y, coords.z + speed) end
+            if IsControlPressed(0, 38) then coords = vector3(coords.x, coords.y, coords.z - speed) end
 
             SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z, false, false, false)
             Wait(0)

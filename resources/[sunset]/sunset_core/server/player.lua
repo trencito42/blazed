@@ -306,5 +306,34 @@ exports('SetHomeProperty', Sunset.SetHomeProperty)
 exports('SetJob', Sunset.SetJob)
 exports('SetFaction', Sunset.SetFaction)
 exports('AddXP', Sunset.AddXP)
+function Sunset.GetRobPoints(source)
+    local char = Sunset.GetCharacter(source)
+    if not char then return 0 end
+    char.metadata = type(char.metadata) == 'table' and char.metadata or {}
+    return math.max(0, math.floor(tonumber(char.metadata.rob_points) or 0))
+end
+
+function Sunset.SetRobPoints(source, value)
+    local char = Sunset.GetCharacter(source)
+    if not char then return false end
+    value = math.max(0, math.floor(tonumber(value) or 0))
+    char.metadata = type(char.metadata) == 'table' and char.metadata or {}
+    char.metadata.rob_points = value
+    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(char.metadata), char.id })
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    return true
+end
+
+function Sunset.AddRobPoints(source, amount)
+    amount = math.floor(tonumber(amount) or 0)
+    if amount == 0 then return true end
+    local nextValue = Sunset.GetRobPoints(source) + amount
+    if nextValue < 0 then return false end
+    return Sunset.SetRobPoints(source, nextValue)
+end
+
 exports('AddRespectPoints', Sunset.AddRespectPoints)
+exports('GetRobPoints', Sunset.GetRobPoints)
+exports('SetRobPoints', Sunset.SetRobPoints)
+exports('AddRobPoints', Sunset.AddRobPoints)
 exports('GetSpawnPosition', Sunset.GetSpawnPosition)

@@ -611,12 +611,14 @@ end)
 
 AddEventHandler('sunset:server:characterSelected', function(source)
     FactionCore.setOnDuty(source, false)
-    TriggerClientEvent('sunset:client:dutyState', source, false, nil)
+    local char = getChar(source)
+    local factionId = char and select(1, getFactionOf(char)) or nil
+    TriggerClientEvent('sunset:client:dutyState', source, false, factionId, true)
 end)
 
 AddEventHandler('sunset:server:factionChanged', function(source, factionId)
     FactionCore.setOnDuty(source, false)
-    TriggerClientEvent('sunset:client:dutyState', source, false, factionId)
+    TriggerClientEvent('sunset:client:dutyState', source, false, factionId, true)
 end)
 
 function GetDutyState(source)
@@ -630,5 +632,39 @@ function IsFactionLeader(source)
     return factionId ~= nil and FactionCore.isFactionLeader(char.id, factionId)
 end
 exports('IsFactionLeader', IsFactionLeader)
+
+local function leaderHqPayload(source)
+    local char = getChar(source)
+    if not char then return nil end
+    local factionId = select(1, getFactionOf(char))
+    if not factionId or not FactionCore.isFactionLeader(char.id, factionId) then return nil end
+    local faction = Sunset.Factions[factionId]
+    local hq = faction and faction.hq
+    if not hq then return nil end
+    local heading = 0.0
+    if faction.depot and faction.depot.spawn then
+        heading = faction.depot.spawn.w or 0.0
+    end
+    return {
+        factionId = factionId,
+        label = faction.label or factionId,
+        hidden = faction.type == 'illegal',
+        x = hq.x,
+        y = hq.y,
+        z = hq.z,
+        w = heading,
+    }
+end
+
+function GetLeaderHqSpawn(source)
+    return leaderHqPayload(source)
+end
+exports('GetLeaderHqSpawn', GetLeaderHqSpawn)
+
+exports.sunset_core:RegisterCallback('sunset:getLeaderSpawnHq', function(source)
+    local hq = leaderHqPayload(source)
+    if not hq then return nil end
+    return { factionId = hq.factionId, label = hq.label, hidden = hq.hidden == true }
+end)
 
 exports('AddSocietyMoney', addSociety)

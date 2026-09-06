@@ -22,6 +22,15 @@ Sunset.Items = {
     gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxLiters = 20, category = 'tools', icon = 'jerry_can' },
     fresh_fish = { label = 'Fresh Fish', weight = 1.0, usable = false, category = 'food', icon = 'cooked_fish' },
     ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false, category = 'ammo', icon = 'pistol_ammo' },
+    stolen_silver_watch = { label = 'Stolen Silver Watch', weight = 0.4, usable = false, category = 'misc', icon = 'backpack' },
+    stolen_luxury_watch = { label = 'Stolen Luxury Watch', weight = 0.45, usable = false, category = 'misc', icon = 'backpack' },
+    stolen_gold_watch = { label = 'Stolen Gold Watch', weight = 0.45, usable = false, category = 'misc', icon = 'backpack' },
+    stolen_diamond_watch = { label = 'Stolen Diamond Watch', weight = 0.5, usable = false, category = 'misc', icon = 'filled_evidence_bag' },
+    stolen_collector_watch = { label = 'Stolen Collector Watch', weight = 0.55, usable = false, category = 'misc', icon = 'filled_evidence_bag' },
+    stolen_bracelet = { label = 'Stolen Bracelet', weight = 0.25, usable = false, category = 'misc', icon = 'backpack' },
+    stolen_gold_chain = { label = 'Stolen Gold Chain', weight = 0.3, usable = false, category = 'misc', icon = 'metalscrap' },
+    stolen_gold_bracelet = { label = 'Stolen Gold Bracelet', weight = 0.3, usable = false, category = 'misc', icon = 'metalscrap' },
+    stolen_diamond_jewelry = { label = 'Stolen Designer Jewelry', weight = 0.4, usable = false, category = 'misc', icon = 'filled_evidence_bag' },
 }
 
 Sunset.Shops = {

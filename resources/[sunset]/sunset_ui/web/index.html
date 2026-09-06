@@ -8,18 +8,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/fonts.css">
-    <link rel="stylesheet" href="css/style.css?v=3">
-    <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/hud.css?v=4">
     <link rel="stylesheet" href="css/scoreboard.css">
-    <link rel="stylesheet" href="css/chat.css?v=2">
+    <link rel="stylesheet" href="css/chat.css?v=3">
     <link rel="stylesheet" href="css/menu.css?v=3">
-    <link rel="stylesheet" href="css/panels.css">
+    <link rel="stylesheet" href="css/panels.css?v=2">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css">
     <link rel="stylesheet" href="css/fuel_pump.css">
     <link rel="stylesheet" href="css/theme.css?v=2">
     <link rel="stylesheet" href="css/fishing.css?v=2">
+    <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=6">
     <link rel="stylesheet" href="css/auth_loading.css?v=3">
@@ -27,6 +28,18 @@
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
+
+    <!-- SERVER ANNOUNCEMENT -->
+    <div id="server-announce" class="server-announce hidden" aria-live="assertive">
+        <div class="server-announce__inner">
+            <div class="server-announce__stripe"></div>
+            <div class="server-announce__content">
+                <span class="server-announce__badge" id="server-announce-badge">ANNOUNCEMENT</span>
+                <p class="server-announce__msg" id="server-announce-msg"></p>
+                <span class="server-announce__meta" id="server-announce-meta"></span>
+            </div>
+        </div>
+    </div>
 
     <!-- POLICE ORDER (summon alert) -->
     <div id="police-order" class="police-order hidden" aria-live="assertive">
@@ -150,6 +163,29 @@
         </div>
     </div>
 
+    <div id="radar-panel" class="radar-shell hidden state-scan" aria-live="polite">
+        <div class="radar-panel__body">
+            <div class="radar__header">
+                <svg class="radar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>
+                    <path d="M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>
+                </svg>
+                <div class="radar__title-wrap">
+                    <div class="radar__title" id="radar-title">Mobile Radar</div>
+                    <div class="radar__meta" id="radar-meta">Limit 90 km/h</div>
+                </div>
+            </div>
+            <div class="radar__message" id="radar-message">Scanning lane…</div>
+            <div class="radar__stats">
+                <div class="radar__stat"><span class="radar__stat-label">Speed</span><span class="radar__stat-value" id="radar-speed">000</span></div>
+                <div class="radar__stat"><span class="radar__stat-label">Plate</span><span class="radar__stat-value" id="radar-plate">--------</span></div>
+                <div class="radar__stat"><span class="radar__stat-label">Driver</span><span class="radar__stat-value" id="radar-driver">—</span></div>
+            </div>
+            <div class="radar__progress"><div class="radar__progress-fill" id="radar-progress"></div></div>
+            <div class="radar__hits hidden" id="radar-hits"></div>
+        </div>
+    </div>
+
     <!-- CHARACTER SCREENS -->
     <div id="app" class="app hidden">
         <img class="app-bg" src="assets/bg.png?v=2" alt="">
@@ -241,6 +277,15 @@
                     <span class="spawn-option__eyebrow" id="spawn-house-access">Your residence</span>
                     <strong id="spawn-house-name">House</strong>
                     <small id="spawn-house-description">Spawn outside your owned or rented house.</small>
+                    <span class="spawn-option__action">Select location <b>→</b></span>
+                </button>
+                <button type="button" class="spawn-option hidden" data-spawn="hq">
+                    <span class="spawn-option__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/></svg>
+                    </span>
+                    <span class="spawn-option__eyebrow" id="spawn-hq-access">Faction leader</span>
+                    <strong id="spawn-hq-name">Faction HQ</strong>
+                    <small id="spawn-hq-description">Spawn at your faction headquarters.</small>
                     <span class="spawn-option__action">Select location <b>→</b></span>
                 </button>
             </div>
@@ -340,7 +385,7 @@
                 <div class="speed-odo"><span>ODO</span> <strong id="hud-odometer">0</strong> <span>km</span></div>
                 <div class="veh-status-row">
                     <div class="veh-mini-stat" id="hud-engine-stat" title="Engine condition">
-                        <svg class="veh-mini-icon veh-mini-icon--engine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+                        <svg class="veh-mini-icon veh-mini-icon--engine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 11h3l2-3h6l2 3h3v7H4v-7z"/><path d="M18 13h3v4"/><path d="M8 18v2M16 18v2"/><circle cx="9" cy="14.5" r="1.2"/></svg>
                         <div class="veh-mini-bar-track"><div class="veh-mini-bar-fill fill-engine" id="hud-engine"></div></div>
                     </div>
                     <div class="veh-mini-stat" id="hud-fuel-stat" title="Fuel level">
@@ -971,18 +1016,26 @@
     </div>
 
     <!-- JOBS PANEL (/jobs) -->
-    <div id="jobs-panel" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide">
-            <h2 id="jobs-panel-title">Jobs</h2>
-            <p id="jobs-panel-current" class="panel-meta"></p>
-            <p id="jobs-panel-session" class="panel-meta hidden"></p>
-            <ul class="panel-list" id="jobs-panel-list"></ul>
-            <div class="panel-actions">
-                <button type="button" class="panel-btn" id="jobs-panel-work">Start Work</button>
-                <button type="button" class="panel-btn panel-btn--muted" id="jobs-panel-cancel">Cancel Shift</button>
-                <button type="button" class="panel-close" id="jobs-panel-close">Close</button>
+    <div id="jobs-panel" class="jobs-menu hidden">
+        <section class="jobs-menu__shell" aria-labelledby="jobs-panel-title">
+            <header class="jobs-menu__header">
+                <div>
+                    <span class="jobs-menu__eyebrow">Sunset civilian careers</span>
+                    <h2 id="jobs-panel-title">Jobs</h2>
+                    <p>Choose a career at the Job Center, then manage your current shift here.</p>
+                </div>
+                <button type="button" class="jobs-menu__close" id="jobs-panel-close" aria-label="Close jobs menu">ESC</button>
+            </header>
+            <div class="jobs-menu__status">
+                <div><span>Current career</span><strong id="jobs-panel-current">Unemployed</strong></div>
+                <div id="jobs-panel-session" class="hidden"><span>Shift status</span><strong>Inactive</strong></div>
             </div>
-        </div>
+            <div class="jobs-menu__list" id="jobs-panel-list"></div>
+            <footer class="jobs-menu__actions">
+                <button type="button" class="jobs-menu__button jobs-menu__button--primary" id="jobs-panel-work">Start current job</button>
+                <button type="button" class="jobs-menu__button jobs-menu__button--danger" id="jobs-panel-cancel">Cancel shift</button>
+            </footer>
+        </section>
     </div>
 
     <!-- VEHICLE DEALERSHIP -->
@@ -1073,23 +1126,24 @@
         </aside>
     </div>
 
-    <script src="js/app.js?v=5"></script>
+    <script src="js/app.js?v=6"></script>
     <script src="js/characters.js"></script>
-    <script src="js/hud.js"></script>
+    <script src="js/hud.js?v=3"></script>
     <script src="js/hud_editor.js"></script>
     <script src="js/scoreboard.js"></script>
     <script src="js/chat_settings.js"></script>
-    <script src="js/chat.js"></script>
+    <script src="js/chat.js?v=3"></script>
     <script src="js/menu.js"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js"></script>
-    <script src="js/panels.js?v=2"></script>
-    <script src="js/overlays.js"></script>
-    <script src="js/auth_loading.js?v=2"></script>
+    <script src="js/panels.js?v=3"></script>
+    <script src="js/overlays.js?v=2"></script>
+    <script src="js/auth_loading.js?v=3"></script>
     <script src="js/spawn.js?v=2"></script>
     <script src="js/fuel_pump.js"></script>
     <script src="js/fishing.js"></script>
+    <script src="js/radar.js"></script>
     <script src="js/courier.js"></script>
     <script src="js/factions.js?v=2"></script>
 </body>

@@ -10,10 +10,28 @@ local function showSpawnSelection(char)
     trace('spawn_selector_open', char and char.id or 'missing_character')
     pendingSpawnCharacter = char
     local pos = char and char.position
+    if type(pos) == 'string' then
+        local ok, decoded = pcall(json.decode, pos)
+        if ok then pos = decoded end
+    end
+    local jail = Sunset.AwaitCallback('sunset:getJailSpawnLock')
+    if jail and jail.locked then
+        pendingSpawnCharacter = char
+        exports.sunset_ui:Show('loading')
+        TriggerEvent('sunset:client:spawnCharacter', char, {
+            x = jail.x, y = jail.y, z = jail.z, w = jail.w or 0.0,
+        })
+        return
+    end
     local homes = Sunset.AwaitCallback('sunset:getSpawnHomes') or {}
+    local factionHq = Sunset.AwaitCallback('sunset:getLeaderSpawnHq')
+    local playedBefore = char and (char.last_played_before or char.last_played)
+    local hasLast = playedBefore ~= nil and playedBefore ~= ''
+        and type(pos) == 'table' and tonumber(pos.x) ~= nil and tonumber(pos.y) ~= nil
     exports.sunset_ui:Show('spawn', {
-        hasLastLocation = type(pos) == 'table' and tonumber(pos.x) ~= nil and tonumber(pos.y) ~= nil,
+        hasLastLocation = hasLast,
         homes = homes,
+        factionHq = factionHq,
     })
 end
 
@@ -30,7 +48,7 @@ AddEventHandler('sunset:client:spawnSelectionRequired', showSpawnSelection)
 AddEventHandler('sunset:nui:spawnSelect', function(data)
     if not pendingSpawnCharacter then return end
     local choice = data and data.location
-    if choice ~= 'default' and choice ~= 'last' and choice ~= 'house' then
+    if choice ~= 'default' and choice ~= 'last' and choice ~= 'house' and choice ~= 'hq' then
         return exports.sunset_ui:Notify('Choose one of the available spawn locations.', 'error')
     end
     local resolved, err = Sunset.AwaitCallback('sunset:resolveSpawnChoice', choice, tonumber(data and data.propertyId))

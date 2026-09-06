@@ -63,6 +63,7 @@ Sunset.Police = {
         minLimitKmh = 20,
         maxLimitKmh = 250,
         lockCooldownMs = 4000,
+        allowedModels = { 'police', 'police2', 'police3', 'police4', 'policeb', 'sheriff', 'sheriff2' },
     },
 
     fixedRadars = {

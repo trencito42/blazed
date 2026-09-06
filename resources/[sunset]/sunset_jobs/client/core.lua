@@ -122,7 +122,9 @@ function JobClient.spawnVehicle(model, spawn, warp)
     end
 
     local s = spawn
-    local veh = CreateVehicle(hash, s.x, s.y, s.z, s.w or 0.0, true, false)
+    local slot = #JobClient.vehicles
+    local ox = (slot % 3) * 4.2
+    local veh = CreateVehicle(hash, s.x + ox, s.y, s.z, s.w or 0.0, true, false)
     if veh == 0 then
         SetModelAsNoLongerNeeded(hash)
         return nil

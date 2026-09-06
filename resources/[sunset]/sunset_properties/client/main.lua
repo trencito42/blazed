@@ -30,6 +30,17 @@ end
 AddEventHandler('sunset:world:propertyInteract', function(prop)
     if insideProperty then return end
     local rows = refreshProperties()
+    if prop and prop.id then
+        local one = {}
+        for _, row in ipairs(rows) do
+            if tonumber(row.id) == tonumber(prop.id) then
+                one[1] = row
+                break
+            end
+        end
+        openProperties(#one > 0 and one or { prop }, prop.id)
+        return
+    end
     openProperties(rows, prop and prop.id)
 end)
 

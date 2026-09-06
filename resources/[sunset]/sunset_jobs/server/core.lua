@@ -138,17 +138,10 @@ function SunsetJobs_GetTrailerState(source, mustBeAttached, maxDistance)
         local nativeOk, attached, attachedEntity = pcall(function()
             return GetVehicleTrailerVehicle(truck)
         end)
-        if nativeOk then
-            if not attached or attachedEntity ~= trailer then
-                return 'detached'
-            end
-        else
-            local state = Entity(truck).state
-            if state.sunsetTrailerAttached ~= true
-                or tonumber(state.sunsetTrailerNetId) ~= tonumber(session.trailerNetId) then
-                return 'detached'
-            end
+        if nativeOk and attached and (not attachedEntity or attachedEntity == trailer) then
+            return 'ok'
         end
+        return 'detached'
     end
     return 'ok'
 end

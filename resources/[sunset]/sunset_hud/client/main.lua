@@ -126,6 +126,8 @@ local function buildHudData()
         data.fuel = vehState.fuel
         data.engine = vehState.engine
         data.odometer = vehState.odometer
+        data.showFuel = vehState.showFuel
+        data.showOdometer = vehState.showOdometer
         data.locked = vehState.locked
         data.seatbelt = vehState.seatbelt
         data.lightMode = vehState.lightMode or 0
@@ -238,8 +240,21 @@ CreateThread(function()
             HideHudComponentThisFrame(20)
             HideHudComponentThisFrame(21) -- wanted stars
             DisplayAmmoThisFrame(false)
+            SetMpGamerTagsVisibleDistance(0.0)
         end
         Wait(0)
+    end
+end)
+
+CreateThread(function()
+    while true do
+        for i = 0, 255 do
+            if IsMpGamerTagActive(i) then
+                SetMpGamerTagVisibility(i, 0, false)
+                RemoveMpGamerTag(i)
+            end
+        end
+        Wait(200)
     end
 end)
 
@@ -304,4 +319,88 @@ end)
 
 AddEventHandler('sunset:nui:hudEditClose', function()
     exports.sunset_ui:SetFocus(false, false)
+end)
+
+local function localRpName()
+    if char and char.firstname then
+        local full = (char.firstname or '') .. ((char.lastname and char.lastname ~= '') and (' ' .. char.lastname) or '')
+        if full ~= '' then return full end
+    end
+    local player = exports.sunset_core:GetPlayer()
+    if player and player.name and player.name ~= '' then return player.name end
+    return GetPlayerName(PlayerId()) or 'Player'
+end
+
+local function applyPauseHeader()
+    AddTextEntry('FE_THDR_GTAO', ('%s #%s'):format(localRpName(), GetPlayerServerId(PlayerId())))
+end
+
+CreateThread(function()
+    while true do
+        applyPauseHeader()
+        Wait(2000)
+    end
+end)
+
+local function drawText3d(x, y, z, text, scale, r, g, b)
+    local onScreen, sx, sy = World3dToScreen2d(x, y, z)
+    if not onScreen then return sx, sy, false end
+    SetTextScale(scale or 0.32, scale or 0.32)
+    SetTextFont(4)
+    SetTextProportional(true)
+    SetTextColour(r or 255, g or 255, b or 255, 215)
+    SetTextCentre(true)
+    SetTextOutline()
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(text)
+    EndTextCommandDisplayText(sx, sy)
+    return sx, sy, true
+end
+
+local function drawHpBar3d(x, y, z, pct)
+    local onScreen, sx, sy = World3dToScreen2d(x, y, z)
+    if not onScreen then return end
+    local w, h = 0.046, 0.008
+    DrawRect(sx, sy, w + 0.0022, h + 0.0028, 0, 0, 0, 190)
+    DrawRect(sx, sy, w, h, 28, 28, 28, 170)
+    local fill = math.max(0.0, math.min(1.0, (tonumber(pct) or 0) / 100.0))
+    if fill <= 0.001 then return end
+    local fw = w * fill
+    local r, g, b = 40, 220, 90
+    if pct <= 25 then
+        r, g, b = 220, 50, 50
+    elseif pct <= 50 then
+        r, g, b = 230, 180, 40
+    end
+    DrawRect(sx - ((w - fw) * 0.5), sy, fw, h, r, g, b, 230)
+end
+
+CreateThread(function()
+    while true do
+        local myPed = PlayerPedId()
+        local myCoords = GetEntityCoords(myPed)
+        local myId = PlayerId()
+        for _, player in ipairs(GetActivePlayers()) do
+            if player ~= myId then
+                local ped = GetPlayerPed(player)
+                if ped ~= 0 and DoesEntityExist(ped) and HasEntityClearLosToEntity(myPed, ped, 17) then
+                    local coords = GetEntityCoords(ped)
+                    if #(myCoords - coords) < 22.0 then
+                        local serverId = GetPlayerServerId(player)
+                        local hp = GetEntityHealth(ped)
+                        local maxHp = GetEntityMaxHealth(ped)
+                        local pct = math.max(0, math.floor((hp / math.max(1, maxHp)) * 100))
+                        local label = GetPlayerName(player)
+                        local st = Player(serverId) and Player(serverId).state
+                        if st and type(st.sunsetName) == 'string' and st.sunsetName ~= '' then
+                            label = st.sunsetName
+                        end
+                        drawText3d(coords.x, coords.y, coords.z + 1.18, ('%s #%d'):format(label, serverId), 0.34)
+                        drawHpBar3d(coords.x, coords.y, coords.z + 1.02, pct)
+                    end
+                end
+            end
+        end
+        Wait(0)
+    end
 end)

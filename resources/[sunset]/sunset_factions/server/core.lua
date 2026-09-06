@@ -89,11 +89,15 @@ function FactionCore.hasCapability(source, capability)
     return Sunset.HasFactionCapability(factionId, grade, capability)
 end
 
-function FactionCore.isLawEnforcement(source)
+function FactionCore.isLawEnforcementMember(source)
     local char = FactionCore.getChar(source)
-    if not char or not OnDuty[source] then return false end
+    if not char then return false end
     local factionId = FactionCore.getFactionOf(char)
     return factionId and Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+end
+
+function FactionCore.isLawEnforcement(source)
+    return FactionCore.isOnDuty(source) and FactionCore.isLawEnforcementMember(source)
 end
 
 function FactionCore.playerCoords(source)

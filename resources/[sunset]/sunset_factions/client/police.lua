@@ -1,9 +1,11 @@
 local jailed = false
+local lastJailUi = 0
 local jailReleaseAt = 0
 local radarActive = false
 local lastRadarLock = 0
 local radarVehicle = 0
 local radarLimitKmh = 0
+local radarHits = {}
 
 local function chatLine(name, message, messageType)
     exports.sunset_ui:Send('chatMessage', {
@@ -34,6 +36,23 @@ end)
 
 local function kmhFromEntity(entity)
     return math.floor(GetEntitySpeed(entity) * 3.6 + 0.5)
+end
+
+local function isAuthorizedRadarVehicle(vehicle)
+    if vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+    if Entity(vehicle).state.sunsetFactionVehicle == 'police' then return true end
+    local model = GetEntityModel(vehicle)
+    local depot = Sunset.Factions and Sunset.Factions.police and Sunset.Factions.police.depot
+    if depot and depot.vehicle and model == joaat(depot.vehicle) then return true end
+    for _, name in ipairs((Sunset.Police and Sunset.Police.radar and Sunset.Police.radar.allowedModels) or {}) do
+        if model == joaat(name) then return true end
+    end
+    return false
+end
+
+local function radarFeedback(message, kind)
+    chatLine('RADAR', message, 'radar')
+    exports.sunset_ui:Notify(message, kind or 'info', 8000)
 end
 
 local function getVehicleInRadarCone()
@@ -68,6 +87,39 @@ local function getVehicleInRadarCone()
     return bestVeh, bestSpeed
 end
 
+local function radarTargetInfo(veh, speed)
+    if veh == 0 or not DoesEntityExist(veh) then
+        return { plate = '--------', name = '—', speed = speed or 0 }
+    end
+    local plate = (GetVehicleNumberPlateText(veh) or '--------'):gsub('^%s+', ''):gsub('%s+$', '')
+    local name = 'Unknown'
+    local driver = GetPedInVehicleSeat(veh, -1)
+    if driver ~= 0 and IsPedAPlayer(driver) then
+        local player = NetworkGetPlayerIndexFromPed(driver)
+        if player ~= -1 then
+            local sid = GetPlayerServerId(player)
+            local tagged = Player(sid).state.sunsetName
+            name = (tagged and tagged ~= '' and tagged) or GetPlayerName(player) or ('#' .. sid)
+        end
+    end
+    return { plate = plate ~= '' and plate or '--------', name = name, speed = speed or 0 }
+end
+
+local function pushRadarUi(extra)
+    extra = extra or {}
+    local info = extra.info or { plate = '--------', name = '—', speed = 0 }
+    exports.sunset_ui:Send('radarShow', {
+        state = extra.state or 'scan',
+        title = extra.title or 'Mobile Radar',
+        message = extra.message or 'Scanning lane…',
+        limit = radarLimitKmh,
+        speed = info.speed or 0,
+        plate = info.plate,
+        name = info.name,
+        hits = radarHits,
+    })
+end
+
 local function stopRadar(showMessage)
     if radarVehicle ~= 0 and DoesEntityExist(radarVehicle) then
         FreezeEntityPosition(radarVehicle, false)
@@ -75,6 +127,8 @@ local function stopRadar(showMessage)
     end
     if radarActive then Sunset.AwaitCallback('sunset:policeRadarStop') end
     radarActive, radarVehicle, radarLimitKmh = false, 0, 0
+    radarHits = {}
+    exports.sunset_ui:Send('radarHide', {})
     if showMessage then exports.sunset_ui:Notify('Speed radar stopped — patrol vehicle unlocked.', 'info') end
 end
 
@@ -105,17 +159,26 @@ RegisterNetEvent('sunset:police:jail', function(payload)
     local coords = payload.coords
 
     local ped = PlayerPedId()
+    ClearPedTasksImmediately(ped)
+    SetEnableHandcuffs(ped, false)
+    TriggerEvent('sunset:faction:uncuff')
     if coords and coords.x then
         SetEntityCoords(ped, coords.x, coords.y, coords.z, false, false, false, false)
         if coords.w then SetEntityHeading(ped, coords.w) end
     end
 
     exports.sunset_ui:Notify(('Sentenced — %d minutes remaining'):format(minutes), 'error', 8000)
+    TriggerEvent('sunset:ui:jobObjective', {
+        title = 'Prison sentence',
+        subtitle = ('%d minutes remaining'):format(minutes),
+        progress = 0,
+    })
 end)
 
 RegisterNetEvent('sunset:police:release', function()
     jailed = false
     jailReleaseAt = 0
+    TriggerEvent('sunset:ui:jobObjective', { hide = true })
     local release = Sunset.Police and Sunset.Police.releaseCoords
     local ped = PlayerPedId()
     if release then
@@ -131,9 +194,19 @@ CreateThread(function()
             EnableControlAction(0, 1, true)
             EnableControlAction(0, 2, true)
 
+            if GetGameTimer() - lastJailUi > 1000 then
+                lastJailUi = GetGameTimer()
+                local remaining = math.max(0, jailReleaseAt - GetCloudTimeAsInt())
+                TriggerEvent('sunset:ui:jobObjective', {
+                    title = 'Prison sentence',
+                    subtitle = ('%d:%02d remaining'):format(math.floor(remaining / 60), remaining % 60),
+                    progress = 0,
+                })
+            end
             if GetCloudTimeAsInt() >= jailReleaseAt then
                 jailed = false
                 jailReleaseAt = 0
+                TriggerEvent('sunset:ui:jobObjective', { hide = true })
                 TriggerServerEvent('sunset:server:jailComplete')
                 local release = Sunset.Police and Sunset.Police.releaseCoords
                 local ped = PlayerPedId()
@@ -156,7 +229,7 @@ CreateThread(function()
             local ped = PlayerPedId()
             local invalidRadarVehicle = radarVehicle == 0 or not DoesEntityExist(radarVehicle)
                 or GetPedInVehicleSeat(radarVehicle, -1) ~= ped
-                or Entity(radarVehicle).state.sunsetFactionVehicle ~= 'police'
+                or not isAuthorizedRadarVehicle(radarVehicle)
             if invalidRadarVehicle then
                 stopRadar(false)
                 exports.sunset_ui:Notify('Radar stopped because you left the driver seat or patrol vehicle.', 'warning', 6000)
@@ -165,15 +238,49 @@ CreateThread(function()
                 SetVehicleHandbrake(radarVehicle, true)
                 local veh, speed = getVehicleInRadarCone()
                 if veh ~= 0 and speed > 0 then
+                    local info = radarTargetInfo(veh, speed)
                     local cfg = Sunset.Police and Sunset.Police.radar or {}
                     local now = GetGameTimer()
-                    if speed > radarLimitKmh and now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
-                        lastRadarLock = now
-                        local result = Sunset.AwaitCallback('sunset:policeRadarLock', NetworkGetNetworkIdFromEntity(veh))
-                        if result and result.flagged then
-                            exports.sunset_ui:Notify(result.message or ('Radar lock: %d km/h'):format(speed), 'warning', 5000)
+                    if speed > radarLimitKmh then
+                        pushRadarUi({
+                            state = 'lock',
+                            title = 'Radar Lock',
+                            message = ('%s  %d km/h  +%d'):format(info.plate, speed, speed - radarLimitKmh),
+                            info = info,
+                        })
+                        if now - lastRadarLock >= (cfg.lockCooldownMs or 4000) then
+                            lastRadarLock = now
+                            local result = Sunset.AwaitCallback('sunset:policeRadarLock', NetworkGetNetworkIdFromEntity(veh))
+                            if result and result.flagged then
+                                table.insert(radarHits, 1, {
+                                    plate = result.plate or info.plate,
+                                    name = info.name,
+                                    speed = result.speed or speed,
+                                    over = (result.speed or speed) - radarLimitKmh,
+                                })
+                                if #radarHits > 5 then radarHits[6] = nil end
+                                pushRadarUi({
+                                    state = 'lock',
+                                    title = 'Radar Lock',
+                                    message = result.message or ('%s caught at %d km/h'):format(info.plate, speed),
+                                    info = info,
+                                })
+                            end
                         end
+                    else
+                        pushRadarUi({
+                            state = 'track',
+                            title = 'Mobile Radar',
+                            message = ('%s in cone — legal'):format(info.plate),
+                            info = info,
+                        })
                     end
+                else
+                    pushRadarUi({
+                        state = 'scan',
+                        title = 'Mobile Radar',
+                        message = 'Scanning lane…',
+                    })
                 end
             end
             Wait((Sunset.Police and Sunset.Police.radar and Sunset.Police.radar.scanIntervalMs) or 750)
@@ -228,6 +335,17 @@ RegisterCommand('clear', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:policeClearWanted', target)
     if ok then exports.sunset_ui:Notify(('Cleared wanted for #%d'):format(target), 'success')
     else actionError(err, 'Wanted status was not cleared.') end
+end, false)
+
+RegisterCommand('unjail', function(_, args)
+    local target = tonumber(args[1])
+    if not target then
+        exports.sunset_ui:Notify('Usage: /unjail [id]', 'error')
+        return
+    end
+    local ok, err = Sunset.AwaitCallback('sunset:policeUnjail', target)
+    if ok then exports.sunset_ui:Notify(('Released #%d from jail'):format(target), 'success')
+    else actionError(err, 'Prisoner could not be released.') end
 end, false)
 
 RegisterCommand('wanted', function()
@@ -314,25 +432,25 @@ RegisterCommand('confiscate', function(_, args)
     exports.sunset_ui:Notify('Contraband confiscated', 'success')
 end, false)
 
-RegisterCommand('startradar', function(_, args)
+local function tryStartRadar(requestedLimit)
     if radarActive then
-        return exports.sunset_ui:Notify(('Radar is already active at %d km/h. Use /stopradar first.'):format(radarLimitKmh), 'warning')
+        return radarFeedback(('Radar is already active at %d km/h. Use /stopradar first.'):format(radarLimitKmh), 'warning')
     end
     local cfg = Sunset.Police and Sunset.Police.radar or {}
-    local limit = tonumber(args[1])
-    if not limit then
-        return exports.sunset_ui:Notify(('Usage: /startradar [limit_kmh] — example: /startradar %d'):format(cfg.defaultLimitKmh or 90), 'error', 8000)
-    end
+    local limit = tonumber(requestedLimit) or cfg.defaultLimitKmh or 90
     local ped = PlayerPedId()
     local vehicle = GetVehiclePedIsIn(ped, false)
     if vehicle == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then
-        return exports.sunset_ui:Notify('You must be in the driver seat of an LSPD patrol vehicle.', 'error', 7000)
+        return radarFeedback('Sit in the driver seat of an LSPD patrol car, then use /startradar 90.', 'error')
     end
-    if Entity(vehicle).state.sunsetFactionVehicle ~= 'police' then
-        return exports.sunset_ui:Notify('Mobile radar only works in an LSPD vehicle spawned at the MRPD garage.', 'error', 7000)
+    if not isAuthorizedRadarVehicle(vehicle) then
+        return radarFeedback('This is not an LSPD patrol car. Use the MRPD garage or a marked cruiser.', 'error')
     end
     local result, err = Sunset.AwaitCallback('sunset:policeRadarStart', NetworkGetNetworkIdFromEntity(vehicle), limit)
-    if not result then return actionError(err, 'Cannot start radar.') end
+    if not result then
+        radarFeedback(err or 'Cannot start radar. Go on duty as LSPD first.', 'error')
+        return
+    end
 
     radarActive = true
     radarVehicle = vehicle
@@ -340,14 +458,23 @@ RegisterCommand('startradar', function(_, args)
     lastRadarLock = 0
     FreezeEntityPosition(vehicle, true)
     SetVehicleHandbrake(vehicle, true)
-    chatLine('RADAR', ('Mobile radar active: %d km/h limit. Patrol vehicle is locked until /stopradar.'):format(radarLimitKmh), 'radar')
-    exports.sunset_ui:Notify(('Radar active at %d km/h — vehicle locked. Use /stopradar before pursuing.'):format(radarLimitKmh), 'success', 8000)
-end, false)
+    radarHits = {}
+    pushRadarUi({
+        state = 'scan',
+        title = 'Mobile Radar',
+        message = 'Scanning lane…',
+    })
+    radarFeedback(('Mobile radar active: %d km/h. Vehicle locked until /stopradar.'):format(radarLimitKmh), 'success')
+end
 
-RegisterCommand('stopradar', function()
-    if not radarActive then return exports.sunset_ui:Notify('Radar is not active. Start it with /startradar [limit_kmh].', 'info') end
+RegisterNetEvent('sunset:police:tryStartRadar', function(limit)
+    tryStartRadar(limit)
+end)
+
+RegisterNetEvent('sunset:police:tryStopRadar', function()
+    if not radarActive then return radarFeedback('Radar is not active. Start it with /startradar 90.', 'info') end
     stopRadar(true)
-end, false)
+end)
 
 RegisterCommand('radars', function()
     local list, err = Sunset.AwaitCallback('sunset:policeFixedRadars')
@@ -428,7 +555,8 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)', { { name = 'id', help = 'optional target ID' } })
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
-    TriggerEvent('chat:addSuggestion', '/startradar', 'Lock an LSPD patrol vehicle and monitor speed', { { name = 'limit_kmh', help = '20-250' } })
+    TriggerEvent('chat:addSuggestion', '/startradar', 'Lock an LSPD patrol vehicle and monitor speed', { { name = 'limit_kmh', help = '20-250, default 90' } })
+    TriggerEvent('chat:addSuggestion', '/radar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/stopradar', 'Deactivate mobile speed radar')
     TriggerEvent('chat:addSuggestion', '/radars', 'List fixed speed cameras')
     TriggerEvent('chat:addSuggestion', '/m', 'Megaphone', { { name = 'message' } })

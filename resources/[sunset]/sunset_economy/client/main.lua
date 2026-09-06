@@ -11,6 +11,7 @@ RegisterNetEvent('sunset:client:payday', function(net, tax, breakdown)
     if (breakdown.faction or 0) > 0 then details = details .. (' | faction $%s'):format(breakdown.faction) end
     if (breakdown.rent or 0) > 0 then details = details .. (' | rent -$%s%s'):format(breakdown.rent, breakdown.rentProperty and (' (' .. breakdown.rentProperty .. ')') or '') end
     if (breakdown.respect or 0) > 0 then details = details .. (' | +%s RP'):format(breakdown.respect) end
+    if (breakdown.robPoints or 0) > 0 then details = details .. (' | +%s rob points'):format(breakdown.robPoints) end
     exports.sunset_ui:Notify(('Payday: +$%s (tax: $%s)%s'):format(net, tax, details), 'success', 8000)
 end)
 

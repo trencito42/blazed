@@ -463,6 +463,9 @@ exports.sunset_core:RegisterCallback('sunset:taxiCancelRide', function(source)
         pushTaxiUpdate(otherSrc)
         TriggerClientEvent('sunset:client:taxiRideEnded', otherSrc)
     end
+    TriggerClientEvent('sunset:client:taxiRideEnded', source)
+    pushTaxiUpdate(source)
+    Rides[ride.id] = nil
 
     if ride.dispatchCallId then
         pcall(function() exports.sunset_dispatch:CancelCall(source, 'taxi', ride.dispatchCallId, 'Ride cancelled') end)

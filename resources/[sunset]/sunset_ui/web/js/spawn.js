@@ -19,6 +19,23 @@ const SpawnSelector = {
             if (description) description.textContent = home?.access_type === 'owner'
                 ? 'Spawn outside the house you own.' : 'Spawn outside the house you currently rent.';
         }
+        const hq = data.factionHq;
+        const hqCard = document.querySelector('[data-spawn="hq"]');
+        if (hqCard) {
+            const hasHq = Boolean(hq && hq.label);
+            hqCard.classList.toggle('hidden', !hasHq);
+            hqCard.disabled = !hasHq;
+            const hqName = document.getElementById('spawn-hq-name');
+            const hqAccess = document.getElementById('spawn-hq-access');
+            const hqDescription = document.getElementById('spawn-hq-description');
+            if (hqName) hqName.textContent = hq?.label || 'Faction HQ';
+            if (hqAccess) hqAccess.textContent = hq?.hidden ? 'Hidden HQ' : 'Faction HQ';
+            if (hqDescription) {
+                hqDescription.textContent = hq?.hidden
+                    ? `Spawn at ${hq.label} headquarters. Not shown on the public map.`
+                    : `Spawn at ${hq?.label || 'your faction'} headquarters.`;
+            }
+        }
         this.select(last && !last.disabled ? 'last' : 'default');
     },
     select(location) {

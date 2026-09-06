@@ -125,11 +125,7 @@ exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, veh
     local outPlates = {}
 
     if stored == 1 then
-        outPlates = MySQL.query.await(
-            'SELECT plate FROM vehicles WHERE character_id = ? AND stored = 0',
-            { char.id }
-        ) or {}
-        MySQL.update.await('UPDATE vehicles SET stored = 1 WHERE character_id = ? AND stored = 0', { char.id })
+        outPlates = {}
         MySQL.update.await('UPDATE vehicles SET stored = 0 WHERE id = ?', { veh.id })
     elseif stored == 0 then
         outPlates = { { plate = veh.plate } }
@@ -411,6 +407,74 @@ exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(sourc
         canLiters = newCanLiters,
         maxCanLiters = maxCanLiters,
     }
+end)
+
+local VehicleKeys = {}
+
+local function plateKey(plate)
+    return (plate or ''):gsub('%s+', ''):upper()
+end
+
+exports.sunset_core:RegisterCallback('sunset:hasVehicleKeys', function(source, plate)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return false end
+    plate = plateKey(plate)
+    local row = MySQL.single.await('SELECT character_id FROM vehicles WHERE REPLACE(plate, " ", "") = ?', { plate })
+    if row and tonumber(row.character_id) == tonumber(char.id) then return true end
+    return VehicleKeys[plate] and VehicleKeys[plate][char.id] == true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:giveVehicleKeys', function(source, targetId, plate)
+    local char = exports.sunset_core:GetCharacter(source)
+    local target = exports.sunset_core:GetCharacter(tonumber(targetId))
+    if not char or not target then return nil, 'Player not found' end
+    plate = plateKey(plate)
+    local row = MySQL.single.await('SELECT character_id FROM vehicles WHERE REPLACE(plate, " ", "") = ?', { plate })
+    if not row or tonumber(row.character_id) ~= tonumber(char.id) then
+        return nil, 'You do not own this vehicle'
+    end
+    VehicleKeys[plate] = VehicleKeys[plate] or {}
+    VehicleKeys[plate][target.id] = true
+    TriggerClientEvent('sunset:client:notify', tonumber(targetId), 'You received vehicle keys', 'success')
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:takeVehicleKeys', function(source, targetId, plate)
+    local char = exports.sunset_core:GetCharacter(source)
+    local target = exports.sunset_core:GetCharacter(tonumber(targetId))
+    if not char or not target then return nil, 'Player not found' end
+    plate = plateKey(plate)
+    local row = MySQL.single.await('SELECT character_id FROM vehicles WHERE REPLACE(plate, " ", "") = ?', { plate })
+    if not row or tonumber(row.character_id) ~= tonumber(char.id) then
+        return nil, 'You do not own this vehicle'
+    end
+    if VehicleKeys[plate] then VehicleKeys[plate][target.id] = nil end
+    TriggerClientEvent('sunset:client:notify', tonumber(targetId), 'Your vehicle keys were taken', 'warning')
+    return true
+end)
+
+exports.sunset_core:RegisterCallback('sunset:parkOwnedVehicle', function(source, plate)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character' end
+    plate = plateKey(plate)
+    local row = MySQL.single.await('SELECT id FROM vehicles WHERE character_id = ? AND REPLACE(plate, " ", "") = ?', { char.id, plate })
+    if not row then return nil, 'This is not your vehicle' end
+
+    local ped = GetPlayerPed(source)
+    local vehicle = ped ~= 0 and GetVehiclePedIsIn(ped, false) or 0
+    if vehicle == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then
+        return nil, 'Sit in the driver seat of your vehicle to park it.'
+    end
+    if plateKey(GetVehicleNumberPlateText(vehicle)) ~= plate then
+        return nil, 'The vehicle you are driving does not match this ownership record.'
+    end
+    local pos = GetEntityCoords(vehicle)
+    local heading = GetEntityHeading(vehicle)
+    MySQL.update.await(
+        'UPDATE vehicles SET stored = 0, parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ? WHERE id = ?',
+        { pos.x, pos.y, pos.z, heading, row.id }
+    )
+    return true
 end)
 
 RegisterCommand('givecar', function(source, args)

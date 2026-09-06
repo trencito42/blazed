@@ -7,16 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
-<body>
+<body onselectstart="return false" ondragstart="return false">
     <div class="loadscreen" id="loadscreen">
-        <img class="loadscreen__bg" src="assets/bg.png" alt="">
+        <div class="loadscreen__bg"></div>
         <div class="loadscreen__vignette"></div>
         <div class="loadscreen__scanlines"></div>
 
         <div class="loadscreen__brand">
-            <img class="loadscreen__logo" src="assets/logo.png" alt="Sunset Roleplay">
+            <div class="loadscreen__logo" role="img" aria-label="Sunset MP"></div>
             <p class="loadscreen__tag">Welcome to Los Santos</p>
         </div>
 

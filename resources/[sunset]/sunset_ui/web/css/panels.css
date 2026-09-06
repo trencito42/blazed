@@ -135,6 +135,37 @@
 .craft-lock { color: #ffb347; font-size: 12px; }
 .panel-list button:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.6); }
 
+/* /jobs — central Sunset career panel. No full-screen fill or CEF backdrop blur. */
+.jobs-menu { position: fixed; inset: 0; z-index: 82; display: grid; place-items: center; padding: 4vh 4vw; color: #f6f2e9; font-family: 'Rajdhani', 'Inter', sans-serif; }
+.jobs-menu.hidden { display: none; }
+.jobs-menu__shell { width: min(880px, 92vw); max-height: 84vh; display: flex; flex-direction: column; padding: 24px; border-top: 1px solid #ff8c00; border-bottom: 1px solid rgba(255,140,0,.45); background: linear-gradient(115deg, rgba(11,11,13,.88), rgba(15,13,12,.72)); box-shadow: 0 22px 70px rgba(0,0,0,.38); clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
+.jobs-menu__header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.09); }
+.jobs-menu__eyebrow { color: #ff9b20; font: 700 10px/1 'Chakra Petch', sans-serif; letter-spacing: .19em; text-transform: uppercase; }
+.jobs-menu__header h2 { margin: 5px 0 1px; color: #fff; font: 700 28px/1.1 'Chakra Petch', sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.jobs-menu__header p { margin: 0; color: rgba(255,255,255,.58); font-size: 13px; }
+.jobs-menu__close { width: 48px; height: 34px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: #ddd; font: 700 11px 'Chakra Petch', sans-serif; }
+.jobs-menu__status { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 0; background: rgba(255,255,255,.035); border-left: 2px solid #ff8c00; }
+.jobs-menu__status > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-right: 1px solid rgba(255,255,255,.07); }
+.jobs-menu__status span { color: #ff9b20; font: 700 9px 'Chakra Petch', sans-serif; letter-spacing: .15em; text-transform: uppercase; }
+.jobs-menu__status strong { color: #fff; font-size: 15px; text-transform: uppercase; }
+.jobs-menu__list { min-height: 0; overflow-y: auto; display: grid; gap: 7px; padding-right: 4px; }
+.jobs-menu__card { position: relative; padding: 13px 15px; border: 1px solid rgba(255,255,255,.07); border-left: 2px solid rgba(255,140,0,.38); background: rgba(5,5,7,.34); }
+.jobs-menu__card.is-current { border-left-color: #ff8c00; background: linear-gradient(90deg, rgba(255,140,0,.12), rgba(5,5,7,.32) 40%); }
+.jobs-menu__card-top { display: flex; justify-content: space-between; gap: 20px; }
+.jobs-menu__card h3 { margin: 0; color: #fff; font: 700 16px 'Chakra Petch', sans-serif; }
+.jobs-menu__card p { margin: 2px 0 0; color: rgba(255,255,255,.57); font-size: 12px; }
+.jobs-menu__pay { color: #ff9b20; white-space: nowrap; font: 700 14px 'Chakra Petch', sans-serif; }
+.jobs-menu__meta { display: flex; align-items: center; gap: 13px; margin-top: 10px; color: rgba(255,255,255,.65); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.jobs-menu__badge { margin-left: auto; color: #ff9b20; font-weight: 700; }
+.jobs-menu__progress { height: 2px; margin-top: 8px; background: rgba(255,255,255,.1); overflow: hidden; }
+.jobs-menu__progress i { display: block; height: 100%; background: #ff8c00; }
+.jobs-menu__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
+.jobs-menu__button { min-height: 38px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: #eee; font: 700 11px 'Chakra Petch', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.jobs-menu__button--primary { border-color: rgba(255,140,0,.7); background: #ff8c00; color: #17110a; }
+.jobs-menu__button--danger:not(:disabled) { border-color: rgba(255,91,72,.35); color: #ff7868; }
+.jobs-menu__button:disabled { opacity: .35; }
+@media (max-width: 680px) { .jobs-menu__status, .jobs-menu__actions { grid-template-columns: 1fr; } .jobs-menu__shell { padding: 18px; } }
+
 /* Dealership keeps the right side transparent for the live in-world preview. */
 .dealership { position: fixed; inset: 0; z-index: 82; font-family: 'Inter', sans-serif; color: #f6f6f6; pointer-events: none; }
 .dealership.hidden { display: none; }
