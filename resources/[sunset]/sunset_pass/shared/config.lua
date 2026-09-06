@@ -19,7 +19,7 @@ SunsetPass.Tiers = {
     {
         level = 3,
         free = { type = 'item', item = 'bread', count = 5, label = 'Bread x5', icon = 'bread' },
-        premium = { type = 'bank', amount = 10000, label = '$10,000 Bank', icon = 'cash' },
+        premium = { type = 'bank', amount = 10000, label = '$10,000 Bank', icon = 'bank' },
     },
     {
         level = 4,
@@ -28,7 +28,7 @@ SunsetPass.Tiers = {
     },
     {
         level = 5,
-        free = { type = 'bank', amount = 7500, label = '$7,500 Bank', icon = 'cash' },
+        free = { type = 'bank', amount = 7500, label = '$7,500 Bank', icon = 'bank' },
         premium = { type = 'cash', amount = 15000, label = '$15,000 Cash', icon = 'cash' },
     },
     {

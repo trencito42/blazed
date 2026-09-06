@@ -1,4 +1,25 @@
 const ITEM_ICON_ROOT = 'nui://sunset_ui/web/assets/items/';
+const ITEM_ICON_FALLBACK = `${ITEM_ICON_ROOT}backpack.webp`;
+
+const ICON_ALIASES = {
+    cash: 'cash_stack',
+    bank: 'bank_card',
+    coins: 'casinochips',
+};
+
+function itemIconUrl(icon, rewardType) {
+    let key = String(icon || '').trim();
+    if (key === 'cash' && rewardType === 'bank') key = 'bank';
+    key = ICON_ALIASES[key] || key;
+    if (!key) return ITEM_ICON_FALLBACK;
+    return `${ITEM_ICON_ROOT}${key}.webp`;
+}
+
+function rewardArt(reward) {
+    if (!reward) return '';
+    const src = itemIconUrl(reward.icon, reward.type);
+    return `<img src="${src}" alt="" loading="eager" onerror="this.onerror=null;this.src='${ITEM_ICON_FALLBACK}'">`;
+}
 
 const state = {
     tab: 'rewards',
@@ -11,29 +32,6 @@ function post(name, data) {
         headers: { 'Content-Type': 'application/json; charset=UTF-8' },
         body: JSON.stringify(data || {}),
     }).then((res) => res.json()).catch(() => ({}));
-}
-
-function iconUrl(icon) {
-    if (!icon || icon === 'cash' || icon === 'coins') {
-        return icon === 'coins' ? `${ITEM_ICON_ROOT}backpack.webp` : `${ITEM_ICON_ROOT}backpack.webp`;
-    }
-    return `${ITEM_ICON_ROOT}${icon}.webp`;
-}
-
-function cashSvg() {
-    return '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>';
-}
-
-function coinsSvg() {
-    return '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8.5 12h7"/></svg>';
-}
-
-function rewardArt(reward) {
-    if (!reward) return '';
-    if (reward.icon === 'cash' || reward.icon === 'coins') {
-        return reward.icon === 'coins' ? coinsSvg() : cashSvg();
-    }
-    return `<img src="${iconUrl(reward.icon)}" alt="">`;
 }
 
 function setTab(tab) {
@@ -102,6 +100,17 @@ function renderTiers(data) {
     }).join('');
 
     if (fill) fill.style.width = `${fillPct}%`;
+
+    const line = document.querySelector('.pass-track__line');
+    if (line && container) {
+        line.style.width = `${container.scrollWidth}px`;
+    }
+
+    container.querySelectorAll('.pass-reward__icon img').forEach((img) => {
+        img.addEventListener('error', () => {
+            if (!img.src.endsWith('backpack.webp')) img.src = ITEM_ICON_FALLBACK;
+        }, { once: true });
+    });
 
     container.querySelectorAll('.pass-reward[data-level]').forEach((btn) => {
         btn.addEventListener('click', async () => {
