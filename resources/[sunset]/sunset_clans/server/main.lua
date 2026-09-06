@@ -1,5 +1,9 @@
 local PendingInvites = {}
 
+local function setPremiumPoints(source, value)
+    return exports.sunset_core:SetPersistentStat(source, 'account', 'premium_points', value)
+end
+
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
 end
@@ -188,7 +192,7 @@ local function spendCoins(source, amount)
     if balance < amount then
         return false, ('You need %d Sunset Coins (you have %d).'):format(amount, balance)
     end
-    local ok, err = Sunset.SetPersistentStat(source, 'account', 'premium_points', balance - amount)
+    local ok, err = setPremiumPoints(source, balance - amount)
     if not ok then return false, err or 'Could not spend Sunset Coins.' end
     return true
 end
@@ -259,7 +263,7 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
 
     local function refundCoins()
         if cost > 0 then
-            Sunset.SetPersistentStat(source, 'account', 'premium_points', balanceBefore)
+            setPremiumPoints(source, balanceBefore)
         end
     end
 
@@ -291,12 +295,25 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
     pcall(function()
         audit(clanId, cid, 'create', { name = name, tag = tag, cost = cost })
     end)
-    ClanDisplay.sync(source)
+
+    local syncOk, syncErr = pcall(function()
+        ClanDisplay.sync(source)
+    end)
+    if not syncOk then
+        print(('[sunset_clans] clanCreate sync failed for %s: %s'):format(source, tostring(syncErr)))
+    end
+
     local row = ClanDisplay.getMembership(cid)
     if not row then
         return nil, 'Clan was created but could not be loaded. Reopen /clan.'
     end
-    return dashboardPayload(source, row, cid)
+
+    local payloadOk, payload = pcall(dashboardPayload, source, row, cid)
+    if not payloadOk then
+        print(('[sunset_clans] clanCreate dashboard failed for %s: %s'):format(source, tostring(payload)))
+        return nil, 'Clan created. Reopen /clan to view your clan page.'
+    end
+    return payload
 end)
 
 exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, payload)
