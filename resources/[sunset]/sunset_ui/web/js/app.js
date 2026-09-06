@@ -127,7 +127,7 @@ window.addEventListener('message', (event) => {
             App.data = data || {};
             if (screen === 'auth') {
                 showScreen('auth');
-                if (window.Panels) Panels.showAuth();
+                if (window.Panels) Panels.showAuth(data || {});
                 return;
             }
             showScreen(screen);
@@ -549,6 +549,18 @@ window.addEventListener('message', (event) => {
 
         case 'authError':
             if (window.AuthLoading) AuthLoading.reset();
+            break;
+
+        case 'authAccounts':
+            if (window.AuthAccounts) AuthAccounts.update(data || event.data.data || {});
+            break;
+
+        case 'authAccountFill':
+            if (window.AuthAccounts) AuthAccounts.showForm(data || event.data.data || {});
+            break;
+
+        case 'authQuickLoginStart':
+            if (window.AuthLoading) AuthLoading.beginSubmit();
             break;
 
         case 'hudEditToggle':

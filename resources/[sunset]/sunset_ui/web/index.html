@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=8">
     <link rel="stylesheet" href="css/clans.css?v=4">
-    <link rel="stylesheet" href="css/auth_loading.css?v=4">
+    <link rel="stylesheet" href="css/auth_loading.css?v=5">
     <link rel="stylesheet" href="css/spawn.css?v=3">
 </head>
 <body>
@@ -303,16 +303,32 @@
                     <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">Login</button>
                     <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">Register</button>
                 </div>
-                <div id="auth-form-login" class="auth-form is-active">
-                    <label class="field"><span>Username</span><input type="text" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
-                    <label class="field"><span>Password</span><input type="password" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
-                    <button type="button" class="btn btn--primary" id="auth-login-btn">Enter City</button>
+                <div id="auth-account-chooser" class="auth-chooser hidden">
+                    <p class="auth-chooser__title">Choose account</p>
+                    <div id="auth-account-list" class="auth-account-list"></div>
+                    <button type="button" class="auth-chooser__other" id="auth-use-other-account">Use another account</button>
                 </div>
-                <div id="auth-form-register" class="auth-form hidden">
-                    <label class="field"><span>Choose Username</span><input type="text" id="auth-reg-user" maxlength="20" spellcheck="false"></label>
-                    <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64"></label>
-                    <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64"></label>
-                    <button type="button" class="btn btn--primary" id="auth-register-btn">Create Account</button>
+                <div id="auth-login-stack" class="auth-login-stack">
+                    <button type="button" class="auth-chooser__back hidden" id="auth-back-to-accounts">← Saved accounts</button>
+                    <div id="auth-form-login" class="auth-form is-active">
+                        <label class="field"><span>Username</span><input type="text" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
+                        <label class="field"><span>Password</span><input type="password" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
+                        <label class="auth-remember">
+                            <input type="checkbox" id="auth-remember-quick" checked>
+                            <span>Quick login next time</span>
+                        </label>
+                        <button type="button" class="btn btn--primary" id="auth-login-btn">Enter City</button>
+                    </div>
+                    <div id="auth-form-register" class="auth-form hidden">
+                        <label class="field"><span>Choose Username</span><input type="text" id="auth-reg-user" maxlength="20" spellcheck="false"></label>
+                        <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64"></label>
+                        <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64"></label>
+                        <label class="auth-remember">
+                            <input type="checkbox" id="auth-reg-remember-quick" checked>
+                            <span>Quick login next time</span>
+                        </label>
+                        <button type="button" class="btn btn--primary" id="auth-register-btn">Create Account</button>
+                    </div>
                 </div>
                 <div class="auth-footer">SunsetMP — FiveM Roleplay</div>
             </div>
@@ -1329,6 +1345,7 @@
     <script src="js/phone.js?v=2"></script>
     <script src="js/panels.js?v=6"></script>
     <script src="js/overlays.js?v=2"></script>
+    <script src="js/auth_accounts.js?v=1"></script>
     <script src="js/auth_loading.js?v=3"></script>
     <script src="js/spawn.js?v=3"></script>
     <script src="js/fuel_pump.js"></script>

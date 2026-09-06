@@ -20,5 +20,6 @@ server_scripts {
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
+    'client/accounts.lua',
     'client/main.lua',
 }

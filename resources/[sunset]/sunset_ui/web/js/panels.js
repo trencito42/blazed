@@ -36,6 +36,7 @@ const Panels = {
             post('authLogin', {
                 username: $('#auth-login-user')?.value,
                 password: $('#auth-login-pass')?.value,
+                rememberQuickLogin: window.AuthAccounts?.rememberEnabled?.() ?? true,
             });
         });
         $('#auth-register-btn')?.addEventListener('click', () => {
@@ -44,6 +45,7 @@ const Panels = {
                 username: $('#auth-reg-user')?.value,
                 password: $('#auth-reg-pass')?.value,
                 passwordConfirm: $('#auth-reg-pass2')?.value,
+                rememberQuickLogin: window.AuthAccounts?.rememberEnabled?.() ?? true,
             });
         });
         const submitAuth = (event) => {
@@ -151,8 +153,12 @@ const Panels = {
         $('#auth-form-register')?.classList.toggle('hidden', tab !== 'register');
     },
 
-    showAuth() {
+    showAuth(data = {}) {
         this.init();
+        if (window.AuthAccounts) {
+            AuthAccounts.bind();
+            AuthAccounts.init(data);
+        }
         this.setAuthTab('login');
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
         if (window.LoadingScreen) LoadingScreen.reset();

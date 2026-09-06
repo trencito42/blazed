@@ -236,6 +236,170 @@
     letter-spacing: 2px;
 }
 
+.auth-login-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.auth-login-stack.hidden {
+    display: none;
+}
+
+.auth-chooser {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: authFormIn 0.3s ease-out;
+}
+
+.auth-chooser.hidden {
+    display: none;
+}
+
+.auth-chooser__title {
+    margin: 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.auth-account-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.auth-account-card {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.auth-account-card__pick {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 3px solid rgba(255, 119, 0, 0.55);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.auth-account-card__pick:hover {
+    background: rgba(255, 119, 0, 0.12);
+    border-left-color: #ff7700;
+    transform: translateY(-1px);
+}
+
+.auth-account-card__avatar {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffb15c, #ff7700);
+    color: #111;
+    font: 700 14px/1 'Chakra Petch', sans-serif;
+}
+
+.auth-account-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.auth-account-card__name {
+    font: 700 16px/1.1 'Rajdhani', sans-serif;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-account-card__meta {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.auth-account-card__remove {
+    flex: 0 0 auto;
+    width: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.35);
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.auth-account-card__remove:hover {
+    color: #ff8a8a;
+    border-color: rgba(255, 120, 120, 0.45);
+    background: rgba(255, 80, 80, 0.12);
+}
+
+.auth-chooser__other,
+.auth-chooser__back {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    font: 600 12px/1 'Chakra Petch', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.auth-chooser__other:hover,
+.auth-chooser__back:hover {
+    color: #ff7700;
+    border-color: rgba(255, 119, 0, 0.45);
+    background: rgba(255, 119, 0, 0.08);
+}
+
+.auth-chooser__back {
+    border-style: solid;
+    text-align: left;
+}
+
+.auth-remember {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: -4px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.auth-remember input {
+    width: 16px;
+    height: 16px;
+    accent-color: #ff7700;
+    cursor: pointer;
+}
+
+.auth-account-list::-webkit-scrollbar { width: 3px; }
+.auth-account-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }
+
 .screen--loading,
 .loading-stage,
 .loading-stage * {
