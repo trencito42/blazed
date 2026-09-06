@@ -75,6 +75,9 @@ function Accounts.publicList(store)
                 username = username,
                 hasPassword = type(row.password) == 'string' and row.password ~= '',
                 lastLogin = tonumber(row.lastLogin) or 0,
+                avatar = type(row.avatar) == 'string' and row.avatar or nil,
+                characterName = type(row.characterName) == 'string' and row.characterName or nil,
+                characterId = tonumber(row.characterId),
             }
         end
     end
@@ -111,13 +114,6 @@ end
 
 function Accounts.upsert(license, username, password, quickLogin)
     local store = Accounts.load(license)
-    if quickLogin ~= nil then
-        store.quickLogin = quickLogin == true
-    end
-    if not store.quickLogin then
-        return store, Accounts.save(license, store)
-    end
-
     local name = tostring(username or '')
     local pass = tostring(password or '')
     if name == '' or pass == '' then
@@ -125,7 +121,19 @@ function Accounts.upsert(license, username, password, quickLogin)
     end
 
     local target = string.lower(name)
-    local now = os.time()
+    if quickLogin == false then
+        local kept = {}
+        for _, row in ipairs(store.accounts) do
+            if string.lower(tostring(row.username or '')) ~= target then
+                kept[#kept + 1] = row
+            end
+        end
+        store.accounts = kept
+        return store, Accounts.save(license, store)
+    end
+
+    store.quickLogin = true
+    local now = GetCloudTimeAsInt()
     local found = false
     for index, row in ipairs(store.accounts) do
         if string.lower(tostring(row.username or '')) == target then
@@ -133,6 +141,9 @@ function Accounts.upsert(license, username, password, quickLogin)
                 username = name,
                 password = pass,
                 lastLogin = now,
+                avatar = row.avatar,
+                characterName = row.characterName,
+                characterId = row.characterId,
             }
             found = true
             break
@@ -152,6 +163,25 @@ function Accounts.upsert(license, username, password, quickLogin)
     while #store.accounts > MAX_ACCOUNTS do
         table.remove(store.accounts)
     end
+
+    return store, Accounts.save(license, store)
+end
+
+function Accounts.updateProfile(license, username, profile)
+    local store = Accounts.load(license)
+    local row = Accounts.find(store, username)
+    if not row then return store, false end
+
+    profile = type(profile) == 'table' and profile or {}
+    local avatar = tostring(profile.avatar or '')
+    if #avatar <= 180000 and avatar:match('^data:image/[a-zA-Z0-9.+-]+;base64,') then
+        row.avatar = avatar
+    end
+
+    local characterName = tostring(profile.characterName or ''):sub(1, 80)
+    if characterName ~= '' then row.characterName = characterName end
+    local characterId = tonumber(profile.characterId)
+    if characterId and characterId > 0 then row.characterId = math.floor(characterId) end
 
     return store, Accounts.save(license, store)
 end

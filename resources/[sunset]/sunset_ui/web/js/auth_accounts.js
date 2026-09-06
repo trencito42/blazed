@@ -32,14 +32,13 @@ const AuthAccounts = {
     },
 
     setMode(mode) {
-        this.mode = mode;
+        this.mode = 'form';
         const hasAccounts = this.accounts.length > 0;
-        const chooser = mode === 'chooser' && hasAccounts;
-
-        $('#auth-account-chooser')?.classList.toggle('hidden', !chooser);
-        $('#auth-login-stack')?.classList.toggle('hidden', chooser);
-        $('#auth-back-to-accounts')?.classList.toggle('hidden', !hasAccounts || chooser);
-        $('#screen-auth .auth-tabs')?.classList.toggle('hidden', chooser);
+        $('#auth-panel')?.classList.toggle('has-saved-accounts', hasAccounts);
+        $('#auth-account-chooser')?.classList.toggle('hidden', !hasAccounts);
+        $('#auth-login-stack')?.classList.remove('hidden');
+        $('#auth-back-to-accounts')?.classList.add('hidden');
+        $('#screen-auth .auth-tabs')?.classList.remove('hidden');
     },
 
     render() {
@@ -57,11 +56,16 @@ const AuthAccounts = {
             const pick = document.createElement('button');
             pick.type = 'button';
             pick.className = 'auth-account-card__pick';
+            const avatar = typeof acc.avatar === 'string' && acc.avatar.startsWith('data:image/')
+                ? `<img src="${this.escape(acc.avatar)}" alt="">`
+                : `<span>${this.escape(this.initials(acc.characterName || username))}</span>`;
+            const identity = String(acc.characterName || username).trim();
+            const id = Number(acc.characterId) > 0 ? `CID ${Number(acc.characterId)}` : 'Saved account';
             pick.innerHTML = `
-                <span class="auth-account-card__avatar">${this.escape(this.initials(username))}</span>
+                <span class="auth-account-card__avatar">${avatar}</span>
                 <span class="auth-account-card__body">
-                    <strong class="auth-account-card__name">${this.escape(username)}</strong>
-                    <span class="auth-account-card__meta">${acc.hasPassword ? 'Quick login ready' : 'Password required'}</span>
+                    <strong class="auth-account-card__name">${this.escape(identity)}</strong>
+                    <span class="auth-account-card__meta">${this.escape(id)} · ${this.escape(username)}</span>
                 </span>
             `;
             pick.addEventListener('click', () => {
@@ -82,14 +86,14 @@ const AuthAccounts = {
             list.appendChild(card);
         });
 
-        this.setMode(this.accounts.length > 0 && this.mode === 'chooser' ? 'chooser' : 'form');
+        this.setMode('form');
     },
 
     init(data = {}) {
         this.accounts = Array.isArray(data.accounts) ? data.accounts : [];
         this.quickLogin = data.quickLogin === true;
         this.syncRememberCheckboxes();
-        this.setMode(this.accounts.length > 0 ? 'chooser' : 'form');
+        this.setMode('form');
         this.render();
     },
 
@@ -123,9 +127,57 @@ const AuthAccounts = {
         }
     },
 
+    capturePortrait(data = {}) {
+        const source = String(data.source || '');
+        const username = String(data.username || '');
+        if (!source || !username) return;
+
+        const image = new Image();
+        image.onload = () => {
+            try {
+                const size = 160;
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d', { alpha: false });
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, size, size);
+                const side = Math.min(image.naturalWidth, image.naturalHeight);
+                const sx = Math.max(0, (image.naturalWidth - side) / 2);
+                const sy = Math.max(0, (image.naturalHeight - side) / 2);
+                ctx.drawImage(image, sx, sy, side, side, 0, 0, size, size);
+                post('authSavePortrait', {
+                    username,
+                    characterName: data.characterName,
+                    characterId: data.characterId,
+                    avatar: canvas.toDataURL('image/jpeg', 0.78),
+                });
+            } catch (_) {
+                post('authSavePortrait', {
+                    username,
+                    characterName: data.characterName,
+                    characterId: data.characterId,
+                });
+            }
+        };
+        image.onerror = () => post('authSavePortrait', {
+            username,
+            characterName: data.characterName,
+            characterId: data.characterId,
+        });
+        image.crossOrigin = 'anonymous';
+        image.src = source;
+    },
+
     bind() {
         if (this._ready) return;
         this._ready = true;
+
+        const chooser = $('#auth-account-chooser');
+        const stack = $('#auth-login-stack');
+        if (chooser && stack) stack.after(chooser);
+        const chooserTitle = chooser?.querySelector('.auth-chooser__title');
+        if (chooserTitle) chooserTitle.textContent = 'Saved identities — select to enter';
 
         $('#auth-use-other-account')?.addEventListener('click', () => {
             this.setMode('form');

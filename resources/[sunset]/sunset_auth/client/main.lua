@@ -1,6 +1,8 @@
 local authenticated = false
 local sessionLicense = nil
 local pendingAuth = nil
+local authenticatedUsername = nil
+local loadedCharacter = nil
 
 local function isEnabled(value)
     if value == true or value == 1 then return true end
@@ -22,7 +24,7 @@ local function authPayload()
     local store = SunsetAuthAccounts.load(activeLicense())
     return {
         accounts = SunsetAuthAccounts.publicList(store),
-        quickLogin = store.quickLogin == true,
+        quickLogin = true,
     }
 end
 
@@ -49,6 +51,7 @@ local function completeAuthentication(username, password, rememberQuickLogin)
     end
     pendingAuth = nil
     authenticated = true
+    authenticatedUsername = username
     exports.sunset_ui:Send('authHide', {})
     if isEnabled(rememberQuickLogin) and not saved then
         exports.sunset_ui:Notify('Login succeeded, but Quick Login could not be saved on this PC.', 'warning', 7000)
@@ -81,6 +84,7 @@ local function performLogin(username, password, rememberQuickLogin)
     if not result then
         exports.sunset_ui:Send('authError', { message = err })
         exports.sunset_ui:Notify(err or 'Login failed', 'error')
+        pushAuthAccounts()
         return false
     end
     if result.needsEmail then
@@ -92,29 +96,10 @@ local function performLogin(username, password, rememberQuickLogin)
     return true
 end
 
-local function tryAutoQuickLogin()
-    local license = activeLicense()
-    if not license then return false end
-
-    local store = SunsetAuthAccounts.load(license)
-    if store.quickLogin ~= true then return false end
-
-    local row = SunsetAuthAccounts.mostRecent(store)
-    if not row or type(row.password) ~= 'string' or row.password == '' then
-        return false
-    end
-
-    exports.sunset_ui:Show('auth', authPayload())
-    exports.sunset_ui:SetFocus(true, true)
-    exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
-    return performLogin(row.username, row.password, true)
-end
-
 RegisterNetEvent('sunset:client:sessionReady', function(data)
     sessionLicense = data and data.license
     if authenticated then return end
     Wait(300)
-    if tryAutoQuickLogin() then return end
     openAuth()
 end)
 
@@ -125,20 +110,11 @@ end)
 
 AddEventHandler('sunset:nui:authLogin', function(data)
     local remember = isEnabled(data and data.rememberQuickLogin)
-    local license = activeLicense()
-    if license then
-        SunsetAuthAccounts.setQuickLogin(license, remember)
-    end
     performLogin(data.username, data.password, remember)
 end)
 
 AddEventHandler('sunset:nui:authRegister', function(data)
     local remember = isEnabled(data and data.rememberQuickLogin)
-    local license = activeLicense()
-    if license then
-        SunsetAuthAccounts.setQuickLogin(license, remember)
-    end
-
     local result, err = Sunset.AwaitCallback(
         'sunset:authRegister',
         data.username,
@@ -187,7 +163,7 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
         return
     end
 
-    if store.quickLogin and type(row.password) == 'string' and row.password ~= '' then
+    if type(row.password) == 'string' and row.password ~= '' then
         exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
         performLogin(row.username, row.password, true)
         return
@@ -209,8 +185,44 @@ AddEventHandler('sunset:nui:authRemoveAccount', function(data)
 end)
 
 AddEventHandler('sunset:nui:authSetQuickLogin', function(data)
-    local license = activeLicense()
-    if not license then return end
-    SunsetAuthAccounts.setQuickLogin(license, isEnabled(data and data.enabled))
-    pushAuthAccounts()
+    -- This preference applies only to the credentials currently being submitted.
+    -- Existing saved identities remain available independently.
+end)
+
+AddEventHandler('sunset:client:onCharacterLoaded', function(char)
+    loadedCharacter = char
+end)
+
+AddEventHandler('sunset:client:characterFlowComplete', function()
+    if not authenticatedUsername or not loadedCharacter then return end
+    CreateThread(function()
+        Wait(800)
+        local ped = PlayerPedId()
+        local handle = RegisterPedheadshot(ped)
+        local timeout = GetGameTimer() + 4000
+        while (not IsPedheadshotReady(handle) or not IsPedheadshotValid(handle)) and GetGameTimer() < timeout do
+            Wait(25)
+        end
+        if IsPedheadshotValid(handle) then
+            local txd = GetPedheadshotTxdString(handle)
+            exports.sunset_ui:Send('authCapturePortrait', {
+                username = authenticatedUsername,
+                characterName = (tostring(loadedCharacter.firstname or '') .. ' ' .. tostring(loadedCharacter.lastname or '')):gsub('%s+$', ''),
+                characterId = loadedCharacter.id,
+                source = ('https://nui-img/%s/%s'):format(txd, txd),
+            })
+            Wait(2500)
+        end
+        UnregisterPedheadshot(handle)
+    end)
+end)
+
+AddEventHandler('sunset:nui:authSavePortrait', function(data)
+    local username = tostring(data and data.username or '')
+    if username == '' or string.lower(username) ~= string.lower(tostring(authenticatedUsername or '')) then return end
+    SunsetAuthAccounts.updateProfile(activeLicense(), username, {
+        avatar = data and data.avatar,
+        characterName = data and data.characterName,
+        characterId = data and data.characterId,
+    })
 end)

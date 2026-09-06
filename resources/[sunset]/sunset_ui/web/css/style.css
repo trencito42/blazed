@@ -39,6 +39,7 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 10;
+    background: #070504 url('../assets/bg.webp?v=5') center / cover no-repeat;
     opacity: 1;
     filter: blur(0);
     transform: scale(1);

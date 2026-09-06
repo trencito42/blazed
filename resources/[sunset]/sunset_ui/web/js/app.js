@@ -16,18 +16,18 @@ function post(action, data = {}) {
 }
 
 const ENTRY_BACKGROUNDS = {
-    auth: 'assets/bg_login.webp?v=4',
-    handoff: 'assets/bg.webp?v=4',
-    loading: 'assets/bg.webp?v=4',
-    spawn: 'assets/bg.webp?v=4',
-    default: 'assets/bg.webp?v=4',
+    auth: 'assets/bg_login.webp?v=5',
+    handoff: 'assets/bg.webp?v=5',
+    loading: 'assets/bg.webp?v=5',
+    spawn: 'assets/bg.webp?v=5',
+    default: 'assets/bg.webp?v=5',
 };
 let entryBackgroundRequest = 0;
 
 function entryBackgroundLayers() {
     const app = $('#app');
     if (!app) return [];
-    let layers = Array.from(app.querySelectorAll(':scope > .app-bg'));
+    let layers = Array.from(app.children).filter((child) => child.classList.contains('app-bg'));
     if (layers.length === 1) {
         const secondary = layers[0].cloneNode(false);
         secondary.removeAttribute('src');
@@ -51,14 +51,22 @@ async function setEntryBackground(screenName) {
     const request = ++entryBackgroundRequest;
     const next = layers.find((layer) => layer !== active) || layers[1];
     next.dataset.entrySource = desired;
-    next.src = desired;
-    try {
-        if (typeof next.decode === 'function') await next.decode();
-    } catch (_) {
-        if (request !== entryBackgroundRequest) return;
-        next.src = 'assets/bg.png?v=4';
+    const load = (src) => new Promise((resolve) => {
+        const complete = () => resolve(next.naturalWidth > 0);
+        next.onload = complete;
+        next.onerror = () => resolve(false);
+        next.src = src;
+        if (next.complete) complete();
+    });
+    let loaded = await load(desired);
+    if (!loaded && request === entryBackgroundRequest) {
+        next.dataset.entrySource = ENTRY_BACKGROUNDS.default;
+        loaded = await load(ENTRY_BACKGROUNDS.default);
     }
     if (request !== entryBackgroundRequest) return;
+    if (!loaded) return;
+    next.onload = null;
+    next.onerror = null;
     requestAnimationFrame(() => {
         next.classList.add('is-active');
         active.classList.remove('is-active');
@@ -646,6 +654,10 @@ window.addEventListener('message', (event) => {
             if (window.AuthAccounts) AuthAccounts.update(data || event.data.data || {});
             break;
 
+        case 'authCapturePortrait':
+            if (window.AuthAccounts) AuthAccounts.capturePortrait(data || event.data.data || {});
+            break;
+
         case 'authAccountFill':
             if (window.AuthAccounts) AuthAccounts.showForm(data || event.data.data || {});
             break;
@@ -719,7 +731,18 @@ document.addEventListener('DOMContentLoaded', () => {
     entryBackgroundLayers();
     document.querySelectorAll('.auth-brand__logo, .panel-logo, .studio-logo').forEach(setBrandLogo);
     const qa = new URLSearchParams(window.location.search).get('qa');
-    if (qa === 'spawn') {
+    if (qa === 'auth') {
+        showApp(true);
+        showScreen('auth');
+        window.Panels?.showAuth({
+            quickLogin: true,
+            accounts: [
+                { username: 'trencito', characterName: 'Trencito Blaze', characterId: 1, hasPassword: true },
+                { username: 'stefan', characterName: 'Stefan Ionescu', characterId: 7, hasPassword: true },
+                { username: 'tester', characterName: 'Alex Pop', characterId: 12, hasPassword: true },
+            ],
+        });
+    } else if (qa === 'spawn') {
         showApp(true);
         showScreen('spawn');
         window.SpawnSelector?.show({ hasLastLocation: true });
