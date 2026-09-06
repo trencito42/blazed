@@ -89,6 +89,21 @@ const Panels = {
         $('#help-close')?.addEventListener('click', () => post('helpClose'));
 
         document.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            const tag = (e.target && e.target.tagName) || '';
+            const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
+
+            const inventory = $('#inventory');
+            if (inventory && !inventory.classList.contains('hidden')) {
+                if (e.key === 'Escape' || e.key === 'i' || e.key === 'I') {
+                    if (!typing || e.key === 'Escape') {
+                        post('inventoryClose');
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
+
             if (e.key !== 'Escape') return;
             const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties'];
             for (const sel of panels) {

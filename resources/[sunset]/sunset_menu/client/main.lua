@@ -203,16 +203,27 @@ local function closeMenu()
     exports.sunset_ui:Send('menuHide', {})
 end
 
+local function toggleMenu(initialTab)
+    if menuOpen then
+        if initialTab then
+            exports.sunset_ui:Send('menuSetTab', { tab = initialTab })
+            return
+        end
+        closeMenu()
+        return
+    end
+    openMenu(initialTab)
+end
+
 RegisterCommand('sunset_menu', function()
-    if menuOpen then return end
-    openMenu()
+    toggleMenu()
 end, false)
-RegisterKeyMapping('sunset_menu', 'Open player menu', 'keyboard', 'M')
+RegisterKeyMapping('sunset_menu', 'Toggle player menu', 'keyboard', 'M')
 
 RegisterCommand('chatsettings', function()
-    openMenu('settings')
+    toggleMenu('settings')
 end, false)
-RegisterCommand('stats', function() openMenu('statistics') end, false)
+RegisterCommand('stats', function() toggleMenu('statistics') end, false)
 TriggerEvent('chat:addSuggestion', '/stats', 'Open character statistics and Respect Point progression')
 TriggerEvent('chat:addSuggestion', '/buylevel', 'Buy the next level using the required Respect Points and money')
 TriggerEvent('chat:addSuggestion', '/chatsettings', 'Open chat font size and visible row settings')
@@ -318,9 +329,23 @@ AddEventHandler('sunset:nui:menuJobAction', function(data)
 end)
 
 CreateThread(function()
+    local MENU_CONTROL = 244 -- M
     while true do
         if menuOpen then
-            DisableControlAction(0, 244, true) -- M — prevent re-trigger quirks
+            DisableControlAction(0, MENU_CONTROL, true)
+            if IsDisabledControlJustReleased(0, MENU_CONTROL) then
+                closeMenu()
+            end
+            Wait(0)
+        else
+            Wait(250)
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if menuOpen then
             local ok, data = pcall(buildMenuData)
             if ok and data then exports.sunset_ui:Send('menuUpdate', data) end
             Wait(1000)

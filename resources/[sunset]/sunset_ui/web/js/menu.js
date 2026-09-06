@@ -367,8 +367,15 @@ const Menu = {
 };
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !$('#menu').classList.contains('hidden')) {
+    if (e.repeat) return;
+    const menu = $('#menu');
+    if (!menu || menu.classList.contains('hidden')) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+
+    if (e.key === 'Escape' || e.key === 'm' || e.key === 'M') {
         Menu.close();
+        e.preventDefault();
     }
 });
 

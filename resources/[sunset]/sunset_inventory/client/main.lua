@@ -38,12 +38,16 @@ AddEventHandler('sunset:nui:inventoryUse', function(data)
 end)
 
 RegisterCommand('inventory', function()
+    if inventoryOpen then
+        closeInventory()
+        return
+    end
     if IsNuiFocused() then return end
     local ok, chatOpen = pcall(function() return exports.sunset_chat:IsChatOpen() end)
     if ok and chatOpen then return end
-    if inventoryOpen then closeInventory() else openInventory() end
+    openInventory()
 end, false)
-RegisterKeyMapping('inventory', 'Open inventory', 'keyboard', 'I')
+RegisterKeyMapping('inventory', 'Toggle inventory', 'keyboard', 'I')
 
 exports('Open', openInventory)
 exports('Close', closeInventory)

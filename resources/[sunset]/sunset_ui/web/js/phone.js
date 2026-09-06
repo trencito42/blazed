@@ -58,6 +58,17 @@ const Phone = {
         window.addEventListener('keydown', (e) => {
             const device = $('#phone-device');
             if (!device?.classList.contains('is-open')) return;
+            const tag = (e.target && e.target.tagName) || '';
+            const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
+
+            if (e.key === 'p' || e.key === 'P') {
+                if (!typing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.close();
+                    return;
+                }
+            }
 
             if (e.key === 'Escape') {
                 e.preventDefault();
