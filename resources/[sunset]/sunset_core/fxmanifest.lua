@@ -60,6 +60,7 @@ server_exports {
     'SetHomeProperty',
     'SetJob',
     'SetFaction',
+    'SetFactionByCharacterId',
     'AddXP',
     'AddRespectPoints',
     'GetRobPoints',

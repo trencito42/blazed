@@ -25,6 +25,10 @@ const FactionPanels = {
             });
         });
 
+        document.getElementById('faction-rank-save')?.addEventListener('click', () => {
+            this.saveRankNames();
+        });
+
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             const panelOpen = !$('#faction-panel')?.classList.contains('hidden');
@@ -36,9 +40,14 @@ const FactionPanels = {
         });
     },
 
+    setBodyOpen(open) {
+        document.body.classList.toggle('faction-panels-open', open);
+    },
+
     hide() {
         $('#faction-panel')?.classList.add('hidden');
         $('#faction-directory')?.classList.add('hidden');
+        this.setBodyOpen(false);
         this.closeDirectoryDetail();
     },
 
@@ -65,34 +74,95 @@ const FactionPanels = {
         }
     },
 
-    renderGrades(grades) {
-        const select = $('#faction-grade-select');
-        if (!select) return;
-        select.innerHTML = '';
+    renderRankEditor(grades, canEdit) {
+        const wrap = $('#faction-rank-editor');
+        const form = $('#faction-rank-names-form');
+        if (!wrap || !form) return;
+        wrap.classList.toggle('hidden', !canEdit);
+        if (!canEdit) return;
+        form.innerHTML = '';
         (grades || []).forEach((row) => {
-            const option = document.createElement('option');
-            option.value = String(row.grade);
-            option.textContent = `${row.label} (${row.grade})`;
-            select.appendChild(option);
+            const field = document.createElement('label');
+            field.className = 'faction-rank-field';
+            field.innerHTML = `
+                <span>Grade ${row.grade}</span>
+                <input type="text" data-grade="${row.grade}" maxlength="64" value="${this.escape(row.label || '')}" placeholder="${this.escape(row.defaultLabel || '')}">
+            `;
+            form.appendChild(field);
         });
     },
 
-    renderRoster(members) {
+    renderRoster(members, permissions, viewerCharacterId) {
         const roster = $('#faction-roster');
         if (!roster) return;
         roster.innerHTML = '';
+        const canRank = Boolean(permissions?.rankMembers);
+        const canKick = Boolean(permissions?.kickMembers);
+        const viewerId = Number(viewerCharacterId) || 0;
+
         (members || []).forEach((member) => {
             const row = document.createElement('article');
             row.className = `faction-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}`;
             const identity = document.createElement('div');
+            identity.className = 'faction-member__identity';
             const name = document.createElement('strong');
             name.textContent = member.name || `CID ${member.characterId || '?'}`;
             const rank = document.createElement('span');
-            rank.textContent = `${member.gradeLabel || 'Member'}${member.serverId ? ` (${member.serverId})` : ''}`;
+            rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
             identity.append(name, rank);
+
             const state = document.createElement('em');
             state.textContent = member.leader ? 'LEADER' : (member.onDuty ? 'ON DUTY' : (member.online ? 'ONLINE' : 'OFFLINE'));
-            row.append(identity, state);
+
+            const actions = document.createElement('div');
+            actions.className = 'faction-member__actions';
+            const isSelf = Number(member.characterId) === viewerId;
+            const manageable = !isSelf && !member.leader && (canRank || canKick);
+
+            if (manageable && canRank) {
+                const up = document.createElement('button');
+                up.type = 'button';
+                up.className = 'faction-btn';
+                up.textContent = '▲';
+                up.title = 'Rank up';
+                up.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: 1 }));
+                const down = document.createElement('button');
+                down.type = 'button';
+                down.className = 'faction-btn';
+                down.textContent = '▼';
+                down.title = 'Rank down';
+                down.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: -1 }));
+                actions.append(up, down);
+            }
+            if (manageable && canKick) {
+                const kickFp = document.createElement('button');
+                kickFp.type = 'button';
+                kickFp.className = 'faction-btn is-danger';
+                kickFp.textContent = 'Kick +FP';
+                kickFp.title = 'Remove online member with faction punishment record';
+                kickFp.disabled = !member.online;
+                kickFp.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'with_fp' }));
+
+                const kick = document.createElement('button');
+                kick.type = 'button';
+                kick.className = 'faction-btn is-warn';
+                kick.textContent = 'Kick';
+                kick.title = 'Remove online member';
+                kick.disabled = !member.online;
+                kick.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'online' }));
+
+                const kickOff = document.createElement('button');
+                kickOff.type = 'button';
+                kickOff.className = 'faction-btn is-muted';
+                kickOff.textContent = 'Kick offline';
+                kickOff.title = 'Remove member from roster while offline';
+                kickOff.disabled = member.online;
+                kickOff.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'offline' }));
+
+                actions.append(kickFp, kick, kickOff);
+            }
+
+            row.append(identity, state, actions);
             roster.appendChild(row);
         });
         if (!members?.length) roster.innerHTML = '<p class="faction-empty">No roster entries found.</p>';
@@ -104,6 +174,7 @@ const FactionPanels = {
         this.dashboard = data;
         const members = Array.isArray(data.members) ? data.members : [];
         const report = data.report || {};
+        const perms = data.permissions || {};
         const current = Math.max(0, Number(report.current) || 0);
         const target = Math.max(0, Number(report.target) || 0);
         const percent = target > 0 ? Math.min(100, (current / target) * 100) : 100;
@@ -125,29 +196,19 @@ const FactionPanels = {
         $('#faction-report-value').textContent = target > 0 ? `${current} / ${target} activities` : `${current} activities`;
         $('#faction-report-bar').style.width = `${percent}%`;
 
-        this.renderRoster(members);
-        this.renderCommands(data.commands);
-        this.renderGrades(data.grades);
+        const toolbar = $('#faction-roster-toolbar');
+        const showToolbar = Boolean(perms.leader || perms.invite || perms.motd);
+        toolbar?.classList.toggle('hidden', !showToolbar);
+        toolbar?.querySelector('[data-faction-action="invite"]')?.classList.toggle('hidden', !(perms.leader || perms.invite));
+        toolbar?.querySelector('[data-faction-action="motd"]')?.classList.toggle('hidden', !(perms.leader || perms.motd));
 
-        const perms = data.permissions || {};
-        const canManage = Boolean(
-            perms.leader || perms.invite || perms.motd || perms.giverank
-            || perms.uninvite || perms.promote || perms.warn
-        );
-        document.querySelector('.faction-tab--manage')?.classList.toggle('hidden', !canManage);
-        document.querySelectorAll('[data-faction-action]').forEach((form) => {
-            const action = form.dataset.factionAction;
-            let allowed = false;
-            if (action === 'invite') allowed = perms.leader || perms.invite;
-            else if (action === 'motd') allowed = perms.leader || perms.motd;
-            else if (action === 'rank') allowed = perms.leader || perms.giverank || perms.promote;
-            else if (action === 'kick') allowed = perms.leader || perms.uninvite;
-            else if (action === 'warn') allowed = perms.leader || perms.warn;
-            form.classList.toggle('hidden', !allowed);
-        });
+        this.renderRoster(members, perms, data.viewerCharacterId);
+        this.renderCommands(data.commands);
+        this.renderRankEditor(data.grades, perms.renameRanks);
 
         this.setTab('overview');
         $('#faction-panel')?.classList.remove('hidden');
+        this.setBodyOpen(true);
     },
 
     showDirectory(payload = {}) {
@@ -191,6 +252,7 @@ const FactionPanels = {
 
         if (!list.children.length) list.innerHTML = '<p class="faction-empty">No factions are configured.</p>';
         $('#faction-directory')?.classList.remove('hidden');
+        this.setBodyOpen(true);
     },
 
     closeDirectoryDetail() {
@@ -233,20 +295,27 @@ const FactionPanels = {
         detail.classList.remove('hidden');
     },
 
+    postAction(action, payload) {
+        post('factionManage', { action, ...payload });
+    },
+
     submitManageForm(form) {
         const action = form.dataset.factionAction;
         const data = new FormData(form);
         const payload = { action };
-        if (action === 'invite' || action === 'kick' || action === 'warn') {
-            payload.targetId = Number(data.get('targetId'));
-        }
+        if (action === 'invite') payload.targetId = Number(data.get('targetId'));
         if (action === 'motd') payload.message = String(data.get('message') || '').trim();
-        if (action === 'rank') {
-            payload.targetId = Number(data.get('targetId'));
-            payload.grade = Number(data.get('grade'));
-        }
-        if (action === 'warn') payload.reason = String(data.get('reason') || '').trim();
         post('factionManage', payload);
+    },
+
+    saveRankNames() {
+        const form = $('#faction-rank-names-form');
+        if (!form) return;
+        const labels = {};
+        form.querySelectorAll('input[data-grade]').forEach((input) => {
+            labels[input.dataset.grade] = String(input.value || '').trim();
+        });
+        post('factionManage', { action: 'gradeLabels', labels });
     },
 
     refreshDashboard(data) {

@@ -88,7 +88,19 @@ body.clan-panels-open #taxi-meter,
 body.clan-panels-open #server-announce,
 body.clan-panels-open #police-order,
 body.clan-panels-open #notifications,
-body.clan-panels-open #progress {
+body.clan-panels-open #progress,
+body.faction-panels-open #hud,
+body.faction-panels-open #job-objective,
+body.faction-panels-open #courier-panel,
+body.faction-panels-open #fishing-panel,
+body.faction-panels-open #radar-panel,
+body.faction-panels-open #fuel-pump,
+body.faction-panels-open #chat,
+body.faction-panels-open #taxi-meter,
+body.faction-panels-open #server-announce,
+body.faction-panels-open #police-order,
+body.faction-panels-open #notifications,
+body.faction-panels-open #progress {
     opacity: 0 !important;
     visibility: hidden !important;
     filter: blur(3px);

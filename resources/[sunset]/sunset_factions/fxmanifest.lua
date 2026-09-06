@@ -30,10 +30,12 @@ client_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/core.lua',
+    'server/faction_labels.lua',
     'server/detention.lua',
     'server/main.lua',
     'server/chat.lua',
     'server/leaders.lua',
+    'server/faction_roster.lua',
     'server/police.lua',
     'server/ems.lua',
     'server/friendlyfire.lua',

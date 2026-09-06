@@ -31,8 +31,7 @@ local function sendFactionChat(source, channel, args, filterFn)
     local faction = Sunset.Factions[factionId]
     local label = faction and faction.label or factionId
     local _, grade = FactionCore.getFactionOf(char)
-    local gradeInfo = Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
-    local rank = (gradeInfo and gradeInfo.label) or 'Member'
+    local rank = FactionLabels.get(factionId, grade)
 
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
@@ -61,8 +60,11 @@ end, false)
 
 RegisterCommand('r', function(source, args)
     if source == 0 then return end
-    sendFactionChat(source, 'r', args, function(_, c, factionId)
-        return select(1, FactionCore.getFactionOf(c)) == factionId
+    if not FactionCore.isOnDuty(source) then
+        return FactionCore.notify(source, 'Faction radio requires you to be on duty', 'error')
+    end
+    sendFactionChat(source, 'r', args, function(src, c, factionId)
+        return select(1, FactionCore.getFactionOf(c)) == factionId and FactionCore.isOnDuty(src)
     end)
 end, false)
 

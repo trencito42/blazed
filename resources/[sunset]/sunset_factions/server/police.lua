@@ -565,8 +565,8 @@ exports.sunset_core:RegisterCallback('sunset:policeClearWanted', function(source
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeSummon', function(source, targetId)
-    if not FactionCore.isLawEnforcement(source) then
-        return nil, FactionCore.accessError(source, nil, 'issue a police stop order', 'law_enforcement')
+    if not FactionCore.hasPerm(source, 'mdc') then
+        return nil, FactionCore.accessError(source, 'mdc', 'issue a police stop order', 'law_enforcement')
     end
 
     targetId = tonumber(targetId)
@@ -608,7 +608,7 @@ exports.sunset_core:RegisterCallback('sunset:policeSummon', function(source, tar
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeWantedList', function(source)
-    if not FactionCore.hasPerm(source, 'mdc') and not FactionCore.isLawEnforcement(source) then
+    if not FactionCore.hasPerm(source, 'mdc') then
         return nil, FactionCore.accessError(source, 'mdc', 'view the wanted list', 'law_enforcement')
     end
     return buildWantedListRows()
@@ -696,8 +696,10 @@ exports.sunset_core:RegisterCallback('sunset:policeArrest', function(source, tar
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeReasons', function(source)
-    if not FactionCore.isLawEnforcement(source) then
-        return nil, FactionCore.accessError(source, nil, 'view wanted reason codes', 'law_enforcement')
+    if not FactionCore.hasPerm(source, 'mdc')
+        and not FactionCore.hasPerm(source, 'wanted')
+        and not FactionCore.hasPerm(source, 'wanted_limited') then
+        return nil, FactionCore.accessError(source, 'wanted', 'view wanted reason codes', 'law_enforcement')
     end
     local list = {}
     for code, row in pairs(Sunset.Police.reasons or {}) do
@@ -714,8 +716,8 @@ exports.sunset_core:RegisterCallback('sunset:policeReasons', function(source)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeViolations', function(source)
-    if not FactionCore.isLawEnforcement(source) then
-        return nil, FactionCore.accessError(source, nil, 'view the citation list', 'law_enforcement')
+    if not FactionCore.hasPerm(source, 'ticket') and not FactionCore.hasPerm(source, 'fine') then
+        return nil, FactionCore.accessError(source, 'ticket', 'view the citation list', 'law_enforcement')
     end
     return Sunset.Police.violations or {}
 end)
@@ -895,8 +897,8 @@ exports.sunset_core:RegisterCallback('sunset:policeRadarLock', function(source, 
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeFixedRadars', function(source)
-    if not FactionCore.isLawEnforcement(source) then
-        return nil, FactionCore.accessError(source, nil, 'view fixed radars', 'law_enforcement')
+    if not FactionCore.hasPerm(source, 'radar') then
+        return nil, FactionCore.accessError(source, 'radar', 'view fixed radars', 'law_enforcement')
     end
     local list = {}
     for _, row in ipairs(Sunset.Police.fixedRadars or {}) do
@@ -1063,7 +1065,7 @@ end)
 exports.sunset_core:RegisterCallback('sunset:policeUnjail', function(source, targetId)
     local isAdmin = false
     pcall(function() isAdmin = exports.sunset_admin:IsAdmin(source, 2) == true end)
-    if not isAdmin and not FactionCore.hasPerm(source, 'arrest') and not FactionCore.isLawEnforcement(source) then
+    if not isAdmin and not FactionCore.hasPerm(source, 'arrest') then
         return nil, 'You cannot release prisoners.'
     end
     targetId = tonumber(targetId)
@@ -1080,7 +1082,7 @@ exports.sunset_core:RegisterCallback('sunset:policeUnjail', function(source, tar
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeMdcLookup', function(source, targetId)
-    if not FactionCore.hasPerm(source, 'mdc') and not FactionCore.isLawEnforcement(source) then
+    if not FactionCore.hasPerm(source, 'mdc') then
         return { error = FactionCore.accessError(source, 'mdc', 'search the MDC', 'law_enforcement') }
     end
 

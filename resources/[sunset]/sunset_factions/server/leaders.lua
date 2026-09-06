@@ -170,7 +170,7 @@ exports.sunset_core:RegisterCallback('sunset:factionGiveRank', function(source, 
     end
 
     exports.sunset_core:SetFaction(targetId, factionId, newGrade)
-    local gradeLabel = faction.grades[newGrade].label
+    local gradeLabel = FactionLabels.get(factionId, newGrade)
     FactionCore.auditLog(factionId, char.id, 'giverank', target.id, { grade = newGrade })
     FactionCore.notify(targetId, ('Rank set to %s'):format(gradeLabel), 'success')
     FactionCore.notify(source, ('Set rank to %s'):format(gradeLabel), 'success')
@@ -251,7 +251,7 @@ exports.sunset_core:RegisterCallback('sunset:factionMembers', function(source)
                 id = src,
                 name = exports.sunset_core:GetPlayerDisplayName(src),
                 grade = grade,
-                gradeLabel = gradeRow and gradeRow.label or '—',
+                gradeLabel = FactionLabels.get(factionId, grade),
                 onDuty = FactionCore.isOnDuty(src),
                 leader = FactionCore.isFactionLeader(c.id, factionId),
             }

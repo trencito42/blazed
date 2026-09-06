@@ -99,8 +99,8 @@ local function buildFactionCategory(source, char)
             entries[#entries + 1] = { cmd = '/backup', desc = 'Request LSPD backup' }
             entries[#entries + 1] = { cmd = '/cbackup', desc = 'Cancel backup request' }
         end
-        if Sunset.IsLegalFaction and Sunset.IsLegalFaction(factionId) then
-            entries[#entries + 1] = { cmd = '/gov [message]', desc = 'Public government notice — visible to everyone (send: on-duty legal factions)' }
+        if Sunset.IsEmergencyDepartment and Sunset.IsEmergencyDepartment(factionId) then
+            entries[#entries + 1] = { cmd = '/gov [message]', desc = 'Public emergency notice — everyone sees it (send: on-duty LSPD/EMS/LSFD)' }
         end
     end
 

@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/fishing.css?v=2">
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
-    <link rel="stylesheet" href="css/factions.css?v=7">
+    <link rel="stylesheet" href="css/factions.css?v=8">
     <link rel="stylesheet" href="css/clans.css?v=2">
     <link rel="stylesheet" href="css/auth_loading.css?v=4">
     <link rel="stylesheet" href="css/spawn.css?v=3">
@@ -781,7 +781,6 @@
                     <div class="faction-tabs" id="faction-tabs">
                         <button type="button" class="faction-tab is-active" data-faction-tab="overview">Overview</button>
                         <button type="button" class="faction-tab" data-faction-tab="roster">Roster</button>
-                        <button type="button" class="faction-tab faction-tab--manage hidden" data-faction-tab="manage">Management</button>
                     </div>
                     <div class="faction-tab-panel is-active" data-faction-panel="overview">
                         <div class="faction-stats">
@@ -801,47 +800,23 @@
                         </div>
                     </div>
                     <div class="faction-tab-panel" data-faction-panel="roster">
-                        <div class="faction-section-label">ONLINE ROSTER</div>
-                        <div id="faction-roster" class="faction-roster"></div>
-                    </div>
-                    <div class="faction-tab-panel" data-faction-panel="manage">
-                        <div class="faction-section-label">LEADER TOOLS</div>
-                        <div class="faction-manage-grid">
-                            <form class="faction-manage-form" data-faction-action="invite">
-                                <strong>Invite member</strong>
-                                <p>Player must be within 10m and have no faction.</p>
-                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                <button type="submit">SEND INVITE</button>
+                        <div class="faction-roster-toolbar hidden" id="faction-roster-toolbar">
+                            <form class="faction-toolbar-form" data-faction-action="invite">
+                                <input type="number" name="targetId" min="1" placeholder="ID invite" required>
+                                <button type="submit">INVITE</button>
                             </form>
-                            <form class="faction-manage-form" data-faction-action="motd">
-                                <strong>Set MOTD</strong>
-                                <p>Broadcast to all online faction members.</p>
-                                <textarea name="message" rows="3" maxlength="512" placeholder="Message of the day" required></textarea>
-                                <button type="submit">SAVE MOTD</button>
-                            </form>
-                            <form class="faction-manage-form" data-faction-action="rank">
-                                <strong>Set rank</strong>
-                                <p>Change a member's grade.</p>
-                                <div class="faction-manage-row">
-                                    <input type="number" name="targetId" min="1" placeholder="ID" required>
-                                    <select name="grade" id="faction-grade-select" required></select>
-                                </div>
-                                <button type="submit">SET RANK</button>
-                            </form>
-                            <form class="faction-manage-form" data-faction-action="kick">
-                                <strong>Remove member</strong>
-                                <p>Removes them from the faction immediately.</p>
-                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                <button type="submit" class="is-danger">REMOVE</button>
-                            </form>
-                            <form class="faction-manage-form" data-faction-action="warn">
-                                <strong>Issue warning</strong>
-                                <p>Logged in faction records.</p>
-                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                <textarea name="reason" rows="2" maxlength="200" placeholder="Reason" required></textarea>
-                                <button type="submit">WARN</button>
+                            <form class="faction-toolbar-form faction-toolbar-form--wide" data-faction-action="motd">
+                                <input type="text" name="message" maxlength="512" placeholder="Set MOTD..." required>
+                                <button type="submit">MOTD</button>
                             </form>
                         </div>
+                        <details class="faction-rank-editor hidden" id="faction-rank-editor">
+                            <summary>Rename ranks (leader)</summary>
+                            <form id="faction-rank-names-form" class="faction-rank-names-form"></form>
+                            <button type="button" class="faction-rank-save" id="faction-rank-save">SAVE RANK NAMES</button>
+                        </details>
+                        <div class="faction-section-label">MEMBER ROSTER</div>
+                        <div id="faction-roster" class="faction-roster"></div>
                     </div>
                 </section>
             </main>
@@ -1359,6 +1334,6 @@
     <script src="js/fishing.js"></script>
     <script src="js/radar.js"></script>
     <script src="js/courier.js"></script>
-    <script src="js/factions.js?v=3"></script>
+    <script src="js/factions.js?v=4"></script>
 </body>
 </html>

@@ -17,7 +17,7 @@
 | `/f [message]` | Faction chat |
 | `/r [message]` | On-duty faction radio |
 | `/d [message]` | Law enforcement dispatch |
-| `/gov [message]` | On-duty government factions |
+| `/gov [message]` | On-duty LSPD, EMS, or LSFD (visible to everyone) |
 
 ## Faction Leadership
 | Command | Description |

@@ -219,7 +219,7 @@ exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, t
     end
 
     exports.sunset_core:SetFaction(targetId, myFaction, newGrade)
-    local gradeLabel = faction.grades[newGrade].label
+    local gradeLabel = FactionLabels.get(myFaction, newGrade)
     FactionCore.auditLog(myFaction, char.id, 'promote', target.id, { grade = newGrade })
     TriggerClientEvent('sunset:client:notify', targetId, ('Promoted to %s'):format(gradeLabel), 'success')
     TriggerClientEvent('sunset:client:notify', source, ('Promoted player to %s'):format(gradeLabel), 'success')
@@ -489,7 +489,7 @@ local function factionRoster(factionId)
                 serverId = presence and presence.serverId or nil,
                 name = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('^%s+', ''):gsub('%s+$', ''),
                 grade = grade,
-                gradeLabel = gradeRow and gradeRow.label or ('Rank ' .. grade),
+                gradeLabel = FactionLabels.get(factionId, grade),
                 leader = leaders[tonumber(row.id)] == true,
                 online = presence ~= nil,
                 onDuty = presence and presence.onDuty or false,
@@ -537,20 +537,17 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         uninvite = isLeader or FactionCore.hasPerm(source, 'uninvite'),
         promote = isLeader or FactionCore.hasPerm(source, 'promote'),
         warn = isLeader or FactionCore.hasPerm(source, 'fwarn'),
+        renameRanks = isLeader,
+        rankMembers = isLeader or FactionCore.hasPerm(source, 'giverank') or FactionCore.hasPerm(source, 'promote'),
+        kickMembers = isLeader or FactionCore.hasPerm(source, 'uninvite'),
     }
-    local grades = {}
-    for grade, row in pairs(faction.grades or {}) do
-        if type(grade) == 'number' then
-            grades[#grades + 1] = { grade = grade, label = row.label or ('Rank ' .. grade) }
-        end
-    end
-    table.sort(grades, function(a, b) return a.grade < b.grade end)
+    local grades = FactionLabels.listForFaction(factionId)
     return {
         id = factionId,
         label = faction.label,
         description = faction.description,
         grade = grade,
-        gradeLabel = gradeRow and gradeRow.label or ('Rank ' .. tostring(grade)),
+        gradeLabel = FactionLabels.get(factionId, grade),
         salary = gradeRow and gradeRow.salary or 0,
         onDuty = FactionCore.isOnDuty(source),
         leader = isLeader,
@@ -561,6 +558,8 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         depot = faction.depot and faction.depot.label or 'No fleet garage',
         report = { current = tonumber(activity and activity.total) or 0, target = faction.weeklyReportTarget or 0 },
         members = roster,
+        viewerCharacterId = char.id,
+        viewerGrade = grade,
     }
 end)
 

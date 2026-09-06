@@ -312,13 +312,26 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideHelp();
             break;
         case 'factionPanelShow':
-            if (window.FactionPanels) FactionPanels.showDashboard(data || event.data.data);
+            if (window.FactionPanels) {
+                try { FactionPanels.showDashboard(data || event.data.data); }
+                catch (err) { console.error('[FactionPanels] showDashboard failed', err); post('factionPanelsClose'); }
+            } else {
+                console.error('[FactionPanels] factions.js not loaded');
+                post('factionPanelsClose');
+            }
             break;
         case 'factionDirectoryShow':
-            if (window.FactionPanels) FactionPanels.showDirectory(data || event.data.data);
+            if (window.FactionPanels) {
+                try { FactionPanels.showDirectory(data || event.data.data); }
+                catch (err) { console.error('[FactionPanels] showDirectory failed', err); post('factionPanelsClose'); }
+            } else {
+                console.error('[FactionPanels] factions.js not loaded');
+                post('factionPanelsClose');
+            }
             break;
         case 'factionPanelsHide':
             if (window.FactionPanels) FactionPanels.hide();
+            document.body.classList.remove('faction-panels-open');
             break;
         case 'clanPanelShow':
             if (window.ClanPanels) {

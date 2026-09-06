@@ -146,6 +146,9 @@ fi
 if [ -f sql/20-fib-sheriff.sql ]; then
   docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/20-fib-sheriff.sql
 fi
+if [ -f sql/21-faction-grade-labels.sql ]; then
+  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/21-faction-grade-labels.sql
+fi
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem

@@ -22,7 +22,7 @@ SunsetRobbery.PoliceEscalateSec = 20
 SunsetRobbery.PoliceVehicleSec = 40
 SunsetRobbery.RateLimitMs = 220
 SunsetRobbery.RequiredItem = 'lockpick'
-SunsetRobbery.BlockedFactions = { police = true }
+SunsetRobbery.BlockedFactions = { police = true, sheriff = true, fib = true }
 
 SunsetRobbery.Fence = {
     label = 'Fence',

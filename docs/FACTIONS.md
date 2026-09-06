@@ -43,7 +43,7 @@ Hospital respawn (`HospitalSpawn`) uses Pillbox exterior at `298.0, -584.0, 43.2
 | `/f [msg]` | All faction members | Rate limited |
 | `/r [msg]` | On-duty faction members | Radio |
 | `/d [msg]` | On-duty law enforcement | Dispatch |
-| `/gov [msg]` | On-duty legal factions | Government |
+| `/gov [msg]` | On-duty LSPD / EMS / LSFD | Government (all players read) |
 
 ## Leadership
 

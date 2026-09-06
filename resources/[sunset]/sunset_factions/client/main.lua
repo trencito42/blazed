@@ -371,14 +371,18 @@ AddEventHandler('sunset:nui:factionManage', function(data)
     elseif action == 'motd' then
         ok, err = Sunset.AwaitCallback('sunset:factionSetMotd', data.message)
         if ok then exports.sunset_ui:Notify('Faction MOTD updated.', 'success') end
-    elseif action == 'rank' then
-        ok, err = Sunset.AwaitCallback('sunset:factionGiveRank', tonumber(data.targetId), tonumber(data.grade))
+    elseif action == 'rankDelta' then
+        ok, err = Sunset.AwaitCallback('sunset:factionMemberRankDelta', tonumber(data.characterId), tonumber(data.delta))
+        if ok then exports.sunset_ui:Notify(('Rank updated to %s.'):format(ok.gradeLabel or '?'), 'success') end
     elseif action == 'kick' then
-        ok, err = Sunset.AwaitCallback('sunset:factionUninvite', tonumber(data.targetId))
-        if ok then exports.sunset_ui:Notify('Member removed from faction.', 'success') end
-    elseif action == 'warn' then
-        ok, err = Sunset.AwaitCallback('sunset:factionWarn', tonumber(data.targetId), data.reason)
-        if ok then exports.sunset_ui:Notify('Faction warning issued.', 'success') end
+        ok, err = Sunset.AwaitCallback('sunset:factionMemberKick', tonumber(data.characterId), data.mode or 'online')
+        if ok then
+            local msg = ok.offline and 'Offline member removed.' or 'Member removed from faction.'
+            exports.sunset_ui:Notify(msg, 'success')
+        end
+    elseif action == 'gradeLabels' then
+        ok, err = Sunset.AwaitCallback('sunset:factionSetGradeLabels', data.labels or {})
+        if ok then exports.sunset_ui:Notify('Rank names saved.', 'success') end
     else
         return exports.sunset_ui:Notify('Unknown faction action.', 'error')
     end

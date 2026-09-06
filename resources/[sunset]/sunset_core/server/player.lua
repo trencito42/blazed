@@ -233,6 +233,57 @@ function Sunset.SetFaction(source, factionId, grade)
     return true
 end
 
+function Sunset.SetFactionByCharacterId(characterId, factionId, grade)
+    characterId = tonumber(characterId)
+    if not characterId then return false end
+    local row = MySQL.single.await('SELECT id, job, job_grade, metadata FROM characters WHERE id = ? LIMIT 1', { characterId })
+    if not row then return false end
+
+    local metadata = row.metadata
+    if type(metadata) == 'string' then
+        local ok, decoded = pcall(json.decode, metadata)
+        metadata = ok and decoded or {}
+    end
+    metadata = type(metadata) == 'table' and metadata or {}
+
+    local job = row.job or 'unemployed'
+    local jobGrade = tonumber(row.job_grade) or 0
+
+    if not factionId or factionId == 'none' then
+        metadata.faction = nil
+        metadata.faction_grade = nil
+    else
+        if not Sunset.Factions[factionId] then return false end
+        grade = tonumber(grade) or 0
+        if not Sunset.Factions[factionId].grades[grade] then return false end
+        metadata.faction = factionId
+        metadata.faction_grade = grade
+        if Sunset.Factions[job] then
+            job = 'unemployed'
+            jobGrade = 0
+        end
+    end
+
+    MySQL.update.await(
+        'UPDATE characters SET job = ?, job_grade = ?, metadata = ? WHERE id = ?',
+        { job, jobGrade, json.encode(metadata), characterId }
+    )
+
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local char = src and Sunset.GetCharacter(src)
+        if char and tonumber(char.id) == characterId then
+            char.metadata = metadata
+            char.job = job
+            char.job_grade = jobGrade
+            TriggerClientEvent('sunset:client:updateCharacter', src, char)
+            TriggerEvent('sunset:server:factionChanged', src, factionId, grade or 0)
+            break
+        end
+    end
+    return true
+end
+
 function Sunset.AddXP(source, amount)
     local char = Sunset.GetCharacter(source)
     if not char or not amount or amount <= 0 then return false end
