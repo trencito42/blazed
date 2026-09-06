@@ -16,5 +16,6 @@ files {
     'style.css',
     'script.js',
     'assets/bg.png',
+    'assets/bg.webp',
     'assets/logo.png',
 }

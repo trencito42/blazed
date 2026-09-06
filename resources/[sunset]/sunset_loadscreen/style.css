@@ -56,7 +56,7 @@ html, body {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: #07030c url('assets/bg.png') center / cover no-repeat;
+    background: #07030c url('assets/bg.webp') center / cover no-repeat;
 }
 
 .loadscreen__vignette {

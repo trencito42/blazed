@@ -15,6 +15,79 @@ function post(action, data = {}) {
     });
 }
 
+const ENTRY_BACKGROUNDS = {
+    auth: 'assets/bg_login.webp?v=4',
+    handoff: 'assets/bg.webp?v=4',
+    loading: 'assets/bg.webp?v=4',
+    spawn: 'assets/bg.webp?v=4',
+    default: 'assets/bg.webp?v=4',
+};
+let entryBackgroundRequest = 0;
+
+function entryBackgroundLayers() {
+    const app = $('#app');
+    if (!app) return [];
+    let layers = Array.from(app.querySelectorAll(':scope > .app-bg'));
+    if (layers.length === 1) {
+        const secondary = layers[0].cloneNode(false);
+        secondary.removeAttribute('src');
+        secondary.classList.remove('is-active');
+        layers[0].after(secondary);
+        layers.push(secondary);
+    }
+    if (layers[0] && !layers.some((layer) => layer.classList.contains('is-active'))) {
+        layers[0].classList.add('is-active');
+    }
+    return layers;
+}
+
+async function setEntryBackground(screenName) {
+    const desired = ENTRY_BACKGROUNDS[screenName] || ENTRY_BACKGROUNDS.default;
+    const layers = entryBackgroundLayers();
+    if (layers.length < 2) return;
+    const active = layers.find((layer) => layer.classList.contains('is-active')) || layers[0];
+    if (active.dataset.entrySource === desired) return;
+
+    const request = ++entryBackgroundRequest;
+    const next = layers.find((layer) => layer !== active) || layers[1];
+    next.dataset.entrySource = desired;
+    next.src = desired;
+    try {
+        if (typeof next.decode === 'function') await next.decode();
+    } catch (_) {
+        if (request !== entryBackgroundRequest) return;
+        next.src = 'assets/bg.png?v=4';
+    }
+    if (request !== entryBackgroundRequest) return;
+    requestAnimationFrame(() => {
+        next.classList.add('is-active');
+        active.classList.remove('is-active');
+    });
+}
+
+function preloadEntryBackgrounds() {
+    Object.values(ENTRY_BACKGROUNDS).forEach((src) => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.src = src;
+    });
+}
+
+function setBrandLogo(img) {
+    if (!img) return;
+    const candidates = ['assets/logo.png?v=4', 'assets/logo.webp?v=4'];
+    let index = 0;
+    const tryNext = () => {
+        if (index >= candidates.length) return;
+        img.onerror = () => {
+            index += 1;
+            tryNext();
+        };
+        img.src = candidates[index];
+    };
+    tryNext();
+}
+
 function showScreen(name) {
     $$('.screen').forEach(s => s.classList.add('hidden'));
     const screen = $(`#screen-${name}`);
@@ -24,6 +97,7 @@ function showScreen(name) {
         const app = $('#app');
         if (app) app.dataset.screen = name;
     }
+    setEntryBackground(name);
     if (window.AuthLoading) {
         if (name === 'loading') {
             AuthLoading.armSafety(120000);
@@ -641,6 +715,9 @@ document.addEventListener('keydown', (e) => {
 
 // Local/browser visual QA only; FiveM never supplies this query parameter.
 document.addEventListener('DOMContentLoaded', () => {
+    preloadEntryBackgrounds();
+    entryBackgroundLayers();
+    document.querySelectorAll('.auth-brand__logo, .panel-logo, .studio-logo').forEach(setBrandLogo);
     const qa = new URLSearchParams(window.location.search).get('qa');
     if (qa === 'spawn') {
         showApp(true);

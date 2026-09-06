@@ -37,17 +37,22 @@ end
 
 local function persistLogin(username, password, rememberQuickLogin)
     local license = activeLicense()
-    if not license then return end
-    SunsetAuthAccounts.upsert(license, username, password, isEnabled(rememberQuickLogin))
+    if not license then return false end
+    local _, saved = SunsetAuthAccounts.upsert(license, username, password, isEnabled(rememberQuickLogin))
+    return saved == true
 end
 
 local function completeAuthentication(username, password, rememberQuickLogin)
+    local saved = true
     if password and username then
-        persistLogin(username, password, rememberQuickLogin)
+        saved = persistLogin(username, password, rememberQuickLogin)
     end
     pendingAuth = nil
     authenticated = true
     exports.sunset_ui:Send('authHide', {})
+    if isEnabled(rememberQuickLogin) and not saved then
+        exports.sunset_ui:Notify('Login succeeded, but Quick Login could not be saved on this PC.', 'warning', 7000)
+    end
     TriggerEvent('sunset:client:authenticationComplete')
 end
 

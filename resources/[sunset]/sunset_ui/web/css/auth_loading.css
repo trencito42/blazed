@@ -13,6 +13,18 @@
     justify-content: flex-end;
 }
 
+#screen-handoff:not(.hidden),
+#screen-loading:not(.hidden),
+#screen-auth:not(.hidden),
+#screen-spawn:not(.hidden) {
+    animation: entryScreenIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes entryScreenIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 .auth-vignette {
     position: absolute;
     inset: 0;

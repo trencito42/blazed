@@ -1,20 +1,22 @@
 local Accounts = {}
 
 local MAX_ACCOUNTS = 6
-local KVP_PREFIX = 'auth_'
+local STORE_KEY = 'saved_accounts_v2'
+local LEGACY_PREFIX = 'auth_'
 
-local function keyFor(license)
+local function legacyKeyFor(license)
     local id = tostring(license or ''):gsub('[^%w]', '_')
     if id == '' then return nil end
     if #id > 96 then id = id:sub(1, 96) end
-    return KVP_PREFIX .. id
+    return LEGACY_PREFIX .. id
 end
 
 local function normalizeStore(data)
     if type(data) ~= 'table' then
         return { quickLogin = true, accounts = {} }
     end
-    data.quickLogin = data.quickLogin == true
+    -- Stores written before quickLogin existed implicitly had it enabled.
+    data.quickLogin = data.quickLogin ~= false
     if type(data.accounts) ~= 'table' then
         data.accounts = {}
     end
@@ -28,16 +30,17 @@ local function flushKvp()
 end
 
 function Accounts.load(license)
-    local key = keyFor(license)
-    if not key then
-        return { quickLogin = true, accounts = {} }
-    end
-    local raw = GetResourceKvpString(key)
+    local raw = GetResourceKvpString(STORE_KEY)
     if not raw or raw == '' then
-        local legacy = GetResourceKvpString('auth_default')
+        local legacyKey = legacyKeyFor(license)
+        local legacy = legacyKey and GetResourceKvpString(legacyKey) or nil
+        if not legacy or legacy == '' then
+            legacyKey = 'auth_default'
+            legacy = GetResourceKvpString(legacyKey)
+        end
         if legacy and legacy ~= '' then
-            SetResourceKvp(key, legacy)
-            DeleteResourceKvp('auth_default')
+            SetResourceKvp(STORE_KEY, legacy)
+            if legacyKey then DeleteResourceKvp(legacyKey) end
             flushKvp()
             raw = legacy
         else
@@ -52,13 +55,14 @@ function Accounts.load(license)
 end
 
 function Accounts.save(license, store)
-    local key = keyFor(license)
-    if not key then
-        print('[sunset_auth] Skipped auth account save: license not ready yet')
+    local encoded = json.encode(normalizeStore(store))
+    SetResourceKvp(STORE_KEY, encoded)
+    flushKvp()
+    local persisted = GetResourceKvpString(STORE_KEY)
+    if persisted ~= encoded then
+        print('[sunset_auth] Saved-account verification failed')
         return false
     end
-    SetResourceKvp(key, json.encode(normalizeStore(store)))
-    flushKvp()
     return true
 end
 
@@ -96,15 +100,13 @@ function Accounts.remove(license, username)
         end
     end
     store.accounts = nextAccounts
-    Accounts.save(license, store)
-    return store
+    return store, Accounts.save(license, store)
 end
 
 function Accounts.setQuickLogin(license, enabled)
     local store = Accounts.load(license)
     store.quickLogin = enabled == true
-    Accounts.save(license, store)
-    return store
+    return store, Accounts.save(license, store)
 end
 
 function Accounts.upsert(license, username, password, quickLogin)
@@ -113,15 +115,13 @@ function Accounts.upsert(license, username, password, quickLogin)
         store.quickLogin = quickLogin == true
     end
     if not store.quickLogin then
-        Accounts.save(license, store)
-        return store
+        return store, Accounts.save(license, store)
     end
 
     local name = tostring(username or '')
     local pass = tostring(password or '')
     if name == '' or pass == '' then
-        Accounts.save(license, store)
-        return store
+        return store, Accounts.save(license, store)
     end
 
     local target = string.lower(name)
@@ -153,8 +153,7 @@ function Accounts.upsert(license, username, password, quickLogin)
         table.remove(store.accounts)
     end
 
-    Accounts.save(license, store)
-    return store
+    return store, Accounts.save(license, store)
 end
 
 function Accounts.mostRecent(store)

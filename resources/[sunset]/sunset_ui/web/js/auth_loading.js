@@ -52,6 +52,11 @@ const LoadingScreen = {
             return;
         }
         this.reset();
+        const { fill } = this._els();
+        if (fill) {
+            void fill.offsetWidth;
+            fill.style.transition = 'width 160ms linear';
+        }
         const steps = data.steps;
         if (steps && steps.length) {
             let i = 0;
@@ -73,7 +78,6 @@ const LoadingScreen = {
         const holdAt = data.holdAt == null ? 92 : Number(data.holdAt);
         this._interval = setInterval(() => {
             let next = this._progress + increment;
-            if (Math.random() > 0.82) next -= increment * 0.75;
             if (next >= holdAt) {
                 next = holdAt;
                 clearInterval(this._interval);
