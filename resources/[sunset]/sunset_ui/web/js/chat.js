@@ -135,6 +135,9 @@ const Chat = {
 
         if (type === 'say' || type === '') {
             const idPart = id > 0 ? ` (${id})` : '';
+            if (m.clanTag || m.factionId) {
+                return `${prefix}${SunsetPlayerIdentity.formatNameHtml(m)} says: ${this.escapeHtml(msg)}`;
+            }
             if (m.clanTag) {
                 return `${prefix}${this.formatClanNameHtml(m)}${idPart} says: ${this.escapeHtml(msg)}`;
             }
@@ -143,6 +146,9 @@ const Chat = {
 
         if (type === 'me') {
             const idPart = id > 0 ? ` (${id})` : '';
+            if (m.clanTag || m.factionId) {
+                return `${prefix}* ${SunsetPlayerIdentity.formatNameHtml(m)} ${this.escapeHtml(msg)}`;
+            }
             if (m.clanTag) {
                 return `${prefix}* ${this.formatClanNameHtml(m)}${idPart} ${this.escapeHtml(msg)}`;
             }
@@ -199,6 +205,8 @@ const Chat = {
         line.className = 'chat-msg__line';
         const formatted = this.formatLine(m);
         if (m.clanTag && (type === 'say' || type === 'me' || type === '')) {
+            line.innerHTML = formatted;
+        } else if ((type === 'say' || type === 'me' || type === '') && m.factionId) {
             line.innerHTML = formatted;
         } else {
             line.textContent = formatted;

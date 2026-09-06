@@ -38,6 +38,20 @@ local function chatIdentity(source)
         if ok and type(base) == 'string' and base ~= '' then
             payload.name = base
         end
+
+        local okChar, char = pcall(function()
+            return exports.sunset_core:GetCharacter(source)
+        end)
+        if okChar and type(char) == 'table' then
+            local md = char.metadata or {}
+            local factionId = md.faction
+            if not factionId and char.job then
+                factionId = char.job
+            end
+            if factionId and type(factionId) == 'string' and factionId ~= '' and factionId ~= 'unemployed' then
+                payload.factionId = factionId
+            end
+        end
     end
     if GetResourceState('sunset_clans') == 'started' then
         local okMeta, meta = pcall(function()
@@ -64,6 +78,7 @@ RegisterNetEvent('sunset:chat:send', function(message)
     sendNearby(src, {
         id = src,
         name = identity.name,
+        factionId = identity.factionId,
         clanTag = identity.clanTag,
         clanTagColor = identity.clanTagColor,
         clanTagStyle = identity.clanTagStyle,
@@ -81,6 +96,7 @@ RegisterCommand('me', function(source, args)
     sendNearby(source, {
         id = source,
         name = identity.name,
+        factionId = identity.factionId,
         clanTag = identity.clanTag,
         clanTagColor = identity.clanTagColor,
         clanTagStyle = identity.clanTagStyle,

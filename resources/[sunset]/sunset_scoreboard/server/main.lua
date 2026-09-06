@@ -13,23 +13,45 @@ CreateThread(function()
             end)
 
             local jobLabel = 'Unemployed'
+            local factionId, factionLabel = nil, nil
             if char then
-                local factionId = select(1, Sunset.GetCharacterFaction(char))
-                local jobId = select(1, Sunset.GetCharacterJob(char))
+                factionId, _ = Sunset.GetCharacterFaction(char)
+                local jobId, _ = Sunset.GetCharacterJob(char)
                 if factionId and Sunset.Factions[factionId] then
-                    jobLabel = Sunset.Factions[factionId].label
+                    factionLabel = Sunset.Factions[factionId].label
+                    jobLabel = factionLabel
                 elseif Sunset.Jobs[jobId] then
                     jobLabel = Sunset.Jobs[jobId].label
                 end
             end
 
+            local st = Player(src).state
+            local clanTag = st.clanTag
+            local clanTagColor = st.clanTagColor
+            local clanTagStyle = st.clanTagStyle
+            if (not clanTag or clanTag == '') and GetResourceState('sunset_clans') == 'started' then
+                local okMeta, meta = pcall(function()
+                    return exports.sunset_clans:GetClanChatMeta(src)
+                end)
+                if okMeta and type(meta) == 'table' then
+                    clanTag = meta.clanTag
+                    clanTagColor = meta.clanTagColor
+                    clanTagStyle = meta.clanTagStyle
+                end
+            end
+
             table.insert(list, {
                 id = src,
-                name = exports.sunset_core:GetPlayerDisplayName(src),
+                name = exports.sunset_core:GetPlayerBaseName(src),
                 ping = GetPlayerPing(src),
                 job = jobLabel,
+                factionId = factionId,
+                factionLabel = factionLabel,
+                clanTag = clanTag,
+                clanTagColor = clanTagColor,
+                clanTagStyle = clanTagStyle,
                 money = char and char.cash or 0,
-                level = 1,
+                level = char and (tonumber(char.level) or 1) or 1,
                 admin = adminLevel,
             })
         end
