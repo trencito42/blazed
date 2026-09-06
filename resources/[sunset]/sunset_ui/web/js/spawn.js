@@ -44,9 +44,19 @@ const SpawnSelector = {
         this.selected = location;
         const cards = this.activeCards();
         const center = cards.indexOf(target);
+        const gap = cards.length > 3 ? 215 : 270;
         cards.forEach((card, index) => {
+            const offset = index - center;
             card.classList.toggle('is-selected', card === target);
-            card.dataset.pos = String(index - center);
+            card.dataset.pos = String(offset);
+            const scale = offset === 0 ? 1.08 : Math.max(0.58, 1.08 - Math.abs(offset) * 0.13);
+            const opacity = offset === 0 ? 1 : Math.max(0.26, 0.82 - Math.abs(offset) * 0.2);
+            const x = offset * gap;
+            const rotate = -offset * 11;
+            card.style.transform = `translate(-50%, -50%) translateX(${x}px) scale(${scale}) rotateY(${rotate}deg)`;
+            card.style.opacity = String(opacity);
+            card.style.zIndex = String(10 - Math.abs(offset));
+            card.style.filter = offset === 0 ? 'none' : 'saturate(0.72)';
         });
     },
     move(direction) {
