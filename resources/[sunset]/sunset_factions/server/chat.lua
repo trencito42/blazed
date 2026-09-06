@@ -1,6 +1,12 @@
 local CHAT_COOLDOWN_MS = 1200
 local MEGAPHONE_RANGE = 35.0
 
+local function isGovEligible(source, char)
+    local factionId = char and select(1, FactionCore.getFactionOf(char))
+    if not factionId or not Sunset.IsLegalFaction(factionId) then return false end
+    return FactionCore.isOnDuty(source)
+end
+
 local function sendFactionChat(source, channel, args, filterFn)
     local char = FactionCore.getChar(source)
     if not char then return end
@@ -81,13 +87,11 @@ end, false)
 
 RegisterCommand('gov', function(source, args)
     if source == 0 then return end
-    local char = FactionCore.getChar(source)
-    local factionId = char and select(1, FactionCore.getFactionOf(char))
-    if not factionId or not Sunset.IsLegalFaction(factionId) or not FactionCore.isOnDuty(source) then
-        return FactionCore.notify(source, 'On-duty government factions only', 'error')
+    if not isGovEligible(source, FactionCore.getChar(source)) then
+        return FactionCore.notify(source, 'On-duty legal factions only', 'error')
     end
     sendFactionChat(source, 'gov', args, function(src, c)
-        return src ~= nil and c ~= nil
+        return isGovEligible(src, c)
     end)
 end, false)
 

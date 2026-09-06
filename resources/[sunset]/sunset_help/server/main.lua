@@ -100,7 +100,7 @@ local function buildFactionCategory(source, char)
             entries[#entries + 1] = { cmd = '/cbackup', desc = 'Cancel backup request' }
         end
         if Sunset.IsLegalFaction and Sunset.IsLegalFaction(factionId) then
-            entries[#entries + 1] = { cmd = '/gov [message]', desc = 'Government broadcast (legal factions)' }
+            entries[#entries + 1] = { cmd = '/gov [message]', desc = 'Government channel — on-duty legal factions only (parades, filters, public notices)' }
         end
     end
 

@@ -176,7 +176,6 @@ body.chat-ui-open .chat-msg,
 
 /* Faction chat default */
 .chat-msg--f,
-.chat-msg--gov,
 .chat-msg--faction_info {
     color: #ffc27a;
     font-weight: 600;
@@ -191,6 +190,12 @@ body.chat-ui-open .chat-msg,
 /* Department — faction colors */
 .chat-msg--d {
     color: #ffc27a;
+    font-weight: 600;
+}
+
+/* Government channel — on-duty legal factions */
+.chat-msg--gov {
+    color: #e8c468;
     font-weight: 600;
 }
 

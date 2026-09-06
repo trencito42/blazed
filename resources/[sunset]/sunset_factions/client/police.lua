@@ -7,13 +7,17 @@ local radarVehicle = 0
 local radarLimitKmh = 0
 local radarHits = {}
 
+local function chatTimeStamp()
+    return string.format('%02d:%02d:%02d', GetClockHours(), GetClockMinutes(), GetClockSeconds())
+end
+
 local function chatLine(name, message, messageType)
     exports.sunset_ui:Send('chatMessage', {
         id = 0,
         type = messageType or 'hq',
         name = name,
         message = message,
-        time = os.date('%H:%M:%S'),
+        time = chatTimeStamp(),
     })
 end
 
@@ -72,7 +76,7 @@ local function radarFeedback(message, kind)
         type = msgType,
         name = 'RADAR',
         message = message,
-        time = os.date('%H:%M:%S'),
+        time = chatTimeStamp(),
     })
     exports.sunset_ui:Notify(message, kind or 'info', 8000)
 end

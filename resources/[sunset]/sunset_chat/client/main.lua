@@ -80,6 +80,10 @@ RegisterNetEvent('sunset:chat:executeCommand', function(command)
     end)
 end)
 
+local function chatTimeStamp()
+    return string.format('%02d:%02d:%02d', GetClockHours(), GetClockMinutes(), GetClockSeconds())
+end
+
 RegisterNetEvent('sunset:chat:system', function(message, kind)
     local msgType = 'command_info'
     if kind == 'error' then
@@ -91,7 +95,7 @@ RegisterNetEvent('sunset:chat:system', function(message, kind)
         id = 0,
         name = 'SYSTEM',
         message = tostring(message or ''),
-        time = os.date('%H:%M:%S'),
+        time = chatTimeStamp(),
         type = msgType,
     })
 end)

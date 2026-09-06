@@ -92,7 +92,7 @@ const Chat = {
             return `${prefix}HQ: ${msg}`;
         }
 
-        if (type === 'r' || type === 'd') {
+        if (type === 'r' || type === 'd' || type === 'gov') {
             let text = msg;
             if (type === 'r' && text && !/over\.?$/i.test(text.trim())) {
                 text = `${text.replace(/[.,\s]+$/, '')}, over.`;
@@ -102,7 +102,7 @@ const Chat = {
             return `${prefix}** ${idPart}${header}: ${text} **`;
         }
 
-        if (type === 'f' || type === 'gov') {
+        if (type === 'f') {
             const header = [faction, rank, name].filter(Boolean).join(' ');
             const idPart = id > 0 ? `(${id}) ` : '';
             return `${prefix}** ${idPart}${header}: ${msg} **`;
