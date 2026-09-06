@@ -4,6 +4,17 @@
     pointer-events: none;
 }
 
+.menu--solo-clan:not(.hidden) {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+
+#clan-panel:not(.hidden),
+#clan-directory:not(.hidden) {
+    pointer-events: auto;
+}
+
 .menu--solo-clan > * { pointer-events: auto; }
 
 .menu--solo-clan .menu-wrap {

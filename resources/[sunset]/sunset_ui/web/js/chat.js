@@ -17,7 +17,23 @@ const Chat = {
     add(msg) {
         this.messages.push(msg);
         const cap = this.maxMessages();
-        while (this.messages.length > cap) this.messages.shift();
+        let trimmed = false;
+        while (this.messages.length > cap) {
+            this.messages.shift();
+            trimmed = true;
+        }
+        if (this.isChatOpen()) {
+            if (this.hasMessageSelection()) {
+                this._pendingRender = true;
+                return;
+            }
+            if (trimmed) {
+                this.render();
+                return;
+            }
+            this.appendMessage(msg);
+            return;
+        }
         this.render();
     },
 
@@ -167,51 +183,87 @@ const Chat = {
         return `${prefix}${msg || name}`;
     },
 
+    buildMessageElement(m) {
+        const el = document.createElement('div');
+        const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
+        const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const highlighted = new Set([
+            'say', 'me', 'do', 'f', 'r', 'd', 'gov', 'announce', 'sms', 'hq',
+            'megaphone', 'police_alert', 'faction_info', 'faction_action', 'radar', 'radar_alert',
+            'command_error', 'command_warn', 'command_info',
+        ]);
+        const classes = ['chat-msg'];
+        if (highlighted.has(type)) classes.push(`chat-msg--${type}`);
+        if (factionId) classes.push(`chat-msg--faction-${factionId}`);
+        el.className = classes.join(' ');
+
+        const line = document.createElement('span');
+        line.className = 'chat-msg__line';
+        const formatted = this.formatLine(m);
+        if (m.clanTag && (type === 'say' || type === 'me' || type === '')) {
+            line.innerHTML = formatted;
+        } else {
+            line.textContent = formatted;
+        }
+        el.appendChild(line);
+        return el;
+    },
+
+    isChatOpen() {
+        return Boolean($('#chat')?.classList.contains('chat-open'));
+    },
+
+    hasMessageSelection() {
+        const container = $('#chat-messages');
+        const sel = window.getSelection?.();
+        if (!container || !sel || sel.isCollapsed || !sel.anchorNode) return false;
+        const node = sel.anchorNode.nodeType === Node.TEXT_NODE
+            ? sel.anchorNode.parentNode
+            : sel.anchorNode;
+        return container.contains(node);
+    },
+
+    updateDraftRow(container) {
+        const root = container || $('#chat-messages');
+        if (!root) return;
+        const draft = String(this.draftText || '').trim();
+        const show = this.isChatOpen() && this.isAdmin && draft && draft.charAt(0) !== '/';
+        let draftEl = root.querySelector('.chat-msg--draft');
+        if (!show) {
+            draftEl?.remove();
+            return;
+        }
+        if (!draftEl) {
+            draftEl = document.createElement('div');
+            draftEl.className = 'chat-msg chat-msg--say chat-msg--draft';
+            const line = document.createElement('span');
+            line.className = 'chat-msg__line';
+            draftEl.appendChild(line);
+            root.appendChild(draftEl);
+        }
+        const idPart = this.playerId > 0 ? ` (${this.playerId})` : '';
+        const who = this.playerName || 'You';
+        draftEl.querySelector('.chat-msg__line').textContent =
+            `${this.formatTime({ time: new Date().toTimeString().slice(0, 8) })} ${who}${idPart} says: ${draft}`;
+    },
+
     render() {
         const container = $('#chat-messages');
         if (!container) return;
         container.innerHTML = '';
-        const open = $('#chat')?.classList.contains('chat-open');
+        const open = this.isChatOpen();
         const visible = open ? this.messages : this.messages.slice(-this.pageSize());
-        visible.forEach((m) => {
-            const el = document.createElement('div');
-            const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
-            const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
-            const highlighted = new Set([
-                'say', 'me', 'do', 'f', 'r', 'd', 'gov', 'announce', 'sms', 'hq',
-                'megaphone', 'police_alert', 'faction_info', 'faction_action', 'radar', 'radar_alert',
-                'command_error', 'command_warn', 'command_info',
-            ]);
-            const classes = ['chat-msg'];
-            if (highlighted.has(type)) classes.push(`chat-msg--${type}`);
-            if (factionId) classes.push(`chat-msg--faction-${factionId}`);
-            el.className = classes.join(' ');
+        visible.forEach((m) => container.appendChild(this.buildMessageElement(m)));
+        this.updateDraftRow(container);
+        container.scrollTop = container.scrollHeight;
+    },
 
-            const line = document.createElement('span');
-            line.className = 'chat-msg__line';
-            const formatted = this.formatLine(m);
-            if (m.clanTag && (type === 'say' || type === 'me' || type === '')) {
-                line.innerHTML = formatted;
-            } else {
-                line.textContent = formatted;
-            }
-            el.appendChild(line);
-            container.appendChild(el);
-        });
-
-        const draft = String(this.draftText || '').trim();
-        if (open && this.isAdmin && draft && draft.charAt(0) !== '/') {
-            const draftEl = document.createElement('div');
-            draftEl.className = 'chat-msg chat-msg--say chat-msg--draft';
-            const line = document.createElement('span');
-            line.className = 'chat-msg__line';
-            const idPart = this.playerId > 0 ? ` (${this.playerId})` : '';
-            const who = this.playerName || 'You';
-            line.textContent = `${this.formatTime({ time: new Date().toTimeString().slice(0, 8) })} ${who}${idPart} says: ${draft}`;
-            draftEl.appendChild(line);
-            container.appendChild(draftEl);
-        }
-
+    appendMessage(msg) {
+        const container = $('#chat-messages');
+        if (!container) return;
+        container.querySelector('.chat-msg--draft')?.remove();
+        container.appendChild(this.buildMessageElement(msg));
+        this.updateDraftRow(container);
         container.scrollTop = container.scrollHeight;
     },
 
@@ -244,10 +296,12 @@ const Chat = {
             document.body.classList.add('chat-ui-open');
             chat.classList.add('chat-open');
             wrap.classList.remove('hidden');
+            this._pendingRender = false;
+            lastPreviewSent = null;
             this.render();
             setTimeout(() => {
-                input.focus();
-                input.setSelectionRange(input.value.length, input.value.length);
+                if (!this.isChatOpen()) return;
+                input.focus({ preventScroll: true });
             }, 50);
         } else {
             this.toggleSettings(false);
@@ -255,20 +309,25 @@ const Chat = {
             chat.classList.remove('chat-open');
             wrap.classList.add('hidden');
             this.draftText = '';
+            this._pendingRender = false;
             this.render();
             input.value = '';
             input.blur();
         }
     },
 
-    setInput(text) {
+    setInput(text, options = {}) {
         const input = $('#chat-input');
         if (!input) return;
-        input.value = text || '';
+        const next = String(text ?? '');
+        if (input.value !== next) input.value = next;
         this.draftText = input.value;
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-        this.render();
+        if (options.fromHistory) {
+            input.focus({ preventScroll: true });
+            const end = input.value.length;
+            input.setSelectionRange(end, end);
+        }
+        this.updateDraftRow();
     },
 
     send() {
@@ -276,8 +335,11 @@ const Chat = {
         const msg = input.value.trim();
         if (!msg) { post('chatClose'); return; }
         post('chatPreview', { text: '' });
+        lastPreviewSent = '';
         post('chatSend', { message: msg });
         input.value = '';
+        this.draftText = '';
+        this.updateDraftRow();
     },
 };
 
@@ -292,11 +354,17 @@ const emitChatPreview = () => {
 
 $('#chat-input')?.addEventListener('input', (e) => {
     Chat.draftText = e.target?.value ?? '';
-    if (Chat.isAdmin) Chat.render();
+    Chat.updateDraftRow();
     clearTimeout(previewTimer);
     if (Chat.isAdmin) {
         previewTimer = setTimeout(emitChatPreview, 70);
     }
+});
+
+$('#chat-messages')?.addEventListener('mouseup', () => {
+    if (!Chat._pendingRender) return;
+    Chat._pendingRender = false;
+    Chat.render();
 });
 
 $('#chat-settings-btn')?.addEventListener('click', (e) => {

@@ -458,3 +458,20 @@ exports.sunset_core:RegisterCallback('sunset:clanDeclineInvite', function(source
     MySQL.update.await('DELETE FROM clan_invites WHERE character_id = ?', { cid })
     return true
 end)
+
+RegisterCommand('clan', function(source)
+    if source == 0 then return end
+    TriggerClientEvent('sunset:clans:openDashboard', source)
+end, false)
+
+RegisterCommand('clans', function(source)
+    if source == 0 then return end
+    TriggerClientEvent('sunset:clans:openDirectory', source)
+end, false)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    if GetResourceState('sunset_chat') == 'started' then
+        pcall(function() exports.sunset_chat:RefreshCommandList() end)
+    end
+end)

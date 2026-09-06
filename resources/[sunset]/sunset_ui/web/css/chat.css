@@ -131,8 +131,13 @@
 
 body.chat-ui-open .chat,
 body.chat-ui-open .chat-messages,
+body.chat-ui-open .chat-messages *,
 body.chat-ui-open .chat-msg,
-.chat.chat-open .chat-messages {
+body.chat-ui-open .chat-msg *,
+.chat.chat-open .chat-messages,
+.chat.chat-open .chat-messages *,
+.chat.chat-open .chat-msg,
+.chat.chat-open .chat-msg * {
     user-select: text !important;
     -webkit-user-select: text !important;
     pointer-events: auto;
@@ -311,8 +316,8 @@ body.chat-ui-open .chat-msg,
     font-family: 'Inter', sans-serif;
     font-size: var(--chat-input-size);
     outline: none;
-    user-select: text;
-    -webkit-user-select: text;
+    user-select: text !important;
+    -webkit-user-select: text !important;
     pointer-events: auto;
     caret-color: #e85d2a;
 }

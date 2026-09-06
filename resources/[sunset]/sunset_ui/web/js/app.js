@@ -223,7 +223,10 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'chatSetInput':
-            if (window.Chat) Chat.setInput((data || event.data.data)?.text);
+            if (window.Chat) {
+                const row = data || event.data.data || {};
+                Chat.setInput(row.text, { fromHistory: row.history === true });
+            }
             break;
 
         case 'menuShow':
@@ -365,6 +368,7 @@ window.addEventListener('message', (event) => {
             break;
         case 'clanPanelsHide':
             if (window.ClanPanels) ClanPanels.hide();
+            document.body.classList.remove('clan-panels-open');
             break;
         case 'policeOrderShow':
             if (window.Overlays) Overlays.showPoliceOrder(data || event.data.data);

@@ -35,6 +35,10 @@ const ClanPanels = {
             });
         }
 
+        document.querySelector('[data-clan-tab="browse"]')?.addEventListener('click', () => {
+            post('clanBrowse');
+        });
+
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             const panelOpen = !$('#clan-panel')?.classList.contains('hidden');
@@ -46,22 +50,18 @@ const ClanPanels = {
         });
     },
 
+    setBodyOpen(open) {
+        document.body.classList.toggle('clan-panels-open', open);
+    },
+
     hide() {
         $('#clan-panel')?.classList.add('hidden');
         $('#clan-directory')?.classList.add('hidden');
-        document.body.classList.remove('clan-panels-open');
+        this.setBodyOpen(false);
     },
 
-    openPanel() {
-        const panel = $('#clan-panel');
-        if (!panel) {
-            console.error('[ClanPanels] #clan-panel is missing from index.html');
-            return false;
-        }
-        $('#clan-directory')?.classList.add('hidden');
-        panel.classList.remove('hidden');
-        document.body.classList.add('clan-panels-open');
-        return true;
+    focusReady() {
+        post('clanPanelsReady');
     },
 
     setTab(tabId) {
@@ -182,11 +182,13 @@ const ClanPanels = {
 
     showDashboard(data = {}) {
         this.init();
-        if (!this.openPanel()) {
-            post('clanPanelsClose');
+        const panel = $('#clan-panel');
+        if (!panel) {
+            console.error('[ClanPanels] #clan-panel is missing from index.html');
             return false;
         }
 
+        $('#clan-directory')?.classList.add('hidden');
         this.dashboard = data || {};
         const inClan = Boolean(this.dashboard.inClan);
         const perms = this.dashboard.permissions || {};
@@ -278,11 +280,20 @@ const ClanPanels = {
             this.setTab('create');
         }
 
+        panel.classList.remove('hidden');
+        this.setBodyOpen(true);
+        this.focusReady();
         return true;
     },
 
     showDirectory(payload = {}) {
         this.init();
+        const directory = $('#clan-directory');
+        if (!directory) {
+            console.error('[ClanPanels] #clan-directory is missing from index.html');
+            return false;
+        }
+
         $('#clan-panel')?.classList.add('hidden');
         this.directory = Array.isArray(payload.clans) ? payload.clans : [];
         const list = $('#clan-directory-list');
@@ -308,10 +319,10 @@ const ClanPanels = {
         });
 
         if (!list.children.length) list.innerHTML = '<p class="clan-empty">No clans have been created yet.</p>';
-        const directory = $('#clan-directory');
-        directory?.classList.remove('hidden');
-        document.body.classList.add('clan-panels-open');
-        return Boolean(directory);
+        directory.classList.remove('hidden');
+        this.setBodyOpen(true);
+        this.focusReady();
+        return true;
     },
 
     submitForm(form) {

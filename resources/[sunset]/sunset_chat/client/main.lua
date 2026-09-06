@@ -114,12 +114,12 @@ AddEventHandler('sunset:nui:chatHistory', function(data)
     if data.direction == 'up' then
         if #chatHistory == 0 then return end
         historyIndex = math.max(1, historyIndex - 1)
-        exports.sunset_ui:Send('chatSetInput', { text = chatHistory[historyIndex] or '' })
+        exports.sunset_ui:Send('chatSetInput', { text = chatHistory[historyIndex] or '', history = true })
     elseif data.direction == 'down' then
         if #chatHistory == 0 then return end
         historyIndex = math.min(#chatHistory + 1, historyIndex + 1)
         local text = historyIndex > #chatHistory and '' or (chatHistory[historyIndex] or '')
-        exports.sunset_ui:Send('chatSetInput', { text = text })
+        exports.sunset_ui:Send('chatSetInput', { text = text, history = true })
     end
 end)
 

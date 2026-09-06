@@ -4,20 +4,32 @@ local function openClanPanel()
         return exports.sunset_ui:Notify(err or 'Clan panel could not be opened.', 'error', 7000)
     end
     exports.sunset_ui:Send('clanPanelShow', data)
-    exports.sunset_ui:SetFocus(true, true)
 end
-RegisterCommand('clan', openClanPanel, false)
-TriggerEvent('chat:addSuggestion', '/clan', 'Open your clan page — members, settings, and management')
 
-RegisterCommand('clans', function()
+local function openClanDirectory()
     local data, err = Sunset.AwaitCallback('sunset:clanDirectory')
     if not data then
         return exports.sunset_ui:Notify(err or 'Clan directory could not be opened.', 'error', 7000)
     end
     exports.sunset_ui:Send('clanDirectoryShow', { clans = data })
-    exports.sunset_ui:SetFocus(true, true)
-end, false)
+end
+
+RegisterCommand('clan', openClanPanel, false)
+TriggerEvent('chat:addSuggestion', '/clan', 'Open your clan page — members, settings, and management')
+
+RegisterCommand('clans', openClanDirectory, false)
 TriggerEvent('chat:addSuggestion', '/clans', 'Browse all server clans')
+
+RegisterNetEvent('sunset:clans:openDashboard', openClanPanel)
+RegisterNetEvent('sunset:clans:openDirectory', openClanDirectory)
+
+AddEventHandler('sunset:nui:clanPanelsReady', function()
+    exports.sunset_ui:SetFocus(true, true)
+end)
+
+AddEventHandler('sunset:nui:clanBrowse', function()
+    openClanDirectory()
+end)
 
 RegisterCommand('acceptclan', function()
     local data, err = Sunset.AwaitCallback('sunset:clanAcceptInvite')
@@ -26,7 +38,6 @@ RegisterCommand('acceptclan', function()
     end
     exports.sunset_ui:Notify(('You joined %s.'):format(data.name or 'the clan'), 'success', 8000)
     exports.sunset_ui:Send('clanPanelShow', data)
-    exports.sunset_ui:SetFocus(true, true)
 end, false)
 TriggerEvent('chat:addSuggestion', '/acceptclan', 'Accept a pending clan invitation')
 
