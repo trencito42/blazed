@@ -6,7 +6,7 @@
     <title>SunsetMP</title>
     <link rel="stylesheet" href="css/fonts.css?v=2">
     <link rel="stylesheet" href="css/style.css?v=5">
-    <link rel="stylesheet" href="css/hud.css?v=5">
+    <link rel="stylesheet" href="css/hud.css?v=6">
     <link rel="stylesheet" href="css/scoreboard.css">
     <link rel="stylesheet" href="css/chat.css?v=3">
     <link rel="stylesheet" href="css/menu.css?v=4">
@@ -323,8 +323,7 @@
         <div class="hud-tr hud-boot" data-hud-panel="tr">
             <div class="hud-wanted hidden" id="hud-wanted">
                 <div class="hud-wanted__row">
-                    <span class="hud-wanted__label">WANTED</span>
-                    <span class="hud-wanted__level" id="hud-wanted-level">0</span>
+                    <span class="hud-wanted__stars" id="hud-wanted-level" aria-label="Wanted level"></span>
                 </div>
                 <span class="hud-wanted__timer hidden" id="hud-wanted-timer"></span>
             </div>
@@ -1130,7 +1129,7 @@
 
     <script src="js/app.js?v=6"></script>
     <script src="js/characters.js"></script>
-    <script src="js/hud.js?v=4"></script>
+    <script src="js/hud.js?v=5"></script>
     <script src="js/hud_editor.js"></script>
     <script src="js/scoreboard.js"></script>
     <script src="js/chat_settings.js"></script>

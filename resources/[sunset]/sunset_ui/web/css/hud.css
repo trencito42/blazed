@@ -808,7 +808,9 @@
     color: #fff;
     font: 700 38px/1 'Chakra Petch',sans-serif;
     letter-spacing: 0.04em;
-    text-shadow: 0 0 5px rgba(255,255,255,.5);
+    -webkit-text-stroke: 1px rgba(0,0,0,.9);
+    paint-order: stroke fill;
+    text-shadow: 0 2px 3px rgba(0,0,0,.95), 0 0 5px rgba(255,255,255,.42);
 }
 
 .clock-display svg { display: none; }
@@ -848,12 +850,17 @@
 .money-cash {
     color: var(--screen-green);
     font: 700 20px/1 'Chakra Petch',sans-serif;
-    text-shadow: 0 0 8px rgba(0,255,102,.4);
+    -webkit-text-stroke: .75px rgba(0,0,0,.9);
+    paint-order: stroke fill;
+    text-shadow: 0 2px 3px rgba(0,0,0,.95), 0 0 8px rgba(0,255,102,.4);
 }
 
 .money-bank {
     color: rgba(255,255,255,.72);
     font: 700 17px/1 'Chakra Petch',sans-serif;
+    -webkit-text-stroke: .75px rgba(0,0,0,.9);
+    paint-order: stroke fill;
+    text-shadow: 0 2px 3px rgba(0,0,0,.95);
 }
 
 .status-bars-container { display:flex; gap:10px; justify-content:flex-end; }
@@ -1028,18 +1035,35 @@
 .veh-mini-stat.crit .veh-mini-bar-fill { background:var(--screen-red); box-shadow:0 0 8px rgba(255,42,42,.6); }
 
 .hud-wanted {
-    gap: 4px;
+    align-self: stretch;
+    align-items: center;
+    gap: 3px;
     margin: 0;
-    padding: 6px 12px;
-    background: rgba(20, 5, 8, 0.55);
+    padding: 0;
+    background: transparent;
     border: none;
-    border-left: 3px solid var(--screen-red);
     border-radius: 0;
     clip-path: none;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.95));
 }
-.hud-wanted__label { color:rgba(255,190,190,.9); font-family:'Chakra Petch',sans-serif; }
-.hud-wanted__level { color:var(--screen-red); font-family:'Chakra Petch',sans-serif; }
-.hud-wanted__timer { color:rgba(255,190,190,.82); font:600 10px/1 'Chakra Petch',sans-serif; letter-spacing:.16em; text-transform:uppercase; }
+.hud-wanted__row { justify-content:center; gap:0; }
+.hud-wanted__label { display:none; }
+.hud-wanted__stars {
+    color:var(--screen-red);
+    font:700 18px/1 'Chakra Petch',sans-serif;
+    letter-spacing:.12em;
+    -webkit-text-stroke:.8px rgba(0,0,0,.9);
+    paint-order:stroke fill;
+    text-shadow:0 0 7px rgba(255,42,42,.62),0 2px 3px rgba(0,0,0,.95);
+}
+.hud-wanted__timer {
+    color:#fff;
+    font:700 11px/1 'Chakra Petch',sans-serif;
+    letter-spacing:.12em;
+    -webkit-text-stroke:.7px rgba(0,0,0,.9);
+    paint-order:stroke fill;
+    text-shadow:0 2px 3px rgba(0,0,0,.95);
+}
 .hud-wanted__timer.hidden { display:none; }
 
 .hud-boot { animation:screenHudBoot 1s cubic-bezier(.2,.8,.2,1) both; }

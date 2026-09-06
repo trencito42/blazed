@@ -51,7 +51,10 @@ const Hud = {
 
         wantedEl.classList.toggle('hidden', wanted <= 0);
         const levelEl = $('#hud-wanted-level');
-        if (levelEl) levelEl.textContent = wanted;
+        if (levelEl) {
+            levelEl.textContent = '★'.repeat(Math.min(wanted, 6));
+            levelEl.setAttribute('aria-label', `Wanted level ${wanted}`);
+        }
 
         if (!timerEl) return;
         if (wanted <= 0) {
@@ -61,14 +64,14 @@ const Hud = {
         }
 
         if (data.wantedPersistent) {
-            timerEl.textContent = 'UNTIL CLEARED';
+            timerEl.textContent = '∞';
             timerEl.classList.remove('hidden');
             return;
         }
 
         const remaining = Number(data.wantedRemainingSec);
         if (Number.isFinite(remaining) && remaining > 0) {
-            timerEl.textContent = `${this.formatWantedTimer(remaining)} LEFT`;
+            timerEl.textContent = this.formatWantedTimer(remaining);
             timerEl.classList.remove('hidden');
             return;
         }
