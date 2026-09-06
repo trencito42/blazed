@@ -67,13 +67,13 @@ local function officerRadarIdentity(source)
 end
 
 local function notifyRadarCaught(driverSource, officer, speed, limit, over)
-    local header = ('%s %s %s'):format(officer.factionLabel, officer.rank, officer.name)
+    local officerName = exports.sunset_core:GetPlayerDisplayName(officer.id)
+    local header = ('%s %s %s'):format(officer.factionLabel, officer.rank, officerName)
     local detail = ('caught you at %d km/h in a %d km/h zone (+%d).'):format(speed, limit, over)
-    local chatMessage = ('%s (%d) %s'):format(header, officer.id, detail)
 
     TriggerClientEvent('sunset:chat:message', driverSource, {
         id = officer.id,
-        name = officer.name,
+        name = officerName,
         message = detail,
         time = os.date('%H:%M:%S'),
         type = 'radar_alert',
@@ -84,7 +84,7 @@ local function notifyRadarCaught(driverSource, officer, speed, limit, over)
         limit = limit,
         over = over,
     })
-    TriggerClientEvent('sunset:client:notify', driverSource, chatMessage, 'error', 10000)
+    TriggerClientEvent('sunset:client:notify', driverSource, ('%s %s'):format(header, detail), 'error', 10000)
 end
 
 local function broadcastToPolice(tag, message)

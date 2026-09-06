@@ -68,6 +68,14 @@ const Chat = {
             .replace(/"/g, '&quot;');
     },
 
+    nameWithId(name, id) {
+        const label = String(name || 'Player').trim();
+        const sid = Number(id) || 0;
+        if (sid <= 0) return label;
+        if (/\(\d+\)\s*$/.test(label)) return label;
+        return `${label} (${sid})`;
+    },
+
     formatLine(m) {
         const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
         const time = this.formatTime(m);
@@ -97,21 +105,18 @@ const Chat = {
             if (type === 'r' && text && !/over\.?$/i.test(text.trim())) {
                 text = `${text.replace(/[.,\s]+$/, '')}, over.`;
             }
-            const header = [faction, rank, name].filter(Boolean).join(' ');
-            const idPart = id > 0 ? `(${id}) ` : '';
-            return `${prefix}** ${idPart}${header}: ${text} **`;
+            const header = [faction, rank, this.nameWithId(name, id)].filter(Boolean).join(' ');
+            return `${prefix}** ${header}: ${text} **`;
         }
 
         if (type === 'f') {
-            const header = [faction, rank, name].filter(Boolean).join(' ');
-            const idPart = id > 0 ? `(${id}) ` : '';
-            return `${prefix}** ${idPart}${header}: ${msg} **`;
+            const header = [faction, rank, this.nameWithId(name, id)].filter(Boolean).join(' ');
+            return `${prefix}** ${header}: ${msg} **`;
         }
 
         if (type === 'faction_action') {
-            const header = [faction, rank, name].filter(Boolean).join(' ');
-            const idPart = id > 0 ? ` (${id})` : '';
-            return `${prefix}${header}${idPart} ${msg}`.trim();
+            const header = [faction, rank, this.nameWithId(name, id)].filter(Boolean).join(' ');
+            return `${prefix}${header} ${msg}`.trim();
         }
 
         if (type === 'say' || type === '') {
@@ -144,9 +149,8 @@ const Chat = {
         }
 
         if (type === 'radar_alert') {
-            const header = [faction, rank, name].filter(Boolean).join(' ');
-            const idPart = id > 0 ? ` (${id})` : '';
-            return `${prefix}${header}${idPart}: ${msg}`;
+            const header = [faction, rank, this.nameWithId(name, id)].filter(Boolean).join(' ');
+            return `${prefix}${header}: ${msg}`;
         }
 
         if (type === 'police_alert') {

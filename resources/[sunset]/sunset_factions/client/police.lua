@@ -144,9 +144,15 @@ local function radarTargetInfo(veh, speed)
         local player = NetworkGetPlayerIndexFromPed(driver)
         if player ~= -1 then
             local sid = GetPlayerServerId(player)
-            local tagged = Player(sid).state.sunsetName
-            local display = (tagged and tagged ~= '' and tagged) or GetPlayerName(player) or 'Player'
-            name = ('%s (%d)'):format(display, sid)
+            local st = Player(sid) and Player(sid).state
+            local display = st and st.sunsetDisplayName
+            if type(display) == 'string' and display ~= '' then
+                name = display
+            else
+                local tagged = st and st.sunsetName
+                local base = (tagged and tagged ~= '' and tagged) or GetPlayerName(player) or 'Player'
+                name = ('%s (%d)'):format(base, sid)
+            end
         end
     end
     return { plate = plate ~= '' and plate or '--------', name = name, speed = speed or 0 }

@@ -55,6 +55,10 @@ function ClanDisplay.sync(source)
     if tag ~= '' then
         displayName = SunsetClans.formatTaggedName(tag, base, style)
     end
+    local sid = tonumber(source) or 0
+    if sid > 0 then
+        displayName = ('%s (%d)'):format(displayName, sid)
+    end
 
     local state = Player(source).state
     state:set('clanTag', tag ~= '' and tag or nil, true)

@@ -411,14 +411,16 @@ CreateThread(function()
                         if st and type(st.sunsetDisplayName) == 'string' and st.sunsetDisplayName ~= '' then
                             label = st.sunsetDisplayName
                         elseif st and type(st.sunsetName) == 'string' and st.sunsetName ~= '' then
-                            label = st.sunsetName
+                            label = ('%s (%d)'):format(st.sunsetName, serverId)
+                        else
+                            label = ('%s (%d)'):format(label, serverId)
                         end
                         local wantedLevel = wantedLevelForPlayer(serverId)
                         local nameY = coords.z + 1.18
                         if policeView and wantedLevel > 0 then
                             drawText3d(coords.x, coords.y, nameY + 0.14, ('★%d'):format(wantedLevel), 0.30, 255, 80, 80)
                         end
-                        drawText3d(coords.x, coords.y, nameY, ('%s (%d)'):format(label, serverId), 0.34)
+                        drawText3d(coords.x, coords.y, nameY, label, 0.34)
                         drawHpBar3d(coords.x, coords.y, coords.z + 1.02, pct)
                     end
                 end

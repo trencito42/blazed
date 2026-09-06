@@ -43,13 +43,15 @@ end)
 
 local function chatIdentity(source)
     local payload = {}
-    if GetResourceState('sunset_clans') == 'started' then
+    if GetResourceState('sunset_core') == 'started' then
         local ok, base = pcall(function()
-            return exports.sunset_clans:GetPlayerBaseName(source)
+            return exports.sunset_core:GetPlayerBaseName(source)
         end)
         if ok and type(base) == 'string' and base ~= '' then
             payload.name = base
         end
+    end
+    if GetResourceState('sunset_clans') == 'started' then
         local okMeta, meta = pcall(function()
             return exports.sunset_clans:GetClanChatMeta(source)
         end)
@@ -60,7 +62,7 @@ local function chatIdentity(source)
         end
     end
     if not payload.name then
-        payload.name = exports.sunset_core:GetPlayerDisplayName(source)
+        payload.name = GetPlayerName(source) or 'Player'
     end
     return payload
 end

@@ -47,6 +47,7 @@ server_exports {
     'GetPlayer',
     'GetCharacter',
     'GetPlayerDisplayName',
+    'GetPlayerBaseName',
     'RegisterCallback',
     'SaveCharacter',
     'AddMoney',

@@ -161,7 +161,7 @@ function GetCharacter(source)
 end
 exports('GetCharacter', GetCharacter)
 
-function GetPlayerDisplayName(source)
+function GetPlayerBaseName(source)
     local char = GetCharacter(source)
     local base
     if char then
@@ -186,6 +186,14 @@ function GetPlayerDisplayName(source)
         end
     end
     return base
+end
+exports('GetPlayerBaseName', GetPlayerBaseName)
+
+function GetPlayerDisplayName(source)
+    local base = GetPlayerBaseName(source)
+    local sid = tonumber(source)
+    if not sid or sid <= 0 then return base end
+    return ('%s (%d)'):format(base, sid)
 end
 exports('GetPlayerDisplayName', GetPlayerDisplayName)
 
@@ -236,7 +244,8 @@ local function loadCharacterForPlayer(source, player, charId)
     char.last_played_before = char.last_played
     MySQL.update.await('UPDATE characters SET last_played = NOW() WHERE id = ?', { charId })
     Players[source].character = char
-    Player(source).state:set('sunsetName', GetPlayerDisplayName(source), true)
+    Player(source).state:set('sunsetName', GetPlayerBaseName(source), true)
+    Player(source).state:set('sunsetDisplayName', GetPlayerDisplayName(source), true)
     TriggerEvent('sunset:server:characterSelected', source, charId)
     return char
 end
