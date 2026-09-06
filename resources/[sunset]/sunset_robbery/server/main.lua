@@ -3,6 +3,38 @@ local function nearPoint(source, coords, radius)
     return pos and RobberyAdapter.dist(pos, coords) <= (radius or 2.2)
 end
 
+local FenceOffers = {}
+local FenceBusy = {}
+
+CreateThread(function()
+    -- Recover safely after an unclean FXServer/container stop. Successful runs are
+    -- intentionally excluded, so unsold legitimate loot remains untouched.
+    local ok, err = pcall(function()
+        local abandoned = MySQL.query.await(
+            "SELECT session_id, character_id, location_id FROM robbery_runs WHERE status = 'active'"
+        ) or {}
+        local now = os.time()
+        for _, run in ipairs(abandoned) do
+            RobberyAdapter.setCooldown('character', run.character_id, now + (SunsetRobbery.PlayerCooldownSec or 1800))
+            RobberyAdapter.setCooldown('location', run.location_id, now + (SunsetRobbery.LocationCooldownSec or 2700))
+        end
+        MySQL.update.await([[
+            DELETE ci FROM character_inventory ci
+            INNER JOIN robbery_runs rr
+                ON rr.session_id = JSON_UNQUOTE(JSON_EXTRACT(ci.metadata, '$.robbery'))
+            WHERE rr.status = 'active'
+              AND JSON_EXTRACT(ci.metadata, '$.stolen') = true
+        ]])
+        MySQL.update.await([[
+            UPDATE robbery_runs
+            SET status = 'cancelled', finished_at = CURRENT_TIMESTAMP
+            WHERE status = 'active'
+        ]])
+        MySQL.update.await('DELETE FROM robbery_cooldowns WHERE expires_at <= ?', { os.time() })
+    end)
+    if not ok then print(('[sunset_robbery] recovery failed: %s'):format(tostring(err))) end
+end)
+
 local function pushHud(source)
     local session = RobberySessions.get(source)
     if not session then return end
@@ -23,6 +55,26 @@ local function applyHackResult(session, result)
     RobberySessions.setStage(session, 'LOOTING')
 end
 
+local function hackPayload(session)
+    return RobberySessions.hackPublic(session.hack)
+end
+
+local function sendHackProgress(source, hack, extra)
+    local nextId = hack.path[hack.index + 1]
+    local nextNode = nextId and hack.nodeById[nextId] or nil
+    TriggerClientEvent('sunset:robbery:hackProgress', source, {
+        index = hack.index,
+        trace = hack.trace,
+        currentNode = hack.path[hack.index],
+        signal = nextNode and nextNode.frequency or nil,
+        nodeId = extra and extra.nodeId or nil,
+        errorNode = extra and extra.errorNode or nil,
+        status = extra and extra.status or nil,
+        lockArmed = extra and extra.lockArmed or false,
+        burstMs = extra and extra.burstMs or nil,
+    })
+end
+
 RegisterNetEvent('sunset:robbery:tryStart', function(locationId)
     local source = source
     if not RobberySessions.rateOk(source) then return end
@@ -38,7 +90,6 @@ RegisterNetEvent('sunset:robbery:tryStart', function(locationId)
         locationId = locationId,
         location = loc,
         bagCap = session.bagCap,
-        hack = { nodes = session.hack.nodes, timeLimit = session.hack.timeLimit },
         stage = session.stage,
     })
     RobberyAdapter.notify(source, 'Security live — reach the terminal and bypass it.', 'warning', 6000)
@@ -57,7 +108,6 @@ exports.sunset_core:RegisterCallback('sunset:robbery:start', function(source, lo
         locationId = locationId,
         location = loc,
         bagCap = session.bagCap,
-        hack = { nodes = session.hack.nodes, timeLimit = session.hack.timeLimit },
         stage = session.stage,
     })
     return { stage = 'HACKING', bagCap = session.bagCap }
@@ -73,6 +123,9 @@ RegisterNetEvent('sunset:robbery:hackOpen', function()
     if not session.hack.startedAt then
         session.hack.startedAt = os.time()
     end
+    local payload = hackPayload(session)
+    payload.timeLimit = math.max(1, session.hack.timeLimit - (os.time() - session.hack.startedAt))
+    TriggerClientEvent('sunset:robbery:hackOpenUi', source, payload)
 end)
 
 RegisterNetEvent('sunset:robbery:hackClick', function(nodeId)
@@ -92,31 +145,77 @@ RegisterNetEvent('sunset:robbery:hackClick', function(nodeId)
         TriggerClientEvent('sunset:robbery:hackResult', source, { result = 'failed', hud = RobberySessions.hud(session) })
         return
     end
-    nodeId = tostring(nodeId or '')
+    nodeId = tostring(nodeId or ''):sub(1, 12)
+    local nowMs = GetGameTimer()
     local expected = hack.path[hack.index + 1]
+
+    if hack.burstDeadline and nowMs > hack.burstDeadline then
+        hack.burstDeadline = nil
+        hack.trace = math.min(SunsetRobbery.HackTraceFail, hack.trace + 28)
+        hack.mistakes = hack.mistakes + 1
+        if hack.trace >= SunsetRobbery.HackTraceFail then
+            applyHackResult(session, 'failed')
+            TriggerClientEvent('sunset:robbery:hackResult', source, { result = 'failed', hud = RobberySessions.hud(session) })
+            return
+        end
+        sendHackProgress(source, hack, { errorNode = nodeId, status = 'BURST WINDOW MISSED — SIGNAL RESET' })
+        return
+    end
+
     if nodeId == expected then
+        local node = hack.nodeById[nodeId]
+        if node and node.kind == 'locked' then
+            if hack.lockNode ~= nodeId or not hack.lockExpiresAt or nowMs > hack.lockExpiresAt then
+                hack.lockNode = nodeId
+                hack.lockExpiresAt = nowMs + 2200
+                sendHackProgress(source, hack, {
+                    nodeId = nodeId,
+                    lockArmed = true,
+                    status = 'ENCRYPTED GATE ARMED — CONFIRM NODE AGAIN',
+                    burstMs = 2200,
+                })
+                return
+            end
+            hack.lockNode = nil
+            hack.lockExpiresAt = nil
+        end
+
         hack.index = hack.index + 1
+        hack.lastCorrectAt = nowMs
+        hack.burstDeadline = node and node.kind == 'timed' and (nowMs + 3000) or nil
         if hack.index >= #hack.path then
             local result = hack.mistakes == 0 and 'perfect' or 'normal'
             applyHackResult(session, result)
             TriggerClientEvent('sunset:robbery:hackResult', source, { result = result, hud = RobberySessions.hud(session) })
             return
         end
-        TriggerClientEvent('sunset:robbery:hackProgress', source, {
-            index = hack.index,
+        sendHackProgress(source, hack, {
             nodeId = nodeId,
-            trace = hack.mistakes * SunsetRobbery.HackWrongClickTrace,
+            status = node and node.kind == 'timed' and 'BURST RELAY ACTIVE — ROUTE NEXT NODE NOW' or 'SIGNAL ACCEPTED',
+            burstMs = hack.burstDeadline and 3000 or nil,
         })
         return
     end
+
+
+    if hack.lockNode then
+        hack.lockNode = nil
+        hack.lockExpiresAt = nil
+    end
     hack.mistakes = hack.mistakes + 1
-    local trace = hack.mistakes * SunsetRobbery.HackWrongClickTrace
-    if trace >= SunsetRobbery.HackTraceFail then
+    local clicked = hack.nodeById[nodeId]
+    local penalty = SunsetRobbery.HackWrongClickTrace
+    if clicked and clicked.kind == 'corrupted' then penalty = penalty + 10 end
+    hack.trace = math.min(SunsetRobbery.HackTraceFail, hack.trace + penalty)
+    if hack.trace >= SunsetRobbery.HackTraceFail then
         applyHackResult(session, 'failed')
         TriggerClientEvent('sunset:robbery:hackResult', source, { result = 'failed', hud = RobberySessions.hud(session) })
         return
     end
-    TriggerClientEvent('sunset:robbery:hackProgress', source, { index = hack.index, nodeId = nil, trace = trace })
+    sendHackProgress(source, hack, {
+        errorNode = nodeId,
+        status = clicked and clicked.kind == 'corrupted' and 'CORRUPTED NODE — TRACE SPIKE' or 'CHANNEL MISMATCH — TRACE INCREASED',
+    })
 end)
 
 RegisterNetEvent('sunset:robbery:smash', function(displayId)
@@ -147,7 +246,7 @@ RegisterNetEvent('sunset:robbery:smash', function(displayId)
         end
         if not session.wantedIssued then
             session.wantedIssued = true
-            RobberyAdapter.issueWanted(source, 'robbery')
+            RobberyAdapter.issueWanted(source, 'robbery', true)
         end
     end
     TriggerClientEvent('sunset:robbery:displayLoot', source, {
@@ -166,8 +265,9 @@ RegisterNetEvent('sunset:robbery:takeItem', function(displayId, uid)
     if not RobberySessions.rateOk(source) then return end
     local session = RobberySessions.get(source)
     if not session or session.stage ~= 'LOOTING' then return end
-    displayId = tostring(displayId or '')
-    uid = tostring(uid or '')
+    if session.lootBusy then return end
+    displayId = tostring(displayId or ''):sub(1, 24)
+    uid = tostring(uid or ''):sub(1, 96)
     local slot = session.displays[displayId]
     if not slot or not slot.smashed or not slot.items then return end
     local displayCfg
@@ -179,14 +279,37 @@ RegisterNetEvent('sunset:robbery:takeItem', function(displayId, uid)
     for _, row in ipairs(slot.items) do
         if row.uid == uid then item = row break end
     end
-    if not item or item.taken then return end
+    if not item or item.taken or item.taking then return end
     if session.bagUsed + (item.weight or 1) > session.bagCap then
         return RobberyAdapter.notify(source, 'Duffel bag is full — escape or drop the extra score', 'error')
     end
-    if not RobberyAdapter.addItem(source, item.item, 1, { stolen = true, robbery = session.id, value = item.baseValue, family = item.family }) then
+    -- Reserve before the database write yields so two concurrent NUI events cannot
+    -- both receive the same item or race for the same inventory slot.
+    session.lootBusy = true
+    item.taking = true
+    local streetValue, fenceOffer = RobberyLoot.stableOfferFor(item, tonumber(item.uid:match('(%d+)$')))
+    if not RobberyAdapter.addItem(source, item.item, 1, {
+        stolen = true,
+        robbery = session.id,
+        lootUid = item.uid,
+        value = item.baseValue,
+        family = item.family,
+        streetValue = streetValue,
+        fenceOffer = fenceOffer,
+    }) then
+        item.taking = nil
+        session.lootBusy = nil
         return RobberyAdapter.notify(source, 'Inventory is full', 'error')
     end
+    if RobberySessions.get(source) ~= session or session.stage ~= 'LOOTING' then
+        item.taking = nil
+        session.lootBusy = nil
+        RobberyAdapter.removeRobberyLoot(source, session.characterId, session.id)
+        return
+    end
     item.taken = true
+    item.taking = nil
+    session.lootBusy = nil
     session.bagUsed = session.bagUsed + (item.weight or 1)
     session.estimated = session.estimated + (item.baseValue or 0)
     session.generatedLoot[#session.generatedLoot + 1] = item.item
@@ -233,6 +356,9 @@ exports.sunset_core:RegisterCallback('sunset:robbery:fencePreview', function(sou
         return nil, 'Talk to the fence at the docks warehouse'
     end
     local offers = {}
+    local issued = {}
+    local char = RobberyAdapter.getCharacter(source)
+    if not char then return nil, 'Your character is not loaded. Reconnect and try again.' end
     local okInv, inv = pcall(function()
         return exports.sunset_inventory:GetInventory(source)
     end)
@@ -250,42 +376,75 @@ exports.sunset_core:RegisterCallback('sunset:robbery:fencePreview', function(sou
                 meta = decodedOk and decoded or {}
             end
             if type(meta) ~= 'table' then meta = {} end
-            local street, offer = RobberyLoot.offerFor({
-                baseValue = tonumber(meta.value) or 900,
-                family = meta.family or 'watch',
-            })
-            offers[#offers + 1] = {
-                item = itemName,
-                count = row.count,
-                label = (def and def.label) or itemName,
-                street = street,
-                offer = offer,
-            }
+            if RobberyAdapter.isCompletedLoot(meta.robbery, char.id) then
+                local street, offer
+                if tonumber(meta.streetValue) and tonumber(meta.fenceOffer) then
+                    street, offer = math.floor(tonumber(meta.streetValue)), math.floor(tonumber(meta.fenceOffer))
+                else
+                    street, offer = RobberyLoot.stableOfferFor({
+                        baseValue = tonumber(meta.value) or 900,
+                        family = meta.family or 'watch',
+                    }, tonumber(row.id))
+                end
+                local offerId = ('%d:%d:%d'):format(tonumber(row.id) or 0, os.time(), math.random(100000, 999999))
+                issued[offerId] = {
+                    characterId = tonumber(char.id),
+                    rowId = tonumber(row.id),
+                    item = itemName,
+                    robberyId = tostring(meta.robbery),
+                    metadata = meta,
+                    street = street,
+                    offer = offer,
+                    expiresAt = os.time() + 30,
+                }
+                offers[#offers + 1] = {
+                    offerId = offerId,
+                    item = itemName,
+                    count = row.count,
+                    label = (def and def.label) or itemName,
+                    street = street,
+                    offer = offer,
+                }
+            end
         end
     end
+    FenceOffers[source] = issued
     return { offers = offers, demand = SunsetRobbery.Fence.demand }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:robbery:fenceSell', function(source, itemName)
+exports.sunset_core:RegisterCallback('sunset:robbery:fenceSell', function(source, offerId)
     if not nearPoint(source, SunsetRobbery.Fence.coords, SunsetRobbery.Fence.interact + 0.6) then
         return nil, 'Stay with the fence'
     end
-    itemName = tostring(itemName or '')
-    if itemName:sub(1, 7) ~= 'stolen_' then return nil, 'The fence only buys stolen goods' end
-    local inv = exports.sunset_inventory:GetInventory(source)
-    local row
-    for _, entry in ipairs(inv or {}) do
-        if entry.item == itemName and (entry.count or 0) > 0 then row = entry break end
+    if FenceBusy[source] then return nil, 'The fence is already processing your previous item' end
+    offerId = tostring(offerId or ''):sub(1, 64)
+    local offer = FenceOffers[source] and FenceOffers[source][offerId]
+    local char = RobberyAdapter.getCharacter(source)
+    if not offer or offer.expiresAt < os.time() then return nil, 'That offer expired. Reopen the fence list.' end
+    if not char or tonumber(char.id) ~= offer.characterId then return nil, 'That offer does not belong to this character' end
+    if offer.item:sub(1, 7) ~= 'stolen_' then return nil, 'The fence only buys stolen goods' end
+    if not RobberyAdapter.isCompletedLoot(offer.robberyId, offer.characterId) then
+        return nil, 'This loot is tied to an unfinished or invalid robbery and cannot be sold.'
     end
-    if not row then return nil, 'You do not have that item' end
-    local meta = type(row.metadata) == 'table' and row.metadata or {}
-    local street, offer = RobberyLoot.offerFor({
-        baseValue = meta.value or 900,
-        family = meta.family or 'watch',
-    })
-    if not RobberyAdapter.removeItem(source, itemName, 1) then return nil, 'Could not take the item' end
-    RobberyAdapter.addCash(source, offer)
-    return { paid = offer, street = street, remaining = (row.count or 1) - 1 }
+
+    FenceBusy[source] = true
+    FenceOffers[source][offerId] = nil
+    if not RobberyAdapter.settleFenceSale(source, offer.rowId, offer.item, offer.offer) then
+        FenceBusy[source] = nil
+        return nil, 'That exact item changed or the payment could not be completed. Reopen the fence list.'
+    end
+    FenceBusy[source] = nil
+    RobberyAdapter.audit({
+        id = tostring(offer.metadata.robbery or ('fence_%d'):format(os.time())),
+        characterId = offer.characterId,
+        locationId = 'fence',
+        bagUsed = 0,
+        estimated = offer.offer,
+    }, 'fence_sale', { rowId = offer.rowId, item = offer.item, paid = offer.offer })
+    if GetResourceState('sunset_pass') == 'started' then
+        exports.sunset_pass:AddMissionProgress(source, 'robbery_complete', 1)
+    end
+    return { paid = offer.offer, street = offer.street, remaining = 0 }
 end)
 
 CreateThread(function()
@@ -302,6 +461,10 @@ CreateThread(function()
             else
                 if session.alertAt and not session.policeAlerted and now >= session.alertAt then
                     session.policeAlerted = true
+                    if not session.wantedIssued then
+                        session.wantedIssued = true
+                        RobberyAdapter.issueWanted(source, 'robbery')
+                    end
                     RobberyPolice.alert(session, 'first')
                     TriggerClientEvent('sunset:robbery:alarm', source)
                 end
@@ -320,6 +483,15 @@ CreateThread(function()
 end)
 
 AddEventHandler('playerDropped', function()
+    FenceOffers[source] = nil
+    FenceBusy[source] = nil
+    RobberySessions.lastEvent[source] = nil
+    RobberySessions.starting[source] = nil
+    for locationId, owner in pairs(RobberySessions.locationBusy) do
+        if owner == source and not RobberySessions.get(source) then
+            RobberySessions.locationBusy[locationId] = nil
+        end
+    end
     if RobberySessions.get(source) then
         RobberySessions.fail(source, 'Disconnected')
     end
@@ -327,9 +499,9 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    for source in pairs(RobberySessions.bySource) do
-        RobberySessions.cancel(source, 'Robbery system restarted')
-    end
+    local active = {}
+    for source in pairs(RobberySessions.bySource) do active[#active + 1] = source end
+    for _, source in ipairs(active) do RobberySessions.cancel(source, 'Robbery system restarted') end
 end)
 
 AddEventHandler('sunset:death:playerDowned', function(source)
@@ -362,7 +534,6 @@ RegisterCommand('robdebug', function(source, args)
             locationId = 'luxury_store',
             location = session.location,
             bagCap = session.bagCap,
-            hack = { nodes = session.hack.nodes, timeLimit = session.hack.timeLimit },
             stage = session.stage,
         })
     elseif action == 'points' then

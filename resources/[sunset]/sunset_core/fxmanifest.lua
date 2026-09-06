@@ -49,6 +49,7 @@ server_exports {
     'RegisterCallback',
     'SaveCharacter',
     'AddMoney',
+    'RefreshMoney',
     'RemoveMoney',
     'GetMoney',
     'SetPersistentStat',

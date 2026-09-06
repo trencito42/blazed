@@ -3,6 +3,7 @@ Police = Police or {}
 local WantedOnline = {}
 local JailedOnline = {}
 local RadarSessions = {}
+local DeathCapturePending = {}
 
 local function notify(source, msg, typ, duration)
     FactionCore.notify(source, msg, typ or 'info', duration)
@@ -128,7 +129,7 @@ local function applyWanted(source, data)
     syncWantedClient(source, data.level, data.reason)
 end
 
-local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issuedBy)
+local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issuedBy, silent)
     local previous = WantedOnline[targetId]
     local addedLevel = math.max(1, tonumber(level) or 1)
     level = math.max(1, math.min(5, (previous and previous.level or 0) + addedLevel))
@@ -156,17 +157,20 @@ local function setWanted(targetId, level, reason, reasonCode, jailMinutes, issue
     pcall(function()
         name = exports.sunset_core:GetPlayerDisplayName(targetId) or name
     end)
-    broadcastToPolice('WANTED', ('%s (#%d) is now wanted ★%d — %s'):format(name, targetId, data.level, data.reason))
+    if not silent then
+        broadcastToPolice('WANTED', ('%s (#%d) is now wanted ★%d — %s'):format(name, targetId, data.level, data.reason))
+    end
     return data
 end
 
-function AddWantedCharge(targetId, reasonCode, issuedBy)
+function AddWantedCharge(targetId, reasonCode, issuedBy, options)
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return nil, 'Player is not online' end
     reasonCode = string.lower(tostring(reasonCode or 'robbery'))
     local reasonRow = Sunset.GetPoliceReason(reasonCode)
     if not reasonRow then return nil, 'Unknown wanted reason' end
-    return setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes, issuedBy)
+    local silent = type(options) == 'table' and options.silent == true
+    return setWanted(targetId, reasonRow.stars, reasonRow.label, reasonCode, reasonRow.jailMinutes, issuedBy, silent)
 end
 exports('AddWantedCharge', AddWantedCharge)
 
@@ -218,6 +222,79 @@ local function beginJail(targetId, minutes, reason, officerSource)
         minutes = minutes,
         coords = jail and { x = jail.x, y = jail.y, z = jail.z, w = jail.w } or nil,
     })
+end
+
+local function nearestOnDutyOfficer(targetId, range)
+    local targetPos = FactionCore.playerCoords(targetId)
+    if not targetPos then return nil end
+
+    local nearest, nearestDistance
+    for _, id in ipairs(GetPlayers()) do
+        local officer = tonumber(id)
+        if officer and officer ~= targetId and FactionCore.isLawEnforcement(officer) then
+            local distance = FactionCore.distBetween(targetPos, FactionCore.playerCoords(officer))
+            if distance <= range and (not nearestDistance or distance < nearestDistance) then
+                nearest, nearestDistance = officer, distance
+            end
+        end
+    end
+    return nearest, nearestDistance
+end
+
+local function captureWantedAfterDeath(targetId)
+    targetId = tonumber(targetId)
+    if not targetId or DeathCapturePending[targetId] or Police.isJailed(targetId) then return false end
+
+    local wanted = WantedOnline[targetId]
+    if not wanted then return false end
+
+    local isDowned = false
+    pcall(function()
+        isDowned = exports.sunset_death:IsPlayerDowned(targetId) == true
+    end)
+    if not isDowned then return false end
+
+    local range = math.max(5.0, tonumber(Sunset.Police and Sunset.Police.wantedDeathCaptureRange) or 125.0)
+    local officer, distance = nearestOnDutyOfficer(targetId, range)
+    if not officer then return false end
+
+    DeathCapturePending[targetId] = true
+    local minutes = math.max(1, tonumber(wanted.jailMinutes) or 2)
+    local reason = wanted.reason or 'Active wanted status'
+    local level = math.max(1, tonumber(wanted.level) or 1)
+
+    local custodyCleared = false
+    pcall(function()
+        custodyCleared = exports.sunset_death:ClearDownedForCustody(targetId) == true
+    end)
+    if not custodyCleared then
+        DeathCapturePending[targetId] = nil
+        return false
+    end
+
+    clearWanted(targetId, charId(officer))
+    beginJail(targetId, minutes, reason, officer)
+    DeathCapturePending[targetId] = nil
+
+    local suspectName = exports.sunset_core:GetPlayerDisplayName(targetId)
+    local officerName = exports.sunset_core:GetPlayerDisplayName(officer)
+    notify(targetId, ('You died while wanted near law enforcement — jailed for %d minutes (former wanted ★%d).'):format(
+        minutes, level), 'error', 10000)
+    notify(officer, ('Wanted suspect %s (#%d) was taken into custody after being downed nearby.'):format(
+        suspectName, targetId), 'success', 8000)
+    broadcastToPolice('SUSPECT IN CUSTODY', ('%s (#%d) was downed near %s (#%d) and jailed for %d minutes: %s.'):format(
+        suspectName, targetId, officerName, officer, minutes, reason))
+    FactionCore.auditLog('police', charId(officer), 'wanted_death_capture', charId(targetId), {
+        wantedLevel = level,
+        jailMinutes = minutes,
+        distance = math.floor((distance or 0.0) * 10 + 0.5) / 10,
+        reason = reason,
+    })
+    return true
+end
+
+function Police.isDeathCapturePending(source)
+    return DeathCapturePending[source] == true
 end
 
 local function endJail(source)
@@ -721,6 +798,8 @@ AddEventHandler('sunset:server:characterSelected', function(source, characterId)
 end)
 
 AddEventHandler('sunset:death:playerDowned', function(victimSource)
+    captureWantedAfterDeath(victimSource)
+
     if GetResourceState('sunset_dispatch') ~= 'started' then return end
     pcall(function()
         local call = exports.sunset_dispatch:GetPlayerActiveCall(victimSource, 'police_backup')
@@ -735,6 +814,7 @@ AddEventHandler('playerDropped', function()
     WantedOnline[src] = nil
     JailedOnline[src] = nil
     RadarSessions[src] = nil
+    DeathCapturePending[src] = nil
 end)
 
 CreateThread(function()

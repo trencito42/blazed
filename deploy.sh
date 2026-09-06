@@ -131,6 +131,12 @@ fi
 if [ -f sql/15-admin-stat-audit.sql ]; then
   docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/15-admin-stat-audit.sql
 fi
+if [ -f sql/16-robbery-security.sql ]; then
+  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/16-robbery-security.sql
+fi
+if [ -f sql/17-sunset-pass.sql ]; then
+  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < sql/17-sunset-pass.sql
+fi
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem

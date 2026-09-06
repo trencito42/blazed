@@ -159,6 +159,19 @@ RegisterNetEvent('sunset:police:jail', function(payload)
     local coords = payload.coords
 
     local ped = PlayerPedId()
+    pcall(function() exports.sunset_death:ClearDead() end)
+    if IsEntityDead(ped) or IsPedFatallyInjured(ped) then
+        local reviveAt = coords and coords.x and coords or GetEntityCoords(ped)
+        NetworkResurrectLocalPlayer(
+            reviveAt.x, reviveAt.y, reviveAt.z,
+            (coords and coords.w) or GetEntityHeading(ped), true, false
+        )
+        ped = PlayerPedId()
+        SetEntityHealth(ped, 200)
+        ClearPedBloodDamage(ped)
+        SetEntityInvincible(ped, false)
+        SetPlayerControl(PlayerId(), true, 0)
+    end
     ClearPedTasksImmediately(ped)
     SetEnableHandcuffs(ped, false)
     TriggerEvent('sunset:faction:uncuff')

@@ -124,6 +124,9 @@ AddEventHandler('sunset:dispatch:serviceCommand', function(callerSource, service
 end)
 
 AddEventHandler('sunset:death:playerDowned', function(victimSource)
+    if Police and (Police.isJailed(victimSource) or Police.isDeathCapturePending(victimSource)) then
+        return
+    end
     local coords = FactionCore.playerCoords(victimSource)
     if not coords then return end
 

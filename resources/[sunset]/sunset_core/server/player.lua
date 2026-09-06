@@ -138,6 +138,18 @@ function Sunset.AddMoney(source, account, amount, reason)
     return true
 end
 
+function Sunset.RefreshMoney(source)
+    local char = Sunset.GetCharacter(source)
+    if not char then return false end
+    local row = MySQL.single.await('SELECT cash, bank FROM characters WHERE id = ? LIMIT 1', { char.id })
+    if not row then return false end
+    char.cash = tonumber(row.cash) or 0
+    char.bank = tonumber(row.bank) or 0
+    TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    return true
+end
+
 function Sunset.RemoveMoney(source, account, amount, reason)
     local char = Sunset.GetCharacter(source)
     amount = math.floor(tonumber(amount) or 0)
@@ -303,6 +315,7 @@ exports('RemoveMoney', Sunset.RemoveMoney)
 exports('GetMoney', Sunset.GetMoney)
 exports('SetPersistentStat', Sunset.SetPersistentStat)
 exports('SetHomeProperty', Sunset.SetHomeProperty)
+exports('RefreshMoney', Sunset.RefreshMoney)
 exports('SetJob', Sunset.SetJob)
 exports('SetFaction', Sunset.SetFaction)
 exports('AddXP', Sunset.AddXP)

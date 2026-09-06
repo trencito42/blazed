@@ -23,16 +23,27 @@
         <div class="hack__scan"></div>
         <header class="hack__head">
             <div>
-                <span class="hack__kicker">SECURITY SYSTEM</span>
-                <strong>NODE 04-B</strong>
+                <span class="hack__kicker">SUNSET SECURITY · ENCRYPTED</span>
+                <strong>CIRCUIT BYPASS</strong>
+                <p>Follow the live channel through connected nodes.</p>
             </div>
             <div class="hack__meters">
-                <span>TRACE <b id="hack-trace">0%</b></span>
-                <span>TIME <b id="hack-time">26.0</b></span>
+                <span class="hack__signal">NEXT CHANNEL <b id="hack-signal">CH --</b></span>
+                <span>TRACE <b id="hack-trace">0%</b><i><em id="hack-trace-fill"></em></i></span>
+                <span>TIME <b id="hack-time">34.0</b></span>
             </div>
         </header>
-        <div id="hack-board" class="hack__board"></div>
-        <footer class="hack__foot">CONNECT SOURCE → RELAY → CORE · WRONG NODE RAISES TRACE</footer>
+        <div id="hack-status" class="hack__status">READING CIRCUIT TOPOLOGY...</div>
+        <div id="hack-board" class="hack__board">
+            <svg id="hack-lines" class="hack__lines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+            <div id="hack-nodes"></div>
+        </div>
+        <footer class="hack__foot">
+            <span><i class="legend legend--normal"></i> RELAY</span>
+            <span><i class="legend legend--locked"></i> DOUBLE-TAP GATE</span>
+            <span><i class="legend legend--timed"></i> 3 SECOND BURST</span>
+            <span><i class="legend legend--bad"></i> CORRUPTED</span>
+        </footer>
     </div>
 
     <div id="loot" class="loot hidden">

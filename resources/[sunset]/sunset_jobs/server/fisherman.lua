@@ -162,6 +162,9 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     session.data.level = level
 
     SunsetJobs_AddJobXP(source, 'fisherman', cfg.xpPerCatch or 12)
+    if GetResourceState('sunset_pass') == 'started' then
+        exports.sunset_pass:AddMissionProgress(source, 'fish_catch', 1)
+    end
     TriggerClientEvent('sunset:jobs:stateChanged', source, session.state, session.data)
     return {
         value = value,

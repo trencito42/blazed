@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset Pass</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="pass-root" class="hidden">
+        <div id="pass-container" class="pass-shell">
+            <header class="pass-header">
+                <div class="pass-header__left">
+                    <div class="pass-brand">
+                        <div class="pass-season" id="pass-season">Season 01</div>
+                        <h1 class="pass-title">Sunset Pass</h1>
+                    </div>
+                    <nav class="pass-tabs" aria-label="Pass sections">
+                        <button type="button" class="pass-tab is-active" data-tab="rewards">Rewards</button>
+                        <button type="button" class="pass-tab" data-tab="missions">Missions</button>
+                    </nav>
+                </div>
+                <div class="pass-header__right">
+                    <div class="pass-tier">
+                        <span class="pass-tier__label">Current Tier</span>
+                        <strong class="pass-tier__value" id="pass-tier">1</strong>
+                        <div class="pass-tier__bar">
+                            <div class="pass-tier__fill" id="pass-tier-fill"></div>
+                        </div>
+                        <span class="pass-tier__xp" id="pass-tier-xp">0 / 500 XP</span>
+                    </div>
+                    <button type="button" class="pass-btn pass-btn--premium" id="pass-buy-premium">Upgrade Pass</button>
+                    <button type="button" class="pass-btn pass-btn--close" id="pass-close" aria-label="Close">ESC</button>
+                </div>
+            </header>
+
+            <section id="tab-rewards" class="pass-panel is-active" aria-label="Rewards track">
+                <div class="pass-track" id="pass-track">
+                    <div class="pass-track__line">
+                        <div class="pass-track__fill" id="pass-track-fill"></div>
+                    </div>
+                    <div class="pass-tiers" id="pass-tiers"></div>
+                </div>
+            </section>
+
+            <section id="tab-missions" class="pass-panel" aria-label="Missions">
+                <div class="pass-missions" id="pass-missions"></div>
+            </section>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

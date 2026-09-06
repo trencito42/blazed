@@ -66,10 +66,6 @@ local function createMapBlips()
         local point = (loc.entrance and loc.entrance.coords) or loc.coords
         addMapBlip(point, loc.blip, loc.label or 'Robbery')
     end
-    local fence = SunsetRobbery.Fence
-    if fence then
-        addMapBlip(fence.coords, fence.blip, fence.label or 'Fence')
-    end
 end
 
 local function clearEscapeGuide()
@@ -126,8 +122,6 @@ RegisterNetEvent('sunset:robbery:started', function(payload)
         location = payload.location,
         stage = payload.stage,
         bagCap = payload.bagCap,
-        hackNodes = payload.hack and payload.hack.nodes or {},
-        hackTime = payload.hack and payload.hack.timeLimit or SunsetRobbery.HackTimeSec,
         smashed = {},
     }
     RobberyAnims.sound('terminal')
@@ -151,6 +145,13 @@ RegisterNetEvent('sunset:robbery:hackResult', function(payload)
         RobberyAnims.sound('alarm')
     end
     if payload.hud then RobberyNui.send('hudShow', payload.hud) end
+end)
+
+RegisterNetEvent('sunset:robbery:hackOpenUi', function(payload)
+    if not session or session.stage ~= 'HACKING' then return end
+    RobberyAnims.play('hack', -1)
+    RobberyNui.focus(true, true)
+    RobberyNui.send('hackShow', payload or {})
 end)
 
 RegisterNetEvent('sunset:robbery:hackProgress', function(payload)
@@ -230,7 +231,7 @@ end)
 
 AddEventHandler('sunset:robbery:nuiFenceSell', function(data)
     CreateThread(function()
-        local result, err = Sunset.AwaitCallback('sunset:robbery:fenceSell', data and data.item)
+        local result, err = Sunset.AwaitCallback('sunset:robbery:fenceSell', data and data.offerId)
         if result then
             notify(('Fence paid $%s'):format(result.paid), 'success')
             local preview = Sunset.AwaitCallback('sunset:robbery:fencePreview')
@@ -291,12 +292,6 @@ CreateThread(function()
                 DrawMarker(2, term.coords.x, term.coords.y, term.coords.z + 0.35, 0, 0, 0, 0, 0, 0, 0.28, 0.28, 0.28, 255, 140, 40, 180, false, false, 2, false, nil, nil, false)
                 if IsControlJustPressed(0, 38) then
                     TriggerServerEvent('sunset:robbery:hackOpen')
-                    RobberyAnims.play('hack', -1)
-                    RobberyNui.focus(true, true)
-                    RobberyNui.send('hackShow', {
-                        timeLimit = session.hackTime or SunsetRobbery.HackTimeSec,
-                        nodes = session.hackNodes or {},
-                    })
                 end
             end
         end

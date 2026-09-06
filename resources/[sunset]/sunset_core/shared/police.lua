@@ -3,6 +3,7 @@ Sunset = Sunset or {}
 Sunset.Police = {
     summonRange = 125.0,
     arrestRange = 5.0,
+    wantedDeathCaptureRange = 125.0,
     jailRadius = 12.0,
     jailCoords = vector4(1641.99, 2570.29, 45.56, 270.0),
     releaseCoords = vector4(1855.68, 2604.45, 45.67, 270.0),

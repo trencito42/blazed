@@ -15,6 +15,7 @@ end)
 
 RegisterNUICallback('hackClose', function(_, cb)
     RobberyNui.focus(false, false)
+    RobberyAnims.stop()
     cb('ok')
 end)
 

@@ -37,24 +37,63 @@ const Hud = {
 
 const Hack = {
     timer: null,
-    left: 26,
+    deadline: 0,
+    burstDeadline: 0,
+    currentNode: null,
+    edges: [],
+    passed: new Set(),
+    clickLocked: false,
     show(data = {}) {
         $('hack').classList.remove('hidden');
         $('hack-trace').textContent = '0%';
-        this.left = Number(data.timeLimit) || 26;
+        $('hack-trace-fill').style.width = '0%';
+        $('hack-status').className = 'hack__status';
+        $('hack-status').textContent = 'MATCH THE REQUESTED CHANNEL AND FOLLOW A CONNECTED LINE';
+        this.deadline = performance.now() + ((Number(data.timeLimit) || 34) * 1000);
+        this.burstDeadline = 0;
+        this.currentNode = data.currentNode || data.sourceId;
+        this.edges = Array.isArray(data.edges) ? data.edges : [];
+        this.passed = new Set(this.currentNode ? [this.currentNode] : []);
+        this.clickLocked = false;
+        this.setSignal(data.signal);
         this.tick();
         clearInterval(this.timer);
-        this.timer = setInterval(() => this.tick(), 100);
+        this.timer = setInterval(() => this.tick(), 80);
         this.draw(data.nodes || []);
+        this.refreshRoute();
         post('playSound', { key: 'terminal' });
     },
     tick() {
-        this.left = Math.max(0, this.left - 0.1);
-        $('hack-time').textContent = this.left.toFixed(1);
+        const left = Math.max(0, (this.deadline - performance.now()) / 1000);
+        $('hack-time').textContent = left.toFixed(1);
+        if (left <= 5) $('hack-time').style.color = 'var(--r-red)';
+        if (this.burstDeadline > 0) {
+            const burst = Math.max(0, (this.burstDeadline - performance.now()) / 1000);
+            $('hack-status').textContent = burst > 0
+                ? `BURST RELAY ACTIVE — ${burst.toFixed(1)}s TO ROUTE NEXT NODE`
+                : 'BURST WINDOW EXPIRED — SELECT TO RESYNC';
+        }
     },
     draw(nodes) {
-        const board = $('hack-board');
+        const board = $('hack-nodes');
+        const lines = $('hack-lines');
         board.innerHTML = '';
+        lines.innerHTML = '';
+        const positions = new Map(nodes.map((node) => [node.id, node]));
+        this.edges.forEach((edge) => {
+            const from = positions.get(edge.from);
+            const to = positions.get(edge.to);
+            if (!from || !to) return;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', from.x);
+            line.setAttribute('y1', from.y);
+            line.setAttribute('x2', to.x);
+            line.setAttribute('y2', to.y);
+            line.setAttribute('class', 'hack-edge');
+            line.dataset.from = edge.from;
+            line.dataset.to = edge.to;
+            lines.appendChild(line);
+        });
         nodes.forEach((node) => {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -62,24 +101,76 @@ const Hack = {
             btn.style.left = `${node.x}%`;
             btn.style.top = `${node.y}%`;
             btn.dataset.id = node.id;
-            btn.innerHTML = `${node.label || node.id}<small>${String(node.kind || '').toUpperCase()}</small>`;
+            btn.dataset.kind = node.kind || 'normal';
+            btn.dataset.frequency = String(node.frequency || 1);
+            const channel = `CH ${String(node.frequency || 1).padStart(2, '0')}`;
+            const type = node.kind === 'locked' ? `${channel} · LOCK`
+                : (node.kind === 'timed' ? `${channel} · BURST`
+                    : (node.kind === 'corrupted' ? 'CORRUPT' : `CH ${String(node.frequency || 1).padStart(2, '0')}`));
+            btn.innerHTML = `${node.label || node.id}<small>${type}</small>`;
             if (node.kind === 'source') btn.classList.add('is-on');
             btn.addEventListener('click', () => {
+                if (this.clickLocked || btn.disabled) return;
+                this.clickLocked = true;
+                setTimeout(() => { this.clickLocked = false; }, 280);
                 post('hackClick', { nodeId: node.id });
                 post('playSound', { key: 'terminal' });
             });
             board.appendChild(btn);
         });
     },
+    setSignal(signal) {
+        $('hack-signal').textContent = signal ? `CH ${String(signal).padStart(2, '0')}` : 'CORE OPEN';
+    },
+    refreshRoute() {
+        const available = new Set(this.edges.filter((edge) => edge.from === this.currentNode).map((edge) => edge.to));
+        document.querySelectorAll('.hack-node').forEach((node) => {
+            const active = available.has(node.dataset.id);
+            const passed = this.passed.has(node.dataset.id);
+            node.disabled = !active;
+            node.classList.toggle('is-available', active);
+            node.classList.toggle('is-offroute', !active && !passed);
+            node.classList.toggle('is-on', passed);
+            if (!active) node.classList.remove('is-armed');
+        });
+        document.querySelectorAll('.hack-edge').forEach((edge) => {
+            edge.classList.toggle('is-live', edge.dataset.from === this.currentNode);
+            edge.classList.toggle('is-passed', this.passed.has(edge.dataset.from) && this.passed.has(edge.dataset.to));
+        });
+    },
     progress(data = {}) {
-        $('hack-trace').textContent = `${Math.min(100, Number(data.trace) || 0)}%`;
+        const trace = Math.min(100, Number(data.trace) || 0);
+        $('hack-trace').textContent = `${trace}%`;
+        $('hack-trace-fill').style.width = `${trace}%`;
+        const status = $('hack-status');
+        status.textContent = data.status || 'SIGNAL ACCEPTED';
+        status.classList.toggle('is-alert', Boolean(data.errorNode));
+        status.classList.toggle('is-burst', Boolean(data.burstMs) && !data.lockArmed);
+        this.setSignal(data.signal);
+        if (data.burstMs && !data.lockArmed) this.burstDeadline = performance.now() + Number(data.burstMs);
+        else if (!data.lockArmed) this.burstDeadline = 0;
+        if (data.errorNode) {
+            const bad = document.querySelector(`[data-id="${data.errorNode}"]`);
+            if (bad) {
+                bad.classList.add('is-error');
+                setTimeout(() => bad.classList.remove('is-error'), 380);
+            }
+        }
+        if (data.lockArmed && data.nodeId) {
+            const armed = document.querySelector(`[data-id="${data.nodeId}"]`);
+            if (armed) armed.classList.add('is-armed');
+            return;
+        }
         if (data.nodeId) {
-            const el = document.querySelector(`[data-id="${data.nodeId}"]`);
-            if (el) el.classList.add('is-on');
+            this.passed.add(data.nodeId);
+            this.currentNode = data.currentNode || data.nodeId;
+            this.refreshRoute();
         }
     },
     hide() {
         clearInterval(this.timer);
+        this.burstDeadline = 0;
+        $('hack-time').style.color = '';
         $('hack').classList.add('hidden');
     },
 };
@@ -132,7 +223,7 @@ const Fence = {
             btn.type = 'button';
             btn.className = 'fence-row';
             btn.innerHTML = `${row.label} ×${row.count}<small>Street ${money(row.street)} · Offer ${money(row.offer)}</small>`;
-            btn.addEventListener('click', () => post('fenceSell', { item: row.item }));
+            btn.addEventListener('click', () => post('fenceSell', { offerId: row.offerId }));
             list.appendChild(btn);
         });
     },

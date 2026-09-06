@@ -15,11 +15,26 @@ end
 
 function RobberyPolice.alert(session, stage)
     local loc = session.location
+    if not session.policeSnapshot then
+        local snapshot = { description = 'Unknown suspect', vehicle = 'No getaway vehicle identified' }
+        pcall(function()
+            local ped = GetPlayerPed(session.source)
+            if ped and ped ~= 0 then
+                snapshot.description = ('Suspect model %s'):format(tostring(GetEntityModel(ped)))
+                local vehicle = GetVehiclePedIsIn(ped, false)
+                if vehicle and vehicle ~= 0 then
+                    local plate = tostring(GetVehicleNumberPlateText(vehicle) or 'UNKNOWN'):gsub('^%s*(.-)%s*$', '%1')
+                    snapshot.vehicle = ('Vehicle model %s, plate %s'):format(tostring(GetEntityModel(vehicle)), plate)
+                end
+            end
+        end)
+        session.policeSnapshot = snapshot
+    end
     local title = 'STORE ROBBERY'
     local lines = {
         first = ('%s — %s, %s. Robbery in progress.'):format(title, loc.label, loc.street),
-        desc = ('%s — suspect description available at %s.'):format(title, loc.label),
-        vehicle = ('%s — possible getaway vehicle near %s.'):format(title, loc.street),
+        desc = ('%s — %s at %s.'):format(title, session.policeSnapshot.description, loc.label),
+        vehicle = ('%s — %s near %s.'):format(title, session.policeSnapshot.vehicle, loc.street),
     }
     local text = lines[stage] or lines.first
     eachPoliceMember(function(src)

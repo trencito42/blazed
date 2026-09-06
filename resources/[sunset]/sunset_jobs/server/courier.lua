@@ -97,6 +97,9 @@ exports.sunset_core:RegisterCallback('sunset:jobs:courier:deliver', function(sou
     local pay = cfg.payPerPackage or 100
     SunsetJobs_PayReward(source, 'courier', pay, 'courier_delivery', false)
     SunsetJobs_AddJobXP(source, 'courier', cfg.xpPerPackage or 15)
+    if GetResourceState('sunset_pass') == 'started' then
+        exports.sunset_pass:AddMissionProgress(source, 'courier_deliveries', 1)
+    end
 
     session.data.delivered = (session.data.delivered or 0) + 1
     session.data.hasPackage = false

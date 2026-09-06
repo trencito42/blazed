@@ -22,7 +22,10 @@ function RobberyLoot.generateDisplay(tableId, count)
     count = math.max(1, math.min(12, tonumber(count) or 6))
     for i = 1, count do
         local pick = weightedPick(pool)
-        local uid = ('%s_%d_%d'):format(pick.id, i, math.random(1000, 9999))
+        local uid
+        repeat
+            uid = ('%s_%d_%d'):format(pick.id, i, math.random(1000, 9999))
+        until not used[uid]
         items[#items + 1] = {
             uid = uid,
             item = pick.id,
@@ -47,4 +50,16 @@ function RobberyLoot.offerFor(item)
     local street = math.floor((item.baseValue or 500) * (0.92 + math.random() * 0.16))
     local offer = math.max(50, math.floor(street * factor * demand))
     return street, offer
+end
+
+function RobberyLoot.stableOfferFor(item, seed)
+    local family = item.family or 'watch'
+    local demand = (SunsetRobbery.Fence.demand or {})[family] or 1.0
+    local variance = SunsetRobbery.SellVariance or { min = 0.75, max = 0.85 }
+    seed = math.floor(tonumber(seed) or tonumber(item.baseValue) or 1)
+    local rollA = ((seed * 1103515245 + 12345) % 10000) / 10000
+    local rollB = ((seed * 214013 + 2531011) % 10000) / 10000
+    local factor = variance.min + (rollA * (variance.max - variance.min))
+    local street = math.floor((item.baseValue or 500) * (0.92 + rollB * 0.16))
+    return street, math.max(50, math.floor(street * factor * demand))
 end

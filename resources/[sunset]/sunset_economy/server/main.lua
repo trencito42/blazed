@@ -49,6 +49,9 @@ local function processPayday(source)
         respect = respect,
         robPoints = robPts,
     })
+    if GetResourceState('sunset_pass') == 'started' then
+        exports.sunset_pass:AddMissionProgress(source, 'paydays', 1)
+    end
 end
 
 local function broadcastTime()

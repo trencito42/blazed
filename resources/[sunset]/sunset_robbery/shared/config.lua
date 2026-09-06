@@ -7,7 +7,7 @@ SunsetRobbery.PlayerCooldownSec = 30 * 60
 SunsetRobbery.LocationCooldownSec = 45 * 60
 SunsetRobbery.RobPointsPerPayday = 1
 SunsetRobbery.RobPointsToStart = 1
-SunsetRobbery.HackTimeSec = 26
+SunsetRobbery.HackTimeSec = 34
 SunsetRobbery.HackTraceFail = 100
 SunsetRobbery.HackWrongClickTrace = 18
 SunsetRobbery.PerfectHackDelaySec = 20
@@ -21,7 +21,7 @@ SunsetRobbery.DisplayLootCount = { min = 6, max = 10 }
 SunsetRobbery.PoliceEscalateSec = 20
 SunsetRobbery.PoliceVehicleSec = 40
 SunsetRobbery.RateLimitMs = 220
-SunsetRobbery.RequiredItem = nil
+SunsetRobbery.RequiredItem = 'lockpick'
 SunsetRobbery.BlockedFactions = { police = true }
 
 SunsetRobbery.Fence = {

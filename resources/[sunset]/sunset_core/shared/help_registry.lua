@@ -79,6 +79,8 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/jobs', desc = 'Open jobs panel' },
     { cmd = '/work [cancel]', desc = 'Start civilian job shift or cancel current shift' },
     { cmd = '/skills', desc = 'View job skill levels' },
+    { cmd = '/pass', desc = 'Open Sunset Pass rewards track' },
+    { cmd = '/missions', desc = 'Open Sunset Pass missions' },
     { cmd = '/crafting', desc = 'Mark the nearest crafting station available to your faction' },
     { cmd = '/jobhelp', desc = 'Help text for your civilian job' },
     { cmd = '/fish', desc = 'Cast and play the fishing reaction challenge at a fishing spot' },
@@ -100,8 +102,8 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/respawn', desc = 'Respawn when dead (if allowed)' },
     { cmd = '/hudedit', desc = 'Move HUD panels' },
     { cmd = '/hudreset', desc = 'Reset HUD layout to default' },
-    { cmd = '/rob', desc = 'Start a store robbery at a marked jewelry / luxury store (costs rob points)' },
-    { cmd = '[E] robbery', desc = 'Start robbery, hack the terminal, smash displays, then escape 300m' },
+    { cmd = '/rob', desc = 'Start a marked luxury-store robbery (requires 1 rob point, a lockpick and enough on-duty police)' },
+    { cmd = '[E] robbery', desc = 'Start robbery, route the security circuit, smash displays, then escape 300m' },
     { cmd = '[E] fence', desc = 'Sell stolen watches and jewelry to the dockside fence' },
 }
 

@@ -51,6 +51,24 @@ function RevivePlayer(targetId)
     return true
 end
 
+-- Used by server-owned custody flows. The receiving resource is responsible for
+-- resurrecting/positioning the player so the normal revive event cannot race it.
+function ClearDownedForCustody(targetId)
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then
+        return false, 'Player not found'
+    end
+
+    local char = exports.sunset_core:GetCharacter(targetId)
+    if char then
+        char.is_dead = false
+        pcall(function() exports.sunset_core:SaveCharacter(targetId) end)
+        TriggerClientEvent('sunset:client:updateCharacter', targetId, char)
+    end
+    Downed[targetId] = nil
+    return true
+end
+
 function StabilizePlayer(targetId)
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then
@@ -69,6 +87,7 @@ end
 exports('RevivePlayer', RevivePlayer)
 exports('RespawnPlayer', respawnPlayer)
 exports('StabilizePlayer', StabilizePlayer)
+exports('ClearDownedForCustody', ClearDownedForCustody)
 exports('IsPlayerDowned', function(source) return Downed[source] ~= nil end)
 
 RegisterNetEvent('sunset:server:playerDied', function()

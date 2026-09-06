@@ -127,6 +127,79 @@ function RemoveItem(source, item, count)
     return false
 end
 
+-- Remove one exact persisted row. This is required for metadata-bearing items:
+-- removing only by item name can consume a different instance than the one shown.
+function RemoveItemById(source, rowId, item, count)
+    local char = exports.sunset_core:GetCharacter(source)
+    rowId = tonumber(rowId)
+    count = math.floor(tonumber(count) or 1)
+    item = tostring(item or '')
+    if not char or not rowId or rowId < 1 or count < 1 or item == '' then return false end
+
+    local inv = GetInventory(source)
+    local index, row
+    for i, entry in ipairs(inv) do
+        if tonumber(entry.id) == rowId and entry.item == item then
+            index, row = i, entry
+            break
+        end
+    end
+    if not row or (tonumber(row.count) or 0) < count then return false end
+
+    local changed = MySQL.update.await(
+        'UPDATE character_inventory SET count = count - ? WHERE id = ? AND character_id = ? AND item = ? AND count >= ?',
+        { count, rowId, char.id, item, count }
+    )
+    if not changed or changed < 1 then
+        loadInventory(char.id)
+        return false
+    end
+
+    row.count = row.count - count
+    if row.count <= 0 then
+        MySQL.update.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ? AND count <= 0', { rowId, char.id })
+        table.remove(inv, index)
+    end
+    sendInventoryUpdate(source, inv)
+    return true
+end
+
+function RemoveRobberyItems(source, robberyId)
+    local char = exports.sunset_core:GetCharacter(source)
+    robberyId = tostring(robberyId or '')
+    if not char or robberyId == '' then return 0 end
+    local inv = GetInventory(source)
+    local ids = {}
+    for _, row in ipairs(inv) do
+        local metadata = row.metadata
+        if type(metadata) == 'string' then
+            local ok, decoded = pcall(json.decode, metadata)
+            metadata = ok and decoded or nil
+        end
+        if type(metadata) == 'table' and metadata.stolen == true and tostring(metadata.robbery or '') == robberyId then
+            ids[#ids + 1] = tonumber(row.id)
+        end
+    end
+    if #ids == 0 then return 0 end
+
+    local removed = 0
+    for _, id in ipairs(ids) do
+        local changed = MySQL.update.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ?', { id, char.id })
+        removed = removed + (tonumber(changed) or 0)
+    end
+    loadInventory(char.id)
+    sendInventoryUpdate(source, Inventories[char.id])
+    return removed
+end
+
+function ReloadInventory(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return false end
+    local inv = loadInventory(char.id)
+    sendInventoryUpdate(source, inv)
+    return true
+end
+
 function HasItem(source, item, count)
     count = count or 1
     local inv = GetInventory(source)
@@ -244,6 +317,9 @@ end
 exports('GetInventory', GetInventory)
 exports('AddItem', AddItem)
 exports('RemoveItem', RemoveItem)
+exports('RemoveItemById', RemoveItemById)
+exports('RemoveRobberyItems', RemoveRobberyItems)
+exports('ReloadInventory', ReloadInventory)
 exports('HasItem', HasItem)
 exports('UseItem', UseItem)
 exports('SetItemMetadata', SetItemMetadata)
