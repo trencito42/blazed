@@ -423,12 +423,13 @@ CreateThread(function()
                         local pct = math.max(0, math.floor((hp / math.max(1, maxHp)) * 100))
                         local label = playerNametagLabel(serverId, GetPlayerName(player))
                         local wantedLevel = wantedLevelForPlayer(serverId)
-                        local nameY = coords.z + 1.18
+                        local nameZ = coords.z + 1.08
+                        local hpZ = coords.z + 0.90
                         if policeView and wantedLevel > 0 then
-                            drawText3d(coords.x, coords.y, nameY + 0.14, ('★%d'):format(wantedLevel), 0.30, 255, 80, 80)
+                            drawText3d(coords.x, coords.y, nameZ + 0.16, ('★%d'):format(wantedLevel), 0.28, 255, 80, 80)
                         end
-                        drawText3d(coords.x, coords.y, nameY, label, 0.34)
-                        drawHpBar3d(coords.x, coords.y, coords.z + 1.02, pct)
+                        drawText3d(coords.x, coords.y, nameZ, label, 0.32)
+                        drawHpBar3d(coords.x, coords.y, hpZ, pct)
                     end
                 end
             end

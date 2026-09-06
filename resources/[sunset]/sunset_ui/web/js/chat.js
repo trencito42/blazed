@@ -3,8 +3,6 @@ const Chat = {
     settingsOpen: false,
     playerId: 0,
     playerName: '',
-    draftText: '',
-    isAdmin: false,
 
     pageSize() {
         return ChatSettings?.settings?.pageSize || 10;
@@ -223,30 +221,6 @@ const Chat = {
         return container.contains(node);
     },
 
-    updateDraftRow(container) {
-        const root = container || $('#chat-messages');
-        if (!root) return;
-        const draft = String(this.draftText || '').trim();
-        const show = this.isChatOpen() && this.isAdmin && draft && draft.charAt(0) !== '/';
-        let draftEl = root.querySelector('.chat-msg--draft');
-        if (!show) {
-            draftEl?.remove();
-            return;
-        }
-        if (!draftEl) {
-            draftEl = document.createElement('div');
-            draftEl.className = 'chat-msg chat-msg--say chat-msg--draft';
-            const line = document.createElement('span');
-            line.className = 'chat-msg__line';
-            draftEl.appendChild(line);
-            root.appendChild(draftEl);
-        }
-        const idPart = this.playerId > 0 ? ` (${this.playerId})` : '';
-        const who = this.playerName || 'You';
-        draftEl.querySelector('.chat-msg__line').textContent =
-            `${this.formatTime({ time: new Date().toTimeString().slice(0, 8) })} ${who}${idPart} says: ${draft}`;
-    },
-
     render() {
         const container = $('#chat-messages');
         if (!container) return;
@@ -254,16 +228,13 @@ const Chat = {
         const open = this.isChatOpen();
         const visible = open ? this.messages : this.messages.slice(-this.pageSize());
         visible.forEach((m) => container.appendChild(this.buildMessageElement(m)));
-        this.updateDraftRow(container);
         container.scrollTop = container.scrollHeight;
     },
 
     appendMessage(msg) {
         const container = $('#chat-messages');
         if (!container) return;
-        container.querySelector('.chat-msg--draft')?.remove();
         container.appendChild(this.buildMessageElement(msg));
-        this.updateDraftRow(container);
         container.scrollTop = container.scrollHeight;
     },
 
@@ -283,7 +254,6 @@ const Chat = {
         const row = data || {};
         this.playerId = Number(row.playerId) || 0;
         this.playerName = String(row.playerName || '').trim();
-        this.isAdmin = Boolean(row.isAdmin);
     },
 
     toggle(open, data) {
@@ -297,7 +267,6 @@ const Chat = {
             chat.classList.add('chat-open');
             wrap.classList.remove('hidden');
             this._pendingRender = false;
-            lastPreviewSent = null;
             this.render();
             setTimeout(() => {
                 if (!this.isChatOpen()) return;
@@ -308,7 +277,6 @@ const Chat = {
             document.body.classList.remove('chat-ui-open');
             chat.classList.remove('chat-open');
             wrap.classList.add('hidden');
-            this.draftText = '';
             this._pendingRender = false;
             this.render();
             input.value = '';
@@ -321,45 +289,21 @@ const Chat = {
         if (!input) return;
         const next = String(text ?? '');
         if (input.value !== next) input.value = next;
-        this.draftText = input.value;
         if (options.fromHistory) {
             input.focus({ preventScroll: true });
             const end = input.value.length;
             input.setSelectionRange(end, end);
         }
-        this.updateDraftRow();
     },
 
     send() {
         const input = $('#chat-input');
         const msg = input.value.trim();
         if (!msg) { post('chatClose'); return; }
-        post('chatPreview', { text: '' });
-        lastPreviewSent = '';
         post('chatSend', { message: msg });
         input.value = '';
-        this.draftText = '';
-        this.updateDraftRow();
     },
 };
-
-let previewTimer = null;
-let lastPreviewSent = null;
-const emitChatPreview = () => {
-    const text = $('#chat-input')?.value ?? '';
-    if (text === lastPreviewSent) return;
-    lastPreviewSent = text;
-    post('chatPreview', { text });
-};
-
-$('#chat-input')?.addEventListener('input', (e) => {
-    Chat.draftText = e.target?.value ?? '';
-    Chat.updateDraftRow();
-    clearTimeout(previewTimer);
-    if (Chat.isAdmin) {
-        previewTimer = setTimeout(emitChatPreview, 70);
-    }
-});
 
 $('#chat-messages')?.addEventListener('mouseup', () => {
     if (!Chat._pendingRender) return;

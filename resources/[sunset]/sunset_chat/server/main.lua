@@ -28,18 +28,6 @@ local function sendNearby(source, payload, range, eventName)
     end
 end
 
-RegisterNetEvent('sunset:chat:typing', function(message)
-    local src = source
-    local isAdmin = false
-    pcall(function() isAdmin = exports.sunset_admin:IsAdmin(src, 1) == true end)
-    if not isAdmin then return end
-    local text = cleanChatText(message, 80) or ''
-    if text:sub(1, 1) == '/' then text = '' end
-    sendNearby(src, {
-        id = src,
-        message = text,
-    }, CHAT_RANGE, 'sunset:chat:typing')
-end)
 
 local function chatIdentity(source)
     local payload = {}

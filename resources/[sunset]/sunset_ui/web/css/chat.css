@@ -291,10 +291,6 @@ body.chat-ui-open .chat-msg *,
     font-weight: 700;
 }
 
-.chat-msg--draft {
-    opacity: 0.55;
-}
-
 .chat-msg--command_error { color: #ff8a8a; font-weight: 700; }
 .chat-msg--command_warn { color: #ffd36a; font-weight: 700; }
 .chat-msg--command_info { color: #9fd4ff; font-weight: 600; }

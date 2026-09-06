@@ -7,40 +7,22 @@ local function inputBlocked()
 end
 exports('IsChatOpen', function() return chatOpen end)
 
-local lastPreview = nil
-
-local function sendTypingPreview(text)
-    text = tostring(text or '')
-    if text == lastPreview then return end
-    lastPreview = text
-    TriggerServerEvent('sunset:chat:typing', text)
-end
-
-local function viewerCanSeeChatPreview()
-    local ok, level = pcall(function() return exports.sunset_admin:GetAdminLevel() end)
-    return ok and (tonumber(level) or 0) > 0
-end
-
 local function openChat()
     if chatOpen then return end
     chatOpen = true
     local myId = GetPlayerServerId(PlayerId())
     local myName = LocalPlayer.state.sunsetName or GetPlayerName(PlayerId()) or 'Player'
-    local isAdmin = false
-    pcall(function() isAdmin = (exports.sunset_admin:GetAdminLevel() or 0) > 0 end)
     exports.sunset_ui:SetFocus(true, true)
     exports.sunset_ui:Send('chatToggle', {
         open = true,
         playerId = myId,
         playerName = myName,
-        isAdmin = isAdmin,
     })
 end
 
 local function closeChat()
     if not chatOpen then return end
     chatOpen = false
-    sendTypingPreview('')
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('chatToggle', { open = false })
 end
@@ -55,13 +37,7 @@ RegisterCommand('sunset_chat_close', function()
 end, false)
 RegisterKeyMapping('sunset_chat_close', 'Close chat', 'keyboard', 'ESCAPE')
 
-AddEventHandler('sunset:nui:chatPreview', function(data)
-    if not chatOpen or not viewerCanSeeChatPreview() then return end
-    sendTypingPreview(data and data.text or '')
-end)
-
 AddEventHandler('sunset:nui:chatSend', function(data)
-    sendTypingPreview('')
     closeChat()
 
     local msg = (data.message or ''):gsub('^%s+', ''):gsub('%s+$', '')
@@ -106,7 +82,6 @@ RegisterNetEvent('sunset:chat:system', function(message, kind)
 end)
 
 AddEventHandler('sunset:nui:chatClose', function()
-    sendTypingPreview('')
     closeChat()
 end)
 
@@ -123,9 +98,9 @@ AddEventHandler('sunset:nui:chatHistory', function(data)
     end
 end)
 
-local Typing = {}
 local Overhead = {}
 local OVERHEAD_MS = 5000
+local OVERHEAD_Z = 1.56
 
 RegisterNetEvent('sunset:chat:message', function(payload)
     exports.sunset_ui:Send('chatMessage', payload)
@@ -143,38 +118,13 @@ RegisterNetEvent('sunset:chat:message', function(payload)
     Overhead[id] = { text = text, untilAt = GetGameTimer() + OVERHEAD_MS }
 end)
 
-RegisterNetEvent('sunset:chat:typing', function(payload)
-    local id = tonumber(payload and payload.id)
-    if not id or id == GetPlayerServerId(PlayerId()) then return end
-    local text = tostring(payload and payload.message or '')
-    if text == '' then
-        Typing[id] = nil
-        return
-    end
-    Typing[id] = { text = text, untilAt = GetGameTimer() + 2500 }
-end)
-
 local function drawOverhead3d(x, y, z, text, r, g, b)
     local onScreen, sx, sy = World3dToScreen2d(x, y, z)
     if not onScreen then return end
-    SetTextScale(0.30, 0.30)
+    SetTextScale(0.28, 0.28)
     SetTextFont(4)
     SetTextProportional(true)
-    SetTextColour(r or 255, g or 230, b or 140, 230)
-    SetTextCentre(true)
-    SetTextOutline()
-    BeginTextCommandDisplayText('STRING')
-    AddTextComponentSubstringPlayerName(text)
-    EndTextCommandDisplayText(sx, sy)
-end
-
-local function drawTyping3d(x, y, z, text)
-    local onScreen, sx, sy = World3dToScreen2d(x, y, z)
-    if not onScreen then return end
-    SetTextScale(0.30, 0.30)
-    SetTextFont(4)
-    SetTextProportional(true)
-    SetTextColour(255, 230, 140, 230)
+    SetTextColour(r or 255, g or 255, b or 255, 230)
     SetTextCentre(true)
     SetTextOutline()
     BeginTextCommandDisplayText('STRING')
@@ -209,7 +159,7 @@ CreateThread(function()
                         if #(myCoords - coords) < 22.0 then
                             local shown = row.text
                             if #shown > 72 then shown = shown:sub(1, 72) .. '...' end
-                            drawOverhead3d(coords.x, coords.y, coords.z + 1.42, shown, 255, 255, 255)
+                            drawOverhead3d(coords.x, coords.y, coords.z + OVERHEAD_Z, shown, 255, 255, 255)
                             drew = true
                         end
                     end
@@ -217,35 +167,6 @@ CreateThread(function()
             end
         end
 
-        for serverId, row in pairs(Typing) do
-            if not viewerCanSeeChatPreview() then
-                Typing[serverId] = nil
-            elseif not row or now > (row.untilAt or 0) then
-                Typing[serverId] = nil
-            elseif not Overhead[serverId] then
-                local player = GetPlayerFromServerId(serverId)
-                if player == -1 then
-                    for _, pid in ipairs(GetActivePlayers()) do
-                        if GetPlayerServerId(pid) == serverId then
-                            player = pid
-                            break
-                        end
-                    end
-                end
-                if player ~= -1 then
-                    local ped = GetPlayerPed(player)
-                    if ped ~= 0 and DoesEntityExist(ped) then
-                        local coords = GetEntityCoords(ped)
-                        if #(myCoords - coords) < 22.0 then
-                            local shown = row.text
-                            if #shown > 72 then shown = shown:sub(1, 72) .. '...' end
-                            drawTyping3d(coords.x, coords.y, coords.z + 1.36, shown)
-                            drew = true
-                        end
-                    end
-                end
-            end
-        end
         Wait(drew and 0 or 200)
     end
 end)
