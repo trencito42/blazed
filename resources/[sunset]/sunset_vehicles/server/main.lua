@@ -477,18 +477,63 @@ exports.sunset_core:RegisterCallback('sunset:parkOwnedVehicle', function(source,
     return true
 end)
 
-RegisterCommand('givecar', function(source, args)
-    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then return end
-    local target = tonumber(args[1])
-    local model = args[2] or 'sultan'
-    if not target then return end
-    local char = exports.sunset_core:GetCharacter(target)
-    if not char then return end
+local function notifyPlayer(source, message, kind)
+    if source == 0 then
+        print(('[givecar] %s'):format(message))
+        return
+    end
+    TriggerClientEvent('sunset:client:notify', source, message, kind or 'info')
+end
 
-    local plate = generatePlate()
-    MySQL.insert.await(
-        'INSERT INTO vehicles (character_id, plate, model, stored, garage) VALUES (?, ?, ?, 1, ?)',
-        { char.id, plate, model, 'legion' }
+RegisterCommand('givecar', function(source, args)
+    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
+        notifyPlayer(source, 'No permission — Admin level 3+ required', 'error')
+        return
+    end
+
+    local target = tonumber(args[1])
+    local model = string.lower((args[2] or 'sultan'):gsub('%s+', ''))
+    if not target then
+        notifyPlayer(source, 'Usage: /givecar [player id] [model]', 'error')
+        return
+    end
+
+    if not GetPlayerName(target) then
+        notifyPlayer(source, ('Player #%d is not online'):format(target), 'error')
+        return
+    end
+
+    local char = exports.sunset_core:GetCharacter(target)
+    if not char then
+        notifyPlayer(source, ('Player #%d has no character loaded'):format(target), 'error')
+        return
+    end
+
+    local vehicleId
+    for _ = 1, 8 do
+        local plate = generatePlate()
+        local ok, result = pcall(function()
+            return MySQL.insert.await(
+                'INSERT INTO vehicles (character_id, plate, model, stored, garage) VALUES (?, ?, ?, 1, ?)',
+                { char.id, plate, model, 'legion' }
+            )
+        end)
+        if ok and result then
+            vehicleId = result
+            break
+        end
+    end
+
+    if not vehicleId then
+        notifyPlayer(source, 'Could not add vehicle to garage (database error)', 'error')
+        return
+    end
+
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target)
+    TriggerClientEvent('sunset:client:notify', target, ('You received a vehicle: %s'):format(model), 'success')
+    notifyPlayer(
+        source,
+        ('Gave %s to %s (#%d) — stored in Legion garage'):format(model, targetName, target),
+        'success'
     )
-    TriggerClientEvent('sunset:client:notify', target, 'You received a vehicle: ' .. model, 'success')
-end, true)
+end, false)
