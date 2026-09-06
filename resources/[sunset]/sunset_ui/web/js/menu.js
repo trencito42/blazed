@@ -14,6 +14,7 @@ const Menu = {
 
         $$('.menu-action').forEach((btn) => {
             btn.addEventListener('click', () => {
+                if (btn.disabled) return;
                 if (btn.dataset.action === 'statistics') {
                     this.setTab('statistics');
                     return;
@@ -23,6 +24,8 @@ const Menu = {
         });
 
         $('#menu-profile-buy-level')?.addEventListener('click', () => {
+            const btn = $('#menu-profile-buy-level');
+            if (!btn || btn.disabled) return;
             post('menuAction', { action: 'buy_level' });
         });
 
@@ -54,6 +57,72 @@ const Menu = {
 
     formatXp(n) {
         return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+
+    buyLevelState(data) {
+        const level = Number(data?.level || 1);
+        const rp = Number(data?.respectPoints || 0);
+        const rpNeed = Number(data?.respectRequired || 4);
+        const price = Number(data?.levelPrice || 2500);
+        const money = Number(data?.cash || 0) + Number(data?.bank || 0);
+        const canBuy = rp >= rpNeed && money >= price;
+        let reason = '';
+        if (!canBuy) {
+            if (rp < rpNeed) {
+                reason = `Need ${this.formatXp(rpNeed)} RP — you have ${this.formatXp(rp)}`;
+            } else {
+                reason = `Need ${formatMoney(price)} in cash or bank`;
+            }
+        }
+        return { level, rp, rpNeed, price, canBuy, reason };
+    },
+
+    applyBuyLevelState(data) {
+        const state = this.buyLevelState(data);
+        const profileBtn = $('#menu-profile-buy-level');
+        const statsBtn = $('#menu-buy-level');
+        const nextLevel = state.level + 1;
+
+        [profileBtn, statsBtn].forEach((btn) => {
+            if (!btn) return;
+            btn.disabled = !state.canBuy;
+            btn.classList.toggle('is-unaffordable', !state.canBuy);
+            btn.setAttribute('aria-disabled', state.canBuy ? 'false' : 'true');
+        });
+
+        if (profileBtn) {
+            if (state.canBuy) {
+                profileBtn.innerHTML = `BUY LEVEL ${nextLevel}<small>${this.formatXp(state.rpNeed)} RP · ${formatMoney(state.price)}</small>`;
+            } else {
+                profileBtn.innerHTML = `LEVEL ${nextLevel} LOCKED<small>${this.escape(state.reason)}</small>`;
+            }
+        }
+
+        if (statsBtn) {
+            statsBtn.textContent = state.canBuy
+                ? `BUY LEVEL ${nextLevel} · ${this.formatXp(state.rpNeed)} RP · ${formatMoney(state.price)}`
+                : state.reason;
+        }
+    },
+
+    showAlert(message, type = 'error') {
+        const el = $('#menu-level-alert');
+        if (!message) {
+            el?.classList.add('hidden');
+            return;
+        }
+        if (typeof notify === 'function') notify(message, type, 7000);
+        if (!el) return;
+        el.textContent = String(message);
+        el.className = `menu-level-alert menu-level-alert--${type}`;
+        el.classList.remove('hidden');
+        clearTimeout(this._alertTimer);
+        this._alertTimer = setTimeout(() => el.classList.add('hidden'), 9000);
+    },
+
+    clearAlert() {
+        clearTimeout(this._alertTimer);
+        $('#menu-level-alert')?.classList.add('hidden');
     },
 
     escape(value) {
@@ -324,12 +393,7 @@ const Menu = {
         $('#menu-stats-level').textContent = String(data.level || 1);
         $('#menu-stats-xp').textContent = `${this.formatXp(data.respectPoints || 0)} / ${this.formatXp(data.respectRequired || 4)} RP`;
         $('#menu-stats-paydays').textContent = String(data.paydaysReceived || 0);
-        $('#menu-buy-level').textContent = `BUY LEVEL ${Number(data.level || 1) + 1} · ${this.formatXp(data.respectRequired || 4)} RP · ${formatMoney(data.levelPrice || 2500)}`;
-        const profileLevelButton = $('#menu-profile-buy-level');
-        if (profileLevelButton) {
-            const nextLevel = Number(data.level || 1) + 1;
-            profileLevelButton.innerHTML = `BUY LEVEL ${nextLevel}<small>${this.formatXp(data.respectRequired || 4)} RP · ${formatMoney(data.levelPrice || 2500)}</small>`;
-        }
+        this.applyBuyLevelState(data);
         $('#menu-stats-playtime').textContent = data.playtime || '0H 0M';
         $('#menu-stats-session').textContent = data.sessionTime || '0H 0M';
         $('#menu-stats-created').textContent = data.characterCreated || '—';
@@ -416,6 +480,7 @@ const Menu = {
 
         document.body.classList.add('menu-open');
         menu.classList.remove('hidden');
+        this.clearAlert();
         this.update(data);
         this.setTab(data?.initialTab || (this.soloMode === 'vehicle' ? 'vehicle' : 'player'));
     },
@@ -433,6 +498,7 @@ const Menu = {
         if (closeBtn && this._closeHtml) closeBtn.innerHTML = this._closeHtml;
 
         document.body.classList.remove('menu-open');
+        this.clearAlert();
     },
 
     close() {

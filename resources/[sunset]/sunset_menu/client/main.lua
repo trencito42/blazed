@@ -322,7 +322,10 @@ AddEventHandler('sunset:nui:menuAction', function(data)
     if data.action == 'buy_level' then
         CreateThread(function()
             local ok, message = Sunset.AwaitCallback('sunset:buyLevel')
-            exports.sunset_ui:Notify(message or (ok and 'Level purchased.' or 'Level purchase failed.'), ok and 'success' or 'error')
+            exports.sunset_ui:Send('menuAlert', {
+                message = message or (ok and 'Level purchased.' or 'Level purchase failed.'),
+                type = ok and 'success' or 'error',
+            })
             if not menuOpen then return end
             cachedExtras = nil
             cachedExtrasAt = 0

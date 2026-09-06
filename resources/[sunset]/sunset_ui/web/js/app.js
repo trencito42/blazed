@@ -245,6 +245,10 @@ window.addEventListener('message', (event) => {
             if (window.Menu) Menu.update(data || event.data.data);
             break;
 
+        case 'menuAlert':
+            if (window.Menu) Menu.showAlert((data || event.data.data)?.message, (data || event.data.data)?.type || 'error');
+            break;
+
         case 'menuHide':
             if (window.Menu) Menu.hide();
             break;
