@@ -267,8 +267,17 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         return
     end
     if data.action == 'buy_level' then
-        closeMenu()
-        ExecuteCommand('buylevel')
+        CreateThread(function()
+            local ok, message = Sunset.AwaitCallback('sunset:buyLevel')
+            exports.sunset_ui:Notify(message or (ok and 'Level purchased.' or 'Level purchase failed.'), ok and 'success' or 'error')
+            if not menuOpen then return end
+            cachedExtras = nil
+            cachedExtrasAt = 0
+            local refreshed, menuData = pcall(buildMenuData, true)
+            if refreshed and menuData then
+                exports.sunset_ui:Send('menuUpdate', menuData)
+            end
+        end)
         return
     end
     if data.action == 'pass' then

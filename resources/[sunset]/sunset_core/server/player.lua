@@ -263,33 +263,56 @@ function Sunset.AddRespectPoints(source, amount)
     return true
 end
 
-RegisterCommand('buylevel', function(source)
-    if source == 0 then return end
+local BuyLevelLocks = {}
+
+local function buyLevel(source)
     local char = Sunset.GetCharacter(source)
-    if not char then return end
+    if not char then return false, 'Character not loaded.' end
+    if BuyLevelLocks[source] then
+        return false, 'Your level purchase is already being processed.'
+    end
+
+    BuyLevelLocks[source] = true
     local rpCost = Sunset.GetLevelRespectCost(char.level)
     local moneyCost = Sunset.GetLevelMoneyCost(char.level)
     if (char.respect_points or 0) < rpCost then
-        return TriggerClientEvent('sunset:client:notify', source,
-            ('Level %d requires %d RP; you have %d. You earn 1 RP at every payday.'):format((char.level or 1) + 1, rpCost, char.respect_points or 0), 'error', 7000)
+        BuyLevelLocks[source] = nil
+        return false, ('Level %d requires %d RP; you have %d. You earn 1 RP at every payday.'):format((char.level or 1) + 1, rpCost, char.respect_points or 0)
     end
     local account
     if Sunset.GetMoney(source, 'bank') >= moneyCost then account = 'bank'
     elseif Sunset.GetMoney(source, 'cash') >= moneyCost then account = 'cash' end
     if not account then
-        return TriggerClientEvent('sunset:client:notify', source,
-            ('Level %d costs $%d. Keep the full amount in bank or cash.'):format((char.level or 1) + 1, moneyCost), 'error', 7000)
+        BuyLevelLocks[source] = nil
+        return false, ('Level %d costs $%d. Keep the full amount in bank or cash.'):format((char.level or 1) + 1, moneyCost)
     end
-    if not Sunset.RemoveMoney(source, account, moneyCost, 'buy_level') then return end
+    if not Sunset.RemoveMoney(source, account, moneyCost, 'buy_level') then
+        BuyLevelLocks[source] = nil
+        return false, 'The payment could not be completed. No level was purchased.'
+    end
     char.respect_points = char.respect_points - rpCost
     char.level = (char.level or 1) + 1
     MySQL.update.await('UPDATE characters SET level=?, respect_points=?, cash=?, bank=? WHERE id=?', {
         char.level, char.respect_points, char.cash or 0, char.bank or 0, char.id
     })
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
-    TriggerClientEvent('sunset:client:notify', source,
-        ('Level purchased! You are now level %d. Paid %d RP and $%d; %d RP remain.'):format(char.level, rpCost, moneyCost, char.respect_points), 'success', 9000)
+    BuyLevelLocks[source] = nil
+    return true, ('Level purchased! You are now level %d. Paid %d RP and $%d; %d RP remain.'):format(char.level, rpCost, moneyCost, char.respect_points)
+end
+
+RegisterCallback('sunset:buyLevel', function(source)
+    return buyLevel(source)
+end)
+
+RegisterCommand('buylevel', function(source)
+    if source == 0 then return end
+    local ok, message = buyLevel(source)
+    TriggerClientEvent('sunset:client:notify', source, message or (ok and 'Level purchased.' or 'Level purchase failed.'), ok and 'success' or 'error', ok and 9000 or 7000)
 end, false)
+
+AddEventHandler('playerDropped', function()
+    BuyLevelLocks[source] = nil
+end)
 
 function Sunset.GetSpawnPosition(char)
     if char.home_property_id then
