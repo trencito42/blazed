@@ -90,8 +90,8 @@ RegisterCommand('gov', function(source, args)
     if not isGovEligible(source, FactionCore.getChar(source)) then
         return FactionCore.notify(source, 'On-duty legal factions only', 'error')
     end
-    sendFactionChat(source, 'gov', args, function(src, c)
-        return isGovEligible(src, c)
+    sendFactionChat(source, 'gov', args, function(_, c)
+        return c ~= nil
     end)
 end, false)
 

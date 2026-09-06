@@ -482,7 +482,7 @@ CreateThread(function()
         { name = 'type', help = 'taxi|medic|fire|mechanic' },
         { name = 'message', help = 'optional details' },
     })
-    TriggerEvent('chat:addSuggestion', '/gov', 'On-duty legal faction channel (parades, public notices)', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/gov', 'Public government notice (on-duty legal factions only)', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/finvite', 'Leader: invite an accepted applicant nearby', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/acceptfaction', 'Accept your pending faction invitation')
     TriggerEvent('chat:addSuggestion', '/declinefaction', 'Decline your pending faction invitation')
