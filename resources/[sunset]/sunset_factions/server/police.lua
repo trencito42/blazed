@@ -29,7 +29,9 @@ end
 
 local function policeChat(target, tag, message, messageType)
     TriggerClientEvent('sunset:police:chatAlert', target, {
-        tag = tag, message = message, type = messageType or 'police_alert',
+        tag = tag,
+        message = message,
+        type = messageType or 'hq',
     })
 end
 
@@ -37,7 +39,7 @@ local function broadcastToPolice(tag, message)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         if src and FactionCore.isLawEnforcementMember(src) then
-            policeChat(src, tag, message, 'police_alert')
+            policeChat(src, 'HQ', message, 'hq')
         end
     end
 end

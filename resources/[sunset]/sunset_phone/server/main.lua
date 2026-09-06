@@ -90,8 +90,14 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
 
     local targetSource = findSourceByCharacterId(targetCharacterId)
     if targetSource then
-        TriggerClientEvent('sunset:client:notify', targetSource,
-            'New message from ' .. exports.sunset_core:GetPlayerDisplayName(source), 'info')
+        TriggerClientEvent('sunset:chat:message', targetSource, {
+            id = source,
+            name = exports.sunset_core:GetPlayerDisplayName(source),
+            message = '',
+            time = os.date('%H:%M:%S'),
+            type = 'sms',
+            smsNotify = true,
+        })
         TriggerClientEvent('sunset:client:phoneMessage', targetSource)
     end
 

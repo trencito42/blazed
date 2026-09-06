@@ -206,10 +206,14 @@ const Panels = {
         });
         const currentWeight = Number(data.weight) || 0;
         $('#inventory-weight').textContent = `${currentWeight.toFixed(1)} / ${Number(data.maxWeight) || 30} KG`;
+        document.body.classList.add('inventory-open');
         $('#inventory')?.classList.remove('hidden');
     },
 
-    hideInventory() { $('#inventory')?.classList.add('hidden'); },
+    hideInventory() {
+        $('#inventory')?.classList.add('hidden');
+        document.body.classList.remove('inventory-open');
+    },
 
     _shopCategoryLabels: {
         all: 'All',
@@ -667,55 +671,9 @@ const Panels = {
 
     showProperties(data) {
         this.init();
-        const list = $('#properties-list');
-        list.innerHTML = '';
-        (data.properties || []).forEach((p) => {
-            const li = document.createElement('li');
-            li.className = `house-row${Number(data.selectedId) === Number(p.id) ? ' is-selected' : ''}`;
-            const status = p.owned ? 'YOUR HOUSE' : p.rented ? 'YOUR RENTAL'
-                : p.owner_character_id ? (p.rentEnabled ? `RENT $${Number(p.rentPrice).toLocaleString()}/PAYDAY` : 'OWNED')
-                : (p.forSale ? `$${Number(p.price).toLocaleString()}` : 'NOT FOR SALE');
-            const details = document.createElement('div');
-            details.className = 'house-row__details';
-            const name = document.createElement('strong');
-            name.textContent = `#${p.id} ${p.label || 'House'}`;
-            const meta = document.createElement('span');
-            meta.textContent = `Level ${p.minimumLevel || 1} · ${p.interior || 'standard'} · ${p.locked ? 'Locked' : 'Unlocked'}${p.ownerName ? ` · Owner: ${p.ownerName}` : ''}`;
-            const rental = document.createElement('small');
-            rental.textContent = p.owner_character_id
-                ? `${p.renterCount || 0}/${p.maxRenters || 1} rental slots used`
-                : (p.forSale ? `Available for purchase · requires level ${p.minimumLevel || 1}` : 'Sale disabled by administrator');
-            details.append(name, meta, rental);
-            if (p.description) {
-                const description = document.createElement('small');
-                description.className = 'house-row__description';
-                description.textContent = `“${p.description}”`;
-                details.appendChild(description);
-            }
-            const side = document.createElement('div');
-            side.className = 'house-row__side';
-            const badge = document.createElement('b');
-            badge.textContent = status;
-            side.appendChild(badge);
-            const actions = document.createElement('div');
-            actions.className = 'house-row__actions';
-            const button = (label, action, primary = false) => {
-                const el = document.createElement('button');
-                el.type = 'button'; el.textContent = label;
-                if (primary) el.className = 'is-primary';
-                el.addEventListener('click', () => post('propertyAction', { propertyId: p.id, action }));
-                actions.appendChild(el);
-            };
-            if (p.access || !p.locked) button('Enter', 'enter', true);
-            if (!p.owner_character_id && p.forSale) button('Buy', 'buy', true);
-            if (p.owner_character_id && !p.access && p.rentEnabled && Number(p.renterCount) < Number(p.maxRenters)) button('Rent', 'rent', true);
-            if (p.access) button('Set spawn', 'sethome');
-            if (p.owned) button(p.locked ? 'Unlock' : 'Lock', 'lock');
-            side.appendChild(actions);
-            li.append(details, side);
-            list.appendChild(li);
-        });
-        if (!(data.properties || []).length) list.innerHTML = '<li class="house-empty">No houses have been created yet. An administrator can use /acreatehouse.</li>';
+        if (window.PropertyUI) {
+            PropertyUI.renderList($('#properties-list'), data || {});
+        }
         $('#properties')?.classList.remove('hidden');
     },
 

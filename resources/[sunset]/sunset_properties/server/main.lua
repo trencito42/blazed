@@ -44,7 +44,12 @@ local function nearby(source, prop, distance)
 end
 
 local function message(source, text, kind)
-    if source and source > 0 then TriggerClientEvent('sunset:client:propertyMessage', source, text, kind or 'info') end
+    if not source or source <= 0 then return end
+    kind = kind or 'info'
+    TriggerClientEvent('sunset:client:propertyMessage', source, text, kind)
+    if kind == 'error' or kind == 'warning' or kind == 'success' then
+        exports.sunset_core:CommandReply(source, text, kind)
+    end
 end
 
 local function publicRow(row, char)
@@ -281,7 +286,127 @@ local function toggleLock(source,id)
     return true,locked==1 and 'House door locked.' or 'House door unlocked; guests may enter.'
 end
 
-exports.sunset_core:RegisterCallback('sunset:propertyAction', function(source,action,id)
+local function setRent(source,id,price)
+    local _,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    if price == false or price == nil then
+        MySQL.update.await('UPDATE properties SET rent_enabled=0 WHERE id=?',{prop.id})
+        TriggerClientEvent('sunset:client:propertiesChanged',-1)
+        return true,'New rentals disabled; existing renters keep access.'
+    end
+    price=tonumber(price)
+    if not price or price<SunsetProperties.RentMin or price>SunsetProperties.RentMax then
+        return nil,('Rent must be between $%d and $%d per payday.'):format(SunsetProperties.RentMin,SunsetProperties.RentMax)
+    end
+    MySQL.update.await('UPDATE properties SET rent_enabled=1,rent_price=? WHERE id=?',{math.floor(price),prop.id})
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    return true,('Rent enabled at $%d per payday.'):format(price)
+end
+
+local function setMaxRenters(source,id,count)
+    local _,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    count=tonumber(count)
+    if not count or count<SunsetProperties.MaxRentersMin or count>SunsetProperties.MaxRentersMax then
+        return nil,('Maximum renters must be between %d and %d.'):format(SunsetProperties.MaxRentersMin,SunsetProperties.MaxRentersMax)
+    end
+    MySQL.update.await('UPDATE properties SET max_renters=? WHERE id=?',{math.floor(count),prop.id})
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    return true,('Maximum renters set to %d.'):format(count)
+end
+
+local function setDescription(source,id,text)
+    local _,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    if text == false or text == nil or text == '' then
+        MySQL.update.await('UPDATE properties SET description=NULL WHERE id=?',{prop.id})
+        TriggerClientEvent('sunset:client:propertiesChanged',-1)
+        return true,'House description removed.'
+    end
+    text=tostring(text):match('^%s*(.-)%s*$')
+    if text == '' then return nil,'Description cannot be empty. Use clear to remove it.' end
+    if #text>160 then return nil,'House description is too long. Maximum: 160 characters.' end
+    MySQL.update.await('UPDATE properties SET description=? WHERE id=?',{text,prop.id})
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    return true,('House description updated: %s'):format(text)
+end
+
+local function changeInterior(source,id,key)
+    local preset=SunsetProperties.Interiors[tostring(key or '')]
+    if not preset then return nil,'Unknown interior. Pick a valid option from the list.' end
+    local _,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    for player,insideId in pairs(Inside) do
+        if insideId==prop.id and tonumber(player)~=source then
+            return nil,'Everyone else must leave before the interior is changed.'
+        end
+    end
+    MySQL.update.await('UPDATE properties SET interior=?,interior_pos=? WHERE id=?',{key,encodePos(preset.coords,preset.coords.w),prop.id})
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    return true,('Interior changed to %s. Re-enter to see it.'):format(preset.label)
+end
+
+local function kickRenter(source,id,characterId)
+    local _,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    characterId=tonumber(characterId)
+    if not characterId then return nil,'Select a renter to remove.' end
+    local changed=MySQL.update.await('UPDATE property_rentals SET active=0 WHERE property_id=? AND character_id=? AND active=1',{prop.id,characterId})
+    if changed<1 then return nil,'That character is not an active renter in this house.' end
+    clearHome(characterId,prop.id,('The owner removed you from %s. Your job and faction were not changed.'):format(prop.label))
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    return true,('Renter #%d was removed.'):format(characterId)
+end
+
+local function sellHouse(source,id,confirm)
+    local owner,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    local refund=math.floor((tonumber(prop.price) or 0)*0.7)
+    if not confirm then
+        return false,('This permanently sells %s for 70%% ($%d). Confirm to proceed.'):format(prop.label,refund)
+    end
+    local renters=MySQL.query.await('SELECT character_id FROM property_rentals WHERE property_id=? AND active=1',{prop.id}) or {}
+    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE property_id=?',{prop.id})
+    for _,renter in ipairs(renters) do
+        clearHome(renter.character_id,prop.id,('Your rental at %s ended because the house was sold.'):format(prop.label))
+    end
+    MySQL.update.await('UPDATE characters SET home_property_id=NULL WHERE home_property_id=?',{prop.id})
+    MySQL.update.await('UPDATE properties SET owner_character_id=NULL,locked=1,rent_enabled=0 WHERE id=? AND owner_character_id=?',{prop.id,owner.id})
+    exports.sunset_core:SetHomeProperty(source,nil)
+    exports.sunset_core:AddMoney(source,'bank',refund,'house_sale')
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    return true,('House sold. $%d was deposited in your bank.'):format(refund)
+end
+
+exports.sunset_core:RegisterCallback('sunset:getPropertyMeta', function()
+    local interiors = {}
+    for id,preset in pairs(SunsetProperties.Interiors) do
+        interiors[#interiors+1] = { id = id, label = preset.label }
+    end
+    table.sort(interiors, function(a,b) return a.label < b.label end)
+    return {
+        rentMin = SunsetProperties.RentMin,
+        rentMax = SunsetProperties.RentMax,
+        maxRentersMin = SunsetProperties.MaxRentersMin,
+        maxRentersMax = SunsetProperties.MaxRentersMax,
+        sellRefundPercent = 70,
+        interiors = interiors,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:getPropertyRenters', function(source,id)
+    local _,prop,err=ownedProperty(source,id)
+    if not prop then return nil,err end
+    local rows=MySQL.query.await([[SELECT r.character_id,TRIM(CONCAT(c.firstname,' ',c.lastname)) name,r.rent_price,r.last_paid_at
+      FROM property_rentals r JOIN characters c ON c.id=r.character_id WHERE r.property_id=? AND r.active=1 ORDER BY r.started_at]],{prop.id}) or {}
+    for _,row in ipairs(rows) do
+        row.rent_price = tonumber(row.rent_price) or 0
+    end
+    return rows
+end)
+
+exports.sunset_core:RegisterCallback('sunset:propertyAction', function(source,action,id,payload)
+    payload = type(payload) == 'table' and payload or {}
     if action=='enter' then return enter(source,id)
     elseif action=='lock' then return toggleLock(source,id)
     elseif action=='sethome' then
@@ -289,6 +414,24 @@ exports.sunset_core:RegisterCallback('sunset:propertyAction', function(source,ac
         if not char or not prop or not accessible(char,prop) then return nil,'You do not have access to this house.' end
         if not exports.sunset_core:SetHomeProperty(source,prop.id) then return nil,'The home spawn could not be saved. Please try again.' end
         return true,('Home spawn set to %s.'):format(prop.label)
+    elseif action=='rent_on' then return setRent(source,id,payload.price)
+    elseif action=='rent_off' then return setRent(source,id,false)
+    elseif action=='max_renters' then return setMaxRenters(source,id,payload.count)
+    elseif action=='description' then
+        if payload.clear then return setDescription(source,id,false) end
+        return setDescription(source,id,payload.text)
+    elseif action=='interior' then return changeInterior(source,id,payload.key)
+    elseif action=='kick_renter' then return kickRenter(source,id,payload.characterId)
+    elseif action=='sell' then return sellHouse(source,id,payload.confirm == true)
+    elseif action=='unrent' then
+        local char=exports.sunset_core:GetCharacter(source)
+        if not char then return nil,'Character data is unavailable.' end
+        local rent=activeRental(char.id)
+        if not rent then return nil,'You do not currently rent a house.' end
+        MySQL.update.await('UPDATE property_rentals SET active=0 WHERE id=?',{rent.id})
+        if tonumber(char.home_property_id)==tonumber(rent.property_id) then exports.sunset_core:SetHomeProperty(source,nil) end
+        TriggerClientEvent('sunset:client:propertiesChanged',-1)
+        return true,'Rental ended. Your civilian job and faction were not changed.'
     end
     return nil,'Unknown house action.'
 end)

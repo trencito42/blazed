@@ -1,20 +1,20 @@
-/* ═══ CHAT — SAMP style (stânga sus) ═══ */
+/* ═══ CHAT — SA-MP style (top-left) ═══ */
 :root {
     --chat-font-size: 13px;
-    --chat-time-size: 11px;
+    --chat-time-size: 13px;
     --chat-input-size: 14px;
-    --chat-page-height: 188px;
-    --chat-line-height: 1.35;
+    --chat-page-height: 220px;
+    --chat-line-height: 1.22;
 }
 
 .chat {
     position: fixed;
-    top: 120px;
-    left: 12px;
-    width: min(520px, 42vw);
+    top: 10px;
+    left: 10px;
+    width: min(560px, 44vw);
     z-index: 40;
     pointer-events: none;
-    font-family: 'Inter', sans-serif;
+    font-family: Tahoma, Arial, 'Segoe UI', sans-serif;
 }
 
 .chat-toolbar {
@@ -42,7 +42,6 @@
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
-    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
 }
 
 .chat-settings-btn:hover {
@@ -61,7 +60,6 @@
     background: rgba(8, 4, 14, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 }
 
 .chat-settings-popover.hidden { display: none; }
@@ -147,7 +145,7 @@ body.chat-ui-open .chat-msg,
 .chat-messages {
     max-height: var(--chat-page-height);
     overflow: hidden;
-    padding: 0 4px;
+    padding: 0 2px;
     display: block;
 }
 
@@ -157,51 +155,114 @@ body.chat-ui-open .chat-msg,
 
 .chat-msg {
     font-size: var(--chat-font-size);
-    color: rgba(255,255,255,0.9);
-    text-shadow: 0 1px 3px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8);
+    color: #f2f2f2;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
     line-height: var(--chat-line-height);
-    animation: chatIn 0.15s ease;
+    animation: chatIn 0.12s ease;
+    margin-bottom: 1px;
 }
 
-.chat-msg__time { color: rgba(255,255,255,0.35); margin-right: 6px; font-size: var(--chat-time-size); }
-.chat-msg__id { color: #e85d2a; font-weight: 600; margin-right: 4px; }
-.chat-msg__name { color: rgba(255,255,255,0.65); margin-right: 4px; }
+.chat-msg__line {
+    display: inline;
+    word-break: break-word;
+}
+
+/* Local / default */
+.chat-msg--say { color: #f5f5f5; }
+
+/* Roleplay */
 .chat-msg--me { color: #c9a0ff; font-style: italic; }
 .chat-msg--do { color: #7ec8e3; font-style: italic; }
+
+/* Faction radio default */
 .chat-msg--f,
 .chat-msg--r,
 .chat-msg--d,
+.chat-msg--gov,
 .chat-msg--faction_info {
     color: #ffc27a;
-    border-left: 2px solid #ff8a1f;
-    padding-left: 7px;
-    background: linear-gradient(90deg, rgba(255, 138, 31, .14), transparent 72%);
+    font-weight: 600;
 }
-.chat-msg--gov,
+
+/* Per-faction colors (B-Zone style) */
+.chat-msg--faction-police.chat-msg--f,
+.chat-msg--faction-police.chat-msg--r,
+.chat-msg--faction-police.chat-msg--d,
+.chat-msg--faction-police.chat-msg--gov {
+    color: #c9b6ff;
+}
+
+.chat-msg--faction-medic.chat-msg--f,
+.chat-msg--faction-medic.chat-msg--r,
+.chat-msg--faction-medic.chat-msg--d,
+.chat-msg--faction-medic.chat-msg--gov {
+    color: #ff9a9a;
+}
+
+.chat-msg--faction-lsfd.chat-msg--f,
+.chat-msg--faction-lsfd.chat-msg--r,
+.chat-msg--faction-lsfd.chat-msg--d,
+.chat-msg--faction-lsfd.chat-msg--gov {
+    color: #ff9b6a;
+}
+
+.chat-msg--faction-taxi.chat-msg--f,
+.chat-msg--faction-taxi.chat-msg--r,
+.chat-msg--faction-taxi.chat-msg--d,
+.chat-msg--faction-taxi.chat-msg--gov {
+    color: #ffe566;
+}
+
+.chat-msg--faction-mechanic.chat-msg--f,
+.chat-msg--faction-mechanic.chat-msg--r,
+.chat-msg--faction-mechanic.chat-msg--d,
+.chat-msg--faction-mechanic.chat-msg--gov {
+    color: #ffbf66;
+}
+
+.chat-msg--faction-sunset_cartel.chat-msg--f,
+.chat-msg--faction-sunset_cartel.chat-msg--r,
+.chat-msg--faction-sunset_cartel.chat-msg--d,
+.chat-msg--faction-sunset_cartel.chat-msg--gov {
+    color: #d8b4fe;
+}
+
+.chat-msg--faction-night_syndicate.chat-msg--f,
+.chat-msg--faction-night_syndicate.chat-msg--r,
+.chat-msg--faction-night_syndicate.chat-msg--d,
+.chat-msg--faction-night_syndicate.chat-msg--gov {
+    color: #c4b5fd;
+}
+
+/* HQ / department */
+.chat-msg--hq {
+    color: #6eb5ff;
+    font-weight: 700;
+}
+
+/* Public announcements */
 .chat-msg--announce {
-    color: #ffd36a;
-    border-left: 2px solid #ffb21c;
-    padding-left: 7px;
-    background: linear-gradient(90deg, rgba(255, 178, 28, .15), transparent 72%);
+    color: #66ff66;
+    font-weight: 700;
 }
+
+/* SMS notification */
+.chat-msg--sms {
+    color: #ffff00;
+    font-weight: 700;
+}
+
+/* Megaphone / police orders */
 .chat-msg--megaphone,
 .chat-msg--police_alert,
 .chat-msg--radar {
-    color: #fff;
+    color: #ffffff;
     font-weight: 700;
-    border-left: 3px solid #ff554f;
-    padding: 2px 0 2px 8px;
-    background: linear-gradient(90deg, rgba(255, 42, 42, .22), rgba(255, 138, 0, .08), transparent 78%);
 }
-.chat-msg--f .chat-msg__name,
-.chat-msg--r .chat-msg__name,
-.chat-msg--d .chat-msg__name,
-.chat-msg--faction_info .chat-msg__name { color: #e8c7ff; font-weight: 700; }
-.chat-msg--gov .chat-msg__name,
-.chat-msg--announce .chat-msg__name { color: #ffe8a8; font-weight: 700; }
-.chat-msg--megaphone .chat-msg__name,
-.chat-msg--police_alert .chat-msg__name,
-.chat-msg--radar .chat-msg__name { color: #ffb260; font-weight: 700; }
+
+.chat-msg--command_error { color: #ff8a8a; font-weight: 700; }
+.chat-msg--command_warn { color: #ffd36a; font-weight: 700; }
+.chat-msg--command_info { color: #9fd4ff; font-weight: 600; }
 
 .chat-input-wrap {
     margin-top: 6px;
@@ -213,11 +274,11 @@ body.chat-ui-open .chat-msg,
 .chat-input {
     width: 100%;
     padding: 8px 12px;
-    background: rgba(0,0,0,0.85);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-left: 3px solid #e85d2a;
     color: #fff;
-    font-family: 'Inter', sans-serif;
+    font-family: Tahoma, Arial, 'Segoe UI', sans-serif;
     font-size: var(--chat-input-size);
     outline: none;
     user-select: text;
@@ -226,12 +287,12 @@ body.chat-ui-open .chat-msg,
     caret-color: #e85d2a;
 }
 
-.chat-input::placeholder { color: rgba(255,255,255,0.35); }
+.chat-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
 @keyframes chatIn {
-    from { opacity: 0; transform: translateY(3px); }
+    from { opacity: 0; transform: translateY(2px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 .chat-messages::-webkit-scrollbar { width: 3px; }
-.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }

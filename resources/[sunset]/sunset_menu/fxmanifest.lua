@@ -23,3 +23,5 @@ server_scripts {
 }
 
 dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone', 'sunset_vehicles' }
+
+exports { 'OpenVehicle' }

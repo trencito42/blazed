@@ -45,6 +45,41 @@ end
 
 AddEventHandler('sunset:client:spawnSelectionRequired', showSpawnSelection)
 
+local function openSpawnMenuNow(force)
+    if inCharacterFlow and not force then
+        exports.sunset_ui:Notify('Finish the current login flow first.', 'error')
+        return false
+    end
+    local char = exports.sunset_core:GetCharacter()
+    if not char or not char.id then
+        exports.sunset_ui:Notify('No character loaded.', 'error')
+        return false
+    end
+    if GetResourceState('sunset_appearance') == 'started' and exports.sunset_appearance:IsEditing() then
+        exports.sunset_ui:Notify('Finish character appearance first.', 'error')
+        return false
+    end
+    showSpawnSelection(char)
+    return true
+end
+
+RegisterNetEvent('sunset:client:openSpawnMenu', function()
+    openSpawnMenuNow(true)
+end)
+
+RegisterCommand('spawnmenu', function()
+    openSpawnMenuNow(false)
+end, false)
+
+exports('OpenSpawnMenu', function(force)
+    return openSpawnMenuNow(force == true)
+end)
+
+CreateThread(function()
+    Wait(1500)
+    TriggerEvent('chat:addSuggestion', '/spawnmenu', 'Open the spawn location selector without reconnecting')
+end)
+
 AddEventHandler('sunset:nui:spawnSelect', function(data)
     if not pendingSpawnCharacter then return end
     local choice = data and data.location

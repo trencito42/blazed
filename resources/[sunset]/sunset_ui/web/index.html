@@ -6,16 +6,16 @@
     <title>SunsetMP</title>
     <link rel="stylesheet" href="css/fonts.css?v=2">
     <link rel="stylesheet" href="css/style.css?v=5">
-    <link rel="stylesheet" href="css/hud.css?v=6">
+    <link rel="stylesheet" href="css/hud.css?v=7">
     <link rel="stylesheet" href="css/scoreboard.css">
-    <link rel="stylesheet" href="css/chat.css?v=3">
-    <link rel="stylesheet" href="css/menu.css?v=4">
-    <link rel="stylesheet" href="css/panels.css?v=3">
+    <link rel="stylesheet" href="css/chat.css?v=6">
+    <link rel="stylesheet" href="css/menu.css?v=7">
+    <link rel="stylesheet" href="css/panels.css?v=4">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css">
     <link rel="stylesheet" href="css/fuel_pump.css">
-    <link rel="stylesheet" href="css/theme.css?v=3">
+    <link rel="stylesheet" href="css/theme.css?v=5">
     <link rel="stylesheet" href="css/fishing.css?v=2">
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
@@ -318,15 +318,15 @@
         </section>
     </div>
 
+    <!-- WANTED (center top) -->
+    <div class="hud-wanted-center hidden" id="hud-wanted" aria-live="polite">
+        <div class="hud-wanted-center__stars" id="hud-wanted-level" aria-label="Wanted level"></div>
+        <div class="hud-wanted-center__timer hidden" id="hud-wanted-timer"></div>
+    </div>
+
     <!-- RPG HUD -->
     <div id="hud" class="hud hidden">
         <div class="hud-tr hud-boot" data-hud-panel="tr">
-            <div class="hud-wanted hidden" id="hud-wanted">
-                <div class="hud-wanted__row">
-                    <span class="hud-wanted__stars" id="hud-wanted-level" aria-label="Wanted level"></span>
-                </div>
-                <span class="hud-wanted__timer hidden" id="hud-wanted-timer"></span>
-            </div>
             <div class="info-panel">
                 <div class="clock-display">
                     <span id="hud-time">00:00</span>
@@ -545,7 +545,18 @@
                     </div><button type="button" class="menu-action menu-stats-buylevel" data-action="buy_level" id="menu-buy-level">BUY NEXT LEVEL</button></div>
                 </section>
                 <section class="menu-panel-view tech-panel accent-orange" data-panel="property">
-                    <div class="menu-placeholder"><h3>REAL ESTATE_</h3><div class="menu-placeholder__row"><span>OWNED</span><strong id="menu-property-count">0</strong></div><div class="menu-placeholder__row"><span>HOME SPAWN</span><strong id="menu-home-label">None</strong></div><p>Use <strong>/properties</strong> or interact at a property marker.</p></div>
+                    <div class="menu-mgmt">
+                        <div class="menu-mgmt__head">
+                            <h3>REAL ESTATE_</h3>
+                            <p>Your house, rentals and owner controls. At a house marker, press <strong>E</strong> for the same panel.</p>
+                        </div>
+                        <div class="menu-property-summary">
+                            <div class="menu-placeholder__row"><span>OWNED</span><strong id="menu-property-count">0</strong></div>
+                            <div class="menu-placeholder__row"><span>HOME SPAWN</span><strong id="menu-home-label">None</strong></div>
+                        </div>
+                        <ul class="panel-list menu-property-list" id="menu-property-list"></ul>
+                        <button type="button" class="menu-job-btn" id="menu-property-browse">Browse all houses</button>
+                    </div>
                 </section>
                 <section class="menu-panel-view tech-panel" data-panel="settings">
                     <div class="menu-config">
@@ -593,15 +604,27 @@
 
     <!-- AUTH moved to #screen-auth (cinematic) -->
 
-    <!-- INVENTORY -->
-    <div id="inventory" class="overlay-panel overlay-panel--peek hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide inventory-panel">
-            <div class="panel-tech-header">
-                <div><span class="panel-kicker">CHARACTER STORAGE</span><h2>Inventory</h2></div>
-                <span class="panel-counter" id="inventory-weight"></span>
-            </div>
-            <ul class="panel-list" id="inventory-list"></ul>
-            <button type="button" class="panel-close" id="inventory-close">Close (I)</button>
+    <!-- INVENTORY (I) — bottom glass layout matching player menu -->
+    <div id="inventory" class="menu menu--solo menu--solo-inventory hidden">
+        <div class="menu-wrap menu-wrap--solo">
+            <header class="menu-brand">
+                <div>INVENTORY <span>STORAGE</span></div>
+                <button type="button" class="menu-close-btn" id="inventory-close"><span class="menu-keycap">I</span> CLOSE</button>
+            </header>
+            <main class="menu-panels menu-panels--solo">
+                <section class="menu-panel-view tech-panel accent-orange is-active">
+                    <div class="menu-mgmt">
+                        <div class="menu-mgmt__head menu-mgmt__head--inventory">
+                            <div>
+                                <h3>CHARACTER STORAGE_</h3>
+                                <p>Items and equipment on your person.</p>
+                            </div>
+                            <span class="panel-counter" id="inventory-weight"></span>
+                        </div>
+                        <ul class="menu-inventory-list" id="inventory-list"></ul>
+                    </div>
+                </section>
+            </main>
         </div>
     </div>
 
@@ -1133,12 +1156,13 @@
     <script src="js/hud_editor.js"></script>
     <script src="js/scoreboard.js"></script>
     <script src="js/chat_settings.js"></script>
-    <script src="js/chat.js?v=3"></script>
-    <script src="js/menu.js?v=2"></script>
+    <script src="js/chat.js?v=6"></script>
+    <script src="js/properties-ui.js?v=2"></script>
+    <script src="js/menu.js?v=4"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=2"></script>
-    <script src="js/panels.js?v=4"></script>
+    <script src="js/panels.js?v=6"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_loading.js?v=3"></script>
     <script src="js/spawn.js?v=2"></script>

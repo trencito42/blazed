@@ -56,21 +56,32 @@ end
 
 RegisterCommand('setleader', function(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        return FactionCore.notify(source, 'No permission', 'error')
+        return exports.sunset_core:CommandDenyAdmin(source, 'setleader')
     end
     local target = resolvePlayer(source, args[1])
-    local factionId = args[2]
-    if not target or not factionId or not Sunset.Factions[factionId] then
-        local msg = 'Usage: /setleader [id|username] [faction]'
-        if source == 0 then print(msg) else FactionCore.notify(source, msg, 'error') end
+    local factionId = args[2] and string.lower(args[2]) or nil
+    if not target or not factionId then
+        local msg = 'Usage: /setleader [server id|username] [faction]'
+        if source == 0 then print(msg) else exports.sunset_core:CommandReply(source, msg, 'error') end
+        return
+    end
+    if not Sunset.Factions[factionId] then
+        local list = exports.sunset_core:CommandListKeys(Sunset.Factions, 10)
+        exports.sunset_core:CommandReply(source,
+            ('Unknown faction "%s". Valid factions: %s'):format(factionId, list), 'error')
         return
     end
     local char = FactionCore.getChar(target)
-    if not char then return end
+    if not char then
+        exports.sunset_core:CommandNoCharacter(source, target)
+        return
+    end
     local current = select(1, FactionCore.getFactionOf(char))
     if current ~= factionId then
         if not exports.sunset_core:SetFaction(target, factionId, highestFactionGrade(factionId)) then
-            return FactionCore.notify(source, 'Could not assign faction rank', 'error')
+            return exports.sunset_core:CommandReply(source,
+                ('Could not add %s (#%d) to %s — invalid faction grade in config.'):format(
+                    GetPlayerName(target) or '?', target, factionId), 'error')
         end
     end
     MySQL.insert.await(
@@ -79,26 +90,41 @@ RegisterCommand('setleader', function(source, args)
     )
     FactionCore.auditLog(factionId, char.id, 'setleader', char.id, { by = source })
     FactionCore.notify(target, 'You are now a faction leader', 'success')
-    if source ~= 0 then FactionCore.notify(source, 'Leader assigned', 'success') end
+    if source ~= 0 then
+        exports.sunset_core:CommandReply(source,
+            ('Made %s (#%d) leader of %s.'):format(GetPlayerName(target) or '?', target, factionId), 'success')
+    end
 end, false)
 
 RegisterCommand('removeleader', function(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        return FactionCore.notify(source, 'No permission', 'error')
+        return exports.sunset_core:CommandDenyAdmin(source, 'removeleader')
     end
     local target = resolvePlayer(source, args[1])
-    local factionId = args[2]
+    local factionId = args[2] and string.lower(args[2]) or nil
     if not target or not factionId then
-        local msg = 'Usage: /removeleader [id|username] [faction]'
-        if source == 0 then print(msg) else FactionCore.notify(source, msg, 'error') end
+        local msg = 'Usage: /removeleader [server id|username] [faction]'
+        if source == 0 then print(msg) else exports.sunset_core:CommandReply(source, msg, 'error') end
+        return
+    end
+    if not Sunset.Factions[factionId] then
+        local list = exports.sunset_core:CommandListKeys(Sunset.Factions, 10)
+        exports.sunset_core:CommandReply(source,
+            ('Unknown faction "%s". Valid factions: %s'):format(factionId, list), 'error')
         return
     end
     local char = FactionCore.getChar(target)
-    if not char then return end
+    if not char then
+        exports.sunset_core:CommandNoCharacter(source, target)
+        return
+    end
     MySQL.update.await('DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?', { char.id, factionId })
     FactionCore.auditLog(factionId, char.id, 'removeleader', char.id, { by = source })
     FactionCore.notify(target, 'Faction leader role removed', 'info')
-    if source ~= 0 then FactionCore.notify(source, 'Leader removed', 'success') end
+    if source ~= 0 then
+        exports.sunset_core:CommandReply(source,
+            ('Removed %s (#%d) as leader of %s.'):format(GetPlayerName(target) or '?', target, factionId), 'success')
+    end
 end, false)
 
 exports.sunset_core:RegisterCallback('sunset:factionUninvite', function(source, targetId)

@@ -12,6 +12,7 @@ Sunset.HelpAdminDescriptions = {
     dv = 'Delete your current vehicle',
     heal = 'Heal yourself or another player',
     revive = 'Revive a downed player',
+    arespawn = 'Open spawn menu for a player or hospital respawn',
     noclip = 'Toggle noclip mode',
     god = 'Toggle god mode',
     announce = 'Send a server-wide announcement',
@@ -27,6 +28,8 @@ Sunset.HelpAdminDescriptions = {
     setjob = 'Set a player civilian job (trucker, fisherman, etc.)',
     setfaction = 'Assign a player to a faction with grade',
     givecar = 'Give a vehicle to a player (stored in garage)',
+    giveitem = 'Give inventory items to a player: /giveitem [id] [item] [count]',
+    givegun = 'Give a weapon to a player: /givegun [id] [weapon] [ammo]',
     setleader = 'Grant faction leader permissions to a member',
     removeleader = 'Revoke faction leader role from a member',
     acreatehouse = 'Create a house at your current position: price, interior, minimum level, name',
@@ -99,12 +102,83 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/f [message]', desc = 'Faction chat' },
     { cmd = '/service [type] [msg]', desc = 'Request taxi, medic, fire, or mechanic' },
     { cmd = '/relook', desc = 'Re-open character appearance editor' },
-    { cmd = '/respawn', desc = 'Respawn when dead (if allowed)' },
+    { cmd = '/respawn', desc = 'Respawn at hospital when downed (after bleedout timer)' },
+    { cmd = '/spawnmenu', desc = 'Open spawn location selector without reconnecting' },
     { cmd = '/hudedit', desc = 'Move HUD panels' },
     { cmd = '/hudreset', desc = 'Reset HUD layout to default' },
     { cmd = '/rob', desc = 'Start a marked luxury-store robbery (requires 1 rob point, a lockpick and enough on-duty police)' },
     { cmd = '[E] robbery', desc = 'Start robbery, route the security circuit, smash displays, then escape 300m' },
     { cmd = '[E] fence', desc = 'Sell stolen watches and jewelry to the dockside fence' },
+}
+
+--- Command usage for chat preflight (permission + argument hints before execution).
+Sunset.CommandUsage = {
+    kick = { usage = '/kick [server id] [reason]', minArgs = 1 },
+    ban = { usage = '/ban [server id] [reason]', minArgs = 1 },
+    unban = { usage = '/unban [player id or license:xxx]', minArgs = 1 },
+    tp = { usage = '/tp [server id] or /tp [x] [y] [z]', minArgs = 1 },
+    bring = { usage = '/bring [server id]', minArgs = 1 },
+    ['goto'] = { usage = '/goto [server id]', minArgs = 1 },
+    car = { usage = '/car [model]', minArgs = 0 },
+    dv = { usage = '/dv', minArgs = 0 },
+    heal = { usage = '/heal [server id]', minArgs = 0 },
+    revive = { usage = '/revive [server id]', minArgs = 0 },
+    arespawn = { usage = '/arespawn [server id] or /arespawn [server id] hospital', minArgs = 1 },
+    noclip = { usage = '/noclip', minArgs = 0 },
+    god = { usage = '/god', minArgs = 0 },
+    announce = { usage = '/announce [message]', minArgs = 1 },
+    setadmin = { usage = '/setadmin [username or id] [level 0-5]', minArgs = 2 },
+    coords = { usage = '/coords [v4]', minArgs = 0 },
+    hudexport = { usage = '/hudexport', minArgs = 0 },
+    setcp = { usage = '/setcp [name]', minArgs = 1 },
+    delcp = { usage = '/delcp [name]', minArgs = 1 },
+    gotocp = { usage = '/gotocp [name]', minArgs = 1 },
+    gotoloc = { usage = '/gotoloc [location id or name]', minArgs = 1 },
+    speed = { usage = '/speed [multiplier]', minArgs = 1 },
+    dealershipadmin = { usage = '/dealershipadmin', minArgs = 0 },
+    setjob = { usage = '/setjob [server id] [job]', minArgs = 2 },
+    setfaction = { usage = '/setfaction [server id] [faction] [grade]', minArgs = 2 },
+    givecar = { usage = '/givecar [server id] [model]', minArgs = 2 },
+    giveitem = { usage = '/giveitem [server id] [item] [count]', minArgs = 2 },
+    givegun = { usage = '/givegun [server id] [weapon] [ammo]', minArgs = 2 },
+    setleader = { usage = '/setleader [server id] [faction]', minArgs = 2 },
+    removeleader = { usage = '/removeleader [server id] [faction]', minArgs = 2 },
+    acreatehouse = { usage = '/acreatehouse [price] [interior] [min level] [name]', minArgs = 4 },
+    ahouseedit = { usage = '/ahouseedit [house id] [field] [value]', minArgs = 3 },
+    astats = { usage = '/astats [server id]', minArgs = 1 },
+    setstat = { usage = '/setstat [server id] [stat] [value]', minArgs = 3 },
+    setrob = { usage = '/setrob [server id] [value]', minArgs = 2 },
+    setjobstat = { usage = '/setjobstat [server id] [job] [stat] [value]', minArgs = 4 },
+    me = { usage = '/me [action text]', minArgs = 1 },
+    ['do'] = { usage = '/do [scene text]', minArgs = 1 },
+    help = { usage = '/help', minArgs = 0 },
+    stats = { usage = '/stats', minArgs = 0 },
+    buylevel = { usage = '/buylevel', minArgs = 0 },
+    inventory = { usage = '/inventory', minArgs = 0 },
+    phone = { usage = '/phone', minArgs = 0 },
+    v = { usage = '/v', minArgs = 0 },
+    garage = { usage = '/garage', minArgs = 0 },
+    properties = { usage = '/properties', minArgs = 0 },
+    emotes = { usage = '/emotes', minArgs = 0 },
+    e = { usage = '/e [emote name]', minArgs = 1 },
+    stopemote = { usage = '/stopemote', minArgs = 0 },
+    jobs = { usage = '/jobs', minArgs = 0 },
+    work = { usage = '/work [cancel]', minArgs = 0 },
+    skills = { usage = '/skills', minArgs = 0 },
+    pass = { usage = '/pass', minArgs = 0 },
+    missions = { usage = '/missions', minArgs = 0 },
+    duty = { usage = '/duty', minArgs = 0 },
+    faction = { usage = '/faction', minArgs = 0 },
+    factions = { usage = '/factions', minArgs = 0 },
+    dealership = { usage = '/dealership', minArgs = 0 },
+    relook = { usage = '/relook', minArgs = 0 },
+    hudedit = { usage = '/hudedit', minArgs = 0 },
+    hudreset = { usage = '/hudreset', minArgs = 0 },
+    rob = { usage = '/rob', minArgs = 0 },
+    fish = { usage = '/fish', minArgs = 0 },
+    sellfish = { usage = '/sellfish', minArgs = 0 },
+    getpos = { usage = '/getpos', minArgs = 0 },
+    pos = { usage = '/pos', minArgs = 0 },
 }
 
 Sunset.HelpDispatchEntries = {
@@ -121,4 +195,50 @@ Sunset.HelpFireEntries = {
     { cmd = '/calls', desc = 'Accept civilian /service fire calls' },
     { cmd = 'Extinguisher', desc = 'Walk up to the burning wreck — spray LMB until it dies' },
     { cmd = '[E] garage', desc = 'Spawn the firetruk at Fire Station Garage' },
+}
+
+--- Client-registered commands (not always visible to server GetRegisteredCommands).
+Sunset.ClientCommands = {}
+local function markClientCommand(name)
+    if name and name ~= '' then
+        Sunset.ClientCommands[string.lower(name)] = true
+    end
+end
+
+for _, row in ipairs(Sunset.HelpGeneralEntries or {}) do
+    markClientCommand(row.cmd and row.cmd:match('^/(%w+)'))
+end
+for _, list in ipairs({ Sunset.HelpDispatchEntries, Sunset.HelpFireEntries }) do
+    for _, row in ipairs(list or {}) do
+        markClientCommand(row.cmd and row.cmd:match('^/(%w+)'))
+    end
+end
+
+for _, name in ipairs({
+    'noclip', 'god', 'coords', 'getpos', 'pos', 'car', 'dv', 'hudexport',
+    'fine', 'cuff', 'uncuff', 'repairveh', 'fare', 'finvite', 'accept', 'fpromote',
+    'fgiverank', 'funinvite', 'fwarn', 'fmotd', 'fmembers', 'sellpouch', 'fence',
+    'pd', 'fd', 'pdgarage', 'su', 'so', 'clear', 'unjail', 'wanted', 'arrest',
+    'booking', 'backup', 'cbackup', 'mdc', 'ticket', 'confiscate', 'radars', 'startradar',
+    'handsup', 'frisk', 'leavefaction', 'quitfaction', 'factionquit', 'quitgroup',
+    'acceptfaction', 'declinefaction', 'crafting', 'quitjob', 'jobhelp', 'documents',
+    'id', 'licenses', 'givekeys', 'takekeys', 'park', 'recovertrailer', 'service',
+    'f', 'r', 'd', 'gov', 'megaphone', 'calls', 'servicecalls', 'cancel',
+    'firestart', 'firecalls', 'respawn', 'sethome', 'renthouse', 'unrent',
+}) do
+    markClientCommand(name)
+end
+
+--- Admin commands handled on the client (server validates via NetEvents).
+Sunset.ClientAdminCommands = {
+    setcp = true,
+    delcp = true,
+    gotocp = true,
+    gotoloc = true,
+    speed = true,
+    coords = true,
+    getpos = true,
+    pos = true,
+    dealershipadmin = true,
+    hudexport = true,
 }

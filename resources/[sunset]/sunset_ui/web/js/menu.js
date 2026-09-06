@@ -26,6 +26,10 @@ const Menu = {
             post('menuAction', { action: 'buy_level' });
         });
 
+        $('#menu-property-browse')?.addEventListener('click', () => {
+            post('menuAction', { action: 'properties' });
+        });
+
         if (window.ChatSettings) ChatSettings.init();
     },
 
@@ -197,6 +201,31 @@ const Menu = {
         });
     },
 
+    renderProperties(data) {
+        const list = $('#menu-property-list');
+        if (!list || !window.PropertyUI) return;
+        const properties = data.properties || [];
+        const owned = properties.filter((p) => p.owned);
+        const rented = properties.filter((p) => p.rented);
+        const mine = [...owned, ...rented.filter((p) => !p.owned)];
+        PropertyUI.renderList(list, {
+            properties: mine.length ? mine : properties.slice(0, 6),
+            selectedId: data.selectedPropertyId,
+            meta: data.propertyMeta,
+        });
+    },
+
+    updateProperties(data) {
+        if (!data) return;
+        this.renderProperties(data);
+        if (data.propertyCount != null) {
+            $('#menu-property-count').textContent = String(data.propertyCount);
+        }
+        if (data.homeLabel) {
+            $('#menu-home-label').textContent = data.homeLabel;
+        }
+    },
+
     renderJob(data) {
         const card = $('#menu-job-card');
         const side = $('#menu-job-side');
@@ -341,6 +370,7 @@ const Menu = {
         $('#menu-property-count').textContent = String(data.propertyCount ?? 0);
         $('#menu-home-label').textContent = data.homeLabel || 'None';
 
+        this.renderProperties(data);
         this.renderVehicles(data);
         this.renderJob(data);
 
@@ -359,14 +389,49 @@ const Menu = {
 
     show(data) {
         this.init();
+        const menu = $('#menu');
+        menu.classList.remove('menu--solo-vehicle', 'menu--solo-inventory');
+        if (data?.soloMode) {
+            menu.classList.add(`menu--solo-${data.soloMode}`);
+        }
+        this.soloMode = data?.soloMode || null;
+
+        const brandTitle = $('.menu-brand > div');
+        if (brandTitle) {
+            if (!this._brandHtml) this._brandHtml = brandTitle.innerHTML;
+            if (this.soloMode === 'vehicle') {
+                brandTitle.innerHTML = 'VEHICLES <span>GARAGE</span>';
+            } else {
+                brandTitle.innerHTML = this._brandHtml;
+            }
+        }
+
+        const closeBtn = $('#menu-close-btn');
+        if (closeBtn) {
+            if (!this._closeHtml) this._closeHtml = closeBtn.innerHTML;
+            closeBtn.innerHTML = this.soloMode === 'vehicle'
+                ? '<span class="menu-keycap">V</span> CLOSE'
+                : this._closeHtml;
+        }
+
         document.body.classList.add('menu-open');
-        $('#menu').classList.remove('hidden');
+        menu.classList.remove('hidden');
         this.update(data);
-        this.setTab(data?.initialTab || 'player');
+        this.setTab(data?.initialTab || (this.soloMode === 'vehicle' ? 'vehicle' : 'player'));
     },
 
     hide() {
-        $('#menu').classList.add('hidden');
+        const menu = $('#menu');
+        menu.classList.add('hidden');
+        menu.classList.remove('menu--solo-vehicle', 'menu--solo-inventory');
+        this.soloMode = null;
+
+        const brandTitle = $('.menu-brand > div');
+        if (brandTitle && this._brandHtml) brandTitle.innerHTML = this._brandHtml;
+
+        const closeBtn = $('#menu-close-btn');
+        if (closeBtn && this._closeHtml) closeBtn.innerHTML = this._closeHtml;
+
         document.body.classList.remove('menu-open');
     },
 
@@ -383,6 +448,11 @@ document.addEventListener('keydown', (e) => {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
 
     if (e.key === 'Escape' || e.key === 'm' || e.key === 'M') {
+        Menu.close();
+        e.preventDefault();
+        return;
+    }
+    if (menu.classList.contains('menu--solo-vehicle') && (e.key === 'v' || e.key === 'V')) {
         Menu.close();
         e.preventDefault();
     }

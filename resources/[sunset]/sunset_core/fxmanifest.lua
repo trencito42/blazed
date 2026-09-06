@@ -26,6 +26,7 @@ shared_scripts {
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    'server/command_feedback.lua',
     'server/main.lua',
     'server/player.lua',
     'server/callbacks.lua',
@@ -63,4 +64,13 @@ server_exports {
     'AddRobPoints',
     'GetSpawnPosition',
     'CompleteAuthentication',
+    'CommandReply',
+    'CommandDenyAdmin',
+    'CommandDenyHeal',
+    'CommandDenyRevive',
+    'CommandPlayerNotFound',
+    'CommandNoCharacter',
+    'CommandUsage',
+    'OnlinePlayerIds',
+    'CommandListKeys',
 }

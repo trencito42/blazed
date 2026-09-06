@@ -4,7 +4,30 @@ local function hasPerm(source, cmd)
 end
 
 local function notify(source, msg, type)
-    TriggerClientEvent('sunset:client:notify', source, msg, type or 'info')
+    if source == 0 then
+        print(('[SunsetAdmin] %s'):format(msg))
+        return
+    end
+    exports.sunset_core:CommandReply(source, msg, type or 'info')
+end
+
+local function deny(source, cmd)
+    exports.sunset_core:CommandDenyAdmin(source, cmd)
+end
+
+local function requirePerm(source, cmd)
+    if source == 0 then return true end
+    if hasPerm(source, cmd) then return true end
+    deny(source, cmd)
+    return false
+end
+
+SunsetAdmin.ServerHandlers = SunsetAdmin.ServerHandlers or {}
+
+local function registerServerCommand(name, handler)
+    name = string.lower(name)
+    SunsetAdmin.ServerHandlers[name] = handler
+    RegisterCommand(name, handler, false)
 end
 
 local function onlineIds()
@@ -153,9 +176,7 @@ local function auditStatChange(source, targetPlayer, targetChar, stat, oldValue,
 end
 
 local function setPlayerStat(source, args, forcedStat)
-    if source ~= 0 and not hasPerm(source, 'setstat') then
-        return commandOutput(source, 'Admin level 3 is required to change player statistics.', 'error')
-    end
+    if source ~= 0 and not requirePerm(source, 'setstat') then return end
 
     local target = getTarget(source, args[1], 'Usage: /setstat [player id] [stat] [value]')
     if not target then return end
@@ -218,7 +239,7 @@ local function setPlayerStat(source, args, forcedStat)
     end
 end
 
-RegisterCommand('setstat', function(source, args) setPlayerStat(source, args) end, false)
+registerServerCommand('setstat', function(source, args) setPlayerStat(source, args) end, false)
 
 local statAliases = {
     setcash = 'cash', setmoney = 'cash', setbank = 'bank', setlevel = 'level',
@@ -227,13 +248,11 @@ local statAliases = {
     setthirst = 'thirst', setstress = 'stress', setrob = 'rob', setrobpoints = 'rob',
 }
 for command, stat in pairs(statAliases) do
-    RegisterCommand(command, function(source, args) setPlayerStat(source, args, stat) end, false)
+    registerServerCommand(command, function(source, args) setPlayerStat(source, args, stat) end, false)
 end
 
-RegisterCommand('astats', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'astats') then
-        return commandOutput(source, 'Admin level 2 is required to inspect another player\'s statistics.', 'error')
-    end
+registerServerCommand('astats', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'astats') then return end
     local target = getTarget(source, args[1], 'Usage: /astats [player id]')
     if not target then return end
     local player = exports.sunset_core:GetPlayer(target)
@@ -256,10 +275,8 @@ local JobStatFields = {
     earned = { field = 'total_earned', min = 0, max = 2000000000 },
 }
 
-RegisterCommand('setjobstat', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'setjobstat') then
-        return commandOutput(source, 'Admin level 3 is required to change job progression.', 'error')
-    end
+registerServerCommand('setjobstat', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'setjobstat') then return end
     local target = getTarget(source, args[1], 'Usage: /setjobstat [id] [job] [xp|level|tasks|earned] [value]')
     if not target then return end
     local jobId = string.lower(tostring(args[2] or ''))
@@ -302,8 +319,8 @@ RegisterCommand('setjobstat', function(source, args)
 end, false)
 
 -- /kick [id] [motiv]
-RegisterCommand('kick', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'kick') then return notify(source, 'No permission', 'error') end
+registerServerCommand('kick', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'kick') then return end
     local target = getTarget(source, args[1], 'Usage: /kick [player id] [reason]')
     if not target or not guardSelfTarget(source, target, args[1], 'kick') then return end
     local reason = table.concat(args, ' ', 2)
@@ -313,8 +330,8 @@ RegisterCommand('kick', function(source, args)
 end, false)
 
 -- /ban [id] [motiv]
-RegisterCommand('ban', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'ban') then return notify(source, 'No permission', 'error') end
+registerServerCommand('ban', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'ban') then return end
     local target = getTarget(source, args[1], 'Usage: /ban [player id] [reason]')
     if not target or not guardSelfTarget(source, target, args[1], 'ban') then return end
     local reason = table.concat(args, ' ', 2)
@@ -358,8 +375,8 @@ local function resolveUnbanLicense(source, arg)
 end
 
 -- /unban [id|license:xxx]
-RegisterCommand('unban', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'unban') then return notify(source, 'No permission', 'error') end
+registerServerCommand('unban', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'unban') then return end
     local license = resolveUnbanLicense(source, args[1])
     if not license then return end
 
@@ -379,9 +396,9 @@ RegisterCommand('unban', function(source, args)
 end, false)
 
 -- /tp [id] sau /tp x y z
-RegisterCommand('tp', function(source, args)
+registerServerCommand('tp', function(source, args)
     if source == 0 then return end
-    if not hasPerm(source, 'tp') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'tp') then return end
 
     if args[1] and not args[2] then
         local target = getTarget(source, args[1], 'Usage: /tp [player id]')
@@ -395,9 +412,9 @@ RegisterCommand('tp', function(source, args)
 end, false)
 
 -- /bring [id]
-RegisterCommand('bring', function(source, args)
+registerServerCommand('bring', function(source, args)
     if source == 0 then return end
-    if not hasPerm(source, 'bring') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'bring') then return end
     local target = getTarget(source, args[1], 'Usage: /bring [player id]')
     if not target then return end
     local ped = GetPlayerPed(source)
@@ -407,24 +424,85 @@ RegisterCommand('bring', function(source, args)
 end, false)
 
 -- /car [model]
-RegisterCommand('car', function(source, args)
+registerServerCommand('car', function(source, args)
     if source == 0 then return end
-    if not hasPerm(source, 'car') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'car') then return end
     local model = args[1] or 'sultan'
     TriggerClientEvent('sunset:admin:spawnVehicle', source, model)
 end, false)
 
+-- /giveitem [id] [item] [count]
+registerServerCommand('giveitem', function(source, args)
+    if source == 0 then
+        print('Usage: giveitem [player id] [item] [count]')
+        return
+    end
+    if not requirePerm(source, 'giveitem') then return end
+    local target = getTarget(source, args[1], 'Usage: /giveitem [server id] [item] [count]')
+    if not target then return end
+    local item = args[2]
+    local count = tonumber(args[3]) or 1
+    if not item then
+        notify(source, 'Usage: /giveitem [server id] [item] [count]', 'error')
+        return
+    end
+    if not exports.sunset_core:GetCharacter(target) then
+        exports.sunset_core:CommandNoCharacter(source, target)
+        return
+    end
+    local ok, err = exports.sunset_inventory:TryAddItem(target, item, count)
+    if not ok then
+        notify(source, err or ('Could not add %dx %s to player #%d.'):format(count, item, target), 'error')
+        return
+    end
+    notify(source, ('Gave %dx %s to ID %s'):format(count, item, target), 'success')
+    if target ~= source then
+        TriggerClientEvent('sunset:client:notify', target, ('You received %dx %s'):format(count, item), 'success')
+    end
+end, false)
+
+-- /givegun [id] [weapon] [ammo]
+registerServerCommand('givegun', function(source, args)
+    if source == 0 then
+        print('Usage: givegun [player id] [weapon] [ammo]')
+        return
+    end
+    if not requirePerm(source, 'givegun') then return end
+    local target = getTarget(source, args[1], 'Usage: /givegun [server id] [weapon] [ammo]')
+    if not target then return end
+    local weapon = args[2]
+    if not weapon then
+        notify(source, 'Usage: /givegun [server id] [weapon] [ammo]', 'error')
+        return
+    end
+    if not exports.sunset_core:GetCharacter(target) then
+        exports.sunset_core:CommandNoCharacter(source, target)
+        return
+    end
+    weapon = string.upper(weapon)
+    if not weapon:find('^WEAPON_') then weapon = 'WEAPON_' .. weapon end
+    local ammo = tonumber(args[3]) or 120
+    TriggerClientEvent('sunset:admin:giveWeapon', target, weapon, ammo, source)
+    notify(source, ('Gave %s to ID %s'):format(weapon, target), 'success')
+    if target ~= source then
+        TriggerClientEvent('sunset:client:notify', target, ('You received %s'):format(weapon), 'success')
+    end
+end, false)
+
 -- /dv
-RegisterCommand('dv', function(source)
+registerServerCommand('dv', function(source)
     if source == 0 then return end
-    if not hasPerm(source, 'dv') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'dv') then return end
     TriggerClientEvent('sunset:admin:deleteVehicle', source)
 end, false)
 
 -- /heal [id] — admin sau EMS/fire on duty
-RegisterCommand('heal', function(source, args)
+registerServerCommand('heal', function(source, args)
     if source == 0 then return end
-    if not canHeal(source) then return notify(source, 'No permission (admin or on-duty EMS/LSFD)', 'error') end
+    if not canHeal(source) then
+        exports.sunset_core:CommandDenyHeal(source)
+        return
+    end
     local target = resolveTarget(source, args[1])
     if not target then return end
     TriggerClientEvent('sunset:admin:heal', target)
@@ -435,9 +513,12 @@ RegisterCommand('heal', function(source, args)
 end, false)
 
 -- /revive [id] — admin sau EMS on duty
-RegisterCommand('revive', function(source, args)
+registerServerCommand('revive', function(source, args)
     if source == 0 then return end
-    if not canRevive(source) then return notify(source, 'No permission (admin or on-duty EMS/LSFD)', 'error') end
+    if not canRevive(source) then
+        exports.sunset_core:CommandDenyRevive(source)
+        return
+    end
     local target = resolveTarget(source, args[1])
     if not target then
         notify(source, 'Usage: /revive [player id]', 'error')
@@ -445,53 +526,89 @@ RegisterCommand('revive', function(source, args)
     end
     local ok, err = exports.sunset_death:RevivePlayer(target)
     if not ok then
-        notify(source, err or 'Revive failed', 'error')
+        notify(source, err or ('Could not revive player #%d — they may not be downed or revive is blocked.'):format(target), 'error')
         return
     end
     notify(source, 'Revived ' .. (GetPlayerName(target) or '?') .. ' (ID ' .. target .. ')', 'success')
 end, false)
 
+-- /arespawn [id] — open spawn menu for a player (admin)
+-- /arespawn [id] hospital — hospital respawn without menu
+registerServerCommand('arespawn', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'arespawn') then return end
+    local target = resolveTarget(source, args[1])
+    if not target then
+        notify(source, 'Usage: /arespawn [server id] or /arespawn [server id] hospital', 'error')
+        return
+    end
+    local mode = string.lower(tostring(args[2] or ''))
+    if mode == 'hospital' then
+        local ok, err = exports.sunset_death:RespawnPlayer(target, 0)
+        if not ok then
+            notify(source, err or ('Could not hospital-respawn player #%d.'):format(target), 'error')
+            return
+        end
+        notify(source, ('Hospital respawn sent to #%d.'):format(target), 'success')
+        if target ~= source then
+            TriggerClientEvent('sunset:client:notify', target, 'An administrator sent you to the hospital.', 'info')
+        end
+        return
+    end
+    pcall(function() exports.sunset_death:RevivePlayer(target) end)
+    TriggerClientEvent('sunset:client:openSpawnMenu', target)
+    notify(source, ('Opened spawn menu for #%d.'):format(target), 'success')
+    if target ~= source then
+        TriggerClientEvent('sunset:client:notify', target, 'An administrator opened your spawn menu — choose a location.', 'info')
+    end
+end, false)
+
 -- /noclip
-RegisterCommand('noclip', function(source)
+registerServerCommand('noclip', function(source)
     if source == 0 then return end
-    if not hasPerm(source, 'noclip') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'noclip') then return end
     TriggerClientEvent('sunset:admin:toggleNoclip', source)
 end, false)
 
 -- /god
-RegisterCommand('god', function(source)
+registerServerCommand('god', function(source)
     if source == 0 then return end
-    if not hasPerm(source, 'god') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'god') then return end
     TriggerClientEvent('sunset:admin:toggleGod', source)
 end, false)
 
--- /announce [mesaj]
-RegisterCommand('announce', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'announce') then return notify(source, 'No permission', 'error') end
+-- /announce [mesaj]  (/announcement alias)
+local function runAnnounce(source, args)
+    if source ~= 0 and not requirePerm(source, 'announce') then return end
     local msg = table.concat(args, ' ')
-    if msg == '' then return end
+    if msg == '' then
+        notify(source, 'Usage: /announce [message]', 'error')
+        return
+    end
     local from = 'SERVER'
     if source ~= 0 then
         from = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or 'Admin'
     end
     TriggerClientEvent('sunset:chat:message', -1, {
         id = source,
-        name = '[ANNOUNCEMENT]',
+        name = from,
         message = msg,
-        time = os.date('%H:%M'),
+        time = os.date('%H:%M:%S'),
         type = 'announce',
     })
     TriggerClientEvent('sunset:ui:announcement', -1, {
         badge = 'ANNOUNCEMENT',
         message = msg,
         meta = from,
-        duration = 14000,
+        duration = 6500,
     })
-end, false)
+end
+
+registerServerCommand('announce', runAnnounce)
+registerServerCommand('announcement', runAnnounce)
 
 -- /setadmin [id|username] [level]
-RegisterCommand('setadmin', function(source, args)
-    if source ~= 0 and not hasPerm(source, 'setadmin') then return notify(source, 'No permission', 'error') end
+registerServerCommand('setadmin', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'setadmin') then return end
 
     local arg1 = args[1]
     local level = tonumber(args[2]) or 1
@@ -509,7 +626,12 @@ RegisterCommand('setadmin', function(source, args)
     end
 
     local account = MySQL.single.await('SELECT id, username FROM accounts WHERE LOWER(username) = LOWER(?)', { arg1 })
-    if not account then return notify(source ~= 0 and source or 0, 'Account not found', 'error') end
+    if not account then
+        notify(source ~= 0 and source or 0,
+            ('No account found for "%s". Use a username or account id from the database.'):format(tostring(arg1 or '?')),
+            'error')
+        return
+    end
 
     MySQL.update.await('UPDATE accounts SET admin_level = ? WHERE id = ?', { level, account.id })
     for _, id in ipairs(GetPlayers()) do
@@ -525,9 +647,9 @@ RegisterCommand('setadmin', function(source, args)
 end, false)
 
 -- /coords [v4] — client also registers /getpos and /pos for NUI chat
-RegisterCommand('coords', function(source, args)
+registerServerCommand('coords', function(source, args)
     if source == 0 then return end
-    if not hasPerm(source, 'coords') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'coords') then return end
     TriggerClientEvent('sunset:admin:copyCoords', source, args)
 end, false)
 
@@ -564,7 +686,7 @@ end
 RegisterNetEvent('sunset:admin:setcp', function(name, x, y, z, heading)
     local source = source
     if source == 0 then return end
-    if not hasPerm(source, 'setcp') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'setcp') then return end
 
     name = name and tostring(name):gsub('^%s+', ''):gsub('%s+$', '') or ''
     if name == '' then
@@ -573,7 +695,7 @@ RegisterNetEvent('sunset:admin:setcp', function(name, x, y, z, heading)
 
     x, y, z, heading = tonumber(x), tonumber(y), tonumber(z), tonumber(heading)
     if not x or not y or not z then
-        return notify(source, 'Could not read your position.', 'error')
+        return notify(source, 'Could not read your position — wait until you have fully spawned in.', 'error')
     end
 
     local createdBy = GetPlayerName(source) or ('player_' .. source)
@@ -588,7 +710,7 @@ end)
 RegisterNetEvent('sunset:admin:delcp', function(name)
     local source = source
     if source == 0 then return end
-    if not hasPerm(source, 'delcp') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'delcp') then return end
 
     name = name and tostring(name):gsub('^%s+', ''):gsub('%s+$', '') or ''
     if name == '' then
@@ -606,7 +728,7 @@ end)
 RegisterNetEvent('sunset:admin:gotocp', function(query)
     local source = source
     if source == 0 then return end
-    if not hasPerm(source, 'gotocp') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'gotocp') then return end
 
     query = query and tostring(query):gsub('^%s+', ''):gsub('%s+$', '') or ''
     if query == '' or string.lower(query) == 'list' then
@@ -626,7 +748,7 @@ end)
 RegisterNetEvent('sunset:admin:gotoloc', function(query)
     local source = source
     if source == 0 then return end
-    if not hasPerm(source, 'gotoloc') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'gotoloc') then return end
 
     query = query and tostring(query):gsub('^%s+', ''):gsub('%s+$', '') or ''
     if query == '' or string.lower(query) == 'list' then
@@ -647,7 +769,7 @@ end)
 RegisterNetEvent('sunset:admin:requestSpeed', function(arg)
     local source = source
     if source == 0 then return end
-    if not hasPerm(source, 'speed') then return notify(source, 'No permission', 'error') end
+    if not requirePerm(source, 'speed') then return end
 
     local mult = 1.0
     if arg and arg ~= '' then
@@ -662,3 +784,20 @@ RegisterNetEvent('sunset:admin:requestSpeed', function(arg)
     mult = math.max(0.5, math.min(mult, 10.0))
     TriggerClientEvent('sunset:admin:setSpeed', source, mult)
 end)
+
+function ExecutePlayerCommand(source, name, args)
+    name = string.lower(tostring(name or ''))
+    local handler = SunsetAdmin.ServerHandlers[name]
+    if not handler then return false end
+    handler(source, args or {})
+    return true
+end
+
+RegisterNetEvent('sunset:admin:weaponGiveFailed', function(adminSource, weapon)
+    adminSource = tonumber(adminSource)
+    if adminSource and adminSource > 0 then
+        notify(adminSource, ('Invalid weapon "%s" — use a GTA weapon name like PISTOL or WEAPON_PISTOL.'):format(tostring(weapon or '?')), 'error')
+    end
+end)
+
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

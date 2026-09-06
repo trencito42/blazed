@@ -27,8 +27,8 @@
     --screen-secondary-glow: 0 0 10px rgba(255, 177, 92, 0.45);
     --screen-green: #00ff66;
     --screen-red: #ff2a2a;
-    --screen-glass: linear-gradient(180deg, rgba(24, 20, 18, 0.55), rgba(9, 8, 8, 0.62));
-    --screen-glass-active: linear-gradient(180deg, rgba(255, 125, 15, 0.14), rgba(12, 10, 9, 0.72) 62%);
+    --screen-glass: linear-gradient(180deg, rgba(24, 20, 18, 0.22), rgba(9, 8, 8, 0.28));
+    --screen-glass-active: linear-gradient(180deg, rgba(255, 125, 15, 0.12), rgba(12, 10, 9, 0.34) 62%);
 
     --accent: var(--sunset-orange);
     --text: var(--sunset-text);
@@ -203,12 +203,11 @@ h5,
     backdrop-filter: blur(10px) saturate(0.9);
 }
 
-#inventory.overlay-panel--peek {
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 8vh;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.22) 100%);
+#inventory.menu {
+    pointer-events: none;
 }
+
+#inventory.menu > * { pointer-events: auto; }
 
 #inventory-list .inventory-row,
 .shop-card,

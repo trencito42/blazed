@@ -314,8 +314,60 @@ function UseItem(source, item)
     return true
 end
 
+function TryAddItem(source, item, count, slot, metadata)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then
+        return false, 'That player has not loaded a character yet.'
+    end
+    if not Sunset.Items[item] then
+        return false, ('"%s" is not a registered item. Check items.lua or /help for valid item ids.'):format(tostring(item or '?'))
+    end
+    count = math.floor(count or 1)
+    if count < 1 then
+        return false, 'Item count must be at least 1.'
+    end
+
+    local inv = GetInventory(source)
+    local currentWeight = calcWeight(inv)
+    local addedWeight = getItemWeight(item, count)
+    if currentWeight + addedWeight > Sunset.Config.MaxWeight then
+        return false, ('Inventory too heavy: %.1f/%.1f kg — cannot add %.1f kg of %s.'):format(
+            currentWeight, Sunset.Config.MaxWeight, addedWeight, item)
+    end
+
+    metadata = metadata or (item == 'gas_can' and { liters = 0 } or nil)
+    if not metadata then
+        for _, row in ipairs(inv) do
+            if row.item == item and (not slot or row.slot == slot) then
+                if AddItem(source, item, count, slot, metadata) then
+                    return true
+                end
+                return false, 'Could not stack the item — try again.'
+            end
+        end
+    end
+
+    local used = {}
+    for _, row in ipairs(inv) do used[row.slot] = true end
+    local freeSlot = slot
+    if not freeSlot then
+        for i = 1, Sunset.Config.MaxSlots do
+            if not used[i] then freeSlot = i break end
+        end
+    end
+    if not freeSlot then
+        return false, ('Inventory full: no free slots (%d max).'):format(Sunset.Config.MaxSlots)
+    end
+
+    if AddItem(source, item, count, slot, metadata) then
+        return true
+    end
+    return false, 'Could not add the item — database or inventory sync failed.'
+end
+
 exports('GetInventory', GetInventory)
 exports('AddItem', AddItem)
+exports('TryAddItem', TryAddItem)
 exports('RemoveItem', RemoveItem)
 exports('RemoveItemById', RemoveItemById)
 exports('RemoveRobberyItems', RemoveRobberyItems)

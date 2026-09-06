@@ -1,4 +1,5 @@
 local menuOpen = false
+local menuSoloMode = nil
 local cachedMugshot = nil
 local mugshotAt = 0
 local mugshotHandle = nil
@@ -124,6 +125,13 @@ local function buildMenuData(forceExtras)
     local displayName = playerData and playerData.name
         or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
 
+    local properties = {}
+    local propertyMeta = nil
+    pcall(function()
+        properties = Sunset.AwaitCallback('sunset:getProperties') or {}
+        propertyMeta = Sunset.AwaitCallback('sunset:getPropertyMeta') or {}
+    end)
+
     return {
         id = GetPlayerServerId(PlayerId()),
         name = displayName,
@@ -171,15 +179,17 @@ local function buildMenuData(forceExtras)
         vehicles = extras.vehicles or {},
         propertyCount = extras.propertyCount or 0,
         homeLabel = extras.homeLabel or 'None',
+        properties = properties,
+        propertyMeta = propertyMeta,
         avatar = captureMugshot(),
         cid = char.id,
     }
 end
 
-local function openMenu(initialTab)
+local function openMenu(initialTab, opts)
     if menuOpen then
         if initialTab then
-            exports.sunset_ui:Send('menuSetTab', { tab = initialTab })
+            exports.sunset_ui:Send('menuSetTab', { tab = initialTab, soloMode = menuSoloMode })
         end
         return
     end
@@ -191,6 +201,12 @@ local function openMenu(initialTab)
     if initialTab then
         data.initialTab = initialTab
     end
+    if opts and opts.solo then
+        data.soloMode = opts.solo
+        menuSoloMode = opts.solo
+    else
+        menuSoloMode = nil
+    end
     menuOpen = true
     exports.sunset_ui:SetFocus(true, true, false)
     exports.sunset_ui:Send('menuShow', data)
@@ -199,13 +215,29 @@ end
 local function closeMenu()
     if not menuOpen then return end
     menuOpen = false
+    menuSoloMode = nil
     exports.sunset_ui:SetFocus(false, false, false)
     exports.sunset_ui:Send('menuHide', {})
 end
 
+local function openVehicleMenu()
+    if menuOpen then
+        if menuSoloMode == 'vehicle' then
+            closeMenu()
+            return
+        end
+        closeMenu()
+        Wait(50)
+    end
+    openMenu('vehicle', { solo = 'vehicle' })
+end
+
+AddEventHandler('sunset:menu:openVehicle', openVehicleMenu)
+exports('OpenVehicle', openVehicleMenu)
+
 local function toggleMenu(initialTab)
     if menuOpen then
-        if initialTab then
+        if initialTab and not menuSoloMode then
             exports.sunset_ui:Send('menuSetTab', { tab = initialTab })
             return
         end
@@ -237,6 +269,19 @@ AddEventHandler('sunset:nui:menuClose', function()
     closeMenu()
 end)
 
+AddEventHandler('sunset:properties:updated', function(properties, meta)
+    if not menuOpen then return end
+    local data = buildMenuData(false)
+    if not data then return end
+    data.properties = properties or data.properties
+    data.propertyMeta = meta or data.propertyMeta
+    exports.sunset_ui:Send('menuPropertyUpdate', data)
+end)
+
+AddEventHandler('sunset:properties:closeMenu', function()
+    closeMenu()
+end)
+
 AddEventHandler('sunset:nui:menuAction', function(data)
     if not data or not data.action then return end
     if data.action == 'inventory' then
@@ -263,6 +308,14 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         CreateThread(function()
             Wait(150)
             exports.sunset_phone:Open()
+        end)
+        return
+    end
+    if data.action == 'properties' then
+        closeMenu()
+        CreateThread(function()
+            Wait(150)
+            ExecuteCommand('properties')
         end)
         return
     end

@@ -121,7 +121,12 @@ function FactionCore.isOnline(target)
 end
 
 function FactionCore.notify(source, msg, typ, duration)
-    TriggerClientEvent('sunset:client:notify', source, msg, typ or 'info', duration)
+    typ = typ or 'info'
+    if typ == 'error' or typ == 'warning' or typ == 'success' then
+        exports.sunset_core:CommandReply(source, msg, typ)
+        return
+    end
+    TriggerClientEvent('sunset:client:notify', source, msg, typ, duration)
 end
 
 function FactionCore.checkRateLimit(source, key, cooldownMs)

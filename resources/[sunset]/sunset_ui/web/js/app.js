@@ -389,6 +389,15 @@ window.addEventListener('message', (event) => {
         case 'propertiesHide':
             if (window.Panels) Panels.hideProperties();
             break;
+        case 'propertyRenters':
+            if (window.PropertyUI) PropertyUI.updateRenters(
+                (data || event.data.data)?.propertyId,
+                (data || event.data.data)?.renters,
+            );
+            break;
+        case 'menuPropertyUpdate':
+            if (window.Menu) Menu.updateProperties(data || event.data.data);
+            break;
         case 'emotesShow':
             if (window.Panels) Panels.showEmotes();
             break;

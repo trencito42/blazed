@@ -23,6 +23,88 @@ const Chat = {
         this.render();
     },
 
+    formatTime(m) {
+        const raw = String(m?.time ?? '').trim();
+        if (!raw) return '';
+        if (raw.startsWith('[')) return raw;
+        return `[${raw}]`;
+    },
+
+    formatLine(m) {
+        const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
+        const time = this.formatTime(m);
+        const id = Number(m.id) || 0;
+        const name = String(m.name || 'Player').trim();
+        const msg = String(m.message ?? '');
+        const faction = String(m.factionLabel || '').trim();
+        const rank = String(m.rank || '').trim();
+        const prefix = time ? `${time} ` : '';
+
+        if (type === 'sms' || m.smsNotify) {
+            const from = name || 'Unknown';
+            return `${prefix}SMS from ${from}${id > 0 ? ` (${id})` : ''}: You got a new message.`;
+        }
+
+        if (type === 'announce') {
+            const from = name || 'SERVER';
+            return `${prefix}Public announcement from ${from}${id > 0 ? ` (${id})` : ''}: ${msg}`;
+        }
+
+        if (type === 'hq') {
+            return `${prefix}HQ: ${msg}`;
+        }
+
+        if (type === 'r' || type === 'd') {
+            const key = type === 'd' ? 'D' : 'S';
+            let text = msg;
+            if (type === 'r' && text && !/over\.?$/i.test(text.trim())) {
+                text = `${text.replace(/[.,\s]+$/, '')}, over.`;
+            }
+            const header = [faction, rank, name].filter(Boolean).join(' ');
+            return `${prefix}** (${id}) ${header} (${key}): ${text} **`;
+        }
+
+        if (type === 'f' || type === 'gov') {
+            const header = [faction, rank, name].filter(Boolean).join(' ');
+            return `${prefix}** (${id}) ${header}: ${msg} **`;
+        }
+
+        if (type === 'say' || type === '') {
+            return `${prefix}${name} says: ${msg}`;
+        }
+
+        if (type === 'me') {
+            return `${prefix}* ${name} ${msg}`;
+        }
+
+        if (type === 'do') {
+            return `${prefix}** ${msg} (( ${name} )) **`;
+        }
+
+        if (type === 'megaphone') {
+            const speaker = name.replace(/^\[MEGAPHONE\]\s*/i, '').trim() || name;
+            return `${prefix}[MEGAPHONE] ${speaker}: ${msg}`;
+        }
+
+        if (type === 'radar') {
+            const tag = name || 'RADAR';
+            return `${prefix}${tag}: ${msg}`;
+        }
+
+        if (type === 'police_alert') {
+            const tag = name || 'POLICE';
+            return `${prefix}${tag}: ${msg}`;
+        }
+
+        if (type === 'command_error' || type === 'command_warn' || type === 'command_info') {
+            const tag = name || 'SYSTEM';
+            return `${prefix}${tag}: ${msg}`;
+        }
+
+        if (name && msg) return `${prefix}${name}: ${msg}`;
+        return `${prefix}${msg || name}`;
+    },
+
     render() {
         const container = $('#chat-messages');
         if (!container) return;
@@ -31,22 +113,22 @@ const Chat = {
         const visible = open ? this.messages : this.messages.slice(-this.pageSize());
         visible.forEach((m) => {
             const el = document.createElement('div');
-            const type = String(m.type || '').toLowerCase().replace(/[^a-z_]/g, '');
-            const highlighted = new Set(['me', 'do', 'f', 'r', 'd', 'gov', 'announce', 'megaphone', 'police_alert', 'faction_info', 'radar']);
-            el.className = 'chat-msg' + (highlighted.has(type) ? ` chat-msg--${type}` : '');
-            const time = document.createElement('span');
-            time.className = 'chat-msg__time';
-            time.textContent = String(m.time ?? '');
+            const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
+            const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+            const highlighted = new Set([
+                'say', 'me', 'do', 'f', 'r', 'd', 'gov', 'announce', 'sms', 'hq',
+                'megaphone', 'police_alert', 'faction_info', 'radar',
+                'command_error', 'command_warn', 'command_info',
+            ]);
+            const classes = ['chat-msg'];
+            if (highlighted.has(type)) classes.push(`chat-msg--${type}`);
+            if (factionId) classes.push(`chat-msg--faction-${factionId}`);
+            el.className = classes.join(' ');
 
-            const id = document.createElement('span');
-            id.className = 'chat-msg__id';
-            id.textContent = `[${String(m.id ?? '?')}]`;
-
-            const name = document.createElement('span');
-            name.className = 'chat-msg__name';
-            name.textContent = `${String(m.name ?? 'Player')}:`;
-
-            el.append(time, id, name, document.createTextNode(` ${String(m.message ?? '')}`));
+            const line = document.createElement('span');
+            line.className = 'chat-msg__line';
+            line.textContent = this.formatLine(m);
+            el.appendChild(line);
             container.appendChild(el);
         });
         container.scrollTop = container.scrollHeight;

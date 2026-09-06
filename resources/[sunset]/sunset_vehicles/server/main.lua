@@ -482,12 +482,12 @@ local function notifyPlayer(source, message, kind)
         print(('[givecar] %s'):format(message))
         return
     end
-    TriggerClientEvent('sunset:client:notify', source, message, kind or 'info')
+    exports.sunset_core:CommandReply(source, message, kind or 'info')
 end
 
-RegisterCommand('givecar', function(source, args)
+local function runGiveCar(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        notifyPlayer(source, 'No permission — Admin level 3+ required', 'error')
+        exports.sunset_core:CommandDenyAdmin(source, 'givecar')
         return
     end
 
@@ -499,13 +499,13 @@ RegisterCommand('givecar', function(source, args)
     end
 
     if not GetPlayerName(target) then
-        notifyPlayer(source, ('Player #%d is not online'):format(target), 'error')
+        notifyPlayer(source, ('Player #%d is not online. Check F10 for current server IDs.'):format(target), 'error')
         return
     end
 
     local char = exports.sunset_core:GetCharacter(target)
     if not char then
-        notifyPlayer(source, ('Player #%d has no character loaded'):format(target), 'error')
+        exports.sunset_core:CommandNoCharacter(source, target)
         return
     end
 
@@ -525,7 +525,10 @@ RegisterCommand('givecar', function(source, args)
     end
 
     if not vehicleId then
-        notifyPlayer(source, 'Could not add vehicle to garage (database error)', 'error')
+        local name = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target) or '?'
+        notifyPlayer(source,
+            ('Could not store %s in Legion garage for %s (#%d) — database insert failed after 8 plate attempts.'):format(
+                model, name, target), 'error')
         return
     end
 
@@ -536,4 +539,16 @@ RegisterCommand('givecar', function(source, args)
         ('Gave %s to %s (#%d) — stored in Legion garage'):format(model, targetName, target),
         'success'
     )
+end
+
+RegisterCommand('givecar', function(source, args)
+    runGiveCar(source, args)
 end, false)
+
+function ExecutePlayerCommand(source, name, args)
+    if string.lower(tostring(name or '')) ~= 'givecar' then return false end
+    runGiveCar(source, args or {})
+    return true
+end
+
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

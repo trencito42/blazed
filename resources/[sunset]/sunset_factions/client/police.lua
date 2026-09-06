@@ -9,7 +9,11 @@ local radarHits = {}
 
 local function chatLine(name, message, messageType)
     exports.sunset_ui:Send('chatMessage', {
-        id = 0, type = messageType or 'police_alert', name = name, message = message, time = '',
+        id = 0,
+        type = messageType or 'hq',
+        name = name,
+        message = message,
+        time = os.date('%H:%M:%S'),
     })
 end
 
@@ -31,7 +35,13 @@ end
 
 RegisterNetEvent('sunset:police:chatAlert', function(data)
     data = data or {}
-    chatLine(data.tag or 'POLICE ALERT', data.message or 'Police activity nearby.', data.type)
+    local msgType = data.type or 'hq'
+    if msgType == 'police_alert' or data.tag == 'STOP ORDER' or data.tag == 'POLICE ORDER' or data.tag == 'POLICE ALERT' then
+        msgType = 'police_alert'
+    elseif msgType ~= 'radar' then
+        msgType = 'hq'
+    end
+    chatLine(data.tag or 'HQ', data.message or 'Police activity nearby.', msgType)
 end)
 
 local function kmhFromEntity(entity)

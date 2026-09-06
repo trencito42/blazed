@@ -1,27 +1,29 @@
 local function quitCivilianJob(source, reason)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return nil, 'No character loaded' end
+    if not char then return nil, 'Your character is not loaded. Reconnect and select it again.' end
 
     local currentJob = select(1, Sunset.GetCharacterJob(char))
     if not currentJob or currentJob == 'unemployed' then
-        return nil, 'You do not have a civilian job'
+        return nil, 'You do not have a civilian job to quit.'
     end
 
     if SunsetJobs_ClearSession then
         SunsetJobs_ClearSession(source, 'CANCELLED', reason or 'Civilian job resigned')
     end
     if not exports.sunset_core:SetJob(source, 'unemployed', 0) then
-        return nil, 'Could not quit civilian job'
+        return nil, 'Could not clear your civilian job — try again after ending your current shift.'
     end
-    TriggerClientEvent('sunset:client:notify', source,
+    exports.sunset_core:CommandReply(source,
         'Civilian job resigned. Your faction membership is unchanged.', 'success')
     return true
 end
 
 exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return nil, 'No character' end
-    if not Sunset.CivilianJobs[jobId] then return nil, 'Invalid civilian job. Factions require an invitation from their admin-appointed leader.' end
+    if not char then return nil, 'Your character is not loaded. Reconnect and select it again.' end
+    if not Sunset.CivilianJobs[jobId] then
+        return nil, 'That is not a valid civilian job. Factions require a leader invitation.'
+    end
 
     if jobId == 'unemployed' then
         return quitCivilianJob(source, 'Resigned at Job Center')
@@ -29,7 +31,7 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
 
     local currentJob = select(1, Sunset.GetCharacterJob(char))
     if currentJob == jobId then
-        return nil, 'You already have this job'
+        return nil, ('You already work as %s.'):format(Sunset.CivilianJobs[jobId].label or jobId)
     end
 
     if currentJob ~= 'unemployed' then
@@ -37,15 +39,15 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
             SunsetJobs_ClearSession(source, 'CANCELLED', 'Changed civilian job')
         end
         local current = Sunset.CivilianJobs[currentJob]
-        TriggerClientEvent('sunset:client:notify', source,
+        exports.sunset_core:CommandReply(source,
             ('Left %s.'):format(current and current.label or currentJob), 'info')
     end
 
     if not exports.sunset_core:SetJob(source, jobId, 0) then
-        return nil, 'Could not set job'
+        return nil, 'Could not assign the job — your character data may still be loading.'
     end
 
-    TriggerClientEvent('sunset:client:notify', source,
+    exports.sunset_core:CommandReply(source,
         'Job set: ' .. (Sunset.CivilianJobs[jobId].label or jobId), 'success')
     TriggerClientEvent('sunset:jobs:waypointToWork', source, jobId)
     return true
@@ -54,6 +56,21 @@ end)
 exports.sunset_core:RegisterCallback('sunset:quitCivilianJob', function(source)
     return quitCivilianJob(source, 'Civilian job resigned')
 end)
+
+local function reply(source, message, kind)
+    if source == 0 then
+        print(message)
+        return
+    end
+    exports.sunset_core:CommandReply(source, message, kind or 'info')
+end
+
+local function requireAdmin(source, cmd)
+    if source == 0 then return true end
+    if exports.sunset_admin:IsAdmin(source, 3) then return true end
+    exports.sunset_core:CommandDenyAdmin(source, cmd)
+    return false
+end
 
 local function resolvePlayer(source, arg)
     local target = tonumber(arg)
@@ -70,95 +87,132 @@ local function resolvePlayer(source, arg)
     return nil
 end
 
-RegisterCommand('setjob', function(source, args)
-    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        TriggerClientEvent('sunset:client:notify', source, 'No permission', 'error')
-        return
-    end
+local function listCivilianJobs()
+    return exports.sunset_core:CommandListKeys(Sunset.CivilianJobs, 12)
+end
+
+local function listFactions()
+    return exports.sunset_core:CommandListKeys(Sunset.Factions, 12)
+end
+
+local function runSetJob(source, args)
+    if not requireAdmin(source, 'setjob') then return end
 
     local targetArg = args[1]
-    local jobId = args[2]
+    local jobId = args[2] and string.lower(args[2]) or nil
     local grade = tonumber(args[3]) or 0
     if not targetArg or not jobId then
-        local msg = 'Usage: /setjob [id|username] [civilian_job] [grade] — unemployed, trucker, garbage, courier, fisherman, mechanic'
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        reply(source,
+            'Usage: /setjob [server id|username] [job] [grade] — jobs: ' .. listCivilianJobs(),
+            'error')
         return
     end
 
     local target = resolvePlayer(source, targetArg)
     if not target then
-        local msg = 'Player not found or offline'
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        exports.sunset_core:CommandPlayerNotFound(source, targetArg)
+        return
+    end
+
+    if not exports.sunset_core:GetCharacter(target) then
+        exports.sunset_core:CommandNoCharacter(source, target)
         return
     end
 
     if Sunset.Factions[jobId] then
-        local msg = 'Use /setfaction for factions (police, taxi, medic...). /setjob is for civilian jobs only.'
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        reply(source,
+            ('"%s" is a faction, not a civilian job. Use /setfaction %s %s [grade].'):format(jobId, targetArg, jobId),
+            'error')
         return
     end
 
     if not Sunset.CivilianJobs[jobId] then
-        local msg = 'Invalid civilian job: ' .. jobId
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        reply(source,
+            ('Unknown civilian job "%s". Valid jobs: %s'):format(jobId, listCivilianJobs()),
+            'error')
         return
     end
 
     if not exports.sunset_core:SetJob(target, jobId, grade) then
-        local msg = 'Invalid grade for civilian job: ' .. tostring(grade)
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        reply(source,
+            ('Grade %d is invalid for %s. Most civilian jobs use grade 0.'):format(grade, jobId),
+            'error')
         return
     end
-    local label = Sunset.CivilianJobs[jobId].label
-    TriggerClientEvent('sunset:client:notify', target, 'Job set to ' .. label, 'success')
-    if source ~= 0 then
-        TriggerClientEvent('sunset:client:notify', source, 'Set job for ' .. GetPlayerName(target), 'success')
-    end
-end, false)
 
-RegisterCommand('setfaction', function(source, args)
-    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
-        TriggerClientEvent('sunset:client:notify', source, 'No permission', 'error')
-        return
+    local label = Sunset.CivilianJobs[jobId].label
+    reply(target, ('Your civilian job was set to %s.'):format(label), 'success')
+    if source ~= 0 then
+        reply(source, ('Set %s (#%d) civilian job to %s (grade %d).'):format(
+            GetPlayerName(target) or '?', target, label, grade), 'success')
     end
+end
+
+local function runSetFaction(source, args)
+    if not requireAdmin(source, 'setfaction') then return end
 
     local targetArg = args[1]
-    local factionId = args[2]
+    local factionId = args[2] and string.lower(args[2]) or nil
     local grade = tonumber(args[3]) or 0
     if not targetArg or not factionId then
-        local msg = 'Usage: /setfaction [id|username] [faction] [grade] — police, medic, taxi, mechanic, lsfd, gangs...'
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        reply(source,
+            'Usage: /setfaction [server id|username] [faction|none] [grade] — factions: ' .. listFactions(),
+            'error')
         return
     end
 
     local target = resolvePlayer(source, targetArg)
     if not target then
-        local msg = 'Player not found or offline'
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        exports.sunset_core:CommandPlayerNotFound(source, targetArg)
+        return
+    end
+
+    if not exports.sunset_core:GetCharacter(target) then
+        exports.sunset_core:CommandNoCharacter(source, target)
         return
     end
 
     if factionId == 'none' or factionId == 'clear' then
         exports.sunset_core:SetFaction(target, nil, 0)
-        TriggerClientEvent('sunset:client:notify', target, 'Faction cleared', 'success')
-        if source ~= 0 then TriggerClientEvent('sunset:client:notify', source, 'Cleared faction for ' .. GetPlayerName(target), 'success') end
+        reply(target, 'Your faction membership was cleared.', 'success')
+        if source ~= 0 then
+            reply(source, ('Cleared faction for %s (#%d).'):format(GetPlayerName(target) or '?', target), 'success')
+        end
         return
     end
 
     if not Sunset.Factions[factionId] then
-        local msg = 'Invalid faction: ' .. factionId
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        reply(source,
+            ('Unknown faction "%s". Valid factions: %s'):format(factionId, listFactions()),
+            'error')
         return
     end
 
     if not exports.sunset_core:SetFaction(target, factionId, grade) then
-        local msg = 'Invalid grade for faction: ' .. tostring(grade)
-        if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
+        local faction = Sunset.Factions[factionId]
+        reply(source,
+            ('Grade %d does not exist for %s. Check faction grades in config.'):format(
+                grade, faction and faction.label or factionId),
+            'error')
         return
     end
+
     local label = Sunset.Factions[factionId].label
-    TriggerClientEvent('sunset:client:notify', target, 'Faction set to ' .. label, 'success')
+    reply(target, ('Your faction was set to %s.'):format(label), 'success')
     if source ~= 0 then
-        TriggerClientEvent('sunset:client:notify', source, 'Set faction for ' .. GetPlayerName(target), 'success')
+        reply(source, ('Set %s (#%d) faction to %s (grade %d).'):format(
+            GetPlayerName(target) or '?', target, label, grade), 'success')
     end
-end, false)
+end
+
+RegisterCommand('setjob', function(source, args) runSetJob(source, args) end, false)
+RegisterCommand('setfaction', function(source, args) runSetFaction(source, args) end, false)
+
+function ExecutePlayerCommand(source, name, args)
+    name = string.lower(tostring(name or ''))
+    if name == 'setjob' then runSetJob(source, args or {}) return true end
+    if name == 'setfaction' then runSetFaction(source, args or {}) return true end
+    return false
+end
+
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

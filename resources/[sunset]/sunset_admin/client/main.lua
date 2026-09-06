@@ -11,6 +11,17 @@ RegisterNetEvent('sunset:admin:teleport', function(x, y, z)
     SetEntityCoords(ped, x + 0.0, y + 0.0, z + 0.0, false, false, false, false)
 end)
 
+RegisterNetEvent('sunset:admin:giveWeapon', function(weapon, ammo, adminSource)
+    local ped = PlayerPedId()
+    local hash = joaat(weapon)
+    if not IsWeaponValid(hash) then
+        TriggerServerEvent('sunset:admin:weaponGiveFailed', adminSource, weapon)
+        return
+    end
+    GiveWeaponToPed(ped, hash, ammo or 120, false, true)
+    SetCurrentPedWeapon(ped, hash, true)
+end)
+
 RegisterNetEvent('sunset:admin:spawnVehicle', function(model)
     local hash = joaat(model)
     RequestModel(hash)

@@ -27,16 +27,6 @@ local function sendFactionChat(source, channel, args, filterFn)
     local _, grade = FactionCore.getFactionOf(char)
     local gradeInfo = Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
     local rank = (gradeInfo and gradeInfo.label) or 'Member'
-    local prefix
-    if channel == 'f' then
-        prefix = '[' .. label .. '] '
-    elseif channel == 'r' then
-        prefix = ('[R|%s|%s] '):format(label, rank)
-    elseif channel == 'd' then
-        prefix = ('[D|%s|%s] '):format(label, rank)
-    else
-        prefix = ('[%s|%s] '):format(string.upper(channel), label)
-    end
 
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
@@ -44,10 +34,13 @@ local function sendFactionChat(source, channel, args, filterFn)
         if c and filterFn(src, c, factionId) then
             TriggerClientEvent('sunset:chat:message', src, {
                 id = source,
-                name = prefix .. name,
+                name = name,
                 message = msg,
-                time = os.date('%H:%M'),
+                time = os.date('%H:%M:%S'),
                 type = channel,
+                factionId = factionId,
+                factionLabel = label,
+                rank = rank,
             })
         end
     end
@@ -117,9 +110,9 @@ RegisterCommand('m', function(source, args)
         if FactionCore.distBetween(pos, tPos) <= MEGAPHONE_RANGE then
             TriggerClientEvent('sunset:chat:message', src, {
                 id = source,
-                name = '[MEGAPHONE] ' .. name,
+                name = name,
                 message = msg,
-                time = os.date('%H:%M'),
+                time = os.date('%H:%M:%S'),
                 type = 'megaphone',
             })
         end

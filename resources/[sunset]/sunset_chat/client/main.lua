@@ -57,15 +57,34 @@ AddEventHandler('sunset:nui:chatSend', function(data)
     historyIndex = #chatHistory + 1
 
     if msg:sub(1, 1) == '/' then
-        -- NUI callbacks run in a restricted context; client RegisterCommand
-        -- (startradar, duty, cuff, ...) is ignored unless this is deferred.
         local command = msg:sub(2)
-        SetTimeout(0, function()
-            ExecuteCommand(command)
-        end)
+        TriggerServerEvent('sunset:chat:runCommand', command)
     else
         TriggerServerEvent('sunset:chat:send', msg)
     end
+end)
+
+RegisterNetEvent('sunset:chat:executeCommand', function(command)
+    if type(command) ~= 'string' or command == '' then return end
+    SetTimeout(0, function()
+        ExecuteCommand(command)
+    end)
+end)
+
+RegisterNetEvent('sunset:chat:system', function(message, kind)
+    local msgType = 'command_info'
+    if kind == 'error' then
+        msgType = 'command_error'
+    elseif kind == 'warning' then
+        msgType = 'command_warn'
+    end
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0,
+        name = 'SYSTEM',
+        message = tostring(message or ''),
+        time = os.date('%H:%M:%S'),
+        type = msgType,
+    })
 end)
 
 AddEventHandler('sunset:nui:chatClose', function()

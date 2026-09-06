@@ -48,7 +48,8 @@ RegisterNetEvent('sunset:chat:send', function(message)
         id = src,
         name = name,
         message = message,
-        time = os.date('%H:%M'),
+        time = os.date('%H:%M:%S'),
+        type = 'say',
     })
 end)
 
@@ -59,9 +60,9 @@ RegisterCommand('me', function(source, args)
     local name = exports.sunset_core:GetPlayerDisplayName(source)
     sendNearby(source, {
         id = source,
-        name = '* ' .. name,
+        name = name,
         message = msg,
-        time = os.date('%H:%M'),
+        time = os.date('%H:%M:%S'),
         type = 'me',
     })
 end, false)
@@ -71,9 +72,9 @@ RegisterCommand('do', function(source, args)
     if not msg then return end
     sendNearby(source, {
         id = source,
-        name = '**',
-        message = msg .. ' (( ' .. GetPlayerName(source) .. ' ))',
-        time = os.date('%H:%M'),
+        name = GetPlayerName(source),
+        message = msg,
+        time = os.date('%H:%M:%S'),
         type = 'do',
     })
 end, false)

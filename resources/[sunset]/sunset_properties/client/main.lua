@@ -1,10 +1,19 @@
 local cachedProperties = {}
+local cachedMeta = nil
 local insideProperty
 local refreshPending = false
+local panelSelectedId = nil
+
+local function loadMeta()
+    if cachedMeta then return cachedMeta end
+    cachedMeta = Sunset.AwaitCallback('sunset:getPropertyMeta') or {}
+    return cachedMeta
+end
 
 local function refreshProperties()
     cachedProperties = Sunset.AwaitCallback('sunset:getProperties') or {}
     TriggerEvent('sunset:client:registerPropertyZones', cachedProperties)
+    TriggerEvent('sunset:properties:updated', cachedProperties, loadMeta())
     return cachedProperties
 end
 
@@ -23,7 +32,12 @@ RegisterNetEvent('sunset:client:propertiesChanged', refreshSoon)
 RegisterNetEvent('sunset:client:propertyMessage', function(text, kind) exports.sunset_ui:Notify(text or 'House update', kind or 'info', 6500) end)
 
 local function openProperties(properties, selectedId)
-    exports.sunset_ui:Send('propertiesShow', { properties = properties or cachedProperties, selectedId = selectedId })
+    panelSelectedId = selectedId
+    exports.sunset_ui:Send('propertiesShow', {
+        properties = properties or cachedProperties,
+        selectedId = selectedId,
+        meta = loadMeta(),
+    })
     exports.sunset_ui:SetFocus(true, true)
 end
 
@@ -44,23 +58,68 @@ AddEventHandler('sunset:world:propertyInteract', function(prop)
     openProperties(rows, prop and prop.id)
 end)
 
-local function runAction(action, propertyId)
+local CLOSE_ACTIONS = {
+    enter = true,
+    buy = true,
+    rent = true,
+    sell = true,
+}
+
+local function runAction(action, propertyId, payload)
+    action = tostring(action or '')
+    if action == 'renters_load' then return end
+
     local callback = action == 'buy' and 'sunset:buyProperty'
         or action == 'rent' and 'sunset:rentProperty'
         or 'sunset:propertyAction'
     local ok, message
-    if callback == 'sunset:propertyAction' then ok, message = Sunset.AwaitCallback(callback, action, propertyId)
-    else ok, message = Sunset.AwaitCallback(callback, propertyId) end
+    if callback == 'sunset:propertyAction' then
+        ok, message = Sunset.AwaitCallback(callback, action, propertyId, payload or {})
+    else
+        ok, message = Sunset.AwaitCallback(callback, propertyId)
+    end
     exports.sunset_ui:Notify(message or (ok and 'House updated.' or 'House action failed.'), ok and 'success' or 'error', 6500)
     if ok then
-        exports.sunset_ui:SetFocus(false, false)
-        exports.sunset_ui:Send('propertiesHide', {})
         refreshSoon()
+        if CLOSE_ACTIONS[action] then
+            exports.sunset_ui:SetFocus(false, false)
+            exports.sunset_ui:Send('propertiesHide', {})
+            panelSelectedId = nil
+            if action == 'enter' or action == 'buy' or action == 'rent' then
+                TriggerEvent('sunset:properties:closeMenu')
+            end
+        else
+            local rows = refreshProperties()
+            exports.sunset_ui:Send('propertiesShow', {
+                properties = rows,
+                selectedId = panelSelectedId or propertyId,
+                meta = loadMeta(),
+            })
+        end
     end
 end
 
 AddEventHandler('sunset:nui:propertyAction', function(data)
-    CreateThread(function() runAction(tostring(data and data.action or ''), tonumber(data and data.propertyId)) end)
+    CreateThread(function()
+        runAction(
+            tostring(data and data.action or ''),
+            tonumber(data and data.propertyId),
+            data and data.payload
+        )
+    end)
+end)
+
+AddEventHandler('sunset:nui:propertyRenters', function(data)
+    CreateThread(function()
+        local propertyId = tonumber(data and data.propertyId)
+        if not propertyId then return end
+        local renters, err = Sunset.AwaitCallback('sunset:getPropertyRenters', propertyId)
+        if not renters then
+            exports.sunset_ui:Notify(err or 'Could not load renters.', 'error')
+            return
+        end
+        exports.sunset_ui:Send('propertyRenters', { propertyId = propertyId, renters = renters })
+    end)
 end)
 
 RegisterNetEvent('sunset:client:propertyInterior', function(data)

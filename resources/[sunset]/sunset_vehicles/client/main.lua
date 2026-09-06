@@ -695,24 +695,17 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     notify(('Vehicle spawned: %s (fuel %d%%)'):format(vehData.plate, math.floor(vehFuel)), 'success')
 end)
 
-local function showGaragePanel(vehicles)
-    for _, v in ipairs(vehicles or {}) do
-        v.inWorld = findVehicleByPlate(v.plate) ~= nil
-    end
-    exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
-    exports.sunset_ui:SetFocus(true, true, false)
+local function showGaragePanel(_vehicles)
+    TriggerEvent('sunset:menu:openVehicle')
 end
 
-RegisterNetEvent('sunset:client:garageMenu', function(vehicles)
-    showGaragePanel(vehicles)
+RegisterNetEvent('sunset:client:garageMenu', function(_vehicles)
+    showGaragePanel(_vehicles)
 end)
 
 local function openGaragePanel()
     if blocked() then return end
-    CreateThread(function()
-        local vehicles = Sunset.AwaitCallback('sunset:getVehicles') or {}
-        showGaragePanel(vehicles)
-    end)
+    TriggerEvent('sunset:menu:openVehicle')
 end
 
 RegisterCommand('v', openGaragePanel, false)

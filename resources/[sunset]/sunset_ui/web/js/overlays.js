@@ -18,7 +18,7 @@ const Overlays = {
 
         el.classList.remove('hidden');
         clearTimeout(this._announceTimer);
-        const duration = data?.duration || 14000;
+        const duration = data?.duration || 6500;
         this._announceTimer = setTimeout(() => this.hideAnnouncement(), duration);
     },
 
