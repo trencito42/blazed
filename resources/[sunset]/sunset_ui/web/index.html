@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=8">
-    <link rel="stylesheet" href="css/clans.css?v=4">
+    <link rel="stylesheet" href="css/clans.css?v=6">
     <link rel="stylesheet" href="css/auth_loading.css?v=6">
     <link rel="stylesheet" href="css/spawn.css?v=3">
 </head>
@@ -976,8 +976,14 @@
                         </form>
                     </div>
                     <div class="clan-tab-panel" data-clan-panel="browse">
-                        <p class="clan-directory-intro">All player-created clans on the server. Contact leadership in-character to join.</p>
-                        <div id="clan-browse-list" class="clan-directory-list"></div>
+                        <p class="clan-directory-intro">Click a clan for details. Contact leadership in-character to join.</p>
+                        <div class="clan-directory-layout" id="clan-browse-layout">
+                            <div id="clan-browse-list" class="clan-directory-list"></div>
+                            <aside id="clan-browse-detail" class="clan-detail hidden" aria-live="polite">
+                                <button type="button" class="clan-detail__back" data-clan-detail-back>← Back to list</button>
+                                <div class="clan-detail__body"></div>
+                            </aside>
+                        </div>
                     </div>
                 </section>
             </main>
@@ -992,8 +998,14 @@
             </header>
             <main class="menu-panels menu-panels--solo">
                 <section class="menu-panel-view tech-panel accent-orange is-active clan-directory-shell">
-                    <p class="clan-directory-intro">All player-created clans on the server. Contact leadership in-character to join.</p>
-                    <div id="clan-directory-list" class="clan-directory-list"></div>
+                    <p class="clan-directory-intro">Click a clan for details. Tag previews match how names appear in chat.</p>
+                    <div class="clan-directory-layout" id="clan-directory-layout">
+                        <div id="clan-directory-list" class="clan-directory-list"></div>
+                        <aside id="clan-directory-detail" class="clan-detail hidden" aria-live="polite">
+                            <button type="button" class="clan-detail__back" data-clan-detail-back>← Back to list</button>
+                            <div class="clan-detail__body"></div>
+                        </aside>
+                    </div>
                 </section>
             </main>
         </div>
@@ -1345,7 +1357,7 @@
         </aside>
     </div>
 
-    <script src="js/clans.js?v=4"></script>
+    <script src="js/clans.js?v=6"></script>
     <script src="js/app.js?v=8"></script>
     <script src="js/characters.js"></script>
     <script src="js/hud.js?v=5"></script>

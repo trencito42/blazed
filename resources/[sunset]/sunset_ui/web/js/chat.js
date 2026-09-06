@@ -50,9 +50,10 @@ const Chat = {
 
     splitClanParts(m) {
         const tag = String(m.clanTag || '').trim();
-        const name = String(m.name || 'Player').trim();
         const style = String(m.clanTagStyle || 'brackets');
         const color = String(m.clanTagColor || '#FF8C00');
+        const name = SunsetPlayerIdentity?.stripTaggedName?.(m.name, tag, style)
+            || String(m.name || 'Player').trim();
         if (!tag) return { prefix: '', name, suffix: '', color };
         switch (style) {
             case 'prefix_dot': return { prefix: `${tag}.`, name, suffix: '', color };
@@ -138,9 +139,6 @@ const Chat = {
             if (m.clanTag || m.factionId) {
                 return `${prefix}${SunsetPlayerIdentity.formatNameHtml(m)} says: ${this.escapeHtml(msg)}`;
             }
-            if (m.clanTag) {
-                return `${prefix}${this.formatClanNameHtml(m)}${idPart} says: ${this.escapeHtml(msg)}`;
-            }
             return `${prefix}${name}${idPart} says: ${msg}`;
         }
 
@@ -148,9 +146,6 @@ const Chat = {
             const idPart = id > 0 ? ` (${id})` : '';
             if (m.clanTag || m.factionId) {
                 return `${prefix}* ${SunsetPlayerIdentity.formatNameHtml(m)} ${this.escapeHtml(msg)}`;
-            }
-            if (m.clanTag) {
-                return `${prefix}* ${this.formatClanNameHtml(m)}${idPart} ${this.escapeHtml(msg)}`;
             }
             return `${prefix}* ${name}${idPart} ${msg}`;
         }

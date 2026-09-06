@@ -383,6 +383,15 @@ window.addEventListener('message', (event) => {
                 }
             }
             break;
+        case 'clanProfileShow':
+            if (window.ClanPanels) {
+                try {
+                    ClanPanels.showClanProfile(data || event.data.data);
+                } catch (err) {
+                    console.error('[ClanPanels] showClanProfile failed', err);
+                }
+            }
+            break;
         case 'clanPanelsHide':
             if (window.ClanPanels) ClanPanels.hide();
             document.body.classList.remove('clan-panels-open');

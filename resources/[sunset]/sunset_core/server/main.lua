@@ -177,20 +177,20 @@ function GetPlayerBaseName(source)
             base = GetPlayerName(source) or 'Player'
         end
     end
-    if GetResourceState('sunset_clans') == 'started' then
-        local ok, formatted = pcall(function()
-            return exports.sunset_clans:FormatDisplayName(source, base)
-        end)
-        if ok and type(formatted) == 'string' and formatted ~= '' then
-            return formatted
-        end
-    end
     return base
 end
 exports('GetPlayerBaseName', GetPlayerBaseName)
 
 function GetPlayerDisplayName(source)
     local base = GetPlayerBaseName(source)
+    if GetResourceState('sunset_clans') == 'started' then
+        local ok, formatted = pcall(function()
+            return exports.sunset_clans:FormatDisplayName(source, base)
+        end)
+        if ok and type(formatted) == 'string' and formatted ~= '' then
+            base = formatted
+        end
+    end
     local sid = tonumber(source)
     if not sid or sid <= 0 then return base end
     return ('%s (%d)'):format(base, sid)

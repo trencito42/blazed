@@ -117,6 +117,92 @@ local function rankLabel(rank)
     return 'Member'
 end
 
+local function tagStyleLabel(style)
+    local meta = SunsetClans.TagStyles[style]
+    return meta and meta.label or style or '—'
+end
+
+local function characterDisplayName(characterId)
+    characterId = tonumber(characterId)
+    if not characterId then return 'Unknown' end
+    local src = sourceForChar(characterId)
+    if src then return ClanDisplay.baseName(src) end
+    local row = MySQL.single.await(
+        'SELECT firstname, lastname FROM characters WHERE id = ? LIMIT 1',
+        { characterId }
+    )
+    if not row then return ('CID %d'):format(characterId) end
+    local full = ((row.firstname or '') .. (row.lastname and row.lastname ~= '' and (' ' .. row.lastname) or ''))
+        :gsub('^%s+', ''):gsub('%s+$', '')
+    return full ~= '' and full or ('CID %d'):format(characterId)
+end
+
+local function clanDirectoryRow(row)
+    local online = 0
+    local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { row.id }) or {}
+    for _, member in ipairs(members) do
+        if sourceForChar(member.character_id) then online = online + 1 end
+    end
+    local leaderName = characterDisplayName(row.owner_character_id)
+    return {
+        id = row.id,
+        name = row.name,
+        tag = row.tag,
+        tagColor = row.tag_color,
+        tagStyle = row.tag_style,
+        tagStyleLabel = tagStyleLabel(row.tag_style),
+        description = row.description or '',
+        motd = row.motd or '',
+        total = tonumber(row.total) or 0,
+        online = online,
+        maxMembers = tonumber(row.max_members) or SunsetClans.MaxMembers,
+        leader = leaderName,
+        leaderCharacterId = tonumber(row.owner_character_id),
+    }
+end
+
+local function buildRoster(clanId)
+    local rows = MySQL.query.await([[
+        SELECT cm.character_id, cm.rank, cm.joined_at
+        FROM clan_members cm
+        WHERE cm.clan_id = ?
+        ORDER BY FIELD(cm.rank, 'leader', 'officer', 'member'), cm.joined_at ASC
+    ]], { clanId }) or {}
+
+    local roster = {}
+    for _, row in ipairs(rows) do
+        local src = sourceForChar(row.character_id)
+        roster[#roster + 1] = {
+            characterId = row.character_id,
+            name = playerName(row.character_id),
+            rank = row.rank,
+            rankLabel = rankLabel(row.rank),
+            online = src ~= nil,
+            serverId = src,
+            leader = row.rank == 'leader',
+        }
+    end
+    return roster
+end
+
+local function clanProfilePayload(clanId)
+    clanId = tonumber(clanId)
+    if not clanId then return nil, 'Invalid clan.' end
+    local row = MySQL.single.await([[
+        SELECT c.id, c.name, c.tag, c.tag_color, c.tag_style, c.description, c.motd,
+               c.owner_character_id, c.max_members,
+               (SELECT COUNT(*) FROM clan_members cm WHERE cm.clan_id = c.id) AS total
+        FROM clans c
+        WHERE c.id = ?
+        LIMIT 1
+    ]], { clanId })
+    if not row then return nil, 'Clan not found.' end
+
+    local profile = clanDirectoryRow(row)
+    profile.members = buildRoster(clanId)
+    return profile
+end
+
 local function buildRoster(clanId)
     local rows = MySQL.query.await([[
         SELECT cm.character_id, cm.rank, cm.joined_at
@@ -206,7 +292,8 @@ end)
 exports.sunset_core:RegisterCallback('sunset:clanDirectory', function(source)
     if not charId(source) then return nil, 'Your character is not loaded. Reconnect and try again.' end
     local rows = MySQL.query.await([[
-        SELECT c.id, c.name, c.tag, c.tag_color, c.tag_style, c.description,
+        SELECT c.id, c.name, c.tag, c.tag_color, c.tag_style, c.description, c.motd,
+               c.owner_character_id, c.max_members,
                (SELECT COUNT(*) FROM clan_members cm WHERE cm.clan_id = c.id) AS total
         FROM clans c
         ORDER BY c.name ASC
@@ -214,24 +301,14 @@ exports.sunset_core:RegisterCallback('sunset:clanDirectory', function(source)
 
     local clans = {}
     for _, row in ipairs(rows) do
-        local online = 0
-        local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { row.id }) or {}
-        for _, member in ipairs(members) do
-            if sourceForChar(member.character_id) then online = online + 1 end
-        end
-        clans[#clans + 1] = {
-            id = row.id,
-            name = row.name,
-            tag = row.tag,
-            tagColor = row.tag_color,
-            tagStyle = row.tag_style,
-            description = row.description or '',
-            total = tonumber(row.total) or 0,
-            online = online,
-            preview = SunsetClans.formatTaggedName(row.tag, 'Player', row.tag_style),
-        }
+        clans[#clans + 1] = clanDirectoryRow(row)
     end
     return clans
+end)
+
+exports.sunset_core:RegisterCallback('sunset:clanProfile', function(source, clanId)
+    if not charId(source) then return nil, 'Your character is not loaded. Reconnect and try again.' end
+    return clanProfilePayload(clanId)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, payload)

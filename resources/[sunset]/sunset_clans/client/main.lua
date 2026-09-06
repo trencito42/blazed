@@ -36,6 +36,16 @@ AddEventHandler('sunset:nui:clanBrowse', function()
     exports.sunset_ui:Send('clanBrowseInline', { clans = data })
 end)
 
+AddEventHandler('sunset:nui:clanProfile', function(data)
+    local clanId = tonumber(data and data.clanId)
+    local profile, err = Sunset.AwaitCallback('sunset:clanProfile', clanId)
+    if not profile then
+        exports.sunset_ui:Notify(err or 'Could not load clan profile.', 'error', 7000)
+        return
+    end
+    exports.sunset_ui:Send('clanProfileShow', profile)
+end)
+
 RegisterCommand('acceptclan', function()
     local data, err = Sunset.AwaitCallback('sunset:clanAcceptInvite')
     if not data then

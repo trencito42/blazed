@@ -43,6 +43,15 @@ local function deleteFleetVehicle()
     fleetVehicle = nil
 end
 
+local function resolveSpawnZ(x, y, z)
+    RequestCollisionAtCoord(x, y, z)
+    local found, groundZ = GetGroundZFor_3dCoord(x, y, z + 50.0, false)
+    if found then
+        return groundZ + 0.35
+    end
+    return z
+end
+
 local function spawnFleetVehicle(depot, factionId)
     if not depot or not depot.spawn then
         exports.sunset_ui:Notify('No fleet garage configured', 'error')
@@ -80,13 +89,17 @@ local function spawnFleetVehicle(depot, factionId)
     end
 
     local s = depot.spawn
-    local veh = CreateVehicle(model, s.x, s.y, s.z, s.w, true, false)
+    local spawnZ = resolveSpawnZ(s.x, s.y, s.z)
+    local veh = CreateVehicle(model, s.x, s.y, spawnZ, s.w, true, false)
     if veh == 0 then
         SetModelAsNoLongerNeeded(model)
         exports.sunset_ui:Notify('Could not spawn vehicle — clear the area', 'error')
         return
     end
 
+    SetEntityCoords(veh, s.x, s.y, spawnZ, false, false, false, false)
+    SetEntityHeading(veh, s.w)
+    SetVehicleOnGroundProperly(veh)
     local prefix = authorized.platePrefix or depot.platePrefix or 'SUN'
     SetVehicleNumberPlateText(veh, prefix .. math.random(100, 999))
     SetEntityAsMissionEntity(veh, true, true)
@@ -467,6 +480,9 @@ CreateThread(function()
         end
         if faction.depot and id ~= 'taxi' then
             TriggerEvent('sunset:world:registerFactionDepot', id, faction.depot, faction)
+            if faction.depot.lift then
+                TriggerEvent('sunset:world:registerElevator', id, faction.depot.lift, faction)
+            end
         end
         if faction.stash and faction.type == 'illegal' then
             TriggerEvent('sunset:world:registerIllegalSell', id, faction.stash, faction)

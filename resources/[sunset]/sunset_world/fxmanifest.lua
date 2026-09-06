@@ -13,6 +13,7 @@ shared_scripts {
 
 client_scripts {
     'client/main.lua',
+    'client/elevators.lua',
 }
 
 dependencies { 'sunset_core' }

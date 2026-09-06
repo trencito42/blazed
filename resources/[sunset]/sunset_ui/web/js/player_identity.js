@@ -26,9 +26,9 @@ const SunsetPlayerIdentity = {
 
     splitClanParts(row) {
         const tag = String(row.clanTag || '').trim();
-        const name = String(row.name || 'Player').trim();
         const style = String(row.clanTagStyle || 'brackets');
         const color = String(row.clanTagColor || '#FF8C00');
+        const name = this.stripTaggedName(row.name, tag, style);
         if (!tag) return { prefix: '', name, suffix: '', color };
         switch (style) {
             case 'prefix_dot': return { prefix: `${tag}.`, name, suffix: '', color };
@@ -63,6 +63,28 @@ const SunsetPlayerIdentity = {
         const label = String(row.factionLabel || row.job || 'Unemployed').trim();
         const color = row.factionColor || this.factionColor(row.factionId);
         return `<span class="player-identity__faction" style="color:${this.escape(color)}">${this.escape(label)}</span>`;
+    },
+
+    stripTaggedName(name, tag, style) {
+        name = String(name || 'Player').trim() || 'Player';
+        tag = String(tag || '').trim();
+        if (!tag) return name;
+        const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const patterns = [
+            new RegExp(`^\\[${escaped}\\]`, 'i'),
+            new RegExp(`^${escaped}\\.`, 'i'),
+            new RegExp(`\\[${escaped}\\]$`, 'i'),
+            new RegExp(`\\.${escaped}$`, 'i'),
+            new RegExp(`^${escaped}(?=[A-Za-z])`, 'i'),
+            new RegExp(`(?<=[A-Za-z])${escaped}$`, 'i'),
+        ];
+        for (const pattern of patterns) {
+            if (pattern.test(name)) {
+                const stripped = name.replace(pattern, '').trim();
+                if (stripped) return stripped;
+            }
+        }
+        return name;
     },
 };
 

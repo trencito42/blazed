@@ -4,7 +4,8 @@ local MAX_ACCOUNTS = 6
 local KVP_PREFIX = 'auth_'
 
 local function keyFor(license)
-    local id = tostring(license or 'default'):gsub('[^%w]', '_')
+    local id = tostring(license or ''):gsub('[^%w]', '_')
+    if id == '' then return nil end
     if #id > 96 then id = id:sub(1, 96) end
     return KVP_PREFIX .. id
 end
@@ -13,21 +14,35 @@ local function normalizeStore(data)
     if type(data) ~= 'table' then
         return { quickLogin = true, accounts = {} }
     end
-    if data.quickLogin == false then
-        data.quickLogin = false
-    else
-        data.quickLogin = true
-    end
+    data.quickLogin = data.quickLogin == true
     if type(data.accounts) ~= 'table' then
         data.accounts = {}
     end
     return data
 end
 
+local function flushKvp()
+    if type(FlushResourceKvp) == 'function' then
+        FlushResourceKvp()
+    end
+end
+
 function Accounts.load(license)
-    local raw = GetResourceKvpString(keyFor(license))
-    if not raw or raw == '' then
+    local key = keyFor(license)
+    if not key then
         return { quickLogin = true, accounts = {} }
+    end
+    local raw = GetResourceKvpString(key)
+    if not raw or raw == '' then
+        local legacy = GetResourceKvpString('auth_default')
+        if legacy and legacy ~= '' then
+            SetResourceKvp(key, legacy)
+            DeleteResourceKvp('auth_default')
+            flushKvp()
+            raw = legacy
+        else
+            return { quickLogin = true, accounts = {} }
+        end
     end
     local ok, decoded = pcall(json.decode, raw)
     if not ok then
@@ -37,7 +52,14 @@ function Accounts.load(license)
 end
 
 function Accounts.save(license, store)
-    SetResourceKvp(keyFor(license), json.encode(normalizeStore(store)))
+    local key = keyFor(license)
+    if not key then
+        print('[sunset_auth] Skipped auth account save: license not ready yet')
+        return false
+    end
+    SetResourceKvp(key, json.encode(normalizeStore(store)))
+    flushKvp()
+    return true
 end
 
 function Accounts.publicList(store)
@@ -133,6 +155,17 @@ function Accounts.upsert(license, username, password, quickLogin)
 
     Accounts.save(license, store)
     return store
+end
+
+function Accounts.mostRecent(store)
+    if type(store.accounts) ~= 'table' or #store.accounts == 0 then return nil end
+    local best = store.accounts[1]
+    for _, row in ipairs(store.accounts) do
+        if (tonumber(row.lastLogin) or 0) > (tonumber(best.lastLogin) or 0) then
+            best = row
+        end
+    end
+    return best
 end
 
 SunsetAuthAccounts = Accounts

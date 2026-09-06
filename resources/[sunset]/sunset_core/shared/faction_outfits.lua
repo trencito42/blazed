@@ -21,12 +21,12 @@ function Sunset.BuildLeoGradeOutfits(style)
     local maleTops = {
         lspd = { 55, 56, 57, 58, 59, 60, 61, 62 },
         fib = { 111, 112, 113, 114, 115, 116, 117, 118 },
-        sheriff = { 95, 96, 97, 98, 99, 100, 101, 102 },
+        sheriff = { 55, 55, 55, 55, 55, 55, 55, 55 },
     }
     local femaleTops = {
         lspd = { 48, 49, 50, 51, 52, 53, 54, 55 },
         fib = { 27, 28, 29, 30, 31, 32, 33, 34 },
-        sheriff = { 42, 43, 44, 45, 46, 47, 48, 49 },
+        sheriff = { 48, 48, 48, 48, 48, 48, 48, 48 },
     }
     local malePants = style == 'sheriff' and 36 or 35
     local femalePants = style == 'sheriff' and 33 or 34
@@ -35,14 +35,19 @@ function Sunset.BuildLeoGradeOutfits(style)
     local gradeOutfits = {}
     for grade = 0, 7 do
         local idx = grade + 1
+        local sheriffTex = style == 'sheriff' and 1 or 0
         gradeOutfits[grade] = {
             male = leoOutfit(topsM[idx], malePants, {
                 undershirt = style == 'fib' and 130 or 58,
                 shoes = style == 'sheriff' and 24 or 25,
+                arms = style == 'sheriff' and 19 or 0,
+                topTexture = style == 'sheriff' and sheriffTex or 0,
             }),
             female = leoOutfit(topsF[idx], femalePants, {
                 undershirt = style == 'fib' and 160 or 35,
                 shoes = style == 'sheriff' and 24 or 25,
+                arms = style == 'sheriff' and 31 or 0,
+                topTexture = style == 'sheriff' and sheriffTex or 0,
             }),
         }
     end

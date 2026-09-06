@@ -18,7 +18,7 @@ const AuthAccounts = {
     },
 
     syncRememberCheckboxes() {
-        const checked = this.quickLogin !== false;
+        const checked = this.quickLogin === true;
         const login = $('#auth-remember-quick');
         const register = $('#auth-reg-remember-quick');
         if (login) login.checked = checked;
@@ -28,7 +28,7 @@ const AuthAccounts = {
     rememberEnabled() {
         const loginOpen = $('#auth-form-login')?.classList.contains('is-active');
         const box = loginOpen ? $('#auth-remember-quick') : $('#auth-reg-remember-quick');
-        return box ? box.checked : this.quickLogin !== false;
+        return box ? box.checked === true : this.quickLogin === true;
     },
 
     setMode(mode) {
@@ -87,7 +87,7 @@ const AuthAccounts = {
 
     init(data = {}) {
         this.accounts = Array.isArray(data.accounts) ? data.accounts : [];
-        this.quickLogin = data.quickLogin !== false;
+        this.quickLogin = data.quickLogin === true;
         this.syncRememberCheckboxes();
         this.setMode(this.accounts.length > 0 ? 'chooser' : 'form');
         this.render();

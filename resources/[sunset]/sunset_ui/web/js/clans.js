@@ -10,6 +10,10 @@ const ClanPanels = {
             button.addEventListener('click', () => post('clanPanelsClose'));
         });
 
+        document.querySelectorAll('[data-clan-detail-back]').forEach((button) => {
+            button.addEventListener('click', () => this.closeDirectoryDetail());
+        });
+
         document.querySelectorAll('[data-clan-tab]').forEach((tab) => {
             tab.addEventListener('click', () => {
                 const tabId = tab.dataset.clanTab;
@@ -58,6 +62,7 @@ const ClanPanels = {
         $('#clan-panel')?.classList.add('hidden');
         $('#clan-directory')?.classList.add('hidden');
         this.setBodyOpen(false);
+        this.closeDirectoryDetail();
     },
 
     focusReady() {
@@ -120,10 +125,113 @@ const ClanPanels = {
         const parts = this.splitTaggedParts(tag, baseName, style);
         const col = color || '#FF8C00';
         el.innerHTML = [
-            parts.prefix ? `<span style="color:${this.escape(col)}">${this.escape(parts.prefix)}</span>` : '',
-            this.escape(parts.name),
-            parts.suffix ? `<span style="color:${this.escape(col)}">${this.escape(parts.suffix)}</span>` : '',
+            parts.prefix ? `<span class="clan-identity__tag" style="color:${this.escape(col)}">${this.escape(parts.prefix)}</span>` : '',
+            `<span class="clan-identity__name">${this.escape(parts.name)}</span>`,
+            parts.suffix ? `<span class="clan-identity__tag" style="color:${this.escape(col)}">${this.escape(parts.suffix)}</span>` : '',
         ].join('');
+    },
+
+    identityPreviewHtml(clan, baseName = 'Player') {
+        const wrap = document.createElement('div');
+        wrap.className = 'clan-identity-preview';
+        this.paintPreview(wrap, clan.tag, baseName, clan.tagStyle, clan.tagColor);
+        return wrap.innerHTML;
+    },
+
+    detailContext(listEl) {
+        if (listEl?.id === 'clan-browse-list') {
+            return {
+                layout: $('#clan-browse-layout'),
+                detail: $('#clan-browse-detail'),
+            };
+        }
+        return {
+            layout: $('#clan-directory-layout'),
+            detail: $('#clan-directory-detail'),
+        };
+    },
+
+    closeDirectoryDetail() {
+        $('#clan-directory-detail')?.classList.add('hidden');
+        $('#clan-browse-detail')?.classList.add('hidden');
+        $('#clan-directory-layout')?.classList.remove('is-detail-open');
+        $('#clan-browse-layout')?.classList.remove('is-detail-open');
+        document.querySelectorAll('.clan-directory-card.is-selected').forEach((el) => {
+            el.classList.remove('is-selected');
+        });
+        this._selectedClanId = null;
+    },
+
+    renderDetailBody(detailEl, clan, members) {
+        const body = detailEl?.querySelector('.clan-detail__body');
+        if (!body || !clan) return;
+
+        const motd = String(clan.motd || '').trim();
+        const description = String(clan.description || '').trim() || 'No public description has been set.';
+        const roster = Array.isArray(members) ? members : (clan.members || []);
+        const rosterHtml = roster.length
+            ? roster.map((member) => `
+                <article class="clan-detail-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}">
+                    <div>
+                        <strong>${this.escape(member.name || 'Unknown')}</strong>
+                        <span>${this.escape(member.rankLabel || 'Member')}${member.serverId ? ` · ID ${member.serverId}` : ''}</span>
+                    </div>
+                    <em>${member.leader ? 'LEADER' : (member.online ? 'ONLINE' : 'OFFLINE')}</em>
+                </article>
+            `).join('')
+            : '<p class="clan-empty">No members listed.</p>';
+
+        body.innerHTML = `
+            <h3>${this.escape(clan.name || 'Clan')}</h3>
+            <div class="clan-detail__identity">${this.identityPreviewHtml(clan)}</div>
+            <div class="clan-detail__meta-line">Tag <strong style="color:${this.escape(clan.tagColor || '#FF8C00')}">${this.escape(clan.tag || '?')}</strong> · Style ${this.escape(clan.tagStyleLabel || clan.tagStyle || '—')}</div>
+            <div class="clan-detail__stats">
+                <div class="clan-detail__stat"><strong>${Number(clan.online) || 0}</strong><span>Online</span></div>
+                <div class="clan-detail__stat"><strong>${Number(clan.total) || 0}</strong><span>Members</span></div>
+                <div class="clan-detail__stat"><strong>${Number(clan.maxMembers) || 25}</strong><span>Capacity</span></div>
+            </div>
+            <div class="clan-detail__block"><span>Leader</span><p>${this.escape(clan.leader || 'Unknown')}</p></div>
+            <div class="clan-detail__block"><span>Message of the day</span><p>${this.escape(motd || 'No MOTD posted.')}</p></div>
+            <div class="clan-detail__block"><span>About</span><p>${this.escape(description)}</p></div>
+            <div class="clan-detail__block"><span>How to join</span><p>Contact the leader in-character or wait for an in-game invite. Leaders use <code>/clan</code> to invite online players.</p></div>
+            <div class="clan-detail__block"><span>Roster</span><div class="clan-detail-roster">${rosterHtml}</div></div>
+        `;
+    },
+
+    openClanDetail(clan, cardEl, listEl) {
+        const ctx = this.detailContext(listEl);
+        if (!ctx.detail || !clan) return;
+
+        document.querySelectorAll('.clan-directory-card.is-selected').forEach((el) => {
+            el.classList.remove('is-selected');
+        });
+        cardEl?.classList.add('is-selected');
+        this._selectedClanId = clan.id;
+
+        this.renderDetailBody(ctx.detail, clan, clan.members || []);
+        ctx.layout?.classList.toggle('is-detail-open', window.matchMedia('(max-width: 900px)').matches);
+        ctx.detail.classList.remove('hidden');
+
+        if (!clan.members || !clan.members.length) {
+            post('clanProfile', { clanId: clan.id });
+        }
+    },
+
+    showClanProfile(profile = {}) {
+        if (!profile || !profile.id) return;
+        const clanId = profile.id;
+        this.directory = (this.directory || []).map((row) => (row.id === clanId ? { ...row, ...profile } : row));
+
+        const contexts = [
+            { detail: $('#clan-directory-detail'), list: $('#clan-directory-list') },
+            { detail: $('#clan-browse-detail'), list: $('#clan-browse-list') },
+        ];
+        contexts.forEach(({ detail, list }) => {
+            if (this._selectedClanId === clanId && detail && !detail.classList.contains('hidden')) {
+                const clan = this.directory.find((row) => row.id === clanId) || profile;
+                this.renderDetailBody(detail, clan, profile.members || clan.members);
+            }
+        });
     },
 
     updateCreatePreview() {
@@ -184,20 +292,40 @@ const ClanPanels = {
         if (!list) return;
         list.innerHTML = '';
         (clans || []).forEach((clan) => {
-            const card = document.createElement('article');
+            const card = document.createElement('button');
+            card.type = 'button';
             card.className = 'clan-directory-card';
+            card.dataset.clanId = String(clan.id || '');
+
+            const top = document.createElement('div');
+            top.className = 'clan-directory-card__top';
+            const titleWrap = document.createElement('div');
             const title = document.createElement('strong');
             title.textContent = clan.name || 'Clan';
-            const tag = document.createElement('span');
-            tag.className = 'clan-directory-card__tag';
-            tag.style.color = clan.tagColor || '#FF8C00';
-            tag.textContent = clan.preview || `[${clan.tag}]Player`;
+            const tagBadge = document.createElement('span');
+            tagBadge.className = 'clan-directory-card__badge';
+            tagBadge.style.color = clan.tagColor || '#FF8C00';
+            tagBadge.textContent = `[${clan.tag || '?'}]`;
+            titleWrap.append(title, tagBadge);
+
+            const online = document.createElement('em');
+            online.textContent = `${clan.online || 0}/${clan.total || 0} online`;
+            top.append(titleWrap, online);
+
+            const identity = document.createElement('div');
+            identity.className = 'clan-directory-card__identity';
+            identity.innerHTML = this.identityPreviewHtml(clan);
+
             const description = document.createElement('p');
-            description.textContent = clan.description || 'No description.';
+            const desc = String(clan.description || '').trim();
+            description.textContent = desc || 'No public description yet.';
+
             const meta = document.createElement('div');
             meta.className = 'clan-directory-card__meta';
-            meta.textContent = `${clan.online || 0}/${clan.total || 0} online · tag ${clan.tag || '?'}`;
-            card.append(title, tag, description, meta);
+            meta.textContent = `Leader: ${clan.leader || 'Unknown'} · ${clan.tagStyleLabel || 'tag style'}`;
+
+            card.append(top, identity, description, meta);
+            card.addEventListener('click', () => this.openClanDetail(clan, card, list));
             list.appendChild(card);
         });
         if (!list.children.length) list.innerHTML = '<p class="clan-empty">No clans have been created yet.</p>';
@@ -218,8 +346,15 @@ const ClanPanels = {
         this._browseLoading = false;
         this._browseLoaded = true;
         this.directory = Array.isArray(payload.clans) ? payload.clans : [];
+        this.closeDirectoryDetail();
         this.renderDirectoryCards($('#clan-browse-list'), this.directory);
         this.setTab('browse');
+    },
+
+    tagStyleLabel(styleId) {
+        const styles = this.dashboard?.tagStyles || [];
+        const row = styles.find((entry) => entry.id === styleId);
+        return row?.label || styleId || '—';
     },
 
     showDashboard(data = {}) {
@@ -239,9 +374,15 @@ const ClanPanels = {
 
         const title = $('#clan-panel-title');
         if (title) {
-            title.innerHTML = inClan
-                ? `${this.escape(this.dashboard.name || 'Clan')} <span>${this.escape(this.dashboard.tag || '')}</span>`
-                : 'CREATE <span>CLAN</span>';
+            if (inClan) {
+                const clanName = this.escape(this.dashboard.name || 'Clan');
+                const clanTag = this.escape(this.dashboard.tag || '');
+                title.innerHTML = clanTag
+                    ? `CLAN <span>${clanName} · ${clanTag}</span>`
+                    : `CLAN <span>${clanName}</span>`;
+            } else {
+                title.innerHTML = 'CREATE <span>CLAN</span>';
+            }
         }
         $('#clan-panel')?.classList.toggle('clan-panel--guest', !inClan);
 
@@ -290,6 +431,8 @@ const ClanPanels = {
                 this.dashboard.tagStyle,
                 this.dashboard.tagColor
             );
+            const styleLabel = $('#clan-tag-style-label');
+            if (styleLabel) styleLabel.textContent = this.tagStyleLabel(this.dashboard.tagStyle);
 
             this.renderRoster(this.dashboard.members);
 
@@ -340,6 +483,7 @@ const ClanPanels = {
 
         $('#clan-panel')?.classList.add('hidden');
         this.directory = Array.isArray(payload.clans) ? payload.clans : [];
+        this.closeDirectoryDetail();
         const list = $('#clan-directory-list');
         if (!list) return false;
         this.renderDirectoryCards(list, this.directory);
