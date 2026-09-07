@@ -250,7 +250,7 @@ Sunset.Factions = {
         society = 'mechanic',
         duty = true,
         hq = vector3(-337.52, -136.57, 39.01),
-        hqHint = '[E] LS Customs — vehicle repair $250 | members: toggle duty',
+        hqHint = '[E] LS Customs — repair $250 or ECU tuning | members: toggle duty',
         blip = { sprite = 446, color = 47, scale = 0.85 },
         marker = { 255, 140, 0 },
         depot = {

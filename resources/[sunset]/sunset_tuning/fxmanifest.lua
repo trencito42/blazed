@@ -18,6 +18,8 @@ client_scripts {
     'client/apply.lua',
     'client/effects.lua',
     'client/dyno.lua',
+    'client/bootstrap.lua',
+    'client/lsc_menu.lua',
     'client/main.lua',
 }
 
@@ -36,6 +38,7 @@ dependencies {
     'sunset_core',
     'sunset_ui',
     'sunset_vehicles',
+    'sunset_factions',
 }
 
 exports {
@@ -43,5 +46,6 @@ exports {
     'GetTuneForPlate',
     'ExportTuneForStore',
     'OpenTuningPanel',
+    'OpenLsCustomsMenu',
     'FormatVehicleInfo',
 }

@@ -66,6 +66,10 @@ local function openPanel(shop)
     currentVeh = veh
     currentPlate = STC.plateOf(veh)
     currentShop = shop or nearestShop()
+    if not currentShop then
+        notify('Nu esti la un shop de tuning', 'error')
+        return
+    end
 
     local payload, err = Sunset.AwaitCallback('sunset:tuning:getTune', currentPlate)
     if not payload then
@@ -101,12 +105,7 @@ local function openPanel(shop)
     ApplyTune(currentVeh, draftTune, false)
 end
 
-function OpenTuningPanel()
-    local shop = nearestShop()
-    if not shop then
-        notify('Mergi la LS Customs / Harmony pentru ECU tuning', 'error')
-        return
-    end
+function OpenTuningPanel(shop)
     openPanel(shop)
 end
 
@@ -139,8 +138,9 @@ RegisterNUICallback('tuningSave', function(data, cb)
     STC.plateTunes[currentPlate] = draftTune
     STC.persistedPlates[currentPlate] = true
     ApplyTune(currentVeh, draftTune, true)
-    if flash then TriggerServerEvent('sunset:tuning:flashApplied', currentPlate) end
-    notify(('ECU salvat — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
+    if flash and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 5) end
+    if flash then TriggerServerEvent('sunset:tuning:flashApplied', currentPlate, draftTune) end
+    notify(('ECU salvat & flash — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
     sendUi('saved', { saved = true, tune = draftTune })
     cb({ ok = true, tune = draftTune })
 end)
@@ -166,6 +166,7 @@ RegisterNUICallback('tuningDyno', function(_, cb)
                 draftTune.dyno = dynoSaved
                 STC.plateTunes[currentPlate] = draftTune
                 hasSavedTune = true
+                STC.persistedPlates[currentPlate] = true
             end
             sendUi('dynoResult', { dyno = dynoSaved, result = result })
         else
@@ -181,25 +182,14 @@ RegisterNUICallback('tuningLeaderboard', function(_, cb)
     cb({ ok = true, rows = rows or {} })
 end)
 
-RegisterCommand('ecu', function()
-    if blocked() then return end
-    OpenTuningPanel()
-end, false)
-
-RegisterCommand('tuning', function()
-    if blocked() then return end
-    OpenTuningPanel()
-end, false)
-
-RegisterKeyMapping('ecu', 'Deschide ECU Tuning', 'keyboard', '')
-
+-- Harmony: secondary tuning shop (LS Customs uses faction HQ menu)
 CreateThread(function()
     for _, shop in ipairs(SunsetTuning.Shops or {}) do
-        if shop.blip then
+        if shop.id ~= 'lsc_main' and shop.blip then
             local blip = AddBlipForCoord(shop.coords.x, shop.coords.y, shop.coords.z)
             SetBlipSprite(blip, shop.blip.sprite or 72)
             SetBlipColour(blip, shop.blip.color or 47)
-            SetBlipScale(blip, shop.blip.scale or 0.85)
+            SetBlipScale(blip, shop.blip.scale or 0.8)
             SetBlipAsShortRange(blip, true)
             BeginTextCommandSetBlipName('STRING')
             AddTextComponentSubstringPlayerName(shop.label or 'ECU Tuning')
@@ -209,24 +199,26 @@ CreateThread(function()
 end)
 
 CreateThread(function()
-    local hint = false
     while true do
         Wait(0)
-        local shop = nearestShop()
+        local shop = nil
+        for _, s in ipairs(SunsetTuning.Shops or {}) do
+            if s.id == 'lsc_harmony' then shop = s break end
+        end
         if shop and not panelOpen and not blocked() then
-            local veh = getDriverVehicle()
-            if veh ~= 0 then
-                SetTextComponentFormat('STRING')
-                AddTextComponentSubstringPlayerName('~o~[E]~s~ ECU Tuning — ' .. (shop.label or ''))
-                DisplayHelpTextFromStringLabel(0, false, true, -1)
+            local dist = #(GetEntityCoords(PlayerPedId()) - shop.coords)
+            if dist <= SunsetTuning.InteractRadius and getDriverVehicle() ~= 0 then
+                BeginTextCommandDisplayHelp('STRING')
+                AddTextComponentSubstringPlayerName('~o~[E]~s~ Harmony — ECU Tuning')
+                EndTextCommandDisplayHelp(0, false, true, -1)
                 if IsControlJustReleased(0, 38) then
-                    openPanel(shop)
+                    TriggerEvent('sunset:tuning:openHarmonyMenu')
                 end
-                hint = true
-            elseif hint then hint = false end
+            else
+                Wait(400)
+            end
         else
-            if hint then hint = false end
-            Wait(400)
+            Wait(500)
         end
     end
 end)
@@ -260,5 +252,5 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    closePanel()
+    closePanel(false)
 end)

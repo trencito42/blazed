@@ -161,10 +161,32 @@ exports.sunset_core:RegisterCallback('sunset:tuning:getLeaderboard', function(so
     return out
 end)
 
-RegisterNetEvent('sunset:tuning:flashApplied', function(plate)
+RegisterNetEvent('sunset:tuning:flashApplied', function(plate, tune)
     local src = source
     local char = getCharacter(src)
     if not char then return end
     plate = normalizePlate(plate)
-    TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, plate)
+    TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, plate, tune)
+end)
+
+RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensity)
+    local src = source
+    netId = tonumber(netId)
+    if not netId or netId == 0 then return end
+    fxType = type(fxType) == 'string' and fxType or 'pop'
+    intensity = math.max(0.1, math.min(1.0, tonumber(intensity) or 0.5))
+
+    local srcPed = GetPlayerPed(src)
+    if not srcPed or srcPed == 0 then return end
+    local coords = GetEntityCoords(srcPed)
+
+    for _, playerId in ipairs(GetPlayers()) do
+        local pid = tonumber(playerId)
+        if pid and pid ~= src then
+            local ped = GetPlayerPed(pid)
+            if ped and ped ~= 0 and #(coords - GetEntityCoords(ped)) < 90.0 then
+                TriggerClientEvent('sunset:tuning:client:exhaustFx', pid, netId, fxType, intensity)
+            end
+        end
+    end
 end)

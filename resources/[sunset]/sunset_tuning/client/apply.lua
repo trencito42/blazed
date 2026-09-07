@@ -144,13 +144,18 @@ exports('FormatVehicleInfo', function(ecu)
     return SunsetTuning.BuildVehicleInfo(ecu)
 end)
 
-RegisterNetEvent('sunset:tuning:client:applyByPlate', function(plate)
+RegisterNetEvent('sunset:tuning:client:applyByPlate', function(plate, tune)
     plate = STC.normalizePlate(plate)
-    local tune = STC.plateTunes[plate]
-    if not tune then return end
+    if type(tune) == 'table' then
+        tune = SunsetTuning.SanitizeTune(tune)
+        STC.plateTunes[plate] = tune
+        STC.persistedPlates[plate] = true
+    end
+    local activeTune = STC.plateTunes[plate]
+    if not activeTune then return end
     for _, veh in ipairs(GetGamePool('CVehicle')) do
         if STC.plateOf(veh) == plate then
-            ApplyTune(veh, tune, STC.persistedPlates[plate] == true)
+            ApplyTune(veh, activeTune, STC.persistedPlates[plate] == true)
         end
     end
 end)

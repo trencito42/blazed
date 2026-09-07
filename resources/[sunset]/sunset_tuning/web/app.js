@@ -372,11 +372,45 @@ function renderAll() {
 if (btnCancel) btnCancel.addEventListener('click', () => post('tuningClose'));
 if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), flash: true }));
 
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (lscApp && !lscApp.classList.contains('hidden')) post('lscClose');
+        else post('tuningClose');
+    }
+});
+
+const lscApp = document.getElementById('lsc-app');
+const lscTitle = document.getElementById('lscTitle');
+const lscSub = document.getElementById('lscSub');
+const lscRepair = document.getElementById('lscRepair');
+const lscTune = document.getElementById('lscTune');
+const lscCancel = document.getElementById('lscCancel');
+
+if (lscRepair) lscRepair.addEventListener('click', () => post('lscRepair'));
+if (lscTune) lscTune.addEventListener('click', () => post('lscTune'));
+if (lscCancel) lscCancel.addEventListener('click', () => post('lscClose'));
+
 window.addEventListener('message', (event) => {
     const payload = event.data || {};
     const action = payload.action;
     const data = payload.data || payload;
+
+    if (action === 'lscOpen' && lscApp) {
+        if (lscTitle) lscTitle.textContent = data.title || 'LS CUSTOMS';
+        if (lscSub) lscSub.textContent = data.shopLabel || 'Alege serviciul dorit';
+        if (lscRepair) {
+            lscRepair.style.display = data.repairAvailable ? 'block' : 'none';
+            lscRepair.textContent = `Reparație vehicul — $${data.repairPrice || 250}`;
+        }
+        lscApp.classList.remove('hidden');
+        if (app) app.classList.add('hidden');
+    }
+    if (action === 'lscClose' && lscApp) {
+        lscApp.classList.add('hidden');
+    }
+
     if (action === 'open') {
+        if (lscApp) lscApp.classList.add('hidden');
         tune = ensureTune(data.tune);
         hasSavedMap = data.saved === true;
         previewDirty = false;
@@ -412,8 +446,4 @@ window.addEventListener('message', (event) => {
         if (app) app.classList.remove('hidden');
         renderAll();
     }
-});
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') post('tuningClose');
 });

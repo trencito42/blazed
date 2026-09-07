@@ -503,17 +503,7 @@ AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
     local myFaction = char and Sunset.GetCharacterFaction(char)
 
     if factionId == 'mechanic' and IsPedInAnyVehicle(ped, false) then
-        local ok, err = Sunset.AwaitCallback('sunset:mechanicShopRepair')
-        if ok then
-            local veh = GetVehiclePedIsIn(ped, false)
-            SetVehicleFixed(veh)
-            SetVehicleEngineHealth(veh, 1000.0)
-            SetVehicleBodyHealth(veh, 1000.0)
-            SetVehicleDirtLevel(veh, 0.0)
-            exports.sunset_ui:Notify('Vehicle repaired at LS Customs ($250)', 'success')
-        else
-            exports.sunset_ui:Notify(err or 'Repair failed', 'error')
-        end
+        TriggerEvent('sunset:tuning:openLsCustomsMenu')
         return
     end
 
