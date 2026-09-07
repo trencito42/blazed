@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset ECU</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="hidden">
+        <div class="ecu-wrap">
+            <header class="ecu-head">
+                <div class="ecu-brand">
+                    <span class="ecu-brand__sun">SUNSET</span>
+                    <span class="ecu-brand__sub">ECU TUNING</span>
+                </div>
+                <div class="ecu-meta">
+                    <span id="shopLabel">ECU Bay</span>
+                    <span id="plateLabel">—</span>
+                </div>
+            </header>
+
+            <div class="ecu-shell">
+                <nav class="ecu-rail" id="rail"></nav>
+                <main class="ecu-main">
+                    <div id="panels"></div>
+                    <footer class="ecu-foot">
+                        <button type="button" class="btn btn-ghost" id="btnCancel">Anulează</button>
+                        <button type="button" class="btn btn-primary" id="btnSave">Salvează &amp; Flash</button>
+                    </footer>
+                </main>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

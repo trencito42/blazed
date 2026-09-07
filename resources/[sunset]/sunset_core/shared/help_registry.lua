@@ -65,6 +65,8 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/licenses', desc = 'Show licenses' },
     { cmd = '/v', desc = 'Personal vehicle garage' },
     { cmd = '/garage', desc = 'Garage panel' },
+    { cmd = '/ecu', desc = 'ECU tuning at LS Customs — pop & bang, dyno, drift, anti-lag' },
+    { cmd = '/tuning', desc = 'Alias for /ecu — vehicle ECU panel' },
     { cmd = '/dealership', desc = 'Browse vehicles at Premium Deluxe Motorsport' },
     { cmd = '2', desc = 'Start or stop the vehicle engine manually' },
     { cmd = 'K', desc = 'Toggle vehicle seatbelt' },

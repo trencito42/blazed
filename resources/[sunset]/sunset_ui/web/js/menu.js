@@ -194,6 +194,26 @@ const Menu = {
         return `https://docs.fivem.net/vehicles/${m}.webp`;
     },
 
+    formatEcuBlock(info) {
+        const ecu = info || {};
+        if (ecu.stock) {
+            return `<div class="menu-vcard__ecu menu-vcard__ecu--stock">
+                <div class="menu-vcard__ecu-head"><span>ECU</span><em>Stock factory map</em></div>
+            </div>`;
+        }
+        const chips = (ecu.chips || []).map((c) => `<span class="menu-vcard__ecu-chip">${this.escape(c)}</span>`).join('');
+        const lines = (ecu.lines || []).map((line) => `
+            <div class="menu-vcard__ecu-line">
+                <span>${this.escape(line.label || '')}</span>
+                <em>${this.escape(line.value || '')}</em>
+            </div>`).join('');
+        return `<div class="menu-vcard__ecu">
+            <div class="menu-vcard__ecu-head"><span>ECU TUNE</span><em>${this.escape(ecu.summary || 'Custom map')}</em></div>
+            <div class="menu-vcard__ecu-chips">${chips}</div>
+            <div class="menu-vcard__ecu-lines">${lines}</div>
+        </div>`;
+    },
+
     renderVehicles(data) {
         const grid = $('#menu-vehicle-grid');
         if (!grid) return;
@@ -221,6 +241,10 @@ const Menu = {
             const model = this.escape((v.model || 'vehicle').toUpperCase());
             const plate = this.escape(v.plate || '—');
             const garage = this.escape(v.garage || 'legion');
+            const odometer = Number(v.odometer);
+            const odoLine = Number.isFinite(odometer) && odometer > 0
+                ? `<div class="menu-vcard__odo">ODOMETRU <em>${odometer.toFixed(1)} km</em></div>`
+                : '';
 
             let actions = '';
             if (stored) {
@@ -249,11 +273,13 @@ const Menu = {
                     </div>
                     <div class="menu-vcard__plate">${plate}</div>
                     <div class="menu-vcard__meta">${garage}</div>
+                    ${odoLine}
                     <div class="menu-vcard__diag">
                         <span>FUEL <i><b style="width:${fuel}%"></b></i><em>${fuel}%</em></span>
                         <span>ENGINE <i><b style="width:${engine}%"></b></i><em>${engine}%</em></span>
                         <span>BODY <i><b style="width:${body}%"></b></i><em>${body}%</em></span>
                     </div>
+                    ${this.formatEcuBlock(v.ecuInfo)}
                     <div class="menu-vcard__actions">${actions}</div>
                 </div>
             </article>`;

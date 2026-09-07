@@ -476,6 +476,65 @@
 .menu-vcard__diag i b { display: block; height: 100%; background: var(--os-accent); mask-image: repeating-linear-gradient(to right, #000 0, #000 3px, transparent 3px, transparent 5px); }
 .menu-vcard__diag em { color: #fff; font: 600 8px/1 var(--os-title); font-style: normal; text-align: right; }
 .menu-vcard__actions { display: flex; gap: 6px; margin-top: 8px; }
+.menu-vcard__odo {
+    margin-top: 6px;
+    color: var(--os-muted);
+    font: 600 9px/1 var(--os-title);
+    letter-spacing: 0.1em;
+}
+.menu-vcard__odo em { color: #fff; font-style: normal; margin-left: 6px; }
+.menu-vcard__ecu {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid rgba(255, 119, 0, 0.22);
+    border-radius: 10px;
+    background: rgba(255, 119, 0, 0.06);
+}
+.menu-vcard__ecu--stock {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.22);
+}
+.menu-vcard__ecu-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    font: 700 9px/1.2 var(--os-title);
+    letter-spacing: 0.14em;
+}
+.menu-vcard__ecu-head span { color: var(--os-accent-bright, #ffb11c); }
+.menu-vcard__ecu-head em {
+    color: #fff;
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-align: right;
+}
+.menu-vcard__ecu-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+.menu-vcard__ecu-chip {
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: rgba(255, 119, 0, 0.16);
+    color: var(--os-accent-bright, #ffb11c);
+    font: 700 8px/1 var(--os-title);
+    letter-spacing: 0.08em;
+}
+.menu-vcard__ecu--stock .menu-vcard__ecu-chip { background: rgba(255, 255, 255, 0.08); color: var(--os-muted); }
+.menu-vcard__ecu-lines { display: flex; flex-direction: column; gap: 4px; }
+.menu-vcard__ecu-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+}
+.menu-vcard__ecu-line span { color: var(--os-muted); }
+.menu-vcard__ecu-line em { color: #fff; font-style: normal; font-weight: 600; text-align: right; }
 .menu-vcard__btn,
 .menu-job-btn {
     padding: 7px 10px;

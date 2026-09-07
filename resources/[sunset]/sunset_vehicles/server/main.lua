@@ -22,6 +22,55 @@ local function decodeProps(raw)
     return ok and type(value) == 'table' and value or {}
 end
 
+local function buildVehicleEcuInfo(props)
+    props = type(props) == 'table' and props or {}
+    if SunsetTuning and SunsetTuning.BuildVehicleInfo then
+        return SunsetTuning.BuildVehicleInfo(props.ecu)
+    end
+    if props.ecu then
+        return {
+            tuned = true,
+            stock = false,
+            summary = 'ECU customizat',
+            chips = { 'TUNED' },
+            lines = {},
+            tune = props.ecu,
+        }
+    end
+    return {
+        tuned = false,
+        stock = true,
+        summary = 'Mapa ECU stock',
+        chips = { 'STOCK' },
+        lines = { { label = 'ECU', value = 'Factory map' } },
+        tune = nil,
+    }
+end
+
+local function enrichVehicleRow(row)
+    if type(row) ~= 'table' then return row end
+    local props = decodeProps(row.props)
+    row.props = nil
+    row.odometer = tonumber(props.odometer)
+    row.ecuInfo = buildVehicleEcuInfo(props)
+    if row.ecuInfo and row.ecuInfo.tune then
+        row.ecu = row.ecuInfo.tune
+    end
+    return row
+end
+
+local function enrichVehicleList(rows)
+    if type(rows) ~= 'table' then return {} end
+    for i = 1, #rows do
+        rows[i] = enrichVehicleRow(rows[i])
+    end
+    return rows
+end
+
+exports('EnrichVehicleRow', enrichVehicleRow)
+exports('EnrichVehicleList', enrichVehicleList)
+exports('BuildVehicleEcuInfo', buildVehicleEcuInfo)
+
 local function plateTextMatches(a, b)
     a = normalizePlate(a)
     b = normalizePlate(b)
@@ -93,10 +142,11 @@ end
 exports.sunset_core:RegisterCallback('sunset:getVehicles', function(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return {} end
-    return MySQL.query.await(
-        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE character_id = ?',
+    local rows = MySQL.query.await(
+        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h, props FROM vehicles WHERE character_id = ?',
         { char.id }
     ) or {}
+    return enrichVehicleList(rows)
 end)
 
 local function normalizeStored(val)
@@ -146,10 +196,10 @@ end)
 exports.sunset_core:RegisterCallback('sunset:getVehicleById', function(source, vehicleId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil end
-    return MySQL.single.await(
-        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE id = ? AND character_id = ?',
+    return enrichVehicleRow(MySQL.single.await(
+        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h, props FROM vehicles WHERE id = ? AND character_id = ?',
         { vehicleId, char.id }
-    )
+    ))
 end)
 
 exports.sunset_core:RegisterCallback('sunset:storeVehicle', function(source, garageId)

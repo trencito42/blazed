@@ -101,11 +101,14 @@ exports.sunset_core:RegisterCallback('sunset:getMenuData', function(source)
     local vehicles = {}
     local vehiclesOk, vehiclesValue = menuAttempt('vehicle list query', function()
         return MySQL.query.await(
-            'SELECT id, plate, model, stored, garage, fuel, engine, body FROM vehicles WHERE character_id = ? ORDER BY id',
+            'SELECT id, plate, model, stored, garage, fuel, engine, body, props FROM vehicles WHERE character_id = ? ORDER BY id',
             { char.id }
         )
     end)
     if vehiclesOk then vehicles = vehiclesValue or {} end
+    pcall(function()
+        vehicles = exports.sunset_vehicles:EnrichVehicleList(vehicles)
+    end)
 
     local onDuty = false
     pcall(function()

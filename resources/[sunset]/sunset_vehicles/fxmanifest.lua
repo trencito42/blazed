@@ -9,6 +9,7 @@ version '1.0.0'
 shared_scripts {
     '@sunset_core/shared/config.lua',
     '@sunset_core/shared/items.lua',
+    '@sunset_tuning/shared/config.lua',
     'shared/vehicle_config.lua',
 }
 
@@ -23,7 +24,7 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_ui', 'sunset_core', 'sunset_world' }
+dependencies { 'sunset_ui', 'sunset_core', 'sunset_world', 'sunset_tuning' }
 
 exports {
     'GetVehicleState',
@@ -31,4 +32,8 @@ exports {
     'IsProtectedVehicle',
     'SetFuelLevel',
     'GetFuelLevel',
+    'SetVehicleProp',
+    'EnrichVehicleRow',
+    'EnrichVehicleList',
+    'BuildVehicleEcuInfo',
 }

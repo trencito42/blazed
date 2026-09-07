@@ -93,6 +93,15 @@ local function buildMenuData(forceExtras)
                 v.fuel = exports.sunset_vehicles:GetFuelLevel()
                 v.engine = GetVehicleEngineHealth(currentVehicle)
                 v.body = GetVehicleBodyHealth(currentVehicle)
+                if GetResourceState('sunset_tuning') == 'started' then
+                    pcall(function()
+                        local tune = exports.sunset_tuning:GetTuneForPlate(plate)
+                        if tune and SunsetTuning and SunsetTuning.BuildVehicleInfo then
+                            v.ecuInfo = SunsetTuning.BuildVehicleInfo(tune)
+                            v.ecu = v.ecuInfo.tune
+                        end
+                    end)
+                end
             else
                 v.inWorld = exports.sunset_vehicles:IsPlateInWorld(v.plate)
             end

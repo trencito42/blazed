@@ -86,6 +86,10 @@ local function buildStoreProps(veh)
     for key, value in pairs(vehicleProps or {}) do props[key] = value end
     props.odometer = math.floor(odometerKm * 10) / 10
     if veh and veh ~= 0 then props.model = GetEntityModel(veh) end
+    if GetResourceState('sunset_tuning') == 'started' then
+        local ok, ecu = pcall(function() return exports.sunset_tuning:ExportTuneForStore(veh) end)
+        if ok and ecu then props.ecu = ecu end
+    end
     return props
 end
 
@@ -495,6 +499,21 @@ function GetVehicleState()
     local class = GetVehicleClass(veh)
     local fuelExempt = class == 13 or class == 14 or class == 15 or class == 16
 
+    local plate = spawnedOwnedVehicle == veh and plateOf(veh) or nil
+    local ecuInfo = nil
+    if vehicleProps and vehicleProps.ecu then
+        if SunsetTuning and SunsetTuning.BuildVehicleInfo then
+            ecuInfo = SunsetTuning.BuildVehicleInfo(vehicleProps.ecu)
+        end
+    elseif plate and GetResourceState('sunset_tuning') == 'started' then
+        pcall(function()
+            local tune = exports.sunset_tuning:GetTuneForPlate(plate)
+            if tune and SunsetTuning and SunsetTuning.BuildVehicleInfo then
+                ecuInfo = SunsetTuning.BuildVehicleInfo(tune)
+            end
+        end)
+    end
+
     return {
         inVehicle = true,
         speed = speed,
@@ -512,6 +531,8 @@ function GetVehicleState()
         vehicleClass = class,
         supportsSeatbelt = supportsSeatbelt(veh),
         supportsDoorLock = supportsDoorLock(veh),
+        plate = plate,
+        ecuInfo = ecuInfo,
     }
 end
 
@@ -731,6 +752,9 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
 
     local props = decodeVehicleProps(vehData.props)
     resetOdometerTracking(vehData.plate, props and props.odometer or 0, props)
+    if props and props.ecu and GetResourceState('sunset_tuning') == 'started' then
+        pcall(function() exports.sunset_tuning:ApplyTune(vehicle, props.ecu) end)
+    end
 
     spawnedOwnedVehicle = vehicle
     markProtected(vehicle)
@@ -1036,3 +1060,10 @@ RegisterNetEvent('sunset:client:useGasCan', function()
         end
     end)
 end)
+
+function SetVehicleProp(key, value)
+    if type(key) ~= 'string' or key == '' then return end
+    vehicleProps[key] = value
+end
+
+exports('SetVehicleProp', SetVehicleProp)

@@ -11,6 +11,7 @@ shared_scripts {
     '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/profile.lua',
     '@sunset_core/shared/factions.lua',
+    '@sunset_tuning/shared/config.lua',
 }
 
 client_scripts {
@@ -22,6 +23,6 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone', 'sunset_vehicles' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone', 'sunset_vehicles', 'sunset_tuning' }
 
 exports { 'OpenVehicle' }
