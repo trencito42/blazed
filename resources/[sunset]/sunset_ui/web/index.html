@@ -22,8 +22,8 @@
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=10">
-    <link rel="stylesheet" href="css/clans.css?v=9">
-    <link rel="stylesheet" href="css/org-panels.css?v=2">
+    <link rel="stylesheet" href="css/clans.css?v=10">
+    <link rel="stylesheet" href="css/org-panels.css?v=3">
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=4">
@@ -1014,8 +1014,29 @@
                         <div id="clan-roster" class="clan-roster"></div>
                     </div>
                     <div class="clan-tab-panel" data-clan-panel="manage">
-                        <p class="org-hint">Officer tools — use <span class="menu-keycap">F10</span> for server IDs. Quick actions also on the CREW tab.</p>
-                        <div class="org-manage-sections">
+                        <p class="org-hint">Officer tools — use <span class="menu-keycap">F10</span> for server IDs.</p>
+                        <div class="clan-manage-body org-manage-sections">
+                            <section class="org-section org-section--identity">
+                                <div class="org-section__head"><span>TAG &amp; CALLSIGN</span><i></i></div>
+                                <form class="clan-manage-form clan-manage-form--identity" id="clan-settings-form" data-clan-action="settings">
+                                    <input type="text" name="tag" minlength="2" maxlength="6" placeholder="Tag (e.g. uS)" required>
+                                    <select name="tagStyle" required></select>
+                                    <label class="clan-color-field">Tag color <input type="color" name="tagColor" value="#FF8C00"></label>
+                                    <textarea name="description" rows="2" maxlength="512" placeholder="Clan description"></textarea>
+                                    <div class="clan-preview clan-preview--compact"><span class="clan-preview-label">Preview</span><div id="clan-settings-preview" class="clan-preview-name">—</div></div>
+                                </form>
+                            </section>
+                            <section class="org-section">
+                                <div class="org-section__head"><span>COMMS</span><i></i></div>
+                                <div class="clan-manage-grid clan-manage-grid--single">
+                                    <form class="clan-manage-form" data-clan-action="motd">
+                                        <strong>MOTD</strong>
+                                        <p>Members see this on connect and via <strong>/cmotd</strong>.</p>
+                                        <textarea name="message" rows="2" maxlength="512" placeholder="Clan MOTD..." required></textarea>
+                                        <button type="submit">SAVE MOTD</button>
+                                    </form>
+                                </div>
+                            </section>
                             <section class="org-section">
                                 <div class="org-section__head"><span>RECRUITMENT</span><i></i></div>
                                 <div class="clan-manage-grid">
@@ -1024,27 +1045,6 @@
                                         <p>Invite an online player into your clan.</p>
                                         <input type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
                                         <button type="submit">SEND INVITE</button>
-                                    </form>
-                                </div>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>COMMS &amp; IDENTITY</span><i></i></div>
-                                <div class="clan-manage-grid">
-                                    <form class="clan-manage-form" data-clan-action="motd">
-                                        <strong>MOTD</strong>
-                                        <p>Clan message of the day — members see it on connect and via <strong>/cmotd</strong>.</p>
-                                        <textarea name="message" rows="3" maxlength="512" placeholder="Clan MOTD..." required></textarea>
-                                        <button type="submit">SAVE MOTD</button>
-                                    </form>
-                                    <form class="clan-manage-form" data-clan-action="settings">
-                                        <strong>Tag &amp; colors</strong>
-                                        <p>How your callsign appears in chat.</p>
-                                        <input type="text" name="tag" minlength="2" maxlength="6" placeholder="Tag (e.g. uS)" required>
-                                        <textarea name="description" rows="2" maxlength="512" placeholder="Clan description"></textarea>
-                                        <label>Tag color <input type="color" name="tagColor" value="#FF8C00"></label>
-                                        <select name="tagStyle" required></select>
-                                        <div class="clan-preview"><span class="clan-preview-label">Preview</span><div id="clan-settings-preview" class="clan-preview-name">—</div></div>
-                                        <button type="submit">SAVE IDENTITY</button>
                                     </form>
                                 </div>
                             </section>
@@ -1101,6 +1101,10 @@
                                     </form>
                                 </div>
                             </section>
+                        </div>
+                        <div class="clan-manage-bar hidden" id="clan-manage-bar">
+                            <span class="clan-manage-bar__hint">Tag, color and description</span>
+                            <button type="submit" form="clan-settings-form" class="clan-manage-bar__btn">SAVE TAG &amp; IDENTITY</button>
                         </div>
                     </div>
                     <div class="clan-tab-panel" data-clan-panel="create">
@@ -1518,7 +1522,7 @@
         </aside>
     </div>
 
-    <script src="js/clans.js?v=9"></script>
+    <script src="js/clans.js?v=10"></script>
     <script src="js/app.js?v=13"></script>
     <script src="js/characters.js"></script>
     <script src="js/hud.js?v=6"></script>

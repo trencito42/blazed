@@ -489,6 +489,13 @@ const ClanPanels = {
             form.classList.toggle('hidden', action !== 'create' && !allowed);
         });
 
+        const settingsForm = document.querySelector('[data-clan-action="settings"]');
+        const manageBar = $('#clan-manage-bar');
+        if (manageBar) {
+            const showBar = inClan && perms.settings && settingsForm && !settingsForm.classList.contains('hidden');
+            manageBar.classList.toggle('hidden', !showBar);
+        }
+
         if (inClan) {
             const rankEl = $('#clan-rank');
             if (rankEl) {
