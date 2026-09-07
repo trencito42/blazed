@@ -586,6 +586,30 @@ window.addEventListener('message', (event) => {
         case 'licenseQuizHide':
             if (window.LicenseQuiz) LicenseQuiz.hide();
             break;
+        case 'jobCreatorShow':
+            if (window.JobCreator) JobCreator.show(data || event.data.data);
+            break;
+        case 'jobCreatorUpdate':
+            if (window.JobCreator) JobCreator.update(data || event.data.data);
+            break;
+        case 'jobCreatorHide':
+            if (window.JobCreator) JobCreator.hide();
+            break;
+        case 'jobCreatorPlacement':
+            if (window.JobCreator) JobCreator.onPlacement((data || event.data.data)?.point);
+            break;
+        case 'jobShiftShow':
+            if (window.JobShift) JobShift.show(data || event.data.data);
+            break;
+        case 'jobShiftHide':
+            if (window.JobShift) JobShift.hide();
+            break;
+        case 'jobSkillShow':
+            if (window.JobShift) JobShift.showSkill(data || event.data.data);
+            break;
+        case 'jobSkillHide':
+            if (window.JobShift) JobShift.hideSkill();
+            break;
         case 'radarShow':
             if (window.RadarHud) RadarHud.show(data || event.data.data);
             break;

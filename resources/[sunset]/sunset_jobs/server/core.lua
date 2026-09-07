@@ -271,6 +271,20 @@ function SunsetJobs_PayReward(source, jobId, amount, reason, countTask)
     return true
 end
 
+function SunsetJobs_GetJobLevel(source, jobId)
+    local char = getChar(source)
+    if not char then return 1 end
+    local row = MySQL.single.await(
+        'SELECT level FROM job_progress WHERE character_id = ? AND job_id = ?',
+        { char.id, jobId }
+    )
+    return row and row.level or 1
+end
+
+exports('PayReward', SunsetJobs_PayReward)
+exports('AddJobXP', SunsetJobs_AddJobXP)
+exports('GetJobLevel', SunsetJobs_GetJobLevel)
+
 function SunsetJobs_StartSession(source, jobId, data)
     if Sessions[source] then
         return nil, 'Already on a work shift'

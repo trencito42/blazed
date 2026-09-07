@@ -1,11 +1,36 @@
 local JC = Sunset.JobClient
 
-local STARTERS = {
+local LEGACY_STARTERS = {
     trucker = function() Sunset.Jobs.StartTrucker() end,
     garbage = function() Sunset.Jobs.StartGarbage() end,
     courier = function() Sunset.Jobs.StartCourier() end,
     fisherman = function() Sunset.Jobs.StartFisherman() end,
     mechanic = function() Sunset.Jobs.StartMechanic() end,
+}
+
+local function startCreatorWork(jobId)
+    if GetResourceState('sunset_jobcreator') ~= 'started' then return false end
+    local target = exports.sunset_jobcreator:GetMigrationTarget(jobId) or jobId
+    if exports.sunset_jobcreator:IsCreatorJob(target) then
+        exports.sunset_jobcreator:StartWork()
+        return true
+    end
+    return false
+end
+
+local function starterFor(jobId)
+    if startCreatorWork(jobId) then
+        return function() end
+    end
+    return LEGACY_STARTERS[jobId]
+end
+
+local STARTERS = {
+    trucker = function() starterFor('trucker')() end,
+    garbage = function() starterFor('garbage')() end,
+    courier = function() starterFor('courier')() end,
+    fisherman = function() starterFor('fisherman')() end,
+    mechanic = function() LEGACY_STARTERS.mechanic() end,
 }
 
 local function openJobsPanel()
@@ -61,6 +86,10 @@ local function startWork()
     end
 
     local starter = STARTERS[jobId]
+    if not starter and GetResourceState('sunset_jobcreator') == 'started'
+        and exports.sunset_jobcreator:IsCreatorJob(jobId) then
+        starter = function() exports.sunset_jobcreator:StartWork() end
+    end
     if not starter then
         JC.notify('No work loop for your job yet', 'error')
         return
@@ -75,7 +104,10 @@ end, false)
 RegisterCommand('work', function(_, args)
     local sub = args[1] and string.lower(args[1])
     if sub == 'cancel' or sub == 'stop' then
-        if JC.jobId == 'mechanic' and JC.state ~= 'IDLE' then
+        if GetResourceState('sunset_jobcreator') == 'started' and JC.getCharacterJob()
+            and exports.sunset_jobcreator:IsCreatorJob(JC.getCharacterJob()) then
+            exports.sunset_jobcreator:CancelWork()
+        elseif JC.jobId == 'mechanic' and JC.state ~= 'IDLE' then
             Sunset.Jobs.EndMechanic()
         else
             Sunset.AwaitCallback('sunset:jobs:cancelWork')

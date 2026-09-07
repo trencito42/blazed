@@ -1,0 +1,106 @@
+/* Player shift HUD — fishing/courier style */
+#job-shift-panel {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 6.5rem;
+    z-index: 42;
+    width: min(320px, 90vw);
+    pointer-events: none;
+}
+#job-shift-panel.hidden { display: none !important; }
+.job-shift-shell {
+    background: rgba(10, 10, 12, 0.88);
+    border: 1px solid rgba(255, 153, 51, 0.45);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    padding: 14px 16px;
+    color: #f6f2e9;
+    font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+}
+.job-shift-shell.state-active { border-color: rgba(255, 153, 51, 0.65); }
+.job-shift__title { font-size: 1.05rem; font-weight: 700; color: #ff9933; margin-bottom: 4px; }
+.job-shift__counter { font-size: 0.85rem; opacity: 0.85; margin-bottom: 6px; }
+.job-shift__message { font-size: 0.95rem; line-height: 1.35; }
+.job-shift__detail { font-size: 0.82rem; opacity: 0.75; margin-top: 4px; }
+.job-shift__key {
+    display: inline-block; min-width: 1.4rem; text-align: center;
+    padding: 0 0.35rem; margin: 0 0.15rem;
+    border: 1px solid rgba(255,153,51,0.55); border-radius: 3px;
+    background: rgba(255,153,51,0.15); color: #ffcc80; font-weight: 700;
+}
+.job-shift__progress { height: 4px; background: rgba(255,255,255,0.08); margin-top: 10px; border-radius: 2px; overflow: hidden; }
+.job-shift__progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff9933, #ffb347); transition: width 0.25s ease; }
+
+/* Admin Job Creator */
+#job-creator-panel {
+    position: fixed; inset: 0; z-index: 95;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.55); pointer-events: auto;
+}
+#job-creator-panel.hidden { display: none !important; pointer-events: none; }
+.jc-shell {
+    width: min(1100px, 96vw); max-height: 92vh; overflow: hidden;
+    display: grid; grid-template-columns: 280px 1fr;
+    background: rgba(12,12,14,0.96);
+    border: 1px solid rgba(255,153,51,0.4);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+    color: #f6f2e9; font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+}
+.jc-sidebar { border-right: 1px solid rgba(255,153,51,0.2); padding: 16px; overflow-y: auto; }
+.jc-main { padding: 16px 18px; overflow-y: auto; }
+.jc-title { font-size: 1.35rem; font-weight: 700; color: #ff9933; margin-bottom: 12px; }
+.jc-job-item {
+    display: block; width: 100%; text-align: left; margin-bottom: 6px;
+    padding: 10px 12px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08); color: inherit; cursor: pointer;
+}
+.jc-job-item:hover, .jc-job-item.active { border-color: rgba(255,153,51,0.5); background: rgba(255,153,51,0.08); }
+.jc-job-item small { display: block; opacity: 0.65; font-size: 0.75rem; margin-top: 2px; }
+.jc-btn {
+    padding: 8px 14px; border: none; cursor: pointer; font-weight: 600;
+    background: #ff9933; color: #1a1a1a; margin-right: 6px; margin-top: 6px;
+}
+.jc-btn.ghost { background: transparent; border: 1px solid rgba(255,153,51,0.45); color: #ff9933; }
+.jc-btn.danger { background: #c44; color: #fff; }
+.jc-field { margin-bottom: 10px; }
+.jc-field label { display: block; font-size: 0.8rem; opacity: 0.75; margin-bottom: 4px; }
+.jc-field input, .jc-field textarea, .jc-field select {
+    width: 100%; padding: 8px 10px; background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.12); color: #f6f2e9; font-family: inherit;
+}
+.jc-field textarea { min-height: 200px; font-family: ui-monospace, monospace; font-size: 0.8rem; }
+.jc-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.jc-tab { padding: 6px 12px; background: rgba(255,255,255,0.05); border: 1px solid transparent; color: #ccc; cursor: pointer; }
+.jc-tab.active { border-color: rgba(255,153,51,0.5); color: #ff9933; }
+.jc-status { font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+.jc-close { position: absolute; top: 12px; right: 14px; background: none; border: none; color: #aaa; font-size: 1.2rem; cursor: pointer; }
+
+.jc-field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.jc-stages-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 420px; }
+.jc-stages-list-wrap { border-right: 1px solid rgba(255,153,51,0.15); padding-right: 12px; }
+.jc-stages-toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.jc-stage-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+.jc-stage-row {
+    display: grid; grid-template-columns: 24px 28px 1fr; gap: 6px; align-items: center;
+    padding: 8px 10px; margin-bottom: 4px; cursor: pointer;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+}
+.jc-stage-row small { grid-column: 2 / -1; opacity: 0.6; font-size: 0.72rem; }
+.jc-stage-row.active { border-color: rgba(255,153,51,0.55); background: rgba(255,153,51,0.1); }
+.jc-stage-row.drag-over { border-color: #ff9933; }
+.jc-drag { opacity: 0.45; cursor: grab; }
+.jc-stage-num { font-weight: 700; color: #ff9933; font-size: 0.85rem; }
+.jc-stage-form-title { color: #ff9933; margin: 0 0 12px; font-size: 1.1rem; }
+.jc-stage-form { overflow-y: auto; max-height: 480px; padding-right: 4px; }
+
+#job-skill-panel {
+    position: fixed; right: 1.25rem; bottom: 14rem; z-index: 43;
+    width: min(300px, 88vw); pointer-events: none;
+}
+#job-skill-panel.hidden { display: none !important; }
+.job-skill-shell {
+    background: rgba(10,10,12,0.92); border: 1px solid rgba(255,153,51,0.5);
+    padding: 12px 14px; color: #f6f2e9; font-family: 'Rajdhani', sans-serif;
+}
+.job-skill__message { font-size: 0.95rem; margin-bottom: 8px; }
+.job-skill__bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+.job-skill__fill { height: 100%; width: 100%; background: linear-gradient(90deg, #4caf50, #ff9933); transition: width 0.05s linear; }

@@ -21,7 +21,9 @@ end
 exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'Your character is not loaded. Reconnect and select it again.' end
-    if not Sunset.CivilianJobs[jobId] then
+    local isCreator = GetResourceState('sunset_jobcreator') == 'started'
+        and exports.sunset_jobcreator:IsCreatorJob(jobId)
+    if not Sunset.CivilianJobs[jobId] and not isCreator then
         return nil, 'That is not a valid civilian job. Factions require a leader invitation.'
     end
 
@@ -126,7 +128,9 @@ local function runSetJob(source, args)
         return
     end
 
-    if not Sunset.CivilianJobs[jobId] then
+    local isCreator = GetResourceState('sunset_jobcreator') == 'started'
+        and exports.sunset_jobcreator:IsCreatorJob(jobId)
+    if not Sunset.CivilianJobs[jobId] and not isCreator then
         reply(source,
             ('Unknown civilian job "%s". Valid jobs: %s'):format(jobId, listCivilianJobs()),
             'error')
@@ -140,7 +144,7 @@ local function runSetJob(source, args)
         return
     end
 
-    local label = Sunset.CivilianJobs[jobId].label
+    local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
     reply(target, ('Your civilian job was set to %s.'):format(label), 'success')
     if source ~= 0 then
         reply(source, ('Set %s (#%d) civilian job to %s (grade %d).'):format(

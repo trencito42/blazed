@@ -125,6 +125,77 @@ RegisterNUICallback('licenseQuizAnswer', function(data, cb)
     end, licenseType, questionIndex, answer)
 end)
 
+local function jcCallback(name, data, cb)
+    exports.sunset_core:TriggerCallback(name, function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, job = result, jobs = result and result.jobs, payload = result })
+    end, data)
+end
+
+RegisterNUICallback('jobCreatorClose', function(_, cb)
+    TriggerEvent('sunset:jobcreator:nui:close')
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('jobCreatorList', function(_, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:list', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, jobs = result and result.jobs })
+    end)
+end)
+
+RegisterNUICallback('jobCreatorGet', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:get', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, job = result })
+    end, data and data.id)
+end)
+
+RegisterNUICallback('jobCreatorSave', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:save', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, job = result })
+    end, data)
+end)
+
+RegisterNUICallback('jobCreatorPublish', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:publish', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, job = result })
+    end, data and data.id, data and data.status)
+end)
+
+RegisterNUICallback('jobCreatorDelete', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:delete', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true })
+    end, data and data.id)
+end)
+
+RegisterNUICallback('jobCreatorExport', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:export', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, payload = result })
+    end, data and data.id)
+end)
+
+RegisterNUICallback('jobCreatorImport', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:import', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, job = result })
+    end, data and data.payload)
+end)
+
+RegisterNUICallback('jobCreatorTest', function(data, cb)
+    TriggerEvent('sunset:jobcreator:nui:test', data and data.id)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('jobCreatorPlace', function(_, cb)
+    TriggerEvent('sunset:jobcreator:nui:place')
+    cb({ ok = true })
+end)
+
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)
     cb('ok')
