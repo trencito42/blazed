@@ -238,7 +238,10 @@ SunsetLicenses.Practical = {
         maxPenalties = 4,
         speedCountdownSec = 5,
         speedGraceKmh = 0,
-        minImpactKmh = 28,
+        minImpactKmh = 12,
+        hardImpactKmh = 18,
+        minImpactDamage = 4.0,
+        hudMessageHoldMs = 5000,
         maxCollisions = 3,
         briefing = {
             {

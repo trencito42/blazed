@@ -258,7 +258,24 @@ local function newPenaltyState(cfg)
         max = maxDriverPenalties(cfg),
         countdownEnd = 0,
         lockUntil = 0,
+        prevSpeedKmh = 0,
+        hudMessage = nil,
+        hudMessageUntil = 0,
+        hudState = 'driver',
     }
+end
+
+local function holdDriverHudMessage(penalties, cfg, message, state)
+    penalties.hudMessage = message
+    penalties.hudMessageUntil = GetGameTimer() + (cfg.hudMessageHoldMs or 5000)
+    penalties.hudState = state or 'warning'
+end
+
+local function activeDriverHudMessage(penalties, now)
+    if penalties.hudMessage and penalties.hudMessageUntil and now < penalties.hudMessageUntil then
+        return penalties.hudMessage, penalties.hudState or 'warning'
+    end
+    return nil, nil
 end
 
 local function failOnPenalties(penalties, reason)
@@ -280,7 +297,8 @@ local function addPenalty(penalties, reason)
 end
 
 local function isOverSpeedLimit(speed, limit, hard, cfg)
-    local grace = cfg.speedGraceKmh or 5
+    local grace = tonumber(cfg.speedGraceKmh)
+    if grace == nil then grace = 0 end
     if speed > hard then return true end
     return speed > (limit + grace)
 end
@@ -291,27 +309,32 @@ local function trackVehicleDamage(veh, cfg, penalties)
 
     local body = GetVehicleBodyHealth(veh)
     local prevBody = penalties.lastBody or body
+    local speedKmh = GetEntitySpeed(veh) * 3.6
+    local impactKmh = penalties.prevSpeedKmh or speedKmh
+    penalties.prevSpeedKmh = speedKmh
     penalties.lastBody = body
 
     if not HasEntityCollidedWithAnything(veh) then return penalties end
 
-    local impactKmh = GetEntitySpeed(veh) * 3.6
-    local minImpact = cfg.minImpactKmh or 28
-    if impactKmh < minImpact then
-        ClearEntityLastDamageEntity(veh)
-        return penalties
-    end
+    local now = GetGameTimer()
+    local minImpact = cfg.minImpactKmh or 12
+    local hardImpact = cfg.hardImpactKmh or 18
+    local minDamage = cfg.minImpactDamage or 4.0
+    local damage = math.max(0, prevBody - body)
+    local qualifies = impactKmh >= hardImpact or (impactKmh >= minImpact and damage >= minDamage)
 
-    if (prevBody - body) >= 18.0 and GetGameTimer() >= (penalties.lockUntil or 0) then
+    if qualifies and now >= (penalties.lockUntil or 0) then
         local count, failed = addPenalty(penalties, ('Too many penalties (%d/%d) — test failed.'):format(
             penalties.count, penalties.max))
+        local msg = ('PENALTY %d/%d — HARD IMPACT. Drive carefully.'):format(count, penalties.max)
+        holdDriverHudMessage(penalties, cfg, msg, 'warning')
         UpdateLicenseTestHud({
             licenseType = 'driver',
             state = 'warning',
             title = 'Driving School',
             penalties = count,
             maxPenalties = penalties.max,
-            message = ('PENALTY %d/%d — HARD IMPACT. Drive carefully.'):format(count, penalties.max),
+            message = msg,
         })
         if failed then return penalties end
     end
@@ -365,6 +388,7 @@ local function trackDriverSpeed(veh, cfg, cpIndex, finishing, penalties)
                 local count, failed = addPenalty(penalties, ('Too many penalties (%d/%d) — test failed.'):format(
                     penalties.count, penalties.max))
                 message = ('PENALTY %d/%d — YOU DID NOT SLOW DOWN.'):format(count, penalties.max)
+                holdDriverHudMessage(penalties, cfg, message, 'warning')
                 state = 'warning'
                 if failed then
                     return penalties, speed, limit, message, state
@@ -377,7 +401,14 @@ local function trackDriverSpeed(veh, cfg, cpIndex, finishing, penalties)
         end
     else
         penalties.countdownEnd = 0
-        message = checkpointHint(cfg, cpIndex, finishing)
+        local heldMessage, heldState = activeDriverHudMessage(penalties, now)
+        if heldMessage then
+            message = heldMessage
+            state = heldState
+        else
+            message = checkpointHint(cfg, cpIndex, finishing)
+            state = 'driver'
+        end
     end
 
     return penalties, speed, limit, message, state
@@ -396,6 +427,7 @@ local function runDriverBriefing(cfg, spawn)
     if #steps == 0 then return end
 
     CreateThread(function()
+        practicalState.driverBriefing = true
         local stepIndex = 1
         local readyPressed = false
         local stepShownAt = {}
@@ -404,12 +436,14 @@ local function runDriverBriefing(cfg, spawn)
         while practicalState and practicalState.licenseType == 'driver' and stepIndex <= #steps do
             Wait(250)
             local step = steps[stepIndex]
+            stepShownAt[stepIndex] = stepShownAt[stepIndex] or GetGameTimer()
+            local minShowMs = step.require and 2200 or 4500
+            local shownLongEnough = (GetGameTimer() - stepShownAt[stepIndex]) >= minShowMs
             local met
             if not step.require then
-                stepShownAt[stepIndex] = stepShownAt[stepIndex] or GetGameTimer()
-                met = (GetGameTimer() - stepShownAt[stepIndex]) >= 2800
+                met = shownLongEnough
             else
-                met = briefingRequirementMet(step, cfg, spawn)
+                met = briefingRequirementMet(step, cfg, spawn) and shownLongEnough
             end
             if step.require == 'ready' and IsControlJustReleased(0, 38) then
                 readyPressed = true
@@ -436,6 +470,9 @@ local function runDriverBriefing(cfg, spawn)
                 stepIndex = stepIndex + 1
                 readyPressed = false
             end
+        end
+        if practicalState then
+            practicalState.driverBriefing = false
         end
     end)
 end
@@ -475,6 +512,7 @@ local function runDriverRoute(cfg, vehicle)
             local finishing = cpIndex > #checkpoints
             local speed, limit
             penalties, speed, limit, hudMessage, hudState = trackDriverSpeed(veh, cfg, cpIndex, finishing, penalties)
+            if practicalState.driverBriefing then goto continue end
             local progress
             if finishing then
                 progress = 95
@@ -606,6 +644,9 @@ local function runDriverTest(cfg)
         progress = 0,
     })
 
+    if practicalState then
+        practicalState.driverBriefing = #steps > 0
+    end
     runDriverBriefing(cfg, spawn)
     runDriverRoute(cfg, vehicle)
 end

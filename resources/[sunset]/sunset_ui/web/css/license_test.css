@@ -113,13 +113,33 @@
 }
 
 .license-test__key {
-    display: inline-block;
-    min-width: 1.5rem;
-    padding: 0 0.4rem;
-    border: 1px solid rgba(255, 159, 67, 0.75);
-    color: #ff9f43;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
     font-weight: 700;
-    text-align: center;
+    color: #fff;
+    vertical-align: middle;
+    text-transform: none;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-bottom-width: 4px;
+    border-radius: 6px;
+    min-width: 36px;
+    height: 36px;
+    font-size: 20px;
+    padding: 0 10px;
+    margin: 0 6px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.state-driver .license-test__key {
+    min-width: 36px;
+    height: 36px;
+    font-size: 20px;
+    border-bottom-width: 4px;
+    margin: 0 6px;
 }
 
 .license-test__progress {

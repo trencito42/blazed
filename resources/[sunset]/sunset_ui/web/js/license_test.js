@@ -20,12 +20,15 @@ const LicenseTestHud = {
         }[ch]));
     },
 
+    _keyHtml(key) {
+        return `<span class="license-test__key">${key}</span>`;
+    },
+
     _highlight(text, plain) {
         if (text == null || text === '') return '';
         if (plain) return this._escape(String(text));
         let html = this._escape(String(text));
-        html = html.replace(/\b([EKH])\b/g, (key) => `<span class="license-test__key">${key}</span>`);
-        html = html.replace(/\b([2])\b/g, (key) => `<span class="license-test__key">${key}</span>`);
+        html = html.replace(/\b([2EKHN])\b/g, (key) => this._keyHtml(key));
         return html;
     },
 
