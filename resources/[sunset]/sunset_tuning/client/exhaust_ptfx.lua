@@ -115,18 +115,43 @@ function EP.smoke(veh, scale)
     end)
 end
 
-function EP.playBackfireSound(veh, loud)
+local POP_SOUNDS = {
+    { name = 'Backfire', set = 'DLC_Tuner_Car_Meet_Sounds', delay = 0 },
+    { name = 'backfire', set = 'dlc_xs_vehicle_mods_sounds', delay = 25 },
+    { name = 'Crackle', set = 'DLC_Tuner_Car_Meet_Sounds', delay = 55 },
+    { name = 'Backfire', set = 'DLC_Tuner_Car_Meet_Sounds', delay = 90 },
+}
+
+local function playSoundLayer(veh, soundName, soundSet, coords)
     if not veh or veh == 0 then return end
     local sid = GetSoundId()
-    PlaySoundFromEntity(sid, 'Backfire', veh, 'DLC_Tuner_Car_Meet_Sounds', false, 0)
-    ReleaseSoundId(sid)
-    local sid2 = GetSoundId()
-    PlaySoundFromEntity(sid2, 'backfire', veh, 'dlc_xs_vehicle_mods_sounds', false, 0)
-    ReleaseSoundId(sid2)
+    PlaySoundFromEntity(sid, soundName, veh, soundSet, false, 0)
+    if coords then
+        local sid2 = GetSoundId()
+        PlaySoundFromCoord(sid2, soundName, coords.x, coords.y, coords.z, soundSet, false, 35, false)
+        SetTimeout(900, function() ReleaseSoundId(sid2) end)
+    end
+    SetTimeout(900, function() ReleaseSoundId(sid) end)
+end
+
+function EP.playBackfireSound(veh, loud)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    local rear = GetOffsetFromEntityInWorldCoords(veh, 0.0, -2.15, 0.35)
+    local count = loud and 4 or 3
+    for i = 1, math.min(count, #POP_SOUNDS) do
+        local s = POP_SOUNDS[i]
+        SetTimeout(s.delay or 0, function()
+            if DoesEntityExist(veh) then
+                playSoundLayer(veh, s.name, s.set, rear)
+            end
+        end)
+    end
     if loud then
-        local sid3 = GetSoundId()
-        PlaySoundFromEntity(sid3, 'Crackle', veh, 'DLC_Tuner_Car_Meet_Sounds', false, 0)
-        ReleaseSoundId(sid3)
+        SetTimeout(120, function()
+            if DoesEntityExist(veh) then
+                playSoundLayer(veh, 'Crackle', 'DLC_Tuner_Car_Meet_Sounds', rear)
+            end
+        end)
     end
 end
 
@@ -137,12 +162,12 @@ function EP.burst(veh, kind, intensity, flameColor)
     local color = flameColor or DEFAULT_FLAME
 
     if kind == 'pop' or kind == 'twostep' then
-        EP.backfire(veh, 0.9 + intensity * 0.5, color)
-        EP.playBackfireSound(veh, intensity > 0.65 or kind == 'twostep')
+        EP.backfire(veh, 1.0 + intensity * 0.55, color)
+        EP.playBackfireSound(veh, true)
     end
     if kind == 'antilag' then
-        EP.backfire(veh, 0.65 + intensity * 0.35, color)
-        EP.playBackfireSound(veh, false)
+        EP.backfire(veh, 0.75 + intensity * 0.4, color)
+        EP.playBackfireSound(veh, true)
     end
     if kind == 'flame' or kind == 'extra' then
         EP.flames(veh, 0.75 + intensity * 0.55, color)

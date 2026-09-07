@@ -147,10 +147,17 @@ CreateThread(function()
         local wasHighRpm = lastRpm >= math.max(0.58, rpmThreshold - 0.12)
 
         if tune.pop.enabled and now > popCooldown and liftOff and wasHighRpm and rpm > 0.28 then
-            local chance = 0.38 + mult.popIntensity * 0.42
+            local chance = 0.52 + mult.popIntensity * 0.38
             if math.random() < chance then
-                popCooldown = now + 180
+                popCooldown = now + 160
                 burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true)
+                if mult.popIntensity > 0.7 and math.random() < 0.45 then
+                    SetTimeout(110, function()
+                        if DoesEntityExist(veh) then
+                            EP.burst(veh, 'pop', mult.popIntensity, flameColorOf(tune))
+                        end
+                    end)
+                end
             end
         end
 
