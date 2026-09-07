@@ -8,7 +8,15 @@ RegisterNetEvent('sunset:jobcreator:openPanel', function()
     if panelOpen then return end
     local data, err = Sunset.AwaitCallback('sunset:jobcreator:list')
     if not data then
-        exports.sunset_ui:Notify(err or 'Could not open Job Creator', 'error')
+        local msg = err or 'Could not open Job Creator'
+        exports.sunset_ui:Notify(msg, 'error')
+        exports.sunset_ui:Send('chatMessage', {
+            id = 0,
+            name = 'SYSTEM',
+            message = tostring(msg),
+            time = '',
+            type = 'command_error',
+        })
         return
     end
     panelOpen = true
@@ -42,8 +50,6 @@ AddEventHandler('sunset:jobcreator:nui:place', function()
     JCPlacement_Start(function(point)
         panelOpen = true
         setFocus(true)
-        local data = Sunset.AwaitCallback('sunset:jobcreator:list')
-        exports.sunset_ui:Send('jobCreatorShow', data or { jobs = {} })
         exports.sunset_ui:Send('jobCreatorPlacement', { point = point })
     end)
 end)

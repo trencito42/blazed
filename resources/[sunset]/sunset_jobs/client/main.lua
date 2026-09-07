@@ -1,14 +1,9 @@
 AddEventHandler('sunset:world:openJobCenter', function(centerId, center)
     if IsNuiFocused() then return end
-    local jobs = {}
-    for _, j in ipairs(center.jobs or {}) do
-        jobs[#jobs + 1] = j
-    end
-    if GetResourceState('sunset_jobcreator') == 'started' then
-        local extra = Sunset.AwaitCallback('sunset:jobcreator:publishedForHire')
-        for _, j in ipairs(extra or {}) do
-            jobs[#jobs + 1] = { id = j.id, label = j.label }
-        end
+    local jobs, err = Sunset.AwaitCallback('sunset:jobs:getJobCenterJobs', centerId)
+    if not jobs then
+        exports.sunset_ui:Notify(err or 'Could not load jobs', 'error')
+        return
     end
     exports.sunset_ui:Send('jobCenterShow', {
         centerId = centerId,

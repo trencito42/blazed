@@ -9,6 +9,10 @@ exports('IsCreatorJob', function(jobId)
     return PublishedIds[jobId] == true
 end)
 
+exports('GetMigrationTarget', function(legacyJobId)
+    return SunsetJobCreator.GetMigrationTarget(legacyJobId)
+end)
+
 exports('StartWork', function(testJobId)
     JCRuntime_StartWork(testJobId)
 end)

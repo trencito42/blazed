@@ -144,6 +144,18 @@ RegisterNUICallback('jobCreatorList', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('jobCreatorSeed', function(_, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:seedTemplates', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({
+            ok = true,
+            jobs = result and result.jobs,
+            seeded = result and result.seeded,
+            total = result and result.total,
+        })
+    end)
+end)
+
 RegisterNUICallback('jobCreatorGet', function(data, cb)
     exports.sunset_core:TriggerCallback('sunset:jobcreator:get', function(result, err)
         if err then cb({ ok = false, error = tostring(err) }) return end

@@ -47,6 +47,8 @@ server_exports {
     'IsCreatorJob',
     'GetJobDefinition',
     'GetPublishedJobs',
+    'GetPublishedForHire',
+    'GetJobWorkCoords',
     'GetMigrationTarget',
     'StartJob',
     'CancelJob',

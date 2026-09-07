@@ -1,43 +1,92 @@
-const STAGE_CATALOG = [
-    { type: 'goto_zone', category: 'world', label: 'Go to location' },
-    { type: 'zone_interact', category: 'interaction', label: 'Zone interact (E)' },
-    { type: 'talk_to_npc', category: 'interaction', label: 'Talk to NPC' },
-    { type: 'pick_random', category: 'logic', label: 'Pick random from pool' },
-    { type: 'branch', category: 'logic', label: 'Branch (if/else)' },
-    { type: 'set_variable', category: 'logic', label: 'Set variable' },
-    { type: 'scale_from_level', category: 'logic', label: 'Scale from job level' },
-    { type: 'wait', category: 'gameplay', label: 'Wait (seconds)' },
-    { type: 'progress', category: 'gameplay', label: 'Progress bar' },
-    { type: 'skill_check', category: 'gameplay', label: 'Skill check' },
-    { type: 'spawn_vehicle', category: 'vehicles', label: 'Spawn vehicle' },
-    { type: 'delete_vehicle', category: 'vehicles', label: 'Delete vehicle' },
-    { type: 'attach_trailer', category: 'vehicles', label: 'Attach trailer' },
-    { type: 'enter_vehicle', category: 'vehicles', label: 'Enter vehicle' },
-    { type: 'require_vehicle', category: 'vehicles', label: 'Require vehicle' },
-    { type: 'return_vehicle', category: 'vehicles', label: 'Return vehicle' },
-    { type: 'spawn_npc', category: 'world', label: 'Spawn NPC' },
-    { type: 'remove_npc', category: 'world', label: 'Remove NPC' },
-    { type: 'require_item', category: 'items', label: 'Require item' },
-    { type: 'give_item', category: 'items', label: 'Give item' },
-    { type: 'remove_item', category: 'items', label: 'Remove item' },
-    { type: 'party_gate', category: 'party', label: 'Party size check' },
-    { type: 'give_reward', category: 'rewards', label: 'Pay + XP' },
-    { type: 'complete', category: 'rewards', label: 'Complete job' },
-    { type: 'fail', category: 'rewards', label: 'Fail job' },
+/**
+ * Job Creator — editor ghidat (putere completă, zero coding).
+ * Variabile, branch, pool-uri: totul prin liste predefinite + opțiune custom.
+ */
+
+const STAGE_META = {
+    goto_zone: { icon: '📍', cat: 'lume', label: 'Du-te la loc', hint: 'Jucătorul primește GPS + marker la destinație.' },
+    zone_interact: { icon: '👆', cat: 'interact', label: 'Apasă E în zonă', hint: 'Stă în cerc și apasă E (încarcă, livrează, colectează).' },
+    talk_to_npc: { icon: '💬', cat: 'interact', label: 'Vorbește cu NPC', hint: 'Interacțiune cu un personaj spawnat anterior.' },
+    pick_random: { icon: '🎲', cat: 'logica', label: 'Alege destinație random', hint: 'Ia un punct din o listă (pool) — ideal pentru livrări.' },
+    branch: { icon: '🔀', cat: 'logica', label: 'Condiție (dacă / altfel)', hint: 'Ex: dacă done < total, repetă; altfel termină.' },
+    set_variable: { icon: '🔢', cat: 'logica', label: 'Setează variabilă', hint: 'Schimbă o valoare internă (contoare, flag-uri).' },
+    scale_from_level: { icon: '📈', cat: 'logica', label: 'Număr sarcini după level', hint: 'Câte livrări/task-uri: mai mult la level mare.' },
+    wait: { icon: '⏱️', cat: 'gameplay', label: 'Așteaptă', hint: 'Pauză în secunde înainte de pasul următor.' },
+    progress: { icon: '⏳', cat: 'gameplay', label: 'Bară de progres', hint: 'Animație de încărcare (E sau automat în zonă).' },
+    skill_check: { icon: '🎯', cat: 'gameplay', label: 'Test de reflex', hint: 'Apasă E în fereastra de timp.' },
+    spawn_vehicle: { icon: '🚗', cat: 'vehicul', label: 'Spawn vehicul', hint: 'Apare mașina jobului la un loc setat.' },
+    delete_vehicle: { icon: '🗑️', cat: 'vehicul', label: 'Șterge vehicul', hint: 'Elimină vehiculul salvat în variabilă.' },
+    attach_trailer: { icon: '🔗', cat: 'vehicul', label: 'Atașează remorcă', hint: 'Pune remorca la camion.' },
+    enter_vehicle: { icon: '🪑', cat: 'vehicul', label: 'Intră în vehicul', hint: 'Jucătorul trebuie să fie în mașină.' },
+    require_vehicle: { icon: '🔒', cat: 'vehicul', label: 'Trebuie în vehicul', hint: 'Verifică că e în vehiculul jobului.' },
+    return_vehicle: { icon: '🏁', cat: 'vehicul', label: 'Înapoi cu vehiculul', hint: 'Adu mașina la depozit / punct de return.' },
+    spawn_npc: { icon: '🧑', cat: 'lume', label: 'Spawn NPC', hint: 'Apare un personaj la un loc.' },
+    remove_npc: { icon: '👋', cat: 'lume', label: 'Elimină NPC', hint: 'Șterge NPC-ul din variabilă.' },
+    require_item: { icon: '📦', cat: 'item', label: 'Necesită obiect', hint: 'Verifică că are itemul în inventar.' },
+    give_item: { icon: '🎁', cat: 'item', label: 'Dă obiect', hint: 'Adaugă item în inventar.' },
+    remove_item: { icon: '➖', cat: 'item', label: 'Ia obiect', hint: 'Scoate item din inventar.' },
+    party_gate: { icon: '👥', cat: 'echipa', label: 'Verifică echipă', hint: 'Câți jucători trebuie lângă tine.' },
+    give_reward: { icon: '💰', cat: 'final', label: 'Plată + XP', hint: 'Dă bani și experiență (sau folosește pay din progresie).' },
+    complete: { icon: '✅', cat: 'final', label: 'Termină jobul', hint: 'Shift reușit — jucătorul a terminat.' },
+    fail: { icon: '❌', cat: 'final', label: 'Eșuează jobul', hint: 'Shift picat (timeout, regulă încălcată).' },
+};
+
+const CAT_LABEL = {
+    lume: 'Lume & locuri', interact: 'Interacțiuni', logica: 'Logică & variabile',
+    gameplay: 'Gameplay', vehicul: 'Vehicule', item: 'Obiecte', echipa: 'Echipă', final: 'Final',
+};
+
+const COMMON_VARS = [
+    { id: 'done', label: 'done — câte ai terminat' },
+    { id: 'total', label: 'total — câte trebuie total' },
+    { id: 'target', label: 'target — destinația curentă' },
+    { id: 'leg', label: 'leg — etapa / runda curentă' },
+    { id: 'caught', label: 'caught — prins / colectat' },
+    { id: 'truck', label: 'truck — vehiculul jobului' },
+    { id: 'trailer', label: 'trailer — remorca' },
+    { id: 'npc', label: 'npc — personaj spawnat' },
+];
+
+const VEHICLE_PRESETS = [
+    { id: 'phantom', label: 'Camion Phantom' }, { id: 'hauler', label: 'Hauler' },
+    { id: 'packer', label: 'Packer' }, { id: 'trash', label: 'Gunoi (trash)' },
+    { id: 'burrito3', label: 'Dubă Burrito' }, { id: 'boxville2', label: 'Dubă curier' },
+    { id: 'mule', label: 'Mule' }, { id: 'rebel', label: 'Rebel pickup' },
+];
+
+const TRAILER_PRESETS = [
+    { id: 'trailers2', label: 'Remorcă standard' }, { id: 'trailerlogs', label: 'Remorcă lemne' },
+    { id: 'tanker', label: 'Cisternă' }, { id: 'trailers', label: 'Remorcă mică' },
+];
+
+const NPC_PRESETS = [
+    { id: 's_m_m_dockwork_01', label: 'Muncitor doc' }, { id: 's_m_y_construct_01', label: 'Constructor' },
+    { id: 's_m_m_trucker_01', label: 'Trucker' }, { id: 'a_m_m_farmer_01', label: 'Fermier' },
+];
+
+const ITEM_PRESETS = [
+    { id: 'fish', label: 'Pește' }, { id: 'package', label: 'Colet' },
+    { id: 'wood', label: 'Lemn' }, { id: 'ore', label: 'Minereu' },
+];
+
+const BRANCH_OPS = [
+    { v: '<', label: 'mai mic decât' }, { v: '<=', label: 'mai mic sau egal' },
+    { v: '>', label: 'mai mare decât' }, { v: '>=', label: 'mai mare sau egal' },
+    { v: '==', label: 'egal cu' },
 ];
 
 const JobCreator = {
-    _jobs: [],
-    _selectedId: null,
-    _draft: null,
-    _tab: 'general',
-    _selectedStageIdx: 0,
-    _dragFromIdx: null,
+    _jobs: [], _selectedId: null, _draft: null, _tab: 'general',
+    _selectedStageIdx: 0, _dragFromIdx: null, _inited: false,
+    _autoFlow: false, _placeMode: 'location', _placePool: 'deliveries',
 
     init() {
+        if (this._inited) return;
+        this._inited = true;
         this._panel = document.getElementById('job-creator-panel');
         document.getElementById('jc-close')?.addEventListener('click', () => this.close());
         document.getElementById('jc-new')?.addEventListener('click', () => this.newJob());
+        document.getElementById('jc-sidebar-seed')?.addEventListener('click', () => this.seedTemplates());
         document.getElementById('jc-save')?.addEventListener('click', () => this.save());
         document.getElementById('jc-publish')?.addEventListener('click', () => this.publish());
         document.getElementById('jc-test')?.addEventListener('click', () => this.test());
@@ -47,6 +96,7 @@ const JobCreator = {
         document.getElementById('jc-import')?.addEventListener('click', () => this.importJob());
         this._panel?.querySelectorAll('.jc-tab').forEach((btn) => {
             btn.addEventListener('click', () => {
+                if (this._draft) this._collectDraft();
                 this._tab = btn.dataset.tab || 'general';
                 this._panel.querySelectorAll('.jc-tab').forEach((b) => b.classList.toggle('active', b === btn));
                 this.renderEditor();
@@ -56,141 +106,766 @@ const JobCreator = {
 
     async _post(action, body = {}) {
         const res = await fetch(`https://${GetParentResourceName()}/${action}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
         return res.json();
     },
 
-    show(data = {}) {
+    async show(data = {}) {
         this.init();
+        const resumeDraft = this._draft;
+        const resumeId = this._selectedId;
         this._jobs = data.jobs || [];
+
+        if (!this._jobs.length) {
+            await this.seedTemplates();
+            if (!this._jobs.length) {
+                this._panel?.classList.remove('hidden');
+                this._draft = null;
+                this.renderList();
+                this.renderEditor();
+                return;
+            }
+        }
+
         this._panel?.classList.remove('hidden');
-        if (!this._selectedId && this._jobs[0]) this._selectedId = this._jobs[0].id;
+
+        if (resumeDraft && resumeId) {
+            this._selectedId = resumeId;
+            this.renderList();
+            this.renderWizard();
+            this.renderEditor();
+            return;
+        }
+
+        const preferred = this._jobs.find((j) => j.id === 'jc_tpl_route')
+            || this._jobs.find((j) => j.id === 'jc_tpl_courier')
+            || this._jobs[0];
+        this._selectedId = preferred?.id || null;
         this.renderList();
-        this.loadSelected();
+        if (this._selectedId) await this.loadSelected();
+        else { this._draft = null; this.renderEditor(); }
     },
 
+    _jobProgress() {
+        if (!this._draft) return { name: false, locs: false, stages: false, published: false };
+        const def = this._def();
+        return {
+            name: !!(this._draft.label && this._draft.label !== 'Jobul meu'),
+            locs: Object.keys(def.locations || {}).length > 0 || Object.values(def.pools || {}).some((p) => p.length > 0),
+            stages: (def.stages || []).length > 1,
+            published: this._draft.status === 'published',
+        };
+    },
+
+    renderWizard() {
+        const el = document.getElementById('jc-wizard');
+        const chk = document.getElementById('jc-checklist');
+        if (!this._draft) {
+            if (el) el.innerHTML = '';
+            if (chk) chk.innerHTML = '';
+            return;
+        }
+        const p = this._jobProgress();
+        const steps = [
+            { key: 'name', label: '1. Nume', done: p.name, tab: 'general' },
+            { key: 'locs', label: '2. Locuri', done: p.locs, tab: 'locations' },
+            { key: 'stages', label: '3. Pași', done: p.stages, tab: 'stages' },
+            { key: 'pub', label: '4. Publică', done: p.published, tab: 'general' },
+        ];
+        if (el) {
+            el.innerHTML = `<div class="jc-wizard-track">${steps.map((s) =>
+                `<button type="button" class="jc-wizard-step ${s.done ? 'done' : ''} ${this._tab === s.tab ? 'current' : ''}" data-tab="${s.tab}">
+                    <span class="jc-wizard-dot">${s.done ? '✓' : '○'}</span>${s.label}</button>`
+            ).join('<span class="jc-wizard-arrow">→</span>')}</div>`;
+            el.querySelectorAll('.jc-wizard-step').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (this._draft) this._collectDraft();
+                    this._tab = btn.dataset.tab;
+                    this._panel?.querySelectorAll('.jc-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === this._tab));
+                    this.renderWizard();
+                    this.renderEditor();
+                });
+            });
+        }
+        if (chk) {
+            chk.innerHTML = `<div class="jc-checklist-title">Progres job</div>${steps.map((s) =>
+                `<div class="jc-check-item ${s.done ? 'done' : ''}">${s.done ? '✓' : '○'} ${s.label.replace(/^\d+\.\s/, '')}</div>`
+            ).join('')}`;
+        }
+    },
+
+    _flowStripHtml() {
+        const stages = this._stages();
+        if (stages.length < 2) return '';
+        return `<div class="jc-flow-strip">${stages.map((s, i) => {
+            const m = this._meta(s.type);
+            const arrow = i < stages.length - 1 ? '<span class="jc-flow-arrow">→</span>' : '';
+            const active = i === this._selectedStageIdx ? ' active' : '';
+            const next = s.onSuccess && s.type === 'branch'
+                ? `? ${s.ifTrue || '?'}` : (s.onSuccess ? `→ ${s.onSuccess}` : '');
+            return `<span class="jc-flow-chip${active}" data-idx="${i}" title="${s.id}">${m.icon} ${this._esc(s.label || m.label)}<small>${next}</small></span>${arrow}`;
+        }).join('')}</div>`;
+    },
+
+    _variablesEditorHtml(vars) {
+        const rows = Object.entries(vars || { done: 0, total: 3 }).map(([k, v]) =>
+            `<div class="jc-var-row">
+                <input class="jc-var-key" value="${this._esc(k)}" placeholder="nume" />
+                <input class="jc-var-val" type="number" value="${Number(v) || 0}" />
+                <button type="button" class="jc-var-del" title="Șterge">×</button>
+            </div>`
+        ).join('');
+        return `<div class="jc-vars-block">
+            <label>Contoare / variabile (pentru repetări și condiții)</label>
+            <div id="jc-vars-list">${rows}</div>
+            <button type="button" class="jc-btn ghost" id="jc-var-add">+ Adaugă variabilă</button>
+            <small class="jc-hint">Folosite la „Condiție dacă/altfel” și la +1 done după livrare.</small>
+        </div>`;
+    },
+
+    _bindVariablesEditor(mount) {
+        mount.querySelector('#jc-var-add')?.addEventListener('click', () => {
+            const list = mount.querySelector('#jc-vars-list');
+            if (!list) return;
+            const row = document.createElement('div');
+            row.className = 'jc-var-row';
+            row.innerHTML = '<input class="jc-var-key" placeholder="nume" /><input class="jc-var-val" type="number" value="0" /><button type="button" class="jc-var-del">×</button>';
+            list.appendChild(row);
+            row.querySelector('.jc-var-del')?.addEventListener('click', () => row.remove());
+        });
+        mount.querySelectorAll('.jc-var-del').forEach((btn) => {
+            btn.addEventListener('click', () => btn.closest('.jc-var-row')?.remove());
+        });
+    },
+
+    _readVariablesFromDom() {
+        const out = {};
+        document.querySelectorAll('#jc-vars-list .jc-var-row').forEach((row) => {
+            const k = row.querySelector('.jc-var-key')?.value?.trim();
+            const v = row.querySelector('.jc-var-val')?.value;
+            if (k) out[k] = Number(v) || 0;
+        });
+        return out;
+    },
     update(data = {}) {
         this._jobs = data.jobs || this._jobs;
         this.renderList();
+        this.renderWizard();
     },
-
     hide() { this._panel?.classList.add('hidden'); },
     close() { this._post('jobCreatorClose'); },
+
+    _stages() { return this._draft?.definition?.stages || []; },
+    _stage() { return this._stages()[this._selectedStageIdx] || null; },
+    _def() { return this._draft?.definition || {}; },
+    _locations() { return this._def().locations || {}; },
+    _pools() { return this._def().pools || {}; },
+    _esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); },
+
+    _meta(type) { return STAGE_META[type] || { icon: '▸', cat: 'logica', label: type, hint: '' }; },
+
+    /** Toate variabilele folosite în job + preset-uri comune. */
+    _allVarNames() {
+        const set = new Set(COMMON_VARS.map((v) => v.id));
+        const vars = this._def().variables || {};
+        Object.keys(vars).forEach((k) => set.add(k));
+        this._stages().forEach((st) => {
+            if (st.var) set.add(st.var);
+            if (st.resetVar) set.add(st.resetVar);
+            if (st.storeAs) set.add(st.storeAs);
+            if (st.vehicleVar) set.add(st.vehicleVar);
+            if (st.npcVar) set.add(st.npcVar);
+            if (st.locationVar) set.add(st.locationVar);
+            if (st.condition?.var) set.add(st.condition.var);
+            if (st.condition?.valueRef) set.add(st.condition.valueRef);
+        });
+        return [...set].sort();
+    },
+
+    _varSelect(id, value, extra = '') {
+        const names = this._allVarNames();
+        const known = new Set(names);
+        let opts = COMMON_VARS.filter((v) => names.includes(v.id) || !value)
+            .map((v) => `<option value="${v.id}" ${v.id === value ? 'selected' : ''}>${v.label}</option>`);
+        names.filter((n) => !COMMON_VARS.some((c) => c.id === n)).forEach((n) => {
+            opts.push(`<option value="${this._esc(n)}" ${n === value ? 'selected' : ''}>${this._esc(n)}</option>`);
+        });
+        if (value && !known.has(value)) {
+            opts.push(`<option value="${this._esc(value)}" selected>${this._esc(value)} (custom)</option>`);
+        }
+        opts.push(`<option value="__new__" ${!value ? '' : ''}>+ Variabilă nouă...</option>`);
+        return `<div class="jc-field"><label>${extra || 'Variabilă'}</label><select id="${id}">${opts.join('')}</select></div>`;
+    },
+
+    _stageSelect(id, value, label, allowEnd = true) {
+        const stages = this._stages();
+        let opts = stages.map((s) =>
+            `<option value="${this._esc(s.id)}" ${s.id === value ? 'selected' : ''}>${this._esc(s.label || s.id)} (${s.id})</option>`
+        );
+        if (allowEnd) {
+            opts += `<option value="complete" ${value === 'complete' ? 'selected' : ''}>✅ Termină jobul</option>`;
+            opts += `<option value="fail" ${value === 'fail' ? 'selected' : ''}>❌ Eșuează jobul</option>`;
+        }
+        opts += `<option value="__custom__" ${value && !stages.some((s) => s.id === value) && value !== 'complete' && value !== 'fail' ? 'selected' : ''}>Alt pas (ID manual)...</option>`;
+        const customVal = value && !stages.some((s) => s.id === value) && value !== 'complete' && value !== 'fail' ? value : '';
+        return `
+            <div class="jc-field"><label>${label}</label>
+                <select id="${id}">${opts}</select>
+                <input id="${id}-custom" class="jc-custom-input ${customVal ? '' : 'hidden'}" value="${this._esc(customVal)}" placeholder="ID pas, ex: to_hub" />
+            </div>`;
+    },
+
+    _locationModeSelect(st) {
+        const mode = st.locationVar ? 'var' : (st.locationField ? 'field' : 'fixed');
+        const keys = Object.keys(this._locations());
+        const poolKeys = Object.keys(this._pools());
+        return `
+            <div class="jc-field"><label>📍 Unde se întâmplă?</label>
+                <select id="jc-s-loc-mode">
+                    <option value="fixed" ${mode === 'fixed' ? 'selected' : ''}>Loc fix din tab Locuri</option>
+                    <option value="var" ${mode === 'var' ? 'selected' : ''}>Unde spune variabila (ex: target)</option>
+                    <option value="field" ${mode === 'field' ? 'selected' : ''}>Câmp din variabilă (pickup/delivery)</option>
+                </select>
+            </div>
+            <div class="jc-field jc-loc-fixed ${mode !== 'fixed' ? 'hidden' : ''}">
+                <label>Loc</label>
+                <select id="jc-s-location">${keys.length ? keys.map((k) => {
+                    const loc = this._locations()[k];
+                    return `<option value="${this._esc(k)}" ${k === st.location ? 'selected' : ''}>${this._esc(loc?.label || k)}</option>`;
+                }).join('') : '<option value="">— adaugă locuri în tab Locuri —</option>'}</select>
+            </div>
+            <div class="jc-field jc-loc-var ${mode !== 'var' ? 'hidden' : ''}">
+                ${this._varSelect('jc-s-locationVar', st.locationVar, 'Variabilă cu coordonate')}
+            </div>
+            <div class="jc-field jc-loc-field ${mode !== 'field' ? 'hidden' : ''}">
+                <label>Câmp coordonate</label>
+                <select id="jc-s-locationField">
+                    <option value="pickup" ${st.locationField === 'pickup' ? 'selected' : ''}>pickup — ridicare</option>
+                    <option value="delivery" ${st.locationField === 'delivery' ? 'selected' : ''}>delivery — livrare</option>
+                    <option value="dropoff" ${st.locationField === 'dropoff' ? 'selected' : ''}>dropoff — predare</option>
+                    <option value="__custom__" ${st.locationField && !['pickup','delivery','dropoff'].includes(st.locationField) ? 'selected' : ''}>Alt nume...</option>
+                </select>
+                <input id="jc-s-locationField-custom" class="jc-custom-input ${st.locationField && !['pickup','delivery','dropoff'].includes(st.locationField) ? '' : 'hidden'}" value="${this._esc(st.locationField || '')}" />
+            </div>`;
+    },
+
+    _poolSelect(value) {
+        const keys = Object.keys(this._pools());
+        if (!keys.length) {
+            return `<div class="jc-field"><label>Listă destinații (pool)</label>
+                <input id="jc-s-pool" value="${this._esc(value || 'deliveries')}" placeholder="deliveries" />
+                <small class="jc-hint">Creează lista în tab Locuri → Liste livrări.</small></div>`;
+        }
+        return `<div class="jc-field"><label>Listă destinații (pool)</label>
+            <select id="jc-s-pool">${keys.map((k) =>
+                `<option value="${this._esc(k)}" ${k === value ? 'selected' : ''}>${this._esc(k)} (${(this._pools()[k] || []).length} puncte)</option>`
+            ).join('')}</select></div>`;
+    },
+
+    _presetSelect(id, list, value, label) {
+        const hit = list.find((x) => x.id === value);
+        let html = list.map((x) => `<option value="${x.id}" ${x.id === value ? 'selected' : ''}>${x.label}</option>`).join('');
+        if (value && !hit) html += `<option value="${this._esc(value)}" selected>${this._esc(value)}</option>`;
+        html += '<option value="__custom__">Alt model...</option>';
+        return `<div class="jc-field"><label>${label}</label>
+            <select id="${id}">${html}</select>
+            <input id="${id}-custom" class="jc-custom-input ${!hit && value ? '' : 'hidden'}" value="${this._esc(value || '')}" />
+        </div>`;
+    },
+
+    _flowFields(st) {
+        return `
+            <div class="jc-flow-box">
+                <div class="jc-flow-title">Ce urmează după acest pas?</div>
+                ${this._stageSelect('jc-s-onSuccess', st.onSuccess, '✅ Dacă reușește →')}
+                ${this._stageSelect('jc-s-onFailure', st.onFailure, '❌ Dacă eșuează →', true)}
+            </div>`;
+    },
+
+    _renderStepForm(st) {
+        const type = st.type || 'goto_zone';
+        const m = this._meta(type);
+        let body = `<p class="jc-step-hint">${m.hint}</p>`;
+
+        body += `
+            <div class="jc-field"><label>Titlu pas (în listă)</label>
+                <input id="jc-s-label" value="${this._esc(st.label || '')}" placeholder="Ex: Du-te la depozit" /></div>
+            <div class="jc-field"><label>Mesaj pe ecran pentru jucător</label>
+                <input id="jc-s-message" value="${this._esc(st.message || '')}" placeholder="Folosește {key} pentru tasta E" /></div>
+            <div class="jc-field"><label>Tip acțiune</label>
+                <select id="jc-s-type">${Object.entries(STAGE_META).map(([t, meta]) =>
+                    `<option value="${t}" ${t === type ? 'selected' : ''}>${meta.icon} ${meta.label}</option>`
+                ).join('')}</select></div>`;
+
+        switch (type) {
+        case 'goto_zone':
+        case 'zone_interact':
+        case 'progress':
+        case 'skill_check':
+        case 'return_vehicle':
+            body += this._locationModeSelect(st);
+            if (type === 'zone_interact') {
+                const inc = st.actions?.[0]?.type === 'increment';
+                body += `<div class="jc-field jc-check"><label>
+                    <input id="jc-s-increment-done" type="checkbox" ${inc ? 'checked' : ''} />
+                    După E, adaugă +1 la variabila „done”</label></div>`;
+            }
+            if (type === 'progress') {
+                body += `<div class="jc-field"><label>Durată (secunde)</label>
+                    <input id="jc-s-seconds" type="number" min="1" value="${st.seconds || Math.round((st.durationMs || 5000) / 1000)}" /></div>`;
+            }
+            if (type === 'skill_check') {
+                body += `<div class="jc-field"><label>Fereastră reacție (sec)</label>
+                    <input id="jc-s-windowSec" type="number" min="1" max="15" value="${Math.round((st.windowMs || 3000) / 1000)}" /></div>`;
+            }
+            break;
+        case 'pick_random':
+            body += this._poolSelect(st.pool);
+            body += this._varSelect('jc-s-storeAs', st.storeAs || 'target', 'Salvează destinația în variabila');
+            break;
+        case 'branch':
+            body += `<div class="jc-branch-box">
+                <div class="jc-flow-title">Dacă...</div>
+                <div class="jc-field-row">
+                    ${this._varSelect('jc-s-branchVar', st.condition?.var || 'done', 'Variabilă')}
+                    <div class="jc-field"><label>Comparație</label>
+                        <select id="jc-s-branchOp">${BRANCH_OPS.map((o) =>
+                            `<option value="${o.v}" ${st.condition?.op === o.v ? 'selected' : ''}>${o.label}</option>`
+                        ).join('')}</select></div>
+                </div>
+                <div class="jc-field"><label>Compară cu</label>
+                    <select id="jc-s-branchValType">
+                        <option value="ref" ${st.condition?.valueRef ? 'selected' : ''}>Altă variabilă</option>
+                        <option value="num" ${st.condition?.value != null && !st.condition?.valueRef ? 'selected' : ''}>Număr fix</option>
+                    </select></div>
+                <div class="jc-field jc-branch-ref ${st.condition?.valueRef ? '' : 'hidden'}">
+                    ${this._varSelect('jc-s-branchValRef', st.condition?.valueRef || 'total', 'Variabilă țintă')}
+                </div>
+                <div class="jc-field jc-branch-num ${st.condition?.valueRef ? 'hidden' : ''}">
+                    <label>Număr</label><input id="jc-s-branchValNum" type="number" value="${st.condition?.value ?? 0}" />
+                </div>
+                <div class="jc-flow-title" style="margin-top:10px">Atunci...</div>
+                ${this._stageSelect('jc-s-ifTrue', st.ifTrue, '✅ Dacă DA →')}
+                ${this._stageSelect('jc-s-ifFalse', st.ifFalse, '➡️ Dacă NU →')}
+            </div>`;
+            break;
+        case 'scale_from_level':
+            body += this._varSelect('jc-s-var', st.var || 'total', 'Ce numărăm (total sarcini)');
+            body += this._varSelect('jc-s-resetVar', st.resetVar || 'done', 'Resetează la 0 la start');
+            body += `<div class="jc-field-row">
+                <div class="jc-field"><label>Bază (level 0)</label><input id="jc-s-base" type="number" value="${st.base ?? 4}" /></div>
+                <div class="jc-field"><label>+ per level</label><input id="jc-s-perLevel" type="number" value="${st.perLevel ?? 1}" /></div>
+                <div class="jc-field"><label>Maxim</label><input id="jc-s-max" type="number" value="${st.max ?? 10}" /></div>
+            </div>`;
+            break;
+        case 'wait':
+            body += `<div class="jc-field"><label>Secunde</label><input id="jc-s-seconds" type="number" min="1" value="${st.seconds || 3}" /></div>`;
+            break;
+        case 'spawn_vehicle':
+            body += this._presetSelect('jc-s-vehicle', VEHICLE_PRESETS, st.model, 'Vehicul');
+            body += this._locationModeSelect(st);
+            body += this._varSelect('jc-s-storeAs', st.storeAs || 'truck', 'Salvează vehiculul în');
+            body += `<div class="jc-field jc-check"><label><input id="jc-s-warp" type="checkbox" ${st.warp ? 'checked' : ''} /> Pune jucătorul în mașină</label></div>`;
+            break;
+        case 'attach_trailer':
+            body += this._varSelect('jc-s-vehicleVar', st.vehicleVar || 'truck', 'Camionul (variabilă)');
+            body += this._presetSelect('jc-s-trailer', TRAILER_PRESETS, st.trailerModel, 'Remorcă');
+            body += this._locationModeSelect(st);
+            break;
+        case 'enter_vehicle':
+        case 'require_vehicle':
+        case 'delete_vehicle':
+        case 'return_vehicle':
+            if (type !== 'return_vehicle') body += this._varSelect('jc-s-vehicleVar', st.vehicleVar || 'truck', 'Vehicul (variabilă)');
+            if (type === 'return_vehicle') { body += this._locationModeSelect(st); }
+            break;
+        case 'spawn_npc':
+            body += this._presetSelect('jc-s-npc', NPC_PRESETS, st.model, 'Model NPC');
+            body += this._locationModeSelect(st);
+            body += this._varSelect('jc-s-storeAs', st.storeAs || 'npc', 'Salvează NPC în');
+            break;
+        case 'talk_to_npc':
+            body += this._varSelect('jc-s-npcVar', st.npcVar || 'npc', 'NPC (variabilă)');
+            break;
+        case 'remove_npc':
+            body += this._varSelect('jc-s-npcVar', st.npcVar || 'npc', 'NPC de eliminat');
+            break;
+        case 'require_item':
+        case 'give_item':
+        case 'remove_item':
+            body += this._presetSelect('jc-s-item', ITEM_PRESETS, st.item, 'Obiect');
+            body += `<div class="jc-field"><label>Cantitate</label><input id="jc-s-count" type="number" min="1" value="${st.count ?? 1}" /></div>`;
+            break;
+        case 'give_reward':
+            body += `<div class="jc-field-row">
+                <div class="jc-field"><label>💵 Bani (0 = din setări job)</label><input id="jc-s-pay" type="number" value="${st.pay ?? ''}" placeholder="auto" /></div>
+                <div class="jc-field"><label>⭐ XP (0 = auto)</label><input id="jc-s-xp" type="number" value="${st.xp ?? ''}" placeholder="auto" /></div>
+            </div>`;
+            break;
+        case 'party_gate':
+            body += `<div class="jc-field-row">
+                <div class="jc-field"><label>Minim jucători</label><input id="jc-s-minPlayers" type="number" min="1" value="${st.minPlayers ?? 2}" /></div>
+                <div class="jc-field"><label>Rază (metri)</label><input id="jc-s-radius" type="number" value="${st.radius ?? 25}" /></div>
+            </div>`;
+            break;
+        case 'complete':
+        case 'fail':
+            body += `<p class="jc-hint">Pas final — nu necesită setări extra.</p>`;
+            break;
+        default:
+            body += this._locationModeSelect(st);
+        }
+
+        if (type !== 'branch' && type !== 'complete' && type !== 'fail') {
+            body += this._flowFields(st);
+        }
+
+        body += `
+            <details class="jc-advanced-box">
+                <summary>ID tehnic pas (opțional)</summary>
+                <input id="jc-s-id" value="${this._esc(st.id || '')}" placeholder="ex: to_hub" />
+                <small class="jc-hint">Template-urile folosesc ID-uri ca to_hub, check_done. Lasă gol pentru auto.</small>
+            </details>`;
+
+        return body;
+    },
+
+    _bindFormHelpers(mount) {
+        const bindMode = (sel, panels) => {
+            mount.querySelector(sel)?.addEventListener('change', (e) => {
+                panels.forEach(([mode, cls]) => mount.querySelector(cls)?.classList.toggle('hidden', e.target.value !== mode));
+            });
+        };
+        bindMode('#jc-s-loc-mode', [['fixed', '.jc-loc-fixed'], ['var', '.jc-loc-var'], ['field', '.jc-loc-field']]);
+        bindMode('#jc-s-branchValType', [['ref', '.jc-branch-ref'], ['num', '.jc-branch-num']]);
+
+        const bindCustom = (sel, inputSel) => {
+            mount.querySelector(sel)?.addEventListener('change', (e) => {
+                const inp = mount.querySelector(inputSel);
+                if (!inp) return;
+                inp.classList.toggle('hidden', e.target.value !== '__custom__' && e.target.value !== '__new__');
+            });
+        };
+        ['jc-s-onSuccess', 'jc-s-onFailure', 'jc-s-ifTrue', 'jc-s-ifFalse'].forEach((id) => bindCustom(`#${id}`, `#${id}-custom`));
+        bindCustom('#jc-s-vehicle', '#jc-s-vehicle-custom');
+        bindCustom('#jc-s-trailer', '#jc-s-trailer-custom');
+        bindCustom('#jc-s-npc', '#jc-s-npc-custom');
+        bindCustom('#jc-s-item', '#jc-s-item-custom');
+        bindCustom('#jc-s-locationField', '#jc-s-locationField-custom');
+
+        mount.querySelector('#jc-s-type')?.addEventListener('change', () => {
+            this._collectStagesFromDom();
+            this.renderEditor();
+        });
+    },
+
+    _readStageSelect(id) {
+        const sel = document.getElementById(id);
+        if (!sel) return undefined;
+        if (sel.value === '__custom__') return document.getElementById(`${id}-custom`)?.value || undefined;
+        return sel.value || undefined;
+    },
+
+    _readPreset(id) {
+        const sel = document.getElementById(id);
+        if (!sel) return undefined;
+        if (sel.value === '__custom__') return document.getElementById(`${id}-custom`)?.value || undefined;
+        return sel.value || undefined;
+    },
+
+    _collectStagesFromDom() {
+        if (!this._draft || this._tab !== 'stages') return;
+        const st = this._stage();
+        if (!st) return;
+        const g = (id) => document.getElementById(id);
+
+        st.label = g('jc-s-label')?.value || st.label;
+        st.message = g('jc-s-message')?.value || undefined;
+        if (g('jc-s-type')) st.type = g('jc-s-type').value;
+
+        const locMode = g('jc-s-loc-mode')?.value;
+        delete st.location; delete st.locationVar; delete st.locationField;
+        if (locMode === 'fixed') st.location = g('jc-s-location')?.value || undefined;
+        else if (locMode === 'var') st.locationVar = this._readVarSelect('jc-s-locationVar');
+        else if (locMode === 'field') {
+            const f = g('jc-s-locationField')?.value;
+            st.locationField = f === '__custom__' ? g('jc-s-locationField-custom')?.value : f;
+        }
+
+        if (g('jc-s-increment-done')?.checked) {
+            st.actions = [{ type: 'increment', var: 'done', value: 1 }];
+        } else if (st.actions) delete st.actions;
+
+        if (g('jc-s-pool')) st.pool = g('jc-s-pool').value;
+        if (g('jc-s-storeAs')) st.storeAs = this._readVarSelect('jc-s-storeAs') || g('jc-s-storeAs')?.value;
+
+        if (st.type === 'branch') {
+            const bVar = this._readVarSelect('jc-s-branchVar');
+            if (bVar) {
+                st.condition = { var: bVar, op: g('jc-s-branchOp')?.value || '<' };
+                if (g('jc-s-branchValType')?.value === 'ref') {
+                    st.condition.valueRef = this._readVarSelect('jc-s-branchValRef');
+                    delete st.condition.value;
+                } else {
+                    st.condition.value = Number(g('jc-s-branchValNum')?.value) || 0;
+                    delete st.condition.valueRef;
+                }
+            }
+            st.ifTrue = this._readStageSelect('jc-s-ifTrue');
+            st.ifFalse = this._readStageSelect('jc-s-ifFalse');
+        } else {
+            delete st.ifTrue; delete st.ifFalse; delete st.condition;
+            const os = this._readStageSelect('jc-s-onSuccess');
+            const of = this._readStageSelect('jc-s-onFailure');
+            if (os) st.onSuccess = os; else delete st.onSuccess;
+            if (of) st.onFailure = of; else delete st.onFailure;
+        }
+
+        if (g('jc-s-var')) st.var = this._readVarSelect('jc-s-var');
+        if (g('jc-s-resetVar')) st.resetVar = this._readVarSelect('jc-s-resetVar');
+        if (g('jc-s-base')) st.base = Number(g('jc-s-base').value);
+        if (g('jc-s-perLevel')) st.perLevel = Number(g('jc-s-perLevel').value);
+        if (g('jc-s-max')) st.max = Number(g('jc-s-max').value);
+
+        const sec = g('jc-s-seconds')?.value;
+        if (sec) { st.seconds = Number(sec); if (st.type === 'progress') st.durationMs = Number(sec) * 1000; }
+        const win = g('jc-s-windowSec')?.value;
+        if (win) st.windowMs = Number(win) * 1000;
+
+        const model = this._readPreset('jc-s-vehicle') || this._readPreset('jc-s-npc');
+        if (model) st.model = model;
+        const trailer = this._readPreset('jc-s-trailer');
+        if (trailer) st.trailerModel = trailer;
+        if (g('jc-s-warp')) st.warp = g('jc-s-warp').checked || undefined;
+        if (g('jc-s-vehicleVar')) st.vehicleVar = this._readVarSelect('jc-s-vehicleVar');
+        if (g('jc-s-npcVar')) st.npcVar = this._readVarSelect('jc-s-npcVar');
+
+        const pay = g('jc-s-pay')?.value;
+        if (pay !== '') st.pay = pay === '' ? undefined : Number(pay);
+        const xp = g('jc-s-xp')?.value;
+        if (xp !== '') st.xp = xp === '' ? undefined : Number(xp);
+
+        const item = this._readPreset('jc-s-item');
+        if (item) st.item = item;
+        if (g('jc-s-count')) st.count = Number(g('jc-s-count').value);
+        if (g('jc-s-minPlayers')) st.minPlayers = Number(g('jc-s-minPlayers').value);
+        if (g('jc-s-radius')) st.radius = Number(g('jc-s-radius').value);
+
+        const newId = g('jc-s-id')?.value?.trim();
+        if (newId) st.id = newId;
+
+        if (this._autoFlow) this._rewireLinearFlow();
+        if (this._def().stages?.[0]) this._def().startStage = this._def().stages[0].id;
+    },
+
+    _readVarSelect(id) {
+        const sel = document.getElementById(id);
+        if (!sel) return undefined;
+        if (sel.value === '__new__') {
+            const name = prompt('Nume variabilă nouă (ex: done, target):');
+            if (name) {
+                this._def().variables = this._def().variables || {};
+                this._def().variables[name] = 0;
+                return name;
+            }
+            return undefined;
+        }
+        return sel.value || undefined;
+    },
+
+    _rewireLinearFlow() {
+        const stages = this._stages().filter((s) => s.type !== 'complete' && s.type !== 'fail');
+        stages.forEach((st, i) => {
+            if (st.type === 'branch') return;
+            if (i < stages.length - 1) st.onSuccess = stages[i + 1].id;
+        });
+    },
 
     renderList() {
         const list = document.getElementById('jc-job-list');
         if (!list) return;
         list.innerHTML = '';
-        this._jobs.forEach((job) => {
+        if (!this._jobs.length && !this._draft) {
+            list.innerHTML = '<div class="jc-empty-list"><p>Niciun job.</p></div>';
+            return;
+        }
+        const rows = [...this._jobs];
+        if (this._draft && !rows.some((j) => j.id === this._draft.id)) {
+            rows.unshift({ id: this._draft.id, label: this._draft.label || 'Job nou', status: 'draft',
+                stageCount: this._draft.definition?.stages?.length || 0, unsaved: true });
+        }
+        rows.forEach((job) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'jc-job-item' + (job.id === this._selectedId ? ' active' : '');
-            btn.innerHTML = `<strong>${job.label}</strong><small>${job.id} · ${job.status} · ${job.stageCount || 0} stages</small>`;
+            btn.innerHTML = `<strong>${this._esc(job.label)}</strong><small>${job.stageCount || 0} pași · ${job.status === 'published' ? 'activ' : 'draft'}${job.unsaved ? ' · nesalvat' : ''}</small>`;
             btn.addEventListener('click', () => {
                 this._selectedId = job.id;
                 this.renderList();
-                this.loadSelected();
+                job.unsaved ? this.renderEditor() : this.loadSelected();
             });
             list.appendChild(btn);
         });
     },
 
     async loadSelected() {
-        if (!this._selectedId) {
-            this._draft = null;
-            this.renderEditor();
-            return;
-        }
+        if (!this._selectedId) { this._draft = null; this.renderEditor(); return; }
         const res = await this._post('jobCreatorGet', { id: this._selectedId });
-        if (!res.ok) {
-            this.setStatus(res.error || 'Could not load job');
-            return;
-        }
+        if (!res.ok) { this.setStatus(res.error || 'Eroare'); return; }
         this._draft = res.job;
+        this._autoFlow = false;
         this._selectedStageIdx = 0;
+        this.renderWizard();
         this.renderEditor();
     },
 
     newJob() {
-        const id = `jc_${Date.now().toString(36)}`;
         this._draft = {
-            id,
-            label: 'New Job',
-            description: '',
-            category: 'civilian',
-            icon: 'briefcase',
-            status: 'draft',
+            id: `jc_${Date.now().toString(36)}`, label: 'Jobul meu', description: '', category: 'civilian', icon: 'briefcase', status: 'draft',
             definition: {
-                startStage: 'start',
-                timeoutSec: 1800,
-                salary: 140,
-                ui: { title: 'Work', key: 'E' },
-                progression: { xpPerTask: 15, payPerTask: 60 },
+                startStage: 'pas_1', timeoutSec: 1800, salary: 140, ui: { title: 'Muncă', key: 'E' },
+                progression: { xpPerTask: 15, payPerTask: 75 },
                 party: { soloEnabled: true, partyEnabled: false, minPlayers: 1, maxPlayers: 4 },
-                variables: {},
-                locations: {},
-                pools: {},
-                stages: [{ id: 'start', type: 'complete', label: 'Finish', onSuccess: 'complete' }],
+                variables: { done: 0, total: 3 },
+                locations: {}, pools: { deliveries: [] },
+                stages: [
+                    { id: 'pas_1', type: 'goto_zone', label: 'Mergi la punct', message: 'Urmează markerul', location: 'start', onSuccess: 'pas_2' },
+                    { id: 'pas_2', type: 'zone_interact', label: 'Fă treaba', message: 'Apasă {key}', location: 'start', onSuccess: 'complete' },
+                    { id: 'complete', type: 'complete', label: 'Gata' },
+                ],
             },
         };
-        this._selectedId = id;
+        this._selectedId = this._draft.id;
         this._selectedStageIdx = 0;
+        this._tab = 'general';
+        this._autoFlow = true;
+        this._panel?.querySelectorAll('.jc-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === 'general'));
         this.renderList();
+        this.renderWizard();
         this.renderEditor();
+        this.setStatus('Job nou creat. Urmează pașii 1→4 de sus.');
     },
 
-    _stages() {
-        return this._draft?.definition?.stages || [];
+    async seedTemplates() {
+        this.setStatus('Încarc template-uri...');
+        const res = await this._post('jobCreatorSeed', {});
+        if (!res.ok) { this.setStatus(res.error || 'Eroare'); return; }
+        this._jobs = res.jobs || [];
+        const preferred = this._jobs.find((j) => j.id === 'jc_tpl_route')
+            || this._jobs.find((j) => j.id === 'jc_tpl_courier')
+            || this._jobs[0];
+        this._selectedId = preferred?.id || null;
+        this.renderList();
+        if (this._selectedId) await this.loadSelected();
+        this.setStatus('✅ Template-uri încărcate. Deschide Trucker (Creator) și uită-te la pași ca exemplu.');
     },
 
-    _stage() {
-        return this._stages()[this._selectedStageIdx] || null;
-    },
-
-    _stageTypeOptions(selected) {
-        return STAGE_CATALOG.map((s) =>
-            `<option value="${s.type}" ${s.type === selected ? 'selected' : ''}>${s.label} (${s.category})</option>`
-        ).join('');
+    _bindEditorActions(mount) {
+        mount.querySelector('#jc-seed')?.addEventListener('click', () => this.seedTemplates());
+        mount.querySelector('#jc-new-inline')?.addEventListener('click', () => this.newJob());
+        mount.querySelector('#jc-auto-flow')?.addEventListener('click', () => {
+            this._autoFlow = true;
+            this._rewireLinearFlow();
+            this.renderEditor();
+            this.setStatus('Pașii legați în ordine (branch-urile rămân custom).');
+        });
     },
 
     renderEditor() {
         const mount = document.getElementById('jc-editor');
-        if (!mount) return;
-        if (!this._draft) {
-            mount.innerHTML = '<p>Select or create a job.</p>';
+        this.renderWizard();
+        if (!mount || !this._draft) {
+            if (!mount) return;
+            const empty = {
+                general: ['<h3>Job Creator</h3><p>Încarcă un template (Trucker, Curier...) sau creează de la zero.</p>',
+                    '<button type="button" class="jc-btn" id="jc-seed">📦 Template-uri gata făcute</button>',
+                    '<button type="button" class="jc-btn ghost" id="jc-new-inline">+ Job nou</button>'],
+                stages: ['<h3>Pași</h3><p>Selectează un job din stânga.</p>'],
+                locations: ['<h3>Locuri</h3><p>Selectează un job din stânga.</p>'],
+            };
+            mount.innerHTML = `<div class="jc-empty-state">${(empty[this._tab] || empty.general).join('')}</div>`;
+            this._bindEditorActions(mount);
             return;
         }
+
         const d = this._draft;
         const def = d.definition || {};
+
         if (this._tab === 'general') {
             mount.innerHTML = `
-                <div class="jc-field"><label>Job ID</label><input id="jc-f-id" value="${d.id || ''}" /></div>
-                <div class="jc-field"><label>Label</label><input id="jc-f-label" value="${this._esc(d.label)}" /></div>
-                <div class="jc-field"><label>Description</label><input id="jc-f-desc" value="${this._esc(d.description || '')}" /></div>
-                <div class="jc-field"><label>Salary (grade 0)</label><input id="jc-f-salary" type="number" value="${def.salary || 140}" /></div>
-                <div class="jc-field"><label>HUD Title</label><input id="jc-f-ui-title" value="${this._esc(def.ui?.title || '')}" /></div>
-                <div class="jc-field"><label>Interact Key</label><input id="jc-f-ui-key" value="${def.ui?.key || 'E'}" maxlength="4" /></div>
-                <div class="jc-field"><label>Pay per task</label><input id="jc-f-pay" type="number" value="${def.progression?.payPerTask || 60}" /></div>
-                <div class="jc-field"><label>XP per task</label><input id="jc-f-xp" type="number" value="${def.progression?.xpPerTask || 15}" /></div>
+                <div class="jc-field"><label>Nume job</label><input id="jc-f-label" value="${this._esc(d.label)}" placeholder="Ex: Trucker, Curier..." /></div>
+                <div class="jc-field"><label>Descriere (Job Center)</label><input id="jc-f-desc" value="${this._esc(d.description || '')}" placeholder="Ce face jucătorul?" /></div>
                 <div class="jc-field-row">
-                    <div class="jc-field"><label>Party enabled</label><input id="jc-f-party" type="checkbox" ${def.party?.partyEnabled ? 'checked' : ''} /></div>
-                    <div class="jc-field"><label>Min players</label><input id="jc-f-party-min" type="number" value="${def.party?.minPlayers || 1}" /></div>
-                    <div class="jc-field"><label>Max players</label><input id="jc-f-party-max" type="number" value="${def.party?.maxPlayers || 4}" /></div>
+                    <div class="jc-field"><label>💵 Plată / sarcină</label><input id="jc-f-pay" type="number" value="${def.progression?.payPerTask || 75}" /></div>
+                    <div class="jc-field"><label>⭐ XP / sarcină</label><input id="jc-f-xp" type="number" value="${def.progression?.xpPerTask || 15}" /></div>
                 </div>
-            `;
+                <div class="jc-field-row">
+                    <div class="jc-field"><label>Salariu afișat</label><input id="jc-f-salary" type="number" value="${def.salary || 140}" /></div>
+                    <div class="jc-field"><label>Titlu pe ecran</label><input id="jc-f-ui-title" value="${this._esc(def.ui?.title || d.label)}" /></div>
+                </div>
+                ${this._variablesEditorHtml(def.variables)}
+                <details class="jc-advanced-box"><summary>Mai multe setări</summary>
+                    <div class="jc-field-row">
+                        <div class="jc-field jc-check"><label><input id="jc-f-party" type="checkbox" ${def.party?.partyEnabled ? 'checked' : ''} /> Job în echipă</label></div>
+                        <div class="jc-field"><label>Min jucători</label><input id="jc-f-party-min" type="number" value="${def.party?.minPlayers || 1}" /></div>
+                        <div class="jc-field"><label>Max</label><input id="jc-f-party-max" type="number" value="${def.party?.maxPlayers || 4}" /></div>
+                    </div>
+                    <div class="jc-field"><label>ID intern</label><input id="jc-f-id" value="${d.id || ''}" /></div>
+                </details>`;
+            this._bindVariablesEditor(mount);
             return;
         }
+
         if (this._tab === 'locations') {
+            const locs = def.locations || {};
+            const pools = def.pools || {};
+            const locCards = Object.keys(locs).map((key) => {
+                const loc = locs[key];
+                return `<div class="jc-loc-card"><strong>${this._esc(loc.label || key)}</strong> <code>${key}</code>
+                    <small class="jc-loc-coords">${loc.x?.toFixed(1)}, ${loc.y?.toFixed(1)}, ${loc.z?.toFixed(1)}</small>
+                    <button type="button" class="jc-btn danger jc-loc-del" data-key="${this._esc(key)}">Șterge</button></div>`;
+            }).join('') || '<p class="jc-hint">Niciun loc fix. Apasă <strong>📍 Pune loc aici</strong> jos.</p>';
+
+            const poolBlocks = Object.keys(pools).map((pname) => {
+                const pts = pools[pname] || [];
+                const ptsHtml = pts.map((p, i) => `<li>${i + 1}. ${this._esc(p.label || 'Punct')} — ${p.x?.toFixed(0)}, ${p.y?.toFixed(0)}</li>`).join('');
+                return `<div class="jc-pool-card"><strong>📋 Lista: ${this._esc(pname)}</strong> (${pts.length} puncte)
+                    <ul class="jc-pool-list">${ptsHtml || '<li class="jc-hint">Gol — adaugă puncte cu butonul de mai jos</li>'}</ul>
+                    <button type="button" class="jc-btn ghost jc-pool-add" data-pool="${this._esc(pname)}">+ Punct în această listă (din joc)</button>
+                    </div>`;
+            }).join('') || '<p class="jc-hint">Nicio listă livrări. Apasă „+ Listă nouă”.</p>';
+
             mount.innerHTML = `
-                <p>Use <strong>Place in world</strong> to add points, then edit JSON if needed.</p>
-                <div class="jc-field"><label>Locations JSON</label><textarea id="jc-f-locations">${this._esc(JSON.stringify(def.locations || {}, null, 2))}</textarea></div>
-                <div class="jc-field"><label>Pools JSON</label><textarea id="jc-f-pools">${this._esc(JSON.stringify(def.pools || {}, null, 2))}</textarea></div>
-            `;
+                <div class="jc-simple-intro"><strong>Locuri fixe</strong> = depozit, spawn mașină. <strong>Liste</strong> = puncte random (curier, trucker).</div>
+                <h4 class="jc-section-title">Locuri fixe</h4>
+                <div class="jc-loc-grid">${locCards}</div>
+                <h4 class="jc-section-title">Liste destinații (pool)</h4>
+                <div class="jc-pool-grid">${poolBlocks}</div>
+                <button type="button" class="jc-btn ghost" id="jc-new-pool">+ Listă nouă</button>
+                <p class="jc-hint">În pași, la „Alege destinație random”, alegi lista de aici.</p>`;
+
+            mount.querySelectorAll('.jc-loc-del').forEach((btn) => {
+                btn.addEventListener('click', () => { delete def.locations[btn.dataset.key]; this.renderEditor(); });
+            });
+            mount.querySelector('#jc-new-pool')?.addEventListener('click', () => {
+                const name = prompt('Nume listă (ex: deliveries, routes):', 'deliveries');
+                if (!name) return;
+                def.pools = def.pools || {};
+                if (!def.pools[name]) def.pools[name] = [];
+                this.renderEditor();
+            });
+            mount.querySelectorAll('.jc-pool-add').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    this._placeMode = 'pool';
+                    this._placePool = btn.dataset.pool;
+                    this.place();
+                });
+            });
             return;
         }
+
         this.renderStagesEditor(mount, def);
     },
 
@@ -200,135 +875,56 @@ const JobCreator = {
         const st = stages[this._selectedStageIdx] || {};
 
         mount.innerHTML = `
+            ${this._flowStripHtml()}
             <div class="jc-stages-layout">
                 <div class="jc-stages-list-wrap">
-                    <div class="jc-stages-toolbar">
-                        <button type="button" class="jc-btn ghost" id="jc-add-stage">+ Stage</button>
-                        <button type="button" class="jc-btn ghost" id="jc-dup-stage">Duplicate</button>
-                        <button type="button" class="jc-btn danger" id="jc-del-stage">Delete</button>
-                    </div>
-                    <div class="jc-field"><label>Start stage ID</label><input id="jc-f-start" value="${def.startStage || ''}" /></div>
+                    <button type="button" class="jc-btn" id="jc-add-stage">+ Adaugă pas</button>
+                    <button type="button" class="jc-btn ghost" id="jc-auto-flow">🔗 Leagă pașii în ordine</button>
+                    <div class="jc-field"><label>Pas de start</label>
+                        <select id="jc-f-start">${stages.map((s) =>
+                            `<option value="${this._esc(s.id)}" ${s.id === def.startStage ? 'selected' : ''}>${this._esc(s.label || s.id)}</option>`
+                        ).join('')}</select></div>
                     <ul class="jc-stage-list" id="jc-stage-list"></ul>
                 </div>
-                <div class="jc-stage-form" id="jc-stage-form"></div>
+                <div class="jc-stage-form">
+                    <h3 class="jc-stage-form-title">${this._meta(st.type).icon} Pas ${this._selectedStageIdx + 1}: ${this._esc(st.label || '')}</h3>
+                    ${this._renderStepForm(st)}
+                    <button type="button" class="jc-btn danger" id="jc-del-stage">Șterge pasul</button>
+                </div>
             </div>
-        `;
+            <div id="jc-step-picker" class="jc-step-picker hidden"></div>`;
 
         const list = mount.querySelector('#jc-stage-list');
         stages.forEach((stage, idx) => {
             const li = document.createElement('li');
             li.className = 'jc-stage-row' + (idx === this._selectedStageIdx ? ' active' : '');
             li.draggable = true;
-            li.dataset.idx = String(idx);
-            const cat = STAGE_CATALOG.find((c) => c.type === stage.type);
-            li.innerHTML = `<span class="jc-drag">☰</span><span class="jc-stage-num">${String(idx + 1).padStart(2, '0')}</span><span class="jc-stage-name">${this._esc(stage.label || stage.id)}</span><small>${cat?.label || stage.type}</small>`;
-            li.addEventListener('click', () => {
-                this._collectStagesFromDom();
-                this._selectedStageIdx = idx;
-                this.renderEditor();
-            });
-            li.addEventListener('dragstart', (e) => {
-                this._dragFromIdx = idx;
-                e.dataTransfer.effectAllowed = 'move';
-            });
+            const meta = this._meta(stage.type);
+            li.innerHTML = `<span class="jc-drag">☰</span><span class="jc-stage-num">${idx + 1}</span>
+                <span class="jc-stage-name">${this._esc(stage.label || meta.label)}</span>
+                <small>${meta.icon} ${meta.label}${stage.onSuccess ? ' → ' + stage.onSuccess : ''}</small>`;
+            li.addEventListener('click', () => { this._collectStagesFromDom(); this._selectedStageIdx = idx; this.renderEditor(); });
+            li.addEventListener('dragstart', () => { this._dragFromIdx = idx; });
             li.addEventListener('dragover', (e) => { e.preventDefault(); li.classList.add('drag-over'); });
             li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
             li.addEventListener('drop', (e) => {
-                e.preventDefault();
-                li.classList.remove('drag-over');
-                const to = idx;
+                e.preventDefault(); li.classList.remove('drag-over');
                 const from = this._dragFromIdx;
-                if (from === null || from === to) return;
+                if (from === null || from === idx) return;
                 this._collectStagesFromDom();
                 const arr = this._stages();
                 const [moved] = arr.splice(from, 1);
-                arr.splice(to, 0, moved);
-                this._selectedStageIdx = to;
+                arr.splice(idx, 0, moved);
+                this._selectedStageIdx = idx;
                 this.renderEditor();
             });
             list.appendChild(li);
         });
 
-        const form = mount.querySelector('#jc-stage-form');
-        form.innerHTML = `
-            <h3 class="jc-stage-form-title">Stage: ${this._esc(st.id || 'new')}</h3>
-            <div class="jc-field"><label>Stage ID</label><input id="jc-s-id" value="${this._esc(st.id || '')}" /></div>
-            <div class="jc-field"><label>Type</label><select id="jc-s-type">${this._stageTypeOptions(st.type)}</select></div>
-            <div class="jc-field"><label>Label</label><input id="jc-s-label" value="${this._esc(st.label || '')}" /></div>
-            <div class="jc-field"><label>Message (HUD)</label><input id="jc-s-message" value="${this._esc(st.message || '')}" /></div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Location key</label><input id="jc-s-location" value="${this._esc(st.location || '')}" placeholder="hub" /></div>
-                <div class="jc-field"><label>Location var</label><input id="jc-s-locationVar" value="${this._esc(st.locationVar || '')}" placeholder="target" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Location field</label><input id="jc-s-locationField" value="${this._esc(st.locationField || '')}" placeholder="pickup" /></div>
-                <div class="jc-field"><label>Pool name</label><input id="jc-s-pool" value="${this._esc(st.pool || '')}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Store as var</label><input id="jc-s-storeAs" value="${this._esc(st.storeAs || '')}" /></div>
-                <div class="jc-field"><label>On success →</label><input id="jc-s-onSuccess" value="${this._esc(st.onSuccess || '')}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>On failure →</label><input id="jc-s-onFailure" value="${this._esc(st.onFailure || '')}" /></div>
-                <div class="jc-field"><label>If true →</label><input id="jc-s-ifTrue" value="${this._esc(st.ifTrue || '')}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>If false →</label><input id="jc-s-ifFalse" value="${this._esc(st.ifFalse || '')}" /></div>
-                <div class="jc-field"><label>Branch var</label><input id="jc-s-branchVar" value="${this._esc(st.condition?.var || '')}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Branch op</label><select id="jc-s-branchOp"><option value=">=" ${st.condition?.op === '>=' ? 'selected' : ''}>&gt;=</option><option value="<=" ${st.condition?.op === '<=' ? 'selected' : ''}>&lt;=</option><option value="==" ${st.condition?.op === '==' ? 'selected' : ''}>==</option><option value="<" ${st.condition?.op === '<' ? 'selected' : ''}>&lt;</option><option value=">" ${st.condition?.op === '>' ? 'selected' : ''}>&gt;</option></select></div>
-                <div class="jc-field"><label>Branch value</label><input id="jc-s-branchVal" value="${st.condition?.valueRef ? `ref:${st.condition.valueRef}` : (st.condition?.value ?? '')}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Vehicle model</label><input id="jc-s-model" value="${this._esc(st.model || '')}" placeholder="phantom" /></div>
-                <div class="jc-field"><label>Warp into vehicle</label><input id="jc-s-warp" type="checkbox" ${st.warp ? 'checked' : ''} /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Trailer model</label><input id="jc-s-trailerModel" value="${this._esc(st.trailerModel || '')}" /></div>
-                <div class="jc-field"><label>Duration (ms)</label><input id="jc-s-durationMs" type="number" value="${st.durationMs || ''}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Skill window (ms)</label><input id="jc-s-windowMs" type="number" value="${st.windowMs || ''}" /></div>
-                <div class="jc-field"><label>Wait (seconds)</label><input id="jc-s-seconds" type="number" value="${st.seconds || ''}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Pay</label><input id="jc-s-pay" type="number" value="${st.pay ?? ''}" /></div>
-                <div class="jc-field"><label>XP</label><input id="jc-s-xp" type="number" value="${st.xp ?? ''}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>Item</label><input id="jc-s-item" value="${this._esc(st.item || '')}" /></div>
-                <div class="jc-field"><label>Item count</label><input id="jc-s-count" type="number" value="${st.count ?? ''}" /></div>
-            </div>
-            <div class="jc-field-row">
-                <div class="jc-field"><label>NPC model</label><input id="jc-s-npcModel" value="${this._esc(st.model || '')}" /></div>
-                <div class="jc-field"><label>Min party</label><input id="jc-s-minPlayers" type="number" value="${st.minPlayers ?? ''}" /></div>
-            </div>
-            <div class="jc-field"><label>Scale: base / perLevel / max</label>
-                <div class="jc-field-row">
-                    <input id="jc-s-base" type="number" value="${st.base ?? ''}" placeholder="base" />
-                    <input id="jc-s-perLevel" type="number" value="${st.perLevel ?? ''}" placeholder="per level" />
-                    <input id="jc-s-max" type="number" value="${st.max ?? ''}" placeholder="max" />
-                </div>
-            </div>
-        `;
-
-        mount.querySelector('#jc-add-stage')?.addEventListener('click', () => {
-            this._collectStagesFromDom();
-            const n = this._stages().length + 1;
-            this._stages().push({ id: `stage_${n}`, type: 'goto_zone', label: `Stage ${n}`, onSuccess: 'complete' });
-            this._selectedStageIdx = this._stages().length - 1;
-            this.renderEditor();
-        });
-        mount.querySelector('#jc-dup-stage')?.addEventListener('click', () => {
-            this._collectStagesFromDom();
-            const cur = this._stage();
-            if (!cur) return;
-            const copy = JSON.parse(JSON.stringify(cur));
-            copy.id = `${cur.id}_copy`;
-            this._stages().splice(this._selectedStageIdx + 1, 0, copy);
-            this._selectedStageIdx += 1;
-            this.renderEditor();
+        mount.querySelector('#jc-add-stage')?.addEventListener('click', () => this._openStepPicker(mount));
+        mount.querySelector('#jc-auto-flow')?.addEventListener('click', () => {
+            this._autoFlow = true; this._rewireLinearFlow(); this.renderEditor();
+            this.setStatus('Flux liniar aplicat.');
         });
         mount.querySelector('#jc-del-stage')?.addEventListener('click', () => {
             this._collectStagesFromDom();
@@ -337,187 +933,162 @@ const JobCreator = {
             this._selectedStageIdx = Math.max(0, this._selectedStageIdx - 1);
             this.renderEditor();
         });
+        this._bindFormHelpers(mount);
+        this._bindEditorActions(mount);
+        mount.querySelectorAll('.jc-flow-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                this._collectStagesFromDom();
+                this._selectedStageIdx = Number(chip.dataset.idx) || 0;
+                this.renderEditor();
+            });
+        });
     },
 
-    _collectStagesFromDom() {
-        if (!this._draft || this._tab !== 'stages') return;
-        const def = this._draft.definition;
-        def.startStage = document.getElementById('jc-f-start')?.value || def.startStage;
-        const st = this._stage();
-        if (!st) return;
-        const g = (id) => document.getElementById(id);
-        st.id = g('jc-s-id')?.value || st.id;
-        st.type = g('jc-s-type')?.value || st.type;
-        st.label = g('jc-s-label')?.value || '';
-        st.message = g('jc-s-message')?.value || undefined;
-        st.location = g('jc-s-location')?.value || undefined;
-        st.locationVar = g('jc-s-locationVar')?.value || undefined;
-        st.locationField = g('jc-s-locationField')?.value || undefined;
-        st.pool = g('jc-s-pool')?.value || undefined;
-        st.storeAs = g('jc-s-storeAs')?.value || undefined;
-        st.onSuccess = g('jc-s-onSuccess')?.value || undefined;
-        st.onFailure = g('jc-s-onFailure')?.value || undefined;
-        st.ifTrue = g('jc-s-ifTrue')?.value || undefined;
-        st.ifFalse = g('jc-s-ifFalse')?.value || undefined;
-        const bVar = g('jc-s-branchVar')?.value;
-        const bVal = g('jc-s-branchVal')?.value;
-        if (bVar) {
-            st.condition = { var: bVar, op: g('jc-s-branchOp')?.value || '>=' };
-            if (String(bVal).startsWith('ref:')) st.condition.valueRef = bVal.slice(4);
-            else if (bVal !== '') st.condition.value = Number(bVal) || bVal;
-        }
-        if (g('jc-s-model')?.value && ['spawn_vehicle', 'attach_trailer', 'spawn_npc'].includes(st.type)) {
-            st.model = g('jc-s-model')?.value;
-        }
-        if (st.type === 'spawn_npc' && g('jc-s-npcModel')?.value) st.model = g('jc-s-npcModel')?.value;
-        st.warp = g('jc-s-warp')?.checked || undefined;
-        st.trailerModel = g('jc-s-trailerModel')?.value || undefined;
-        const dur = g('jc-s-durationMs')?.value;
-        if (dur) st.durationMs = Number(dur);
-        const win = g('jc-s-windowMs')?.value;
-        if (win) st.windowMs = Number(win);
-        const sec = g('jc-s-seconds')?.value;
-        if (sec) st.seconds = Number(sec);
-        const pay = g('jc-s-pay')?.value;
-        if (pay !== '') st.pay = Number(pay);
-        const xp = g('jc-s-xp')?.value;
-        if (xp !== '') st.xp = Number(xp);
-        st.item = g('jc-s-item')?.value || undefined;
-        const cnt = g('jc-s-count')?.value;
-        if (cnt !== '') st.count = Number(cnt);
-        const mp = g('jc-s-minPlayers')?.value;
-        if (mp !== '') st.minPlayers = Number(mp);
-        const base = g('jc-s-base')?.value;
-        if (base !== '') { st.var = st.var || 'total'; st.base = Number(base); }
-        const pl = g('jc-s-perLevel')?.value;
-        if (pl !== '') st.perLevel = Number(pl);
-        const mx = g('jc-s-max')?.value;
-        if (mx !== '') st.max = Number(mx);
+    _openStepPicker(mount) {
+        const picker = mount.querySelector('#jc-step-picker');
+        if (!picker) return;
+        picker.classList.remove('hidden');
+        const byCat = {};
+        Object.entries(STAGE_META).forEach(([type, meta]) => {
+            if (type === 'complete' || type === 'fail') return;
+            const c = meta.cat || 'logica';
+            (byCat[c] = byCat[c] || []).push({ type, ...meta });
+        });
+        let grid = '';
+        Object.entries(byCat).forEach(([cat, items]) => {
+            grid += `<div class="jc-picker-cat"><h4>${CAT_LABEL[cat] || cat}</h4><div class="jc-picker-grid">`;
+            grid += items.map((s) =>
+                `<button type="button" class="jc-picker-item" data-type="${s.type}" title="${s.hint}">
+                    <span class="jc-picker-icon">${s.icon}</span><span>${s.label}</span></button>`
+            ).join('');
+            grid += '</div></div>';
+        });
+        picker.innerHTML = `<div class="jc-picker-head"><strong>Alege tipul de pas:</strong>
+            <button type="button" class="jc-close-picker">✕</button></div>${grid}`;
+        picker.querySelector('.jc-close-picker')?.addEventListener('click', () => picker.classList.add('hidden'));
+        picker.querySelectorAll('.jc-picker-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                this._collectStagesFromDom();
+                const type = btn.dataset.type;
+                const meta = this._meta(type);
+                const n = this._stages().filter((s) => !['complete', 'fail'].includes(s.type)).length + 1;
+                const newStage = { id: `pas_${n}`, type, label: meta.label, message: 'Apasă {key}' };
+                const ci = this._stages().findIndex((s) => s.type === 'complete');
+                if (ci >= 0) this._stages().splice(ci, 0, newStage);
+                else this._stages().push(newStage);
+                this._selectedStageIdx = ci >= 0 ? ci : this._stages().length - 1;
+                picker.classList.add('hidden');
+                this.renderEditor();
+            });
+        });
     },
 
     _collectDraft() {
         if (!this._draft) return null;
-        const d = { ...this._draft };
-        d.id = document.getElementById('jc-f-id')?.value || d.id;
-        d.label = document.getElementById('jc-f-label')?.value || d.label;
-        d.description = document.getElementById('jc-f-desc')?.value || '';
-        const def = { ...(d.definition || {}) };
-        if (document.getElementById('jc-f-salary')) {
-            def.salary = Number(document.getElementById('jc-f-salary').value) || 140;
-            def.ui = { title: document.getElementById('jc-f-ui-title')?.value || 'Work', key: document.getElementById('jc-f-ui-key')?.value || 'E' };
+        const d = { ...this._draft, definition: { ...this._draft.definition } };
+        const def = d.definition;
+
+        if (this._tab === 'stages') {
+            this._collectStagesFromDom();
+            const start = document.getElementById('jc-f-start');
+            if (start) def.startStage = start.value;
+        } else if (document.getElementById('jc-f-label')) {
+            d.label = document.getElementById('jc-f-label').value || d.label;
+            d.description = document.getElementById('jc-f-desc')?.value || '';
+            d.id = document.getElementById('jc-f-id')?.value || d.id;
+            def.salary = Number(document.getElementById('jc-f-salary')?.value) || 140;
+            def.ui = { title: document.getElementById('jc-f-ui-title')?.value || d.label, key: 'E' };
             def.progression = {
-                payPerTask: Number(document.getElementById('jc-f-pay')?.value) || 60,
+                payPerTask: Number(document.getElementById('jc-f-pay')?.value) || 75,
                 xpPerTask: Number(document.getElementById('jc-f-xp')?.value) || 15,
             };
-            def.party = {
-                soloEnabled: true,
-                partyEnabled: document.getElementById('jc-f-party')?.checked || false,
-                minPlayers: Number(document.getElementById('jc-f-party-min')?.value) || 1,
-                maxPlayers: Number(document.getElementById('jc-f-party-max')?.value) || 4,
-            };
+            def.variables = this._readVariablesFromDom();
+            if (document.getElementById('jc-f-party')) {
+                def.party = {
+                    soloEnabled: true,
+                    partyEnabled: document.getElementById('jc-f-party').checked,
+                    minPlayers: Number(document.getElementById('jc-f-party-min')?.value) || 1,
+                    maxPlayers: Number(document.getElementById('jc-f-party-max')?.value) || 4,
+                };
+            }
         }
-        if (document.getElementById('jc-f-locations')) {
-            try { def.locations = JSON.parse(document.getElementById('jc-f-locations').value || '{}'); } catch (_) {}
-            try { def.pools = JSON.parse(document.getElementById('jc-f-pools').value || '{}'); } catch (_) {}
-        }
-        if (this._tab === 'stages') this._collectStagesFromDom();
-        d.definition = def;
+        this._draft = d;
         return d;
     },
 
-    setStatus(msg) {
-        const el = document.getElementById('jc-status');
-        if (el) el.textContent = msg || '';
-    },
+    setStatus(msg) { const el = document.getElementById('jc-status'); if (el) el.textContent = msg || ''; },
 
     async save() {
         const payload = this._collectDraft();
         if (!payload) return;
         const res = await this._post('jobCreatorSave', payload);
         if (res.ok && res.job) {
-            this._draft = res.job;
-            this._selectedId = res.job.id;
-            this.setStatus('Saved.');
+            this._draft = res.job; this._selectedId = res.job.id;
+            this.setStatus('✅ Salvat!');
             const listRes = await this._post('jobCreatorList', {});
-            if (listRes.ok && listRes.jobs) {
-                this._jobs = listRes.jobs;
-                this.renderList();
-            }
-        } else {
-            this.setStatus(res.error || 'Save failed');
-        }
+            if (listRes.ok) { this._jobs = listRes.jobs; this.renderList(); this.renderEditor(); }
+        } else this.setStatus(res.error || 'Eroare la salvare');
     },
 
     async publish() {
-        const payload = this._collectDraft();
-        if (payload) await this._post('jobCreatorSave', payload);
+        const p = this._collectDraft();
+        if (p) await this._post('jobCreatorSave', p);
         const res = await this._post('jobCreatorPublish', { id: this._selectedId, status: 'published' });
-        this.setStatus(res.ok ? 'Published.' : (res.error || 'Publish failed'));
+        this.setStatus(res.ok ? '✅ Publicat la Job Center!' : (res.error || 'Eroare'));
     },
 
-    async test() {
-        if (!this._selectedId) return;
-        await this._post('jobCreatorTest', { id: this._selectedId });
-    },
-
+    async test() { if (this._selectedId) await this._post('jobCreatorTest', { id: this._selectedId }); },
     async place() { await this._post('jobCreatorPlace'); },
 
     async delete() {
-        if (!this._selectedId || !confirm('Delete this job?')) return;
+        if (!this._selectedId || !confirm('Ștergi jobul?')) return;
         const res = await this._post('jobCreatorDelete', { id: this._selectedId });
-        if (res.ok) {
-            this._selectedId = null;
-            this._draft = null;
-            this.setStatus('Deleted.');
-        }
+        if (res.ok) { this._selectedId = null; this._draft = null; this.renderList(); this.renderEditor(); }
     },
 
     async exportJob() {
         const res = await this._post('jobCreatorExport', { id: this._selectedId });
         if (res.ok && res.payload) {
-            const blob = new Blob([JSON.stringify(res.payload, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${this._selectedId || 'job'}.json`;
-            a.click();
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(res.payload, null, 2)]));
+            a.download = `${this._selectedId}.json`; a.click();
         }
     },
 
     async importJob() {
-        const text = prompt('Paste job JSON export:');
+        const text = prompt('JSON export:');
         if (!text) return;
         try {
-            const payload = JSON.parse(text);
-            const res = await this._post('jobCreatorImport', { payload });
-            this.setStatus(res.ok ? 'Imported.' : (res.error || 'Import failed'));
-            if (res.ok && res.job) {
-                this._selectedId = res.job.id;
-                this._draft = res.job;
-                this.renderList();
-                this.renderEditor();
-            }
-        } catch (_) {
-            this.setStatus('Invalid JSON.');
-        }
+            const res = await this._post('jobCreatorImport', { payload: JSON.parse(text) });
+            if (res.ok && res.job) { this._selectedId = res.job.id; this._draft = res.job; this.renderList(); this.renderEditor(); }
+            this.setStatus(res.ok ? 'Importat.' : res.error);
+        } catch (_) { this.setStatus('JSON invalid.'); }
     },
 
     onPlacement(point) {
-        if (!point) return;
+        if (!point || !this._draft) return;
+        this._panel?.classList.remove('hidden');
         this._tab = 'locations';
         this._panel?.querySelectorAll('.jc-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === 'locations'));
+        const def = this._draft.definition;
+        if (this._placeMode === 'pool') {
+            def.pools = def.pools || {};
+            const pname = this._placePool || 'deliveries';
+            if (!def.pools[pname]) def.pools[pname] = [];
+            const n = def.pools[pname].length + 1;
+            def.pools[pname].push({ ...point, label: `Punct ${n}`, weight: 1 });
+            this._placeMode = 'location';
+            this.setStatus(`✅ Punct adăugat în lista „${pname}".`);
+        } else {
+            def.locations = def.locations || {};
+            const n = Object.keys(def.locations).length + 1;
+            const key = n === 1 ? 'start' : `loc_${n}`;
+            def.locations[key] = { ...point, label: `Loc ${n}`, radius: 3.5, zTolerance: 5, blip: { sprite: 478, color: 47, scale: 0.85 } };
+            this.setStatus(`✅ Loc „${key}" salvat unde stai.`);
+        }
+        this.renderWizard();
         this.renderEditor();
-        const ta = document.getElementById('jc-f-locations');
-        if (!ta) return;
-        let locs = {};
-        try { locs = JSON.parse(ta.value || '{}'); } catch (_) {}
-        const key = `point_${Object.keys(locs).length + 1}`;
-        locs[key] = { ...point, label: key, blip: { sprite: 478, color: 47, scale: 0.85 } };
-        ta.value = JSON.stringify(locs, null, 2);
-        this.setStatus(`Added location "${key}" from world placement.`);
-    },
-
-    _esc(s) {
-        return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     },
 };
+
 window.JobCreator = JobCreator;

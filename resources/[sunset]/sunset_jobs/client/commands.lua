@@ -1,5 +1,20 @@
 local JC = Sunset.JobClient
 
+-- Keep in sync with sunset_jobcreator/shared/migrations.lua (no client export needed).
+local CREATOR_MIGRATIONS = {
+    trucker = 'jc_tpl_route',
+    courier = 'jc_tpl_courier',
+    garbage = 'jc_tpl_garbage',
+    fisherman = 'jc_tpl_gather',
+}
+
+local function jobcreatorCall(fn)
+    if GetResourceState('sunset_jobcreator') ~= 'started' then return nil end
+    local ok, result = pcall(fn)
+    if ok then return result end
+    return nil
+end
+
 local LEGACY_STARTERS = {
     trucker = function() Sunset.Jobs.StartTrucker() end,
     garbage = function() Sunset.Jobs.StartGarbage() end,
@@ -10,9 +25,9 @@ local LEGACY_STARTERS = {
 
 local function startCreatorWork(jobId)
     if GetResourceState('sunset_jobcreator') ~= 'started' then return false end
-    local target = exports.sunset_jobcreator:GetMigrationTarget(jobId) or jobId
-    if exports.sunset_jobcreator:IsCreatorJob(target) then
-        exports.sunset_jobcreator:StartWork()
+    local target = CREATOR_MIGRATIONS[jobId] or jobId
+    if jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(target) end) then
+        jobcreatorCall(function() exports.sunset_jobcreator:StartWork() end)
         return true
     end
     return false
@@ -71,30 +86,38 @@ local function startWork()
             if Sunset.Jobs and Sunset.Jobs.EnsureFishermanShift then
                 Sunset.Jobs.EnsureFishermanShift()
             end
-            JC.notify('Fisherman shift is already active — stand in a blue marker and press E.', 'info')
+            JC.workFeedback('Fisherman shift is already active — stand in a blue marker and press E.', 'info')
             return
         elseif JC.state ~= 'IDLE' then
-            JC.notify('Already on a shift — finish or /work cancel', 'error')
+            JC.workFeedback('Already on a shift — finish or /work cancel', 'error')
             return
         end
     end
 
     local jobId = JC.getCharacterJob()
     if jobId == 'unemployed' then
-        JC.notify('You need a job first — visit the Job Center or /jobs', 'error')
+        JC.workFeedback('You need a job first — visit the Job Center or /jobs', 'error')
         return
     end
 
     local starter = STARTERS[jobId]
-    if not starter and GetResourceState('sunset_jobcreator') == 'started'
-        and exports.sunset_jobcreator:IsCreatorJob(jobId) then
-        starter = function() exports.sunset_jobcreator:StartWork() end
+    if not starter and jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(jobId) end) then
+        starter = function()
+            jobcreatorCall(function() exports.sunset_jobcreator:StartWork() end)
+        end
     end
     if not starter then
-        JC.notify('No work loop for your job yet', 'error')
+        JC.workFeedback('No work loop for your job yet', 'error')
         return
     end
-    starter()
+
+    local def = Sunset.CivilianJobs[jobId]
+    JC.workFeedback(('Starting %s shift...'):format(def and def.label or jobId), 'info')
+    local ok, err = pcall(starter)
+    if not ok then
+        JC.workFeedback('Work command failed — try again or contact staff.', 'error')
+        print(('[sunset_jobs] /work error for %s: %s'):format(jobId, tostring(err)))
+    end
 end
 
 RegisterCommand('jobs', function()
@@ -104,9 +127,9 @@ end, false)
 RegisterCommand('work', function(_, args)
     local sub = args[1] and string.lower(args[1])
     if sub == 'cancel' or sub == 'stop' then
-        if GetResourceState('sunset_jobcreator') == 'started' and JC.getCharacterJob()
-            and exports.sunset_jobcreator:IsCreatorJob(JC.getCharacterJob()) then
-            exports.sunset_jobcreator:CancelWork()
+        local charJob = JC.getCharacterJob()
+        if charJob and jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(charJob) end) then
+            jobcreatorCall(function() exports.sunset_jobcreator:CancelWork() end)
         elseif JC.jobId == 'mechanic' and JC.state ~= 'IDLE' then
             Sunset.Jobs.EndMechanic()
         else
@@ -114,7 +137,7 @@ RegisterCommand('work', function(_, args)
         end
         JC.cleanup()
         JC.hideObjective()
-        JC.notify('Shift cancelled', 'info')
+        JC.workFeedback('Shift cancelled', 'info')
         return
     end
     startWork()

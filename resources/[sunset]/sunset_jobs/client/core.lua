@@ -24,6 +24,27 @@ function JobClient.notify(msg, typ, duration)
     exports.sunset_ui:Notify(msg, typ or 'info', duration)
 end
 
+function JobClient.chatSystem(msg, kind)
+    local msgType = 'command_info'
+    if kind == 'error' then
+        msgType = 'command_error'
+    elseif kind == 'warning' then
+        msgType = 'command_warn'
+    end
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0,
+        name = 'SYSTEM',
+        message = tostring(msg or ''),
+        time = string.format('%02d:%02d:%02d', GetClockHours(), GetClockMinutes(), GetClockSeconds()),
+        type = msgType,
+    })
+end
+
+function JobClient.workFeedback(msg, typ, duration)
+    JobClient.notify(msg, typ, duration)
+    JobClient.chatSystem(msg, typ)
+end
+
 function JobClient.showObjective(title, subtitle, progress)
     TriggerEvent('sunset:ui:jobObjective', {
         title = title or 'Job',
@@ -397,8 +418,12 @@ RegisterNetEvent('sunset:jobs:trailerRespawn', function(data)
     end
 end)
 
-RegisterNetEvent('sunset:jobs:waypointToWork', function(jobId)
-    if JobClient.waypointToJob(jobId) then
+RegisterNetEvent('sunset:jobs:waypointToWork', function(jobId, coords)
+    if coords and coords.x then
+        JobClient.setWaypoint(coords)
+        local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
+        JobClient.notify('GPS set to ' .. label .. ' work location', 'info')
+    elseif JobClient.waypointToJob(jobId) then
         local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
         JobClient.notify('GPS set to ' .. label .. ' work location', 'info')
     end

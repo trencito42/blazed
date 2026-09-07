@@ -3,9 +3,43 @@ local function requireAdmin(source)
     return exports.sunset_admin:IsAdmin(source, 3)
 end
 
+local function listJobsForAdmin()
+    local ok, result = pcall(function()
+        local jobs = JCStorage_List()
+        if #jobs == 0 then
+            JCTemplates_Seed()
+            JCStorage_LoadAll()
+            JCStorage_RegisterCivilianJobs()
+            JCSyncClients()
+            jobs = JCStorage_List()
+        end
+        return { jobs = jobs }
+    end)
+    if not ok then
+        return nil, ('Job Creator database error: %s'):format(tostring(err))
+    end
+    return result
+end
+
 exports.sunset_core:RegisterCallback('sunset:jobcreator:list', function(source)
     if not requireAdmin(source) then return nil, SunsetJobCreator.L('not_admin') end
-    return { jobs = JCStorage_List() }
+    return listJobsForAdmin()
+end)
+
+exports.sunset_core:RegisterCallback('sunset:jobcreator:seedTemplates', function(source)
+    if not requireAdmin(source) then return nil, SunsetJobCreator.L('not_admin') end
+    local before = #JCStorage_List()
+    JCTemplates_Seed()
+    JCStorage_LoadAll()
+    JCStorage_RegisterCivilianJobs()
+    JCSyncClients()
+    TriggerClientEvent('sunset:jobcreator:definitionsUpdated', -1)
+    local after = #JCStorage_List()
+    return {
+        jobs = JCStorage_List(),
+        seeded = math.max(0, after - before),
+        total = after,
+    }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobcreator:get', function(source, jobId)
@@ -117,14 +151,5 @@ exports.sunset_core:RegisterCallback('sunset:jobcreator:debugSkip', function(sou
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobcreator:publishedForHire', function()
-    local list = {}
-    for jobId, job in pairs(JCStorage_GetPublished()) do
-        list[#list + 1] = {
-            id = jobId,
-            label = job.label,
-            description = job.description,
-            salary = (job.definition and job.definition.salary) or 140,
-        }
-    end
-    return list
+    return GetPublishedForHire()
 end)

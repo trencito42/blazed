@@ -25,6 +25,19 @@ local AUTO_ZONE_STAGES = {
 
 local function notify(msg, kind)
     exports.sunset_ui:Notify(msg, kind or 'info', 6000)
+    local msgType = 'command_info'
+    if kind == 'error' then
+        msgType = 'command_error'
+    elseif kind == 'warning' then
+        msgType = 'command_warn'
+    end
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0,
+        name = 'SYSTEM',
+        message = tostring(msg or ''),
+        time = string.format('%02d:%02d:%02d', GetClockHours(), GetClockMinutes(), GetClockSeconds()),
+        type = msgType,
+    })
 end
 
 local function clearBlips()

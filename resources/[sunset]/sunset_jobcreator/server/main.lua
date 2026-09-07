@@ -30,9 +30,44 @@ function GetMigrationTarget(legacyJobId)
     return SunsetJobCreator.GetMigrationTarget(legacyJobId)
 end
 
+function GetJobWorkCoords(jobId)
+    local def = GetJobDefinition(jobId)
+    if not def or not def.locations then return nil end
+    local keys = { 'depot', 'hub', 'quarry', 'site', 'dock', 'mill', 'market', 'truck_spawn', 'sell' }
+    for _, key in ipairs(keys) do
+        local loc = def.locations[key]
+        if loc and loc.x then
+            return { x = loc.x, y = loc.y, z = loc.z }
+        end
+    end
+    for _, loc in pairs(def.locations) do
+        if type(loc) == 'table' and loc.x then
+            return { x = loc.x, y = loc.y, z = loc.z }
+        end
+    end
+    return nil
+end
+
+function GetPublishedForHire()
+    local list = {}
+    for jobId, job in pairs(JCStorage_GetPublished()) do
+        list[#list + 1] = {
+            id = jobId,
+            label = job.label,
+            description = job.description or '',
+            salary = (job.definition and job.definition.salary) or 140,
+            coords = GetJobWorkCoords(jobId),
+        }
+    end
+    table.sort(list, function(a, b) return a.label < b.label end)
+    return list
+end
+
 exports('IsCreatorJob', IsCreatorJob)
 exports('GetJobDefinition', GetJobDefinition)
 exports('GetPublishedJobs', GetPublishedJobs)
+exports('GetPublishedForHire', GetPublishedForHire)
+exports('GetJobWorkCoords', GetJobWorkCoords)
 exports('GetMigrationTarget', GetMigrationTarget)
 exports('StartJob', StartJob)
 exports('CancelJob', CancelJob)
@@ -52,10 +87,18 @@ end)
 
 CreateThread(function()
     Wait(500)
-    JCStorage_LoadAll()
-    JCTemplates_Seed()
-    JCStorage_RegisterCivilianJobs()
-    JCSyncClients()
+    local ok, err = pcall(function()
+        JCStorage_EnsureSchema()
+        JCStorage_LoadAll()
+        JCTemplates_Seed()
+        JCStorage_RegisterCivilianJobs()
+        JCSyncClients()
+    end)
+    if not ok then
+        print(('^1[sunset_jobcreator] Failed to load jobs: %s^7'):format(tostring(err)))
+        print('^3[sunset_jobcreator] Run sql/28-job-creator.sql on your database, then restart the resource.^7')
+        return
+    end
     print(('[sunset_jobcreator] Loaded %d job definition(s).'):format(#JCStorage_List()))
 end)
 

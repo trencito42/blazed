@@ -916,7 +916,10 @@ const Panels = {
         list.innerHTML = '';
         (data.jobs || []).forEach((job) => {
             const li = document.createElement('li');
-            li.innerHTML = `<span>${job.label}</span><button>HIRE</button>`;
+            const meta = [];
+            if (job.salary) meta.push(`$${job.salary}/wk`);
+            if (job.description) meta.push(job.description);
+            li.innerHTML = `<div class="panel-list__job"><strong>${job.label}</strong>${meta.length ? `<small>${meta.join(' — ')}</small>` : ''}</div><button>HIRE</button>`;
             li.querySelector('button')?.addEventListener('click', () => post('jobCenterHire', {
                 jobId: job.id, jobLabel: job.label,
             }));
