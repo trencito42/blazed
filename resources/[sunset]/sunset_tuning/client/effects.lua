@@ -96,6 +96,10 @@ CreateThread(function()
 
         local state = STC.appliedVehicles[veh]
         local tune = state and state.tune
+        if STC.dynoActive then
+            Wait(300)
+            goto continue
+        end
         if not tuneHasEffects(tune) then
             Wait(300)
             goto continue

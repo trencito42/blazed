@@ -35,14 +35,41 @@ local function estimatePower(veh, tune, peakRpm)
     return math.max(80, math.min(980, hp)), math.max(90, math.min(1100, torque))
 end
 
-local function placeOnDyno(veh, shop)
-    if not shop or not shop.dyno then return false end
-    local d = shop.dyno
-    SetEntityCoords(veh, d.x, d.y, d.z, false, false, false, false)
-    SetEntityHeading(veh, d.w or 0.0)
-    SetVehicleOnGroundProperly(veh)
-    Wait(100)
-    return true
+--- Keep the car level and pinned — never teleport inside LS Customs (causes flip).
+local function captureDynoPose(veh)
+    local coords = GetEntityCoords(veh)
+    local heading = GetEntityHeading(veh)
+    return {
+        x = coords.x,
+        y = coords.y,
+        z = coords.z,
+        heading = heading,
+    }
+end
+
+local function pinVehicle(veh, pose)
+    if not veh or veh == 0 or not DoesEntityExist(veh) or not pose then return end
+    SetEntityCoords(veh, pose.x, pose.y, pose.z, false, false, false, true)
+    SetEntityRotation(veh, 0.0, 0.0, pose.heading, 2, true)
+    SetEntityVelocity(veh, 0.0, 0.0, 0.0)
+    SetVehicleForwardSpeed(veh, 0.0)
+end
+
+local function prepareDynoVehicle(veh)
+    local pose = captureDynoPose(veh)
+    SetVehicleEngineOn(veh, true, true, false)
+    SetVehicleHandbrake(veh, true)
+    SetEntityCollision(veh, true, true)
+    pinVehicle(veh, pose)
+    Wait(50)
+    pinVehicle(veh, pose)
+    return pose
+end
+
+local function releaseDynoVehicle(veh, pose)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    SetVehicleHandbrake(veh, false)
+    if pose then pinVehicle(veh, pose) end
 end
 
 local function drawDynoHud()
@@ -83,7 +110,7 @@ local function drawDynoHud()
     SetTextCentre(true)
     SetTextOutline()
     SetTextEntry('STRING')
-    AddTextComponentSubstringPlayerName('Tine W / accelerația apasata — masina e pe stand, nu trebuie sa mergi')
+    AddTextComponentSubstringPlayerName('Tine W apasat — masina sta pe loc pe stand')
     DrawText(0.5, 0.905)
 end
 
@@ -91,7 +118,11 @@ CreateThread(function()
     while true do
         if dynoHud.active then
             drawDynoHud()
-            DisableControlAction(0, 75, true)
+            DisableControlAction(0, 75, true)  -- exit vehicle
+            DisableControlAction(0, 59, true)  -- steer left
+            DisableControlAction(0, 60, true)  -- steer right
+            DisableControlAction(0, 63, true)
+            DisableControlAction(0, 64, true)
             Wait(0)
         else
             Wait(400)
@@ -108,17 +139,10 @@ function RunDynoTest(shop, onComplete)
     end
 
     dynoActive = true
+    STC.dynoActive = true
     dynoResult = nil
 
-    if not placeOnDyno(veh, shop) then
-        dynoActive = false
-        notify('Stand dyno indisponibil la acest shop', 'error')
-        return
-    end
-
-    SetVehicleEngineOn(veh, true, true, false)
-    SetVehicleHandbrake(veh, true)
-    SetVehicleCurrentRpm(veh, 0.2)
+    local pose = prepareDynoVehicle(veh)
 
     dynoHud.active = true
     dynoHud.peakRpm = 0.0
@@ -127,6 +151,7 @@ function RunDynoTest(shop, onComplete)
     for i = 3, 1, -1 do
         dynoHud.phase = ('PREGATIRE DYNO... %d'):format(i)
         dynoHud.secondsLeft = i
+        pinVehicle(veh, pose)
         Wait(1000)
     end
 
@@ -135,10 +160,9 @@ function RunDynoTest(shop, onComplete)
     local start = GetGameTimer()
     local peakRpm = 0.0
 
-    FreezeEntityPosition(veh, true)
-
     while GetGameTimer() - start < testMs do
         if not DoesEntityExist(veh) then break end
+        pinVehicle(veh, pose)
         local elapsed = GetGameTimer() - start
         local rpm = GetVehicleCurrentRpm(veh)
         if rpm > peakRpm then peakRpm = rpm end
@@ -149,10 +173,10 @@ function RunDynoTest(shop, onComplete)
         Wait(0)
     end
 
-    FreezeEntityPosition(veh, false)
-    SetVehicleHandbrake(veh, false)
+    releaseDynoVehicle(veh, pose)
     dynoHud.active = false
     dynoActive = false
+    STC.dynoActive = false
 
     if peakRpm < 0.35 then
         notify('RPM prea mic — tine W apasat pe stand pana se termina testul', 'error')

@@ -306,13 +306,13 @@ function panelDynoStand() {
     el.className = 'panel';
     el.innerHTML = `
         <h2>STAND DYNO</h2>
-        <p class="subtitle">Testul se face pe loc — nu trebuie să mergi cu mașina.</p>
+        <p class="subtitle">Testul se face pe loc — masina nu se muta.</p>
         <div class="dyno-steps">
-            <p><strong>1.</strong> Apasă START — mașina sare pe standul dyno</p>
+            <p><strong>1.</strong> Apasă START — mașina se blochează pe loc (în garaj)</p>
             <p><strong>2.</strong> Meniul se închide temporar (normal)</p>
             <p><strong>3.</strong> Countdown 3…2…1</p>
-            <p><strong>4.</strong> Ține <strong>W</strong> apăsat 10 secunde (accelerație la maxim)</p>
-            <p><strong>5.</strong> Mașina e blocată pe stand — doar dai gaz, nu conduci</p>
+            <p><strong>4.</strong> Ține <strong>W</strong> apăsat 10 secunde</p>
+            <p><strong>5.</strong> Mașina rămâne pe loc — doar dai gaz</p>
         </div>`;
     const btn = document.createElement('button');
     btn.type = 'button';
