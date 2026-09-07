@@ -5,17 +5,30 @@ exports.sunset_core:RegisterCallback('sunset:getDocuments', function(source, kin
     local player = exports.sunset_core:GetPlayer(source)
     local displayName = exports.sunset_core:GetPlayerDisplayName(source)
 
-    local licenses = MySQL.query.await(
-        'SELECT license_type, issued_at FROM character_licenses WHERE character_id = ?',
-        { char.id }
-    ) or {}
+    local licenses = {}
+    if GetResourceState('sunset_licenses') == 'started' then
+        licenses = exports.sunset_licenses:GetLicenses(source) or {}
+    else
+        local rows = MySQL.query.await(
+            'SELECT license_type, issued_at FROM character_licenses WHERE character_id = ?',
+            { char.id }
+        ) or {}
+        for _, row in ipairs(rows) do
+            licenses[#licenses + 1] = {
+                license_type = row.license_type,
+                label = row.license_type,
+                issued_at = row.issued_at,
+                valid = true,
+            }
+        end
+    end
 
     local invLicenses = {}
     if exports.sunset_inventory:HasItem(source, 'driver_license') then
-        invLicenses[#invLicenses + 1] = { license_type = 'driver', issued_at = 'Inventory item' }
+        invLicenses[#invLicenses + 1] = { license_type = 'driver', label = 'Driver License', issued_at = 'Inventory item', valid = true }
     end
     if exports.sunset_inventory:HasItem(source, 'id_card') then
-        invLicenses[#invLicenses + 1] = { license_type = 'id_card', issued_at = 'Inventory item' }
+        invLicenses[#invLicenses + 1] = { license_type = 'id_card', label = 'ID Card', issued_at = 'Inventory item', valid = true }
     end
 
     local allLicenses = licenses

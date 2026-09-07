@@ -41,6 +41,8 @@ Sunset.HelpAdminDescriptions = {
     setpp = 'Alias for /setsc — set Blaze Points (premium points)',
     setrob = 'Set a player robbery points: /setrob [id] [value]',
     setjobstat = 'Set civilian job progress: /setjobstat [id] [job] [xp|level|tasks|earned] [value]',
+    givelicense = 'Grant a license: /givelicense [id] [driver|pilot|boat|weapon]',
+    revokelicense = 'Revoke a license: /revokelicense [id] [driver|pilot|boat|weapon]',
 }
 
 Sunset.HelpGeneralEntries = {

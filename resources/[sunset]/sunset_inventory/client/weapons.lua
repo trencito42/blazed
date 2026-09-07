@@ -1,6 +1,27 @@
 local UNARMED = `WEAPON_UNARMED`
 local syncedWeapons = {}
 
+local MELEE_WEAPONS = {
+    WEAPON_UNARMED = true,
+    WEAPON_KNIFE = true,
+    WEAPON_SWITCHBLADE = true,
+    WEAPON_BAT = true,
+    WEAPON_CROWBAR = true,
+    WEAPON_FLASHLIGHT = true,
+    WEAPON_NIGHTSTICK = true,
+    WEAPON_HAMMER = true,
+    WEAPON_GOLFCLUB = true,
+    WEAPON_BOTTLE = true,
+    WEAPON_DAGGER = true,
+    WEAPON_HATCHET = true,
+    WEAPON_KNUCKLE = true,
+    WEAPON_MACHETE = true,
+    WEAPON_WRENCH = true,
+    WEAPON_POOLCUE = true,
+    WEAPON_BATTLEAXE = true,
+    WEAPON_STONE_HATCHET = true,
+}
+
 local function isOnDuty()
     if GetResourceState('sunset_factions') ~= 'started' then return false end
     local ok, onDuty = pcall(function()
@@ -9,9 +30,37 @@ local function isOnDuty()
     return ok and onDuty == true
 end
 
+local function inWeaponTest()
+    if GetResourceState('sunset_licenses') ~= 'started' then return false end
+    local ok, active = pcall(function()
+        return exports.sunset_licenses:IsInLicenseTest()
+    end)
+    return ok and active == true
+end
+
+local function hasWeaponLicense()
+    if GetResourceState('sunset_licenses') ~= 'started' then return true end
+    local ok, licensed = pcall(function()
+        return exports.sunset_licenses:HasLicense('weapon')
+    end)
+    return ok and licensed == true
+end
+
+local function isFirearmWeapon(weaponName)
+    if not weaponName or weaponName == '' then return false end
+    weaponName = string.upper(weaponName)
+    if MELEE_WEAPONS[weaponName] then return false end
+    return weaponName:sub(1, 7) == 'WEAPON_'
+end
+
 local function weaponHashForItem(itemName)
     local def = Sunset.Items[itemName]
     return def and def.weapon and joaat(def.weapon) or nil
+end
+
+local function isFirearmItem(itemName)
+    local def = Sunset.Items[itemName]
+    return def and def.weapon and isFirearmWeapon(def.weapon)
 end
 
 local function clearSyncedWeapons(ped)
@@ -29,6 +78,14 @@ local function ensureUnarmed(ped)
     end
 end
 
+local function mayCarryWeapon(itemName)
+    if isOnDuty() or inWeaponTest() then return true end
+    if isFirearmItem(itemName) and not hasWeaponLicense() then
+        return false
+    end
+    return true
+end
+
 function SyncInventoryWeapons(items)
     if isOnDuty() then return end
 
@@ -38,7 +95,7 @@ function SyncInventoryWeapons(items)
 
     for _, row in ipairs(items or {}) do
         local hash = weaponHashForItem(row.item)
-        if hash and hash ~= UNARMED then
+        if hash and hash ~= UNARMED and mayCarryWeapon(row.item) then
             GiveWeaponToPed(ped, hash, 0, false, false)
             syncedWeapons[hash] = true
         end
@@ -73,6 +130,35 @@ RegisterNetEvent('sunset:client:dutyState', function(state)
         SyncInventoryWeapons(data.items)
     else
         ensureUnarmed(PlayerPedId())
+    end
+end)
+
+RegisterNetEvent('sunset:licenses:refresh', function()
+    local data = Sunset.AwaitCallback('sunset:getInventory')
+    if data and data.items then
+        SyncInventoryWeapons(data.items)
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if not isOnDuty() and not inWeaponTest() and not hasWeaponLicense() then
+            local ped = PlayerPedId()
+            for _, def in pairs(Sunset.Items or {}) do
+                if def.weapon and isFirearmWeapon(def.weapon) then
+                    local hash = joaat(def.weapon)
+                    if HasPedGotWeapon(ped, hash, false) then
+                        RemoveWeaponFromPed(ped, hash)
+                    end
+                end
+            end
+            local testHash = joaat('WEAPON_PISTOL')
+            if HasPedGotWeapon(ped, testHash, false) then
+                RemoveWeaponFromPed(ped, testHash)
+            end
+            SetCurrentPedWeapon(ped, UNARMED, true)
+        end
+        Wait(1500)
     end
 end)
 

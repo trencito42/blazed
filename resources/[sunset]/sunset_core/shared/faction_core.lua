@@ -9,6 +9,7 @@ Sunset.FactionTypes = {
     mechanic = 'mechanic',
     criminal_org = 'criminal_org',
     government = 'government',
+    education = 'education',
 }
 
 --- Capability keys referenced by rank perms and faction type defaults.

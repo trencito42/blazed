@@ -92,6 +92,21 @@ function Sunset.BuildServiceGrades(permKey, labels, salaries)
     return grades
 end
 
+function Sunset.BuildEducationGrades()
+    local instruct = { issue_license = true, conduct_test = true, members = true }
+    local lead = { invite = true, giverank = true, fmotd = true, fwarn = true, uninvite = true }
+    return {
+        [0] = { label = 'Trainee Instructor', salary = 280, perms = { members = true } },
+        [1] = { label = 'Instructor', salary = 360, perms = mergePerms(instruct) },
+        [2] = { label = 'Senior Instructor', salary = 440, perms = mergePerms(instruct) },
+        [3] = { label = 'Lead Instructor', salary = 520, perms = mergePerms(instruct) },
+        [4] = { label = 'Supervisor', salary = 600, perms = mergePerms(instruct) },
+        [5] = { label = 'Chief Instructor', salary = 680, perms = mergePerms(instruct, lead) },
+        [6] = { label = 'Deputy Director', salary = 760, perms = mergePerms(instruct, lead) },
+        [7] = { label = 'Director', salary = 840, perms = mergePerms(instruct, lead, { promote = true }) },
+    }
+end
+
 function Sunset.BuildCriminalGrades(permsByRank)
     local lead = { invite = true, giverank = true, fmotd = true, fwarn = true, uninvite = true }
     local grades = {}

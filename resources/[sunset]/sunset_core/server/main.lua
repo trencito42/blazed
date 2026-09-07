@@ -377,10 +377,6 @@ RegisterCallback('sunset:createCharacter', function(source, data)
     if type(meta) ~= 'table' then meta = {} end
     meta.starter_items_granted = true
     MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(meta), charId })
-    MySQL.insert.await('INSERT IGNORE INTO character_licenses (character_id, license_type) VALUES (?, ?)', {
-        charId, 'driver'
-    })
-
     local char = MySQL.single.await('SELECT * FROM characters WHERE id = ?', { charId })
     return Sunset.DecodeCharacter(char)
 end)

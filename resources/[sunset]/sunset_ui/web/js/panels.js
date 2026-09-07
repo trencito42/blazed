@@ -892,7 +892,12 @@ const Panels = {
         }
         if (data.licenses && data.licenses.length) {
             html += '<h3 style="margin-top:12px">Licenses</h3><ul>';
-            data.licenses.forEach((l) => { html += `<li>${l.license_type} — ${l.issued_at || ''}</li>`; });
+            data.licenses.forEach((l) => {
+                const label = l.label || l.license_type;
+                const status = l.valid === false ? 'Expired' : 'Valid';
+                const expiry = l.expires_at_payday ? ` — expires payday #${l.expires_at_payday}` : '';
+                html += `<li>${label} — ${status}${expiry}</li>`;
+            });
             html += '</ul>';
         } else if (data.kind === 'licenses') {
             html += '<p>No licenses on record.</p>';
