@@ -160,3 +160,4 @@ exports('ExecutePlayerCommand', ExecutePlayerCommand)
 
 TriggerEvent('chat:addSuggestion', '/jobcreator', 'Open the civilian Job Creator (admin)')
 TriggerEvent('chat:addSuggestion', '/jcdebug', 'Skip current creator job stage (admin)')
+TriggerEvent('chat:addSuggestion', '/jccancel', 'Cancel Job Creator test/shift')

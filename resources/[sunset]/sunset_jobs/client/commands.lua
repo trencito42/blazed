@@ -128,6 +128,19 @@ end, false)
 RegisterCommand('work', function(_, args)
     local sub = args[1] and string.lower(args[1])
     if sub == 'cancel' or sub == 'stop' then
+        local cancelled = jobcreatorCall(function()
+            if exports.sunset_jobcreator:IsSessionActive() then
+                exports.sunset_jobcreator:CancelWork()
+                return true
+            end
+            return false
+        end)
+        if cancelled then
+            JC.cleanup()
+            JC.hideObjective()
+            JC.workFeedback('Shift cancelled', 'info')
+            return
+        end
         local charJob = JC.getCharacterJob()
         if charJob and jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(charJob) end) then
             jobcreatorCall(function() exports.sunset_jobcreator:CancelWork() end)

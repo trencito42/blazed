@@ -424,9 +424,22 @@ function JCRuntime_StartWork(testJobId)
 end
 
 function JCRuntime_Cancel()
+    if not active then return false end
     Sunset.AwaitCallback('sunset:jobcreator:cancel')
     endShift('Shift cancelled', false)
+    return true
 end
+
+function JCRuntime_IsActive()
+    return active == true
+end
+
+RegisterCommand('jccancel', function()
+    if JCRuntime_Cancel() then return end
+    exports.sunset_ui:Notify('Nu ai un test/shift Job Creator activ.', 'info', 4000)
+end, false)
+
+TriggerEvent('chat:addSuggestion', '/jccancel', 'Oprește testul sau shift-ul Job Creator')
 
 CreateThread(function()
     while true do

@@ -76,4 +76,5 @@ exports {
     'RegisterStageType',
     'StartWork',
     'CancelWork',
+    'IsSessionActive',
 }

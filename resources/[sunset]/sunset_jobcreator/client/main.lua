@@ -18,7 +18,11 @@ exports('StartWork', function(testJobId)
 end)
 
 exports('CancelWork', function()
-    JCRuntime_Cancel()
+    return JCRuntime_Cancel()
+end)
+
+exports('IsSessionActive', function()
+    return JCRuntime_IsActive()
 end)
 
 CreateThread(function()

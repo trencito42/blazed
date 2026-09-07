@@ -149,15 +149,10 @@ const Chat = {
             }
         }
         const spyTag = m.spy
-            ? `<span class="chat-spy-tag">SPY ${esc(String(m.spyChannel || 'CHAT'))}</span>`
+            ? `<span class="chat-spy-tag">SPY ${esc(String(m.spyChannel || 'CHAT'))}</span> `
             : '';
         const header = [spyTag, faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
-        return [
-            '<div class="chat-radio-card">',
-            `<div class="chat-radio-card__head">${timeHtml}<span class="chat-pill chat-pill--radio">${channel}</span> <span class="chat-radio-card__who">${header}</span></div>`,
-            `<div class="chat-radio-card__body">${esc(text)}</div>`,
-            '</div>',
-        ].join('');
+        return `${timeHtml}<span class="chat-pill chat-pill--radio">${channel}</span> <span class="chat-row__who">${header}</span>: <span class="chat-row__msg">${esc(text)}</span>`;
     },
 
     formatSystemCardHtml(m, type) {
@@ -167,12 +162,7 @@ const Chat = {
         const tag = String(m.name || 'SYSTEM').trim();
         const label = type === 'command_error' ? 'ERROR' : (type === 'command_warn' ? 'WARN' : 'SYSTEM');
         const pillClass = type === 'command_error' ? 'chat-pill--error' : (type === 'command_warn' ? 'chat-pill--warn' : 'chat-pill--system');
-        return [
-            '<div class="chat-system-card">',
-            `<div class="chat-system-card__head">${timeHtml}<span class="chat-pill ${pillClass}">${label}</span> <span class="chat-system-card__tag">${esc(tag)}</span></div>`,
-            `<div class="chat-system-card__body">${esc(String(m.message ?? ''))}</div>`,
-            '</div>',
-        ].join('');
+        return `${timeHtml}<span class="chat-pill ${pillClass}">${label}</span> <span class="chat-row__tag">${esc(tag)}</span>: <span class="chat-row__msg">${esc(String(m.message ?? ''))}</span>`;
     },
 
     formatGovCardHtml(m) {
@@ -183,21 +173,8 @@ const Chat = {
         const issuer = [issuerRank ? esc(String(issuerRank)) : '', issuerNameHtml].filter(Boolean).join(' ');
         const time = this.formatTime(m);
         const timeHtml = time ? `<span class="chat-meta-time">${esc(time)}</span>` : '';
-        const issuerHtml = issuer ? `<span class="chat-gov-card__issuer">${issuer}</span>` : '';
-        const icon = [
-            '<svg class="chat-gov-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">',
-            '<path d="M12 3l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/>',
-            '<path d="M9 12l2 2 4-4"/>',
-            '</svg>',
-        ].join('');
-        return [
-            '<div class="chat-gov-card">',
-            icon,
-            '<div class="chat-gov-card__content">',
-            `<div class="chat-gov-card__head">${timeHtml}<span class="chat-pill chat-pill--gov">GOV</span> <span class="chat-gov-dept">${esc(dept)}</span>${issuerHtml}</div>`,
-            `<div class="chat-gov-body">${esc(String(m.message ?? ''))}</div>`,
-            '</div></div>',
-        ].join('');
+        const issuerHtml = issuer ? ` <span class="chat-row__who">${issuer}</span>` : '';
+        return `${timeHtml}<span class="chat-pill chat-pill--gov">GOV</span> <span class="chat-gov-dept">${esc(dept)}</span>${issuerHtml}: <span class="chat-row__msg">${esc(String(m.message ?? ''))}</span>`;
     },
 
     formatClanCardHtml(m, action = false) {
@@ -214,12 +191,7 @@ const Chat = {
         if (rankTitle) rankBits.push(`<span class="chat-clan-rank-label">${esc(rankTitle)}</span>`);
         const who = [...rankBits, `<span class="chat-clan-channel__name">${nameHtml}</span>`].filter(Boolean).join(' ');
         const pill = action ? 'ACTION' : 'CLAN';
-        return [
-            `<div class="chat-clan-card${action ? ' chat-clan-card--action' : ''}">`,
-            `<div class="chat-clan-card__head">${timeHtml}<span class="chat-pill chat-pill--clan" style="border-color:${tagColor};color:${tagColor}">${pill}</span> <span class="chat-clan-card__who">${who}</span></div>`,
-            `<div class="chat-clan-card__body">${msg}</div>`,
-            '</div>',
-        ].join('');
+        return `${timeHtml}<span class="chat-pill chat-pill--clan" style="border-color:${tagColor};color:${tagColor}">${pill}</span> <span class="chat-row__who">${who}</span>: <span class="chat-row__msg">${msg}</span>`;
     },
 
     formatRadioHeaderHtml(m, text) {
