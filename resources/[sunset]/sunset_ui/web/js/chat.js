@@ -72,13 +72,12 @@ const Chat = {
             ? SunsetPlayerIdentity.stripServerId(parts.name)
             : String(parts.name || 'Player').trim().replace(/\s*\(\d+\)\s*$/, '');
         const sid = Number(m.id) || 0;
-        if (options.showId !== false && sid > 0) {
-            name = `${name} (${sid})`;
-        }
+        const idPart = options.showId !== false && sid > 0 ? ` (${sid})` : '';
         return [
             parts.prefix ? `<span class="chat-clan-tag" style="color:${esc(parts.color)}">${esc(parts.prefix)}</span>` : '',
             esc(name),
             parts.suffix ? `<span class="chat-clan-tag" style="color:${esc(parts.color)}">${esc(parts.suffix)}</span>` : '',
+            esc(idPart),
         ].join('');
     },
 

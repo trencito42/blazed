@@ -24,7 +24,7 @@
 
 .clan-dashboard.org-shell {
     display: grid;
-    max-height: 58vh;
+    max-height: min(72vh, 760px);
 }
 
 .clan-dashboard:not(.org-shell),

@@ -51,15 +51,18 @@ const SunsetPlayerIdentity = {
         const showId = options.showId !== false;
         const idPart = showId && id > 0 ? ` (${id})` : '';
         const factionColor = row.factionColor || this.factionColor(row.factionId);
-        const nameHtml = `<span class="player-identity__name" style="color:${esc(factionColor)}">${esc(name)}</span>${esc(idPart)}`;
+        const nameHtml = `<span class="player-identity__name" style="color:${esc(factionColor)}">${esc(name)}</span>`;
 
-        if (!row.clanTag) return nameHtml;
+        if (!row.clanTag) {
+            return `${nameHtml}${esc(idPart)}`;
+        }
 
         const parts = this.splitClanParts(row);
         return [
             parts.prefix ? `<span class="player-identity__clan" style="color:${esc(parts.color)}">${esc(parts.prefix)}</span>` : '',
             nameHtml,
             parts.suffix ? `<span class="player-identity__clan" style="color:${esc(parts.color)}">${esc(parts.suffix)}</span>` : '',
+            esc(idPart),
         ].join('');
     },
 

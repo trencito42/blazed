@@ -64,7 +64,31 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
     padding-right: 6px;
+    scrollbar-gutter: stable;
+}
+
+.org-main .clan-tab-panel[data-clan-panel="manage"] {
+    overflow-y: scroll;
+    padding-bottom: 16px;
+}
+
+.org-manage-sections .clan-manage-form[data-clan-action="settings"] textarea[name="description"] {
+    min-height: 52px;
+}
+
+.org-manage-sections .clan-manage-form[data-clan-action="settings"] .clan-preview {
+    margin-bottom: 2px;
+}
+
+.org-manage-sections .clan-manage-form button[type="submit"] {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: rgba(32, 18, 6, 0.96);
 }
 
 .org-hint {
