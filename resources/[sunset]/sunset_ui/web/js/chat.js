@@ -135,6 +135,93 @@ const Chat = {
         return false;
     },
 
+    formatRadioCardHtml(m, type) {
+        const esc = (v) => this.escapeHtml(v);
+        const time = this.formatTime(m);
+        const timeHtml = time ? `<span class="chat-meta-time">${esc(time)}</span>` : '';
+        const channel = type === 'r' ? 'RADIO' : (type === 'd' ? 'DEPT' : 'FACTION');
+        const faction = String(m.factionLabel || '').trim();
+        const rank = String(m.rank || '').trim();
+        let text = String(m.message ?? '');
+        if (type === 'r' || type === 'd') {
+            if (text && !/over\.?$/i.test(text.trim())) {
+                text = `${text.replace(/[.,\s]+$/, '')}, over.`;
+            }
+        }
+        const spyTag = m.spy
+            ? `<span class="chat-spy-tag">SPY ${esc(String(m.spyChannel || 'CHAT'))}</span>`
+            : '';
+        const header = [spyTag, faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+        return [
+            '<div class="chat-radio-card">',
+            `<div class="chat-radio-card__head">${timeHtml}<span class="chat-pill chat-pill--radio">${channel}</span> <span class="chat-radio-card__who">${header}</span></div>`,
+            `<div class="chat-radio-card__body">${esc(text)}</div>`,
+            '</div>',
+        ].join('');
+    },
+
+    formatSystemCardHtml(m, type) {
+        const esc = (v) => this.escapeHtml(v);
+        const time = this.formatTime(m);
+        const timeHtml = time ? `<span class="chat-meta-time">${esc(time)}</span>` : '';
+        const tag = String(m.name || 'SYSTEM').trim();
+        const label = type === 'command_error' ? 'ERROR' : (type === 'command_warn' ? 'WARN' : 'SYSTEM');
+        const pillClass = type === 'command_error' ? 'chat-pill--error' : (type === 'command_warn' ? 'chat-pill--warn' : 'chat-pill--system');
+        return [
+            '<div class="chat-system-card">',
+            `<div class="chat-system-card__head">${timeHtml}<span class="chat-pill ${pillClass}">${label}</span> <span class="chat-system-card__tag">${esc(tag)}</span></div>`,
+            `<div class="chat-system-card__body">${esc(String(m.message ?? ''))}</div>`,
+            '</div>',
+        ].join('');
+    },
+
+    formatGovCardHtml(m) {
+        const esc = (v) => this.escapeHtml(v);
+        const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
+        const issuerRank = m.issuerRank || m.rank;
+        const issuerNameHtml = this.formatPlayerNameHtml(m, m.issuerName || m.name);
+        const issuer = [issuerRank ? esc(String(issuerRank)) : '', issuerNameHtml].filter(Boolean).join(' ');
+        const time = this.formatTime(m);
+        const timeHtml = time ? `<span class="chat-meta-time">${esc(time)}</span>` : '';
+        const issuerHtml = issuer ? `<span class="chat-gov-card__issuer">${issuer}</span>` : '';
+        const icon = [
+            '<svg class="chat-gov-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">',
+            '<path d="M12 3l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/>',
+            '<path d="M9 12l2 2 4-4"/>',
+            '</svg>',
+        ].join('');
+        return [
+            '<div class="chat-gov-card">',
+            icon,
+            '<div class="chat-gov-card__content">',
+            `<div class="chat-gov-card__head">${timeHtml}<span class="chat-pill chat-pill--gov">GOV</span> <span class="chat-gov-dept">${esc(dept)}</span>${issuerHtml}</div>`,
+            `<div class="chat-gov-body">${esc(String(m.message ?? ''))}</div>`,
+            '</div></div>',
+        ].join('');
+    },
+
+    formatClanCardHtml(m, action = false) {
+        const esc = (v) => this.escapeHtml(v);
+        const time = this.formatTime(m);
+        const timeHtml = time ? `<span class="chat-meta-time">${esc(time)}</span>` : '';
+        const rankNum = m.clanRank ? `R${m.clanRank}` : '';
+        const rankTitle = String(m.clanRankLabel || '').trim();
+        const msg = esc(String(m.message ?? ''));
+        const tagColor = esc(String(m.clanTagColor || '#FF8C00'));
+        const nameHtml = this.formatClanNameHtml(m);
+        const rankBits = [];
+        if (rankNum) rankBits.push(`<span class="chat-clan-rank">${esc(rankNum)}</span>`);
+        if (rankTitle) rankBits.push(`<span class="chat-clan-rank-label">${esc(rankTitle)}</span>`);
+        const who = [...rankBits, `<span class="chat-clan-channel__name">${nameHtml}</span>`].filter(Boolean).join(' ');
+        const pill = action ? 'ACTION' : 'CLAN';
+        return [
+            `<div class="chat-clan-card${action ? ' chat-clan-card--action' : ''}">`,
+            `<div class="chat-clan-card__head">${timeHtml}<span class="chat-pill chat-pill--clan" style="border-color:${tagColor};color:${tagColor}">${pill}</span> <span class="chat-clan-card__who">${who}</span></div>`,
+            `<div class="chat-clan-card__body">${msg}</div>`,
+            '</div>',
+        ].join('');
+    },
+
     formatRadioHeaderHtml(m, text) {
         const faction = String(m.factionLabel || '').trim();
         const rank = String(m.rank || '').trim();
@@ -348,18 +435,17 @@ const Chat = {
         const line = document.createElement('span');
         line.className = 'chat-msg__line';
         if (type === 'gov') {
-            const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
-            const issuerRank = m.issuerRank || m.rank;
-            const issuerNameHtml = this.formatPlayerNameHtml(m, m.issuerName || m.name);
-            const issuer = [issuerRank ? this.escapeHtml(String(issuerRank)) : '', issuerNameHtml].filter(Boolean).join(' ');
-            const time = this.formatTime(m);
-            const timeHtml = time ? `<span class="chat-gov-time">${this.escapeHtml(time)}</span> ` : '';
-            const issuerHtml = issuer ? ` <span class="chat-gov-issuer">— ${issuer}</span>` : '';
-            line.innerHTML = [
-                `<span class="chat-gov-head">${timeHtml}<span class="chat-gov-label">GOV</span> <span class="chat-gov-dept">${this.escapeHtml(dept)}</span>${issuerHtml}</span>`,
-                `<span class="chat-gov-body">${this.escapeHtml(String(m.message ?? ''))}</span>`,
-            ].join('<br>');
+            line.innerHTML = this.formatGovCardHtml(m);
             el.classList.add('chat-msg--gov-banner');
+        } else if (type === 'r' || type === 'd' || type === 'f') {
+            line.innerHTML = this.formatRadioCardHtml(m, type);
+            el.classList.add('chat-msg--radio-card');
+        } else if (type === 'command_error' || type === 'command_warn' || type === 'command_info') {
+            line.innerHTML = this.formatSystemCardHtml(m, type);
+            el.classList.add('chat-msg--system-card');
+        } else if (type === 'c' || type === 'clan_action') {
+            line.innerHTML = this.formatClanCardHtml(m, type === 'clan_action');
+            el.classList.add('chat-msg--clan-card');
         } else if (type === 'blaze_pass') {
             line.innerHTML = this.formatPassEventHtml(m);
             el.classList.add('chat-msg--blaze-pass');
