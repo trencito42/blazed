@@ -183,29 +183,36 @@ const Hud = {
     syncHintState(data = {}) {
         const lights = ['LIGHTS OFF', 'LIGHTS LOW', 'LIGHTS HIGH'];
         const mode = Math.max(0, Math.min(2, Number(data.lightMode) || 0));
+        const supportsSeatbelt = data.supportsSeatbelt !== false;
+        const supportsDoorLock = data.supportsDoorLock !== false;
+        const noEngine = Number(data.vehicleClass) === 13;
         this.hintState.engine = {
             label: data.engineOn ? 'ENGINE ON' : 'ENGINE OFF',
             key: '2',
             ok: !!data.engineOn,
             tone: data.engineOn ? 'on' : 'off',
+            hidden: noEngine,
         };
         this.hintState.lock = {
             label: data.locked ? 'LOCKED' : 'UNLOCKED',
             key: 'N',
             ok: !data.locked,
             tone: data.locked ? 'off' : 'on',
+            hidden: !supportsDoorLock,
         };
         this.hintState.seatbelt = {
             label: data.seatbelt ? 'SEATBELT ON' : 'SEATBELT OFF',
             key: 'K',
             ok: !!data.seatbelt,
             tone: data.seatbelt ? 'on' : 'off',
+            hidden: !supportsSeatbelt,
         };
         this.hintState.lights = {
             label: lights[mode],
             key: 'H',
             ok: mode > 0,
             tone: mode === 2 ? 'high' : (mode === 1 ? 'low' : 'off'),
+            hidden: noEngine,
         };
         this.renderHintRows();
     },
@@ -214,6 +221,8 @@ const Hud = {
         Object.entries(this.hintState).forEach(([id, row]) => {
             const el = document.querySelector(`[data-hint="${id}"]`);
             if (!el) return;
+            el.classList.toggle('hidden', row.hidden === true);
+            if (row.hidden) return;
             const label = el.querySelector('.veh-hints__label');
             const key = el.querySelector('.veh-hints__key');
             if (label) label.textContent = row.label;

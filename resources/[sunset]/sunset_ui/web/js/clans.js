@@ -245,17 +245,17 @@ const ClanPanels = {
         const form = document.querySelector('[data-clan-action="settings"]');
         const preview = $('#clan-settings-preview');
         if (!form || !preview || !this.dashboard) return;
-        const tag = this.dashboard.tag || 'uS';
+        const tag = form.querySelector('[name="tag"]')?.value || this.dashboard.tag || 'uS';
         const style = form.querySelector('[name="tagStyle"]')?.value || this.dashboard.tagStyle || 'brackets';
         const color = form.querySelector('[name="tagColor"]')?.value || this.dashboard.tagColor || '#FF8C00';
-        const base = (this.dashboard.previewName || 'YourName').replace(/\[.*?\]|\.|\w+$/g, '') || 'YourName';
         this.paintPreview(preview, tag, 'YourName', style, color);
     },
 
     fillStyleSelect(select, styles, selected) {
         if (!select) return;
         select.innerHTML = '';
-        (styles || []).forEach((row) => {
+        const rows = (styles && styles.length) ? styles : [{ id: 'brackets', label: '[tag]name' }];
+        rows.forEach((row) => {
             const option = document.createElement('option');
             option.value = row.id;
             option.textContent = row.label || row.id;
@@ -526,6 +526,8 @@ const ClanPanels = {
 
             const settingsForm = document.querySelector('[data-clan-action="settings"]');
             if (settingsForm) {
+                const tagInput = settingsForm.querySelector('[name="tag"]');
+                if (tagInput) tagInput.value = this.dashboard.tag || '';
                 const descInput = settingsForm.querySelector('[name="description"]');
                 if (descInput) descInput.value = this.dashboard.description || '';
                 const colorInput = settingsForm.querySelector('[name="tagColor"]');

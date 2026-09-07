@@ -6,6 +6,12 @@ SunsetLicenses.InstructorAuthorizationSeconds = 300
 SunsetLicenses.InstructorMaxDistance = 12.0
 SunsetLicenses.CandidateFailMistakes = 3.0
 
+-- Exam fee scales from Sunset.Config.StartingCash (default $500 → $50 at 10%).
+SunsetLicenses.ExamFeePercentOfStartingCash = 0.10
+SunsetLicenses.ExamFeeMin = 40
+SunsetLicenses.ExamFeeMax = 100
+SunsetLicenses.TheoryTimeSec = 600
+
 -- LSSI promotions use completed management reviews, not raw test count. This keeps
 -- senior ranks tied to teaching quality and can be tuned without changing code.
 SunsetLicenses.InstructorPromotionRequirements = {
@@ -23,7 +29,7 @@ SunsetLicenses.Types = {
         short = 'Driver',
         facility = 'driving_school',
         instructorFaction = false,
-        vehicleClasses = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18, 19, 20 },
+        vehicleClasses = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20 },
     },
     pilot = {
         label = 'Pilot License',

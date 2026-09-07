@@ -212,6 +212,12 @@ local function startRefuel(station)
     local veh = getDriverVehicle()
     if veh == 0 then return end
 
+    local class = GetVehicleClass(veh)
+    if class == 13 or (Sunset.GetVehicleTankCapacityLiters(class) or 0) <= 0 then
+        notify('This vehicle does not use fuel', 'info')
+        return
+    end
+
     local current = getFuelLevel()
     if current >= 99.9 then
         notify('Tank is already full', 'info')

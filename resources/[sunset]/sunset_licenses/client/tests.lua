@@ -485,6 +485,7 @@ local function runDriverRoute(cfg, vehicle)
     local hudState = 'driver'
     local checkpoints = cfg.checkpoints or {}
     local checkpointNotify = {}
+    local practicalEndsAt = GetGameTimer() + ((cfg.maxTimeSec or 1200) * 1000)
 
     addCheckpointBlips(checkpoints, 47)
 
@@ -523,6 +524,7 @@ local function runDriverRoute(cfg, vehicle)
                 cpIndex, speed or 0, penalties.count, penalties.countdownEnd or 0, hudState or '', hudMessage or '')
             if hudKey == lastHudKey then goto continue end
             lastHudKey = hudKey
+            local timeLeftSec = math.max(0, math.floor((practicalEndsAt - GetGameTimer()) / 1000))
             UpdateLicenseTestHud({
                 licenseType = 'driver',
                 state = hudState,
@@ -533,6 +535,7 @@ local function runDriverRoute(cfg, vehicle)
                 maxPenalties = penalties.max,
                 speed = speed,
                 speedLimit = limit,
+                timeLeftSec = timeLeftSec,
                 message = hudMessage,
                 progress = progress,
             })

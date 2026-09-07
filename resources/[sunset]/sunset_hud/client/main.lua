@@ -139,6 +139,9 @@ local function buildHudData()
         data.seatbelt = vehState.seatbelt
         data.lightMode = vehState.lightMode or 0
         data.engineOn = vehState.engineOn
+        data.vehicleClass = vehState.vehicleClass
+        data.supportsSeatbelt = vehState.supportsSeatbelt
+        data.supportsDoorLock = vehState.supportsDoorLock
     end
 
     return data

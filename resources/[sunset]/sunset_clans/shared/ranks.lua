@@ -12,6 +12,15 @@ SunsetClans.DefaultRankLabels = {
 }
 
 function SunsetClans.normalizeRank(rank)
+    if type(rank) == 'string' then
+        local legacy = {
+            leader = 7,
+            officer = 5,
+            member = 1,
+        }
+        local mapped = legacy[rank:lower()]
+        if mapped then return mapped end
+    end
     rank = math.floor(tonumber(rank) or 1)
     if rank < 1 then return 1 end
     if rank > SunsetClans.MaxRank then return SunsetClans.MaxRank end

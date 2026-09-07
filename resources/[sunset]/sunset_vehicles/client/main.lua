@@ -1,4 +1,24 @@
-local seatbelt = false
+local NO_SEATBELT_CLASSES = { [8] = true, [13] = true, [14] = true, [15] = true, [16] = true }
+local NO_DOOR_LOCK_CLASSES = { [13] = true }
+local NO_ENGINE_CLASSES = { [13] = true }
+
+local function vehicleClassOf(veh)
+    if not veh or veh == 0 then return -1 end
+    return GetVehicleClass(veh)
+end
+
+local function supportsSeatbelt(veh)
+    return not NO_SEATBELT_CLASSES[vehicleClassOf(veh)]
+end
+
+local function supportsDoorLock(veh)
+    return not NO_DOOR_LOCK_CLASSES[vehicleClassOf(veh)]
+end
+
+local function supportsEngineControl(veh)
+    return not NO_ENGINE_CLASSES[vehicleClassOf(veh)]
+end
+
 local locked = false
 local lightMode = 0 -- 0 off, 1 low, 2 high
 local currentVeh = 0
@@ -169,10 +189,14 @@ RegisterCommand('sunset_lock', function()
         veh = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 0)
     end
     if veh == 0 then return notify('No vehicle nearby', 'error') end
+    if not supportsDoorLock(veh) then
+        return notify('This vehicle cannot be locked', 'error')
+    end
     CreateThread(function()
         if not hasKeysFor(veh) then
             return notify('You do not have keys for this vehicle', 'error')
         end
+        syncLockState(veh)
         locked = not locked
         SetVehicleDoorsLocked(veh, locked and 2 or 1)
         SetVehicleDoorsLockedForPlayer(veh, PlayerId(), false)
@@ -184,7 +208,12 @@ RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'N')
 -- ═══ SEATBELT (K) ═══
 RegisterCommand('sunset_seatbelt', function()
     if blocked() then return end
-    if not IsPedInAnyVehicle(PlayerPedId(), false) then return end
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then return end
+    local veh = GetVehiclePedIsIn(ped, false)
+    if not supportsSeatbelt(veh) then
+        return notify('This vehicle has no seatbelt', 'error')
+    end
     seatbelt = not seatbelt
     showVehicleHint('seatbelt')
 end, false)
@@ -196,6 +225,9 @@ RegisterCommand('sunset_engine', function()
     if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end
+    if not supportsEngineControl(veh) then
+        return notify('This vehicle has no engine to toggle', 'error')
+    end
     local on = engineEnabled[veh] ~= true
     engineEnabled[veh] = on
     SetVehicleEngineOn(veh, on, true, true)
@@ -217,6 +249,9 @@ RegisterCommand('sunset_lights', function()
     if not driverOnly() then return end
     local veh = getVeh()
     if veh == 0 then return end
+    if vehicleClassOf(veh) == 13 then
+        return notify('This vehicle has no headlights', 'error')
+    end
 
     lightMode = (lightMode + 1) % 3
 
@@ -234,7 +269,12 @@ RegisterCommand('sunset_lights', function()
 end, false)
 RegisterKeyMapping('sunset_lights', 'Vehicle lights', 'keyboard', 'H')
 
-local function applySeatbeltPhysics(ped)
+local function applySeatbeltPhysics(ped, veh)
+    if not supportsSeatbelt(veh) then
+        SetPedConfigFlag(ped, 32, true)
+        SetFlyThroughWindscreenParams(EJECT_PARAMS[1], EJECT_PARAMS[2], EJECT_PARAMS[3], EJECT_PARAMS[4])
+        return
+    end
     if seatbelt then
         SetPedConfigFlag(ped, 32, false)
         SetFlyThroughWindscreenParams(NO_EJECT_PARAMS[1], NO_EJECT_PARAMS[2], NO_EJECT_PARAMS[3], NO_EJECT_PARAMS[4])
@@ -267,7 +307,8 @@ CreateThread(function()
             end
 
             syncLockState(veh)
-            applySeatbeltPhysics(ped)
+            if not supportsSeatbelt(veh) then seatbelt = false end
+            applySeatbeltPhysics(ped, veh)
 
             local speed = GetEntitySpeed(veh)
             local body = GetVehicleBodyHealth(veh)
@@ -294,6 +335,7 @@ CreateThread(function()
             Wait(0)
         else
             seatbelt = false
+            locked = false
             lightMode = 0
             lastBodyHealth = 1000.0
             lastVehSpeed = 0.0
@@ -451,7 +493,7 @@ function GetVehicleState()
         if rpm > 1.0 then rpm = 1.0 end
     end
     local class = GetVehicleClass(veh)
-    local fuelExempt = class == 14 or class == 15 or class == 16
+    local fuelExempt = class == 13 or class == 14 or class == 15 or class == 16
 
     return {
         inVehicle = true,
@@ -468,6 +510,8 @@ function GetVehicleState()
         odometer = spawnedOwnedVehicle == veh and (math.floor(odometerKm * 10) / 10) or nil,
         showOdometer = spawnedOwnedVehicle == veh,
         vehicleClass = class,
+        supportsSeatbelt = supportsSeatbelt(veh),
+        supportsDoorLock = supportsDoorLock(veh),
     }
 end
 
@@ -769,11 +813,12 @@ CreateThread(function()
         local ped = PlayerPedId()
         local trying = GetVehiclePedIsTryingToEnter(ped)
         if trying ~= 0 then
+            local class = GetVehicleClass(trying)
             local lockedState = GetVehicleDoorLockStatus(trying)
             local mine = spawnedOwnedVehicle == trying
             if mine then
                 SetVehicleDoorsLockedForPlayer(trying, PlayerId(), false)
-            elseif lockedState > 1 then
+            elseif class ~= 13 and lockedState > 1 then
                 local keys = Sunset.AwaitCallback('sunset:hasVehicleKeys', plateOf(trying))
                 if keys then
                     SetVehicleDoorsLockedForPlayer(trying, PlayerId(), false)

@@ -213,6 +213,33 @@ function GetLicenses(source)
 end
 exports('GetLicenses', GetLicenses)
 
+local function resolveExamFee(licenseType)
+    local def = SunsetLicenses.Types[licenseType]
+    if def and tonumber(def.examFee) then
+        return math.floor(tonumber(def.examFee))
+    end
+    local starting = tonumber(Sunset.Config and Sunset.Config.StartingCash) or 500
+    local pct = tonumber(def and def.examFeePercent)
+        or tonumber(SunsetLicenses.ExamFeePercentOfStartingCash)
+        or 0.10
+    local fee = math.floor(starting * pct)
+    local minFee = tonumber(SunsetLicenses.ExamFeeMin) or 40
+    local maxFee = tonumber(SunsetLicenses.ExamFeeMax) or 100
+    return math.max(minFee, math.min(maxFee, fee))
+end
+
+local function chargeExamFee(source, licenseType)
+    local fee = resolveExamFee(licenseType)
+    if fee <= 0 then return true, 0 end
+    if exports.sunset_core:RemoveMoney(source, 'cash', fee, 'license_exam') then
+        return true, fee
+    end
+    if exports.sunset_core:RemoveMoney(source, 'bank', fee, 'license_exam') then
+        return true, fee
+    end
+    return false, fee
+end
+
 local function canStartTest(source, licenseType)
     licenseType = tostring(licenseType or '')
     local def = SunsetLicenses.Types[licenseType]
@@ -266,18 +293,41 @@ exports.sunset_core:RegisterCallback('sunset:license:getStatus', function(source
     }
 end)
 
+exports.sunset_core:RegisterCallback('sunset:license:getExamOffer', function(source, licenseType)
+    licenseType = tostring(licenseType or '')
+    local def = SunsetLicenses.Types[licenseType]
+    if not def then return nil, 'Invalid license type.' end
+    local fee = resolveExamFee(licenseType)
+    return {
+        licenseType = licenseType,
+        label = def.label,
+        fee = fee,
+        startingCash = tonumber(Sunset.Config and Sunset.Config.StartingCash) or 500,
+        theoryTimeSec = tonumber(SunsetLicenses.TheoryTimeSec) or 600,
+    }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(source, licenseType)
     licenseType = tostring(licenseType or '')
     local ok, err = canStartTest(source, licenseType)
     if not ok then return nil, err end
     local theory = SunsetLicenses.Theory[licenseType]
     if not theory then return nil, 'No theory exam configured for this license.' end
+    local fee = resolveExamFee(licenseType)
+    local paid, charged = chargeExamFee(source, licenseType)
+    if not paid then
+        return nil, ('Exam fee is $%d. You need enough cash or bank balance.'):format(fee)
+    end
     local def = SunsetLicenses.Types[licenseType]
     local authorization = AuthorizedTests[source]
+    local theoryTimeSec = tonumber(SunsetLicenses.TheoryTimeSec) or 600
     TestSessions[source] = {
         licenseType = licenseType,
         phase = 'theory',
         startedAt = os.time(),
+        theoryDeadline = os.time() + theoryTimeSec,
+        theoryAnswers = {},
+        examFee = charged,
         instructor = authorization and authorization.instructor or nil,
         issuerCharacterId = authorization and authorization.issuerCharacterId or nil,
     }
@@ -291,7 +341,36 @@ exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(sour
         end
     end
     AuthorizedTests[source] = nil
-    return sanitizedTheory(theory)
+    local payload = sanitizedTheory(theory)
+    payload.examFee = charged
+    payload.theoryTimeSec = theoryTimeSec
+    payload.deadlineAt = TestSessions[source].theoryDeadline
+    return payload
+end)
+
+exports.sunset_core:RegisterCallback('sunset:license:gradeTheoryAnswer', function(source, licenseType, questionIndex, answer)
+    licenseType = tostring(licenseType or '')
+    questionIndex = tonumber(questionIndex)
+    answer = tonumber(answer)
+    local session = TestSessions[source]
+    if not session or session.licenseType ~= licenseType or session.phase ~= 'theory' then
+        return nil, 'No active theory exam.'
+    end
+    if session.theoryDeadline and os.time() > session.theoryDeadline then
+        return nil, 'Theory time expired.'
+    end
+    if not questionIndex or not answer then return nil, 'Invalid answer.' end
+    local theory = SunsetLicenses.Theory[licenseType]
+    if not theory or not theory.questions[questionIndex] then return nil, 'Invalid question.' end
+    session.theoryAnswers = session.theoryAnswers or {}
+    if session.theoryAnswers[questionIndex] ~= nil then
+        return nil, 'You already answered this question.'
+    end
+    local answerKey = SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType]
+    if not answerKey then return nil, 'The server answer key is not configured for this exam.' end
+    local correct = tonumber(answerKey[questionIndex]) == answer
+    session.theoryAnswers[questionIndex] = answer
+    return { correct = correct, questionIndex = questionIndex }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(source, licenseType, answers)
@@ -300,9 +379,15 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     if not session or session.licenseType ~= licenseType or session.phase ~= 'theory' then
         return nil, 'No active theory exam. Start again at the school marker.'
     end
+    if session.theoryDeadline and os.time() > session.theoryDeadline then
+        if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'failed') end
+        TestSessions[source] = nil
+        return nil, 'Theory time expired — exam failed.'
+    end
     local theory = SunsetLicenses.Theory[licenseType]
     if not theory then return nil, 'Invalid exam.' end
-    answers = type(answers) == 'table' and answers or {}
+    answers = type(answers) == 'table' and answers or session.theoryAnswers or {}
+    session.theoryAnswers = answers
     local answerKey = SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType]
     if not answerKey then return nil, 'The server answer key is not configured for this exam.' end
     local score = 0
@@ -329,10 +414,14 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     local practical = SunsetLicenses.Practical[licenseType]
     local facilityKey = SunsetLicenses.Types[licenseType].facility
     local facility = facilityKey and SunsetLicenses.Facilities[facilityKey]
+    local practicalTimeSec = practical and tonumber(practical.maxTimeSec) or 1200
     return {
         practical = practical,
         facility = facility,
         licenseType = licenseType,
+        examFee = session.examFee or 0,
+        practicalTimeSec = practicalTimeSec,
+        practicalDeadlineAt = session.practicalStartedAt + practicalTimeSec,
     }
 end)
 

@@ -102,6 +102,17 @@ forward('appearanceRotate')
 forward('appearanceGender')
 forward('licenseQuizClose')
 forward('licenseQuizSubmit')
+forward('licenseQuizAnswer')
+
+RegisterNUICallback('licenseQuizAnswer', function(data, cb)
+    exports.sunset_core:TriggerCallback('sunset:license:gradeTheoryAnswer', function(result, err)
+        if err then
+            cb({ ok = false, error = err })
+            return
+        end
+        cb({ ok = true, correct = result and result.correct == true })
+    end, data and data.licenseType, data and data.questionIndex, data and data.answer)
+end)
 
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)

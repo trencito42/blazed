@@ -116,7 +116,7 @@ end
 function Sunset.GetVehicleTankCapacityLiters(vehicleClass)
     local caps = Sunset.VehicleProfiles.classTankCapacityLiters or {}
     local cap = caps[vehicleClass]
-    if cap and cap > 0 then return cap end
+    if cap ~= nil then return cap end
     return caps[1] or 60
 end
 

@@ -58,8 +58,14 @@ local function startAtFacility(facility)
     if not theory then
         return notify(err or 'Could not start theory exam.', 'error')
     end
+    activeTest = { licenseType = licenseType, phase = 'theory' }
+    if theory.examFee and theory.examFee > 0 then
+        notify(('Exam fee paid: $%d'):format(theory.examFee), 'info', 5000)
+    end
     OpenTheoryQuiz(licenseType, theory)
 end
+
+local examOfferCache = {}
 
 CreateThread(function()
     Wait(2000)
@@ -77,8 +83,21 @@ CreateThread(function()
                         drawMarker(facility.marker, 50, 200, 80)
                     end
                     if dist < (facility.markerRadius or 2.5) and not activeTest then
+                        local licenseType = facility.license
+                        local now = GetGameTimer()
+                        local cached = examOfferCache[licenseType]
+                        if not cached or (now - cached.at) > 15000 then
+                            local offer = Sunset.AwaitCallback('sunset:license:getExamOffer', licenseType)
+                            if offer then
+                                examOfferCache[licenseType] = { at = now, fee = offer.fee or 0 }
+                                cached = examOfferCache[licenseType]
+                            end
+                        end
+                        local fee = cached and cached.fee or 0
+                        local feeText = fee > 0 and (' — fee $%d'):format(fee) or ''
                         BeginTextCommandDisplayHelp('STRING')
-                        AddTextComponentString(('Press ~INPUT_CONTEXT~ — %s theory test'):format(facility.label or 'License'))
+                        AddTextComponentString(('Press ~INPUT_CONTEXT~ — %s exam%s'):format(
+                            facility.label or 'License', feeText))
                         EndTextCommandDisplayHelp(0, false, true, -1)
                         if IsControlJustReleased(0, 38) then
                             startAtFacility(facility)

@@ -15,6 +15,9 @@ function OpenTheoryQuiz(licenseType, theory)
         title = theory.title,
         intro = theory.intro,
         questions = theory.questions,
+        examFee = theory.examFee,
+        theoryTimeSec = theory.theoryTimeSec,
+        deadlineAt = theory.deadlineAt,
     })
     exports.sunset_ui:SetFocus(true, true)
 end
@@ -31,6 +34,7 @@ AddEventHandler('sunset:nui:licenseQuizSubmit', function(data)
     local result, err = Sunset.AwaitCallback('sunset:license:submitTheory', licenseType, answers)
     if not result then
         exports.sunset_ui:Notify(err or 'Theory exam failed.', 'error', 8000)
+        TriggerEvent('sunset:licenses:testAbort')
         return
     end
     TriggerEvent('sunset:licenses:beginPractical', licenseType, result)

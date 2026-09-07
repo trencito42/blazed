@@ -50,6 +50,12 @@ const LicenseTestHud = {
         if (data.speed !== undefined && data.speedLimit !== undefined) {
             parts.push(`${data.speed}/${data.speedLimit} km/h`);
         }
+        if (data.timeLeftSec != null) {
+            const left = Math.max(0, Number(data.timeLeftSec) || 0);
+            const m = Math.floor(left / 60);
+            const s = left % 60;
+            parts.push(`Time ${m}:${String(s).padStart(2, '0')}`);
+        }
         return parts.join(' · ') || (data.meta || '');
     },
 

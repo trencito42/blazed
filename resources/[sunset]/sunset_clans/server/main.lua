@@ -564,14 +564,26 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
     if action == 'settings' then
         if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can change clan settings.' end
         local description = cleanText(payload.description, SunsetClans.MaxDescriptionLength)
+        local tag = cleanTag(payload.tag)
+        if not tag then
+            return nil, ('Clan tag must be %d-%d letters or numbers.'):format(
+                SunsetClans.MinTagLength, SunsetClans.MaxTagLength)
+        end
+        if tag:lower() ~= tostring(row.tag or ''):lower() then
+            local taken = MySQL.scalar.await(
+                'SELECT id FROM clans WHERE LOWER(tag) = LOWER(?) AND id <> ? LIMIT 1',
+                { tag, row.clan_id }
+            )
+            if taken then return nil, 'That clan tag is already taken.' end
+        end
         local tagColor = cleanColor(payload.tagColor)
         local tagStyle = tostring(payload.tagStyle or row.tag_style or 'brackets')
         if not SunsetClans.isValidTagStyle(tagStyle) then return nil, 'Invalid tag style.' end
         MySQL.update.await(
-            'UPDATE clans SET description = ?, tag_color = ?, tag_style = ? WHERE id = ?',
-            { description, tagColor, tagStyle, row.clan_id }
+            'UPDATE clans SET description = ?, tag = ?, tag_color = ?, tag_style = ? WHERE id = ?',
+            { description, tag, tagColor, tagStyle, row.clan_id }
         )
-        safeAudit(row.clan_id, cid, 'settings', { tagColor = tagColor, tagStyle = tagStyle })
+        safeAudit(row.clan_id, cid, 'settings', { tag = tag, tagColor = tagColor, tagStyle = tagStyle })
         safeBroadcast(row.clan_id, source, 'updated clan settings.')
         safeSyncMembers(row.clan_id)
         return clanManageDashboard(source, cid)
@@ -742,10 +754,10 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         MySQL.update.await('UPDATE clans SET rank_labels = ? WHERE id = ?', {
             SunsetClans.encodeRankLabels(labels), row.clan_id,
         })
-        audit(row.clan_id, cid, 'rank_labels', { labels = labels })
-        broadcastClanManagement(row.clan_id, source, 'updated clan rank names.')
-        syncClanMembers(row.clan_id)
-        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+        safeAudit(row.clan_id, cid, 'rank_labels', { labels = labels })
+        safeBroadcast(row.clan_id, source, 'updated clan rank names.')
+        safeSyncMembers(row.clan_id)
+        return clanManageDashboard(source, cid)
     end
 
     if action == 'leave' then
@@ -879,8 +891,50 @@ RegisterCommand('clans', function(source)
     TriggerClientEvent('sunset:clans:openDirectory', source)
 end, false)
 
+local function ensureClanSchema()
+    local hasRankLabels = MySQL.scalar.await([[
+        SELECT COUNT(*) FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clans' AND COLUMN_NAME = 'rank_labels'
+    ]])
+    if tonumber(hasRankLabels) == 0 then
+        MySQL.query.await('ALTER TABLE `clans` ADD COLUMN `rank_labels` JSON NULL')
+    end
+
+    local hasWarns = MySQL.scalar.await([[
+        SELECT COUNT(*) FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clan_members' AND COLUMN_NAME = 'warns'
+    ]])
+    if tonumber(hasWarns) == 0 then
+        MySQL.query.await('ALTER TABLE `clan_members` ADD COLUMN `warns` TINYINT UNSIGNED NOT NULL DEFAULT 0')
+    end
+
+    local rankType = MySQL.scalar.await([[
+        SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clan_members' AND COLUMN_NAME = 'rank'
+        LIMIT 1
+    ]])
+    if type(rankType) == 'string' and rankType:lower():find('enum', 1, true) then
+        MySQL.query.await('ALTER TABLE `clan_members` ADD COLUMN `rank_num` TINYINT UNSIGNED NOT NULL DEFAULT 1')
+        MySQL.query.await([[UPDATE `clan_members` SET `rank_num` = CASE `rank`
+            WHEN 'leader' THEN 7 WHEN 'officer' THEN 5 ELSE 1 END]])
+        MySQL.query.await('ALTER TABLE `clan_members` DROP COLUMN `rank`')
+        MySQL.query.await('ALTER TABLE `clan_members` CHANGE COLUMN `rank_num` `rank` TINYINT UNSIGNED NOT NULL DEFAULT 1')
+    end
+end
+
+local function safeEnsureClanSchema()
+    local ok, err = pcall(ensureClanSchema)
+    if not ok then
+        print(('^3[sunset_clans]^7 schema migration skipped: %s'):format(tostring(err)))
+    end
+end
+
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
+    CreateThread(function()
+        Wait(1500)
+        safeEnsureClanSchema()
+    end)
     if GetResourceState('sunset_chat') == 'started' then
         pcall(function() exports.sunset_chat:RefreshCommandList() end)
     end
