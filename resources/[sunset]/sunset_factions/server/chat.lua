@@ -276,22 +276,6 @@ function RunChatCommand(source, name, args)
     name = string.lower(tostring(name or ''))
     args = args or {}
 
-    local ok, err = pcall(function()
-        if name == 'f' then runFactionChat(source, args) return end
-        if name == 'r' then runRadioChat(source, args) return end
-        if name == 'd' then runDepartmentChat(source, args) return end
-        if name == 'gov' then runGovAnnouncement(source, args) return end
-        if name == 'm' then runMegaphone(source, args) return end
-        error('unsupported')
-    end)
-    if not ok and err ~= 'unsupported' then
-        print(('[sunset_factions] chat command /%s failed for #%s: %s'):format(name, tostring(source), tostring(err)))
-        FactionCore.notify(source, ('Faction chat failed: %s'):format(tostring(err)), 'error')
-        return true
-    end
-    if ok and (name == 'f' or name == 'r' or name == 'd' or name == 'gov' or name == 'm') then
-        return true
-    end
     if name == 'startradar' or name == 'setradar' or name == 'radar' then
         TriggerClientEvent('sunset:police:tryStartRadar', source, args[1])
         return true
@@ -300,7 +284,22 @@ function RunChatCommand(source, name, args)
         TriggerClientEvent('sunset:police:tryStopRadar', source)
         return true
     end
-    return false
+
+    local handler
+    if name == 'f' then handler = runFactionChat
+    elseif name == 'r' then handler = runRadioChat
+    elseif name == 'd' then handler = runDepartmentChat
+    elseif name == 'gov' then handler = runGovAnnouncement
+    elseif name == 'm' then handler = runMegaphone
+    end
+    if not handler then return false end
+
+    local ok, err = pcall(handler, source, args)
+    if not ok then
+        print(('[sunset_factions] chat command /%s failed for #%s: %s'):format(name, tostring(source), tostring(err)))
+        FactionCore.notify(source, ('Faction chat failed: %s'):format(tostring(err)), 'error')
+    end
+    return true
 end
 exports('RunChatCommand', RunChatCommand)
 
