@@ -111,6 +111,11 @@ exports.sunset_core:RegisterCallback('sunset:jobcreator:stageCatalog', function(
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobcreator:startWork', function(source, testJobId)
+    local existing = JCSessions_Get(source)
+    if existing then
+        JCSessions_Clear(source, nil, false)
+    end
+
     local jobId = testJobId
     local testMode = false
     if jobId and requireAdmin(source) then

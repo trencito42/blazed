@@ -6,6 +6,7 @@ local CREATOR_MIGRATIONS = {
     courier = 'jc_tpl_courier',
     garbage = 'jc_tpl_garbage',
     fisherman = 'jc_tpl_gather',
+    lumberjack = 'jc_tpl_lumber',
 }
 
 local function jobcreatorCall(fn)

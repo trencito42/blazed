@@ -89,6 +89,25 @@ local function jobProgress(vars)
     return done, total
 end
 
+local function fishingHud(data, extra)
+    local ui = (data.definition and data.definition.ui) or {}
+    local vars = data.variables or {}
+    local done, total = jobProgress(vars)
+    local payload = {
+        title = ui.title or data.label or 'Work',
+        bagLabel = ui.bagLabel or 'Task',
+    }
+    if total > 0 then
+        payload.carried = done
+        payload.capacity = total
+    end
+    if extra then
+        for k, v in pairs(extra) do payload[k] = v end
+    end
+    exports.sunset_ui:Send('fishingShow', payload)
+    exports.sunset_ui:Send('jobShiftHide', {})
+end
+
 local function syncHud(data, override)
     if not data then return end
     local ui = (data.definition and data.definition.ui) or {}
@@ -135,6 +154,7 @@ local function syncHud(data, override)
         payload.capacity = total
     end
     exports.sunset_ui:Send('fishingShow', payload)
+    exports.sunset_ui:Send('jobShiftHide', {})
 end
 
 local function endShift(reason, failed)
@@ -145,12 +165,14 @@ local function endShift(reason, failed)
     skillActive = false
     clearBlips()
     exports.sunset_ui:Send('fishingHide', {})
+    exports.sunset_ui:Send('jobShiftHide', {})
     exports.sunset_ui:Send('jobSkillHide', {})
     JCEntities_Cleanup()
     if reason then notify(reason, failed and 'error' or 'success') end
 end
 
 local function sendClientAction(stageId, body)
+    if not active or not payload or payload.stageId ~= stageId then return end
     local result, err = Sunset.AwaitCallback('sunset:jobcreator:clientAction', {
         stageId = stageId,
         error = body.error,
@@ -232,9 +254,15 @@ local function startProgressStage(data)
         end
     end
     progressActive = true
-    syncHud(data, { state = 'waiting', message = stage.label or 'Working...' })
     local duration = tonumber(stage.durationMs) or 5000
-    exports.sunset_ui:ProgressBar(stage.label or 'Working...', duration, function()
+    local key = (data.definition and data.definition.ui and data.definition.ui.key) or 'E'
+    fishingHud(data, {
+        state = 'work',
+        message = formatMessage(stage, key),
+        windowMs = duration,
+    })
+    SetTimeout(duration, function()
+        if not progressActive then return end
         progressActive = false
         sendClientAction(data.stageId, { success = true })
     end)
@@ -245,24 +273,36 @@ local function startChopStage(data)
     local stage = data.stage
     local loc = stageLocation(data)
     if loc then
-        local pos = GetEntityCoords(PlayerPedId())
+        local ped = PlayerPedId()
+        local pos = GetEntityCoords(ped)
         local radius = tonumber(loc.radius) or 3.5
         local dx, dy = pos.x - loc.x, pos.y - loc.y
         if math.sqrt(dx * dx + dy * dy) > radius then
             notify(SunsetJobCreator.L('interact_far'), 'error')
             return
         end
+        TaskTurnPedToFaceCoord(ped, loc.x, loc.y, loc.z, 600)
+        Wait(400)
     end
     progressActive = true
-    syncHud(data, { state = 'waiting', message = stage.label or 'Chopping...' })
+    local swings = tonumber(stage.swings) or 5
+    local duration = tonumber(stage.durationMs) or (swings * 1200)
+    local key = (data.definition and data.definition.ui and data.definition.ui.key) or 'E'
+    fishingHud(data, {
+        state = 'work',
+        message = formatMessage(stage, key),
+        windowMs = duration,
+    })
     CreateThread(function()
-        local swings = tonumber(stage.swings) or 5
-        local duration = tonumber(stage.durationMs) or (swings * 1200)
         JCEntities_PlayChopAnim(swings, duration)
+        if not progressActive then return end
         local propVar = stage.propVar or 'treeProp'
         JCEntities_RemoveProp(data.variables or {}, propVar)
         progressActive = false
-        sendClientAction(data.stageId, { success = true, poolKey = loc and (loc.poolKey or (loc.x and string.format('%.1f_%.1f', loc.x, loc.y))) })
+        sendClientAction(data.stageId, {
+            success = true,
+            poolKey = loc and (loc.poolKey or (loc.x and string.format('%.1f_%.1f', loc.x, loc.y))),
+        })
     end)
 end
 
@@ -400,7 +440,7 @@ CreateThread(function()
                     end
                 elseif stageType == 'skill_check' then
                     BeginTextCommandDisplayHelp('STRING')
-                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. (stage.message or 'Skill check'))
+                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. helpMsg)
                     EndTextCommandDisplayHelp(0, false, true, -1)
                     if IsControlJustReleased(0, 38) and not skillActive then
                         startSkillCheck(payload)

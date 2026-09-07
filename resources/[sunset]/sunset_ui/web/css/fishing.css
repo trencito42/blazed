@@ -219,6 +219,16 @@
     color: rgba(255, 255, 255, 0.94);
 }
 
+.fishing-shell.state-work {
+    --f-accent: var(--sunset-orange, #ff7700);
+    --f-edge: rgba(255, 119, 0, 0.38);
+}
+.fishing-shell.state-work .fishing__title,
+.fishing-shell.state-work .fishing__icon { color: var(--sunset-amber, #ffb15c); }
+.fishing-shell.state-work .fishing__message { color: #fff1df; text-transform: uppercase; }
+.fishing-shell.state-work .fishing__progress { display: block; }
+.fishing-shell.state-work .fishing__progress-fill { background: var(--sunset-orange, #ff7700); }
+
 /* full */
 .fishing-shell.state-full {
     --f-accent: #ffb21c;

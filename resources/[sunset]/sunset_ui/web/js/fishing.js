@@ -126,6 +126,20 @@ const Fishing = {
                 this._progress.style.transition = 'none';
                 this._progress.style.width = '0%';
             }
+        } else if (state === 'work') {
+            this._applyState(
+                'state-work',
+                data.title || 'Work',
+                data.message || 'Working...'
+            );
+            const ms = Math.max(500, Number(data.windowMs) || 5000);
+            if (this._progress) {
+                this._progress.style.transition = 'none';
+                this._progress.style.width = '0%';
+                void this._progress.offsetWidth;
+                this._progress.style.transition = `width ${ms}ms linear`;
+                this._progress.style.width = '100%';
+            }
         } else {
             this._applyState(
                 'state-idle',
@@ -157,6 +171,10 @@ const Fishing = {
         }
         if (data.state === 'bite') {
             this.startBite(data.windowMs || 1500, data);
+            return;
+        }
+        if (data.state === 'work') {
+            this.show({ ...data, state: 'work' });
             return;
         }
         const resolved = this._resolveState(data);

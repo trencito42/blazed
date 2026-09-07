@@ -6,6 +6,7 @@ SunsetJobCreator.LegacyMigrations = {
     courier = 'jc_tpl_courier',
     garbage = 'jc_tpl_garbage',
     fisherman = 'jc_tpl_gather',
+    lumberjack = 'jc_tpl_lumber',
 }
 
 function SunsetJobCreator.GetMigrationTarget(legacyJobId)

@@ -160,23 +160,28 @@ function JCEntities_PlayChopAnim(swings, durationMs)
     if axeHash then
         local coords = GetEntityCoords(ped)
         axe = CreateObject(axeHash, coords.x, coords.y, coords.z, true, true, false)
-        AttachEntityToEntity(axe, ped, GetPedBoneIndex(ped, 57005), 0.12, 0.02, 0.0, -90.0, 0.0, 0.0, true, true, false, true, 1, true)
+        AttachEntityToEntity(axe, ped, GetPedBoneIndex(ped, 57005), 0.09, -0.02, -0.02, -78.0, 13.0, 28.0, true, true, false, true, 1, true)
         SetModelAsNoLongerNeeded(axeHash)
     end
 
-    local dict = 'melee@hatchet@streamed_core'
+    local dict = 'melee@large_wpn@streamed_core'
+    local anim = 'ground_attack_on_spot'
     RequestAnimDict(dict)
-    local deadline = GetGameTimer() + 3000
+    local deadline = GetGameTimer() + 5000
     while not HasAnimDictLoaded(dict) and GetGameTimer() < deadline do Wait(10) end
 
     local count = math.max(1, tonumber(swings) or 4)
-    local perSwing = math.max(800, math.floor((tonumber(durationMs) or 5000) / count))
+    local total = math.max(2000, tonumber(durationMs) or (count * 1200))
+    local perSwing = math.max(900, math.floor(total / count))
+
+    FreezeEntityPosition(ped, true)
     for _ = 1, count do
         if HasAnimDictLoaded(dict) then
-            TaskPlayAnim(ped, dict, 'plyr_rear_takedown_b', 8.0, -8.0, perSwing, 0, 0, false, false, false)
+            TaskPlayAnim(ped, dict, anim, 8.0, -8.0, perSwing, 1, 0, false, false, false)
         end
         Wait(perSwing)
     end
+    FreezeEntityPosition(ped, false)
     ClearPedTasks(ped)
     if axe and DoesEntityExist(axe) then DeleteObject(axe) end
 end

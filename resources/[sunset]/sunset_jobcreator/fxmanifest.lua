@@ -10,6 +10,7 @@ shared_scripts {
     '@sunset_core/shared/config.lua',
     '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/job_session.lua',
+    '@sunset_core/shared/profile.lua',
     'shared/schema.lua',
     'shared/locale.lua',
     'shared/stage_catalog.lua',
