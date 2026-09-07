@@ -189,10 +189,10 @@ const ClanPanels = {
                 <div class="clan-detail__stat"><strong>${Number(clan.maxMembers) || 25}</strong><span>Capacity</span></div>
             </div>
             <div class="clan-detail__block"><span>Leader</span><p>${this.escape(clan.leader || 'Unknown')}</p></div>
-            <div class="clan-detail__block"><span>Message of the day</span><p>${this.escape(motd || 'No MOTD posted.')}</p></div>
-            <div class="clan-detail__block"><span>About</span><p>${this.escape(description)}</p></div>
-            <div class="clan-detail__block"><span>How to join</span><p>Contact the leader in-character or wait for an in-game invite. Leaders use <code>/clan</code> to invite online players.</p></div>
-            <div class="clan-detail__block"><span>Roster</span><div class="clan-detail-roster">${rosterHtml}</div></div>
+            <div class="clan-detail__block"><span>Field briefing</span><p>${this.escape(motd || 'No briefing posted.')}</p></div>
+            <div class="clan-detail__block"><span>Unit intel</span><p>${this.escape(description)}</p></div>
+            <div class="clan-detail__block"><span>Recruitment</span><p>Contact the leader in-character or wait for an in-game invite via <code>/clan</code>.</p></div>
+            <div class="clan-detail__block"><span>Crew roster</span><div class="clan-detail-roster">${rosterHtml}</div></div>
         `;
     },
 
@@ -264,32 +264,92 @@ const ClanPanels = {
         });
     },
 
-    renderRoster(members) {
+    renderRoster(members, permissions, viewerCharacterId) {
         const roster = $('#clan-roster');
         if (!roster) return;
         roster.innerHTML = '';
+        const perms = permissions || this.dashboard?.permissions || {};
+        const viewerId = Number(viewerCharacterId || this.dashboard?.viewerCharacterId) || 0;
+        const viewerRank = Number(this.dashboard?.rank) || 0;
+        const canKick = Boolean(perms.kick);
+        const canPromote = Boolean(perms.promote);
+        const canWarn = Boolean(perms.warn);
+        const isLeader = Boolean(perms.leader);
+
         (members || []).forEach((member) => {
             const row = document.createElement('article');
-            row.className = `clan-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}`;
+            row.className = `clan-member faction-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}`;
+
             const identity = document.createElement('div');
+            identity.className = 'faction-member__identity';
             const name = document.createElement('strong');
             name.textContent = member.name || `CID ${member.characterId || '?'}`;
             const rank = document.createElement('span');
-            rank.className = 'clan-member-rank';
-            rank.textContent = `${member.rank ? `R${member.rank}` : 'R?'} · ${member.rankLabel || 'Member'}`;
-            const meta = document.createElement('span');
-            const metaBits = [];
-            if (member.warns) metaBits.push(`${member.warns}/3 warns`);
-            if (member.serverId) metaBits.push(`ID ${member.serverId}`);
-            meta.textContent = metaBits.join(' · ');
+            rank.textContent = `${member.rank ? `R${member.rank}` : 'R?'} · ${member.rankLabel || 'Member'}${member.warns ? ` · ${member.warns}/3 strikes` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
             identity.append(name, rank);
-            if (metaBits.length) identity.append(meta);
-            const state = document.createElement('em');
-            state.textContent = member.leader ? 'LEADER' : (member.online ? 'ONLINE' : 'OFFLINE');
-            row.append(identity, state);
+
+            const state = document.createElement('div');
+            state.className = 'faction-member__state';
+            const badge = document.createElement('span');
+            badge.className = 'org-member-badge';
+            if (member.leader) {
+                badge.classList.add('is-leader');
+                badge.textContent = 'LEADER';
+            } else if (member.online) {
+                badge.classList.add('is-online');
+                badge.textContent = 'ONLINE';
+            } else {
+                badge.classList.add('is-offline');
+                badge.textContent = 'OFFLINE';
+            }
+            state.appendChild(badge);
+
+            const actions = document.createElement('div');
+            actions.className = 'faction-member__actions';
+            const isSelf = Number(member.characterId) === viewerId;
+            const manageable = !isSelf && !member.leader && member.online && (canKick || canPromote || canWarn);
+            const lowerRank = isLeader || (Number(member.rank) < viewerRank);
+
+            if (manageable && canPromote && lowerRank) {
+                const up = document.createElement('button');
+                up.type = 'button';
+                up.className = 'faction-btn';
+                up.textContent = '▲';
+                up.title = 'Promote';
+                up.addEventListener('click', () => post('clanManage', { action: 'rankUp', targetId: member.serverId }));
+                const down = document.createElement('button');
+                down.type = 'button';
+                down.className = 'faction-btn';
+                down.textContent = '▼';
+                down.title = 'Demote';
+                down.addEventListener('click', () => post('clanManage', { action: 'rankDown', targetId: member.serverId }));
+                actions.append(up, down);
+            }
+            if (manageable && canKick && lowerRank) {
+                const kick = document.createElement('button');
+                kick.type = 'button';
+                kick.className = 'faction-btn is-danger';
+                kick.textContent = 'KICK';
+                kick.addEventListener('click', () => post('clanManage', { action: 'kick', targetId: member.serverId }));
+                actions.append(kick);
+            }
+            if (manageable && canWarn && lowerRank) {
+                const warn = document.createElement('button');
+                warn.type = 'button';
+                warn.className = 'faction-btn is-warn';
+                warn.textContent = 'STRIKE';
+                warn.addEventListener('click', () => {
+                    const reason = window.prompt('Strike reason:', 'No reason given');
+                    if (reason === null) return;
+                    post('clanManage', { action: 'warn', targetId: member.serverId, reason });
+                });
+                actions.append(warn);
+            }
+
+            row.append(identity, state, actions);
             roster.appendChild(row);
         });
-        if (!members?.length) roster.innerHTML = '<p class="clan-empty">No members found.</p>';
+        if (!members?.length) roster.innerHTML = '<p class="clan-empty">No crew members found.</p>';
     },
 
     renderRankLabelEditor(labels) {
@@ -314,37 +374,31 @@ const ClanPanels = {
         (clans || []).forEach((clan) => {
             const card = document.createElement('button');
             card.type = 'button';
-            card.className = 'clan-directory-card';
+            card.className = 'org-directory-row clan-directory-card';
             card.dataset.clanId = String(clan.id || '');
 
-            const top = document.createElement('div');
-            top.className = 'clan-directory-card__top';
-            const titleWrap = document.createElement('div');
+            const main = document.createElement('div');
+            main.className = 'org-directory-row__main';
             const title = document.createElement('strong');
             title.textContent = clan.name || 'Clan';
-            const tagBadge = document.createElement('span');
-            tagBadge.className = 'clan-directory-card__badge';
-            tagBadge.style.color = clan.tagColor || '#FF8C00';
-            tagBadge.textContent = `[${clan.tag || '?'}]`;
-            titleWrap.append(title, tagBadge);
-
-            const online = document.createElement('em');
-            online.textContent = `${clan.online || 0}/${clan.total || 0} online`;
-            top.append(titleWrap, online);
-
+            const tagLine = document.createElement('span');
+            tagLine.textContent = `[${clan.tag || '?'}] · ${clan.tagStyleLabel || 'tag'}`;
             const identity = document.createElement('div');
             identity.className = 'clan-directory-card__identity';
             identity.innerHTML = this.identityPreviewHtml(clan);
-
             const description = document.createElement('p');
-            const desc = String(clan.description || '').trim();
-            description.textContent = desc || 'No public description yet.';
+            description.textContent = String(clan.description || '').trim() || 'No public intel yet.';
+            main.append(title, tagLine, identity, description);
 
-            const meta = document.createElement('div');
-            meta.className = 'clan-directory-card__meta';
-            meta.textContent = `Leader: ${clan.leader || 'Unknown'} · ${clan.tagStyleLabel || 'tag style'}`;
+            const stats = document.createElement('div');
+            stats.className = 'org-directory-row__stats';
+            const online = document.createElement('b');
+            online.textContent = `${clan.online || 0}/${clan.total || 0}`;
+            const leader = document.createElement('em');
+            leader.textContent = clan.leader || 'Unknown';
+            stats.append(online, leader);
 
-            card.append(top, identity, description, meta);
+            card.append(main, stats);
             card.addEventListener('click', () => this.openClanDetail(clan, card, list));
             list.appendChild(card);
         });
@@ -447,9 +501,9 @@ const ClanPanels = {
                 countEl.textContent = `${this.dashboard.memberCount || 0} / ${this.dashboard.maxMembers || 25}`;
             }
             const motdEl = $('#clan-motd');
-            if (motdEl) motdEl.textContent = this.dashboard.motd || 'No message of the day has been set.';
+            if (motdEl) motdEl.textContent = this.dashboard.motd || 'No field briefing posted.';
             const descEl = $('#clan-description');
-            if (descEl) descEl.textContent = this.dashboard.description || 'No clan description.';
+            if (descEl) descEl.textContent = this.dashboard.description || 'No unit intel on file.';
             const preview = $('#clan-overview-preview');
             this.paintPreview(
                 preview,
@@ -461,7 +515,14 @@ const ClanPanels = {
             const styleLabel = $('#clan-tag-style-label');
             if (styleLabel) styleLabel.textContent = this.tagStyleLabel(this.dashboard.tagStyle);
 
-            this.renderRoster(this.dashboard.members);
+            this.renderRoster(this.dashboard.members, perms, this.dashboard.viewerCharacterId);
+
+            const rosterMeta = $('#clan-roster-meta');
+            if (rosterMeta) {
+                const members = this.dashboard.members || [];
+                const online = members.filter((m) => m.online).length;
+                rosterMeta.textContent = `${online} online · ${this.dashboard.memberCount || 0}/${this.dashboard.maxMembers || 25} slots`;
+            }
 
             const settingsForm = document.querySelector('[data-clan-action="settings"]');
             if (settingsForm) {

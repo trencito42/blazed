@@ -5,7 +5,7 @@ local function bleedoutDuration()
 end
 
 local function hospitalSpawn(char)
-    local pos = char and exports.sunset_core:GetSpawnPosition(char)
+    local pos = char and exports.sunset_core:GetSpawnPosition(char, source)
     if pos and pos.x then return pos end
     local h = Sunset.Config.HospitalSpawn or Sunset.Config.DefaultSpawn
     return { x = h.x, y = h.y, z = h.z, w = h.w }

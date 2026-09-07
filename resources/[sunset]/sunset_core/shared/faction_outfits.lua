@@ -82,6 +82,88 @@ function Sunset.BuildFireGradeOutfits()
     return gradeOutfits
 end
 
+local SERVICE_OUTFIT_PRESETS = {
+    mechanic = {
+        maleTops = { 66, 66, 66, 73, 73, 73, 89, 89 },
+        femaleTops = { 59, 59, 59, 62, 62, 62, 65, 65 },
+        maleTopTextures = { 2, 2, 2, 0, 0, 0, 0, 0 },
+        femaleTopTextures = { 2, 2, 2, 0, 0, 0, 0, 0 },
+        malePants = 98, femalePants = 101,
+        maleShoes = 12, femaleShoes = 26,
+        maleArms = 11, femaleArms = 14,
+        maleUndershirt = 15, femaleUndershirt = 15,
+    },
+    taxi = {
+        maleTops = { 13, 13, 32, 32, 32, 32, 32, 32 },
+        femaleTops = { 27, 27, 41, 41, 41, 41, 41, 41 },
+        maleTopTextures = { 5, 5, 0, 0, 0, 0, 0, 0 },
+        femaleTopTextures = { 5, 5, 0, 0, 0, 0, 0, 0 },
+        malePants = 24, femalePants = 34,
+        maleShoes = 10, femaleShoes = 29,
+        maleArms = 11, femaleArms = 14,
+        maleUndershirt = 31, femaleUndershirt = 35,
+    },
+    cartel = {
+        maleTops = { 13, 13, 31, 31, 31, 31, 31, 31 },
+        femaleTops = { 27, 27, 38, 38, 38, 38, 38, 38 },
+        maleTopTextures = { 0, 0, 0, 0, 0, 0, 0, 0 },
+        femaleTopTextures = { 0, 0, 0, 0, 0, 0, 0, 0 },
+        malePants = 10, femalePants = 6,
+        maleShoes = 12, femaleShoes = 26,
+        maleArms = 11, femaleArms = 14,
+        maleUndershirt = 15, femaleUndershirt = 15,
+    },
+    syndicate = {
+        maleTops = { 16, 16, 57, 57, 57, 57, 57, 57 },
+        femaleTops = { 30, 30, 49, 49, 49, 49, 49, 49 },
+        maleTopTextures = { 0, 0, 0, 0, 0, 0, 0, 0 },
+        femaleTopTextures = { 0, 0, 0, 0, 0, 0, 0, 0 },
+        malePants = 4, femalePants = 3,
+        maleShoes = 1, femaleShoes = 3,
+        maleArms = 0, femaleArms = 14,
+        maleUndershirt = 15, femaleUndershirt = 15,
+    },
+}
+
+function Sunset.BuildServiceGradeOutfits(presetKey)
+    local preset = SERVICE_OUTFIT_PRESETS[presetKey] or SERVICE_OUTFIT_PRESETS.mechanic
+    local gradeOutfits = {}
+    for grade = 0, 7 do
+        local idx = grade + 1
+        gradeOutfits[grade] = {
+            male = leoOutfit(preset.maleTops[idx], preset.malePants, {
+                undershirt = preset.maleUndershirt,
+                shoes = preset.maleShoes,
+                arms = preset.maleArms,
+                topTexture = preset.maleTopTextures[idx] or 0,
+            }),
+            female = leoOutfit(preset.femaleTops[idx], preset.femalePants, {
+                undershirt = preset.femaleUndershirt,
+                shoes = preset.femaleShoes,
+                arms = preset.femaleArms,
+                topTexture = preset.femaleTopTextures[idx] or 0,
+            }),
+        }
+    end
+    return gradeOutfits
+end
+
+function Sunset.BuildServiceLoadout(presetKey, opts)
+    opts = opts or {}
+    local gradeOutfits = Sunset.BuildServiceGradeOutfits(presetKey)
+    local fallbackMale = gradeOutfits[0] and gradeOutfits[0].male
+    local fallbackFemale = gradeOutfits[0] and gradeOutfits[0].female
+    return {
+        armor = opts.armor or 0,
+        male = fallbackMale,
+        female = fallbackFemale,
+        gradeOutfits = gradeOutfits,
+        weapons = opts.weapons or {
+            { weapon = 'WEAPON_FLASHLIGHT', ammo = 0 },
+        },
+    }
+end
+
 function Sunset.BuildLawEnforcementLoadout(style, vehicle, extraWeapons)
     local gradeOutfits = Sunset.BuildLeoGradeOutfits(style)
     local fallbackMale = gradeOutfits[0] and gradeOutfits[0].male

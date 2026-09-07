@@ -333,6 +333,7 @@ local function dashboardPayload(source, row, cid)
         creationCost = SunsetClans.CreationCost,
         accountCoins = player and (tonumber(player.premium_points) or 0) or 0,
         tagStyles = tagStyleOptions(),
+        viewerCharacterId = cid,
         permissions = {
             leader = row and isLeader(row, cid) or false,
             officer = row and isOfficer(row, cid) or false,

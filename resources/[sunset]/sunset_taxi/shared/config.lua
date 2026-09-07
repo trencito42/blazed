@@ -20,7 +20,7 @@ Sunset.Taxi = {
         idleTimeoutSec = 45,
         maxFareMultiplier = 1.5,
     },
-    allowedVehicles = { 'taxi' },
+    allowedVehicles = { 'taxi', 'taxiold', 'dynasty', 'rumpo', 'stretch', 'bus' },
     tipOptions = { 25, 50, 100 },
     destinations = {
         { id = 'legion', label = 'Legion Square', category = 'Popular', coords = vector3(215.76, -810.12, 30.73) },
@@ -50,7 +50,11 @@ function Sunset.Taxi.IsValidTaxiVehicle(modelHash)
     end
     local faction = Sunset.Factions and Sunset.Factions[cfg.factionId or 'taxi']
     local depot = faction and faction.depot
-    if depot and depot.vehicle and joaat(depot.vehicle) == modelHash then
+    if depot and depot.vehicles then
+        for _, entry in ipairs(depot.vehicles) do
+            if entry.model and joaat(entry.model) == modelHash then return true end
+        end
+    elseif depot and depot.vehicle and joaat(depot.vehicle) == modelHash then
         return true
     end
     return modelHash == joaat('taxi')

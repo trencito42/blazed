@@ -138,8 +138,24 @@ const FactionPanels = {
             rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${member.warns ? ` · ${member.warns}/3 FW` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
             identity.append(name, rank);
 
-            const state = document.createElement('em');
-            state.textContent = member.leader ? 'LEADER' : (member.onDuty ? 'ON DUTY' : (member.online ? 'ONLINE' : 'OFFLINE'));
+            const state = document.createElement('div');
+            state.className = 'faction-member__state';
+            const badge = document.createElement('span');
+            badge.className = 'org-member-badge';
+            if (member.leader) {
+                badge.classList.add('is-leader');
+                badge.textContent = 'LEADER';
+            } else if (member.onDuty) {
+                badge.classList.add('is-duty');
+                badge.textContent = 'ON SHIFT';
+            } else if (member.online) {
+                badge.classList.add('is-online');
+                badge.textContent = 'ONLINE';
+            } else {
+                badge.classList.add('is-offline');
+                badge.textContent = 'OFFLINE';
+            }
+            state.appendChild(badge);
 
             const actions = document.createElement('div');
             actions.className = 'faction-member__actions';
@@ -226,16 +242,23 @@ const FactionPanels = {
             title.innerHTML = `${this.escape(label)} <span>CONTROL</span>`;
         }
 
-        $('#faction-rank').textContent = `${data.gradeLabel || 'Member'}${data.leader ? ' · LEADER' : ''}`;
-        $('#faction-duty').textContent = data.onDuty ? 'ON DUTY' : 'OFF DUTY';
+        $('#faction-rank').textContent = `${data.gradeLabel || 'Member'}${data.leader ? ' · COMMAND' : ''}`;
+        $('#faction-duty').textContent = data.onDuty ? 'ON SHIFT' : 'OFF SHIFT';
         $('#faction-duty').classList.toggle('is-active', Boolean(data.onDuty));
         $('#faction-salary').textContent = `$${Number(data.salary || 0).toLocaleString()}/HR`;
         $('#faction-member-count').textContent = String(members.length);
-        $('#faction-motd').textContent = data.motd || 'No message of the day has been set.';
-        $('#faction-description').textContent = data.description || 'No department description available.';
-        $('#faction-depot').textContent = `Fleet: ${data.depot || 'No garage configured'}`;
-        $('#faction-report-value').textContent = target > 0 ? `${current} / ${target} activities` : `${current} activities`;
+        $('#faction-motd').textContent = data.motd || 'No field briefing posted.';
+        $('#faction-description').textContent = data.description || 'No department intel on file.';
+        $('#faction-depot').textContent = `Motor pool: ${data.depot || 'Not configured'}`;
+        $('#faction-report-value').textContent = target > 0 ? `${current} / ${target} ops` : `${current} ops logged`;
         $('#faction-report-bar').style.width = `${percent}%`;
+
+        const rosterMeta = $('#faction-roster-meta');
+        if (rosterMeta) {
+            const online = members.filter((m) => m.online).length;
+            const onDuty = members.filter((m) => m.onDuty).length;
+            rosterMeta.textContent = `${online} online · ${onDuty} on shift`;
+        }
 
         const toolbar = $('#faction-roster-toolbar');
         toolbar?.classList.add('hidden');
@@ -309,34 +332,36 @@ const FactionPanels = {
         this.directory.forEach((faction) => {
             const card = document.createElement('button');
             card.type = 'button';
-            card.className = `faction-directory-card faction-directory-card--${faction.type === 'illegal' ? 'illegal' : 'legal'}`;
+            card.className = `org-directory-row faction-directory-card faction-directory-card--${faction.type === 'illegal' ? 'illegal' : 'legal'}`;
             card.dataset.factionId = faction.id || '';
             const marker = Array.isArray(faction.marker) ? faction.marker : null;
             if (marker && marker.length >= 3) {
-                card.style.borderLeftColor = `rgb(${marker[0]}, ${marker[1]}, ${marker[2]})`;
+                card.style.setProperty('--faction-accent', `rgb(${marker[0]}, ${marker[1]}, ${marker[2]})`);
             }
 
-            const top = document.createElement('div');
-            top.className = 'faction-directory-card__top';
-            const title = document.createElement('div');
+            const main = document.createElement('div');
+            main.className = 'org-directory-row__main';
             const name = document.createElement('strong');
             name.textContent = faction.label || faction.id;
             const category = document.createElement('span');
-            category.textContent = String(faction.factionType || faction.type || 'organization').replaceAll('_', ' ').toUpperCase();
-            title.append(name, category);
-            const status = document.createElement('em');
-            status.className = faction.applicationsOpen ? 'is-open' : '';
-            status.textContent = faction.applicationLabel || 'Applications closed';
-            top.append(title, status);
-
+            category.textContent = String(faction.factionType || faction.type || 'organization').replaceAll('_', ' ');
             const description = document.createElement('p');
-            description.textContent = faction.description || 'No public information.';
-            const meta = document.createElement('div');
-            meta.className = 'faction-directory-card__meta';
-            const leaders = Array.isArray(faction.leaders) && faction.leaders.length ? faction.leaders.join(', ') : 'Vacant';
-            meta.textContent = `Leader: ${leaders} · ${faction.online || 0}/${faction.total || 0} online · ${faction.onDuty || 0} on duty`;
+            description.textContent = faction.description || 'No public intel.';
+            main.append(name, category, description);
 
-            card.append(top, description, meta);
+            const stats = document.createElement('div');
+            stats.className = 'org-directory-row__stats';
+            const status = document.createElement('em');
+            status.className = faction.applicationsOpen ? 'is-open' : 'is-closed';
+            status.textContent = faction.applicationsOpen ? 'RECRUITING' : 'CLOSED';
+            const online = document.createElement('b');
+            const leaders = Array.isArray(faction.leaders) && faction.leaders.length ? faction.leaders[0] : 'Vacant';
+            online.textContent = `${faction.online || 0}/${faction.total || 0}`;
+            const leader = document.createElement('em');
+            leader.textContent = leaders;
+            stats.append(status, online, leader);
+
+            card.append(main, stats);
             card.addEventListener('click', () => this.openDirectoryDetail(faction, card));
             list.appendChild(card);
         });
@@ -375,9 +400,9 @@ const FactionPanels = {
                 <div class="faction-detail__stat"><strong>${Number(faction.total) || 0}</strong><span>Members</span></div>
                 <div class="faction-detail__stat"><strong>${Number(faction.onDuty) || 0}</strong><span>On duty</span></div>
             </div>
-            <div class="faction-detail__block"><span>Description</span><p>${this.escape(faction.description || 'No public information.')}</p></div>
-            <div class="faction-detail__block"><span>Leadership</span><p>${this.escape(leaders)}</p></div>
-            <div class="faction-detail__block"><span>How to join</span><p>${faction.type === 'illegal' ? 'Invite only — contact leadership in character.' : (faction.applicationsOpen ? 'Apply on Discord or the website. After acceptance, the leader invites you in-game with /finvite.' : 'Applications are currently closed. Only the appointed leader can invite members.')}</p></div>
+            <div class="faction-detail__block"><span>Unit intel</span><p>${this.escape(faction.description || 'No public intel.')}</p></div>
+            <div class="faction-detail__block"><span>Command</span><p>${this.escape(leaders)}</p></div>
+            <div class="faction-detail__block"><span>Recruitment</span><p>${faction.type === 'illegal' ? 'Invite only — contact leadership in character.' : (faction.applicationsOpen ? 'Recruiting — get invited in-game after approval.' : 'Not recruiting — leadership invites only.')}</p></div>
         `;
 
         layout.classList.add('has-detail', 'is-detail-open');

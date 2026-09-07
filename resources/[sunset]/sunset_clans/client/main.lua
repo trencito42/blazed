@@ -15,7 +15,9 @@ local function openClanDirectory()
 end
 
 RegisterCommand('clan', openClanPanel, false)
-TriggerEvent('chat:addSuggestion', '/clan', 'Open your clan page — members, settings, and management')
+RegisterCommand('group', openClanPanel, false)
+TriggerEvent('chat:addSuggestion', '/clan', 'Open your clan unit panel — crew, command, identity')
+TriggerEvent('chat:addSuggestion', '/group', 'Same as /clan — clan unit panel')
 
 RegisterCommand('clans', openClanDirectory, false)
 TriggerEvent('chat:addSuggestion', '/clans', 'Browse all server clans')

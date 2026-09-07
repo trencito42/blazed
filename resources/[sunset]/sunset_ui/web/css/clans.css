@@ -22,12 +22,17 @@
     max-height: 78vh;
 }
 
-.clan-dashboard,
+.clan-dashboard.org-shell {
+    display: grid;
+    max-height: 58vh;
+}
+
+.clan-dashboard:not(.org-shell),
 .clan-directory-shell {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    min-height: 280px;
+    min-height: 0;
     max-height: 62vh;
     overflow: hidden;
 }

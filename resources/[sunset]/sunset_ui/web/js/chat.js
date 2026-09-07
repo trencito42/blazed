@@ -137,7 +137,10 @@ const Chat = {
     formatRadioHeaderHtml(m, text) {
         const faction = String(m.factionLabel || '').trim();
         const rank = String(m.rank || '').trim();
-        const header = [faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+        const spyTag = m.spy
+            ? `<span class="chat-spy-tag">[SPY ${this.escapeHtml(String(m.spyChannel || 'CHAT'))}]</span> `
+            : '';
+        const header = [spyTag, faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
         const time = this.formatTime(m);
         const prefix = time ? `${this.escapeHtml(time)} ` : '';
         const body = this.escapeHtml(text);
@@ -275,6 +278,7 @@ const Chat = {
         const classes = ['chat-msg'];
         if (highlighted.has(type)) classes.push(`chat-msg--${type}`);
         if (factionId) classes.push(`chat-msg--faction-${factionId}`);
+        if (m.spy) classes.push('chat-msg--spy');
         el.className = classes.join(' ');
 
         const line = document.createElement('span');

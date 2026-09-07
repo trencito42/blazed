@@ -98,34 +98,65 @@ local function spawnCoords(pos)
     return { x = x, y = y, z = z, w = tonumber(pos.w) or 0.0 }
 end
 
-exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(source, choice, propertyId)
-    local char=exports.sunset_core:GetCharacter(source)
-    if not char then return nil,'Character data is unavailable. Please reconnect.' end
-    local jailed = false
-    pcall(function() jailed = exports.sunset_factions:IsJailed(source) == true end)
-    if jailed and Sunset.Police and Sunset.Police.jailCoords then
-        local jail = spawnCoords(Sunset.Police.jailCoords)
-        if jail then return jail end
-    end
-    local pos
-    if choice=='default' then pos=Sunset.Config.DefaultSpawn
-    elseif choice=='last' then pos=decodePos(char.position)
-    elseif choice=='house' then
-        local prop=property(propertyId)
-        if not prop or not dbBool(prop.enabled) then return nil,'That house is no longer available.' end
-        if not accessible(char,prop) then return nil,'You no longer own or rent that house.' end
-        pos=decodePos(prop.entry)
-    elseif choice=='hq' then
-        local ok, hq = pcall(function()
-            return exports.sunset_factions:GetLeaderHqSpawn(source)
-        end)
-        if not ok or type(hq) ~= 'table' then
-            return nil, 'Faction HQ spawn is only available to faction members.'
+local function resolveSpawnChoiceForChar(source, char, choice, propertyId)
+    if not char then return nil, 'Character data is unavailable. Please reconnect.' end
+    choice = tostring(choice or '')
+    if source and source > 0 then
+        local jailed = false
+        pcall(function() jailed = exports.sunset_factions:IsJailed(source) == true end)
+        if jailed and Sunset.Police and Sunset.Police.jailCoords then
+            local jail = spawnCoords(Sunset.Police.jailCoords)
+            if jail then return jail end
         end
-        pos = hq
-    else return nil,'Invalid spawn location.' end
+    end
+
+    local pos
+    if choice == 'default' then
+        pos = Sunset.Config.DefaultSpawn
+    elseif choice == 'last' then
+        pos = decodePos(char.position)
+    elseif choice == 'house' then
+        local prop = property(propertyId)
+        if not prop or not dbBool(prop.enabled) then return nil, 'That house is no longer available.' end
+        if not accessible(char, prop) then return nil, 'You no longer own or rent that house.' end
+        pos = decodePos(prop.entry)
+    elseif choice == 'hq' then
+        if source and source > 0 then
+            local ok, hq = pcall(function()
+                return exports.sunset_factions:GetFactionHqSpawn(source)
+            end)
+            if ok and type(hq) == 'table' then pos = hq end
+        end
+        if not pos then
+            local metadata = type(char.metadata) == 'table' and char.metadata or {}
+            local factionId = metadata.faction
+            local faction = factionId and Sunset.Factions[factionId]
+            local hq = faction and faction.hq
+            if hq then
+                local heading = 0.0
+                if faction.depot and faction.depot.spawn then
+                    heading = faction.depot.spawn.w or 0.0
+                end
+                pos = { x = hq.x, y = hq.y, z = hq.z, w = heading }
+            end
+        end
+        if not pos then return nil, 'Faction HQ spawn is only available to faction members.' end
+    else
+        return nil, 'Invalid spawn location.'
+    end
+
     local resolved = spawnCoords(pos)
-    if not resolved then return nil,'That spawn location has invalid coordinates.' end
+    if not resolved then return nil, 'That spawn location has invalid coordinates.' end
+    return resolved
+end
+
+exports('ResolveSpawnChoice', resolveSpawnChoiceForChar)
+
+exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(source, choice, propertyId)
+    local char = exports.sunset_core:GetCharacter(source)
+    local resolved, err = resolveSpawnChoiceForChar(source, char, choice, propertyId)
+    if not resolved then return nil, err end
+    exports.sunset_core:SetSpawnPreference(source, choice, propertyId)
     return resolved
 end)
 

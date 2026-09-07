@@ -690,7 +690,7 @@ const Panels = {
         const title = $('#fleet-garage-title');
         if (title) title.textContent = data.label || 'Fleet Garage';
         list.innerHTML = '';
-        list.className = 'menu-vehicle-grid';
+        list.className = 'fleet-garage__list';
 
         const vehicleImage = (model) => {
             const m = (model || 'sultan').toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -698,30 +698,24 @@ const Panels = {
         };
 
         (data.vehicles || []).forEach((v) => {
-            const model = (v.model || 'vehicle').toUpperCase();
+            const model = String(v.model || 'vehicle');
+            const modelCode = model.toUpperCase();
+            const rankLabel = v.minGradeLabel || `Rank ${Number.isFinite(v.minGrade) ? v.minGrade : 0}+`;
             const li = document.createElement('li');
-            li.className = 'menu-vcard';
+            li.className = 'fleet-unit-row';
             li.innerHTML = `
-                <div class="menu-vcard__img-wrap">
-                    <img class="menu-vcard__img" src="${vehicleImage(v.model)}" alt="${model}" loading="lazy"
+                <div class="fleet-unit-row__thumb">
+                    <img src="${vehicleImage(v.model)}" alt="${modelCode}" loading="lazy"
                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                    <div class="menu-vcard__img-fallback" style="display:none">${model.charAt(0)}</div>
+                    <span class="fleet-unit-row__fallback">${modelCode.charAt(0)}</span>
                 </div>
-                <div class="menu-vcard__body">
-                    <div class="menu-vcard__top">
-                        <strong>${v.label || model}</strong>
-                        <span class="menu-vcard__status menu-vcard__status--stored">Fleet</span>
-                    </div>
-                    <div class="menu-vcard__plate">${model}</div>
-                    <div class="menu-vcard__meta">Rank ${Number.isFinite(v.minGrade) ? v.minGrade : 0}+</div>
-                    <div class="menu-vcard__actions"></div>
-                </div>`;
+                <div class="fleet-unit-row__info">
+                    <strong>${v.label || modelCode}</strong>
+                    <span>${modelCode} · ${rankLabel}+</span>
+                </div>
+                <button type="button" class="fleet-unit-row__btn">Take out</button>`;
 
-            const actions = li.querySelector('.menu-vcard__actions');
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = 'Take out';
-            btn.className = 'menu-vcard__btn menu-vcard__btn--primary';
+            const btn = li.querySelector('.fleet-unit-row__btn');
             btn.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -733,12 +727,10 @@ const Panels = {
                     model: v.model,
                 });
             });
-            actions.appendChild(btn);
             list.appendChild(li);
         });
 
         if (!(data.vehicles || []).length) {
-            list.className = 'panel-list';
             list.innerHTML = '<li class="garage-empty">No fleet vehicles available for your rank.</li>';
         }
 

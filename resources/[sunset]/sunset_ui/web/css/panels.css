@@ -73,6 +73,78 @@
     list-style: none;
 }
 
+.fleet-unit-row {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.34);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 3px solid rgba(255, 119, 0, 0.75);
+}
+
+.fleet-unit-row__thumb {
+    position: relative;
+    width: 56px;
+    height: 42px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.fleet-unit-row__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fleet-unit-row__fallback {
+    display: none;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: var(--os-accent, #ff7700);
+    font: 700 18px/1 var(--os-title, 'Chakra Petch', sans-serif);
+}
+
+.fleet-unit-row__info strong {
+    display: block;
+    color: #fff;
+    font: 700 13px/1.2 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.05em;
+}
+
+.fleet-unit-row__info span {
+    display: block;
+    margin-top: 3px;
+    color: rgba(246, 242, 233, 0.55);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+}
+
+.fleet-unit-row__btn {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 119, 0, 0.45);
+    background: rgba(255, 119, 0, 0.16);
+    color: #ffd7a8;
+    font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.fleet-unit-row__btn:hover:not(:disabled) {
+    background: rgba(255, 119, 0, 0.28);
+    color: #fff;
+}
+
+.fleet-unit-row__btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
 .fleet-garage__list .menu-vcard {
     list-style: none;
     grid-template-columns: 88px minmax(0, 1fr);

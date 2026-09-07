@@ -29,7 +29,7 @@ SunsetMP uses a **capability-based faction framework**. Factions are not hardcod
 | `taxi` | Downtown Cab Co. | `903.32, -170.14, 74.08` | Cab depot at same block |
 | `mechanic` | LS Customs | `337.52, -136.57, 39.01` | Drive-in repair when in vehicle |
 | `lsfd` | LS Fire Department | `1194.82, -1464.01, 34.86` | Fire station garage |
-| `fib` | FIB | `105.52, -745.12, 45.75` | Enter offices → lift (`136.25, -761.65`) → underground motor pool |
+| `fib` | FIB | `105.52, -745.12, 45.75` | Walk into offices → lift (`136.25, -761.65`) → motor pool → `[E]` fleet garage (`176.16, -706.13`) |
 | `sheriff` | San Andreas Sheriff | `387.74, -1607.92, 29.29` (exterior) | Fleet garage in parking lot south of station |
 | `sunset_cartel` | Sunset Cartel | `1394.72, 1141.98, 114.33` | Invite-only; members-only blip |
 | `night_syndicate` | Night Syndicate | `-1520.88, 849.55, 181.59` | Invite-only; members-only blip |

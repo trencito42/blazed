@@ -1,5 +1,22 @@
 local CHAT_COOLDOWN_MS = 1200
 local MEGAPHONE_RANGE = 35.0
+local SPY_ADMIN_LEVEL = 2
+local SpyEnabled = {}
+
+local function canSpyFactionChat(source)
+    if source == 0 then return false end
+    if GetResourceState('sunset_admin') ~= 'started' then return false end
+    if not exports.sunset_admin:IsAdmin(source, SPY_ADMIN_LEVEL) then return false end
+    if SpyEnabled[source] == false then return false end
+    return true
+end
+
+local function spyChannelLabel(channel)
+    if channel == 'f' then return 'FACTION'
+    if channel == 'r' then return 'RADIO'
+    if channel == 'd' then return 'DEPT'
+    return string.upper(tostring(channel or 'CHAT'))
+end
 
 local function attachSpeakerIdentity(payload, source, opts)
     opts = opts or {}
@@ -48,13 +65,15 @@ local function sendFactionChat(source, channel, args, filterFn)
     local name = exports.sunset_core:GetPlayerBaseName(source)
     local faction = Sunset.Factions[factionId]
     local label = faction and faction.label or factionId
-    local _, grade = FactionCore.getFactionOf(char)
+    local grade = FactionCore.getEffectiveGrade(char, factionId)
     local rank = FactionLabels.get(factionId, grade)
 
+    local recipients = {}
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         local c = FactionCore.getChar(src)
         if c and filterFn(src, c, factionId) then
+            recipients[src] = true
             local payload = attachSpeakerIdentity({
                 id = source,
                 message = msg,
@@ -66,6 +85,24 @@ local function sendFactionChat(source, channel, args, filterFn)
             }, source, { setName = true })
             TriggerClientEvent('sunset:chat:message', src, payload)
         end
+    end
+
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src == source or recipients[src] or not canSpyFactionChat(src) then goto continue_spy end
+        local spyPayload = attachSpeakerIdentity({
+            id = source,
+            message = msg,
+            time = os.date('%H:%M:%S'),
+            type = channel,
+            factionId = factionId,
+            factionLabel = label,
+            rank = rank,
+            spy = true,
+            spyChannel = spyChannelLabel(channel),
+        }, source, { setName = true })
+        TriggerClientEvent('sunset:chat:message', src, spyPayload)
+        ::continue_spy::
     end
 end
 
@@ -112,6 +149,26 @@ local function runDepartmentChat(source, args)
 end
 
 RegisterCommand('d', runDepartmentChat, false)
+
+local function runSpyToggle(source)
+    if source == 0 then return end
+    if GetResourceState('sunset_admin') ~= 'started' or not exports.sunset_admin:IsAdmin(source, SPY_ADMIN_LEVEL) then
+        return FactionCore.notify(source, 'No permission', 'error')
+    end
+    if SpyEnabled[source] == false then
+        SpyEnabled[source] = true
+        FactionCore.notify(source, 'Faction chat spy ON — you will see /f, /r, and /d traffic.', 'success')
+    else
+        SpyEnabled[source] = false
+        FactionCore.notify(source, 'Faction chat spy OFF.', 'info')
+    end
+end
+
+RegisterCommand('spy', runSpyToggle, false)
+
+AddEventHandler('playerDropped', function()
+    SpyEnabled[source] = nil
+end)
 
 local function runGovAnnouncement(source, args)
     if source == 0 then return end

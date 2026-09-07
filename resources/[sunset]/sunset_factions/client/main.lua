@@ -109,6 +109,9 @@ local function spawnFleetVehicle(depot, factionId, vehicleModel)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
     SetVehicleNeedsToBeHotwired(veh, false)
     SetVehRadioStation(veh, 'OFF')
+    if factionId == 'taxi' then
+        SetVehicleColours(veh, 88, 88)
+    end
     SetModelAsNoLongerNeeded(model)
 
     fleetVehicle = veh
@@ -517,10 +520,6 @@ AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
 end)
 
 AddEventHandler('sunset:world:factionDepot', function(factionId, depot)
-    if factionId == 'taxi' then
-        TriggerEvent('sunset:world:taxiDepot')
-        return
-    end
     openFleetGarage(factionId, depot)
 end)
 
@@ -564,7 +563,7 @@ CreateThread(function()
         if faction.hq then
             TriggerEvent('sunset:world:registerFactionHQ', id, faction)
         end
-        if faction.depot and id ~= 'taxi' then
+        if faction.depot then
             TriggerEvent('sunset:world:registerFactionDepot', id, faction.depot, faction)
             if faction.depot.lift then
                 TriggerEvent('sunset:world:registerElevator', id, faction.depot.lift, faction)

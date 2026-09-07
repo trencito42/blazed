@@ -198,6 +198,17 @@ body.chat-ui-open .chat-msg *,
     font-weight: 600;
 }
 
+.chat-msg--spy {
+    opacity: 0.82;
+    font-style: italic;
+}
+
+.chat-spy-tag {
+    color: #9fd4ff;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
 /* Government channel — on-duty legal factions */
 .chat-msg--gov {
     color: #e8c468;

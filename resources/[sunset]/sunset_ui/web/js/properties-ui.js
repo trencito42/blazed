@@ -19,14 +19,14 @@ const PropertyUI = {
     },
 
     statusLabel(p) {
-        if (p.owned) return 'YOUR HOUSE';
-        if (p.rented) return 'YOUR RENTAL';
+        if (p.owned) return 'YOUR PROPERTY';
+        if (p.rented) return 'RENTING';
         if (p.owner_character_id) {
             return p.rentEnabled
                 ? `RENT ${this.money(p.rentPrice)}/PAYDAY`
-                : 'OWNED';
+                : 'OCCUPIED';
         }
-        return p.forSale ? this.money(p.price) : 'NOT FOR SALE';
+        return p.forSale ? this.money(p.price) : 'UNAVAILABLE';
     },
 
     createButton(label, action, propertyId, payload, primary = false) {
@@ -45,7 +45,7 @@ const PropertyUI = {
 
         const title = document.createElement('div');
         title.className = 'house-owner-tools__title';
-        title.textContent = 'OWNER SETTINGS';
+        title.textContent = 'OWNER CONTROLS';
         tools.appendChild(title);
 
         const descRow = document.createElement('div');
@@ -163,13 +163,13 @@ const PropertyUI = {
         const details = document.createElement('div');
         details.className = 'house-row__details';
         const name = document.createElement('strong');
-        name.textContent = `#${p.id} ${p.label || 'House'}`;
+        name.textContent = `#${p.id} ${p.label || 'Residence'}`;
         const meta = document.createElement('span');
-        meta.textContent = `Level ${p.minimumLevel || 1} · ${p.interior || 'standard'} · ${p.locked ? 'Locked' : 'Unlocked'}${p.ownerName ? ` · Owner: ${p.ownerName}` : ''}`;
+        meta.textContent = `LVL ${p.minimumLevel || 1} · ${p.interior || 'standard'} · ${p.locked ? 'LOCKED' : 'OPEN'}${p.ownerName ? ` · ${p.ownerName}` : ''}`;
         const rental = document.createElement('small');
         rental.textContent = p.owner_character_id
-            ? `${p.renterCount || 0}/${p.maxRenters || 1} rental slots used`
-            : (p.forSale ? `Available for purchase · requires level ${p.minimumLevel || 1}` : 'Sale disabled by administrator');
+            ? `Renters ${p.renterCount || 0}/${p.maxRenters || 1}`
+            : (p.forSale ? `For sale · requires level ${p.minimumLevel || 1}` : 'Not listed for sale');
         details.append(name, meta, rental);
         if (p.description) {
             const description = document.createElement('small');
@@ -191,7 +191,7 @@ const PropertyUI = {
         };
 
         if (p.access || !p.locked) button('Enter', 'enter', true);
-        if (!p.owner_character_id && p.forSale) button('Buy', 'buy', true);
+        if (!p.owner_character_id && p.forSale) button('Purchase', 'buy', true);
         if (p.owner_character_id && !p.access && p.rentEnabled && Number(p.renterCount) < Number(p.maxRenters)) {
             button('Rent', 'rent', true);
         } else if (p.owner_character_id && !p.access && !p.rentEnabled) {
@@ -205,23 +205,23 @@ const PropertyUI = {
             hint.textContent = 'All rental slots are full.';
             details.appendChild(hint);
         }
-        if (p.access) button('Set spawn', 'sethome');
-        if (p.rented) button('End rental', 'unrent');
+        if (p.access) button('Set home', 'sethome');
+        if (p.rented) button('End lease', 'unrent');
         if (p.owned) button(p.locked ? 'Unlock' : 'Lock', 'lock');
 
         if (p.owned) {
             const toggle = document.createElement('button');
             toggle.type = 'button';
-            toggle.textContent = 'Owner settings';
+            toggle.textContent = 'Manage';
             toggle.addEventListener('click', (event) => {
                 event.stopPropagation();
                 const existing = li.querySelector('.house-owner-tools');
                 if (existing) {
                     existing.remove();
-                    toggle.textContent = 'Owner settings';
+                    toggle.textContent = 'Manage';
                     return;
                 }
-                toggle.textContent = 'Hide settings';
+                toggle.textContent = 'Hide controls';
                 details.appendChild(this.createOwnerTools(p, details));
                 post('propertyRenters', { propertyId: p.id });
             });

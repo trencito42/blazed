@@ -177,7 +177,7 @@ AddEventHandler('sunset:world:registerFactionHQ', function(factionId, faction)
         addBlip(faction.hq, faction.blip, label, false)
     end
     local hint = faction.hqHint or ('[E] ' .. label)
-    zones[#zones + 1] = registerZone('faction:' .. factionId, faction.hq, 3.5, hint, color, function()
+    zones[#zones + 1] = registerZone('faction:' .. factionId, faction.hq, faction.hqRadius or 3.5, hint, color, function()
         TriggerEvent('sunset:world:factionHQ', factionId, faction)
     end)
 end)
@@ -329,7 +329,7 @@ CreateThread(function()
                 activeZone = closest.id
                 if not closest.floating then showHint(closest.hint) end
             end
-            if IsControlJustReleased(0, 38) and not IsNuiFocused() then
+            if IsControlJustReleased(0, 38) and not IsNuiFocused() and SunsetWorld.tryInteract() then
                 if closest.onInteract then closest.onInteract() end
             end
             Wait(0)

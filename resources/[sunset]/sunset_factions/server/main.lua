@@ -92,17 +92,12 @@ local function leaveFactionForSource(source)
     local actorName = exports.sunset_core:GetPlayerDisplayName(source)
     setDuty(source, false)
 
-    FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true })
+    FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true, wasLeader = wasLeader })
+
+    MySQL.update.await('DELETE FROM faction_leaders WHERE character_id = ?', { char.id })
 
     if not exports.sunset_core:SetFaction(source, nil, 0) then
         return nil, 'Could not leave faction — try again'
-    end
-
-    if wasLeader then
-        MySQL.update.await(
-            'DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?',
-            { char.id, oldFaction }
-        )
     end
 
     FactionCore.broadcastManagement(oldFaction, nil, 'left the faction.', {
@@ -326,34 +321,72 @@ local function nearFactionDepot(source, depot)
     return false
 end
 
-local function fleetVehiclesForGrade(depot, grade)
+local function fleetEntryLabel(depot, vehicleModel)
+    vehicleModel = string.lower(tostring(vehicleModel or ''))
+    if depot and depot.vehicles then
+        for _, entry in ipairs(depot.vehicles) do
+            if string.lower(tostring(entry.model or '')) == vehicleModel then
+                return entry.label or fleetVehicleLabel(entry.model)
+            end
+        end
+    end
+    return fleetVehicleLabel(vehicleModel)
+end
+
+local function broadcastFleetTake(source, factionId, faction, vehicleModel)
+    local char = getChar(source)
+    if not char or not faction or not faction.depot then return end
+    local depot = faction.depot
+    local vehicleLabel = fleetEntryLabel(depot, vehicleModel)
+    local grade = FactionCore.getEffectiveGrade(char, factionId)
+    local rank = FactionLabels.get(factionId, grade)
+    local depotLabel = depot.label or 'fleet garage'
+    FactionCore.broadcastManagement(factionId, source,
+        ('took out %s from %s.'):format(vehicleLabel, depotLabel),
+        { actorId = source, rank = rank })
+    FactionCore.auditLog(factionId, char.id, 'fleet_take', char.id, {
+        vehicle = vehicleModel,
+        label = vehicleLabel,
+        depot = depotLabel,
+    })
+end
+
+local function fleetVehicleLabel(model, fallback)
+    model = tostring(model or '')
+    if model == '' then return fallback or 'Vehicle' end
+    return model:sub(1, 1):upper() .. model:sub(2):lower()
+end
+
+local function fleetVehiclesForGrade(depot, grade, factionId)
     local list = {}
     grade = tonumber(grade) or 0
     if depot.vehicles then
         for _, entry in ipairs(depot.vehicles) do
             local minGrade = tonumber(entry.minGrade)
-            if minGrade == nil then minGrade = 1 end
+            if minGrade == nil then minGrade = 0 end
             if grade >= minGrade then
                 list[#list + 1] = {
                     model = entry.model,
-                    label = entry.label or entry.model,
+                    label = entry.label or fleetVehicleLabel(entry.model),
                     minGrade = minGrade,
+                    minGradeLabel = factionId and FactionLabels.get(factionId, minGrade) or ('Rank ' .. minGrade),
                 }
             end
         end
     elseif depot.vehicle then
         list[#list + 1] = {
             model = depot.vehicle,
-            label = depot.label or depot.vehicle,
+            label = fleetVehicleLabel(depot.vehicle),
             minGrade = 0,
+            minGradeLabel = factionId and FactionLabels.get(factionId, 0) or 'Trainee',
         }
     end
     return list
 end
 
-local function isAllowedFleetModel(depot, model, grade)
+local function isAllowedFleetModel(depot, model, grade, factionId)
     model = string.lower(tostring(model or ''))
-    for _, entry in ipairs(fleetVehiclesForGrade(depot, grade)) do
+    for _, entry in ipairs(fleetVehiclesForGrade(depot, grade, factionId)) do
         if string.lower(entry.model) == model then return true end
     end
     return false
@@ -367,7 +400,7 @@ exports.sunset_core:RegisterCallback('sunset:factionFleetList', function(source,
     if ownFaction ~= factionId or not faction or not faction.depot then return nil, 'You do not work here' end
     if not FactionCore.isOnDuty(source) then return nil, 'Go on duty first' end
     if not nearFactionDepot(source, faction.depot) then return nil, 'You must be at the fleet garage' end
-    local vehicles = fleetVehiclesForGrade(faction.depot, grade)
+    local vehicles = fleetVehiclesForGrade(faction.depot, grade, ownFaction)
     if #vehicles == 0 then return nil, 'No fleet vehicles available for your rank' end
     return vehicles
 end)
@@ -384,7 +417,7 @@ exports.sunset_core:RegisterCallback('sunset:factionRequestFleet', function(sour
     local depot = faction.depot
     local model = vehicleModel or depot.vehicle
     if not model then return nil, 'No vehicle selected' end
-    if not isAllowedFleetModel(depot, model, grade) then return nil, 'Vehicle not available for your rank' end
+    if not isAllowedFleetModel(depot, model, grade, ownFaction) then return nil, 'Vehicle not available for your rank' end
     return { vehicle = model, platePrefix = depot.platePrefix }
 end)
 
@@ -399,7 +432,7 @@ RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, facti
     local faction = ownFaction and Sunset.Factions[ownFaction]
     if not networkId or ownFaction ~= factionId or not faction or not faction.depot then return end
     if not FactionCore.isOnDuty(src) then return end
-    if vehicleModel == '' or not isAllowedFleetModel(faction.depot, vehicleModel, grade) then return end
+    if vehicleModel == '' or not isAllowedFleetModel(faction.depot, vehicleModel, grade, ownFaction) then return end
 
     local vehicle = 0
     for _ = 1, 20 do
@@ -420,6 +453,7 @@ RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, facti
 
     Entity(vehicle).state:set('sunsetFactionVehicle', factionId, true)
     Entity(vehicle).state:set('sunsetProtectedVehicle', true, true)
+    broadcastFleetTake(src, factionId, faction, vehicleModel)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, targetId)
@@ -695,14 +729,18 @@ exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
         return MySQL.query.await('SELECT id, metadata FROM characters', {})
     end)
     if not charactersOk then return nil, 'Faction directory could not read member data. Please try again.' end
+    local memberFactionByCharId = {}
     for _, row in ipairs(characters or {}) do
         local metadata = row.metadata
         if type(metadata) == 'string' then
             local ok, decoded = pcall(json.decode, metadata)
             metadata = ok and decoded or {}
         end
-        local entry = type(metadata) == 'table' and byId[metadata.faction]
-        if entry then entry.total = entry.total + 1 end
+        if type(metadata) == 'table' and metadata.faction then
+            memberFactionByCharId[row.id] = metadata.faction
+            local entry = byId[metadata.faction]
+            if entry then entry.total = entry.total + 1 end
+        end
     end
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
@@ -716,14 +754,16 @@ exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
     end
     local leadersOk, leaderRows = pcall(function()
         return MySQL.query.await([[
-            SELECT fl.faction_id, c.firstname, c.lastname FROM faction_leaders fl
+            SELECT fl.faction_id, fl.character_id, c.firstname, c.lastname FROM faction_leaders fl
             LEFT JOIN characters c ON c.id = fl.character_id ORDER BY fl.assigned_at ASC
         ]], {})
     end)
     if not leadersOk then return nil, 'Faction directory could not read leadership data. Please try again.' end
     for _, row in ipairs(leaderRows or {}) do
+        if memberFactionByCharId[row.character_id] ~= row.faction_id then goto continue_leader end
         local entry = byId[row.faction_id]
         if entry then entry.leaders[#entry.leaders + 1] = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('%s+$', '') end
+        ::continue_leader::
     end
     table.sort(result, function(a, b)
         if a.type ~= b.type then return a.type == 'legal' end
@@ -748,9 +788,13 @@ AddEventHandler('sunset:server:characterSelected', function(source)
     TriggerClientEvent('sunset:client:dutyState', source, false, factionId, true)
 end)
 
-AddEventHandler('sunset:server:factionChanged', function(source, factionId)
-    FactionCore.setOnDuty(source, false)
-    TriggerClientEvent('sunset:client:dutyState', source, false, factionId, true)
+AddEventHandler('sunset:server:factionChanged', function(source, factionId, _grade, previousFactionId)
+    local newFactionId = factionId or nil
+    local oldFactionId = previousFactionId or nil
+    if newFactionId ~= oldFactionId then
+        FactionCore.setOnDuty(source, false)
+        TriggerClientEvent('sunset:client:dutyState', source, false, newFactionId, true)
+    end
 end)
 
 function GetDutyState(source)

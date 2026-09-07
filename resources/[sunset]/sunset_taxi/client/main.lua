@@ -1,4 +1,3 @@
-local depotVehicle = nil
 local activeRide = nil
 local lastTaxiAppData = nil
 
@@ -120,58 +119,6 @@ local function refreshPhoneTaxi()
             notify(err or 'Could not load taxi app', 'error')
         end
     end)
-end
-
-local function deleteDepotVehicle()
-    if depotVehicle and DoesEntityExist(depotVehicle) then
-        SetEntityAsMissionEntity(depotVehicle, true, true)
-        DeleteVehicle(depotVehicle)
-    end
-    depotVehicle = nil
-end
-
-local function spawnDepotVehicle()
-    local faction = Sunset.Factions and Sunset.Factions.taxi
-    local depot = faction and faction.depot
-    if not depot or not depot.spawn then
-        notify('No cab depot configured', 'error')
-        return
-    end
-
-    deleteDepotVehicle()
-
-    local model = joaat(depot.vehicle or 'taxi')
-    RequestModel(model)
-    local timeout = GetGameTimer() + 8000
-    while not HasModelLoaded(model) do
-        if GetGameTimer() > timeout then
-            notify('Failed to load cab model', 'error')
-            return
-        end
-        Wait(10)
-    end
-
-    local s = depot.spawn
-    local veh = CreateVehicle(model, s.x, s.y, s.z, s.w, true, false)
-    if veh == 0 then
-        SetModelAsNoLongerNeeded(model)
-        notify('Could not spawn cab', 'error')
-        return
-    end
-
-    SetVehicleNumberPlateText(veh, 'CAB' .. math.random(100, 999))
-    SetEntityAsMissionEntity(veh, true, true)
-    SetVehicleHasBeenOwnedByPlayer(veh, true)
-    SetVehicleNeedsToBeHotwired(veh, false)
-    SetVehRadioStation(veh, 'OFF')
-    SetVehicleColours(veh, 88, 88)
-    SetModelAsNoLongerNeeded(model)
-
-    depotVehicle = veh
-    TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
-    Wait(0)
-    TriggerServerEvent('sunset:factionRegisterFleetVehicle', NetworkGetNetworkIdFromEntity(veh), 'taxi')
-    notify('Cab ready — open Downtown Cab app for rides', 'success')
 end
 
 RegisterNetEvent('sunset:client:taxiMeterUpdate', function(data)
@@ -452,31 +399,4 @@ CreateThread(function()
         end
         Wait(waitMs)
     end
-end)
-
-AddEventHandler('sunset:world:taxiDepot', function()
-    local char = exports.sunset_core:GetCharacter()
-    if not char or Sunset.GetCharacterFaction(char) ~= 'taxi' then
-        notify('You must work for Downtown Cab Co.', 'error')
-        return
-    end
-    if not exports.sunset_factions:IsOnDuty() then
-        notify('Go on duty at the cab office first ([E] at yellow marker)', 'error')
-        return
-    end
-    spawnDepotVehicle()
-end)
-
-CreateThread(function()
-    Wait(4000)
-    local faction = Sunset.Factions and Sunset.Factions.taxi
-    local depot = faction and faction.depot
-    if not depot or not depot.coords then return end
-
-    TriggerEvent('sunset:world:registerTaxiDepot', depot)
-end)
-
-AddEventHandler('onResourceStop', function(res)
-    if res ~= GetCurrentResourceName() then return end
-    deleteDepotVehicle()
 end)

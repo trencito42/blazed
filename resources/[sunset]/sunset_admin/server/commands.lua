@@ -572,7 +572,7 @@ registerServerCommand('arespawn', function(source, args)
     end
 
     pcall(function() exports.sunset_death:RevivePlayer(target) end)
-    local pos = exports.sunset_core:GetSpawnPosition(char)
+    local pos = exports.sunset_core:GetSpawnPosition(char, target)
     if not pos or not pos.x then
         notify(source, ('Could not resolve a spawn point for #%d.'):format(target), 'error')
         return

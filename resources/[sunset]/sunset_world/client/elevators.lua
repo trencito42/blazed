@@ -150,7 +150,7 @@ CreateThread(function()
                     exports.ox_lib:showTextUI(closest.hint, { position = 'bottom-center' })
                 end
             end
-            if IsControlJustReleased(0, 38) and not IsNuiFocused() then
+            if IsControlJustReleased(0, 38) and not IsNuiFocused() and SunsetWorld.tryInteract() then
                 closest.onInteract()
             end
             Wait(0)

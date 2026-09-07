@@ -209,6 +209,7 @@ function Sunset.SetFaction(source, factionId, grade)
     if not char then return false end
 
     char.metadata = char.metadata or {}
+    local previousFaction = char.metadata.faction
     if not factionId or factionId == 'none' then
         char.metadata.faction = nil
         char.metadata.faction_grade = nil
@@ -234,7 +235,7 @@ function Sunset.SetFaction(source, factionId, grade)
     )
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     Player(source).state:set('sunsetDisplayName', GetPlayerDisplayName(source), true)
-    TriggerEvent('sunset:server:factionChanged', source, factionId, grade or 0)
+    TriggerEvent('sunset:server:factionChanged', source, char.metadata.faction, grade or 0, previousFaction)
     return true
 end
 
@@ -251,6 +252,7 @@ function Sunset.SetFactionByCharacterId(characterId, factionId, grade)
     end
     metadata = type(metadata) == 'table' and metadata or {}
 
+    local previousFaction = metadata.faction
     local job = row.job or 'unemployed'
     local jobGrade = tonumber(row.job_grade) or 0
 
@@ -282,7 +284,7 @@ function Sunset.SetFactionByCharacterId(characterId, factionId, grade)
             char.job = job
             char.job_grade = jobGrade
             TriggerClientEvent('sunset:client:updateCharacter', src, char)
-            TriggerEvent('sunset:server:factionChanged', src, factionId, grade or 0)
+            TriggerEvent('sunset:server:factionChanged', src, metadata.faction, grade or 0, previousFaction)
             break
         end
     end
@@ -370,7 +372,40 @@ AddEventHandler('playerDropped', function()
     BuyLevelLocks[source] = nil
 end)
 
-function Sunset.GetSpawnPosition(char)
+function Sunset.SetSpawnPreference(source, choice, propertyId)
+    local char = Sunset.GetCharacter(source)
+    if not char then return false end
+    decodeChar(char)
+    char.metadata = type(char.metadata) == 'table' and char.metadata or {}
+    choice = tostring(choice or '')
+    if choice ~= 'default' and choice ~= 'last' and choice ~= 'house' and choice ~= 'hq' then
+        return false
+    end
+    char.metadata.spawn_choice = choice
+    if choice == 'house' and propertyId then
+        char.metadata.spawn_property_id = tonumber(propertyId)
+    else
+        char.metadata.spawn_property_id = nil
+    end
+    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(char.metadata), char.id })
+    TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    return true
+end
+
+function Sunset.GetSpawnPosition(char, source)
+    if not char then return nil end
+    decodeChar(char)
+    local metadata = type(char.metadata) == 'table' and char.metadata or {}
+    local choice = metadata.spawn_choice
+    if choice and GetResourceState('sunset_properties') == 'started' then
+        local ok, resolved = pcall(function()
+            return exports.sunset_properties:ResolveSpawnChoice(source or 0, char, choice, metadata.spawn_property_id)
+        end)
+        if ok and type(resolved) == 'table' and resolved.x then
+            return resolved
+        end
+    end
+
     if char.home_property_id then
         local prop = MySQL.single.await(
             'SELECT id, entry, owner_character_id, enabled FROM properties WHERE id = ? LIMIT 1',
@@ -444,4 +479,5 @@ exports('AddRespectPoints', Sunset.AddRespectPoints)
 exports('GetRobPoints', Sunset.GetRobPoints)
 exports('SetRobPoints', Sunset.SetRobPoints)
 exports('AddRobPoints', Sunset.AddRobPoints)
+exports('SetSpawnPreference', Sunset.SetSpawnPreference)
 exports('GetSpawnPosition', Sunset.GetSpawnPosition)
