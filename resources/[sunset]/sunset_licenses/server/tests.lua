@@ -228,15 +228,15 @@ exports.sunset_core:RegisterCallback('sunset:license:validateFinish', function(s
         if practical.requireEngineOff and (type(data) ~= 'table' or data.engineOn ~= false) then
             return false, 'Shut off the engine before finishing.'
         end
-        local maxColl = practical.maxCollisions or 3
-        local collisions = tonumber(data and data.collisions) or 0
-        if collisions > maxColl then
-            return false, ('Too many collisions during the test (%d/%d).'):format(collisions, maxColl)
+        local maxPenalties = practical.maxPenalties or practical.maxSpeedStrikes or 4
+        local penaltyCount = tonumber(data and data.penalties)
+        if penaltyCount == nil then
+            local collisions = tonumber(data and data.collisions) or 0
+            local speedStrikes = tonumber(data and data.speedStrikes) or 0
+            penaltyCount = collisions + speedStrikes
         end
-        local maxSpeed = practical.maxSpeedStrikes or 4
-        local speedStrikes = tonumber(data and data.speedStrikes) or 0
-        if speedStrikes >= maxSpeed then
-            return false, ('Too many speed violations during the test (%d/%d).'):format(speedStrikes, maxSpeed)
+        if penaltyCount >= maxPenalties then
+            return false, ('Too many penalties during the test (%d/%d).'):format(penaltyCount, maxPenalties)
         end
     end
 

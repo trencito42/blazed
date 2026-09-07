@@ -23,7 +23,7 @@ const LicenseTestHud = {
     _highlight(text) {
         if (text == null || text === '') return '';
         let html = this._escape(String(text));
-        html = html.replace(/\b([0-9]|E|K|H)\b/g, (key) => `<span class="license-test__key">${key}</span>`);
+        html = html.replace(/\b([0-9]{1,3}|E|K|H)\b/g, (key) => `<span class="license-test__key">${key}</span>`);
         return html;
     },
 
@@ -37,14 +37,13 @@ const LicenseTestHud = {
         const parts = [];
         if (data.step != null && data.total) parts.push(`Step ${data.step}/${data.total}`);
         if (data.checkpoints) parts.push(`Checkpoint ${data.checkpoint ?? 0}/${data.checkpoints}`);
-        if (data.collisions !== undefined && data.maxCollisions !== undefined) {
+        if (data.penalties !== undefined && data.maxPenalties !== undefined) {
+            parts.push(`Penalties ${data.penalties}/${data.maxPenalties}`);
+        } else if (data.collisions !== undefined && data.maxCollisions !== undefined) {
             parts.push(`Hits ${data.collisions}/${data.maxCollisions}`);
         }
         if (data.speed !== undefined && data.speedLimit !== undefined) {
             parts.push(`${data.speed}/${data.speedLimit} km/h`);
-        }
-        if (data.speedStrikes !== undefined && data.maxSpeedStrikes !== undefined) {
-            parts.push(`Speed ${data.speedStrikes}/${data.maxSpeedStrikes}`);
         }
         return parts.join(' · ') || (data.meta || '');
     },

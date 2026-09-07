@@ -235,6 +235,9 @@ SunsetLicenses.Practical = {
         departGate = vector4(220.96, -1406.25, 29.33, 145.74),
         gateRadius = 10.0,
         engineOffOnSpawn = true,
+        maxPenalties = 4,
+        speedCountdownSec = 5,
+        speedGraceKmh = 5,
         maxCollisions = 3,
         briefing = {
             {

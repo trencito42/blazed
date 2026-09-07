@@ -147,8 +147,15 @@
 
 .state-driver .license-test__title,
 .state-driver .license-test__icon { color: #ff9f43; }
-.state-warning .license-test__title,
-.state-warning .license-test__icon { color: #ff554f; }
+.state-warning .license-test__message {
+    color: #ff6b6b;
+    animation: license-test-pulse 0.85s ease-in-out infinite alternate;
+}
+
+@keyframes license-test-pulse {
+    from { opacity: 0.82; }
+    to { opacity: 1; }
+}
 .state-success .license-test__title,
 .state-success .license-test__icon { color: #59e391; }
 

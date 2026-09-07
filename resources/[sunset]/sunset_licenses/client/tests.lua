@@ -244,34 +244,68 @@ local function runBriefing(licenseType, cfg, spawn, onComplete)
     end)
 end
 
-local function trackVehicleDamage(veh, cfg, collisions)
-    collisions = collisions or { count = 0, lastBody = 0.0 }
-    if veh == 0 or not DoesEntityExist(veh) then return collisions end
-    if collisions.lastBody <= 0.0 then
-        collisions.lastBody = GetVehicleBodyHealth(veh)
+local function maxDriverPenalties(cfg)
+    return cfg.maxPenalties or cfg.maxSpeedStrikes or 4
+end
+
+local function newPenaltyState(cfg)
+    return {
+        count = 0,
+        max = maxDriverPenalties(cfg),
+        countdownEnd = 0,
+        lockUntil = 0,
+    }
+end
+
+local function failOnPenalties(penalties, reason)
+    if penalties.count >= penalties.max then
+        failTest(reason or ('Too many penalties (%d/%d) — test failed.'):format(penalties.count, penalties.max))
+        return true
+    end
+    return false
+end
+
+local function addPenalty(penalties, reason)
+    penalties.count = penalties.count + 1
+    penalties.countdownEnd = 0
+    penalties.lockUntil = GetGameTimer() + 2500
+    if failOnPenalties(penalties, reason) then
+        return penalties.count, true
+    end
+    return penalties.count, false
+end
+
+local function isOverSpeedLimit(speed, limit, hard, cfg)
+    local grace = cfg.speedGraceKmh or 5
+    if speed > hard then return true end
+    return speed > (limit + grace)
+end
+
+local function trackVehicleDamage(veh, cfg, penalties)
+    penalties = penalties or newPenaltyState(cfg)
+    if veh == 0 or not DoesEntityExist(veh) then return penalties end
+    if not penalties.lastBody or penalties.lastBody <= 0.0 then
+        penalties.lastBody = GetVehicleBodyHealth(veh)
     end
     if HasEntityCollidedWithAnything(veh) then
         local body = GetVehicleBodyHealth(veh)
-        if body < collisions.lastBody - 18.0 then
-            collisions.count = collisions.count + 1
-            collisions.lastBody = body
-            local maxHits = cfg.maxCollisions or 3
+        if body < penalties.lastBody - 18.0 then
+            penalties.lastBody = body
+            local count, failed = addPenalty(penalties, ('Too many penalties (%d/%d) — test failed.'):format(
+                penalties.count, penalties.max))
             UpdateLicenseTestHud({
                 licenseType = 'driver',
-                state = collisions.count >= maxHits and 'warning' or 'driver',
+                state = 'warning',
                 title = 'Driving School',
-                collisions = collisions.count,
-                maxCollisions = maxHits,
-                message = ('Vehicle contact recorded (%d/%d). Drive carefully.'):format(collisions.count, maxHits),
-                progress = nil,
+                penalties = count,
+                maxPenalties = penalties.max,
+                message = ('PENALTY %d/%d — HARD IMPACT. Drive carefully.'):format(count, penalties.max),
             })
-            if collisions.count >= maxHits then
-                failTest(('Too many collisions (%d/%d) — test failed.'):format(collisions.count, maxHits))
-            end
+            if failed then return penalties end
         end
         ClearEntityLastDamageEntity(veh)
     end
-    return collisions
+    return penalties
 end
 
 local function driverSpeedLimit(cpIndex, cfg, finishing)
@@ -291,46 +325,51 @@ local function checkpointHint(cfg, cpIndex, finishing)
     return hints[cpIndex] or 'Follow the route markers and obey the speed limit.'
 end
 
-local function trackDriverSpeed(veh, cfg, cpIndex, finishing, state)
-    state = state or { strikes = 0, overLimitSince = 0, hardSince = 0 }
-    if veh == 0 or not DoesEntityExist(veh) then return state, 0, driverSpeedLimit(cpIndex, cfg, finishing), nil end
+local function trackDriverSpeed(veh, cfg, cpIndex, finishing, penalties)
+    penalties = penalties or newPenaltyState(cfg)
+    penalties.max = maxDriverPenalties(cfg)
+    if veh == 0 or not DoesEntityExist(veh) then
+        return penalties, 0, driverSpeedLimit(cpIndex, cfg, finishing), checkpointHint(cfg, cpIndex, finishing), 'driver'
+    end
 
     local speed = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
     local limit = driverSpeedLimit(cpIndex, cfg, finishing)
     local hard = cfg.speedLimitHard or 115
-    local maxStrikes = cfg.maxSpeedStrikes or 4
+    local countdownSec = cfg.speedCountdownSec or 5
     local now = GetGameTimer()
+    local over = isOverSpeedLimit(speed, limit, hard, cfg)
     local message
+    local state = 'driver'
 
-    if speed > hard then
-        if state.hardSince == 0 then state.hardSince = now end
-        message = ('Slow down now! %d km/h is reckless — max %d on this exam.'):format(speed, hard)
-        if now - state.hardSince >= 1800 then
-            state.strikes = state.strikes + 1
-            state.hardSince = now
-            message = ('Speed violation %d/%d — ease off the throttle immediately.'):format(state.strikes, maxStrikes)
+    if over and now >= (penalties.lockUntil or 0) then
+        state = 'warning'
+        if penalties.countdownEnd <= 0 then
+            penalties.countdownEnd = now + (countdownSec * 1000)
+        end
+        local remaining = math.max(1, math.ceil((penalties.countdownEnd - now) / 1000))
+        message = ('REDUCE SPEED IN %d'):format(remaining)
+
+        if now >= penalties.countdownEnd then
+            if isOverSpeedLimit(speed, limit, hard, cfg) then
+                local count, failed = addPenalty(penalties, ('Too many penalties (%d/%d) — test failed.'):format(
+                    penalties.count, penalties.max))
+                message = ('PENALTY %d/%d — YOU DID NOT SLOW DOWN.'):format(count, penalties.max)
+                state = 'warning'
+                if failed then
+                    return penalties, speed, limit, message, state
+                end
+            else
+                penalties.countdownEnd = 0
+                message = checkpointHint(cfg, cpIndex, finishing)
+                state = 'driver'
+            end
         end
     else
-        state.hardSince = 0
-        if speed > limit + 8 then
-            if state.overLimitSince == 0 then state.overLimitSince = now end
-            message = ('Slow down — %d km/h. Limit here is %d km/h.'):format(speed, limit)
-            if now - state.overLimitSince >= 2800 then
-                state.strikes = state.strikes + 1
-                state.overLimitSince = now
-                message = ('Speed warning %d/%d — drive like an exam, not a race.'):format(state.strikes, maxStrikes)
-            end
-        else
-            state.overLimitSince = 0
-            message = checkpointHint(cfg, cpIndex, finishing)
-        end
+        penalties.countdownEnd = 0
+        message = checkpointHint(cfg, cpIndex, finishing)
     end
 
-    if state.strikes >= maxStrikes then
-        failTest(('Too many speed violations (%d/%d) — test failed.'):format(state.strikes, maxStrikes))
-    end
-
-    return state, speed, limit, message
+    return penalties, speed, limit, message, state
 end
 
 local function pickTestSpawn(cfg)
@@ -392,9 +431,10 @@ end
 
 local function runDriverRoute(cfg, vehicle)
     local cpIndex = 1
-    local collisions = { count = 0, lastBody = GetVehicleBodyHealth(vehicle) }
-    local speedState = { strikes = 0, overLimitSince = 0, hardSince = 0 }
+    local penalties = newPenaltyState(cfg)
+    penalties.lastBody = GetVehicleBodyHealth(vehicle)
     local hudMessage = checkpointHint(cfg, 1, false)
+    local hudState = 'driver'
     local checkpoints = cfg.checkpoints or {}
     local checkpointNotify = {}
 
@@ -406,12 +446,10 @@ local function runDriverRoute(cfg, vehicle)
         title = 'Driving School',
         checkpoint = 0,
         checkpoints = #checkpoints,
-        collisions = 0,
-        maxCollisions = cfg.maxCollisions or 3,
+        penalties = 0,
+        maxPenalties = penalties.max,
         speed = 0,
         speedLimit = driverSpeedLimit(1, cfg, false),
-        speedStrikes = 0,
-        maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
         message = hudMessage,
         progress = 0,
     })
@@ -419,35 +457,33 @@ local function runDriverRoute(cfg, vehicle)
     CreateThread(function()
         local lastHudKey = ''
         while practicalState and practicalState.licenseType == 'driver' do
-            Wait(900)
+            local waitMs = penalties.countdownEnd > 0 and 250 or 600
+            Wait(waitMs)
             local ped = PlayerPedId()
             local veh = GetVehiclePedIsIn(ped, false)
             local finishing = cpIndex > #checkpoints
-            local speed, limit, msg
-            speedState, speed, limit, msg = trackDriverSpeed(veh, cfg, cpIndex, finishing, speedState)
-            if msg then hudMessage = msg end
+            local speed, limit
+            penalties, speed, limit, hudMessage, hudState = trackDriverSpeed(veh, cfg, cpIndex, finishing, penalties)
             local progress
             if finishing then
                 progress = 95
             else
                 progress = math.floor((math.max(cpIndex - 1, 0) / math.max(#checkpoints, 1)) * 100)
             end
-            local hudKey = ('%d:%d:%d:%d:%s'):format(
-                cpIndex, speed or 0, speedState.strikes, collisions.count, hudMessage or '')
+            local hudKey = ('%d:%d:%d:%d:%s:%s'):format(
+                cpIndex, speed or 0, penalties.count, penalties.countdownEnd or 0, hudState or '', hudMessage or '')
             if hudKey == lastHudKey then goto continue end
             lastHudKey = hudKey
             UpdateLicenseTestHud({
                 licenseType = 'driver',
-                state = speedState.strikes >= 2 and 'warning' or 'driver',
+                state = hudState,
                 title = 'Driving School',
                 checkpoint = math.min(cpIndex - 1, #checkpoints),
                 checkpoints = #checkpoints,
-                collisions = collisions.count,
-                maxCollisions = cfg.maxCollisions or 3,
+                penalties = penalties.count,
+                maxPenalties = penalties.max,
                 speed = speed,
                 speedLimit = limit,
-                speedStrikes = speedState.strikes,
-                maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
                 message = hudMessage,
                 progress = progress,
             })
@@ -467,7 +503,7 @@ local function runDriverRoute(cfg, vehicle)
             local ped = PlayerPedId()
             local pos = GetEntityCoords(ped)
             local veh = GetVehiclePedIsIn(ped, false)
-            collisions = trackVehicleDamage(veh, cfg, collisions)
+            penalties = trackVehicleDamage(veh, cfg, penalties)
 
             if cpIndex <= #checkpoints then
                 local cp = asVector3(checkpoints[cpIndex])
@@ -479,19 +515,17 @@ local function runDriverRoute(cfg, vehicle)
                         cpIndex = cpIndex + 1
                         updateRoute(cpIndex)
                         hudMessage = checkpointHint(cfg, cpIndex, cpIndex > #checkpoints)
-                        UpdateLicenseTestHud({
-                            licenseType = 'driver',
-                            state = 'driver',
-                            title = 'Driving School',
-                            checkpoint = cpIndex - 1,
-                            checkpoints = #checkpoints,
-                            collisions = collisions.count,
-                            maxCollisions = cfg.maxCollisions or 3,
-                            speedStrikes = speedState.strikes,
-                            maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
-                            message = ('Checkpoint %d/%d — %s'):format(cpIndex - 1, #checkpoints, hudMessage),
-                            progress = math.floor(((cpIndex - 1) / math.max(#checkpoints, 1)) * 100),
-                        })
+                            UpdateLicenseTestHud({
+                                licenseType = 'driver',
+                                state = hudState,
+                                title = 'Driving School',
+                                checkpoint = cpIndex - 1,
+                                checkpoints = #checkpoints,
+                                penalties = penalties.count,
+                                maxPenalties = penalties.max,
+                                message = ('Checkpoint %d/%d — %s'):format(cpIndex - 1, #checkpoints, hudMessage),
+                                progress = math.floor(((cpIndex - 1) / math.max(#checkpoints, 1)) * 100),
+                            })
                     elseif err then
                         notifyOnce(checkpointNotify, err, 'error')
                     end
@@ -507,11 +541,10 @@ local function runDriverRoute(cfg, vehicle)
                         AddTextComponentString('Press ~INPUT_CONTEXT~ to finish (engine off if required)')
                         EndTextCommandDisplayHelp(0, false, true, -1)
                         if IsControlJustReleased(0, 38) then
-                            return completeTest('driver', {
-                                engineOn = engineOn,
-                                collisions = collisions.count,
-                                speedStrikes = speedState.strikes,
-                            })
+                                return completeTest('driver', {
+                                    engineOn = engineOn,
+                                    penalties = penalties.count,
+                                })
                         end
                     end
                 end
@@ -538,8 +571,8 @@ local function runDriverTest(cfg)
         total = #steps > 0 and #steps or nil,
         checkpoint = 0,
         checkpoints = #(cfg.checkpoints or {}),
-        collisions = 0,
-        maxCollisions = cfg.maxCollisions or 3,
+        penalties = 0,
+        maxPenalties = maxDriverPenalties(cfg),
         message = (steps[1] and steps[1].message) or 'Follow the orange GPS route to each checkpoint.',
         progress = 0,
     })
