@@ -55,16 +55,21 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
     local row = getOwnedVehicleRow(char.id, plate)
     if not row then return nil, 'Not your vehicle' end
 
-    local sanitized = SunsetTuning.SanitizeTune(tune)
+    local sanitized
+    if type(tune) == 'table' then
+        sanitized = SunsetTuning.SanitizeTune(tune)
+    else
+        return nil, 'Invalid tune data'
+    end
     local cost = SunsetTuning.SaveBaseCost + (flash and SunsetTuning.FlashCost or 0)
 
-    if not Sunset.RemoveMoney(source, 'bank', cost, 'ECU tune save') then
+    if not exports.sunset_core:RemoveMoney(source, 'bank', cost, 'ECU tune save') then
         return nil, ('Need $%d in bank for ECU save'):format(cost)
     end
 
     local ok, err = saveTuneToVehicle(char.id, plate, sanitized)
     if not ok then
-        Sunset.AddMoney(source, 'bank', cost, 'ECU tune refund')
+        exports.sunset_core:AddMoney(source, 'bank', cost, 'ECU tune refund')
         return nil, err or 'Save failed'
     end
 
@@ -80,7 +85,7 @@ exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, p
     local row = getOwnedVehicleRow(char.id, plate)
     if not row then return nil, 'Not your vehicle' end
 
-    if not Sunset.RemoveMoney(source, 'bank', SunsetTuning.DynoCost, 'Dyno run') then
+    if not exports.sunset_core:RemoveMoney(source, 'bank', SunsetTuning.DynoCost, 'Dyno run') then
         return nil, ('Need $%d in bank for dyno'):format(SunsetTuning.DynoCost)
     end
 
@@ -92,7 +97,7 @@ exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, p
 
     local ok, err = saveTuneToVehicle(char.id, plate, tune)
     if not ok then
-        Sunset.AddMoney(source, 'bank', SunsetTuning.DynoCost, 'Dyno refund')
+        exports.sunset_core:AddMoney(source, 'bank', SunsetTuning.DynoCost, 'Dyno refund')
         return nil, err or 'Dyno save failed'
     end
 
@@ -100,24 +105,40 @@ exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, p
 end)
 
 exports.sunset_core:RegisterCallback('sunset:tuning:getLeaderboard', function(source)
-    local rows = MySQL.query.await([[
-        SELECT v.plate, v.model, JSON_UNQUOTE(JSON_EXTRACT(v.props, '$.ecu.dyno.lastHp')) AS hp,
-               JSON_UNQUOTE(JSON_EXTRACT(v.props, '$.ecu.dyno.lastTorque')) AS torque
-        FROM vehicles v
-        WHERE JSON_EXTRACT(v.props, '$.ecu.dyno.lastHp') IS NOT NULL
-          AND CAST(JSON_UNQUOTE(JSON_EXTRACT(v.props, '$.ecu.dyno.lastHp')) AS UNSIGNED) > 0
-        ORDER BY CAST(JSON_UNQUOTE(JSON_EXTRACT(v.props, '$.ecu.dyno.lastHp')) AS UNSIGNED) DESC
-        LIMIT 15
-    ]]) or {}
+    local ok, rows = pcall(function()
+        return MySQL.query.await([[
+            SELECT plate, model, props FROM vehicles
+            WHERE props IS NOT NULL
+            ORDER BY id DESC
+            LIMIT 200
+        ]]) or {}
+    end)
+
+    if not ok then
+        print(('^1[sunset_tuning]^7 leaderboard query failed: %s'):format(tostring(rows)))
+        return {}
+    end
 
     local out = {}
     for _, row in ipairs(rows) do
-        out[#out + 1] = {
-            plate = row.plate,
-            model = row.model,
-            hp = math.floor(tonumber(row.hp) or 0),
-            torque = math.floor(tonumber(row.torque) or 0),
-        }
+        local props = decodeProps(row.props)
+        local tune = props.ecu and SunsetTuning.SanitizeTune(props.ecu) or nil
+        local hp = tune and tune.dyno and tune.dyno.lastHp or 0
+        if hp > 0 then
+            out[#out + 1] = {
+                plate = row.plate,
+                model = row.model,
+                hp = hp,
+                torque = tune.dyno.lastTorque or 0,
+            }
+        end
+    end
+
+    table.sort(out, function(a, b) return (a.hp or 0) > (b.hp or 0) end)
+    if #out > 15 then
+        local trimmed = {}
+        for i = 1, 15 do trimmed[i] = out[i] end
+        out = trimmed
     end
     return out
 end)
