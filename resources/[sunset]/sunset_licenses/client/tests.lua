@@ -94,27 +94,54 @@ local function spawnTestVehicle(model, spawn, opts)
     return veh
 end
 
-local function addCheckpointBlips(checkpoints, color)
+local function setActiveCheckpointBlip(point, opts)
     clearBlips()
-    for i, cp in ipairs(checkpoints or {}) do
-        local point = asVector3(cp)
-        local blip = AddBlipForCoord(point.x, point.y, point.z)
-        SetBlipSprite(blip, 1)
-        SetBlipColour(blip, color or 47)
-        SetBlipScale(blip, 0.8)
-        SetBlipAsShortRange(blip, i ~= 1)
-        if i == 1 then
-            SetBlipRoute(blip, true)
-            SetBlipRouteColour(blip, color or 47)
-        end
-        testBlips[#testBlips + 1] = blip
+    opts = opts or {}
+    local p = asVector3(point)
+    local blip = AddBlipForCoord(p.x, p.y, p.z)
+    SetBlipSprite(blip, opts.sprite or 1)
+    SetBlipColour(blip, opts.color or 47)
+    SetBlipScale(blip, opts.scale or 0.9)
+    SetBlipAsShortRange(blip, false)
+    SetBlipDisplay(blip, 2)
+    if opts.route then
+        SetBlipRoute(blip, true)
+        SetBlipRouteColour(blip, opts.color or 47)
     end
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentString(opts.label or 'Next checkpoint')
+    EndTextCommandSetBlipName(blip)
+    testBlips[1] = blip
 end
 
-local function updateRoute(index)
-    for i, blip in ipairs(testBlips) do
-        SetBlipRoute(blip, i == index)
+local function refreshCheckpointNavigation(cfg, cpIndex, color)
+    local checkpoints = cfg.checkpoints or {}
+    if cpIndex <= #checkpoints then
+        setActiveCheckpointBlip(checkpoints[cpIndex], {
+            color = color or 47,
+            route = true,
+            label = ('Checkpoint %d/%d'):format(cpIndex, #checkpoints),
+        })
+        return
     end
+    if cfg.finish then
+        setActiveCheckpointBlip(cfg.finish, {
+            color = color or 47,
+            route = true,
+            label = 'Finish',
+        })
+        return
+    end
+    clearBlips()
+end
+
+local function drawCheckpointMarker(point, radius, alpha)
+    local p = asVector3(point)
+    local size = math.max(4.0, (tonumber(radius) or 8.0) * 1.35)
+    DrawMarker(1, p.x, p.y, p.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        size, size, 2.2, 255, 153, 51, alpha or 145, false, false, 2, false, nil, nil, false)
+    DrawMarker(27, p.x, p.y, p.z + 2.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        1.4, 1.4, 1.4, 255, 153, 51, math.min(255, (alpha or 145) + 40), false, false, 2, false, nil, nil, false)
 end
 
 local function failTest(msg)
@@ -487,7 +514,7 @@ local function runDriverRoute(cfg, vehicle)
     local checkpointNotify = {}
     local practicalEndsAt = GetGameTimer() + ((cfg.maxTimeSec or 1200) * 1000)
 
-    addCheckpointBlips(checkpoints, 47)
+    refreshCheckpointNavigation(cfg, 1, 47)
 
     UpdateLicenseTestHud({
         licenseType = 'driver',
@@ -558,6 +585,15 @@ local function runDriverRoute(cfg, vehicle)
             local veh = GetVehiclePedIsIn(ped, false)
             penalties = trackVehicleDamage(veh, cfg, penalties)
 
+            if not practicalState.driverBriefing then
+                local radius = cfg.checkpointRadius or 8.0
+                if cpIndex <= #checkpoints then
+                    drawCheckpointMarker(checkpoints[cpIndex], radius, 150)
+                elseif cfg.finish then
+                    drawCheckpointMarker(cfg.finish, cfg.finishRadius or 10.0, 120)
+                end
+            end
+
             if cpIndex <= #checkpoints then
                 local cp = asVector3(checkpoints[cpIndex])
                 local radius = cfg.checkpointRadius or 8.0
@@ -566,7 +602,7 @@ local function runDriverRoute(cfg, vehicle)
                     local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', 'driver', cpIndex)
                     if ok then
                         cpIndex = cpIndex + 1
-                        updateRoute(cpIndex)
+                        refreshCheckpointNavigation(cfg, cpIndex, 47)
                         hudMessage = checkpointHint(cfg, cpIndex, cpIndex > #checkpoints)
                             UpdateLicenseTestHud({
                                 licenseType = 'driver',
@@ -745,7 +781,7 @@ end)
 
 local function runCheckpointTest(licenseType, cfg, facility)
     local cpIndex = 1
-    addCheckpointBlips(cfg.checkpoints, 2)
+    refreshCheckpointNavigation(cfg, 1, 2)
     notify('Complete all checkpoints, then return to the finish marker.', 'info')
 
     if licenseType ~= 'driver' then
@@ -775,6 +811,12 @@ local function runCheckpointTest(licenseType, cfg, facility)
             local ped = PlayerPedId()
             local pos = GetEntityCoords(ped)
             local cps = cfg.checkpoints or {}
+            local radius = cfg.checkpointRadius or 8.0
+            if cpIndex <= #cps then
+                drawCheckpointMarker(cps[cpIndex], radius, 150)
+            elseif cfg.finish then
+                drawCheckpointMarker(cfg.finish, cfg.finishRadius or 10.0, 120)
+            end
             if cpIndex <= #cps then
                 local cp = asVector3(cps[cpIndex])
                 local radius = cfg.checkpointRadius or 8.0
@@ -783,7 +825,7 @@ local function runCheckpointTest(licenseType, cfg, facility)
                     local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', licenseType, cpIndex)
                     if ok then
                         cpIndex = cpIndex + 1
-                        updateRoute(cpIndex)
+                        refreshCheckpointNavigation(cfg, cpIndex, 2)
                         notify(('Checkpoint %d/%d passed.'):format(cpIndex - 1, #cps), 'success')
                     elseif err then
                         notify(err, 'error')

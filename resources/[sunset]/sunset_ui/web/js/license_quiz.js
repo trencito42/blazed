@@ -129,8 +129,18 @@ const LicenseQuiz = {
                     answer: value,
                 }),
             });
-            const payload = await res.json();
-            const correct = payload && payload.ok && payload.correct === true;
+            const text = await res.text();
+            let payload = null;
+            try { payload = text ? JSON.parse(text) : null; } catch (_) { payload = null; }
+            if (typeof payload === 'string') payload = { ok: false, error: payload };
+            if (!payload || typeof payload !== 'object' || payload.ok !== true) {
+                this._state.locked = false;
+                this._state.answers[idx + 1] = null;
+                this._renderQuestion();
+                this._showFeedback(payload?.error || 'COULD NOT VERIFY ANSWER', false, true);
+                return;
+            }
+            const correct = payload.correct === true;
             this._state.results[idx + 1] = correct;
             this._showFeedback(correct ? 'CORRECT' : 'WRONG', correct);
             setTimeout(() => {

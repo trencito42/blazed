@@ -102,16 +102,27 @@ forward('appearanceRotate')
 forward('appearanceGender')
 forward('licenseQuizClose')
 forward('licenseQuizSubmit')
-forward('licenseQuizAnswer')
 
 RegisterNUICallback('licenseQuizAnswer', function(data, cb)
+    data = type(data) == 'table' and data or {}
+    local licenseType = data.licenseType
+    local questionIndex = tonumber(data.questionIndex)
+    local answer = tonumber(data.answer)
+    if not licenseType or not questionIndex or not answer then
+        cb({ ok = false, error = 'Missing answer data.' })
+        return
+    end
+
     exports.sunset_core:TriggerCallback('sunset:license:gradeTheoryAnswer', function(result, err)
         if err then
-            cb({ ok = false, error = err })
+            cb({ ok = false, error = tostring(err) })
             return
         end
-        cb({ ok = true, correct = result and result.correct == true })
-    end, data and data.licenseType, data and data.questionIndex, data and data.answer)
+        cb({
+            ok = true,
+            correct = type(result) == 'table' and result.correct == true,
+        })
+    end, licenseType, questionIndex, answer)
 end)
 
 RegisterNUICallback('hudEditSave', function(data, cb)

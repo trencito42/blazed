@@ -66,6 +66,19 @@ local function sanitizedTheory(theory)
     return result
 end
 
+local function bindTheoryAnswerKeys()
+    for licenseType, key in pairs(SunsetLicenseTheoryAnswers or {}) do
+        local theory = SunsetLicenses.Theory[licenseType]
+        if not theory then goto continue end
+        for i, question in ipairs(theory.questions or {}) do
+            question.serverAnswer = tonumber(key[i])
+        end
+        ::continue::
+    end
+end
+
+bindTheoryAnswerKeys()
+
 function IsInLicenseTest(source)
     return TestSessions[source] ~= nil
 end
@@ -327,6 +340,7 @@ exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(sour
         startedAt = os.time(),
         theoryDeadline = os.time() + theoryTimeSec,
         theoryAnswers = {},
+        theoryAnswerKey = SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType],
         examFee = charged,
         instructor = authorization and authorization.instructor or nil,
         issuerCharacterId = authorization and authorization.issuerCharacterId or nil,
@@ -359,16 +373,19 @@ exports.sunset_core:RegisterCallback('sunset:license:gradeTheoryAnswer', functio
     if session.theoryDeadline and os.time() > session.theoryDeadline then
         return nil, 'Theory time expired.'
     end
-    if not questionIndex or not answer then return nil, 'Invalid answer.' end
+    if not questionIndex or answer == nil then return nil, 'Invalid answer.' end
     local theory = SunsetLicenses.Theory[licenseType]
     if not theory or not theory.questions[questionIndex] then return nil, 'Invalid question.' end
     session.theoryAnswers = session.theoryAnswers or {}
     if session.theoryAnswers[questionIndex] ~= nil then
         return nil, 'You already answered this question.'
     end
-    local answerKey = SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType]
-    if not answerKey then return nil, 'The server answer key is not configured for this exam.' end
-    local correct = tonumber(answerKey[questionIndex]) == answer
+    local answerKey = session.theoryAnswerKey
+        or (SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType])
+    local question = theory.questions[questionIndex]
+    local expected = tonumber(question and question.serverAnswer) or tonumber(answerKey and answerKey[questionIndex])
+    if expected == nil then return nil, 'The server answer key is not configured for this exam.' end
+    local correct = tonumber(answer) == expected
     session.theoryAnswers[questionIndex] = answer
     return { correct = correct, questionIndex = questionIndex }
 end)
@@ -388,11 +405,13 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     if not theory then return nil, 'Invalid exam.' end
     answers = type(answers) == 'table' and answers or session.theoryAnswers or {}
     session.theoryAnswers = answers
-    local answerKey = SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType]
+    local answerKey = session.theoryAnswerKey
+        or (SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType])
     if not answerKey then return nil, 'The server answer key is not configured for this exam.' end
     local score = 0
     for i, q in ipairs(theory.questions or {}) do
-        if tonumber(answers[i] or answers[tostring(i)]) == tonumber(answerKey[i]) then
+        local expected = tonumber(q.serverAnswer) or tonumber(answerKey[i])
+        if tonumber(answers[i] or answers[tostring(i)]) == expected then
             score = score + 1
         end
     end
@@ -415,6 +434,10 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     local facilityKey = SunsetLicenses.Types[licenseType].facility
     local facility = facilityKey and SunsetLicenses.Facilities[facilityKey]
     local practicalTimeSec = practical and tonumber(practical.maxTimeSec) or 1200
+    if session.instructor then
+        notify(session.instructor, ('Candidate #%d passed the %s theory test. Supervise the practical until completion.'):format(
+            source, SunsetLicenses.Types[licenseType].label), 'success')
+    end
     return {
         practical = practical,
         facility = facility,
