@@ -36,7 +36,12 @@
 }
 
 .studio-logo {
+    display: block;
     width: 120px;
+    max-width: min(120px, 32vw);
+    height: auto;
+    max-height: 50px;
+    object-fit: contain;
     margin-bottom: 12px;
     opacity: 0.95;
 }

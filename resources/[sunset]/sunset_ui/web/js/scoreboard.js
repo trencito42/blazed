@@ -18,7 +18,7 @@ const Scoreboard = {
         const max = data.max || 48;
         $('#sb-count').textContent = `${count}/${max}`;
         $('#sb-tab-players').textContent = `PLAYERS ${count}/${max}`;
-        $('#sb-server-name').textContent = data.serverName || 'SunsetMP';
+        $('#sb-server-name').textContent = data.serverName || 'blaze.mp';
 
         const body = $('#sb-body');
         body.innerHTML = '';

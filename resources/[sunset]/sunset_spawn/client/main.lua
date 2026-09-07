@@ -7,7 +7,12 @@ local function validCoordinate(value)
 end
 
 local function resolvePosition(char, spawnPosition)
+    local usingSaved = type(spawnPosition) ~= 'table'
     local pos = type(spawnPosition) == 'table' and spawnPosition or (char.position or {})
+    if usingSaved and Sunset.GetFactionDepotRescueSpawn then
+        local rescued = Sunset.GetFactionDepotRescueSpawn(pos.x, pos.y, pos.z)
+        if rescued then pos = rescued end
+    end
     if not validCoordinate(pos.x) or not validCoordinate(pos.y) or not validCoordinate(pos.z) then
         pos = Sunset.Config.DefaultSpawn
     end

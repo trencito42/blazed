@@ -17,5 +17,6 @@ files {
     'script.js',
     'assets/bg.png',
     'assets/bg.webp',
+    'assets/bg_login.png',
     'assets/logo.png',
 }

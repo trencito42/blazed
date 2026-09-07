@@ -132,9 +132,10 @@
     min-width: 0;
     min-height: 0;
     padding: 16px 18px;
-    background: rgba(10, 9, 8, 0.24);
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
-    backdrop-filter: blur(14px) saturate(1.15);
+    background: linear-gradient(135deg, rgba(10, 9, 8, 0.28), rgba(10, 9, 8, 0.16));
+    /* FiveM's CEF can composite backdrop-filter as an opaque black layer. */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     border: none;
     border-top: 1px solid rgba(255, 255, 255, 0.07);
     clip-path: none;
@@ -704,9 +705,9 @@
 }
 
 .menu--solo-inventory .tech-panel {
-    background: rgba(8, 7, 8, 0.52);
-    -webkit-backdrop-filter: blur(16px) saturate(1.2);
-    backdrop-filter: blur(16px) saturate(1.2);
+    background: linear-gradient(135deg, rgba(8, 7, 8, 0.34), rgba(8, 7, 8, 0.2));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     border-top: 2px solid rgba(255, 119, 0, 0.42);
 }
 

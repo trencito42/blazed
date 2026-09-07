@@ -272,7 +272,13 @@ end)
 function ApplyAppearance(ped, appearance, gender)
     SunsetAppearance.apply(ped, appearance, gender or 0)
 end
+
+local function exportResolveTorso(ped, gender, topDrawable, topTexture)
+    return SunsetAppearance.resolveTorso(ped, gender, topDrawable, topTexture)
+end
+
 exports('ApplyAppearance', ApplyAppearance)
+exports('ResolveTorso', exportResolveTorso)
 exports('IsEditing', function() return editing end)
 
 AddEventHandler('sunset:client:playerSpawned', function(char)

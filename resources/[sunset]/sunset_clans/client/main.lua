@@ -64,6 +64,31 @@ RegisterCommand('declineclan', function()
     exports.sunset_ui:Notify('Clan invite declined.', 'info')
 end, false)
 TriggerEvent('chat:addSuggestion', '/declineclan', 'Decline a pending clan invitation')
+TriggerEvent('chat:addSuggestion', '/c', 'Clan chat — visible to your clan members only')
+
+local function clanWarnCommand(_, args)
+    local targetId = tonumber(args[1])
+    local reason = table.concat(args, ' ', 2)
+    if not targetId or reason == '' then
+        return exports.sunset_ui:Notify('Usage: /cwarn [id] [reason]', 'error')
+    end
+    local ok, err = Sunset.AwaitCallback('sunset:clanManage', {
+        action = 'warn',
+        targetId = targetId,
+        reason = reason,
+    })
+    if ok then
+        exports.sunset_ui:Notify('Clan warning issued.', 'warning')
+        exports.sunset_ui:Send('clanPanelShow', ok)
+    else
+        exports.sunset_ui:Notify(err or 'Clan warning failed.', 'error', 8000)
+    end
+end
+
+RegisterCommand('cwarn', clanWarnCommand, false)
+RegisterCommand('cw', clanWarnCommand, false)
+TriggerEvent('chat:addSuggestion', '/cwarn', 'Issue a clan warning', { { name = 'id' }, { name = 'reason' } })
+TriggerEvent('chat:addSuggestion', '/cw', 'Alias for /cwarn', { { name = 'id' }, { name = 'reason' } })
 
 AddEventHandler('sunset:nui:clanManage', function(data)
     data = data or {}
@@ -84,8 +109,12 @@ AddEventHandler('sunset:nui:clanManage', function(data)
                 exports.sunset_ui:Notify('Clan invite sent.', 'success')
             elseif action == 'kick' then
                 exports.sunset_ui:Notify('Member removed from clan.', 'success')
-            elseif action == 'promote' then
+            elseif action == 'rankUp' or action == 'rankDown' then
                 exports.sunset_ui:Notify('Member rank updated.', 'success')
+            elseif action == 'warn' then
+                exports.sunset_ui:Notify('Clan warning issued.', 'warning')
+            elseif action == 'rankLabels' then
+                exports.sunset_ui:Notify('Clan rank names saved.', 'success')
             elseif action == 'motd' then
                 exports.sunset_ui:Notify('Clan MOTD updated.', 'success')
             elseif action == 'settings' then

@@ -179,7 +179,7 @@ AddEventHandler('sunset:client:playerSpawned', function()
     exports.sunset_ui:Send('chatMessage', {
         id = 0,
         name = 'SERVER',
-        message = 'Welcome to SunsetMP! T = chat, /help for commands.',
+        message = 'Welcome to blaze.mp! T = chat, /help for commands.',
         time = '',
     })
 end)

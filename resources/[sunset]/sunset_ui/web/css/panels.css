@@ -13,7 +13,87 @@
     background: transparent;
     backdrop-filter: none;
 }
+.fleet-garage {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    pointer-events: none;
+    background: transparent;
+}
+
+.fleet-garage__panel {
+    position: fixed;
+    right: 28px;
+    bottom: 110px;
+    width: min(420px, 90vw);
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    pointer-events: auto;
+    padding: 12px 12px 10px;
+    background: linear-gradient(145deg, rgba(10, 9, 8, .38), rgba(4, 4, 4, .24));
+    border: 1px solid rgba(255, 119, 0, .32);
+    border-top: 2px solid rgba(255, 119, 0, .85);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .24);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    filter: none;
+}
+
+.fleet-garage__panel::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--os-accent, #ff7700);
+}
+
+.fleet-garage__head span {
+    display: block;
+    font: 700 14px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: .14em;
+    color: var(--os-accent-bright, #ffb21c);
+    text-transform: uppercase;
+}
+
+.fleet-garage__hint {
+    margin-top: 6px;
+    color: rgba(246, 242, 233, .55);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.fleet-garage__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0;
+    list-style: none;
+}
+
+.fleet-garage__list .menu-vcard {
+    list-style: none;
+    grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.fleet-garage__leave {
+    margin-top: 10px;
+    width: 100%;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    color: rgba(246, 242, 233, .55);
+    letter-spacing: .14em;
+    font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    cursor: pointer;
+}
+
+.fleet-garage__leave:hover { color: #fff; }
+
 .overlay-panel.hidden { display: none; }
+.fleet-garage.hidden { display: none !important; }
 
 .overlay-panel__box {
     width: min(520px, 92vw);

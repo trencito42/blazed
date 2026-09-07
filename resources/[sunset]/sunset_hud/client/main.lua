@@ -88,7 +88,11 @@ local function buildHudData()
         or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
 
     local jobId = select(1, Sunset.GetCharacterJob(char))
-    local factionId = select(1, Sunset.GetCharacterFaction(char))
+    local md = char.metadata or {}
+    local factionId = md.faction
+    if not factionId and char.job and Sunset.Factions and Sunset.Factions[char.job] then
+        factionId = char.job
+    end
     local jobLabel = 'Unemployed'
     if factionId and Sunset.Factions[factionId] then
         jobLabel = Sunset.Factions[factionId].label
@@ -325,6 +329,10 @@ AddEventHandler('sunset:nui:hudEditClose', function()
 end)
 
 local function localRpName()
+    local display = LocalPlayer.state.sunsetDisplayName
+    if type(display) == 'string' and display ~= '' then
+        return display:gsub('%s*%(%d+%)%s*$', '')
+    end
     if char and char.firstname then
         local full = (char.firstname or '') .. ((char.lastname and char.lastname ~= '') and (' ' .. char.lastname) or '')
         if full ~= '' then return full end
@@ -345,10 +353,21 @@ CreateThread(function()
     end
 end)
 
+local LAW_ENFORCEMENT_FACTIONS = {
+    police = true,
+    sheriff = true,
+    fib = true,
+}
+
 local function isLawEnforcementOnDuty()
     if not LocalPlayer.state.sunsetOnDuty then return false end
     local factionId = LocalPlayer.state.sunsetFaction
-    return factionId and Sunset.FactionTypeMatches(factionId, 'law_enforcement')
+    if not factionId then
+        local char = exports.sunset_core:GetCharacter()
+        local md = char and char.metadata
+        factionId = md and md.faction or (char and char.job)
+    end
+    return factionId and LAW_ENFORCEMENT_FACTIONS[factionId] == true
 end
 
 local function wantedLevelForPlayer(serverId)

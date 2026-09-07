@@ -90,8 +90,8 @@ html, body {
 }
 
 .loadscreen__logo {
-    width: min(380px, 52vw);
-    height: 110px;
+    width: min(320px, 48vw);
+    height: 88px;
     margin: 0 auto;
     pointer-events: none;
     background: url('assets/logo.png') center / contain no-repeat;

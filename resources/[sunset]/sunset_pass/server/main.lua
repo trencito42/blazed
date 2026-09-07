@@ -7,7 +7,7 @@ local CharacterLocks = {}
 local function withCharacterLock(characterId, operation)
     local key = tostring(characterId)
     if CharacterLocks[key] then
-        return nil, 'Your Sunset Pass is already processing another action. Try again in a moment.'
+        return nil, 'Your Blaze Pass is already processing another action. Try again in a moment.'
     end
 
     CharacterLocks[key] = true
@@ -16,7 +16,7 @@ local function withCharacterLock(characterId, operation)
 
     if not result[1] then
         print(('[sunset_pass] operation failed for character %s: %s'):format(key, tostring(result[2])))
-        return nil, 'Sunset Pass could not process the action. No second request was accepted.'
+        return nil, 'Blaze Pass could not process the action. No second request was accepted.'
     end
     return table.unpack(result, 2, result.n)
 end
@@ -122,7 +122,7 @@ local function grantReward(source, reward)
         if amount <= 0 then return false, 'Invalid coin amount.' end
         local nextValue = (tonumber(player.premium_points) or 0) + amount
         local ok, err = setPremiumPoints(source, nextValue)
-        if not ok then return false, err or 'Could not add Sunset Coins.' end
+        if not ok then return false, err or 'Could not add Blaze Points.' end
         return true
     end
 
@@ -313,7 +313,7 @@ exports.sunset_core:RegisterCallback('sunset:pass:buyPremium', function(source)
         local balance = tonumber(player.premium_points) or 0
         if cost <= 0 then return nil, 'Premium pass is not for sale yet.' end
         if balance < cost then
-            return nil, ('You need %d Sunset Coins (you have %d).'):format(cost, balance)
+            return nil, ('You need %d Blaze Points (you have %d).'):format(cost, balance)
         end
 
         local ok, err = setPremiumPoints(source, balance - cost)

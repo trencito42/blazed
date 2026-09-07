@@ -120,7 +120,7 @@ exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(sourc
             return exports.sunset_factions:GetLeaderHqSpawn(source)
         end)
         if not ok or type(hq) ~= 'table' then
-            return nil, 'Faction HQ spawn is only available to faction leaders.'
+            return nil, 'Faction HQ spawn is only available to faction members.'
         end
         pos = hq
     else return nil,'Invalid spawn location.' end
@@ -179,7 +179,11 @@ exports.sunset_core:RegisterCallback('sunset:buyProperty', function(source,id)
     local price=tonumber(prop.price) or 0
     local bank, cash = exports.sunset_core:GetMoney(source,'bank'), exports.sunset_core:GetMoney(source,'cash')
     if bank<price and cash<price then return nil,('Purchase blocked: the house costs $%d. You have $%d in bank and $%d cash; the full price must be in one account. No money was charged.'):format(price,bank,cash) end
-    local claimed=MySQL.update.await('UPDATE properties SET owner_character_id=?,locked=1 WHERE id=? AND owner_character_id IS NULL',{char.id,prop.id})
+    local defaultRent = math.floor(tonumber(SunsetProperties.DefaultRentPrice) or 500)
+    local claimed=MySQL.update.await(
+        'UPDATE properties SET owner_character_id=?, locked=1, rent_enabled=1, rent_price=? WHERE id=? AND owner_character_id IS NULL',
+        { char.id, defaultRent, prop.id }
+    )
     if claimed~=1 then return nil,'Another player bought this house first.' end
     local paidFrom = charge(source,price,'house_purchase')
     if not paidFrom then
@@ -193,7 +197,7 @@ exports.sunset_core:RegisterCallback('sunset:buyProperty', function(source,id)
         return nil,'The house could not be saved to your character. Ownership was rolled back and the full payment was refunded.'
     end
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
-    return true,('You bought %s for $%d.'):format(prop.label,price)
+    return true,('You bought %s for $%d. Rent is open at $%d/payday — change it in Owner settings or /houserent.'):format(prop.label,price,defaultRent)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:rentProperty', function(source,id)
@@ -546,7 +550,18 @@ RegisterCommand('ahouseedit',function(source,args)
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('House #%d updated: %s = %s.'):format(id,field,tostring(value)),'success')
 end,false)
 
-RegisterCommand('renthouse',function(source) message(source,'Stand at a house, press E, then choose RENT. /properties lists all houses.','info') end,false)
+RegisterCommand('aenablerent', function(source, args)
+    if source==0 or not exports.sunset_admin:IsAdmin(source,SunsetProperties.AdminLevel) then return message(source,'Admin level 3 is required.','error') end
+    local price = math.floor(tonumber(args[1]) or SunsetProperties.DefaultRentPrice or 500)
+    local changed = MySQL.update.await(
+        'UPDATE properties SET rent_enabled=1, rent_price=? WHERE owner_character_id IS NOT NULL AND rent_enabled=0',
+        { price }
+    )
+    TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    message(source, ('Rent enabled on %d owned houses at $%d per payday.'):format(tonumber(changed) or 0, price), 'success')
+end, false)
+
+RegisterCommand('renthouse',function(source) message(source,'Stand at a house marker, press E, then choose RENT. Owner must have rent enabled. /properties lists all houses.','info') end,false)
 RegisterCommand('unrent',function(source)
     local char=exports.sunset_core:GetCharacter(source); if not char then return end; local rent=activeRental(char.id)
     if not rent then return message(source,'You do not currently rent a house.','error') end

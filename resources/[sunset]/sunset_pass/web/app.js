@@ -184,9 +184,9 @@ function renderHeader(data) {
         premiumBtn.textContent = 'Premium Active';
         premiumBtn.classList.add('is-owned');
     } else {
-        premiumBtn.textContent = `Upgrade Pass (${data.premiumCost || 0} Coins)`;
+        premiumBtn.textContent = `Upgrade Pass (${data.premiumCost || 0} BP)`;
         premiumBtn.classList.remove('is-owned');
-        premiumBtn.title = `You have ${data.accountCoins || 0} Sunset Coins`;
+        premiumBtn.title = `You have ${data.accountCoins || 0} Blaze Points`;
     }
 }
 
@@ -246,7 +246,7 @@ if (new URLSearchParams(window.location.search).get('qa') === '1') {
         { type: 'item', label: 'Bread x5', icon: 'bread', count: 5 },
         { type: 'item', label: 'Bandage x3', icon: 'bandage', count: 3 },
         { type: 'bank', label: '$7,500 Bank', icon: 'bank', amount: 7500 },
-        { type: 'premium_points', label: '10 Sunset Coins', icon: 'coins', amount: 10 },
+        { type: 'premium_points', label: '10 Blaze Points', icon: 'coins', amount: 10 },
     ];
     show({
         tab: 'rewards',

@@ -1,7 +1,15 @@
 Sunset = Sunset or {}
 
+Sunset.Brand = {
+    ServerName = 'blaze.mp',
+    DisplayName = 'Blaze MP',
+    CurrencyShort = 'BP',
+    CurrencyName = 'Blaze Points',
+    PassName = 'Blaze Pass',
+}
+
 Sunset.Config = {
-    ServerName = 'SunsetMP',
+    ServerName = Sunset.Brand.ServerName,
     MaxCharacters = 1,
     DefaultSpawn = vector4(-1037.58, -2737.58, 20.17, 328.0),
     StartingCash = 500,

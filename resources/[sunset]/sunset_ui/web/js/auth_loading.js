@@ -15,7 +15,7 @@ const LoadingScreen = {
         return [
             'Connecting to server instance...',
             'Downloading map assets...',
-            'Loading Sunset custom vehicles...',
+            'Loading Blaze custom vehicles...',
             'Initializing UI systems...',
             'Fetching character data...',
             'Synchronizing weather protocols...',

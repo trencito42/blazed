@@ -213,6 +213,10 @@ local function wantedCapFor(source)
 end
 
 local function applyWanted(source, data)
+    if not data.decayAt then
+        local remaining = tonumber(data.decayRemaining) or wantedStarSeconds()
+        data.decayAt = os.time() + math.max(1, remaining)
+    else
         data.decayRemaining = math.max(1, data.decayAt - os.time())
     end
     data.characterId = data.characterId or charId(source)
@@ -794,6 +798,17 @@ local function broadcastFactionAction(source, message, factionId)
     end
 end
 
+local function isDepotFleetModel(depot, model)
+    if not depot or not model then return false end
+    if depot.vehicle and model == joaat(depot.vehicle) then return true end
+    if depot.vehicles then
+        for _, entry in ipairs(depot.vehicles) do
+            if entry.model and model == joaat(entry.model) then return true end
+        end
+    end
+    return false
+end
+
 local function validateRadarVehicle(source, networkId)
     if not FactionCore.hasPerm(source, 'radar') then
         return nil, FactionCore.accessError(source, 'radar', 'use the speed radar', 'law_enforcement')
@@ -801,15 +816,18 @@ local function validateRadarVehicle(source, networkId)
     local vehicle = NetworkGetEntityFromNetworkId(tonumber(networkId) or 0)
     local ped = GetPlayerPed(source)
     if vehicle == 0 or not DoesEntityExist(vehicle) or ped == 0 then
-        return nil, 'You must be driving a valid LSPD patrol vehicle.'
+        return nil, 'You must be driving a valid patrol vehicle.'
     end
     if GetPedInVehicleSeat(vehicle, -1) ~= ped then
-        return nil, 'You must be in the driver seat of the LSPD patrol vehicle.'
+        return nil, 'You must be in the driver seat of the patrol vehicle.'
     end
-    local isFleet = Entity(vehicle).state.sunsetFactionVehicle == 'police'
+    local char = FactionCore.getChar(source)
+    local factionId = char and select(1, FactionCore.getFactionOf(char))
+    local isFleet = factionId and Entity(vehicle).state.sunsetFactionVehicle == factionId
     local model = GetEntityModel(vehicle)
-    local depot = Sunset.Factions.police and Sunset.Factions.police.depot
-    local isDepotModel = depot and depot.vehicle and model == joaat(depot.vehicle)
+    local faction = factionId and Sunset.Factions[factionId]
+    local depot = faction and faction.depot
+    local isDepotModel = depot and isDepotFleetModel(depot, model)
     local allowed = false
     for _, name in ipairs((Sunset.Police.radar and Sunset.Police.radar.allowedModels) or {}) do
         if model == joaat(name) then
@@ -818,7 +836,7 @@ local function validateRadarVehicle(source, networkId)
         end
     end
     if not isFleet and not isDepotModel and not allowed then
-        return nil, 'Get in an LSPD patrol car (MRPD garage or a marked cruiser) and try again.'
+        return nil, 'Get in a patrol car from your faction garage or a marked cruiser, then try again.'
     end
     return vehicle
 end
@@ -1233,3 +1251,5 @@ exports.sunset_core:RegisterCallback('sunset:policeRefuseTicket', function(sourc
         exports.sunset_core:GetPlayerDisplayName(source), source, ticketId, row.reason or 'violation', wanted.level))
     return true
 end)
+
+print('[sunset_factions] police server loaded (radar, MDC, tickets, wanted, jail)')

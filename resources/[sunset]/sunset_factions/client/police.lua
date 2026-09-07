@@ -7,6 +7,67 @@ local radarVehicle = 0
 local radarLimitKmh = 0
 local radarHits = {}
 
+local function releaseRadarVehicle(veh)
+    if veh == 0 or not DoesEntityExist(veh) then return end
+    FreezeEntityPosition(veh, false)
+    SetVehicleHandbrake(veh, false)
+    SetEntityCollision(veh, true, true)
+    SetVehicleUndriveable(veh, false)
+    SetVehicleEngineOn(veh, true, true, false)
+end
+
+local function drawRadarZoneText(x, y, z, lines, scale, r, g, b)
+    scale = scale or 0.32
+    SetDrawOrigin(x, y, z, 0)
+    for i, line in ipairs(lines) do
+        SetTextScale(scale, scale)
+        SetTextFont(4)
+        SetTextCentre(true)
+        SetTextColour(r or 255, g or 140, b or 0, 235)
+        SetTextDropshadow(1, 0, 0, 0, 210)
+        SetTextOutline()
+        BeginTextCommandDisplayText('STRING')
+        AddTextComponentSubstringPlayerName(line)
+        EndTextCommandDisplayText(0.0, (i - 1) * 0.018)
+    end
+    ClearDrawOrigin()
+end
+
+local function drawRadarZoneMarkers(vehicle, cfg)
+    if vehicle == 0 or not DoesEntityExist(vehicle) then return end
+    cfg = cfg or {}
+    local range = cfg.mobileRange or 45.0
+    local coneDeg = cfg.mobileCone or 18.0
+    local coords = GetEntityCoords(vehicle)
+    local groundZ = coords.z - 0.95
+    local heading = math.rad(GetEntityHeading(vehicle))
+    local halfCone = math.rad(coneDeg * 0.5)
+
+    DrawMarker(1, coords.x, coords.y, groundZ, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        3.0, 3.0, 1.1, 255, 140, 0, 150, false, false, 2, false, nil, nil, false)
+
+    local steps = 6
+    for i = 0, steps do
+        local t = i / steps
+        local angle = heading - halfCone + (2 * halfCone * t)
+        local mx = coords.x - math.sin(angle) * range
+        local my = coords.y + math.cos(angle) * range
+        local alpha = math.floor(55 + 95 * (1 - math.abs(t - 0.5)))
+        DrawMarker(1, mx, my, groundZ, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            3.2, 3.2, 0.35, 255, 110, 0, alpha, false, false, 2, false, nil, nil, false)
+    end
+
+    local fx = coords.x - math.sin(heading) * range
+    local fy = coords.y + math.cos(heading) * range
+    DrawMarker(1, fx, fy, groundZ, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        5.5, 5.5, 0.45, 255, 70, 0, 120, false, false, 2, false, nil, nil, false)
+
+    drawRadarZoneText(coords.x, coords.y, coords.z + 1.35, {
+        ('~o~RADAR ACTIVE~s~  %d km/h'):format(radarLimitKmh),
+        ('Range %.0fm'):format(range),
+    }, 0.30)
+end
+
 local function chatTimeStamp()
     return string.format('%02d:%02d:%02d', GetClockHours(), GetClockMinutes(), GetClockSeconds())
 end
@@ -52,12 +113,25 @@ local function kmhFromEntity(entity)
     return math.floor(GetEntitySpeed(entity) * 3.6 + 0.5)
 end
 
+local function isDepotFleetModel(depot, model)
+    if not depot or not model then return false end
+    if depot.vehicle and model == joaat(depot.vehicle) then return true end
+    if depot.vehicles then
+        for _, entry in ipairs(depot.vehicles) do
+            if entry.model and model == joaat(entry.model) then return true end
+        end
+    end
+    return false
+end
+
 local function isAuthorizedRadarVehicle(vehicle)
     if vehicle == 0 or not DoesEntityExist(vehicle) then return false end
-    if Entity(vehicle).state.sunsetFactionVehicle == 'police' then return true end
     local model = GetEntityModel(vehicle)
-    local depot = Sunset.Factions and Sunset.Factions.police and Sunset.Factions.police.depot
-    if depot and depot.vehicle and model == joaat(depot.vehicle) then return true end
+    local char = exports.sunset_core:GetCharacter()
+    local factionId = char and Sunset.GetCharacterFaction(char)
+    if factionId and Entity(vehicle).state.sunsetFactionVehicle == factionId then return true end
+    local faction = factionId and Sunset.Factions[factionId]
+    if faction and faction.depot and isDepotFleetModel(faction.depot, model) then return true end
     for _, name in ipairs((Sunset.Police and Sunset.Police.radar and Sunset.Police.radar.allowedModels) or {}) do
         if model == joaat(name) then return true end
     end
@@ -174,15 +248,23 @@ local function pushRadarUi(extra)
 end
 
 local function stopRadar(showMessage)
-    if radarVehicle ~= 0 and DoesEntityExist(radarVehicle) then
-        FreezeEntityPosition(radarVehicle, false)
-        SetVehicleHandbrake(radarVehicle, false)
-    end
-    if radarActive then Sunset.AwaitCallback('sunset:policeRadarStop') end
-    radarActive, radarVehicle, radarLimitKmh = false, 0, 0
+    local veh = radarVehicle
+    local wasActive = radarActive
+    radarActive = false
+    radarVehicle = 0
+    radarLimitKmh = 0
     radarHits = {}
+    lastRadarLock = 0
     exports.sunset_ui:Send('radarHide', {})
-    if showMessage then exports.sunset_ui:Notify('Speed radar stopped — patrol vehicle unlocked.', 'info') end
+    releaseRadarVehicle(veh)
+    if wasActive then
+        CreateThread(function()
+            Sunset.AwaitCallback('sunset:policeRadarStop')
+        end)
+    end
+    if showMessage then
+        exports.sunset_ui:Notify('Speed radar stopped — patrol vehicle unlocked.', 'info')
+    end
 end
 
 RegisterNetEvent('sunset:police:summonAlert', function(data)
@@ -285,6 +367,17 @@ CreateThread(function()
             Wait(0)
         else
             Wait(800)
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if radarActive and radarVehicle ~= 0 and DoesEntityExist(radarVehicle) then
+            drawRadarZoneMarkers(radarVehicle, Sunset.Police and Sunset.Police.radar)
+            Wait(0)
+        else
+            Wait(400)
         end
     end
 end)
@@ -549,7 +642,7 @@ local function tryStartRadar(requestedLimit)
         title = 'Mobile Radar',
         message = 'Scanning lane…',
     })
-    radarFeedback(('Mobile radar active: %d km/h. Vehicle locked until /stopradar.'):format(radarLimitKmh), 'success')
+    radarFeedback(('Mobile radar active: %d km/h. Orange zone marks the scan lane ahead.'):format(radarLimitKmh), 'success')
 end
 
 RegisterNetEvent('sunset:police:tryStartRadar', function(limit)
@@ -560,6 +653,23 @@ RegisterNetEvent('sunset:police:tryStopRadar', function()
     if not radarActive then return radarFeedback('Radar is not active. Start it with /startradar 90.', 'info') end
     stopRadar(true)
 end)
+
+RegisterCommand('startradar', function(_, args)
+    tryStartRadar(args[1])
+end, false)
+
+RegisterCommand('setradar', function(_, args)
+    tryStartRadar(args[1])
+end, false)
+
+RegisterCommand('radar', function(_, args)
+    tryStartRadar(args[1])
+end, false)
+
+RegisterCommand('stopradar', function()
+    if not radarActive then return radarFeedback('Radar is not active. Start it with /startradar 90.', 'info') end
+    stopRadar(true)
+end, false)
 
 RegisterCommand('radars', function()
     local list, err = Sunset.AwaitCallback('sunset:policeFixedRadars')
@@ -694,5 +804,7 @@ exports('IsJailed', function() return jailed end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
+    releaseRadarVehicle(radarVehicle)
     radarActive = false
+    radarVehicle = 0
 end)

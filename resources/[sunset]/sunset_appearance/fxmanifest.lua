@@ -13,7 +13,7 @@ shared_scripts {
     '@sunset_core/shared/utils.lua',
 }
 
-exports { 'IsEditing', 'ApplyAppearance' }
+exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',

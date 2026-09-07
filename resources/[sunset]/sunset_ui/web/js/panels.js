@@ -108,7 +108,7 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory'];
+            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -126,6 +126,8 @@ const Panels = {
                         '#clan-directory': 'clanPanelsClose',
                         '#faction-panel': 'factionPanelsClose',
                         '#faction-directory': 'factionPanelsClose',
+                        '#garage': 'garageClose',
+                        '#fleet-garage': 'fleetGarageClose',
                     };
                     post(map[sel]);
                     e.preventDefault();
@@ -134,6 +136,7 @@ const Panels = {
             }
         });
         $('#garage-close')?.addEventListener('click', () => post('garageClose'));
+        $('#fleet-garage-close')?.addEventListener('click', () => post('fleetGarageClose'));
         $('#properties-close')?.addEventListener('click', () => post('propertiesClose'));
         $('#emotes-close')?.addEventListener('click', () => post('emotesClose'));
         $('#clothing-close')?.addEventListener('click', () => post('clothingClose'));
@@ -680,6 +683,72 @@ const Panels = {
     },
 
     hideGarage() { $('#garage')?.classList.add('hidden'); },
+
+    showFleetGarage(data) {
+        this.init();
+        const list = $('#fleet-garage-list');
+        const title = $('#fleet-garage-title');
+        if (title) title.textContent = data.label || 'Fleet Garage';
+        list.innerHTML = '';
+        list.className = 'menu-vehicle-grid';
+
+        const vehicleImage = (model) => {
+            const m = (model || 'sultan').toLowerCase().replace(/[^a-z0-9_]/g, '');
+            return `https://docs.fivem.net/vehicles/${m}.webp`;
+        };
+
+        (data.vehicles || []).forEach((v) => {
+            const model = (v.model || 'vehicle').toUpperCase();
+            const li = document.createElement('li');
+            li.className = 'menu-vcard';
+            li.innerHTML = `
+                <div class="menu-vcard__img-wrap">
+                    <img class="menu-vcard__img" src="${vehicleImage(v.model)}" alt="${model}" loading="lazy"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <div class="menu-vcard__img-fallback" style="display:none">${model.charAt(0)}</div>
+                </div>
+                <div class="menu-vcard__body">
+                    <div class="menu-vcard__top">
+                        <strong>${v.label || model}</strong>
+                        <span class="menu-vcard__status menu-vcard__status--stored">Fleet</span>
+                    </div>
+                    <div class="menu-vcard__plate">${model}</div>
+                    <div class="menu-vcard__meta">Rank ${Number.isFinite(v.minGrade) ? v.minGrade : 0}+</div>
+                    <div class="menu-vcard__actions"></div>
+                </div>`;
+
+            const actions = li.querySelector('.menu-vcard__actions');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Take out';
+            btn.className = 'menu-vcard__btn menu-vcard__btn--primary';
+            btn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (btn.disabled) return;
+                btn.disabled = true;
+                btn.textContent = 'Spawning...';
+                post('fleetGarageSpawn', {
+                    factionId: data.factionId,
+                    model: v.model,
+                });
+            });
+            actions.appendChild(btn);
+            list.appendChild(li);
+        });
+
+        if (!(data.vehicles || []).length) {
+            list.className = 'panel-list';
+            list.innerHTML = '<li class="garage-empty">No fleet vehicles available for your rank.</li>';
+        }
+
+        $('#fleet-garage')?.classList.remove('hidden');
+        post('fleetGarageReady');
+    },
+
+    hideFleetGarage() {
+        $('#fleet-garage')?.classList.add('hidden');
+    },
 
     showProperties(data) {
         this.init();

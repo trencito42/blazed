@@ -333,13 +333,13 @@
 
 .faction-directory-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     min-height: 0;
     flex: 1;
 }
 
-.faction-directory-layout.is-detail-open {
+.faction-directory-layout.has-detail {
     grid-template-columns: minmax(0, 1fr);
 }
 

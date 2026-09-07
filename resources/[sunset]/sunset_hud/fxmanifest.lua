@@ -5,13 +5,14 @@ lua54 'yes'
 name 'sunset_hud'
 author 'SunsetMP'
 description 'In-game HUD — health, money, street name'
-version '1.0.0'
+version '1.0.2'
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
     '@sunset_core/shared/utils.lua',
     '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/profile.lua',
+    '@sunset_core/shared/faction_core.lua',
     '@sunset_core/shared/factions.lua',
 }
 

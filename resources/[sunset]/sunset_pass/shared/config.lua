@@ -9,7 +9,7 @@ SunsetPass.Tiers = {
     {
         level = 1,
         free = { type = 'cash', amount = 2500, label = '$2,500 Cash', icon = 'cash' },
-        premium = { type = 'premium_points', amount = 15, label = '15 Sunset Coins', icon = 'coins' },
+        premium = { type = 'premium_points', amount = 15, label = '15 Blaze Points', icon = 'coins' },
     },
     {
         level = 2,
@@ -24,7 +24,7 @@ SunsetPass.Tiers = {
     {
         level = 4,
         free = { type = 'item', item = 'bandage', count = 3, label = 'Bandage x3', icon = 'bandage' },
-        premium = { type = 'premium_points', amount = 35, label = '35 Sunset Coins', icon = 'coins' },
+        premium = { type = 'premium_points', amount = 35, label = '35 Blaze Points', icon = 'coins' },
     },
     {
         level = 5,
@@ -33,7 +33,7 @@ SunsetPass.Tiers = {
     },
     {
         level = 6,
-        free = { type = 'premium_points', amount = 10, label = '10 Sunset Coins', icon = 'coins' },
+        free = { type = 'premium_points', amount = 10, label = '10 Blaze Points', icon = 'coins' },
         premium = { type = 'item', item = 'bandage', count = 5, label = 'Bandage x5', icon = 'bandage' },
     },
 }

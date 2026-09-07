@@ -80,8 +80,20 @@
 }
 
 .auth-brand {
-    margin-bottom: 34px;
+    margin-bottom: 28px;
     text-align: center;
+}
+
+.auth-brand__logo {
+    display: block;
+    width: 200px;
+    max-width: min(200px, 62vw);
+    height: auto;
+    max-height: 82px;
+    object-fit: contain;
+    object-position: center;
+    margin: 0 auto 16px;
+    filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55));
 }
 
 .auth-brand__eyebrow {

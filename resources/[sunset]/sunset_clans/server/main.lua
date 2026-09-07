@@ -1,5 +1,17 @@
 local PendingInvites = {}
 
+local function normalizeInvite(invite)
+    if not invite then return nil end
+    local clanId = tonumber(invite.clan_id or invite.clanId)
+    if not clanId then return nil end
+    return {
+        clan_id = clanId,
+        expires_at = tonumber(invite.expires_at or invite.expiresAt),
+        name = invite.name or invite.clanName,
+        tag = invite.tag,
+    }
+end
+
 local function setPremiumPoints(source, value)
     return exports.sunset_core:SetPersistentStat(source, 'account', 'premium_points', value)
 end
@@ -38,6 +50,63 @@ local function playerName(characterId)
     local full = ((row.firstname or '') .. (row.lastname and row.lastname ~= '' and (' ' .. row.lastname) or ''))
         :gsub('^%s+', ''):gsub('%s+$', '')
     return full ~= '' and full or ('CID %d'):format(characterId)
+end
+
+local function broadcastClanManagement(clanId, actorSource, message)
+    clanId = tonumber(clanId)
+    message = tostring(message or ''):gsub('^%s+', ''):gsub('%s+$', '')
+    if not clanId or message == '' then return end
+
+    local clanRow = MySQL.single.await(
+        'SELECT name, tag, tag_color, tag_style, rank_labels FROM clans WHERE id = ? LIMIT 1',
+        { clanId }
+    )
+
+    local actorName = 'System'
+    local rank = 0
+    local rankLabel = ''
+    local tag = clanRow and clanRow.tag or ''
+    local tagColor = clanRow and clanRow.tag_color or '#FF8C00'
+    local tagStyle = clanRow and clanRow.tag_style or 'brackets'
+
+    if actorSource then
+        actorName = exports.sunset_core:GetPlayerDisplayName(actorSource) or ClanDisplay.baseName(actorSource)
+        local actorCid = charId(actorSource)
+        local memberRow = actorCid and ClanDisplay.getMembership(actorCid)
+        if memberRow and tonumber(memberRow.clan_id) == clanId then
+            rank = SunsetClans.normalizeRank(memberRow.rank)
+            rankLabel = SunsetClans.getRankLabel(clanRankLabels(memberRow), rank)
+            tag = memberRow.tag or tag
+            tagColor = memberRow.tag_color or tagColor
+            tagStyle = memberRow.tag_style or tagStyle
+        end
+    end
+
+    local payload = {
+        id = actorSource or 0,
+        name = actorName,
+        message = message,
+        time = os.date('%H:%M:%S'),
+        type = 'clan_action',
+        clanId = clanId,
+        clanName = clanRow and clanRow.name or '',
+        clanTag = tag,
+        clanTagColor = tagColor,
+        clanTagStyle = tagStyle,
+        clanRank = rank,
+        clanRankLabel = rankLabel,
+    }
+
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local memberCid = charId(src)
+        if not memberCid then goto continue end
+        local member = ClanDisplay.getMembership(memberCid)
+        if member and tonumber(member.clan_id) == clanId then
+            TriggerClientEvent('sunset:chat:message', src, payload)
+        end
+        ::continue::
+    end
 end
 
 local function audit(clanId, actorId, action, details)
@@ -79,13 +148,38 @@ local function membershipFor(source)
     return ClanDisplay.getMembership(cid), cid
 end
 
-local function isLeader(row, cid)
-    if not row then return false end
-    return row.rank == 'leader' or tonumber(row.owner_character_id) == cid
+local function memberRank(row)
+    return SunsetClans.normalizeRank(row and row.rank)
 end
 
-local function isOfficer(row)
-    return row and (row.rank == 'leader' or row.rank == 'officer')
+local function clanRankLabels(row)
+    return SunsetClans.decodeRankLabels(row and row.rank_labels)
+end
+
+local function isLeader(row, cid)
+    if not row then return false end
+    if tonumber(row.owner_character_id) == cid then return true end
+    return memberRank(row) >= SunsetClans.MaxRank
+end
+
+local function isOfficer(row, cid)
+    if not row then return false end
+    if cid and isLeader(row, cid) then return true end
+    return memberRank(row) >= 5
+end
+
+local function canManageMember(actorRow, targetRow, cid)
+    if not actorRow or not targetRow then return false end
+    if tonumber(targetRow.character_id) == tonumber(actorRow.owner_character_id) then return false end
+    if tonumber(targetRow.character_id) == cid then return false end
+    if isLeader(actorRow, cid) then return true end
+    if not isOfficer(actorRow, cid) then return false end
+    return memberRank(actorRow) > memberRank(targetRow)
+end
+
+local function rankLabelFor(row, rank)
+    local labels = clanRankLabels(row)
+    return SunsetClans.getRankLabel(labels, rank or memberRank(row))
 end
 
 local function clanMemberCount(clanId)
@@ -111,10 +205,8 @@ local function tagStyleOptions()
     return out
 end
 
-local function rankLabel(rank)
-    if rank == 'leader' then return 'Leader' end
-    if rank == 'officer' then return 'Officer' end
-    return 'Member'
+local function rankLabel(rank, labels)
+    return SunsetClans.getRankLabel(labels, rank)
 end
 
 local function tagStyleLabel(style)
@@ -161,25 +253,31 @@ local function clanDirectoryRow(row)
     }
 end
 
-local function buildRoster(clanId)
+local function buildRoster(clanId, labels)
+    labels = labels or SunsetClans.decodeRankLabels(MySQL.scalar.await(
+        'SELECT rank_labels FROM clans WHERE id = ?', { clanId }
+    ))
     local rows = MySQL.query.await([[
-        SELECT cm.character_id, cm.rank, cm.joined_at
+        SELECT cm.character_id, cm.rank, cm.warns, cm.joined_at
         FROM clan_members cm
         WHERE cm.clan_id = ?
-        ORDER BY FIELD(cm.rank, 'leader', 'officer', 'member'), cm.joined_at ASC
+        ORDER BY cm.rank DESC, cm.joined_at ASC
     ]], { clanId }) or {}
 
+    local ownerId = tonumber(MySQL.scalar.await('SELECT owner_character_id FROM clans WHERE id = ?', { clanId }))
     local roster = {}
     for _, row in ipairs(rows) do
         local src = sourceForChar(row.character_id)
+        local rank = SunsetClans.normalizeRank(row.rank)
         roster[#roster + 1] = {
             characterId = row.character_id,
             name = playerName(row.character_id),
-            rank = row.rank,
-            rankLabel = rankLabel(row.rank),
+            rank = rank,
+            rankLabel = rankLabel(rank, labels),
+            warns = tonumber(row.warns) or 0,
             online = src ~= nil,
             serverId = src,
-            leader = row.rank == 'leader',
+            leader = rank >= SunsetClans.MaxRank or tonumber(row.character_id) == ownerId,
         }
     end
     return roster
@@ -203,30 +301,6 @@ local function clanProfilePayload(clanId)
     return profile
 end
 
-local function buildRoster(clanId)
-    local rows = MySQL.query.await([[
-        SELECT cm.character_id, cm.rank, cm.joined_at
-        FROM clan_members cm
-        WHERE cm.clan_id = ?
-        ORDER BY FIELD(cm.rank, 'leader', 'officer', 'member'), cm.joined_at ASC
-    ]], { clanId }) or {}
-
-    local roster = {}
-    for _, row in ipairs(rows) do
-        local src = sourceForChar(row.character_id)
-        roster[#roster + 1] = {
-            characterId = row.character_id,
-            name = playerName(row.character_id),
-            rank = row.rank,
-            rankLabel = rankLabel(row.rank),
-            online = src ~= nil,
-            serverId = src,
-            leader = row.rank == 'leader',
-        }
-    end
-    return roster
-end
-
 local function dashboardPayload(source, row, cid)
     local player = exports.sunset_core:GetPlayer(source)
     local baseName = ClanDisplay.baseName(source)
@@ -234,6 +308,9 @@ local function dashboardPayload(source, row, cid)
     if row and row.tag and row.tag ~= '' then
         previewName = SunsetClans.formatTaggedName(row.tag, baseName, row.tag_style)
     end
+
+    local labels = row and clanRankLabels(row) or SunsetClans.defaultRankLabels()
+    local rank = row and memberRank(row) or nil
 
     return {
         inClan = row ~= nil,
@@ -247,22 +324,25 @@ local function dashboardPayload(source, row, cid)
         previewName = previewName,
         memberCount = row and clanMemberCount(row.clan_id) or 0,
         maxMembers = row and (row.max_members or SunsetClans.MaxMembers) or SunsetClans.MaxMembers,
-        members = row and buildRoster(row.clan_id) or {},
+        members = row and buildRoster(row.clan_id, labels) or {},
         leader = row and isLeader(row, cid) or false,
-        officer = row and isOfficer(row) or false,
-        rank = row and row.rank or nil,
-        rankLabel = row and rankLabel(row.rank) or nil,
+        officer = row and isOfficer(row, cid) or false,
+        rank = rank,
+        rankLabel = row and rankLabelFor(row, rank) or nil,
+        rankLabels = labels,
         creationCost = SunsetClans.CreationCost,
         accountCoins = player and (tonumber(player.premium_points) or 0) or 0,
         tagStyles = tagStyleOptions(),
         permissions = {
             leader = row and isLeader(row, cid) or false,
-            officer = row and isOfficer(row) or false,
-            invite = row and isOfficer(row) or false,
-            kick = row and isOfficer(row) or false,
-            motd = row and isOfficer(row) or false,
+            officer = row and isOfficer(row, cid) or false,
+            invite = row and isOfficer(row, cid) or false,
+            kick = row and isOfficer(row, cid) or false,
+            motd = row and isOfficer(row, cid) or false,
             settings = row and isLeader(row, cid) or false,
-            promote = row and isLeader(row, cid) or false,
+            promote = row and isOfficer(row, cid) or false,
+            rankLabels = row and isLeader(row, cid) or false,
+            warn = row and isOfficer(row, cid) or false,
             dissolve = row and isLeader(row, cid) or false,
             leave = row ~= nil,
         },
@@ -276,10 +356,10 @@ local function spendCoins(source, amount)
     if not player then return false, 'Account not loaded.' end
     local balance = tonumber(player.premium_points) or 0
     if balance < amount then
-        return false, ('You need %d Sunset Coins (you have %d).'):format(amount, balance)
+        return false, ('You need %d Blaze Points (you have %d).'):format(amount, balance)
     end
     local ok, err = setPremiumPoints(source, balance - amount)
-    if not ok then return false, err or 'Could not spend Sunset Coins.' end
+    if not ok then return false, err or 'Could not spend Blaze Points.' end
     return true
 end
 
@@ -354,19 +434,19 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
     if not insertOk or not clanId then
         refundCoins()
         print(('[sunset_clans] clanCreate insert failed for %s: %s'):format(source, tostring(insertErr or clanId)))
-        return nil, 'Could not create clan in the database. Your Sunset Coins were refunded.'
+        return nil, 'Could not create clan in the database. Your Blaze Points were refunded.'
     end
 
     local memberOk, memberErr = pcall(function()
         MySQL.insert.await('INSERT INTO clan_members (clan_id, character_id, rank) VALUES (?, ?, ?)', {
-            clanId, cid, 'leader',
+            clanId, cid, SunsetClans.MaxRank,
         })
     end)
     if not memberOk then
         pcall(function() MySQL.update.await('DELETE FROM clans WHERE id = ?', { clanId }) end)
         refundCoins()
         print(('[sunset_clans] clanCreate member insert failed for %s: %s'):format(source, tostring(memberErr)))
-        return nil, 'Could not add you as clan leader. Your Sunset Coins were refunded.'
+        return nil, 'Could not add you as clan leader. Your Blaze Points were refunded.'
     end
 
     pcall(function()
@@ -390,6 +470,7 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
         print(('[sunset_clans] clanCreate dashboard failed for %s: %s'):format(source, tostring(payload)))
         return nil, 'Clan created. Reopen /clan to view your clan page.'
     end
+    broadcastClanManagement(clanId, source, ('founded the clan %s [%s].'):format(name, tag))
     return payload
 end)
 
@@ -400,10 +481,12 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
     if not cid then return nil, 'Your character is not loaded. Reconnect and try again.' end
 
     if action == 'motd' then
-        if not row or not isOfficer(row) then return nil, 'Only clan leaders and officers can set the MOTD.' end
+        if not row or not isOfficer(row, cid) then return nil, 'Only clan leaders and officers can set the MOTD.' end
         local motd = cleanText(payload.message, SunsetClans.MaxMotdLength)
         MySQL.update.await('UPDATE clans SET motd = ? WHERE id = ?', { motd, row.clan_id })
         audit(row.clan_id, cid, 'motd', { motd = motd })
+        broadcastClanManagement(row.clan_id, source,
+            motd ~= '' and ('updated the clan MOTD: %s'):format(motd) or 'cleared the clan MOTD.')
         syncClanMembers(row.clan_id)
         return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
     end
@@ -419,12 +502,13 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
             { description, tagColor, tagStyle, row.clan_id }
         )
         audit(row.clan_id, cid, 'settings', { tagColor = tagColor, tagStyle = tagStyle })
+        broadcastClanManagement(row.clan_id, source, 'updated clan settings.')
         syncClanMembers(row.clan_id)
         return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
     end
 
     if action == 'invite' then
-        if not row or not isOfficer(row) then return nil, 'Only clan leaders and officers can invite members.' end
+        if not row or not isOfficer(row, cid) then return nil, 'Only clan leaders and officers can invite members.' end
         if clanMemberCount(row.clan_id) >= (row.max_members or SunsetClans.MaxMembers) then
             return nil, 'Your clan is full.'
         end
@@ -453,11 +537,13 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         }
         notify(targetId, ('Clan invite from %s [%s]. Use /acceptclan or /declineclan.'):format(row.name, row.tag), 'info', 12000)
         audit(row.clan_id, cid, 'invite', { targetCharacterId = targetCid, targetId = targetId })
+        broadcastClanManagement(row.clan_id, source,
+            ('invited %s to join the clan.'):format(exports.sunset_core:GetPlayerDisplayName(targetId)))
         return dashboardPayload(source, row, cid)
     end
 
     if action == 'kick' then
-        if not row or not isOfficer(row) then return nil, 'Only clan leaders and officers can remove members.' end
+        if not row or not isOfficer(row, cid) then return nil, 'Only clan leaders and officers can remove members.' end
         local targetId = tonumber(payload.targetId)
         if not targetId or not GetPlayerName(targetId) then
             return nil, ('Player ID %s is not online.'):format(tostring(payload.targetId or '?'))
@@ -468,10 +554,14 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         if not targetRow or tonumber(targetRow.clan_id) ~= tonumber(row.clan_id) then
             return nil, 'That player is not in your clan.'
         end
-        if targetRow.rank == 'leader' then return nil, 'You cannot remove the clan leader.' end
-        if targetRow.rank == 'officer' and not isLeader(row, cid) then
-            return nil, 'Only the leader can remove officers.'
+        if not canManageMember(row, targetRow, cid) then
+            return nil, 'You cannot remove that member.'
         end
+        if memberRank(targetRow) >= SunsetClans.MaxRank then
+            return nil, 'You cannot remove the clan leader.'
+        end
+        broadcastClanManagement(row.clan_id, source,
+            ('removed %s from the clan.'):format(playerName(targetCid)))
         MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { row.clan_id, targetCid })
         ClanDisplay.sync(targetId)
         notify(targetId, ('You were removed from %s.'):format(row.name), 'warning')
@@ -479,25 +569,112 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
     end
 
-    if action == 'promote' then
-        if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can change ranks.' end
+    local function resolveTarget(payload)
         local targetId = tonumber(payload.targetId)
-        local rank = tostring(payload.rank or '')
-        if rank ~= 'officer' and rank ~= 'member' then return nil, 'Invalid rank.' end
         if not targetId or not GetPlayerName(targetId) then
-            return nil, ('Player ID %s is not online.'):format(tostring(payload.targetId or '?'))
+            return nil, nil, nil, ('Player ID %s is not online.'):format(tostring(payload.targetId or '?'))
         end
         local targetCid = charId(targetId)
-        local targetRow = targetCid and ClanDisplay.getMembership(targetCid)
+        if not targetCid then return nil, nil, nil, 'That player has not loaded a character yet.' end
+        local targetRow = ClanDisplay.getMembership(targetCid)
         if not targetRow or tonumber(targetRow.clan_id) ~= tonumber(row.clan_id) then
-            return nil, 'That player is not in your clan.'
+            return nil, nil, nil, 'That player is not in your clan.'
         end
-        if targetRow.rank == 'leader' then return nil, 'You cannot change the leader rank this way.' end
+        return targetId, targetCid, targetRow
+    end
+
+    if action == 'rankUp' or action == 'rankDown' then
+        if not row or not isOfficer(row, cid) then return nil, 'Only clan officers and leaders can change ranks.' end
+        local targetId, targetCid, targetRow, err = resolveTarget(payload)
+        if not targetId then return nil, err end
+        if not canManageMember(row, targetRow, cid) then
+            return nil, 'You cannot change that member\'s rank.'
+        end
+        local current = memberRank(targetRow)
+        local nextRank
+        if action == 'rankUp' then
+            nextRank = current + 1
+        else
+            nextRank = current - 1
+        end
+        if not isLeader(row, cid) and nextRank >= memberRank(row) then
+            return nil, 'You can only promote members below your own rank.'
+        end
+        if nextRank < 1 or nextRank > SunsetClans.MaxRank then
+            return nil, 'That rank change is not allowed.'
+        end
+        if nextRank >= SunsetClans.MaxRank and tonumber(targetCid) ~= tonumber(row.owner_character_id) then
+            return nil, 'Only the clan owner can hold the top rank.'
+        end
         MySQL.update.await('UPDATE clan_members SET rank = ? WHERE clan_id = ? AND character_id = ?', {
-            rank, row.clan_id, targetCid,
+            nextRank, row.clan_id, targetCid,
         })
-        notify(targetId, ('Your clan rank is now %s.'):format(rankLabel(rank)), 'info')
-        audit(row.clan_id, cid, 'promote', { targetCharacterId = targetCid, rank = rank })
+        local labels = clanRankLabels(row)
+        notify(targetId, ('Your clan rank is now %s (rank %d).'):format(
+            SunsetClans.getRankLabel(labels, nextRank), nextRank), 'info')
+        audit(row.clan_id, cid, action, { targetCharacterId = targetCid, rank = nextRank })
+        local verb = action == 'rankUp' and 'promoted' or 'demoted'
+        broadcastClanManagement(row.clan_id, source,
+            ('%s %s to %s (rank %d).'):format(
+                verb, playerName(targetCid), SunsetClans.getRankLabel(labels, nextRank), nextRank))
+        syncClanMembers(row.clan_id)
+        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+    end
+
+    if action == 'warn' then
+        if not row or not isOfficer(row, cid) then return nil, 'Only clan officers and leaders can issue warnings.' end
+        local targetId, targetCid, targetRow, err = resolveTarget(payload)
+        if not targetId then return nil, err end
+        if not canManageMember(row, targetRow, cid) then
+            return nil, 'You cannot warn that member.'
+        end
+        local warns = tonumber(targetRow.warns) or 0
+        if warns >= SunsetClans.MaxWarns then
+            return nil, 'This member already has 3/3 clan warnings.'
+        end
+        local reason = cleanText(payload.reason, 128)
+        if reason == '' then reason = 'No reason given' end
+        local nextWarns = warns + 1
+        if nextWarns >= SunsetClans.MaxWarns then
+            broadcastClanManagement(row.clan_id, source,
+                ('removed %s from the clan after 3/3 warnings: %s'):format(playerName(targetCid), reason))
+            MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', {
+                row.clan_id, targetCid,
+            })
+            ClanDisplay.sync(targetId)
+            notify(targetId, ('Clan warning 3/3 — removed from %s: %s'):format(row.name, reason), 'error', 10000)
+            audit(row.clan_id, cid, 'warn_kick', { targetCharacterId = targetCid, reason = reason })
+        else
+            MySQL.update.await('UPDATE clan_members SET warns = ? WHERE clan_id = ? AND character_id = ?', {
+                nextWarns, row.clan_id, targetCid,
+            })
+            notify(targetId, ('Clan warning %d/3: %s'):format(nextWarns, reason), 'warning', 8000)
+            audit(row.clan_id, cid, 'warn', { targetCharacterId = targetCid, reason = reason, warns = nextWarns })
+            broadcastClanManagement(row.clan_id, source,
+                ('issued a clan warning (%d/3) to %s: %s'):format(nextWarns, playerName(targetCid), reason))
+        end
+        notify(source, ('Warning issued (%d/3): %s'):format(math.min(nextWarns, SunsetClans.MaxWarns), reason), 'success')
+        syncClanMembers(row.clan_id)
+        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+    end
+
+    if action == 'rankLabels' then
+        if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can rename ranks.' end
+        local labels = SunsetClans.defaultRankLabels()
+        if type(payload.labels) == 'table' then
+            for i = 1, SunsetClans.MaxRank do
+                local label = payload.labels[tostring(i)] or payload.labels[i]
+                if type(label) == 'string' and label:gsub('%s+', '') ~= '' then
+                    labels[i] = label:sub(1, 48)
+                end
+            end
+        end
+        MySQL.update.await('UPDATE clans SET rank_labels = ? WHERE id = ?', {
+            json.encode(labels), row.clan_id,
+        })
+        audit(row.clan_id, cid, 'rank_labels', { labels = labels })
+        broadcastClanManagement(row.clan_id, source, 'updated clan rank names.')
+        syncClanMembers(row.clan_id)
         return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
     end
 
@@ -506,21 +683,23 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         if isLeader(row, cid) then
             return nil, 'Leaders must dissolve the clan or transfer leadership before leaving.'
         end
+        audit(row.clan_id, cid, 'leave', {})
+        broadcastClanManagement(row.clan_id, source, 'left the clan.')
         MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { row.clan_id, cid })
         ClanDisplay.sync(source)
-        audit(row.clan_id, cid, 'leave', {})
         return dashboardPayload(source, nil, cid)
     end
 
     if action == 'dissolve' then
         if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can dissolve the clan.' end
         local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { row.clan_id }) or {}
+        audit(row.clan_id, cid, 'dissolve', {})
+        broadcastClanManagement(row.clan_id, source, 'dissolved the clan.')
         MySQL.update.await('DELETE FROM clans WHERE id = ?', { row.clan_id })
         for _, member in ipairs(members) do
             local src = sourceForChar(member.character_id)
             if src then ClanDisplay.sync(src) end
         end
-        audit(row.clan_id, cid, 'dissolve', {})
         return dashboardPayload(source, nil, cid)
     end
 
@@ -532,20 +711,19 @@ local function acceptInvite(source)
     if not cid then return nil, 'Your character is not loaded. Reconnect and try again.' end
     if ClanDisplay.getMembership(cid) then return nil, 'You are already in a clan.' end
 
-    local pending = PendingInvites[source]
-    local invite = pending
+    local invite = normalizeInvite(PendingInvites[source])
     if not invite then
-        invite = MySQL.single.await([[
+        invite = normalizeInvite(MySQL.single.await([[
             SELECT ci.clan_id, ci.expires_at, c.name, c.tag
             FROM clan_invites ci
             INNER JOIN clans c ON c.id = ci.clan_id
             WHERE ci.character_id = ?
             ORDER BY ci.expires_at DESC
             LIMIT 1
-        ]], { cid })
+        ]], { cid }))
     end
     if not invite then return nil, 'You have no pending clan invites.' end
-    if tonumber(invite.expires_at) and tonumber(invite.expires_at) < os.time() then
+    if invite.expires_at and invite.expires_at < os.time() then
         MySQL.update.await('DELETE FROM clan_invites WHERE clan_id = ? AND character_id = ?', { invite.clan_id, cid })
         PendingInvites[source] = nil
         return nil, 'That clan invite expired.'
@@ -557,13 +735,20 @@ local function acceptInvite(source)
         return nil, 'That clan is full.'
     end
 
-    MySQL.insert.await('INSERT INTO clan_members (clan_id, character_id, rank) VALUES (?, ?, ?)', {
-        invite.clan_id, cid, 'member',
-    })
+    local insertOk, insertErr = pcall(function()
+        MySQL.insert.await('INSERT INTO clan_members (clan_id, character_id, rank) VALUES (?, ?, ?)', {
+            invite.clan_id, cid, 1,
+        })
+    end)
+    if not insertOk then
+        print(('[sunset_clans] acceptInvite insert failed for %s: %s'):format(source, tostring(insertErr)))
+        return nil, 'Could not join the clan. Ask the leader to invite you again.'
+    end
     MySQL.update.await('DELETE FROM clan_invites WHERE clan_id = ? AND character_id = ?', { invite.clan_id, cid })
     PendingInvites[source] = nil
     ClanDisplay.sync(source)
     audit(invite.clan_id, cid, 'join', {})
+    broadcastClanManagement(invite.clan_id, source, 'joined the clan.')
     return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
 end
 
@@ -575,12 +760,21 @@ exports.sunset_core:RegisterCallback('sunset:clanDeclineInvite', function(source
     local cid = charId(source)
     if not cid then return nil, 'Your character is not loaded. Reconnect and try again.' end
     local pending = PendingInvites[source]
+    local clanId = pending and pending.clanId
     if pending then
         MySQL.update.await('DELETE FROM clan_invites WHERE clan_id = ? AND character_id = ?', { pending.clanId, cid })
         PendingInvites[source] = nil
-        return true
+    else
+        local row = MySQL.single.await(
+            'SELECT clan_id FROM clan_invites WHERE character_id = ? ORDER BY expires_at DESC LIMIT 1',
+            { cid }
+        )
+        clanId = row and tonumber(row.clan_id)
+        MySQL.update.await('DELETE FROM clan_invites WHERE character_id = ?', { cid })
     end
-    MySQL.update.await('DELETE FROM clan_invites WHERE character_id = ?', { cid })
+    if clanId then
+        broadcastClanManagement(clanId, source, 'declined the clan invitation.')
+    end
     return true
 end)
 

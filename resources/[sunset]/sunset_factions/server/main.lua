@@ -10,6 +10,21 @@ local function hasPerm(source, perm)
     return FactionCore.hasPerm(source, perm)
 end
 
+local function memberManagePerm(source, perm)
+    if type(FactionCore.hasManagePerm) == 'function' then
+        return FactionCore.hasManagePerm(source, perm)
+    end
+    local char = getChar(source)
+    if not char then return false end
+    local factionId, grade = getFactionOf(char)
+    if not factionId then return false end
+    if FactionCore.isFactionLeader(char.id, factionId) then return true end
+    if not Sunset.CapabilityAllowedForFaction(factionId, perm) and perm ~= 'invite' and perm ~= 'promote' then
+        return false
+    end
+    return Sunset.HasFactionPerm(factionId, grade, perm)
+end
+
 local PendingFactionInvites = {}
 local FACTION_INVITE_SECONDS = 120
 
@@ -74,7 +89,10 @@ local function leaveFactionForSource(source)
     if not oldFaction then return nil, 'You are not in a faction' end
 
     local wasLeader = FactionCore.isFactionLeader(char.id, oldFaction)
+    local actorName = exports.sunset_core:GetPlayerDisplayName(source)
     setDuty(source, false)
+
+    FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true })
 
     if not exports.sunset_core:SetFaction(source, nil, 0) then
         return nil, 'Could not leave faction — try again'
@@ -87,7 +105,11 @@ local function leaveFactionForSource(source)
         )
     end
 
-    FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true })
+    FactionCore.broadcastManagement(oldFaction, nil, 'left the faction.', {
+        actorName = actorName,
+        actorId = source,
+        omitRank = true,
+    })
 
     TriggerClientEvent('sunset:client:notify', source,
         ('You left %s. Your civilian job is unchanged.'):format(
@@ -138,6 +160,8 @@ exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, ta
         expiresAt = os.time() + FACTION_INVITE_SECONDS,
     }
     FactionCore.auditLog(myFaction, char.id, 'invite_sent', target.id, { expiresIn = FACTION_INVITE_SECONDS })
+    FactionCore.broadcastManagement(myFaction, source,
+        ('invited %s to join the faction.'):format(exports.sunset_core:GetPlayerDisplayName(targetId)))
     TriggerClientEvent('sunset:faction:inviteReceived', targetId, {
         factionId = myFaction,
         label = faction and faction.label or myFaction,
@@ -173,6 +197,8 @@ exports.sunset_core:RegisterCallback('sunset:factionAcceptInvite', function(sour
 
     local faction = Sunset.Factions[invite.factionId]
     FactionCore.auditLog(invite.factionId, leader.id, 'invite_accepted', char.id, {})
+    FactionCore.broadcastManagement(invite.factionId, source,
+        ('joined the faction.'))
     TriggerClientEvent('sunset:client:notify', invite.inviterSource,
         ('%s accepted the invitation to %s.'):format(exports.sunset_core:GetPlayerDisplayName(source), faction.label), 'success', 7000)
     return { factionId = invite.factionId, label = faction.label }
@@ -184,6 +210,10 @@ exports.sunset_core:RegisterCallback('sunset:factionDeclineInvite', function(sou
     PendingFactionInvites[source] = nil
     local char = getChar(source)
     FactionCore.auditLog(invite.factionId, char and char.id or nil, 'invite_declined', invite.targetCharacterId, {})
+    if char then
+        FactionCore.broadcastManagement(invite.factionId, source,
+            ('declined the faction invitation.'))
+    end
     if GetPlayerName(invite.inviterSource) then
         TriggerClientEvent('sunset:client:notify', invite.inviterSource,
             ('%s declined the faction invitation.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 6000)
@@ -221,6 +251,8 @@ exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, t
     exports.sunset_core:SetFaction(targetId, myFaction, newGrade)
     local gradeLabel = FactionLabels.get(myFaction, newGrade)
     FactionCore.auditLog(myFaction, char.id, 'promote', target.id, { grade = newGrade })
+    FactionCore.broadcastManagement(myFaction, source,
+        ('promoted %s to %s.'):format(exports.sunset_core:GetPlayerDisplayName(targetId), gradeLabel))
     TriggerClientEvent('sunset:client:notify', targetId, ('Promoted to %s'):format(gradeLabel), 'success')
     TriggerClientEvent('sunset:client:notify', source, ('Promoted player to %s'):format(gradeLabel), 'success')
     return true
@@ -282,27 +314,92 @@ exports.sunset_core:RegisterCallback('sunset:mechanicShopRepair', function(sourc
     return nil, ('Not enough money ($%s)'):format(price)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:factionRequestFleet', function(source, factionId)
+local function nearFactionDepot(source, depot)
+    if not depot or not depot.coords then return false end
+    local coords = FactionCore.playerCoords(source)
+    if FactionCore.distBetween(coords, depot.coords) <= 15.0 then return true end
+    if depot.spawn and FactionCore.distBetween(coords, vector3(depot.spawn.x, depot.spawn.y, depot.spawn.z)) <= 15.0 then return true end
+    if depot.lift and depot.lift.garage then
+        local g = depot.lift.garage
+        if FactionCore.distBetween(coords, vector3(g.x, g.y, g.z)) <= 15.0 then return true end
+    end
+    return false
+end
+
+local function fleetVehiclesForGrade(depot, grade)
+    local list = {}
+    grade = tonumber(grade) or 0
+    if depot.vehicles then
+        for _, entry in ipairs(depot.vehicles) do
+            local minGrade = tonumber(entry.minGrade)
+            if minGrade == nil then minGrade = 1 end
+            if grade >= minGrade then
+                list[#list + 1] = {
+                    model = entry.model,
+                    label = entry.label or entry.model,
+                    minGrade = minGrade,
+                }
+            end
+        end
+    elseif depot.vehicle then
+        list[#list + 1] = {
+            model = depot.vehicle,
+            label = depot.label or depot.vehicle,
+            minGrade = 0,
+        }
+    end
+    return list
+end
+
+local function isAllowedFleetModel(depot, model, grade)
+    model = string.lower(tostring(model or ''))
+    for _, entry in ipairs(fleetVehiclesForGrade(depot, grade)) do
+        if string.lower(entry.model) == model then return true end
+    end
+    return false
+end
+
+exports.sunset_core:RegisterCallback('sunset:factionFleetList', function(source, factionId)
     local char = getChar(source)
     local ownFaction = char and select(1, getFactionOf(char))
+    local grade = char and ownFaction and FactionCore.getEffectiveGrade(char, ownFaction) or 0
     local faction = ownFaction and Sunset.Factions[ownFaction]
     if ownFaction ~= factionId or not faction or not faction.depot then return nil, 'You do not work here' end
     if not FactionCore.isOnDuty(source) then return nil, 'Go on duty first' end
-    if FactionCore.distBetween(FactionCore.playerCoords(source), faction.depot.coords) > 8.0 then
-        return nil, 'You must be at the fleet garage'
-    end
-    return { vehicle = faction.depot.vehicle, platePrefix = faction.depot.platePrefix }
+    if not nearFactionDepot(source, faction.depot) then return nil, 'You must be at the fleet garage' end
+    local vehicles = fleetVehiclesForGrade(faction.depot, grade)
+    if #vehicles == 0 then return nil, 'No fleet vehicles available for your rank' end
+    return vehicles
 end)
 
-RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, factionId)
+exports.sunset_core:RegisterCallback('sunset:factionRequestFleet', function(source, factionId, vehicleModel)
+    local char = getChar(source)
+    local ownFaction = char and select(1, getFactionOf(char))
+    local grade = char and ownFaction and FactionCore.getEffectiveGrade(char, ownFaction) or 0
+    local faction = ownFaction and Sunset.Factions[ownFaction]
+    if ownFaction ~= factionId or not faction or not faction.depot then return nil, 'You do not work here' end
+    if not FactionCore.isOnDuty(source) then return nil, 'Go on duty first' end
+    if not nearFactionDepot(source, faction.depot) then return nil, 'You must be at the fleet garage' end
+
+    local depot = faction.depot
+    local model = vehicleModel or depot.vehicle
+    if not model then return nil, 'No vehicle selected' end
+    if not isAllowedFleetModel(depot, model, grade) then return nil, 'Vehicle not available for your rank' end
+    return { vehicle = model, platePrefix = depot.platePrefix }
+end)
+
+RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, factionId, vehicleModel)
     local src = source
     networkId = tonumber(networkId)
     factionId = tostring(factionId or '')
+    vehicleModel = tostring(vehicleModel or '')
     local char = getChar(src)
     local ownFaction = char and select(1, getFactionOf(char))
+    local grade = char and ownFaction and FactionCore.getEffectiveGrade(char, ownFaction) or 0
     local faction = ownFaction and Sunset.Factions[ownFaction]
     if not networkId or ownFaction ~= factionId or not faction or not faction.depot then return end
     if not FactionCore.isOnDuty(src) then return end
+    if vehicleModel == '' or not isAllowedFleetModel(faction.depot, vehicleModel, grade) then return end
 
     local vehicle = 0
     for _ = 1, 20 do
@@ -313,8 +410,13 @@ RegisterNetEvent('sunset:factionRegisterFleetVehicle', function(networkId, facti
     local ped = GetPlayerPed(src)
     if vehicle == 0 or not DoesEntityExist(vehicle) or ped == 0 then return end
     if GetPedInVehicleSeat(vehicle, -1) ~= ped then return end
-    if GetEntityModel(vehicle) ~= joaat(faction.depot.vehicle) then return end
-    if FactionCore.distBetween(GetEntityCoords(vehicle), faction.depot.spawn) > 25.0 then return end
+    if GetEntityModel(vehicle) ~= joaat(vehicleModel) then return end
+
+    local vehCoords = GetEntityCoords(vehicle)
+    local depot = faction.depot
+    local nearSpawn = FactionCore.distBetween(vehCoords, depot.spawn) <= 30.0
+    local nearExit = depot.exitSpawn and FactionCore.distBetween(vehCoords, depot.exitSpawn) <= 35.0
+    if not nearSpawn and not nearExit then return end
 
     Entity(vehicle).state:set('sunsetFactionVehicle', factionId, true)
     Entity(vehicle).state:set('sunsetProtectedVehicle', true, true)
@@ -472,6 +574,15 @@ local function factionRoster(factionId)
         end
     end
 
+    local warnRows = MySQL.query.await(
+        'SELECT character_id, COUNT(*) AS total FROM faction_warnings WHERE faction_id = ? GROUP BY character_id',
+        { factionId }
+    ) or {}
+    local warnCounts = {}
+    for _, row in ipairs(warnRows) do
+        warnCounts[tonumber(row.character_id)] = tonumber(row.total) or 0
+    end
+
     local roster = {}
     for _, row in ipairs(MySQL.query.await('SELECT id, firstname, lastname, metadata FROM characters', {}) or {}) do
         local metadata = row.metadata
@@ -493,6 +604,7 @@ local function factionRoster(factionId)
                 leader = leaders[tonumber(row.id)] == true,
                 online = presence ~= nil,
                 onDuty = presence and presence.onDuty or false,
+                warns = warnCounts[tonumber(row.id)] or 0,
             }
         end
     end
@@ -531,15 +643,15 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
     local isLeader = FactionCore.isFactionLeader(char.id, factionId)
     local permissions = {
         leader = isLeader,
-        invite = isLeader,
-        motd = isLeader or FactionCore.hasPerm(source, 'fmotd'),
-        giverank = isLeader or FactionCore.hasPerm(source, 'giverank'),
-        uninvite = isLeader or FactionCore.hasPerm(source, 'uninvite'),
-        promote = isLeader or FactionCore.hasPerm(source, 'promote'),
-        warn = isLeader or FactionCore.hasPerm(source, 'fwarn'),
+        invite = isLeader or memberManagePerm(source, 'invite'),
+        motd = isLeader or memberManagePerm(source, 'fmotd'),
+        giverank = isLeader or memberManagePerm(source, 'giverank'),
+        uninvite = isLeader or memberManagePerm(source, 'uninvite'),
+        promote = isLeader or memberManagePerm(source, 'promote'),
+        warn = isLeader or memberManagePerm(source, 'fwarn'),
         renameRanks = isLeader,
-        rankMembers = isLeader or FactionCore.hasPerm(source, 'giverank') or FactionCore.hasPerm(source, 'promote'),
-        kickMembers = isLeader or FactionCore.hasPerm(source, 'uninvite'),
+        rankMembers = isLeader or memberManagePerm(source, 'giverank') or memberManagePerm(source, 'promote'),
+        kickMembers = isLeader or memberManagePerm(source, 'uninvite'),
     }
     local grades = FactionLabels.listForFaction(factionId)
     return {
@@ -570,6 +682,7 @@ exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
         local entry = {
             id = factionId, label = faction.label, type = faction.type,
             factionType = faction.factionType, description = faction.description,
+            marker = faction.marker, blipColor = faction.blip and faction.blip.color,
             applicationsOpen = faction.applicationsOpen == true,
             applicationLabel = faction.type == 'illegal' and 'Invite only'
                 or (faction.applicationsOpen and 'Applications open — Discord / website' or 'Applications closed'),
@@ -652,11 +765,11 @@ function IsFactionLeader(source)
 end
 exports('IsFactionLeader', IsFactionLeader)
 
-local function leaderHqPayload(source)
+local function factionHqPayload(source)
     local char = getChar(source)
     if not char then return nil end
     local factionId = select(1, getFactionOf(char))
-    if not factionId or not FactionCore.isFactionLeader(char.id, factionId) then return nil end
+    if not factionId then return nil end
     local faction = Sunset.Factions[factionId]
     local hq = faction and faction.hq
     if not hq then return nil end
@@ -676,12 +789,17 @@ local function leaderHqPayload(source)
 end
 
 function GetLeaderHqSpawn(source)
-    return leaderHqPayload(source)
+    return factionHqPayload(source)
 end
 exports('GetLeaderHqSpawn', GetLeaderHqSpawn)
 
+function GetFactionHqSpawn(source)
+    return factionHqPayload(source)
+end
+exports('GetFactionHqSpawn', GetFactionHqSpawn)
+
 exports.sunset_core:RegisterCallback('sunset:getLeaderSpawnHq', function(source)
-    local hq = leaderHqPayload(source)
+    local hq = factionHqPayload(source)
     if not hq then return nil end
     return { factionId = hq.factionId, label = hq.label, hidden = hq.hidden == true }
 end)

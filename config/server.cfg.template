@@ -5,9 +5,9 @@
 endpoint_add_tcp "0.0.0.0:30120"
 endpoint_add_udp "0.0.0.0:30120"
 
-sv_hostname "SunsetMP | RPG"
-sets sv_projectName "SunsetMP"
-sets sv_projectDesc "Sunset RPG — build your story."
+sv_hostname "blaze.mp | RPG Roleplay"
+sets sv_projectName "blaze.mp"
+sets sv_projectDesc "Blaze RPG — build your story."
 sets tags "rpg, sunsetmp, english"
 sets locale "en-US"
 

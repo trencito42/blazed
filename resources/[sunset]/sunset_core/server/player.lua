@@ -212,6 +212,10 @@ function Sunset.SetFaction(source, factionId, grade)
     if not factionId or factionId == 'none' then
         char.metadata.faction = nil
         char.metadata.faction_grade = nil
+        if char.job and Sunset.Factions and Sunset.Factions[char.job] then
+            char.job = 'unemployed'
+            char.job_grade = 0
+        end
     else
         if not Sunset.Factions[factionId] then return false end
         grade = tonumber(grade) or 0
@@ -229,6 +233,7 @@ function Sunset.SetFaction(source, factionId, grade)
         { char.job or 'unemployed', char.job_grade or 0, json.encode(char.metadata), char.id }
     )
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
+    Player(source).state:set('sunsetDisplayName', GetPlayerDisplayName(source), true)
     TriggerEvent('sunset:server:factionChanged', source, factionId, grade or 0)
     return true
 end

@@ -194,6 +194,16 @@ const PropertyUI = {
         if (!p.owner_character_id && p.forSale) button('Buy', 'buy', true);
         if (p.owner_character_id && !p.access && p.rentEnabled && Number(p.renterCount) < Number(p.maxRenters)) {
             button('Rent', 'rent', true);
+        } else if (p.owner_character_id && !p.access && !p.rentEnabled) {
+            const hint = document.createElement('small');
+            hint.className = 'house-row__rent-hint';
+            hint.textContent = 'Owner is not accepting renters right now.';
+            details.appendChild(hint);
+        } else if (p.owner_character_id && !p.access && p.rentEnabled && Number(p.renterCount) >= Number(p.maxRenters)) {
+            const hint = document.createElement('small');
+            hint.className = 'house-row__rent-hint';
+            hint.textContent = 'All rental slots are full.';
+            details.appendChild(hint);
         }
         if (p.access) button('Set spawn', 'sethome');
         if (p.rented) button('End rental', 'unrent');

@@ -17,18 +17,10 @@ local function requireLeaderPerm(source, perm)
     local factionId = select(1, FactionCore.getFactionOf(char))
     if not factionId then return nil, 'No faction' end
     if FactionCore.isFactionLeader(char.id, factionId) then return char, factionId end
-    if not FactionCore.hasPerm(source, perm) then
-        return nil, FactionCore.accessError(source, perm, 'manage faction members')
+    if not FactionCore.hasManagePerm(source, perm) then
+        return nil, FactionCore.manageAccessError(source, perm, 'manage faction members')
     end
     return char, factionId
-end
-
-local function highestFactionGrade(factionId)
-    local highest = 0
-    for grade in pairs((Sunset.Factions[factionId] and Sunset.Factions[factionId].grades) or {}) do
-        if type(grade) == 'number' and grade > highest then highest = grade end
-    end
-    return highest
 end
 
 local function getFactionMotd(factionId)
@@ -77,14 +69,20 @@ local function handleSetLeader(source, args)
         exports.sunset_core:CommandNoCharacter(source, target)
         return true
     end
+    local topGrade = FactionCore.highestFactionGrade(factionId)
     local current = select(1, FactionCore.getFactionOf(char))
     if current ~= factionId then
-        if not exports.sunset_core:SetFaction(target, factionId, highestFactionGrade(factionId)) then
+        if not exports.sunset_core:SetFaction(target, factionId, topGrade) then
             exports.sunset_core:CommandReply(source,
                 ('Could not add %s (#%d) to %s — invalid faction grade in config.'):format(
                     GetPlayerName(target) or '?', target, factionId), 'error')
             return true
         end
+    elseif not exports.sunset_core:SetFaction(target, factionId, topGrade) then
+        exports.sunset_core:CommandReply(source,
+            ('Could not set %s (#%d) to top rank in %s.'):format(
+                GetPlayerName(target) or '?', target, factionId), 'error')
+        return true
     end
     MySQL.insert.await(
         'INSERT INTO faction_leaders (character_id, faction_id, assigned_by) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE assigned_by = VALUES(assigned_by)',
@@ -124,7 +122,22 @@ local function handleRemoveLeader(source, args)
     end
     MySQL.update.await('DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?', { char.id, factionId })
     FactionCore.auditLog(factionId, char.id, 'removeleader', char.id, { by = source })
-    FactionCore.notify(target, 'Faction leader role removed', 'info')
+    local factionLabel = Sunset.Factions[factionId] and Sunset.Factions[factionId].label or factionId
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target)
+    local _, grade = FactionCore.getFactionOf(char)
+    local topGrade = FactionCore.highestFactionGrade(factionId)
+    if grade >= topGrade then
+        exports.sunset_core:SetFaction(target, factionId, math.max(0, topGrade - 1))
+    end
+    FactionCore.broadcastManagement(factionId, nil,
+        ('was removed as faction leader (still a member of %s).'):format(factionLabel), {
+            actorName = targetName,
+            actorId = target,
+            omitRank = true,
+        })
+    FactionCore.notify(target,
+        ('Your leader role in %s was removed. You are still a member — use /quitgroup to leave.'):format(factionLabel),
+        'info', 10000)
     if source ~= 0 then
         exports.sunset_core:CommandReply(source,
             ('Removed %s (#%d) as leader of %s.'):format(GetPlayerName(target) or '?', target, factionId), 'success')
@@ -165,6 +178,8 @@ exports.sunset_core:RegisterCallback('sunset:factionUninvite', function(source, 
         return nil, 'Target is not in your faction'
     end
 
+    FactionCore.broadcastManagement(factionId, source,
+        ('removed %s from the faction.'):format(exports.sunset_core:GetPlayerDisplayName(targetId)))
     exports.sunset_core:SetFaction(targetId, nil, 0)
     FactionCore.auditLog(factionId, char.id, 'uninvite', target.id, {})
     FactionCore.notify(targetId, 'You were removed from the faction', 'warning')
@@ -197,6 +212,8 @@ exports.sunset_core:RegisterCallback('sunset:factionGiveRank', function(source, 
     exports.sunset_core:SetFaction(targetId, factionId, newGrade)
     local gradeLabel = FactionLabels.get(factionId, newGrade)
     FactionCore.auditLog(factionId, char.id, 'giverank', target.id, { grade = newGrade })
+    FactionCore.broadcastManagement(factionId, source,
+        ('set %s\'s rank to %s.'):format(exports.sunset_core:GetPlayerDisplayName(targetId), gradeLabel))
     FactionCore.notify(targetId, ('Rank set to %s'):format(gradeLabel), 'success')
     FactionCore.notify(source, ('Set rank to %s'):format(gradeLabel), 'success')
     return true
@@ -215,6 +232,24 @@ exports.sunset_core:RegisterCallback('sunset:factionWarn', function(source, targ
     if not target or select(1, FactionCore.getFactionOf(target)) ~= factionId then
         return nil, 'Target is not in your faction'
     end
+    if FactionCore.isFactionLeader(target.id, factionId) then
+        return nil, 'You cannot warn a faction leader'
+    end
+    local _, myGrade = FactionCore.getFactionOf(char)
+    local _, targetGrade = FactionCore.getFactionOf(target)
+    if (targetGrade or 0) >= (myGrade or 0)
+        and tonumber(target.id) ~= tonumber(char.id)
+        and not FactionCore.isFactionLeader(char.id, factionId) then
+        return nil, 'You cannot warn members at your rank or higher'
+    end
+
+    local warnCount = tonumber(MySQL.scalar.await(
+        'SELECT COUNT(*) FROM faction_warnings WHERE faction_id = ? AND character_id = ?',
+        { factionId, target.id }
+    )) or 0
+    if warnCount >= 3 then
+        return nil, 'This member already has 3/3 faction warnings'
+    end
 
     pcall(function()
         MySQL.insert.await(
@@ -222,9 +257,14 @@ exports.sunset_core:RegisterCallback('sunset:factionWarn', function(source, targ
             { factionId, target.id, char.id, reason }
         )
     end)
-    FactionCore.auditLog(factionId, char.id, 'fwarn', target.id, { reason = reason })
-    FactionCore.notify(targetId, ('Faction warning: %s'):format(reason), 'warning', 8000)
-    return true
+    local nextCount = warnCount + 1
+    FactionCore.auditLog(factionId, char.id, 'fwarn', target.id, { reason = reason, count = nextCount })
+    FactionCore.broadcastManagement(factionId, source,
+        ('issued a faction warning (%d/3) to %s: %s'):format(
+            nextCount, exports.sunset_core:GetPlayerDisplayName(targetId), reason))
+    FactionCore.notify(targetId, ('Faction warning %d/3: %s'):format(nextCount, reason), 'warning', 8000)
+    FactionCore.notify(source, ('Warning issued (%d/3): %s'):format(nextCount, reason), 'success')
+    return { warns = nextCount, count = nextCount }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:factionSetMotd', function(source, message)

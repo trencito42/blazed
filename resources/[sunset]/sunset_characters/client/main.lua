@@ -1,14 +1,16 @@
 local inCharacterFlow = false
 local pendingSpawnCharacter = nil
+local optionalSpawnMenu = false
 
 local function trace(stage, detail)
     print(('[SunsetFlow] %s%s'):format(stage, detail and (' | ' .. tostring(detail)) or ''))
     TriggerServerEvent('sunset:server:flowTrace', stage, detail and tostring(detail) or '')
 end
 
-local function showSpawnSelection(char)
+local function showSpawnSelection(char, optional)
     trace('spawn_selector_open', char and char.id or 'missing_character')
     pendingSpawnCharacter = char
+    optionalSpawnMenu = optional == true
     local pos = char and char.position
     if type(pos) == 'string' then
         local ok, decoded = pcall(json.decode, pos)
@@ -32,7 +34,16 @@ local function showSpawnSelection(char)
         hasLastLocation = hasLast,
         homes = homes,
         factionHq = factionHq,
+        dismissible = optionalSpawnMenu,
     })
+end
+
+local function closeOptionalSpawnMenu()
+    if not optionalSpawnMenu then return end
+    optionalSpawnMenu = false
+    pendingSpawnCharacter = nil
+    exports.sunset_ui:Hide()
+    exports.sunset_ui:Send('showHud', {})
 end
 
 local function spawnCharacter(char)
@@ -59,7 +70,7 @@ local function openSpawnMenuNow(force)
         exports.sunset_ui:Notify('Finish character appearance first.', 'error')
         return false
     end
-    showSpawnSelection(char)
+    showSpawnSelection(char, true)
     return true
 end
 
@@ -93,9 +104,14 @@ AddEventHandler('sunset:nui:spawnSelect', function(data)
     end
     local char = pendingSpawnCharacter
     pendingSpawnCharacter = nil
+    optionalSpawnMenu = false
     trace('spawn_selected', choice)
     exports.sunset_ui:Show('loading')
     TriggerEvent('sunset:client:spawnCharacter', char, resolved)
+end)
+
+AddEventHandler('sunset:nui:spawnClose', function()
+    closeOptionalSpawnMenu()
 end)
 
 local function showCharacterList()

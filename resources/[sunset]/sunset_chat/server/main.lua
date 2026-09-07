@@ -88,8 +88,7 @@ RegisterNetEvent('sunset:chat:send', function(message)
     })
 end)
 
--- Comenzi chat utile
-RegisterCommand('me', function(source, args)
+local function runMeCommand(source, args)
     local msg = cleanChatText(table.concat(args, ' '), 256)
     if not msg then return end
     local identity = chatIdentity(source)
@@ -104,16 +103,39 @@ RegisterCommand('me', function(source, args)
         time = os.date('%H:%M:%S'),
         type = 'me',
     })
-end, false)
+end
 
-RegisterCommand('do', function(source, args)
+local function runDoCommand(source, args)
     local msg = cleanChatText(table.concat(args, ' '), 256)
     if not msg then return end
+    local identity = chatIdentity(source)
     sendNearby(source, {
         id = source,
-        name = GetPlayerName(source),
+        name = identity.name,
+        factionId = identity.factionId,
+        clanTag = identity.clanTag,
+        clanTagColor = identity.clanTagColor,
+        clanTagStyle = identity.clanTagStyle,
         message = msg,
         time = os.date('%H:%M:%S'),
         type = 'do',
     })
+end
+
+RegisterCommand('me', function(source, args)
+    runMeCommand(source, args)
 end, false)
+
+RegisterCommand('do', function(source, args)
+    runDoCommand(source, args)
+end, false)
+
+function RunServerCommand(source, name, args)
+    if source == 0 then return false end
+    name = string.lower(tostring(name or ''))
+    args = args or {}
+    if name == 'me' then runMeCommand(source, args) return true end
+    if name == 'do' then runDoCommand(source, args) return true end
+    return false
+end
+exports('RunServerCommand', RunServerCommand)

@@ -29,6 +29,7 @@ files {
     'web/css/auth_loading.css',
     'web/css/spawn.css',
     'web/css/theme.css',
+    'web/css/gameplay_glass.css',
     'web/js/*.js',
     'web/vendor/**/*',
     'web/assets/**/*',

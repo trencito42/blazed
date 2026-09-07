@@ -3,6 +3,8 @@ local myFaction = nil
 local illegalBlip = nil
 local fleetVehicle = nil
 local isCuffed = false
+local pendingFleetDepot = nil
+local pendingFleetId = nil
 
 local function clearIllegalBlip()
     if illegalBlip and DoesBlipExist(illegalBlip) then
@@ -52,7 +54,7 @@ local function resolveSpawnZ(x, y, z)
     return z
 end
 
-local function spawnFleetVehicle(depot, factionId)
+local function spawnFleetVehicle(depot, factionId, vehicleModel)
     if not depot or not depot.spawn then
         exports.sunset_ui:Notify('No fleet garage configured', 'error')
         return
@@ -69,7 +71,7 @@ local function spawnFleetVehicle(depot, factionId)
         return
     end
 
-    local authorized, err = Sunset.AwaitCallback('sunset:factionRequestFleet', factionId)
+    local authorized, err = Sunset.AwaitCallback('sunset:factionRequestFleet', factionId, vehicleModel)
     if not authorized then
         exports.sunset_ui:Notify(err or 'Fleet request denied', 'error')
         return
@@ -77,7 +79,8 @@ local function spawnFleetVehicle(depot, factionId)
 
     deleteFleetVehicle()
 
-    local model = joaat(authorized.vehicle or depot.vehicle or 'sultan')
+    local modelName = authorized.vehicle or vehicleModel or depot.vehicle or 'sultan'
+    local model = joaat(modelName)
     RequestModel(model)
     local timeout = GetGameTimer() + 8000
     while not HasModelLoaded(model) do
@@ -111,8 +114,42 @@ local function spawnFleetVehicle(depot, factionId)
     fleetVehicle = veh
     TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
     Wait(0)
-    TriggerServerEvent('sunset:factionRegisterFleetVehicle', NetworkGetNetworkIdFromEntity(veh), factionId)
+    TriggerServerEvent('sunset:factionRegisterFleetVehicle', NetworkGetNetworkIdFromEntity(veh), factionId, modelName)
+
+    if depot.exitSpawn then
+        Wait(150)
+        TriggerEvent('sunset:world:fadeTeleport', depot.exitSpawn, true)
+    end
+
     exports.sunset_ui:Notify((depot.label or 'Fleet') .. ' vehicle ready', 'success')
+end
+
+local function openFleetGarage(factionId, depot)
+    local char = exports.sunset_core:GetCharacter()
+    local myFaction = char and Sunset.GetCharacterFaction(char)
+    if not myFaction or myFaction ~= factionId then
+        exports.sunset_ui:Notify('You do not work here', 'error')
+        return
+    end
+    if not exports.sunset_factions:IsOnDuty() then
+        exports.sunset_ui:Notify('Go on duty at HQ first ([E])', 'error')
+        return
+    end
+
+    local vehicles, err = Sunset.AwaitCallback('sunset:factionFleetList', factionId)
+    if not vehicles or #vehicles == 0 then
+        exports.sunset_ui:Notify(err or 'No fleet vehicles available', 'error')
+        return
+    end
+
+    pendingFleetDepot = depot
+    pendingFleetId = factionId
+    TriggerEvent('sunset:world:uiModalOpen')
+    exports.sunset_ui:Send('fleetGarageShow', {
+        label = depot.label or 'Fleet Garage',
+        factionId = factionId,
+        vehicles = vehicles,
+    })
 end
 
 RegisterNetEvent('sunset:client:updateCharacter', function()
@@ -313,6 +350,10 @@ RegisterCommand('fwarn', function(_, args)
     else exports.sunset_ui:Notify(err or 'Faction warning failed. Check your leader permission, target ID and reason.', 'error') end
 end, false)
 
+RegisterCommand('fw', function(_, args)
+    ExecuteCommand(('fwarn %s'):format(table.concat(args, ' ')))
+end, false)
+
 RegisterCommand('fmotd', function(_, args)
     local msg = table.concat(args, ' ')
     if msg == '' then
@@ -371,6 +412,15 @@ RegisterCommand('factions', function()
     exports.sunset_ui:SetFocus(true, true)
 end, false)
 
+AddEventHandler('sunset:nui:factionBrowse', function()
+    local data, err = Sunset.AwaitCallback('sunset:factionDirectory')
+    if not data then
+        exports.sunset_ui:Send('factionBrowseInline', { factions = {}, error = err })
+        return exports.sunset_ui:Notify(err or 'Faction directory could not be loaded.', 'error', 7000)
+    end
+    exports.sunset_ui:Send('factionBrowseInline', { factions = data })
+end)
+
 AddEventHandler('sunset:nui:factionManage', function(data)
     data = data or {}
     local action = data.action
@@ -392,6 +442,21 @@ AddEventHandler('sunset:nui:factionManage', function(data)
         if ok then
             local msg = ok.offline and 'Offline member removed.' or 'Member removed from faction.'
             exports.sunset_ui:Notify(msg, 'success')
+        end
+    elseif action == 'warn' then
+        local characterId = tonumber(data.characterId)
+        local targetId = tonumber(data.targetId)
+        local reason = data.reason or 'No reason given'
+        if characterId then
+            ok, err = Sunset.AwaitCallback('sunset:factionMemberWarn', characterId, reason)
+        elseif targetId then
+            ok, err = Sunset.AwaitCallback('sunset:factionWarn', targetId, reason)
+        else
+            return exports.sunset_ui:Notify('Invalid member for faction warning.', 'error')
+        end
+        if ok then
+            local count = type(ok) == 'table' and (ok.warns or ok.count) or nil
+            exports.sunset_ui:Notify(count and ('Faction warning issued (%d/3).'):format(count) or 'Faction warning issued.', 'warning')
         end
     elseif action == 'gradeLabels' then
         ok, err = Sunset.AwaitCallback('sunset:factionSetGradeLabels', data.labels or {})
@@ -456,7 +521,28 @@ AddEventHandler('sunset:world:factionDepot', function(factionId, depot)
         TriggerEvent('sunset:world:taxiDepot')
         return
     end
-    spawnFleetVehicle(depot, factionId)
+    openFleetGarage(factionId, depot)
+end)
+
+AddEventHandler('sunset:nui:fleetGarageSpawn', function(data)
+    CreateThread(function()
+        local depot = pendingFleetDepot
+        local factionId = pendingFleetId
+        pendingFleetDepot = nil
+        pendingFleetId = nil
+        exports.sunset_ui:Send('fleetGarageHide', {})
+        if depot and factionId and data and data.model then
+            spawnFleetVehicle(depot, factionId, data.model)
+        else
+            exports.sunset_ui:Notify('Could not take out vehicle — try again.', 'error')
+        end
+    end)
+end)
+
+AddEventHandler('sunset:nui:fleetGarageClose', function()
+    pendingFleetDepot = nil
+    pendingFleetId = nil
+    exports.sunset_ui:Send('fleetGarageHide', {})
 end)
 
 AddEventHandler('sunset:world:illegalSell', function(factionId)
@@ -484,6 +570,9 @@ CreateThread(function()
                 TriggerEvent('sunset:world:registerElevator', id, faction.depot.lift, faction)
             end
         end
+        if faction.entrance then
+            TriggerEvent('sunset:world:registerFactionEntrance', id, faction.entrance, faction)
+        end
         if faction.stash and faction.type == 'illegal' then
             TriggerEvent('sunset:world:registerIllegalSell', id, faction.stash, faction)
         end
@@ -495,20 +584,21 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/leavefaction', 'Leave your faction; keeps your civilian job')
     TriggerEvent('chat:addSuggestion', '/quitfaction', 'Same as /leavefaction; keeps your civilian job')
     TriggerEvent('chat:addSuggestion', '/quitgroup', 'Same as /leavefaction; keeps your civilian job')
-    TriggerEvent('chat:addSuggestion', '/f', 'Faction chat', { { name = 'message' } })
-    TriggerEvent('chat:addSuggestion', '/r', 'On-duty faction radio', { { name = 'message' } })
-    TriggerEvent('chat:addSuggestion', '/d', 'Law enforcement dispatch', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/f', 'Faction radio (illegal/civilian factions — not LSPD/EMS/LSFD)', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/r', 'Faction radio (your department)', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/d', 'Department radio (LSPD, Sheriff, FIB, EMS, LSFD)', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/service', 'Request emergency/service dispatch', {
         { name = 'type', help = 'taxi|medic|fire|mechanic' },
         { name = 'message', help = 'optional details' },
     })
-    TriggerEvent('chat:addSuggestion', '/gov', 'Public emergency notice (on-duty LSPD/EMS/LSFD only; everyone can read)', { { name = 'message' } })
+    TriggerEvent('chat:addSuggestion', '/gov', 'Government announcement — everyone on the server sees it (on-duty LSPD/Sheriff/FIB/EMS/LSFD)', { { name = 'message' } })
     TriggerEvent('chat:addSuggestion', '/finvite', 'Leader: invite an accepted applicant nearby', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/acceptfaction', 'Accept your pending faction invitation')
     TriggerEvent('chat:addSuggestion', '/declinefaction', 'Decline your pending faction invitation')
     TriggerEvent('chat:addSuggestion', '/funinvite', 'Remove member', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/fgiverank', 'Set member rank', { { name = 'id' }, { name = 'grade' } })
     TriggerEvent('chat:addSuggestion', '/fwarn', 'Faction warning', { { name = 'id' }, { name = 'reason' } })
+    TriggerEvent('chat:addSuggestion', '/fw', 'Alias for /fwarn', { { name = 'id' }, { name = 'reason' } })
     TriggerEvent('chat:addSuggestion', '/fmembers', 'List online faction members')
     TriggerEvent('chat:addSuggestion', '/fmotd', 'Read MOTD, or set it if you have permission', { { name = 'message', help = 'optional new MOTD' } })
     TriggerEvent('chat:addSuggestion', '/fine', 'Issue fine (PD)', { { name = 'id' }, { name = 'amount' }, { name = 'reason' } })
@@ -548,7 +638,8 @@ local PD_HELP = {
     '/startradar [limit_kmh] — Lock patrol car and monitor traffic',
     '/stopradar — Deactivate speed radar',
     '/radars — List fixed speed cameras',
-    '/f [msg] — Faction radio',
+    '/r [msg] — Faction radio (LSPD only)',
+    '/d [msg] — Department radio (LSPD, Sheriff, FIB, EMS, LSFD)',
     '/faction — Your rank, salary, commands',
     '/help — personalized list filtered to commands your current rank can use',
     'Payday: every hour at :00 — must be ON DUTY — salary goes to bank',
@@ -570,7 +661,7 @@ local FD_HELP = {
     'At the wreck: you get a fire extinguisher — hold LMB and spray until it dies',
     'Stay within ~8m of the burning car. When health hits 0 you get paid (~$350)',
     'Engineer+ can /revive, Firefighter+ can /heal, all ranks /stabilize',
-    '/f [msg] — Faction radio  |  /faction — rank, salary, commands',
+    '/f [msg] — Faction radio  |  /r [msg] — LSFD radio  |  /d [msg] — Emergency dept radio',
     '/help — same commands filtered to your current rank',
 }
 
@@ -587,11 +678,11 @@ RegisterCommand('pdgarage', function()
         return exports.sunset_ui:Notify('You must be law enforcement', 'error')
     end
     if not exports.sunset_factions:IsOnDuty() then
-        return exports.sunset_ui:Notify('Go on duty first (/duty at MRPD)', 'error')
+        return exports.sunset_ui:Notify('Go on duty first (/duty at HQ)', 'error')
     end
-    local faction = Sunset.Factions.police
+    local faction = Sunset.Factions[factionId]
     if faction and faction.depot then
-        spawnFleetVehicle(faction.depot, 'police')
+        openFleetGarage(factionId, faction.depot)
     end
 end, false)
 

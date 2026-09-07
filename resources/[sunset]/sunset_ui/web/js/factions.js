@@ -11,7 +11,11 @@ const FactionPanels = {
         });
 
         document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
-            tab.addEventListener('click', () => this.setTab(tab.dataset.factionTab));
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.factionTab;
+                this.setTab(tabId);
+                if (tabId === 'browse') this.requestBrowse();
+            });
         });
 
         document.querySelector('[data-faction-detail-back]')?.addEventListener('click', () => {
@@ -75,7 +79,7 @@ const FactionPanels = {
     },
 
     renderRankEditor(grades, canEdit) {
-        const wrap = $('#faction-rank-editor');
+        const wrap = document.getElementById('faction-rank-editor');
         const form = $('#faction-rank-names-form');
         if (!wrap || !form) return;
         wrap.classList.toggle('hidden', !canEdit);
@@ -92,13 +96,36 @@ const FactionPanels = {
         });
     },
 
+    updateManageForms(perms, data) {
+        document.querySelector('.faction-tab--manage')?.classList.toggle('hidden', !(
+            perms.invite || perms.motd || perms.warn || perms.renameRanks
+            || perms.rankMembers || perms.kickMembers
+        ));
+
+        document.querySelectorAll('[data-faction-action]').forEach((form) => {
+            const action = form.dataset.factionAction;
+            let allowed = false;
+            if (action === 'invite') allowed = perms.invite;
+            else if (action === 'motd') allowed = perms.motd;
+            else if (action === 'warn') allowed = perms.warn;
+            else allowed = true;
+            form.classList.toggle('hidden', !allowed);
+        });
+
+        const motdForm = document.querySelector('[data-faction-action="motd"]');
+        const motdInput = motdForm?.querySelector('[name="message"]');
+        if (motdInput && data?.motd) motdInput.value = data.motd;
+    },
+
     renderRoster(members, permissions, viewerCharacterId) {
         const roster = $('#faction-roster');
         if (!roster) return;
         roster.innerHTML = '';
         const canRank = Boolean(permissions?.rankMembers);
         const canKick = Boolean(permissions?.kickMembers);
+        const canWarn = Boolean(permissions?.warn);
         const viewerId = Number(viewerCharacterId) || 0;
+        const viewerGrade = Number(this.dashboard?.viewerGrade) || 0;
 
         (members || []).forEach((member) => {
             const row = document.createElement('article');
@@ -108,7 +135,7 @@ const FactionPanels = {
             const name = document.createElement('strong');
             name.textContent = member.name || `CID ${member.characterId || '?'}`;
             const rank = document.createElement('span');
-            rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
+            rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${member.warns ? ` · ${member.warns}/3 FW` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
             identity.append(name, rank);
 
             const state = document.createElement('em');
@@ -117,9 +144,10 @@ const FactionPanels = {
             const actions = document.createElement('div');
             actions.className = 'faction-member__actions';
             const isSelf = Number(member.characterId) === viewerId;
-            const manageable = !isSelf && !member.leader && (canRank || canKick);
+            const manageable = !isSelf && !member.leader && (canRank || canKick || canWarn);
+            const lowerRank = Number(member.grade) < viewerGrade || Boolean(this.dashboard?.permissions?.leader);
 
-            if (manageable && canRank) {
+            if (manageable && canRank && lowerRank) {
                 const up = document.createElement('button');
                 up.type = 'button';
                 up.className = 'faction-btn';
@@ -134,7 +162,7 @@ const FactionPanels = {
                 down.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: -1 }));
                 actions.append(up, down);
             }
-            if (manageable && canKick) {
+            if (manageable && canKick && lowerRank) {
                 const kickFp = document.createElement('button');
                 kickFp.type = 'button';
                 kickFp.className = 'faction-btn is-danger';
@@ -161,6 +189,19 @@ const FactionPanels = {
 
                 actions.append(kickFp, kick, kickOff);
             }
+            if (manageable && canWarn && lowerRank && member.online) {
+                const warn = document.createElement('button');
+                warn.type = 'button';
+                warn.className = 'faction-btn is-warn';
+                warn.textContent = 'FW';
+                warn.title = 'Faction warning (3/3 max)';
+                warn.addEventListener('click', () => {
+                    const reason = window.prompt('Faction warning reason:', 'No reason given');
+                    if (reason === null) return;
+                    this.postAction('warn', { characterId: member.characterId, reason });
+                });
+                actions.append(warn);
+            }
 
             row.append(identity, state, actions);
             roster.appendChild(row);
@@ -170,7 +211,7 @@ const FactionPanels = {
 
     showDashboard(data = {}) {
         this.init();
-        this.hide();
+        $('#faction-directory')?.classList.add('hidden');
         this.dashboard = data;
         const members = Array.isArray(data.members) ? data.members : [];
         const report = data.report || {};
@@ -197,14 +238,17 @@ const FactionPanels = {
         $('#faction-report-bar').style.width = `${percent}%`;
 
         const toolbar = $('#faction-roster-toolbar');
-        const showToolbar = Boolean(perms.leader || perms.invite || perms.motd);
-        toolbar?.classList.toggle('hidden', !showToolbar);
-        toolbar?.querySelector('[data-faction-action="invite"]')?.classList.toggle('hidden', !(perms.leader || perms.invite));
-        toolbar?.querySelector('[data-faction-action="motd"]')?.classList.toggle('hidden', !(perms.leader || perms.motd));
+        toolbar?.classList.add('hidden');
 
         this.renderRoster(members, perms, data.viewerCharacterId);
         this.renderCommands(data.commands);
         this.renderRankEditor(data.grades, perms.renameRanks);
+        this.updateManageForms(perms, data);
+
+        document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
+            tab.classList.remove('hidden');
+        });
+        this._browseLoaded = Boolean(this.directory?.length);
 
         this.setTab('overview');
         $('#faction-panel')?.classList.remove('hidden');
@@ -213,9 +257,52 @@ const FactionPanels = {
 
     showDirectory(payload = {}) {
         this.init();
-        this.hide();
         this.directory = Array.isArray(payload.factions) ? payload.factions : [];
-        const list = $('#faction-directory-list');
+        this.closeDirectoryDetail();
+        this.renderDirectoryCards($('#faction-browse-list'));
+
+        const panel = $('#faction-panel');
+        const panelWasHidden = panel?.classList.contains('hidden');
+        if (panelWasHidden && !this.dashboard) {
+            document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
+                tab.classList.toggle('hidden', tab.dataset.factionTab !== 'browse');
+            });
+            const title = $('#faction-panel-title');
+            if (title) title.innerHTML = 'SERVER <span>FACTIONS</span>';
+        } else {
+            document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
+                tab.classList.remove('hidden');
+            });
+        }
+
+        panel?.classList.remove('hidden');
+        $('#faction-directory')?.classList.add('hidden');
+        this.setTab('browse');
+        this.setBodyOpen(true);
+        this._browseLoaded = true;
+    },
+
+    requestBrowse() {
+        if (this._browseLoading) return;
+        const list = $('#faction-browse-list');
+        if (!list) return;
+        if (this._browseLoaded && this.directory?.length) return;
+        this._browseLoading = true;
+        list.innerHTML = '<p class="faction-empty">Loading factions...</p>';
+        post('factionBrowse');
+    },
+
+    showBrowseInline(payload = {}) {
+        this._browseLoading = false;
+        this._browseLoaded = true;
+        this.directory = Array.isArray(payload.factions) ? payload.factions : [];
+        this.closeDirectoryDetail();
+        this.renderDirectoryCards($('#faction-browse-list'));
+        this.setTab('browse');
+    },
+
+    renderDirectoryCards(listEl) {
+        const list = listEl || $('#faction-browse-list');
         if (!list) return;
         list.innerHTML = '';
 
@@ -224,6 +311,10 @@ const FactionPanels = {
             card.type = 'button';
             card.className = `faction-directory-card faction-directory-card--${faction.type === 'illegal' ? 'illegal' : 'legal'}`;
             card.dataset.factionId = faction.id || '';
+            const marker = Array.isArray(faction.marker) ? faction.marker : null;
+            if (marker && marker.length >= 3) {
+                card.style.borderLeftColor = `rgb(${marker[0]}, ${marker[1]}, ${marker[2]})`;
+            }
 
             const top = document.createElement('div');
             top.className = 'faction-directory-card__top';
@@ -251,21 +342,19 @@ const FactionPanels = {
         });
 
         if (!list.children.length) list.innerHTML = '<p class="faction-empty">No factions are configured.</p>';
-        $('#faction-directory')?.classList.remove('hidden');
-        this.setBodyOpen(true);
     },
 
     closeDirectoryDetail() {
-        $('#faction-directory-detail')?.classList.add('hidden');
-        document.querySelector('.faction-directory-layout')?.classList.remove('is-detail-open');
+        $('#faction-browse-detail')?.classList.add('hidden');
+        $('#faction-browse-layout')?.classList.remove('is-detail-open', 'has-detail');
         document.querySelectorAll('.faction-directory-card.is-selected').forEach((el) => {
             el.classList.remove('is-selected');
         });
     },
 
     openDirectoryDetail(faction, cardEl) {
-        const layout = document.querySelector('.faction-directory-layout');
-        const detail = $('#faction-directory-detail');
+        const layout = $('#faction-browse-layout');
+        const detail = $('#faction-browse-detail');
         const body = detail?.querySelector('.faction-detail__body');
         if (!layout || !detail || !body) return;
 
@@ -291,7 +380,7 @@ const FactionPanels = {
             <div class="faction-detail__block"><span>How to join</span><p>${faction.type === 'illegal' ? 'Invite only — contact leadership in character.' : (faction.applicationsOpen ? 'Apply on Discord or the website. After acceptance, the leader invites you in-game with /finvite.' : 'Applications are currently closed. Only the appointed leader can invite members.')}</p></div>
         `;
 
-        layout.classList.toggle('is-detail-open', window.matchMedia('(max-width: 900px)').matches);
+        layout.classList.add('has-detail', 'is-detail-open');
         detail.classList.remove('hidden');
     },
 
@@ -305,6 +394,10 @@ const FactionPanels = {
         const payload = { action };
         if (action === 'invite') payload.targetId = Number(data.get('targetId'));
         if (action === 'motd') payload.message = String(data.get('message') || '').trim();
+        if (action === 'warn') {
+            payload.targetId = Number(data.get('targetId'));
+            payload.reason = String(data.get('reason') || 'No reason given').trim();
+        }
         post('factionManage', payload);
     },
 

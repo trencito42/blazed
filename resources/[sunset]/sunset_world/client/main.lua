@@ -186,10 +186,13 @@ AddEventHandler('sunset:world:registerFactionDepot', function(factionId, depot, 
     if not depot or not depot.coords then return end
     local color = faction and faction.marker or { 255, 200, 0 }
     addBlip(depot.coords, { sprite = 326, color = 5, scale = 0.7 }, depot.label or 'Fleet Garage', false)
-    zones[#zones + 1] = registerZone('depot:' .. factionId, depot.coords, 3.0,
-        '[E] ' .. (depot.label or 'Spawn fleet vehicle'), color, function()
-            TriggerEvent('sunset:world:factionDepot', factionId, depot)
-        end)
+    local depotHint = '[E] ' .. (depot.label or 'Spawn fleet vehicle')
+    if depot.vehicles and #depot.vehicles > 0 then
+        depotHint = '[E] ' .. (depot.label or 'Fleet garage') .. ' — choose vehicle'
+    end
+    zones[#zones + 1] = registerZone('depot:' .. factionId, depot.coords, 3.0, depotHint, color, function()
+        TriggerEvent('sunset:world:factionDepot', factionId, depot)
+    end)
 end)
 
 AddEventHandler('sunset:world:registerIllegalSell', function(factionId, coords, faction)
@@ -343,4 +346,12 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     hideHint()
+end)
+
+AddEventHandler('sunset:world:uiModalOpen', function()
+    hideHint()
+end)
+
+AddEventHandler('sunset:world:uiModalClose', function()
+    activeZone = nil
 end)

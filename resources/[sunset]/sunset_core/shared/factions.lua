@@ -69,8 +69,15 @@ Sunset.Factions = {
             label = 'MRPD Fleet Garage',
             coords = vector3(452.12, -1017.35, 28.45),
             spawn = vector4(438.42, -1018.30, 28.75, 90.0),
-            vehicle = 'police',
             platePrefix = 'LSPD',
+            vehicles = {
+                { model = 'police', label = 'Patrol Cruiser', minGrade = 0 },
+                { model = 'police2', label = 'Buffalo', minGrade = 1 },
+                { model = 'police3', label = 'Interceptor', minGrade = 2 },
+                { model = 'policeb', label = 'Police Bike', minGrade = 2 },
+                { model = 'policet', label = 'Transport Van', minGrade = 3 },
+                { model = 'police4', label = 'Unmarked Cruiser', minGrade = 4 },
+            },
         },
         loadout = Sunset.BuildLawEnforcementLoadout('lspd', 'police'),
         grades = Sunset.BuildLawEnforcementGrades(1.0),
@@ -85,16 +92,21 @@ Sunset.Factions = {
         description = 'County sheriff department — robbery response, warrants, and high-risk pursuits.',
         society = 'sheriff',
         duty = true,
-        hq = vector3(387.74, -1607.92, 29.29),
+        hq = vector3(369.23, -1607.72, 29.29),
+        hqHeading = 323.63,
         hqHint = '[E] Sheriff Station — members: toggle duty | robbery response unit',
         blip = { sprite = 60, color = 46, scale = 0.9 },
         marker = { 160, 110, 40 },
         depot = {
             label = 'Sheriff Fleet Garage',
-            coords = vector3(374.74, -1610.86, 29.29),
-            spawn = vector4(391.16, -1610.71, 28.29, 230.55),
-            vehicle = 'sheriff',
+            coords = vector3(376.33, -1631.79, 27.84),
+            spawn = vector4(376.33, -1631.79, 27.84, 145.06),
             platePrefix = 'SASD',
+            vehicles = {
+                { model = 'sheriff', label = 'Sheriff Cruiser', minGrade = 0 },
+                { model = 'sheriff2', label = 'Sheriff SUV', minGrade = 2 },
+                { model = 'policeb', label = 'Police Bike', minGrade = 3 },
+            },
         },
         loadout = Sunset.BuildLawEnforcementLoadout('sheriff', 'sheriff2'),
         grades = Sunset.BuildLawEnforcementGrades(0.95),
@@ -109,20 +121,32 @@ Sunset.Factions = {
         society = 'fib',
         duty = true,
         hq = vector3(105.52, -745.12, 45.75),
-        hqHint = '[E] FIB HQ — members: toggle duty | lift at interior panel for motor pool',
+        hqHint = '[E] FIB HQ — duty | walk in & use interior lift to motor pool',
+        entrance = {
+            from = vector3(107.85, -744.35, 45.75),
+            to = vector4(136.25, -761.65, 45.75, 161.02),
+            radius = 3.5,
+            hint = '[E] Enter FIB offices (lift inside)',
+        },
         blip = { sprite = 60, color = 0, scale = 0.85 },
         marker = { 20, 20, 20 },
         depot = {
             label = 'FIB Motor Pool',
-            coords = vector3(58.20, -761.50, 31.72),
-            spawn = vector4(58.20, -761.50, 31.72, 70.0),
-            vehicle = 'fbi',
+            coords = vector3(182.66, -727.47, 33.13),
+            spawn = vector4(186.50, -723.80, 33.13, 250.0),
+            exitSpawn = vector4(56.75, -756.82, 44.23, 340.0),
             platePrefix = 'FIB',
+            vehicles = {
+                { model = 'fbi', label = 'FIB Buffalo', minGrade = 1 },
+                { model = 'fbi2', label = 'FIB Granger SUV', minGrade = 2 },
+                { model = 'police4', label = 'FIB Unmarked Cruiser', minGrade = 4 },
+                { model = 'baller6', label = 'FIB Armored SUV', minGrade = 6 },
+            },
             lift = {
                 label = 'FIB Lift',
                 lobby = vector4(136.25, -761.65, 45.75, 161.02),
-                garage = vector4(70.10, -751.50, 31.85, 160.0),
-                garageRadius = 1.8,
+                garage = vector4(182.66, -727.47, 33.13, 250.0),
+                garageRadius = 2.2,
             },
         },
         loadout = Sunset.BuildLawEnforcementLoadout('fib', 'fbi2', {
@@ -345,7 +369,14 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
         end
     end
     list[#list + 1] = { cmd = '/duty', desc = 'Toggle on/off shift' }
-    list[#list + 1] = { cmd = '/f [message]', desc = 'Faction radio chat' }
+    if Sunset.FactionTypeMatches(jobId, 'law_enforcement')
+        or Sunset.FactionTypeMatches(jobId, 'ems')
+        or Sunset.FactionTypeMatches(jobId, 'fire_rescue') then
+        list[#list + 1] = { cmd = '/r [message]', desc = 'Faction radio (your department only)' }
+        list[#list + 1] = { cmd = '/d [message]', desc = 'Shared emergency radio (LSPD, Sheriff, FIB, EMS, LSFD)' }
+    else
+        list[#list + 1] = { cmd = '/f [message]', desc = 'Faction radio chat' }
+    end
     list[#list + 1] = { cmd = '/leavefaction', desc = 'Leave your faction' }
     list[#list + 1] = { cmd = '/quitfaction', desc = 'Leave your faction (alias)' }
     list[#list + 1] = { cmd = '/factionquit', desc = 'Leave your faction (alias)' }
@@ -426,4 +457,58 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
         list[#list + 1] = { cmd = '/fgiverank [id] [grade]', desc = 'Set member faction rank' }
     end
     return list
+end
+
+local function coord3(point)
+    if not point then return nil end
+    local x = tonumber(point.x)
+    local y = tonumber(point.y)
+    local z = tonumber(point.z)
+    if not x or not y or not z then return nil end
+    return x, y, z
+end
+
+--- Saved positions inside faction motor pools / lifts are not safe last-location spawns.
+function Sunset.GetFactionDepotRescueSpawn(x, y, z)
+    x, y, z = tonumber(x), tonumber(y), tonumber(z)
+    if not x or not y or not z then return nil end
+
+    for _, faction in pairs(Sunset.Factions or {}) do
+        local depot = faction.depot
+        if not depot then goto continue end
+
+        local hotspots = {}
+        if depot.spawn then hotspots[#hotspots + 1] = depot.spawn end
+        if depot.lift and depot.lift.garage then hotspots[#hotspots + 1] = depot.lift.garage end
+        if depot.lift and depot.lift.lobby then hotspots[#hotspots + 1] = depot.lift.lobby end
+        if depot.coords then hotspots[#hotspots + 1] = depot.coords end
+
+        for _, point in ipairs(hotspots) do
+            local px, py, pz = coord3(point)
+            if px then
+                local dx, dy, dz = x - px, y - py, z - pz
+                if (dx * dx + dy * dy + dz * dz) <= (14.0 * 14.0) then
+                    if depot.exitSpawn then
+                        return {
+                            x = depot.exitSpawn.x,
+                            y = depot.exitSpawn.y,
+                            z = depot.exitSpawn.z,
+                            w = depot.exitSpawn.w or 0.0,
+                        }
+                    end
+                    if faction.hq then
+                        return {
+                            x = faction.hq.x,
+                            y = faction.hq.y,
+                            z = faction.hq.z,
+                            w = 0.0,
+                        }
+                    end
+                end
+            end
+        end
+
+        ::continue::
+    end
+    return nil
 end

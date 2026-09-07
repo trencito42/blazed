@@ -2,6 +2,7 @@ SunsetProperties = SunsetProperties or {}
 
 SunsetProperties.RentMin = 50
 SunsetProperties.RentMax = 5000
+SunsetProperties.DefaultRentPrice = 500
 SunsetProperties.MaxRentersMin = 1
 SunsetProperties.MaxRentersMax = 10
 SunsetProperties.AdminLevel = 3

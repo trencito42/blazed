@@ -38,7 +38,7 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
     end
     rate.count = rate.count + 1
     if rate.count > 30 then
-        print(('^3[SunsetMP]^7 Callback flood blocked from %s'):format(source))
+        print(('^3[blaze.mp]^7 Callback flood blocked from %s'):format(source))
         TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, 'Too many requests — wait a moment')
         return
     end
@@ -53,7 +53,7 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
     end, ...)
 
     if not ok then
-        print(('^1[SunsetMP]^7 Callback error (%s): %s'):format(name, tostring(packed)))
+        print(('^1[blaze.mp]^7 Callback error (%s): %s'):format(name, tostring(packed)))
         TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil,
             ('Server error while processing %s. Try once more; if it repeats, report this action to staff.'):format(name))
         return
@@ -411,6 +411,6 @@ end)
 
 CreateThread(function()
     MySQL.ready(function()
-        print('^2[SunsetMP]^7 Core framework loaded — database connected.')
+        print('^2[blaze.mp]^7 Core framework loaded — database connected.')
     end)
 end)

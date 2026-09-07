@@ -227,7 +227,12 @@ body.fuel-pump-open #job-objective {
 }
 
 .panel-logo {
-    width: 180px;
+    display: block;
+    width: 160px;
+    max-width: min(160px, 42vw);
+    height: auto;
+    max-height: 66px;
+    object-fit: contain;
     margin-bottom: 24px;
 }
 

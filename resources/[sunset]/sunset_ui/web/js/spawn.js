@@ -1,5 +1,5 @@
 const SpawnSelector = {
-    selected: 'last', busy: false,
+    selected: 'last', busy: false, dismissible: false,
     activeCards() { return [...document.querySelectorAll('.spawn-option:not(.hidden)')].filter((card) => !card.disabled); },
     reset() {
         this.busy = false;
@@ -14,7 +14,14 @@ const SpawnSelector = {
         });
     },
     show(data = {}) {
+        this.dismissible = data.dismissible === true;
         this.reset();
+        const footer = document.querySelector('.spawn-footer');
+        if (footer) {
+            footer.innerHTML = this.dismissible
+                ? '<span>ESC</span> close · <span>A / D</span> navigate · <span>Enter</span> confirm'
+                : '<span>A / D</span> or arrow keys to navigate · <span>Enter</span> to confirm';
+        }
         const last = document.querySelector('[data-spawn="last"]');
         if (last) {
             const disabled = data.hasLastLocation === false;
@@ -91,6 +98,11 @@ const SpawnSelector = {
         document.querySelectorAll('.spawn-option').forEach((card) => { card.disabled = true; });
         post('spawnSelect', { location, propertyId: Number(target.dataset.propertyId || 0) || null });
     },
+    close() {
+        if (!this.dismissible || this.busy) return;
+        this.reset();
+        post('spawnClose');
+    },
 };
 document.querySelectorAll('.spawn-option').forEach((card) => {
     card.addEventListener('mouseenter', () => SpawnSelector.select(card.dataset.spawn));
@@ -100,6 +112,11 @@ document.querySelectorAll('.spawn-option').forEach((card) => {
 });
 document.addEventListener('keydown', (event) => {
     if (window.App?.currentScreen !== 'spawn') return;
+    if (event.key === 'Escape' && SpawnSelector.dismissible) {
+        event.preventDefault();
+        SpawnSelector.close();
+        return;
+    }
     if (['ArrowLeft', 'a', 'A'].includes(event.key)) SpawnSelector.move(-1);
     if (['ArrowRight', 'd', 'D'].includes(event.key)) SpawnSelector.move(1);
     if (event.key === 'Enter') SpawnSelector.confirm();

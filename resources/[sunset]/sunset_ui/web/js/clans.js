@@ -146,15 +146,13 @@ const ClanPanels = {
             };
         }
         return {
-            layout: $('#clan-directory-layout'),
-            detail: $('#clan-directory-detail'),
+            layout: $('#clan-browse-layout'),
+            detail: $('#clan-browse-detail'),
         };
     },
 
     closeDirectoryDetail() {
-        $('#clan-directory-detail')?.classList.add('hidden');
         $('#clan-browse-detail')?.classList.add('hidden');
-        $('#clan-directory-layout')?.classList.remove('is-detail-open');
         $('#clan-browse-layout')?.classList.remove('is-detail-open');
         document.querySelectorAll('.clan-directory-card.is-selected').forEach((el) => {
             el.classList.remove('is-selected');
@@ -174,7 +172,7 @@ const ClanPanels = {
                 <article class="clan-detail-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}">
                     <div>
                         <strong>${this.escape(member.name || 'Unknown')}</strong>
-                        <span>${this.escape(member.rankLabel || 'Member')}${member.serverId ? ` · ID ${member.serverId}` : ''}</span>
+                        <span>${this.escape(member.rank ? `R${member.rank} · ` : '')}${this.escape(member.rankLabel || 'Member')}${member.warns ? ` · ${member.warns}/3 warns` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}</span>
                     </div>
                     <em>${member.leader ? 'LEADER' : (member.online ? 'ONLINE' : 'OFFLINE')}</em>
                 </article>
@@ -209,7 +207,7 @@ const ClanPanels = {
         this._selectedClanId = clan.id;
 
         this.renderDetailBody(ctx.detail, clan, clan.members || []);
-        ctx.layout?.classList.toggle('is-detail-open', window.matchMedia('(max-width: 900px)').matches);
+        ctx.layout?.classList.add('is-detail-open');
         ctx.detail.classList.remove('hidden');
 
         if (!clan.members || !clan.members.length) {
@@ -223,7 +221,6 @@ const ClanPanels = {
         this.directory = (this.directory || []).map((row) => (row.id === clanId ? { ...row, ...profile } : row));
 
         const contexts = [
-            { detail: $('#clan-directory-detail'), list: $('#clan-directory-list') },
             { detail: $('#clan-browse-detail'), list: $('#clan-browse-list') },
         ];
         contexts.forEach(({ detail, list }) => {
@@ -278,14 +275,37 @@ const ClanPanels = {
             const name = document.createElement('strong');
             name.textContent = member.name || `CID ${member.characterId || '?'}`;
             const rank = document.createElement('span');
-            rank.textContent = `${member.rankLabel || 'Member'}${member.serverId ? ` (${member.serverId})` : ''}`;
+            rank.className = 'clan-member-rank';
+            rank.textContent = `${member.rank ? `R${member.rank}` : 'R?'} · ${member.rankLabel || 'Member'}`;
+            const meta = document.createElement('span');
+            const metaBits = [];
+            if (member.warns) metaBits.push(`${member.warns}/3 warns`);
+            if (member.serverId) metaBits.push(`ID ${member.serverId}`);
+            meta.textContent = metaBits.join(' · ');
             identity.append(name, rank);
+            if (metaBits.length) identity.append(meta);
             const state = document.createElement('em');
             state.textContent = member.leader ? 'LEADER' : (member.online ? 'ONLINE' : 'OFFLINE');
             row.append(identity, state);
             roster.appendChild(row);
         });
         if (!members?.length) roster.innerHTML = '<p class="clan-empty">No members found.</p>';
+    },
+
+    renderRankLabelEditor(labels) {
+        const wrap = document.getElementById('clan-rank-label-fields');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        const source = labels || {};
+        for (let i = 1; i <= 7; i += 1) {
+            const field = document.createElement('label');
+            field.className = 'clan-rank-label-field';
+            field.innerHTML = `
+                <span>Rank ${i}</span>
+                <input type="text" data-rank-label="${i}" maxlength="48" value="${this.escape(source[i] || source[String(i)] || '')}" placeholder="Rank ${i}">
+            `;
+            wrap.appendChild(field);
+        }
     },
 
     renderDirectoryCards(list, clans) {
@@ -375,11 +395,12 @@ const ClanPanels = {
         const title = $('#clan-panel-title');
         if (title) {
             if (inClan) {
+                const color = this.escape(this.dashboard.tagColor || '#FF8C00');
                 const clanName = this.escape(this.dashboard.name || 'Clan');
                 const clanTag = this.escape(this.dashboard.tag || '');
                 title.innerHTML = clanTag
-                    ? `CLAN <span>${clanName} · ${clanTag}</span>`
-                    : `CLAN <span>${clanName}</span>`;
+                    ? `CLAN <span><span style="color:${color}">${clanName}</span> · <span style="color:${color}">${clanTag}</span></span>`
+                    : `CLAN <span style="color:${color}">${clanName}</span>`;
             } else {
                 title.innerHTML = 'CREATE <span>CLAN</span>';
             }
@@ -389,7 +410,7 @@ const ClanPanels = {
         document.querySelector('.clan-tab--overview')?.classList.toggle('hidden', !inClan);
         document.querySelector('.clan-tab--roster')?.classList.toggle('hidden', !inClan);
         document.querySelector('.clan-tab--manage')?.classList.toggle('hidden', !inClan || !(
-            perms.invite || perms.motd || perms.settings || perms.promote || perms.dissolve || perms.leave
+            perms.invite || perms.motd || perms.settings || perms.promote || perms.warn || perms.rankLabels || perms.dissolve || perms.leave
         ));
         document.querySelector('.clan-tab--create')?.classList.toggle('hidden', inClan);
         document.querySelector('.clan-tab--browse')?.classList.toggle('hidden', false);
@@ -405,7 +426,9 @@ const ClanPanels = {
             else if (action === 'motd') allowed = perms.motd;
             else if (action === 'settings') allowed = perms.settings;
             else if (action === 'kick') allowed = perms.kick;
-            else if (action === 'promote') allowed = perms.promote;
+            else if (action === 'rankUp' || action === 'rankDown') allowed = perms.promote;
+            else if (action === 'warn') allowed = perms.warn;
+            else if (action === 'rankLabels') allowed = perms.rankLabels;
             else if (action === 'leave') allowed = perms.leave;
             else if (action === 'dissolve') allowed = perms.dissolve;
             else if (action === 'create') allowed = false;
@@ -414,7 +437,11 @@ const ClanPanels = {
 
         if (inClan) {
             const rankEl = $('#clan-rank');
-            if (rankEl) rankEl.textContent = this.dashboard.rankLabel || 'Member';
+            if (rankEl) {
+                rankEl.textContent = this.dashboard.rank
+                    ? `R${this.dashboard.rank} · ${this.dashboard.rankLabel || 'Member'}`
+                    : (this.dashboard.rankLabel || 'Member');
+            }
             const countEl = $('#clan-member-count');
             if (countEl) {
                 countEl.textContent = `${this.dashboard.memberCount || 0} / ${this.dashboard.maxMembers || 25}`;
@@ -449,6 +476,7 @@ const ClanPanels = {
                 );
             }
             this.updateSettingsPreview();
+            this.renderRankLabelEditor(this.dashboard.rankLabels);
             this.setTab('overview');
         } else {
             const createForm = document.querySelector('[data-clan-action="create"]');
@@ -460,7 +488,7 @@ const ClanPanels = {
                 );
                 const costEl = $('#clan-create-cost');
                 if (costEl) {
-                    costEl.textContent = `Cost: ${Number(this.dashboard.creationCost || 500).toLocaleString()} Sunset Coins — you have ${Number(this.dashboard.accountCoins || 0).toLocaleString()} SC`;
+                    costEl.textContent = `Cost: ${Number(this.dashboard.creationCost || 500).toLocaleString()} Blaze Points — you have ${Number(this.dashboard.accountCoins || 0).toLocaleString()} BP`;
                 }
             }
             this.updateCreatePreview();
@@ -474,32 +502,52 @@ const ClanPanels = {
     },
 
     showDirectory(payload = {}) {
-        this.init();
-        const directory = $('#clan-directory');
-        if (!directory) {
-            console.error('[ClanPanels] #clan-directory is missing from index.html');
-            return false;
-        }
+        return this.openBrowsePanel(payload);
+    },
 
-        $('#clan-panel')?.classList.add('hidden');
+    openBrowsePanel(payload = {}) {
+        this.init();
         this.directory = Array.isArray(payload.clans) ? payload.clans : [];
         this.closeDirectoryDetail();
-        const list = $('#clan-directory-list');
-        if (!list) return false;
-        this.renderDirectoryCards(list, this.directory);
-        directory.classList.remove('hidden');
+        this._browseLoaded = true;
+        this._browseLoading = false;
+
+        $('#clan-directory')?.classList.add('hidden');
+        this.renderDirectoryCards($('#clan-browse-list'), this.directory);
+
+        const panel = $('#clan-panel');
+        const panelWasHidden = panel?.classList.contains('hidden');
+        if (panelWasHidden && !this.dashboard) {
+            document.querySelector('.clan-tab--overview')?.classList.add('hidden');
+            document.querySelector('.clan-tab--roster')?.classList.add('hidden');
+            document.querySelector('.clan-tab--manage')?.classList.add('hidden');
+            document.querySelector('.clan-tab--create')?.classList.remove('hidden');
+            const title = $('#clan-panel-title');
+            if (title) title.innerHTML = 'SERVER <span>CLANS</span>';
+        }
+
+        panel?.classList.remove('hidden');
+        this.setTab('browse');
         this.setBodyOpen(true);
-        this.focusReady();
+        if (panelWasHidden) this.focusReady();
         return true;
     },
 
     submitForm(form) {
         const action = form.dataset.clanAction;
         const payload = { action };
-        form.querySelectorAll('input, textarea, select').forEach((field) => {
-            if (!field.name) return;
-            payload[field.name] = field.value;
-        });
+        if (action === 'rankLabels') {
+            const labels = {};
+            form.querySelectorAll('[data-rank-label]').forEach((field) => {
+                labels[field.dataset.rankLabel] = field.value;
+            });
+            payload.labels = labels;
+        } else {
+            form.querySelectorAll('input, textarea, select').forEach((field) => {
+                if (!field.name) return;
+                payload[field.name] = field.value;
+            });
+        }
         post('clanManage', payload);
     },
 };

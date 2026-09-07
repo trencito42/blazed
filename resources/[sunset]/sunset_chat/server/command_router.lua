@@ -85,6 +85,28 @@ local function tryRunAdminCommand(src, cmd, rest)
     return false
 end
 
+local function tryRunServerChatCommand(src, cmd, args)
+    cmd = string.lower(tostring(cmd or ''))
+    args = args or {}
+
+    local ok, handled = pcall(function()
+        return exports.sunset_factions:RunChatCommand(src, cmd, args)
+    end)
+    if ok and handled then return true end
+
+    ok, handled = pcall(function()
+        return exports.sunset_clans:RunChatCommand(src, cmd, args)
+    end)
+    if ok and handled then return true end
+
+    ok, handled = pcall(function()
+        return exports.sunset_chat:RunServerCommand(src, cmd, args)
+    end)
+    if ok and handled then return true end
+
+    return false
+end
+
 RegisterNetEvent('sunset:chat:runCommand', function(line)
     local src = source
     if type(line) ~= 'string' then return end
@@ -151,7 +173,23 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
         return
     end
 
-    TriggerClientEvent('sunset:chat:executeCommand', src, line)
+    if tryRunServerChatCommand(src, cmd, parseArgs(rest)) then
+        return
+    end
+
+    if Sunset.ClientCommands[cmd] or adminRequired(cmd) then
+        TriggerClientEvent('sunset:chat:executeCommand', src, line)
+        return
+    end
+
+    if serverCommands[cmd] then
+        TriggerClientEvent('sunset:chat:executeCommand', src, line)
+        return
+    end
+
+    chatSystem(src,
+        ('Command /%s could not be executed. Reconnect or contact staff.'):format(cmd),
+        'error')
 end)
 
 exports('RefreshCommandList', refreshServerCommands)

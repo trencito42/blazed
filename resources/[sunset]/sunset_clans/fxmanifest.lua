@@ -4,13 +4,14 @@ lua54 'yes'
 
 name 'sunset_clans'
 author 'SunsetMP'
-description 'Player-created clans with tags, Sunset Coins, and management UI'
+description 'Player-created clans with tags, Blaze Points, and management UI'
 version '1.0.0'
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
     'shared/config.lua',
     'shared/tag.lua',
+    'shared/ranks.lua',
 }
 
 client_scripts {
@@ -22,6 +23,7 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/display.lua',
     'server/main.lua',
+    'server/chat.lua',
 }
 
 dependencies {
@@ -34,4 +36,5 @@ exports {
     'GetClanChatMeta',
     'GetPlayerBaseName',
     'SyncPlayerClan',
+    'RunChatCommand',
 }

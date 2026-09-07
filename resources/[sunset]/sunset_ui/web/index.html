@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunsetMP</title>
+    <title>blaze.mp</title>
     <link rel="stylesheet" href="css/fonts.css?v=2">
     <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="stylesheet" href="css/hud.css?v=7">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=12">
-    <link rel="stylesheet" href="css/menu.css?v=8">
-    <link rel="stylesheet" href="css/panels.css?v=5">
+    <link rel="stylesheet" href="css/menu.css?v=9">
+    <link rel="stylesheet" href="css/panels.css?v=6">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css">
@@ -19,10 +19,11 @@
     <link rel="stylesheet" href="css/fishing.css?v=2">
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
-    <link rel="stylesheet" href="css/factions.css?v=8">
-    <link rel="stylesheet" href="css/clans.css?v=6">
+    <link rel="stylesheet" href="css/factions.css?v=9">
+    <link rel="stylesheet" href="css/clans.css?v=7">
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
+    <link rel="stylesheet" href="css/gameplay_glass.css?v=3">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -90,7 +91,7 @@
                     <path d="M17 5a2 2 0 0 0-2-2M21 9a2 2 0 0 0 2-2 2 2 0 0 0-2-2"/>
                 </svg>
                 <div>
-                    <div class="fuel-pump__brand">Sunset Fuel</div>
+                    <div class="fuel-pump__brand">Blaze Fuel</div>
                     <div class="fuel-pump__station" id="fuel-pump-station">Gas Station</div>
                 </div>
             </div>
@@ -195,7 +196,7 @@
         </section>
         <section id="screen-characters" class="screen hidden">
             <div class="panel panel--left">
-                <img class="panel-logo" src="assets/logo.png" alt="SunsetMP">
+                <img class="panel-logo" src="assets/logo.png?v=4" width="200" height="131" alt="blaze.mp" onerror="this.onerror=null;this.src='assets/logo.webp?v=4'">
                 <p class="panel-user" id="player-name"></p>
                 <div class="slots" id="characters-list"></div>
                 <button class="btn" id="btn-create-char">+ New Character</button>
@@ -245,7 +246,7 @@
         <section id="screen-spawn" class="screen screen--spawn hidden">
             <div class="spawn-vignette"></div>
             <header class="spawn-heading">
-                <span>Sunset entry protocol</span>
+                <span>Blaze entry protocol</span>
                 <h1>Choose your location</h1>
                 <p>Select where your character enters Los Santos.</p>
             </header>
@@ -281,7 +282,7 @@
                     <span class="spawn-option__icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/></svg>
                     </span>
-                    <span class="spawn-option__eyebrow" id="spawn-hq-access">Faction leader</span>
+                    <span class="spawn-option__eyebrow" id="spawn-hq-access">Faction HQ</span>
                     <strong id="spawn-hq-name">Faction HQ</strong>
                     <small id="spawn-hq-description">Spawn at your faction headquarters.</small>
                     <span class="spawn-option__action">Select location <b>→</b></span>
@@ -295,9 +296,9 @@
             <div class="auth-scanlines"></div>
             <div id="auth-panel" class="auth-panel">
                 <div class="auth-brand">
+                    <img class="auth-brand__logo" src="assets/logo.png?v=4" width="200" height="131" alt="blaze.mp" onerror="this.onerror=null;this.src='assets/logo.webp?v=4'">
                     <div class="auth-brand__eyebrow">Welcome to Los Santos</div>
-                    <div class="auth-brand__title">Sunset Roleplay</div>
-                    <p class="auth-brand__desc">Enter the city. Your story starts at sunset.</p>
+                    <p class="auth-brand__desc">Enter the city. Your story starts here.</p>
                 </div>
                 <div class="auth-tabs">
                     <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">Login</button>
@@ -331,7 +332,7 @@
                         <button type="button" class="btn btn--primary" id="auth-register-btn">Create Account</button>
                     </div>
                 </div>
-                <div class="auth-footer">SunsetMP — FiveM Roleplay</div>
+                <div class="auth-footer">blaze.mp — FiveM Roleplay</div>
             </div>
             <div id="auth-email-modal" class="auth-email-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-email-title">
                 <div class="auth-email-modal__panel">
@@ -444,11 +445,11 @@
         <div class="sb-shell">
             <header class="sb-top">
                 <div class="sb-brand">
-                    <span class="sb-kicker">Sunset Network</span>
+                    <span class="sb-kicker">Blaze Network</span>
                     <h2 id="sb-tab-players">Players</h2>
                 </div>
                 <div class="sb-meta">
-                    <span class="sb-server-name" id="sb-server-name">SunsetMP</span>
+                    <span class="sb-server-name" id="sb-server-name">blaze.mp</span>
                     <span class="sb-count" id="sb-count">0/48</span>
                 </div>
             </header>
@@ -545,7 +546,7 @@
                 <ul class="menu-info-list">
                     <li><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><div><span>CASH</span><strong class="is-good" id="menu-cash">$0</strong></div></li>
                     <li><svg viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3"/></svg><div><span>BANK</span><strong id="menu-bank">$0</strong></div></li>
-                    <li><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><div><span>SUNSET COINS</span><strong class="is-accent" id="menu-premium">0</strong></div></li>
+                    <li><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><div><span>BLAZE POINTS</span><strong class="is-accent" id="menu-premium">0</strong></div></li>
                     <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><span>PLAYTIME</span><strong id="menu-playtime">0H 0M</strong></div></li>
                     <li><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><div><span>LAST LOGIN</span><strong id="menu-lastlogin">—</strong></div></li>
                 </ul>
@@ -812,6 +813,8 @@
                     <div class="faction-tabs" id="faction-tabs">
                         <button type="button" class="faction-tab is-active" data-faction-tab="overview">Overview</button>
                         <button type="button" class="faction-tab" data-faction-tab="roster">Roster</button>
+                        <button type="button" class="faction-tab faction-tab--manage hidden" data-faction-tab="manage">Management</button>
+                        <button type="button" class="faction-tab" data-faction-tab="browse">Browse</button>
                     </div>
                     <div class="faction-tab-panel is-active" data-faction-panel="overview">
                         <div class="faction-stats">
@@ -831,30 +834,57 @@
                         </div>
                     </div>
                     <div class="faction-tab-panel" data-faction-panel="roster">
-                        <div class="faction-roster-toolbar hidden" id="faction-roster-toolbar">
-                            <form class="faction-toolbar-form" data-faction-action="invite">
-                                <input type="number" name="targetId" min="1" placeholder="ID invite" required>
-                                <button type="submit">INVITE</button>
-                            </form>
-                            <form class="faction-toolbar-form faction-toolbar-form--wide" data-faction-action="motd">
-                                <input type="text" name="message" maxlength="512" placeholder="Set MOTD..." required>
-                                <button type="submit">MOTD</button>
-                            </form>
-                        </div>
-                        <details class="faction-rank-editor hidden" id="faction-rank-editor">
-                            <summary>Rename ranks (leader)</summary>
-                            <form id="faction-rank-names-form" class="faction-rank-names-form"></form>
-                            <button type="button" class="faction-rank-save" id="faction-rank-save">SAVE RANK NAMES</button>
-                        </details>
                         <div class="faction-section-label">MEMBER ROSTER</div>
                         <div id="faction-roster" class="faction-roster"></div>
+                    </div>
+                    <div class="faction-tab-panel" data-faction-panel="manage">
+                        <div class="faction-section-label">LEADERSHIP TOOLS</div>
+                        <div class="faction-manage-grid">
+                            <form class="faction-manage-form" data-faction-action="invite">
+                                <strong>Invite member</strong>
+                                <p>Player must be online and accepted on Discord first.</p>
+                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                <button type="submit">SEND INVITE</button>
+                            </form>
+                            <form class="faction-manage-form" data-faction-action="motd">
+                                <strong>Set MOTD</strong>
+                                <p>Message visible to all faction members.</p>
+                                <textarea name="message" rows="3" maxlength="512" placeholder="Message of the day" required></textarea>
+                                <button type="submit">SAVE MOTD</button>
+                            </form>
+                            <form class="faction-manage-form" data-faction-action="warn">
+                                <strong>Faction warning</strong>
+                                <p>Max 3/3 — visible on roster. Rank 6+ can issue.</p>
+                                <div class="faction-manage-row">
+                                    <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                    <input type="text" name="reason" maxlength="256" placeholder="Reason">
+                                </div>
+                                <button type="submit" class="is-danger">ISSUE WARNING</button>
+                            </form>
+                            <div class="faction-manage-form" id="faction-rank-editor">
+                                <strong>Rename ranks</strong>
+                                <p>Leader only — custom grade titles for your faction.</p>
+                                <form id="faction-rank-names-form" class="faction-rank-names-form"></form>
+                                <button type="button" class="faction-rank-save" id="faction-rank-save">SAVE RANK NAMES</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="faction-tab-panel" data-faction-panel="browse">
+                        <p class="faction-directory-intro">Click a faction for details. Applications are on Discord/website — leaders invite in-game after acceptance.</p>
+                        <div class="faction-directory-layout" id="faction-browse-layout">
+                            <div id="faction-browse-list" class="faction-directory-list"></div>
+                            <aside id="faction-browse-detail" class="faction-detail hidden" aria-live="polite">
+                                <button type="button" class="faction-detail__back" data-faction-detail-back>← Back to list</button>
+                                <div class="faction-detail__body"></div>
+                            </aside>
+                        </div>
                     </div>
                 </section>
             </main>
         </div>
     </div>
 
-    <div id="faction-directory" class="menu menu--solo menu--solo-faction hidden">
+    <div id="faction-directory" class="menu menu--solo menu--solo-faction hidden" aria-hidden="true">
         <div class="menu-wrap menu-wrap--solo menu-wrap--faction-dir">
             <header class="menu-brand">
                 <div>SERVER <span>FACTIONS</span></div>
@@ -937,17 +967,32 @@
                                 <input type="number" name="targetId" min="1" placeholder="Server ID" required>
                                 <button type="submit" class="is-danger">REMOVE</button>
                             </form>
-                            <form class="clan-manage-form" data-clan-action="promote">
-                                <strong>Set rank</strong>
-                                <p>Promote to officer or demote to member.</p>
+                            <form class="clan-manage-form" data-clan-action="rankUp">
+                                <strong>Rank up</strong>
+                                <p>Promote a member one rank (max rank 7).</p>
+                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                <button type="submit">RANK UP</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="rankDown">
+                                <strong>Rank down</strong>
+                                <p>Demote a member one rank (min rank 1).</p>
+                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                <button type="submit">RANK DOWN</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="warn">
+                                <strong>Clan warning</strong>
+                                <p>Max 3/3 — auto-kick at 3.</p>
                                 <div class="clan-manage-row">
                                     <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                    <select name="rank" required>
-                                        <option value="officer">Officer</option>
-                                        <option value="member">Member</option>
-                                    </select>
+                                    <input type="text" name="reason" maxlength="128" placeholder="Reason">
                                 </div>
-                                <button type="submit">SET RANK</button>
+                                <button type="submit" class="is-danger">WARN</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="rankLabels" id="clan-rank-labels-form">
+                                <strong>Rank names</strong>
+                                <p>Leader only — SA-MP style rank titles (1–7).</p>
+                                <div id="clan-rank-label-fields" class="clan-rank-label-fields"></div>
+                                <button type="submit">SAVE RANK NAMES</button>
                             </form>
                             <form class="clan-manage-form" data-clan-action="leave">
                                 <strong>Leave clan</strong>
@@ -963,7 +1008,7 @@
                     </div>
                     <div class="clan-tab-panel" data-clan-panel="create">
                         <div class="clan-section-label">CREATE A CLAN</div>
-                        <p class="clan-create-cost" id="clan-create-cost">Cost: 500 Sunset Coins</p>
+                        <p class="clan-create-cost" id="clan-create-cost">Cost: 500 Blaze Points</p>
                         <form class="clan-manage-form" data-clan-action="create">
                             <strong>Clan details</strong>
                             <input type="text" name="name" minlength="3" maxlength="32" placeholder="Clan name (e.g. Ultras South)" required>
@@ -1030,6 +1075,18 @@
             <p class="garage-hint">Plates are auto-assigned on ownership. Spawn, store, or GPS from here or <strong>M → Vehicle</strong>.</p>
             <ul class="panel-list" id="garage-list"></ul>
             <button type="button" class="panel-close" id="garage-close">Close</button>
+        </div>
+    </div>
+
+    <!-- FLEET GARAGE — compact peek panel (robbery fence style) -->
+    <div id="fleet-garage" class="fleet-garage hidden">
+        <div class="fleet-garage__panel">
+            <header class="fleet-garage__head">
+                <span id="fleet-garage-title">Fleet Garage</span>
+                <p class="fleet-garage__hint">Choose a unit — you exit the motor pool in your selection.</p>
+            </header>
+            <ul id="fleet-garage-list" class="fleet-garage__list menu-vehicle-grid"></ul>
+            <button type="button" class="fleet-garage__leave" id="fleet-garage-close">Close</button>
         </div>
     </div>
 
@@ -1173,7 +1230,7 @@
                         </div>
                         <div class="phone-scroll phone-bank">
                             <div class="phone-bank-card">
-                                <div class="phone-bank-card__label">Apple Cash & Sunset Bank</div>
+                                <div class="phone-bank-card__label">Apple Cash & Blaze Bank</div>
                                 <div class="phone-bank-card__amount" id="phone-bank-total">$0</div>
                                 <div class="phone-bank-card__label">Available Balance</div>
                             </div>
@@ -1214,7 +1271,7 @@
                                 </div>
                             </div>
                             <div class="phone-settings-group">
-                                <div class="phone-settings-row">SunsetMP<span>Los Santos Roleplay</span></div>
+                                <div class="phone-settings-row">blaze.mp<span>Los Santos Roleplay</span></div>
                                 <div class="phone-settings-row">Close Phone<span>Press P or swipe home bar</span></div>
                             </div>
                         </div>
@@ -1251,7 +1308,7 @@
         <section class="jobs-menu__shell" aria-labelledby="jobs-panel-title">
             <header class="jobs-menu__header">
                 <div>
-                    <span class="jobs-menu__eyebrow">Sunset civilian careers</span>
+                    <span class="jobs-menu__eyebrow">Blaze civilian careers</span>
                     <h2 id="jobs-panel-title">Jobs</h2>
                     <p>Choose a career at the Job Center, then manage your current shift here.</p>
                 </div>
@@ -1274,7 +1331,7 @@
         <aside class="dealership__panel">
             <header class="dealership__header">
                 <div>
-                    <span class="dealership__eyebrow">SunsetMP vehicle market</span>
+                    <span class="dealership__eyebrow">blaze.mp vehicle market</span>
                     <h2 id="dealership-title">Premium Deluxe Motorsport</h2>
                 </div>
                 <button type="button" class="dealership__close" id="dealership-close">×</button>
@@ -1336,7 +1393,7 @@
             <span class="studio-preview-keys">A / D or ← → to rotate</span>
         </div>
         <aside class="studio-sidebar">
-            <img class="studio-logo" src="assets/logo.png" alt="SunsetMP">
+            <img class="studio-logo" src="assets/logo.png?v=4" width="120" height="79" alt="blaze.mp" onerror="this.onerror=null;this.src='assets/logo.webp?v=4'">
             <h2 class="studio-title">Character Look</h2>
             <p class="studio-hint">Rotate with A/D or the ROTATE buttons. Camera stays fixed.</p>
             <div class="studio-gender" id="appearance-gender">

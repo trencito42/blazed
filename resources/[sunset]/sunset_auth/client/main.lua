@@ -24,7 +24,7 @@ local function authPayload()
     local store = SunsetAuthAccounts.load(activeLicense())
     return {
         accounts = SunsetAuthAccounts.publicList(store),
-        quickLogin = true,
+        quickLogin = store.quickLogin ~= false,
     }
 end
 
@@ -154,7 +154,10 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
     if username == '' then return end
 
     local license = activeLicense()
-    if not license then return end
+    if not license then
+        exports.sunset_ui:Notify('Session not ready — try again in a moment', 'error')
+        return
+    end
 
     local store = SunsetAuthAccounts.load(license)
     local row = SunsetAuthAccounts.find(store, username)
@@ -165,7 +168,7 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
 
     if type(row.password) == 'string' and row.password ~= '' then
         exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
-        performLogin(row.username, row.password, true)
+        performLogin(row.username, row.password, store.quickLogin ~= false)
         return
     end
 
@@ -185,8 +188,11 @@ AddEventHandler('sunset:nui:authRemoveAccount', function(data)
 end)
 
 AddEventHandler('sunset:nui:authSetQuickLogin', function(data)
-    -- This preference applies only to the credentials currently being submitted.
-    -- Existing saved identities remain available independently.
+    local license = activeLicense()
+    if not license then return end
+    local enabled = isEnabled(data and data.enabled)
+    SunsetAuthAccounts.setQuickLogin(license, enabled)
+    pushAuthAccounts()
 end)
 
 AddEventHandler('sunset:client:onCharacterLoaded', function(char)

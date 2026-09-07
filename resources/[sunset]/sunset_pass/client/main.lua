@@ -31,7 +31,7 @@ local function openPass(tab)
 
     local data, err = Sunset.AwaitCallback('sunset:pass:getData')
     if not data then
-        notify(err or 'Could not load Sunset Pass.', 'error')
+        notify(err or 'Could not load Blaze Pass.', 'error')
         return
     end
 

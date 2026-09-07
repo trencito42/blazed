@@ -426,6 +426,15 @@ window.addEventListener('message', (event) => {
             if (window.FactionPanels) FactionPanels.hide();
             document.body.classList.remove('faction-panels-open');
             break;
+        case 'factionBrowseInline':
+            if (window.FactionPanels) {
+                try {
+                    FactionPanels.showBrowseInline(data || event.data.data);
+                } catch (err) {
+                    console.error('[FactionPanels] showBrowseInline failed', err);
+                }
+            }
+            break;
         case 'clanPanelShow':
             if (window.ClanPanels) {
                 try {
@@ -540,6 +549,12 @@ window.addEventListener('message', (event) => {
             break;
         case 'garageHide':
             if (window.Panels) Panels.hideGarage();
+            break;
+        case 'fleetGarageShow':
+            if (window.Panels) Panels.showFleetGarage(data || event.data.data);
+            break;
+        case 'fleetGarageHide':
+            if (window.Panels) Panels.hideFleetGarage();
             break;
         case 'propertiesShow':
             if (window.Panels) Panels.showProperties(data || event.data.data);
@@ -753,7 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cash: 106209, bank: 5316, premium: 0, playtime: '39H 41M',
             lastLogin: 'TODAY', health: 100, armor: 0, hunger: 82, thirst: 74,
             stress: 6, vehicleCount: 1, propertyCount: 0, homeLabel: 'None',
-            avatar: 'assets/logo.png', jobId: 'fisherman', job: 'Fisherman',
+            avatar: 'assets/logo.png?v=3', jobId: 'fisherman', job: 'Fisherman',
             jobGradeLabel: 'Angler', jobSalary: 120, completedTasks: 17,
             careerEarnings: 28400, combinedSkillLevels: 4,
         });

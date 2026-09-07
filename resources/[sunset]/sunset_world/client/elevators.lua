@@ -13,11 +13,18 @@ local function fadeTeleport(coords4, allowVehicle)
     end
 
     DoScreenFadeOut(400)
-    Wait(500)
+    while not IsScreenFadedOut() do Wait(0) end
 
     local x, y, z = coords4.x, coords4.y, coords4.z
     local heading = coords4.w or 0.0
+    FreezeEntityPosition(ped, true)
+    if driving then FreezeEntityPosition(veh, true) end
+
     RequestCollisionAtCoord(x, y, z)
+    for _ = 1, 20 do
+        RequestCollisionAtCoord(x, y, z)
+        Wait(50)
+    end
 
     if driving and allowVehicle then
         SetEntityCoords(veh, x, y, z, false, false, false, false)
@@ -29,19 +36,31 @@ local function fadeTeleport(coords4, allowVehicle)
         SetEntityHeading(ped, heading)
     end
 
-    local timeout = GetGameTimer() + 3000
+    local timeout = GetGameTimer() + 5000
     while not HasCollisionLoadedAroundEntity(ped) and GetGameTimer() < timeout do
-        Wait(10)
+        RequestCollisionAtCoord(x, y, z)
+        Wait(50)
+    end
+    Wait(250)
+
+    if driving then
+        FreezeEntityPosition(veh, false)
+    else
+        FreezeEntityPosition(ped, false)
     end
 
     DoScreenFadeIn(500)
 end
 
 local function canUseFactionElevator(factionId)
-    local char = exports.sunset_core:GetCharacter()
-    if not char then return false end
-    return Sunset.GetCharacterFaction(char) == factionId
+    if LocalPlayer.state.sunsetFaction == factionId then return true end
+    local allowed = Sunset.AwaitCallback('sunset:world:canUseFactionLift', factionId)
+    return allowed == true
 end
+
+AddEventHandler('sunset:world:fadeTeleport', function(coords4, allowVehicle)
+    fadeTeleport(coords4, allowVehicle == true)
+end)
 
 AddEventHandler('sunset:world:registerElevator', function(factionId, lift, faction)
     if not lift or not lift.lobby or not lift.garage then return end

@@ -386,7 +386,7 @@ const Menu = {
         $('#menu-rank').textContent = data.rank || 'PLAYER';
         $('#menu-cash').textContent = formatMoney(data.cash || 0);
         $('#menu-bank').textContent = formatMoney(data.bank || 0);
-        $('#menu-premium').textContent = `${this.formatXp(data.premium ?? 0)} SC`;
+        $('#menu-premium').textContent = `${this.formatXp(data.premium ?? 0)} BP`;
         $('#menu-playtime').textContent = data.playtime || '0H 0M';
         $('#menu-lastlogin').textContent = data.lastLogin || '—';
 

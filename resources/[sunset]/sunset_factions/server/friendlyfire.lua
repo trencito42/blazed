@@ -16,6 +16,9 @@ end)
 
 AddEventHandler('sunset:server:factionChanged', function(source)
     syncCombatState(source)
+    if GetResourceState('sunset_clans') == 'started' then
+        pcall(function() exports.sunset_clans:SyncPlayerClan(source) end)
+    end
 end)
 
 AddEventHandler('playerDropped', function()
