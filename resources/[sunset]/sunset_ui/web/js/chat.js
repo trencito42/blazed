@@ -352,16 +352,13 @@ const Chat = {
             const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
             const issuerRank = m.issuerRank || m.rank;
             const issuerNameHtml = this.formatPlayerNameHtml(m, m.issuerName || m.name);
-            const issuer = [issuerRank ? this.escapeHtml(String(issuerRank)) : '', issuerNameHtml].filter(Boolean).join(' — ');
+            const issuer = [issuerRank ? this.escapeHtml(String(issuerRank)) : '', issuerNameHtml].filter(Boolean).join(' ');
             const time = this.formatTime(m);
-            const prefix = time ? `${this.escapeHtml(time)} ` : '';
+            const timeHtml = time ? `<span class="chat-gov-time">${this.escapeHtml(time)}</span> ` : '';
+            const issuerHtml = issuer ? ` <span class="chat-gov-issuer">— ${issuer}</span>` : '';
             line.innerHTML = [
-                `<span class="chat-gov-rule">${prefix}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`,
-                `<span class="chat-gov-label">${prefix}GOVERNMENT ANNOUNCEMENT</span>`,
-                `<span class="chat-gov-dept">${prefix}${this.escapeHtml(dept)}</span>`,
-                `<span class="chat-gov-body">${prefix}${this.escapeHtml(String(m.message ?? ''))}</span>`,
-                issuer ? `<span class="chat-gov-issuer">${prefix}Issued by ${issuer}</span>` : '',
-                `<span class="chat-gov-rule">${prefix}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`,
+                `<span class="chat-gov-head">${timeHtml}<span class="chat-gov-label">GOV</span> <span class="chat-gov-dept">${this.escapeHtml(dept)}</span>${issuerHtml}</span>`,
+                `<span class="chat-gov-body">${this.escapeHtml(String(m.message ?? ''))}</span>`,
             ].join('<br>');
             el.classList.add('chat-msg--gov-banner');
         } else if (type === 'blaze_pass') {
