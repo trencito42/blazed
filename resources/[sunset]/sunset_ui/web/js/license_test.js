@@ -43,7 +43,7 @@ const LicenseTestHud = {
         if (this._title) this._title.textContent = data.title || 'License Test';
         if (this._meta) {
             const parts = [];
-            if (data.step && data.total) parts.push(`Step ${data.step}/${data.total}`);
+            if (data.step != null && data.total) parts.push(`Step ${data.step}/${data.total}`);
             if (data.checkpoints) parts.push(`Checkpoint ${data.checkpoint ?? 0}/${data.checkpoints}`);
             if (data.collisions !== undefined && data.maxCollisions !== undefined) {
                 parts.push(`Hits ${data.collisions}/${data.maxCollisions}`);

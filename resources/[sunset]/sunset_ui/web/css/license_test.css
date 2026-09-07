@@ -4,10 +4,10 @@
     left: 50%;
     bottom: 80px;
     transform: translateX(-50%);
-    z-index: 45;
+    z-index: 55;
     width: min(760px, 94vw);
     pointer-events: none;
-    color: var(--sunset-text, #f6f2e9);
+    color: #fff8ef;
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
     filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
     opacity: 0;
@@ -31,7 +31,10 @@
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding: 12px 10px 14px;
+    padding: 14px 16px 16px;
+    background: linear-gradient(155deg, rgba(12, 10, 8, 0.92), rgba(6, 6, 6, 0.88));
+    border: 1px solid rgba(255, 159, 67, 0.28);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
     border-bottom: 4px solid var(--lt-accent, rgba(255, 159, 67, 0.85));
 }
 
@@ -55,22 +58,29 @@
 }
 
 .license-test__title {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
+    color: #ff9f43;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
 }
 
 .license-test__meta {
-    font-size: 0.82rem;
-    opacity: 0.75;
+    font-size: 0.84rem;
+    opacity: 0.88;
+    color: #f0e6d8;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .license-test__message {
     width: 100%;
     text-align: center;
-    font-size: 1rem;
+    font-size: 1.05rem;
     line-height: 1.45;
+    font-weight: 600;
+    color: #fff8ef;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
 
 .license-test__key {
@@ -78,6 +88,7 @@
     min-width: 1.35rem;
     padding: 0 0.35rem;
     border: 1px solid rgba(255, 159, 67, 0.65);
+    background: rgba(255, 159, 67, 0.12);
     color: #ff9f43;
     font-weight: 700;
     text-align: center;

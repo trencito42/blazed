@@ -8,6 +8,31 @@ local function notify(msg, kind)
     exports.sunset_ui:Notify(msg, kind or 'info', 7000)
 end
 
+local function asVector3(value)
+    if type(value) == 'vector3' then return value end
+    if type(value) == 'vector4' then return vector3(value.x, value.y, value.z) end
+    if type(value) == 'table' then
+        return vector3(tonumber(value.x) or 0.0, tonumber(value.y) or 0.0, tonumber(value.z) or 0.0)
+    end
+    return vector3(0.0, 0.0, 0.0)
+end
+
+local function resolvePracticalCfg(licenseType, payload)
+    local cfg = SunsetLicenses.Practical[licenseType]
+    if cfg then return cfg end
+    return payload and payload.practical
+end
+
+local function drawRouteMarker(point, active)
+    local pos = GetEntityCoords(PlayerPedId())
+    if #(pos - point) > 140.0 then return end
+    local r, g, b = active and 255 or 180, active and 159 or 180, active and 67 or 90
+    DrawMarker(2, point.x, point.y, point.z + 1.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        1.4, 1.4, 1.2, r, g, b, 200, false, true, 2, false, nil, nil, false)
+    DrawMarker(1, point.x, point.y, point.z - 0.35, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        3.2, 3.2, 0.45, r, g, b, 90, false, false, 2, false, nil, nil, false)
+end
+
 local function clearBlips()
     for _, b in ipairs(testBlips) do
         if DoesBlipExist(b) then RemoveBlip(b) end
@@ -71,11 +96,16 @@ end
 local function addCheckpointBlips(checkpoints, color)
     clearBlips()
     for i, cp in ipairs(checkpoints or {}) do
-        local blip = AddBlipForCoord(cp.x, cp.y, cp.z)
+        local point = asVector3(cp)
+        local blip = AddBlipForCoord(point.x, point.y, point.z)
         SetBlipSprite(blip, 1)
-        SetBlipColour(blip, color or 2)
-        SetBlipRoute(blip, i == 1)
-        SetBlipRouteColour(blip, color or 2)
+        SetBlipColour(blip, color or 47)
+        SetBlipScale(blip, 0.8)
+        SetBlipAsShortRange(blip, i ~= 1)
+        if i == 1 then
+            SetBlipRoute(blip, true)
+            SetBlipRouteColour(blip, color or 47)
+        end
         testBlips[#testBlips + 1] = blip
     end
 end
@@ -133,7 +163,11 @@ local function briefingRequirementMet(step, cfg, spawn)
     if not req then return true end
     local state = GetTestVehicleState()
     local pos = GetEntityCoords(PlayerPedId())
-    if req == 'engine_on' then return state and state.engineOn == true end
+    if req == 'engine_on' then
+        if state and state.engineOn == true then return true end
+        local veh = GetVehiclePedIsIn(PlayerPedId(), false)
+        return veh ~= 0 and GetIsVehicleEngineRunning(veh)
+    end
     if req == 'seatbelt' then return state and state.seatbelt == true end
     if req == 'lights' then return state and (state.lightMode or 0) > 0 end
     if req == 'depart' then
@@ -308,6 +342,176 @@ local function pickTestSpawn(cfg)
     return cfg.spawn
 end
 
+local function runDriverBriefing(cfg, spawn)
+    local steps = cfg.briefing or {}
+    if #steps == 0 then return end
+
+    CreateThread(function()
+        local stepIndex = 1
+        local readyPressed = false
+        local stepShownAt = {}
+
+        while practicalState and practicalState.licenseType == 'driver' and stepIndex <= #steps do
+            Wait(200)
+            local step = steps[stepIndex]
+            local met
+            if not step.require then
+                stepShownAt[stepIndex] = stepShownAt[stepIndex] or GetGameTimer()
+                met = (GetGameTimer() - stepShownAt[stepIndex]) >= 2800
+            else
+                met = briefingRequirementMet(step, cfg, spawn)
+            end
+            if step.require == 'ready' and IsControlJustReleased(0, 38) then
+                readyPressed = true
+                met = true
+            elseif step.require == 'ready' then
+                met = readyPressed
+            end
+
+            UpdateLicenseTestHud({
+                licenseType = 'driver',
+                state = 'driver',
+                title = step.title or 'Driving School',
+                step = stepIndex,
+                total = #steps,
+                message = step.message,
+                progress = math.floor(((stepIndex - 1) / #steps) * 100),
+            })
+
+            if met then
+                stepIndex = stepIndex + 1
+                readyPressed = false
+            end
+        end
+    end)
+end
+
+local function runDriverRoute(cfg, vehicle)
+    local cpIndex = 1
+    local collisions = { count = 0, lastBody = GetVehicleBodyHealth(vehicle) }
+    local speedState = { strikes = 0, overLimitSince = 0, hardSince = 0 }
+    local hudMessage = checkpointHint(cfg, 1, false)
+    local checkpoints = cfg.checkpoints or {}
+
+    addCheckpointBlips(checkpoints, 47)
+    notify('Follow the orange GPS route to each checkpoint.', 'info')
+
+    UpdateLicenseTestHud({
+        licenseType = 'driver',
+        state = 'driver',
+        title = 'Driving School',
+        checkpoint = 0,
+        checkpoints = #checkpoints,
+        collisions = 0,
+        maxCollisions = cfg.maxCollisions or 3,
+        speed = 0,
+        speedLimit = driverSpeedLimit(1, cfg, false),
+        speedStrikes = 0,
+        maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
+        message = hudMessage,
+        progress = 0,
+    })
+
+    CreateThread(function()
+        while practicalState and practicalState.licenseType == 'driver' do
+            Wait(450)
+            local ped = PlayerPedId()
+            local veh = GetVehiclePedIsIn(ped, false)
+            local finishing = cpIndex > #checkpoints
+            local speed, limit, msg
+            speedState, speed, limit, msg = trackDriverSpeed(veh, cfg, cpIndex, finishing, speedState)
+            if msg then hudMessage = msg end
+            local progress
+            if finishing then
+                progress = 95
+            else
+                progress = math.floor((math.max(cpIndex - 1, 0) / math.max(#checkpoints, 1)) * 100)
+            end
+            UpdateLicenseTestHud({
+                licenseType = 'driver',
+                state = speedState.strikes >= 2 and 'warning' or 'driver',
+                title = 'Driving School',
+                checkpoint = math.min(cpIndex - 1, #checkpoints),
+                checkpoints = #checkpoints,
+                collisions = collisions.count,
+                maxCollisions = cfg.maxCollisions or 3,
+                speed = speed,
+                speedLimit = limit,
+                speedStrikes = speedState.strikes,
+                maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
+                message = hudMessage,
+                progress = progress,
+            })
+        end
+    end)
+
+    CreateThread(function()
+        local started = GetGameTimer()
+        local validationCooldown = 0
+        while practicalState and practicalState.licenseType == 'driver' do
+            Wait(0)
+            if cfg.maxTimeSec and (GetGameTimer() - started) > cfg.maxTimeSec * 1000 then
+                return failTest('Time expired — test failed.')
+            end
+
+            local ped = PlayerPedId()
+            local pos = GetEntityCoords(ped)
+            local veh = GetVehiclePedIsIn(ped, false)
+            collisions = trackVehicleDamage(veh, cfg, collisions)
+
+            if cpIndex <= #checkpoints then
+                local cp = asVector3(checkpoints[cpIndex])
+                local radius = cfg.checkpointRadius or 8.0
+                drawRouteMarker(cp, true)
+                if #(pos - cp) <= radius and GetGameTimer() >= validationCooldown then
+                    validationCooldown = GetGameTimer() + 1000
+                    local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', 'driver', cpIndex)
+                    if ok then
+                        cpIndex = cpIndex + 1
+                        updateRoute(cpIndex)
+                        hudMessage = checkpointHint(cfg, cpIndex, cpIndex > #checkpoints)
+                        UpdateLicenseTestHud({
+                            licenseType = 'driver',
+                            state = 'driver',
+                            title = 'Driving School',
+                            checkpoint = cpIndex - 1,
+                            checkpoints = #checkpoints,
+                            collisions = collisions.count,
+                            maxCollisions = cfg.maxCollisions or 3,
+                            speedStrikes = speedState.strikes,
+                            maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
+                            message = ('Checkpoint %d/%d — %s'):format(cpIndex - 1, #checkpoints, hudMessage),
+                            progress = math.floor(((cpIndex - 1) / math.max(#checkpoints, 1)) * 100),
+                        })
+                    elseif err then
+                        notify(err, 'error')
+                    end
+                end
+            else
+                local finish = cfg.finish
+                if finish then
+                    local fr = cfg.finishRadius or 10.0
+                    local fp = asVector3(finish)
+                    drawRouteMarker(fp, true)
+                    if #(pos - fp) <= fr then
+                        local engineOn = veh ~= 0 and GetIsVehicleEngineRunning(veh)
+                        BeginTextCommandDisplayHelp('STRING')
+                        AddTextComponentString('Press ~INPUT_CONTEXT~ to finish (engine off if required)')
+                        EndTextCommandDisplayHelp(0, false, true, -1)
+                        if IsControlJustReleased(0, 38) then
+                            return completeTest('driver', {
+                                engineOn = engineOn,
+                                collisions = collisions.count,
+                                speedStrikes = speedState.strikes,
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
 local function runDriverTest(cfg)
     local spawn = pickTestSpawn(cfg)
     if not spawn then return failTest('Driving test spawn is not configured.') end
@@ -317,129 +521,23 @@ local function runDriverTest(cfg)
     })
     if not vehicle then return failTest(spawnError or 'Could not spawn the training vehicle.') end
 
-    runBriefing('driver', cfg, spawn, function()
-        local cpIndex = 1
-        local collisions = { count = 0, lastBody = GetVehicleBodyHealth(vehicle) }
-        local speedState = { strikes = 0, overLimitSince = 0, hardSince = 0 }
-        local hudMessage = checkpointHint(cfg, 1, false)
-        addCheckpointBlips(cfg.checkpoints, 2)
+    local steps = cfg.briefing or {}
+    ShowLicenseTestHud({
+        licenseType = 'driver',
+        state = 'driver',
+        title = (steps[1] and steps[1].title) or 'Driving School',
+        step = #steps > 0 and 1 or nil,
+        total = #steps > 0 and #steps or nil,
+        checkpoint = 0,
+        checkpoints = #(cfg.checkpoints or {}),
+        collisions = 0,
+        maxCollisions = cfg.maxCollisions or 3,
+        message = (steps[1] and steps[1].message) or checkpointHint(cfg, 1, false),
+        progress = 0,
+    })
 
-        ShowLicenseTestHud({
-            licenseType = 'driver',
-            state = 'driver',
-            title = 'Driving School',
-            checkpoint = 0,
-            checkpoints = #(cfg.checkpoints or {}),
-            collisions = 0,
-            maxCollisions = cfg.maxCollisions or 3,
-            speed = 0,
-            speedLimit = driverSpeedLimit(1, cfg, false),
-            speedStrikes = 0,
-            maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
-            message = hudMessage,
-            progress = 0,
-        })
-
-        CreateThread(function()
-            while practicalState and practicalState.licenseType == 'driver' do
-                Wait(450)
-                local ped = PlayerPedId()
-                local veh = GetVehiclePedIsIn(ped, false)
-                local finishing = cpIndex > #(cfg.checkpoints or {})
-                local speed, limit, msg
-                speedState, speed, limit, msg = trackDriverSpeed(veh, cfg, cpIndex, finishing, speedState)
-                if msg then hudMessage = msg end
-                local progress
-                if finishing then
-                    progress = 95
-                else
-                    progress = math.floor((math.max(cpIndex - 1, 0) / math.max(#(cfg.checkpoints or {}), 1)) * 100)
-                end
-                UpdateLicenseTestHud({
-                    licenseType = 'driver',
-                    state = speedState.strikes >= 2 and 'warning' or 'driver',
-                    title = 'Driving School',
-                    checkpoint = math.min(cpIndex - 1, #(cfg.checkpoints or {})),
-                    checkpoints = #(cfg.checkpoints or {}),
-                    collisions = collisions.count,
-                    maxCollisions = cfg.maxCollisions or 3,
-                    speed = speed,
-                    speedLimit = limit,
-                    speedStrikes = speedState.strikes,
-                    maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
-                    message = hudMessage,
-                    progress = progress,
-                })
-            end
-        end)
-
-        CreateThread(function()
-            local started = GetGameTimer()
-            local validationCooldown = 0
-            while practicalState and practicalState.licenseType == 'driver' do
-                Wait(0)
-                if cfg.maxTimeSec and (GetGameTimer() - started) > cfg.maxTimeSec * 1000 then
-                    return failTest('Time expired — test failed.')
-                end
-
-                local ped = PlayerPedId()
-                local pos = GetEntityCoords(ped)
-                local veh = GetVehiclePedIsIn(ped, false)
-                collisions = trackVehicleDamage(veh, cfg, collisions)
-
-                local cps = cfg.checkpoints or {}
-                if cpIndex <= #cps then
-                    local cp = cps[cpIndex]
-                    local radius = cfg.checkpointRadius or 8.0
-                    DrawMarker(1, cp.x, cp.y, cp.z - 1.0, 0, 0, 0, 0, 0, 0, radius, radius, 2.0, 80, 200, 80, 100, false, false, 2, false, nil, nil, false)
-                    if #(pos - cp) <= radius and GetGameTimer() >= validationCooldown then
-                        validationCooldown = GetGameTimer() + 1000
-                        local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', 'driver', cpIndex)
-                        if ok then
-                            cpIndex = cpIndex + 1
-                            updateRoute(cpIndex)
-                            hudMessage = checkpointHint(cfg, cpIndex, cpIndex > #cps)
-                            UpdateLicenseTestHud({
-                                licenseType = 'driver',
-                                state = 'driver',
-                                title = 'Driving School',
-                                checkpoint = cpIndex - 1,
-                                checkpoints = #cps,
-                                collisions = collisions.count,
-                                maxCollisions = cfg.maxCollisions or 3,
-                                speedStrikes = speedState.strikes,
-                                maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
-                                message = ('Checkpoint %d/%d — %s'):format(cpIndex - 1, #cps, hudMessage),
-                                progress = math.floor(((cpIndex - 1) / math.max(#cps, 1)) * 100),
-                            })
-                        elseif err then
-                            notify(err, 'error')
-                        end
-                    end
-                else
-                    local finish = cfg.finish
-                    if finish then
-                        local fr = cfg.finishRadius or 10.0
-                        local fp = type(finish) == 'vector3' and finish or vector3(finish.x, finish.y, finish.z)
-                        DrawMarker(1, fp.x, fp.y, fp.z - 1.0, 0, 0, 0, 0, 0, 0, fr, fr, 2.0, 255, 180, 50, 120, false, false, 2, false, nil, nil, false)
-                        if #(pos - fp) <= fr then
-                            local engineOn = veh ~= 0 and GetIsVehicleEngineRunning(veh)
-                            BeginTextCommandDisplayHelp('STRING')
-                            AddTextComponentString('Press ~INPUT_CONTEXT~ to finish (engine off if required)')
-                            EndTextCommandDisplayHelp(0, false, true, -1)
-                            if IsControlJustReleased(0, 38) then
-                                return completeTest('driver', {
-                                    engineOn = engineOn,
-                                    collisions = collisions.count,
-                                    speedStrikes = speedState.strikes,
-                                })
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end)
+    runDriverBriefing(cfg, spawn)
+    runDriverRoute(cfg, vehicle)
 end
 
 local function runWeaponTest(cfg)
@@ -564,9 +662,9 @@ local function runCheckpointTest(licenseType, cfg, facility)
             local pos = GetEntityCoords(ped)
             local cps = cfg.checkpoints or {}
             if cpIndex <= #cps then
-                local cp = cps[cpIndex]
+                local cp = asVector3(cps[cpIndex])
                 local radius = cfg.checkpointRadius or 8.0
-                DrawMarker(1, cp.x, cp.y, cp.z - 1.0, 0, 0, 0, 0, 0, 0, radius, radius, 2.0, 80, 200, 80, 100, false, false, 2, false, nil, nil, false)
+                drawRouteMarker(cp, true)
                 if #(pos - cp) <= radius and GetGameTimer() >= validationCooldown then
                     validationCooldown = GetGameTimer() + 1000
                     local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', licenseType, cpIndex)
@@ -582,8 +680,8 @@ local function runCheckpointTest(licenseType, cfg, facility)
                 local finish = cfg.finish
                 if finish then
                     local fr = cfg.finishRadius or 10.0
-                    local fp = type(finish) == 'vector3' and finish or vector3(finish.x, finish.y, finish.z)
-                    DrawMarker(1, fp.x, fp.y, fp.z - 1.0, 0, 0, 0, 0, 0, 0, fr, fr, 2.0, 255, 180, 50, 120, false, false, 2, false, nil, nil, false)
+                    local fp = asVector3(finish)
+                    drawRouteMarker(fp, true)
                     if #(pos - fp) <= fr then
                         local veh = GetVehiclePedIsIn(ped, false)
                         local engineOn = veh ~= 0 and GetIsVehicleEngineRunning(veh)
@@ -603,7 +701,7 @@ end
 function StartPracticalTest(licenseType, payload)
     CleanupPracticalTest()
     practicalState = { licenseType = licenseType }
-    local cfg = payload and payload.practical or SunsetLicenses.Practical[licenseType]
+    local cfg = resolvePracticalCfg(licenseType, payload)
     local facility = payload and payload.facility
     if not cfg then return failTest('Practical test not configured.') end
     if licenseType == 'weapon' then
