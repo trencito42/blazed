@@ -124,3 +124,27 @@ AddEventHandler('onResourceStart', function(resourceName)
         ClanDisplay.sync(tonumber(id))
     end
 end)
+
+function GetConnectMotd(source, char)
+    local cid = char and tonumber(char.id) or nil
+    if not cid and source then
+        local loaded = exports.sunset_core:GetCharacter(source)
+        cid = loaded and tonumber(loaded.id)
+    end
+    if not cid then return nil end
+    local row = ClanDisplay.getMembership(cid)
+    if not row then return nil end
+    local message = tostring(row.motd or ''):gsub('^%s+', ''):gsub('%s+$', '')
+    if message == '' then return nil end
+    return {
+        type = 'clan_motd',
+        id = 0,
+        time = '',
+        clanTag = row.tag,
+        clanName = row.name,
+        name = row.name,
+        message = message,
+        command = '/cmotd',
+    }
+end
+exports('GetConnectMotd', GetConnectMotd)

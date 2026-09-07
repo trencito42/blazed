@@ -43,7 +43,34 @@ local function sendInventoryUpdate(source, items)
     emitClient('sunset:client:inventoryUpdate', source, inventoryView(items), calcWeight(items))
 end
 
+local function ensureStarterItems(characterId)
+    local count = tonumber(MySQL.scalar.await(
+        'SELECT COUNT(*) FROM character_inventory WHERE character_id = ?',
+        { characterId }
+    )) or 0
+    if count > 0 then return false end
+
+    local row = MySQL.single.await('SELECT metadata FROM characters WHERE id = ?', { characterId })
+    local meta = row and row.metadata and json.decode(row.metadata) or {}
+    if type(meta) ~= 'table' then meta = {} end
+    if meta.starter_items_granted then return false end
+
+    local starter = { { 'water', 2, 1 }, { 'bread', 2, 2 }, { 'id_card', 1, 3 }, { 'phone', 1, 4 } }
+    for _, entry in ipairs(starter) do
+        MySQL.insert.await(
+            'INSERT INTO character_inventory (character_id, item, count, slot) VALUES (?, ?, ?, ?)',
+            { characterId, entry[1], entry[2], entry[3] }
+        )
+    end
+    meta.starter_items_granted = true
+    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(meta), characterId })
+    return true
+end
+
 local function loadInventory(characterId)
+    if ensureStarterItems(characterId) then
+        Inventories[characterId] = nil
+    end
     local rows = MySQL.query.await(
         'SELECT id, item, count, slot, metadata FROM character_inventory WHERE character_id = ? ORDER BY slot',
         { characterId }

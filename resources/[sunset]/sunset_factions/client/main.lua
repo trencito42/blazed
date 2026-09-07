@@ -240,6 +240,15 @@ RegisterCommand('quitgroup', function()
     leaveFactionCommand()
 end, false)
 
+local function forwardFactionChatCommand(channel, args)
+    local msg = table.concat(args or {}, ' ')
+    TriggerServerEvent('sunset:chat:runCommand', msg == '' and channel or (channel .. ' ' .. msg))
+end
+
+RegisterCommand('f', function(_, args) forwardFactionChatCommand('f', args) end, false)
+RegisterCommand('r', function(_, args) forwardFactionChatCommand('r', args) end, false)
+RegisterCommand('d', function(_, args) forwardFactionChatCommand('d', args) end, false)
+
 RegisterCommand('duty', function()
     if blocked() then return end
     local state, err = Sunset.AwaitCallback('sunset:toggleDuty')
@@ -363,8 +372,14 @@ RegisterCommand('fmotd', function(_, args)
         local data, err = Sunset.AwaitCallback('sunset:factionGetMotd')
         if not data then return exports.sunset_ui:Notify(err or 'Faction MOTD could not be loaded.', 'error') end
         exports.sunset_ui:Send('chatMessage', {
-            id = 0, type = 'faction_info', name = (data.label or 'FACTION') .. ' MOTD',
-            message = data.message ~= '' and data.message or 'No message of the day has been set.', time = '',
+            id = 0,
+            type = 'faction_motd',
+            factionId = data.factionId,
+            factionLabel = data.label,
+            name = data.label,
+            message = data.message ~= '' and data.message or 'No message of the day has been set.',
+            command = '/fmotd',
+            time = '',
         })
         return
     end

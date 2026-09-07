@@ -189,7 +189,7 @@ const ClanPanels = {
                 <div class="clan-detail__stat"><strong>${Number(clan.maxMembers) || 25}</strong><span>Capacity</span></div>
             </div>
             <div class="clan-detail__block"><span>Leader</span><p>${this.escape(clan.leader || 'Unknown')}</p></div>
-            <div class="clan-detail__block"><span>Field briefing</span><p>${this.escape(motd || 'No briefing posted.')}</p></div>
+            <div class="clan-detail__block"><span>MOTD</span><p>${this.escape(motd || 'No MOTD posted. Officers use /cmotd.')}</p></div>
             <div class="clan-detail__block"><span>Unit intel</span><p>${this.escape(description)}</p></div>
             <div class="clan-detail__block"><span>Recruitment</span><p>Contact the leader in-character or wait for an in-game invite via <code>/clan</code>.</p></div>
             <div class="clan-detail__block"><span>Crew roster</span><div class="clan-detail-roster">${rosterHtml}</div></div>
@@ -501,7 +501,7 @@ const ClanPanels = {
                 countEl.textContent = `${this.dashboard.memberCount || 0} / ${this.dashboard.maxMembers || 25}`;
             }
             const motdEl = $('#clan-motd');
-            if (motdEl) motdEl.textContent = this.dashboard.motd || 'No field briefing posted.';
+            if (motdEl) motdEl.textContent = this.dashboard.motd || 'No MOTD posted. Officers use /cmotd.';
             const descEl = $('#clan-description');
             if (descEl) descEl.textContent = this.dashboard.description || 'No unit intel on file.';
             const preview = $('#clan-overview-preview');

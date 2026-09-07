@@ -166,7 +166,7 @@
     background: rgba(255, 107, 74, 0.1);
 }
 
-/* ═══ NOTIFICATIONS ═══ */
+/* ═══ NOTIFICATIONS — layout only; visual style in theme.css */
 .notifications {
     position: fixed;
     top: var(--space-lg);
@@ -179,21 +179,10 @@
 }
 
 .notification {
-    padding: 14px 20px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    border-left: 3px solid var(--color-info);
-    font-size: 0.9rem;
-    max-width: 360px;
+    max-width: 420px;
+    pointer-events: none;
     animation: notifyIn var(--duration-normal) var(--ease-spring);
-    pointer-events: auto;
 }
-
-.notification--success { border-left-color: var(--color-success); }
-.notification--error { border-left-color: var(--color-error); }
-.notification--warning { border-left-color: var(--color-warning); }
 
 /* ═══ PROGRESS ═══ */
 .progress {

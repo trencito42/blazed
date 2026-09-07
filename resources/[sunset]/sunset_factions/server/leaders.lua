@@ -34,13 +34,23 @@ local function getFactionMotd(factionId)
     return row and tostring(row.message or '') or ''
 end
 
-local function sendFactionInfo(factionId, name, message)
+local function sendFactionInfo(factionId, name, message, chatType)
+    chatType = chatType or 'faction_motd'
+    local faction = Sunset.Factions[factionId]
+    local label = faction and faction.label or name
     for _, id in ipairs(GetPlayers()) do
         local target = tonumber(id)
         local targetChar = target and FactionCore.getChar(target)
         if targetChar and select(1, FactionCore.getFactionOf(targetChar)) == factionId then
             TriggerClientEvent('sunset:chat:message', target, {
-                type = 'faction_info', name = name, message = message,
+                type = chatType,
+                id = 0,
+                time = '',
+                factionId = factionId,
+                factionLabel = label,
+                name = label,
+                message = message,
+                command = '/fmotd',
             })
         end
     end
@@ -123,16 +133,13 @@ local function handleRemoveLeader(source, args)
     MySQL.update.await('DELETE FROM faction_leaders WHERE character_id = ? AND faction_id = ?', { char.id, factionId })
     FactionCore.auditLog(factionId, char.id, 'removeleader', char.id, { by = source })
     local factionLabel = Sunset.Factions[factionId] and Sunset.Factions[factionId].label or factionId
-    local targetName = exports.sunset_core:GetPlayerDisplayName(target)
     local _, grade = FactionCore.getFactionOf(char)
     local topGrade = FactionCore.highestFactionGrade(factionId)
     if grade >= topGrade then
         exports.sunset_core:SetFaction(target, factionId, math.max(0, topGrade - 1))
     end
-    FactionCore.broadcastManagement(factionId, nil,
+    FactionCore.broadcastManagement(factionId, target,
         ('was removed as faction leader (still a member of %s).'):format(factionLabel), {
-            actorName = targetName,
-            actorId = target,
             omitRank = true,
         })
     FactionCore.notify(target,
@@ -294,8 +301,33 @@ exports.sunset_core:RegisterCallback('sunset:factionGetMotd', function(source)
     local factionId = select(1, FactionCore.getFactionOf(char))
     if not factionId then return nil, 'You are not a member of a faction.' end
     local faction = Sunset.Factions[factionId]
-    return { label = faction and faction.label or factionId, message = getFactionMotd(factionId) }
+    return { factionId = factionId, label = faction and faction.label or factionId, message = getFactionMotd(factionId) }
 end)
+
+function GetConnectMotd(source, char)
+    char = char or FactionCore.getChar(source)
+    if not char then return nil end
+    local factionId = select(1, FactionCore.getFactionOf(char))
+    if not factionId then
+        factionId = select(1, FactionCore.ensureFactionMembership(source, char))
+    end
+    if not factionId then return nil end
+    local message = getFactionMotd(factionId)
+    if not message or message == '' then return nil end
+    local faction = Sunset.Factions[factionId]
+    local label = faction and faction.label or factionId
+    return {
+        type = 'faction_motd',
+        id = 0,
+        time = '',
+        factionId = factionId,
+        factionLabel = label,
+        name = label,
+        message = message,
+        command = '/fmotd',
+    }
+end
+exports('GetConnectMotd', GetConnectMotd)
 
 exports.sunset_core:RegisterCallback('sunset:factionMembers', function(source)
     local char = FactionCore.getChar(source)
@@ -314,7 +346,7 @@ exports.sunset_core:RegisterCallback('sunset:factionMembers', function(source)
             local gradeRow = Sunset.GetFactionGrade(factionId, grade)
             members[#members + 1] = {
                 id = src,
-                name = exports.sunset_core:GetPlayerDisplayName(src),
+                name = exports.sunset_core:GetPlayerBaseName(src),
                 grade = grade,
                 gradeLabel = FactionLabels.get(factionId, grade),
                 onDuty = FactionCore.isOnDuty(src),

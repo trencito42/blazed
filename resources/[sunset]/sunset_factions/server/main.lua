@@ -89,7 +89,6 @@ local function leaveFactionForSource(source)
     if not oldFaction then return nil, 'You are not in a faction' end
 
     local wasLeader = FactionCore.isFactionLeader(char.id, oldFaction)
-    local actorName = exports.sunset_core:GetPlayerDisplayName(source)
     setDuty(source, false)
 
     FactionCore.auditLog(oldFaction, char.id, 'leave', char.id, { voluntary = true, wasLeader = wasLeader })
@@ -100,9 +99,7 @@ local function leaveFactionForSource(source)
         return nil, 'Could not leave faction — try again'
     end
 
-    FactionCore.broadcastManagement(oldFaction, nil, 'left the faction.', {
-        actorName = actorName,
-        actorId = source,
+    FactionCore.broadcastManagement(oldFaction, source, 'left the faction.', {
         omitRank = true,
     })
 
@@ -781,9 +778,13 @@ AddEventHandler('playerDropped', function()
     if Detention and Detention.clear then Detention.clear(source) end
 end)
 
-AddEventHandler('sunset:server:characterSelected', function(source)
+AddEventHandler('sunset:server:characterSelected', function(source, _charId)
     FactionCore.setOnDuty(source, false)
     local char = getChar(source)
+    if char then
+        FactionCore.ensureFactionMembership(source, char)
+        char = getChar(source) or char
+    end
     local factionId = char and select(1, getFactionOf(char)) or nil
     TriggerClientEvent('sunset:client:dutyState', source, false, factionId, true)
 end)

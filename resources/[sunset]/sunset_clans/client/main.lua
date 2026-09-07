@@ -48,6 +48,29 @@ AddEventHandler('sunset:nui:clanProfile', function(data)
     exports.sunset_ui:Send('clanProfileShow', profile)
 end)
 
+RegisterCommand('cmotd', function(_, args)
+    local msg = table.concat(args, ' ')
+    if msg == '' then
+        local data, err = Sunset.AwaitCallback('sunset:clanGetMotd')
+        if not data then return exports.sunset_ui:Notify(err or 'Clan MOTD could not be loaded.', 'error') end
+        exports.sunset_ui:Send('chatMessage', {
+            id = 0,
+            type = 'clan_motd',
+            clanTag = data.tag,
+            clanName = data.name,
+            name = data.name,
+            message = data.message ~= '' and data.message or 'No message of the day has been set.',
+            command = '/cmotd',
+            time = '',
+        })
+        return
+    end
+    local ok, err = Sunset.AwaitCallback('sunset:clanManage', { action = 'motd', message = msg })
+    if ok then exports.sunset_ui:Notify('Clan MOTD updated', 'success')
+    else exports.sunset_ui:Notify(err or 'MOTD update failed. Officers can set it with /cmotd [message].', 'error') end
+end, false)
+TriggerEvent('chat:addSuggestion', '/cmotd', 'Read clan MOTD, or set it if you are an officer', { { name = 'message', help = 'optional new MOTD' } })
+
 RegisterCommand('acceptclan', function()
     local data, err = Sunset.AwaitCallback('sunset:clanAcceptInvite')
     if not data then

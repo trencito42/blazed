@@ -67,19 +67,18 @@ RegisterNUICallback('passClaim', function(data, cb)
         return
     end
     send('passUpdate', { state = result })
-    cb({ ok = true })
+    cb({ ok = true, state = result })
 end)
 
 RegisterNUICallback('passBuyPremium', function(_, cb)
     local result, err = Sunset.AwaitCallback('sunset:pass:buyPremium')
     if not result then
         notify(err or 'Could not unlock premium pass.', 'error')
-        cb({ ok = false })
+        cb({ ok = false, error = err })
         return
     end
     send('passUpdate', { state = result })
-    notify('Premium pass unlocked.', 'success')
-    cb({ ok = true })
+    cb({ ok = true, state = result })
 end)
 
 RegisterNetEvent('sunset:pass:refresh', function()

@@ -134,11 +134,20 @@ end
 
 RegisterCommand('phone', togglePhone, false)
 
+CreateThread(function()
+    while true do
+        if phoneOpen and IsPauseMenuActive() then
+            closePhone()
+        end
+        Wait(phoneOpen and 50 or 250)
+    end
+end)
+
 -- P opens/closes phone. Lua owns the binding so it still works while NUI focus is on.
 CreateThread(function()
     while true do
         DisableControlAction(0, 199, true) -- INPUT_FRONTEND_PAUSE (P)
-        if IsDisabledControlJustReleased(0, 199) then
+        if IsDisabledControlJustReleased(0, 199) and not IsPauseMenuActive() then
             togglePhone()
         end
         Wait(0)

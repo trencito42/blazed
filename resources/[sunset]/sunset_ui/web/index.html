@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="css/style.css?v=8">
     <link rel="stylesheet" href="css/hud.css?v=7">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
-    <link rel="stylesheet" href="css/chat.css?v=12">
+    <link rel="stylesheet" href="css/chat.css?v=14">
     <link rel="stylesheet" href="css/menu.css?v=9">
     <link rel="stylesheet" href="css/panels.css?v=6">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css">
     <link rel="stylesheet" href="css/fuel_pump.css">
-    <link rel="stylesheet" href="css/theme.css?v=5">
+    <link rel="stylesheet" href="css/theme.css?v=8">
     <link rel="stylesheet" href="css/fishing.css?v=2">
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="css/org-panels.css?v=1">
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
-    <link rel="stylesheet" href="css/gameplay_glass.css?v=3">
+    <link rel="stylesheet" href="css/gameplay_glass.css?v=4">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -828,7 +828,7 @@
                         </div>
                         <div class="org-intel-grid">
                             <div class="faction-cards">
-                                <article class="faction-card faction-card--motd"><span>FIELD BRIEFING</span><p id="faction-motd">No briefing posted.</p></article>
+                                <article class="faction-card faction-card--motd"><span>MOTD</span><p id="faction-motd">No MOTD posted. Leaders use <strong>/fmotd</strong>.</p></article>
                                 <article class="faction-card"><span>UNIT INTEL</span><p id="faction-description">—</p><small id="faction-depot">—</small></article>
                             </div>
                             <article class="faction-card"><span>WEEKLY OBJECTIVE</span><div class="faction-report"><strong id="faction-report-value">0 / 0</strong><i><b id="faction-report-bar"></b></i></div></article>
@@ -863,10 +863,10 @@
                                 <div class="org-section__head"><span>COMMS</span><i></i></div>
                                 <div class="faction-manage-grid">
                                     <form class="faction-manage-form" data-faction-action="motd">
-                                        <strong>Field briefing</strong>
-                                        <p>Broadcast to all faction members.</p>
-                                        <textarea name="message" rows="3" maxlength="512" placeholder="Briefing text..." required></textarea>
-                                        <button type="submit">POST BRIEFING</button>
+                                        <strong>MOTD</strong>
+                                        <p>Faction message of the day — members see it on connect and via <strong>/fmotd</strong>.</p>
+                                        <textarea name="message" rows="3" maxlength="512" placeholder="Faction MOTD..." required></textarea>
+                                        <button type="submit">SAVE MOTD</button>
                                     </form>
                                 </div>
                             </section>
@@ -958,7 +958,7 @@
                             <div class="clan-stat"><span>CALLSIGN</span><strong class="clan-preview-name" id="clan-overview-preview">—</strong></div>
                         </div>
                         <div class="clan-cards">
-                            <article class="clan-card"><span>FIELD BRIEFING</span><p id="clan-motd">No briefing posted.</p></article>
+                            <article class="clan-card"><span>MOTD</span><p id="clan-motd">No MOTD posted. Officers use <strong>/cmotd</strong>.</p></article>
                             <article class="clan-card"><span>UNIT INTEL</span><p id="clan-description">—</p></article>
                         </div>
                     </div>
@@ -987,10 +987,10 @@
                                 <div class="org-section__head"><span>COMMS &amp; IDENTITY</span><i></i></div>
                                 <div class="clan-manage-grid">
                                     <form class="clan-manage-form" data-clan-action="motd">
-                                        <strong>Field briefing</strong>
-                                        <p>Broadcast to all clan members.</p>
-                                        <textarea name="message" rows="3" maxlength="512" placeholder="Briefing text..." required></textarea>
-                                        <button type="submit">POST BRIEFING</button>
+                                        <strong>MOTD</strong>
+                                        <p>Clan message of the day — members see it on connect and via <strong>/cmotd</strong>.</p>
+                                        <textarea name="message" rows="3" maxlength="512" placeholder="Clan MOTD..." required></textarea>
+                                        <button type="submit">SAVE MOTD</button>
                                     </form>
                                     <form class="clan-manage-form" data-clan-action="settings">
                                         <strong>Tag &amp; colors</strong>
@@ -1473,20 +1473,20 @@
         </aside>
     </div>
 
-    <script src="js/clans.js?v=7"></script>
-    <script src="js/app.js?v=10"></script>
+    <script src="js/clans.js?v=8"></script>
+    <script src="js/app.js?v=13"></script>
     <script src="js/characters.js"></script>
     <script src="js/hud.js?v=5"></script>
     <script src="js/hud_editor.js"></script>
-    <script src="js/player_identity.js?v=1"></script>
+    <script src="js/player_identity.js?v=2"></script>
     <script src="js/scoreboard.js?v=2"></script>
     <script src="js/chat_settings.js"></script>
-    <script src="js/chat.js?v=14"></script>
+    <script src="js/chat.js?v=17"></script>
     <script src="js/properties-ui.js?v=3"></script>
     <script src="js/menu.js?v=5"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
-    <script src="js/phone.js?v=2"></script>
+    <script src="js/phone.js?v=3"></script>
     <script src="js/panels.js?v=6"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=3"></script>
@@ -1497,6 +1497,6 @@
     <script src="js/fishing.js"></script>
     <script src="js/radar.js"></script>
     <script src="js/courier.js"></script>
-    <script src="js/factions.js?v=5"></script>
+    <script src="js/factions.js?v=6"></script>
 </body>
 </html>

@@ -180,7 +180,14 @@ const Panels = {
         const list = $('#inventory-list');
         if (!list) return;
         list.innerHTML = '';
-        (data.items || []).forEach((row) => {
+        const items = data.items || [];
+        if (!items.length) {
+            const empty = document.createElement('li');
+            empty.className = 'inventory-row inventory-row--empty';
+            empty.textContent = 'No items in your inventory.';
+            list.appendChild(empty);
+        }
+        items.forEach((row) => {
             const def = row.item || 'unknown';
             let label = row.label || def;
             if (def === 'gas_can' && row.metadata) {

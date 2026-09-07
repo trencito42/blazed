@@ -65,7 +65,7 @@ const Phone = {
                 if (!typing) {
                     e.preventDefault();
                     e.stopPropagation();
-                    this.close();
+                    post('phoneClose', {});
                     return;
                 }
             }
@@ -214,6 +214,10 @@ const Phone = {
         } else {
             this.goHome();
         }
+    },
+
+    close() {
+        post('phoneClose', {});
     },
 
     openApp(app) {

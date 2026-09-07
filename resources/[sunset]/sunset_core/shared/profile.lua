@@ -8,7 +8,6 @@ function Sunset.GetLevelMoneyCost(level)
     return math.max(1, tonumber(level) or 1) * (Sunset.Config.LevelPriceBase or 2500)
 end
 
---- Faction membership lives in character.metadata (SAMP-style: job + faction are separate).
 function Sunset.GetCharacterFaction(char)
     if not char then return nil, 0 end
     local md = char.metadata or {}
@@ -20,6 +19,12 @@ function Sunset.GetCharacterFaction(char)
         return char.job, char.job_grade or 0
     end
     return nil, 0
+end
+
+--- Remove a trailing server id suffix e.g. "Name (12)" -> "Name".
+function Sunset.StripServerIdSuffix(name)
+    if type(name) ~= 'string' then return '' end
+    return name:gsub('%s*%(%d+%)%s*$', ''):gsub('^%s+', ''):gsub('%s+$', '')
 end
 
 function Sunset.GetCharacterJob(char)

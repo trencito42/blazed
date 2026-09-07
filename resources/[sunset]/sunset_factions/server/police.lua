@@ -59,7 +59,7 @@ local function officerRadarIdentity(source)
     local gradeInfo = factionId and Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
     return {
         id = source,
-        name = exports.sunset_core:GetPlayerDisplayName(source),
+        name = exports.sunset_core:GetPlayerBaseName(source),
         factionId = factionId,
         factionLabel = faction and faction.label or 'LSPD',
         rank = (gradeInfo and gradeInfo.label) or 'Officer',
@@ -67,13 +67,14 @@ local function officerRadarIdentity(source)
 end
 
 local function notifyRadarCaught(driverSource, officer, speed, limit, over)
-    local officerName = exports.sunset_core:GetPlayerDisplayName(officer.id)
-    local header = ('%s %s %s'):format(officer.factionLabel, officer.rank, officerName)
+    local officerDisplay = exports.sunset_core:GetPlayerDisplayName(officer.id)
+    local officerBase = exports.sunset_core:GetPlayerBaseName(officer.id)
+    local header = ('%s %s %s'):format(officer.factionLabel, officer.rank, officerDisplay)
     local detail = ('caught you at %d km/h in a %d km/h zone (+%d).'):format(speed, limit, over)
 
     TriggerClientEvent('sunset:chat:message', driverSource, {
         id = officer.id,
-        name = officerName,
+        name = officerBase,
         message = detail,
         time = os.date('%H:%M:%S'),
         type = 'radar_alert',

@@ -70,7 +70,7 @@ local function broadcastClanManagement(clanId, actorSource, message)
     local tagStyle = clanRow and clanRow.tag_style or 'brackets'
 
     if actorSource then
-        actorName = exports.sunset_core:GetPlayerDisplayName(actorSource) or ClanDisplay.baseName(actorSource)
+        actorName = exports.sunset_core:GetPlayerBaseName(actorSource) or ClanDisplay.baseName(actorSource)
         local actorCid = charId(actorSource)
         local memberRow = actorCid and ClanDisplay.getMembership(actorCid)
         if memberRow and tonumber(memberRow.clan_id) == clanId then
@@ -114,6 +114,27 @@ local function audit(clanId, actorId, action, details)
         'INSERT INTO clan_audit_log (clan_id, actor_character_id, action, details) VALUES (?, ?, ?, ?)',
         { clanId, actorId, action, details and json.encode(details) or nil }
     )
+end
+
+local function safeAudit(...)
+    local ok, err = pcall(audit, ...)
+    if not ok then
+        print(('^3[sunset_clans]^7 audit failed: %s'):format(tostring(err)))
+    end
+end
+
+local function safeBroadcast(...)
+    local ok, err = pcall(broadcastClanManagement, ...)
+    if not ok then
+        print(('^3[sunset_clans]^7 broadcast failed: %s'):format(tostring(err)))
+    end
+end
+
+local function safeSyncMembers(clanId)
+    local ok, err = pcall(syncClanMembers, clanId)
+    if not ok then
+        print(('^3[sunset_clans]^7 member sync failed: %s'):format(tostring(err)))
+    end
 end
 
 local function cleanColor(hex)
@@ -205,7 +226,7 @@ local function tagStyleOptions()
     return out
 end
 
-local function rankLabel(rank, labels)
+local function rosterRankLabel(rank, labels)
     return SunsetClans.getRankLabel(labels, rank)
 end
 
@@ -273,7 +294,7 @@ local function buildRoster(clanId, labels)
             characterId = row.character_id,
             name = playerName(row.character_id),
             rank = rank,
-            rankLabel = rankLabel(rank, labels),
+            rankLabel = rosterRankLabel(rank, labels),
             warns = tonumber(row.warns) or 0,
             online = src ~= nil,
             serverId = src,
@@ -475,6 +496,17 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
     return payload
 end)
 
+exports.sunset_core:RegisterCallback('sunset:clanGetMotd', function(source)
+    local row, cid = membershipFor(source)
+    if not cid then return nil, 'Your character is not loaded. Reconnect and try again.' end
+    if not row then return nil, 'You are not in a clan.' end
+    return {
+        tag = row.tag,
+        name = row.name,
+        message = tostring(row.motd or ''),
+    }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, payload)
     if type(payload) ~= 'table' then return nil, 'Invalid clan action.' end
     local action = tostring(payload.action or '')
@@ -496,16 +528,25 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can change clan settings.' end
         local description = cleanText(payload.description, SunsetClans.MaxDescriptionLength)
         local tagColor = cleanColor(payload.tagColor)
-        local tagStyle = tostring(payload.tagStyle or row.tag_style)
+        local tagStyle = tostring(payload.tagStyle or row.tag_style or 'brackets')
         if not SunsetClans.isValidTagStyle(tagStyle) then return nil, 'Invalid tag style.' end
         MySQL.update.await(
             'UPDATE clans SET description = ?, tag_color = ?, tag_style = ? WHERE id = ?',
             { description, tagColor, tagStyle, row.clan_id }
         )
-        audit(row.clan_id, cid, 'settings', { tagColor = tagColor, tagStyle = tagStyle })
-        broadcastClanManagement(row.clan_id, source, 'updated clan settings.')
-        syncClanMembers(row.clan_id)
-        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+        safeAudit(row.clan_id, cid, 'settings', { tagColor = tagColor, tagStyle = tagStyle })
+        safeBroadcast(row.clan_id, source, 'updated clan settings.')
+        safeSyncMembers(row.clan_id)
+        local fresh = ClanDisplay.getMembership(cid)
+        if not fresh then
+            return nil, 'Clan settings saved, but your membership could not be reloaded. Reopen /clan.'
+        end
+        local ok, dashboard = pcall(dashboardPayload, source, fresh, cid)
+        if not ok then
+            print(('^1[sunset_clans]^7 settings dashboard failed: %s'):format(tostring(dashboard)))
+            return nil, 'Clan settings saved. Reopen /clan to see the update.'
+        end
+        return dashboard
     end
 
     if action == 'invite' then
@@ -671,7 +712,7 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
             end
         end
         MySQL.update.await('UPDATE clans SET rank_labels = ? WHERE id = ?', {
-            json.encode(labels), row.clan_id,
+            SunsetClans.encodeRankLabels(labels), row.clan_id,
         })
         audit(row.clan_id, cid, 'rank_labels', { labels = labels })
         broadcastClanManagement(row.clan_id, source, 'updated clan rank names.')

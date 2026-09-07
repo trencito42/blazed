@@ -15,6 +15,7 @@ client_scripts { 'client/main.lua' }
 server_scripts {
     'server/main.lua',
     'server/command_router.lua',
+    'server/connect_motd.lua',
 }
 
-dependencies { 'sunset_ui', 'sunset_core', 'sunset_admin' }
+dependencies { 'sunset_ui', 'sunset_core', 'sunset_admin', 'sunset_factions', 'sunset_clans' }

@@ -40,9 +40,13 @@ const SunsetPlayerIdentity = {
         }
     },
 
+    stripServerId(name) {
+        return String(name || 'Player').trim().replace(/\s*\(\d+\)\s*$/, '') || 'Player';
+    },
+
     formatNameHtml(row, options = {}) {
         const esc = (value) => this.escape(value);
-        const name = String(row.name || 'Player').trim();
+        const name = this.stripServerId(row.name);
         const id = Number(row.id) || 0;
         const showId = options.showId !== false;
         const idPart = showId && id > 0 ? ` (${id})` : '';

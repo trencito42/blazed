@@ -134,32 +134,62 @@ function showHud(visible) {
     }
 }
 
+const NOTIFY_META = {
+    info: {
+        label: 'NOTICE',
+        icon: '<circle cx="12" cy="12" r="9"/><path d="M12 8v1M12 11v5"/>',
+    },
+    success: {
+        label: 'CONFIRMED',
+        icon: '<path d="M5 12l5 5L19 7"/>',
+    },
+    warning: {
+        label: 'ATTENTION',
+        icon: '<path d="M12 3 2 21h20L12 3z"/><path d="M12 9v5M12 17h.01"/>',
+    },
+    error: {
+        label: 'ALERT',
+        icon: '<path d="M6 6l12 12M18 6L6 18"/>',
+    },
+};
+
+function notifyIconSvg(type) {
+    const meta = NOTIFY_META[type] || NOTIFY_META.info;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'notification__icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'square');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = meta.icon;
+    return svg;
+}
+
 function notify(message, type = 'info', duration = 4000) {
     const container = $('#notifications');
     if (!container) return;
     const safeType = ['info', 'success', 'warning', 'error'].includes(type) ? type : 'info';
-    const labels = {
-        info: 'NOTICE',
-        success: 'CONFIRMED',
-        warning: 'ATTENTION',
-        error: 'ALERT',
-    };
+    const meta = NOTIFY_META[safeType];
+
     const el = document.createElement('div');
     el.className = `notification notification--${safeType}`;
     el.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
-    const signal = document.createElement('span');
-    signal.className = 'notification__signal';
-    signal.setAttribute('aria-hidden', 'true');
-    const body = document.createElement('div');
-    body.className = 'notification__body';
-    const title = document.createElement('strong');
+
+    const wrap = document.createElement('div');
+    wrap.className = 'notification__wrap';
+
+    const title = document.createElement('div');
     title.className = 'notification__title';
-    title.textContent = labels[safeType];
-    const copy = document.createElement('span');
+    title.textContent = meta.label;
+
+    const copy = document.createElement('div');
     copy.className = 'notification__message';
     copy.textContent = String(message ?? '');
-    body.append(title, copy);
-    el.append(signal, body);
+
+    wrap.append(title, copy);
+    el.append(notifyIconSvg(safeType), wrap);
     container.appendChild(el);
 
     const maxVisible = 5;
@@ -169,7 +199,7 @@ function notify(message, type = 'info', duration = 4000) {
 
     setTimeout(() => {
         el.classList.add('is-leaving');
-        setTimeout(() => el.remove(), 280);
+        setTimeout(() => el.remove(), 240);
     }, duration);
 }
 
@@ -252,9 +282,24 @@ window.addEventListener('message', (event) => {
             showHud(false);
             break;
 
-        case 'pauseState':
-            document.body.classList.toggle('game-paused', Boolean(data?.paused));
+        case 'pauseState': {
+            const paused = Boolean(data?.paused);
+            document.body.classList.toggle('game-paused', paused);
+            if (paused) {
+                if (window.Phone) Phone.hide();
+                if (window.Menu && !$('#menu')?.classList.contains('hidden')) {
+                    Menu.hide();
+                    post('menuClose');
+                }
+                if (window.Panels) {
+                    if (!$('#inventory')?.classList.contains('hidden')) {
+                        Panels.hideInventory();
+                        post('inventoryClose');
+                    }
+                }
+            }
             break;
+        }
 
         case 'enterGameplay': {
             if (window.AuthLoading) {

@@ -26,6 +26,23 @@ function SunsetClans.defaultRankLabels()
     return out
 end
 
+function SunsetClans.encodeRankLabels(labels)
+    local out = {}
+    labels = labels or SunsetClans.defaultRankLabels()
+    for i = 1, SunsetClans.MaxRank do
+        local label = labels[i] or labels[tostring(i)]
+        if type(label) == 'string' then
+            label = label:gsub('^%s+', ''):gsub('%s+$', '')
+        end
+        if type(label) == 'string' and label ~= '' then
+            out[tostring(i)] = label:sub(1, 48)
+        else
+            out[tostring(i)] = SunsetClans.DefaultRankLabels[i] or ('Rank ' .. i)
+        end
+    end
+    return json.encode(out)
+end
+
 function SunsetClans.decodeRankLabels(raw)
     local defaults = SunsetClans.defaultRankLabels()
     if type(raw) == 'string' and raw ~= '' then

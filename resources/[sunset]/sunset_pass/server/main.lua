@@ -2,6 +2,19 @@ local function notify(source, message, kind)
     TriggerClientEvent('sunset:client:notify', source, message, kind or 'info', 5000)
 end
 
+local function passAnnounce(source, title, body, kind)
+    kind = kind or 'success'
+    notify(source, body, kind, 5000)
+    TriggerClientEvent('sunset:chat:message', source, {
+        id = 0,
+        name = 'BLAZE PASS',
+        passTitle = title,
+        message = body,
+        time = os.date('%H:%M:%S'),
+        type = 'blaze_pass',
+    })
+end
+
 local CharacterLocks = {}
 
 local function withCharacterLock(characterId, operation)
@@ -53,6 +66,29 @@ local function decodeJson(raw)
     return ok and type(decoded) == 'table' and decoded or {}
 end
 
+local function upsertRow(characterId, xp, premium, claimed, missionProgress)
+    MySQL.insert.await([[
+        INSERT INTO character_pass_progress (character_id, season_id, xp, premium, claimed, mission_progress)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            xp = VALUES(xp),
+            premium = VALUES(premium),
+            claimed = VALUES(claimed),
+            mission_progress = VALUES(mission_progress)
+    ]], {
+        characterId,
+        SunsetPass.SeasonId,
+        tonumber(xp) or 0,
+        premium and 1 or 0,
+        json.encode(claimed or {}),
+        json.encode(missionProgress or {}),
+    })
+end
+
+local function saveRow(characterId, xp, premium, claimed, missionProgress)
+    upsertRow(characterId, xp, premium, claimed, missionProgress)
+end
+
 local function loadRow(characterId)
     local row = MySQL.single.await([[
         SELECT xp, premium, claimed, mission_progress
@@ -62,32 +98,18 @@ local function loadRow(characterId)
     ]], { characterId, SunsetPass.SeasonId })
     if row then return row end
 
-    MySQL.insert.await([[
-        INSERT INTO character_pass_progress (character_id, season_id, xp, premium, claimed, mission_progress)
-        VALUES (?, ?, 0, 0, '{}', '{}')
-    ]], { characterId, SunsetPass.SeasonId })
-
-    return {
+    upsertRow(characterId, 0, false, {}, {})
+    return MySQL.single.await([[
+        SELECT xp, premium, claimed, mission_progress
+        FROM character_pass_progress
+        WHERE character_id = ? AND season_id = ?
+        LIMIT 1
+    ]], { characterId, SunsetPass.SeasonId }) or {
         xp = 0,
         premium = 0,
         claimed = '{}',
         mission_progress = '{}',
     }
-end
-
-local function saveRow(characterId, xp, premium, claimed, missionProgress)
-    MySQL.update.await([[
-        UPDATE character_pass_progress
-        SET xp = ?, premium = ?, claimed = ?, mission_progress = ?
-        WHERE character_id = ? AND season_id = ?
-    ]], {
-        xp,
-        premium and 1 or 0,
-        json.encode(claimed or {}),
-        json.encode(missionProgress or {}),
-        characterId,
-        SunsetPass.SeasonId,
-    })
 end
 
 local function missionById(id)
@@ -155,14 +177,28 @@ function AddMissionProgress(source, missionId, amount)
 
         entry.progress = math.min(mission.goal, (tonumber(entry.progress) or 0) + amount)
         local xp = tonumber(row.xp) or 0
-        if entry.progress >= mission.goal then
+        local oldTier = tierFromXp(xp)
+        local justCompleted = false
+        if entry.progress >= mission.goal and not entry.completed then
             entry.completed = true
             xp = xp + (mission.xp or 0)
+            justCompleted = true
         end
         missionProgress[missionId] = entry
 
         saveRow(char.id, xp, tonumber(row.premium) == 1, decodeJson(row.claimed), missionProgress)
         TriggerClientEvent('sunset:pass:refresh', source)
+
+        if justCompleted then
+            passAnnounce(source, 'MISSION COMPLETE',
+                ('%s — +%d XP'):format(mission.title or mission.id, mission.xp or 0), 'success')
+            local newTier = tierFromXp(xp)
+            if newTier > oldTier then
+                passAnnounce(source, 'PASS LEVEL UP',
+                    ('You reached pass level %d — open /pass to claim rewards.'):format(newTier), 'success')
+            end
+        end
+
         return true
     end)
 end
@@ -291,7 +327,7 @@ exports.sunset_core:RegisterCallback('sunset:pass:claim', function(source, data)
 
         claimed[key] = true
         saveRow(char.id, xp, premium, claimed, decodeJson(row.mission_progress))
-        notify(source, ('Claimed: %s'):format(reward.label or 'reward'), 'success')
+        passAnnounce(source, 'REWARD CLAIMED', ('Tier %d — %s'):format(level, reward.label or 'reward'), 'success')
         return buildPayload(source, loadRow(char.id))
     end)
 end)
@@ -319,9 +355,14 @@ exports.sunset_core:RegisterCallback('sunset:pass:buyPremium', function(source)
         local ok, err = setPremiumPoints(source, balance - cost)
         if not ok then return nil, err or 'Payment failed.' end
 
-        saveRow(char.id, tonumber(row.xp) or 0, true, decodeJson(row.claimed), decodeJson(row.mission_progress))
-        notify(source, 'Premium pass unlocked for this season.', 'success')
-        return buildPayload(source, loadRow(char.id))
+        upsertRow(char.id, tonumber(row.xp) or 0, true, decodeJson(row.claimed), decodeJson(row.mission_progress))
+        local saved = loadRow(char.id)
+        if tonumber(saved.premium) ~= 1 then
+            setPremiumPoints(source, balance)
+            return nil, 'Premium pass payment succeeded but progress could not be saved. Your Blaze Points were refunded.'
+        end
+        passAnnounce(source, 'PREMIUM UNLOCKED', 'Blaze Pass premium track is now active for this season.', 'success')
+        return buildPayload(source, saved)
     end)
 end)
 

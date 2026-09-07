@@ -154,8 +154,15 @@
     background: var(--gameplay-glass-control) !important;
 }
 
-/* Small runtime widgets use the same transparent treatment. */
-.notification,
+/* HUD-style notifications stay text-only (no glass plate). */
+.notification {
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
 .job-objective,
 .taxi-meter,
 .progress {

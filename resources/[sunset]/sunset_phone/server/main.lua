@@ -92,7 +92,7 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
     if targetSource then
         TriggerClientEvent('sunset:chat:message', targetSource, {
             id = source,
-            name = exports.sunset_core:GetPlayerDisplayName(source),
+            name = exports.sunset_core:GetPlayerBaseName(source),
             message = '',
             time = os.date('%H:%M:%S'),
             type = 'sms',

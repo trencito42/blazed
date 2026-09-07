@@ -68,9 +68,11 @@ const Chat = {
     formatClanNameHtml(m, options = {}) {
         const parts = this.splitClanParts(m);
         const esc = (v) => this.escapeHtml(v);
-        let name = parts.name;
+        let name = window.SunsetPlayerIdentity
+            ? SunsetPlayerIdentity.stripServerId(parts.name)
+            : String(parts.name || 'Player').trim().replace(/\s*\(\d+\)\s*$/, '');
         const sid = Number(m.id) || 0;
-        if (options.showId !== false && sid > 0 && !/\(\d+\)\s*$/.test(name)) {
+        if (options.showId !== false && sid > 0) {
             name = `${name} (${sid})`;
         }
         return [
@@ -148,11 +150,65 @@ const Chat = {
     },
 
     nameWithId(name, id) {
-        const label = String(name || 'Player').trim();
+        const strip = window.SunsetPlayerIdentity?.stripServerId
+            || ((value) => String(value || 'Player').trim().replace(/\s*\(\d+\)\s*$/, '') || 'Player');
+        const label = strip(name);
         const sid = Number(id) || 0;
         if (sid <= 0) return label;
-        if (/\(\d+\)\s*$/.test(label)) return label;
         return `${label} (${sid})`;
+    },
+
+    formatMotdBannerHtml(m, type) {
+        const time = this.formatTime(m);
+        const prefix = time ? `${this.escapeHtml(time)} ` : '';
+        const msg = this.escapeHtml(String(m.message ?? ''));
+        const command = this.escapeHtml(String(m.command || ''));
+        const rule = `<span class="chat-motd-rule">${prefix}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`;
+        const cmdLine = command
+            ? `<span class="chat-motd-cmd">${prefix}${command} to read again</span>`
+            : '';
+
+        if (type === 'clan_motd') {
+            const tag = String(m.clanTag || '').trim();
+            const clanName = String(m.clanName || m.name || 'CLAN').trim();
+            const title = tag ? `[${tag}] ${clanName}` : clanName;
+            return [
+                rule,
+                `<span class="chat-motd-label">${prefix}CLAN MOTD</span>`,
+                `<span class="chat-motd-org">${prefix}${this.escapeHtml(title)}</span>`,
+                `<span class="chat-motd-body">${prefix}${msg}</span>`,
+                cmdLine,
+                rule,
+            ].filter(Boolean).join('<br>');
+        }
+
+        const label = String(m.factionLabel || m.name || 'FACTION').trim();
+        return [
+            rule,
+            `<span class="chat-motd-label">${prefix}FACTION MOTD</span>`,
+            `<span class="chat-motd-org">${prefix}${this.escapeHtml(label)}</span>`,
+            `<span class="chat-motd-body">${prefix}${msg}</span>`,
+            cmdLine,
+            rule,
+        ].filter(Boolean).join('<br>');
+    },
+
+    formatPassEventHtml(m) {
+        const time = this.formatTime(m);
+        const prefix = time ? `${this.escapeHtml(time)} ` : '';
+        const title = this.escapeHtml(String(m.passTitle || 'BLAZE PASS'));
+        const body = this.escapeHtml(String(m.message ?? ''));
+        const icon = [
+            '<svg class="chat-pass__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">',
+            '<path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6z"/>',
+            '</svg>',
+        ].join('');
+        return [
+            `<span class="chat-pass">${icon}<span class="chat-pass__wrap">`,
+            `<span class="chat-pass__title">${prefix}${title}</span>`,
+            `<span class="chat-pass__body">${prefix}${body}</span>`,
+            '</span></span>',
+        ].join('');
     },
 
     formatLine(m) {
@@ -192,6 +248,14 @@ const Chat = {
             const issuer = [m.issuerRank || m.rank, this.formatPlayerNameHtml(m, m.issuerName || m.name)].filter(Boolean).join(' — ');
             const issuerLine = issuer ? ` (${issuer})` : '';
             return `${prefix}[GOVERNMENT] ${dept}: ${msg}${issuerLine}`;
+        }
+
+        if (type === 'faction_motd' || type === 'clan_motd') {
+            return this.formatMotdBannerHtml(m, type);
+        }
+
+        if (type === 'blaze_pass') {
+            return this.formatPassEventHtml(m);
         }
 
         if (type === 'f') {
@@ -272,7 +336,8 @@ const Chat = {
         const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
         const highlighted = new Set([
             'say', 'me', 'do', 'f', 'r', 'd', 'c', 'gov', 'announce', 'sms', 'hq',
-            'megaphone', 'police_alert', 'faction_info', 'faction_action', 'clan_action', 'radar', 'radar_alert',
+            'megaphone', 'police_alert', 'faction_info', 'faction_motd', 'clan_motd', 'blaze_pass',
+            'faction_action', 'clan_action', 'radar', 'radar_alert',
             'command_error', 'command_warn', 'command_info',
         ]);
         const classes = ['chat-msg'];
@@ -299,6 +364,12 @@ const Chat = {
                 `<span class="chat-gov-rule">${prefix}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`,
             ].join('<br>');
             el.classList.add('chat-msg--gov-banner');
+        } else if (type === 'blaze_pass') {
+            line.innerHTML = this.formatPassEventHtml(m);
+            el.classList.add('chat-msg--blaze-pass');
+        } else if (type === 'faction_motd' || type === 'clan_motd') {
+            line.innerHTML = this.formatMotdBannerHtml(m, type);
+            el.classList.add('chat-msg--motd-banner');
         } else if (type === 'c' || type === 'clan_action' || this.lineUsesHtml(m, type)) {
             line.innerHTML = this.formatLine(m);
         } else {

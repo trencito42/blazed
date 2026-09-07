@@ -406,65 +406,85 @@ h5,
         linear-gradient(110deg, rgba(12, 14, 17, 0.995), rgba(18, 20, 24, 0.94));
 }
 
-/* Sunset OS HUD modules — same cut corners, scanlines and segmented data bars. */
+/* Fishing-style HUD notifications — icon + colored title + white subtitle. */
 .notifications {
     top: 118px;
     right: 25px;
-    gap: 9px;
-    width: min(390px, 36vw);
+    gap: 12px;
+    width: min(420px, 38vw);
     pointer-events: none;
 }
 
 .notification {
-    position: relative;
-    display: grid;
-    grid-template-columns: 4px minmax(0, 1fr);
-    gap: 13px;
+    --notify-accent: var(--sunset-orange, #ff8a00);
+    display: flex;
+    align-items: center;
+    gap: 10px;
     width: 100%;
-    min-height: 58px;
-    padding: 11px 15px 11px 9px;
-    overflow: hidden;
-    color: var(--sunset-text);
-    background:
-        repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,.018) 4px),
-        rgba(7, 3, 12, 0.38);
-    border: 1px solid rgba(255,255,255,.11);
-    border-left: 0;
-    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-    box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    padding: 0;
+    background: none;
+    border: none;
+    clip-path: none;
+    box-shadow: none;
+    color: #fff;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
     opacity: 0;
-    transform: translateX(28px);
-    animation: sunset-notify-in .28s cubic-bezier(.18,.8,.24,1) both;
+    transform: translateX(16px);
+    animation: sunset-notify-in .24s cubic-bezier(.18,.8,.24,1) both;
 }
 
 .notification.is-leaving {
-    animation: sunset-notify-out .26s ease-in both;
+    animation: sunset-notify-out .22s ease-in both;
 }
 
-.notification::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 18px;
-    width: 42px;
-    height: 2px;
-    background: var(--sunset-orange);
-    box-shadow: 0 0 10px rgba(255,138,0,.55);
+.notification__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: var(--notify-accent);
+    transition: color 0.2s;
 }
 
-.notification__signal { width: 3px; height: 100%; background: var(--sunset-orange); box-shadow: 0 0 10px rgba(255,138,0,.5); }
-.notification__body { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-.notification__title { color: var(--sunset-orange); font: 700 10px/1 var(--sunset-display); letter-spacing: .18em; }
-.notification__message { color: rgba(255,255,255,.82); font: 500 13px/1.25 var(--sunset-body); letter-spacing: .025em; }
-.notification--success .notification__signal,
-.notification--success::after { background: var(--sunset-green); box-shadow: 0 0 10px rgba(84,227,142,.5); }
-.notification--success .notification__title { color: var(--sunset-green); }
-.notification--warning .notification__signal,
-.notification--warning::after { background: var(--sunset-amber); box-shadow: 0 0 10px rgba(255,178,28,.5); }
-.notification--warning .notification__title { color: var(--sunset-amber); }
-.notification--error .notification__signal,
-.notification--error::after { background: var(--sunset-red); box-shadow: 0 0 10px rgba(255,85,79,.5); }
-.notification--error .notification__title { color: var(--sunset-red); }
+.notification__wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.notification__title {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--notify-accent);
+    line-height: 1.1;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 12px rgba(0, 0, 0, 0.85);
+}
+
+.notification__message {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #ffffff;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 10px rgba(0, 0, 0, 0.8);
+}
+
+.notification--success { --notify-accent: var(--sunset-orange, #ff8a00); }
+.notification--warning { --notify-accent: var(--sunset-amber, #ffb21c); }
+.notification--error { --notify-accent: var(--sunset-red, #ff554f); }
+.notification--info { --notify-accent: var(--sunset-amber, #ffb15c); }
 
 .job-objective {
     width: min(350px, 34vw);

@@ -12,9 +12,9 @@ local function canSpyFactionChat(source)
 end
 
 local function spyChannelLabel(channel)
-    if channel == 'f' then return 'FACTION'
-    if channel == 'r' then return 'RADIO'
-    if channel == 'd' then return 'DEPT'
+    if channel == 'f' then return 'FACTION' end
+    if channel == 'r' then return 'RADIO' end
+    if channel == 'd' then return 'DEPT' end
     return string.upper(tostring(channel or 'CHAT'))
 end
 
@@ -42,16 +42,25 @@ local function isGovEligible(source, char)
     return FactionCore.isOnDuty(source)
 end
 
-local function sendFactionChat(source, channel, args, filterFn)
+local function resolveFactionMember(source)
     local char = FactionCore.getChar(source)
+    if not char then
+        FactionCore.notify(source, 'Your character is not loaded. Reconnect and try again.', 'error')
+        return nil
+    end
+    local factionId, grade = FactionCore.ensureFactionMembership(source, char)
+    if not factionId then
+        FactionCore.notify(source, 'You are not in a faction. Use /factions to browse or ask staff if you should be a member.', 'error')
+        return nil
+    end
+    return char, factionId, grade
+end
+
+local function sendFactionChat(source, channel, args, filterFn)
+    local char, factionId = resolveFactionMember(source)
     if not char then return end
     if not FactionCore.checkRateLimit(source, 'chat_' .. channel, CHAT_COOLDOWN_MS) then
         return FactionCore.notify(source, 'Slow down — message rate limited', 'error')
-    end
-
-    local factionId = select(1, FactionCore.getFactionOf(char))
-    if not factionId then
-        return FactionCore.notify(source, 'You are not in a faction', 'error')
     end
 
     local msg = table.concat(args, ' ')
@@ -107,28 +116,41 @@ local function sendFactionChat(source, channel, args, filterFn)
 end
 
 local function isEmergencyDepartment(factionId)
-    return Sunset.FactionTypeMatches(factionId, 'law_enforcement')
-        or Sunset.FactionTypeMatches(factionId, 'ems')
-        or Sunset.FactionTypeMatches(factionId, 'fire_rescue')
+    return Sunset.IsEmergencyDepartment(factionId)
+end
+
+local function factionChatDeniedMessage(factionId)
+    local faction = Sunset.Factions[factionId]
+    local label = faction and faction.label or 'your faction'
+    if isEmergencyDepartment(factionId) then
+        return ('%s uses department radio — /r for your team, /d for all emergency services.'):format(label)
+    end
+    return 'You are not in a faction. Use /factions to browse or ask staff if you should be a member.'
+end
+
+local function memberInFaction(src, c, factionId)
+    if not c or not factionId then return false end
+    local memberFaction = select(1, FactionCore.getFactionOf(c))
+    if memberFaction == factionId then return true end
+    return select(1, FactionCore.ensureFactionMembership(src, c)) == factionId
 end
 
 local function runFactionChat(source, args)
     if source == 0 then return end
-    local char = FactionCore.getChar(source)
-    local factionId = char and select(1, FactionCore.getFactionOf(char))
-    if factionId and isEmergencyDepartment(factionId) then
-        return FactionCore.notify(source,
-            'Emergency services use /r (faction radio) and /d (department radio), not /f.', 'error')
+    local char, factionId = resolveFactionMember(source)
+    if not char then return end
+    if isEmergencyDepartment(factionId) then
+        return FactionCore.notify(source, factionChatDeniedMessage(factionId), 'error')
     end
-    sendFactionChat(source, 'f', args, function(_, c, factionId)
-        return select(1, FactionCore.getFactionOf(c)) == factionId
+    sendFactionChat(source, 'f', args, function(src, c, senderFactionId)
+        return memberInFaction(src, c, senderFactionId)
     end)
 end
 
 local function runRadioChat(source, args)
     if source == 0 then return end
-    sendFactionChat(source, 'r', args, function(_, c, factionId)
-        return select(1, FactionCore.getFactionOf(c)) == factionId
+    sendFactionChat(source, 'r', args, function(src, c, senderFactionId)
+        return memberInFaction(src, c, senderFactionId)
     end)
 end
 
@@ -137,13 +159,16 @@ RegisterCommand('r', runRadioChat, false)
 
 local function runDepartmentChat(source, args)
     if source == 0 then return end
-    local char = FactionCore.getChar(source)
-    local factionId = char and select(1, FactionCore.getFactionOf(char))
-    if not factionId or not isEmergencyDepartment(factionId) then
+    local char, factionId = resolveFactionMember(source)
+    if not char then return end
+    if not isEmergencyDepartment(factionId) then
         return FactionCore.notify(source, 'Department radio is for LSPD, Sheriff, FIB, EMS, and LSFD', 'error')
     end
-    sendFactionChat(source, 'd', args, function(_, c)
+    sendFactionChat(source, 'd', args, function(src, c)
         local id = select(1, FactionCore.getFactionOf(c))
+        if not id then
+            id = select(1, FactionCore.ensureFactionMembership(src, c))
+        end
         return id and isEmergencyDepartment(id)
     end)
 end
@@ -251,11 +276,22 @@ function RunChatCommand(source, name, args)
     name = string.lower(tostring(name or ''))
     args = args or {}
 
-    if name == 'f' then runFactionChat(source, args) return true end
-    if name == 'r' then runRadioChat(source, args) return true end
-    if name == 'd' then runDepartmentChat(source, args) return true end
-    if name == 'gov' then runGovAnnouncement(source, args) return true end
-    if name == 'm' then runMegaphone(source, args) return true end
+    local ok, err = pcall(function()
+        if name == 'f' then runFactionChat(source, args) return end
+        if name == 'r' then runRadioChat(source, args) return end
+        if name == 'd' then runDepartmentChat(source, args) return end
+        if name == 'gov' then runGovAnnouncement(source, args) return end
+        if name == 'm' then runMegaphone(source, args) return end
+        error('unsupported')
+    end)
+    if not ok and err ~= 'unsupported' then
+        print(('[sunset_factions] chat command /%s failed for #%s: %s'):format(name, tostring(source), tostring(err)))
+        FactionCore.notify(source, ('Faction chat failed: %s'):format(tostring(err)), 'error')
+        return true
+    end
+    if ok and (name == 'f' or name == 'r' or name == 'd' or name == 'gov' or name == 'm') then
+        return true
+    end
     if name == 'startradar' or name == 'setradar' or name == 'radar' then
         TriggerClientEvent('sunset:police:tryStartRadar', source, args[1])
         return true

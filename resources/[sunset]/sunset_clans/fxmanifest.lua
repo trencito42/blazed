@@ -37,4 +37,5 @@ exports {
     'GetPlayerBaseName',
     'SyncPlayerClan',
     'RunChatCommand',
+    'GetConnectMotd',
 }

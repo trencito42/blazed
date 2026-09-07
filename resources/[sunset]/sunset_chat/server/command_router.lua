@@ -85,6 +85,10 @@ local function tryRunAdminCommand(src, cmd, rest)
     return false
 end
 
+local SERVER_CHAT_COMMANDS = {
+    f = true, r = true, d = true, gov = true, m = true, megaphone = true,
+}
+
 local function tryRunServerChatCommand(src, cmd, args)
     cmd = string.lower(tostring(cmd or ''))
     args = args or {}
@@ -92,17 +96,34 @@ local function tryRunServerChatCommand(src, cmd, args)
     local ok, handled = pcall(function()
         return exports.sunset_factions:RunChatCommand(src, cmd, args)
     end)
-    if ok and handled then return true end
+    if not ok then
+        chatSystem(src, ('/%s failed on the server: %s'):format(cmd, tostring(handled)), 'error')
+        return true
+    end
+    if handled then return true end
 
     ok, handled = pcall(function()
         return exports.sunset_clans:RunChatCommand(src, cmd, args)
     end)
-    if ok and handled then return true end
+    if not ok then
+        chatSystem(src, ('/%s failed on the server: %s'):format(cmd, tostring(handled)), 'error')
+        return true
+    end
+    if handled then return true end
 
     ok, handled = pcall(function()
         return exports.sunset_chat:RunServerCommand(src, cmd, args)
     end)
-    if ok and handled then return true end
+    if not ok then
+        chatSystem(src, ('/%s failed on the server: %s'):format(cmd, tostring(handled)), 'error')
+        return true
+    end
+    if handled then return true end
+
+    if SERVER_CHAT_COMMANDS[cmd] then
+        chatSystem(src, ('/%s could not be processed. Reconnect or contact staff.'):format(cmd), 'error')
+        return true
+    end
 
     return false
 end

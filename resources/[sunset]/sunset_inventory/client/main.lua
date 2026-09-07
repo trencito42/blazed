@@ -43,11 +43,21 @@ RegisterCommand('inventory', function()
         return
     end
     if IsNuiFocused() then return end
+    if IsPauseMenuActive() then return end
     local ok, chatOpen = pcall(function() return exports.sunset_chat:IsChatOpen() end)
     if ok and chatOpen then return end
     openInventory()
 end, false)
 RegisterKeyMapping('inventory', 'Toggle inventory', 'keyboard', 'I')
+
+CreateThread(function()
+    while true do
+        if inventoryOpen and IsPauseMenuActive() then
+            closeInventory()
+        end
+        Wait(inventoryOpen and 50 or 250)
+    end
+end)
 
 exports('Open', openInventory)
 exports('Close', closeInventory)

@@ -12,6 +12,32 @@ function FactionCore.getFactionOf(char)
     return Sunset.GetCharacterFaction(char)
 end
 
+--- Repair leader rows that exist without metadata.faction (common after manual DB edits).
+function FactionCore.ensureFactionMembership(source, char)
+    char = char or (source and FactionCore.getChar(source))
+    if not char or not char.id then return nil, 0 end
+
+    local factionId, grade = Sunset.GetCharacterFaction(char)
+    if factionId then return factionId, grade end
+
+    local row = MySQL.single.await(
+        'SELECT faction_id FROM faction_leaders WHERE character_id = ? LIMIT 1',
+        { char.id }
+    )
+    if not row or not row.faction_id or not Sunset.Factions[row.faction_id] then
+        return nil, 0
+    end
+
+    local topGrade = FactionCore.highestFactionGrade(row.faction_id)
+    if source and tonumber(source) and tonumber(source) > 0 then
+        exports.sunset_core:SetFaction(source, row.faction_id, topGrade)
+        char = FactionCore.getChar(source) or char
+    else
+        exports.sunset_core:SetFactionByCharacterId(char.id, row.faction_id, topGrade)
+    end
+    return row.faction_id, topGrade
+end
+
 function FactionCore.isOnDuty(source)
     return OnDuty[source] == true
 end
@@ -250,12 +276,17 @@ function FactionCore.broadcastManagement(factionId, actorSource, message, opts)
     local label = faction and faction.label or factionId
     local actorName = opts.actorName
     local actorId = tonumber(opts.actorId) or tonumber(actorSource) or 0
-    if not actorName then
-        if actorSource then
-            actorName = exports.sunset_core:GetPlayerBaseName(actorSource) or 'Unknown'
+    if actorSource and tonumber(actorSource) and tonumber(actorSource) > 0 then
+        actorName = exports.sunset_core:GetPlayerBaseName(actorSource) or actorName
+        actorId = tonumber(actorSource) or actorId
+    elseif not actorName then
+        if actorId > 0 and GetPlayerName(actorId) then
+            actorName = exports.sunset_core:GetPlayerBaseName(actorId) or 'Unknown'
         else
             actorName = 'System'
         end
+    elseif actorName and actorId > 0 then
+        actorName = Sunset.StripServerIdSuffix(actorName)
     end
 
     local rank = nil

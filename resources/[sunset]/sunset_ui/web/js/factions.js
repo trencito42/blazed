@@ -247,7 +247,7 @@ const FactionPanels = {
         $('#faction-duty').classList.toggle('is-active', Boolean(data.onDuty));
         $('#faction-salary').textContent = `$${Number(data.salary || 0).toLocaleString()}/HR`;
         $('#faction-member-count').textContent = String(members.length);
-        $('#faction-motd').textContent = data.motd || 'No field briefing posted.';
+        $('#faction-motd').textContent = data.motd || 'No MOTD posted. Leaders use /fmotd.';
         $('#faction-description').textContent = data.description || 'No department intel on file.';
         $('#faction-depot').textContent = `Motor pool: ${data.depot || 'Not configured'}`;
         $('#faction-report-value').textContent = target > 0 ? `${current} / ${target} ops` : `${current} ops logged`;

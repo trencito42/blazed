@@ -225,6 +225,11 @@ local function createDefaultAccountCharacter(player)
     })
 
     grantStarterItems(charId)
+    local charRow = MySQL.single.await('SELECT metadata FROM characters WHERE id = ?', { charId })
+    local meta = charRow and charRow.metadata and json.decode(charRow.metadata) or {}
+    if type(meta) ~= 'table' then meta = {} end
+    meta.starter_items_granted = true
+    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(meta), charId })
     local char = MySQL.single.await('SELECT * FROM characters WHERE id = ?', { charId })
     return Sunset.DecodeCharacter(char)
 end
@@ -367,6 +372,11 @@ RegisterCallback('sunset:createCharacter', function(source, data)
     })
 
     grantStarterItems(charId)
+    local charRow = MySQL.single.await('SELECT metadata FROM characters WHERE id = ?', { charId })
+    local meta = charRow and charRow.metadata and json.decode(charRow.metadata) or {}
+    if type(meta) ~= 'table' then meta = {} end
+    meta.starter_items_granted = true
+    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(meta), charId })
     MySQL.insert.await('INSERT IGNORE INTO character_licenses (character_id, license_type) VALUES (?, ?)', {
         charId, 'driver'
     })

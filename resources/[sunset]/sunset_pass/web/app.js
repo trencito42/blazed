@@ -115,10 +115,13 @@ function renderTiers(data) {
     container.querySelectorAll('.pass-reward[data-level]').forEach((btn) => {
         btn.addEventListener('click', async () => {
             if (btn.disabled || btn.classList.contains('is-claimed') || btn.classList.contains('is-locked')) return;
-            await post('passClaim', {
+            btn.disabled = true;
+            const res = await post('passClaim', {
                 level: Number(btn.dataset.level),
                 track: btn.dataset.track,
             });
+            btn.disabled = false;
+            if (res?.state) renderAll(res.state);
         });
     });
 
@@ -209,7 +212,14 @@ function hide() {
 }
 
 document.getElementById('pass-close')?.addEventListener('click', () => post('passClose'));
-document.getElementById('pass-buy-premium')?.addEventListener('click', () => post('passBuyPremium'));
+document.getElementById('pass-buy-premium')?.addEventListener('click', async () => {
+    const btn = document.getElementById('pass-buy-premium');
+    if (!btn || btn.classList.contains('is-owned') || btn.disabled) return;
+    btn.disabled = true;
+    const res = await post('passBuyPremium');
+    btn.disabled = false;
+    if (res?.state) renderAll(res.state);
+});
 
 document.querySelectorAll('.pass-tab').forEach((btn) => {
     btn.addEventListener('click', () => setTab(btn.dataset.tab));

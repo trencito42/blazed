@@ -236,6 +236,7 @@ AddEventHandler('sunset:menu:openVehicle', openVehicleMenu)
 exports('OpenVehicle', openVehicleMenu)
 
 local function toggleMenu(initialTab)
+    if IsPauseMenuActive() and not menuOpen then return end
     if menuOpen then
         if initialTab and not menuSoloMode then
             exports.sunset_ui:Send('menuSetTab', { tab = initialTab })
@@ -246,6 +247,15 @@ local function toggleMenu(initialTab)
     end
     openMenu(initialTab)
 end
+
+CreateThread(function()
+    while true do
+        if menuOpen and IsPauseMenuActive() then
+            closeMenu()
+        end
+        Wait(menuOpen and 50 or 250)
+    end
+end)
 
 RegisterCommand('sunset_menu', function()
     toggleMenu()
