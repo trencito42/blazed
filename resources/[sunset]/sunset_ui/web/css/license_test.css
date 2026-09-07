@@ -17,7 +17,7 @@
 }
 
 .license-test-frame {
-    display: none;
+    display: none !important;
 }
 
 #license-test-panel.is-visible,

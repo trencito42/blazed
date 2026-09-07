@@ -100,6 +100,8 @@ forward('appearancePreview')
 forward('appearanceSave')
 forward('appearanceRotate')
 forward('appearanceGender')
+forward('licenseQuizClose')
+forward('licenseQuizSubmit')
 
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)

@@ -29,14 +29,6 @@ server_scripts {
     'server/admin.lua',
 }
 
-ui_page 'web/quiz.html'
-
-files {
-    'web/quiz.html',
-    'web/quiz.js',
-    'web/quiz.css',
-}
-
 dependencies {
     'sunset_core',
     'sunset_ui',

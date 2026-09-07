@@ -128,6 +128,8 @@ function CleanupPracticalTest()
     clearBlips()
     clearTargets()
     HideLicenseTestHud()
+    SetNuiFocus(false, false)
+    exports.sunset_ui:Send('licenseQuizHide', {})
     if testVehicle ~= 0 and DoesEntityExist(testVehicle) then
         DeleteEntity(testVehicle)
     end
@@ -767,7 +769,7 @@ end
 function StartPracticalTest(licenseType, payload)
     CleanupPracticalTest()
     SetNuiFocus(false, false)
-    SendNUIMessage({ action = 'hide' })
+    exports.sunset_ui:Send('licenseQuizHide', {})
     practicalState = { licenseType = licenseType }
     local cfg = resolvePracticalCfg(licenseType, payload)
     local facility = payload and payload.facility

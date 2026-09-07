@@ -22,6 +22,8 @@ files {
     'web/css/phone.css',
     'web/css/fuel_pump.css',
     'web/css/fishing.css',
+    'web/css/license_test.css',
+    'web/css/license_quiz.css',
     'web/css/radar.css',
     'web/css/courier.css',
     'web/css/factions.css',

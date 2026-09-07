@@ -580,6 +580,12 @@ window.addEventListener('message', (event) => {
         case 'licenseTestHide':
             if (window.LicenseTestHud) LicenseTestHud.hide();
             break;
+        case 'licenseQuizShow':
+            if (window.LicenseQuiz) LicenseQuiz.show(data || event.data.data);
+            break;
+        case 'licenseQuizHide':
+            if (window.LicenseQuiz) LicenseQuiz.hide();
+            break;
         case 'radarShow':
             if (window.RadarHud) RadarHud.show(data || event.data.data);
             break;
