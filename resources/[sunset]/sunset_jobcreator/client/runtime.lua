@@ -150,7 +150,10 @@ local function syncHud(data, override)
     else
         local stageType = stage.type
         if stageType == 'zone_interact' or stageType == 'progress' or stageType == 'chop_prop' or stageType == 'skill_check' then
-            if progressActive or skillActive then
+            if stageType == 'skill_check' and skillActive then
+                return
+            end
+            if progressActive or (skillActive and stageType ~= 'skill_check') then
                 state = 'waiting'
                 message = stage.label or 'Working...'
             else
@@ -350,12 +353,15 @@ local function startSkillCheck(data)
     end
     skillActive = true
     local windowMs = tonumber(stage.windowMs) or 1500
-    exports.sunset_ui:Send('jobSkillShow', {
-        message = stage.message or 'Press E in time!',
+    local key = (data.definition and data.definition.ui and data.definition.ui.key) or 'E'
+    fishingHud(data, {
+        state = 'bite',
+        message = formatMessage(stage, key),
         windowMs = windowMs,
-        key = (data.definition and data.definition.ui and data.definition.ui.key) or 'E',
     })
     CreateThread(function()
+        -- Ignore the E press that started the skill check.
+        Wait(150)
         local deadline = GetGameTimer() + windowMs
         local hit = false
         while skillActive and GetGameTimer() < deadline do
@@ -366,7 +372,9 @@ local function startSkillCheck(data)
             Wait(0)
         end
         skillActive = false
-        exports.sunset_ui:Send('jobSkillHide', {})
+        if active and payload then
+            syncHud(payload)
+        end
         sendClientAction(data.stageId, { success = hit })
     end)
 end

@@ -37,7 +37,7 @@ const JobShift = {
         const fill = document.getElementById('job-skill-fill');
         if (!panel || !fill) return;
         panel.classList.remove('hidden');
-        if (msg) msg.textContent = data.message || 'Press E in time!';
+        if (msg) msg.innerHTML = this._highlight(data.message || 'Press {key} in time!', data.key);
         const windowMs = Math.max(500, Number(data.windowMs) || 1500);
         fill.style.width = '100%';
         const start = performance.now();
