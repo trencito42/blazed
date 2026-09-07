@@ -99,6 +99,14 @@ local function routeTemplate()
         timeoutSec = 1800,
         salary = 180,
         ui = { title = 'Trucker', key = 'E', icon = 'truck', bagLabel = 'Deliveries' },
+        trucking = {
+            trailerModel = 'trailers2',
+            trailerGraceSec = 90,
+            trailerRecoveryMaxUses = 3,
+            trailerRecoveryCooldownSec = 90,
+            trailerRecoveryMaxDistance = 35.0,
+            autoReattachDistance = 28.0,
+        },
         progression = { xpPerTask = 45, payPerTask = 0 },
         variables = { done = 0, total = 3 },
         locations = {
@@ -229,6 +237,7 @@ local function routeTemplate()
                 locationVar = 'route',
                 locationField = 'delivery',
                 message = 'Press {key} to unload cargo',
+                requireTrailer = true,
                 actions = { { type = 'increment', var = 'done', value = 1 } },
                 onSuccess = 'pay',
             },

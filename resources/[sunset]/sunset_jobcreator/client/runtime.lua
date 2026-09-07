@@ -6,6 +6,7 @@ local lastStageId = nil
 local clientSetupDone = nil
 local progressActive = false
 local skillActive = false
+local lastTruckTick = 0
 
 local INTERACT_STAGES = {
     zone_interact = true,
@@ -154,6 +155,10 @@ local function syncHud(data, override)
     if total > 0 then
         payload.carried = done
         payload.capacity = total
+        if not override then
+            message = ('%s · %s %d/%d'):format(message, bagLabel, done, total)
+            payload.message = message
+        end
     end
     exports.sunset_ui:Send('fishingShow', payload)
     exports.sunset_ui:Send('jobShiftHide', {})
@@ -165,6 +170,7 @@ local function endShift(reason, failed)
     clientSetupDone = nil
     progressActive = false
     skillActive = false
+    if JCTrucking_Reset then JCTrucking_Reset() end
     clearBlips()
     exports.sunset_ui:Send('fishingHide', {})
     exports.sunset_ui:Send('jobShiftHide', {})
@@ -460,6 +466,13 @@ CreateThread(function()
                 end
             end
             ::continue::
+        end
+        if active and payload and JCTrucking_Tick then
+            local now = GetGameTimer()
+            if now - lastTruckTick >= 2000 then
+                lastTruckTick = now
+                JCTrucking_Tick(payload, syncHud, notify)
+            end
         end
         Wait(waitMs)
     end

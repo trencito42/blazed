@@ -68,6 +68,7 @@ function JCEngine_BuildClientPayload(session)
         definition = {
             ui = session.definition.ui,
             locations = session.definition.locations,
+            trucking = session.definition.trucking,
         },
         timeoutAt = session.timeoutAt,
     }
@@ -100,6 +101,7 @@ function JCEngine_Advance(source, nextId)
         local ok, autoNext, err = JCStages_Enter(source, session, stage)
         if not ok then return nil, err end
         if autoNext and autoNext ~= nextId then
+            TriggerClientEvent('sunset:jobcreator:sessionSync', source, JCEngine_BuildClientPayload(session))
             nextId = autoNext
         else
             TriggerClientEvent('sunset:jobcreator:sessionSync', source, JCEngine_BuildClientPayload(session))

@@ -137,6 +137,15 @@ StageHandlers.zone_interact = {
         if not inZone(source, loc) then
             return false, nil, SunsetJobCreator.L('interact_far')
         end
+        if stage.requireTrailer and session.variables.trailer and JCTrucking_GetState then
+            local state = JCTrucking_GetState(session, true, 40.0)
+            if state == 'detached' then
+                return false, nil, 'Reatașează remorca înainte de livrare.'
+            end
+            if state == 'destroyed' or state == 'too_far' then
+                return false, nil, 'Remorca lipsește — folosește /recovertrailer.'
+            end
+        end
         runActions(session, stage.actions)
         return true, resolveNext(stage, true)
     end,
@@ -220,6 +229,12 @@ StageHandlers.give_reward = {
         if xp > 0 and GetResourceState('sunset_jobs') == 'started' then
             exports.sunset_jobs:AddJobXP(source, payJobId, xp)
         end
+        TriggerClientEvent('sunset:jobcreator:paid', source, {
+            pay = pay,
+            xp = xp,
+            done = tonumber(session.variables.done) or 0,
+            total = tonumber(session.variables.total) or 0,
+        })
         return true, resolveNext(stage, true)
     end,
 }
