@@ -167,15 +167,9 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
         return
     end
 
-    if type(row.password) == 'string' and row.password ~= '' then
-        exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
-        performLogin(row.username, row.password, store.quickLogin ~= false)
-        return
-    end
-
     exports.sunset_ui:Send('authAccountFill', {
         username = row.username,
-        password = row.password or '',
+        password = '',
     })
 end)
 

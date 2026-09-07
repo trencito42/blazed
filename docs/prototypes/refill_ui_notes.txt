@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset OS - Fuel Pump</title>
+
+    <!-- Fonturi Tehnice -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Sunset Palette */
+            --sunset-purple: #b900ff;
+            --sunset-orange: #ff7700;
+            --sunset-orange-dim: rgba(255, 119, 0, 0.2);
+            --sunset-orange-glow: 0 0 15px rgba(255, 119, 0, 0.6);
+            --success-green: #00ff66;
+            --success-green-glow: 0 0 15px rgba(0, 255, 102, 0.6);
+            
+            --bg-dark: rgba(10, 5, 12, 0.9);
+            
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-data: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            /* Fundal de test (screenshot benzinărie) */
+            background: url('https://images.unsplash.com/photo-1542228682-1be309a4eb01?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-data);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; /* Poziționat în dreapta pentru a vedea mașina în joc */
+            padding-right: 10%;
+        }
+
+        /* Containerul principal al pompei */
+        #pump-ui {
+            width: 380px;
+            background: var(--bg-dark);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.05);
+            border-top: 4px solid var(--sunset-orange);
+            /* Forma tech - colțuri decupate */
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: -20px 20px 50px rgba(0,0,0,0.8);
+            transform: translateX(100px);
+            opacity: 0;
+            animation: bootUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+        }
+
+        @keyframes bootUp {
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* HEADER */
+        .pump-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+
+        .pump-brand {
+            font-family: var(--font-title);
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--sunset-orange);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pump-brand svg {
+            width: 24px;
+            height: 24px;
+            transition: 0.2s;
+        }
+        
+        /* Animație de pompare activă pentru iconiță */
+        .is-pumping .pump-brand svg {
+            filter: drop-shadow(var(--sunset-orange-glow));
+            transform: scale(1.1);
+        }
+
+        .pump-price-info {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            text-align: right;
+        }
+        .pump-price-info span { color: #fff; font-weight: 700; font-family: var(--font-title); }
+
+        /* DISPLAY DIGITAL (Cost și Litri) */
+        .digital-display {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 20px;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .display-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .display-label {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .display-value {
+            font-family: var(--font-title);
+            font-size: 42px;
+            font-weight: 700;
+            font-style: italic;
+            color: #fff;
+            line-height: 1;
+            /* Tabular-nums previne tremuratul cifrelor când rulează rapid */
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+
+        .val-symbol {
+            font-size: 24px;
+            color: var(--sunset-purple);
+            margin-right: 5px;
+            font-style: normal;
+        }
+        
+        .val-unit {
+            font-size: 20px;
+            color: rgba(255,255,255,0.5);
+            margin-left: 5px;
+            font-style: normal;
+        }
+
+        /* BARA DE PROGRES REZERVOR */
+        .tank-status {
+            margin-top: 10px;
+        }
+        
+        .tank-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .bar-bg {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 15%; /* Valoarea inițială a rezervorului */
+            background: var(--sunset-purple);
+            box-shadow: 0 0 10px var(--sunset-purple);
+            /* Mască pentru a o face segmentată / tehnică */
+            -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 4px, transparent 4px, transparent 6px);
+            mask-image: repeating-linear-gradient(to right, black 0, black 4px, transparent 4px, transparent 6px);
+        }
+
+        /* INTRUCȚIUNI (Hold E) */
+        .prompt-area {
+            margin-top: 10px;
+            background: var(--sunset-orange-dim);
+            border: 1px solid var(--sunset-orange);
+            padding: 15px;
+            text-align: center;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            transition: 0.2s;
+        }
+
+        .prompt-text {
+            font-family: var(--font-title);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--sunset-orange);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .key-btn {
+            background: var(--sunset-orange);
+            color: #000;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 18px;
+        }
+
+        /* Stări speciale UI */
+        .is-pumping .prompt-area {
+            background: rgba(255, 119, 0, 0.4);
+            box-shadow: inset 0 0 20px rgba(255, 119, 0, 0.5);
+        }
+        .is-pumping .prompt-text { color: #fff; text-shadow: var(--sunset-orange-glow); }
+        .is-pumping .key-btn { background: #fff; box-shadow: var(--sunset-orange-glow); }
+
+        .is-full .prompt-area {
+            background: rgba(0, 255, 102, 0.15);
+            border-color: var(--success-green);
+        }
+        .is-full .prompt-text { color: var(--success-green); text-shadow: var(--success-green-glow); }
+        .is-full .bar-fill { background: var(--success-green); box-shadow: var(--success-green-glow); }
+        .is-full .key-btn { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div id="pump-ui">
+        
+        <!-- Header -->
+        <div class="pump-header">
+            <div class="pump-brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 22V8a5 5 0 0 1 10 0v14M3 22h10M8 22v-8M17 5v14M21 9v10M17 5h4M17 5a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2M21 9a2 2 0 0 0 2-2h0a2 2 0 0 0-2-2M15 13.5A2.5 2.5 0 0 1 12.5 11h0A2.5 2.5 0 0 1 10 13.5v0A2.5 2.5 0 0 1 12.5 16h0a2.5 2.5 0 0 1 2.5-2.5z"/>
+                </svg>
+                Sunset Fuel
+            </div>
+            <div class="pump-price-info">
+                Preț: <span>$2.50</span> / L
+            </div>
+        </div>
+
+        <!-- Digital Display -->
+        <div class="digital-display">
+            <div class="display-row">
+                <div class="display-label">Vânzare Totală</div>
+                <div class="display-value"><span class="val-symbol">$</span><span id="ui-cost">0.00</span></div>
+            </div>
+            <div class="display-row">
+                <div class="display-label">Volum Livrat</div>
+                <div class="display-value"><span id="ui-liters">0.00</span><span class="val-unit">L</span></div>
+            </div>
+        </div>
+
+        <!-- Bara Status Rezervor -->
+        <div class="tank-status">
+            <div class="tank-label">
+                <span>Nivel Rezervor</span>
+                <span id="ui-percent">15%</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fill" id="ui-tank-bar" style="width: 15%;"></div>
+            </div>
+        </div>
+
+        <!-- Prompt Area -->
+        <div class="prompt-area" id="ui-prompt">
+            <div class="prompt-text">
+                ȚINE APĂSAT <span class="key-btn">E</span> PENTRU A UMPLE
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Setări Pompă
+        const pricePerLiter = 2.50;
+        const maxTankCapacity = 65.0; // Capacitate totală a mașinii în litri
+        let currentLitersInTank = 9.75; // 15% din 65L (Cât are deja mașina)
+        
+        let litersDispensed = 0.00;
+        let totalCost = 0.00;
+        
+        let isHoldingKey = false;
+        let pumpInterval = null;
+        let isFull = false;
+
+        // Referințe DOM
+        const uiPump = document.getElementById('pump-ui');
+        const uiCost = document.getElementById('ui-cost');
+        const uiLiters = document.getElementById('ui-liters');
+        const uiPercent = document.getElementById('ui-percent');
+        const uiTankBar = document.getElementById('ui-tank-bar');
+        const promptArea = document.getElementById('ui-prompt');
+
+        // Funcția de pompare (rulează la fiecare 30ms pentru animație fluidă de cifre)
+        function processRefuel() {
+            if (isFull) return;
+
+            // Viteza de pompare per frame
+            const flowRate = 0.15; 
+            
+            litersDispensed += flowRate;
+            currentLitersInTank += flowRate;
+            
+            // Verificare dacă s-a umplut
+            if (currentLitersInTank >= maxTankCapacity) {
+                currentLitersInTank = maxTankCapacity;
+                litersDispensed = maxTankCapacity - (currentLitersInTank - litersDispensed); // corectie matematica fina
+                finishRefuel();
+            }
+
+            // Calcul Cost
+            totalCost = litersDispensed * pricePerLiter;
+
+            // Update UI
+            uiLiters.innerText = litersDispensed.toFixed(2);
+            uiCost.innerText = totalCost.toFixed(2);
+            
+            let percent = (currentLitersInTank / maxTankCapacity) * 100;
+            uiPercent.innerText = Math.floor(percent) + '%';
+            uiTankBar.style.width = percent + '%';
+        }
+
+        // Când se umple 100%
+        function finishRefuel() {
+            isFull = true;
+            stopPumping();
+            uiPump.classList.remove('is-pumping');
+            uiPump.classList.add('is-full');
+            
+            promptArea.innerHTML = `
+                <div class="prompt-text">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    REZERVOR PLIN
+                </div>
+            `;
+            
+            // Trimite NUI Callback catre LUA ca s-a terminat
+            console.log(`Pumping finished. Total Cost: $${totalCost.toFixed(2)}`);
+        }
+
+        function startPumping() {
+            if(isFull || isHoldingKey) return;
+            isHoldingKey = true;
+            uiPump.classList.add('is-pumping');
+            
+            promptArea.innerHTML = `
+                <div class="prompt-text">
+                    POMPARE ÎN CURS...
+                </div>
+            `;
+
+            // Interval rapid pentru senzația de numere rulând la pompă
+            pumpInterval = setInterval(processRefuel, 30);
+        }
+
+        function stopPumping() {
+            if(!isHoldingKey || isFull) return;
+            isHoldingKey = false;
+            uiPump.classList.remove('is-pumping');
+            clearInterval(pumpInterval);
+            
+            promptArea.innerHTML = `
+                <div class="prompt-text">
+                    ȚINE APĂSAT <span class="key-btn">E</span> PENTRU A CONTINUA
+                </div>
+            `;
+        }
+
+        // Ascultători pentru tastatură
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'e') {
+                startPumping();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'e') {
+                stopPumping();
+            }
+        });
+
+    </script>
+</body>
+</html>

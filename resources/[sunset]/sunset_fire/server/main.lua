@@ -170,6 +170,18 @@ exports.sunset_core:RegisterCallback('sunset:fireExtinguish', function(source, i
         return nil, 'Too far from the fire'
     end
 
+    local currentWeapon = GetSelectedPedWeapon(ped)
+    local veh = GetVehiclePedIsIn(ped, false)
+    local isFireTruck = false
+    if veh ~= 0 then
+        local model = GetEntityModel(veh)
+        isFireTruck = (model == `firetruk`)
+    end
+    local hasExtinguisher = (currentWeapon == `WEAPON_FIREEXTINGUISHER`)
+    if not hasExtinguisher and not isFireTruck then
+        return nil, 'You need a fire extinguisher or fire truck to put out fires'
+    end
+
     amount = math.min(tonumber(amount) or 0, Sunset.Fire.extinguishRate or 12)
     if amount < 1 then return nil, 'Invalid extinguish amount' end
 

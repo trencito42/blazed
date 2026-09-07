@@ -95,6 +95,16 @@ local function completeAuthentication(source, accountId, username)
     if not account then return false end
     username = account.username
 
+    -- Drop any existing session on another client for this account
+    for otherSrc, otherPlayer in pairs(Players) do
+        if otherSrc ~= source and otherPlayer.account_id == accountId then
+            Sunset.Warn(('Account %s (#%d) re-logged from source %s; dropping old source %s'):format(username, accountId, source, otherSrc))
+            DropPlayer(otherSrc, 'Your account was logged in from another session.')
+            Players[otherSrc] = nil
+            Sessions[otherSrc] = nil
+        end
+    end
+
     local license = session.license
     local player = MySQL.single.await('SELECT * FROM players WHERE account_id = ?', { accountId })
 
@@ -235,6 +245,22 @@ local function createDefaultAccountCharacter(player)
 end
 
 local function loadCharacterForPlayer(source, player, charId)
+    if not player or not Players[source] then return nil end
+    if Players[source].character and Players[source].character.id then
+        Sunset.Warn(('Player %s tried to load character %s while already playing character %s'):format(source, charId, Players[source].character.id))
+        return nil
+    end
+
+    charId = tonumber(charId)
+    if not charId then return nil end
+
+    for otherSrc, otherData in pairs(Players) do
+        if otherSrc ~= source and otherData.character and tonumber(otherData.character.id) == charId then
+            Sunset.Warn(('Duplicate character load blocked: charId %s already active on source %s'):format(charId, otherSrc))
+            return nil
+        end
+    end
+
     local char = MySQL.single.await('SELECT * FROM characters WHERE id = ? AND player_id = ?', { charId, player.id })
     if not char then return nil end
 

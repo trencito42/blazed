@@ -19,17 +19,36 @@ function Sunset.SaveCharacter(source)
     if not player or not player.character then return false end
 
     local char = player.character
+    local position = nil
     local ped = GetPlayerPed(source)
-    local coords = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
-    -- Instanced interiors reuse remote world coordinates. Persist their exterior
-    -- safe position so "Last Location" can never strand a player underground.
-    local safe = Player(source) and Player(source).state.sunsetPropertyExit
-    if type(safe) == 'table' and tonumber(safe.x) then
-        coords = vector3(safe.x, safe.y, safe.z)
-        heading = tonumber(safe.w) or heading
+    if ped and ped ~= 0 then
+        local coords = GetEntityCoords(ped)
+        local heading = GetEntityHeading(ped)
+        -- Instanced interiors reuse remote world coordinates. Persist their exterior
+        -- safe position so "Last Location" can never strand a player underground.
+        local safe = Player(source) and Player(source).state.sunsetPropertyExit
+        if type(safe) == 'table' and tonumber(safe.x) then
+            coords = vector3(safe.x, safe.y, safe.z)
+            heading = tonumber(safe.w) or heading
+        end
+        if coords and #(coords - vector3(0, 0, 0)) > 2.0 then
+            position = json.encode({ x = coords.x, y = coords.y, z = coords.z, w = heading })
+        end
     end
-    local position = json.encode({ x = coords.x, y = coords.y, z = coords.z, w = heading })
+    if not position and char.position then
+        if type(char.position) == 'table' then
+            position = json.encode(char.position)
+        elseif type(char.position) == 'string' then
+            position = char.position
+        end
+    end
+
+    -- Refresh latest DB balances to avoid overwriting concurrent transactions
+    local currentDb = MySQL.single.await('SELECT cash, bank FROM characters WHERE id = ?', { char.id })
+    if currentDb then
+        if currentDb.cash ~= nil then char.cash = currentDb.cash end
+        if currentDb.bank ~= nil then char.bank = currentDb.bank end
+    end
 
     MySQL.update.await([[
         UPDATE characters SET
@@ -407,8 +426,8 @@ local function buyLevel(source)
     end
     char.respect_points = char.respect_points - rpCost
     char.level = (char.level or 1) + 1
-    MySQL.update.await('UPDATE characters SET level=?, respect_points=?, cash=?, bank=? WHERE id=?', {
-        char.level, char.respect_points, char.cash or 0, char.bank or 0, char.id
+    MySQL.update.await('UPDATE characters SET level=?, respect_points=? WHERE id=?', {
+        char.level, char.respect_points, char.id
     })
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     BuyLevelLocks[source] = nil

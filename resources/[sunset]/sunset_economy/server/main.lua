@@ -1,4 +1,24 @@
 local lastPaydayHour = -1
+local PlayedMinutes = {}
+
+CreateThread(function()
+    while true do
+        Wait(60000)
+        for _, playerId in ipairs(GetPlayers()) do
+            local src = tonumber(playerId)
+            if src then
+                local char = exports.sunset_core:GetCharacter(src)
+                if char and not char.is_dead then
+                    PlayedMinutes[src] = (PlayedMinutes[src] or 0) + 1
+                end
+            end
+        end
+    end
+end)
+
+AddEventHandler('playerDropped', function()
+    PlayedMinutes[source] = nil
+end)
 
 local function getSalary(char, source)
     local civilianSalary = 0
@@ -23,6 +43,19 @@ end
 local function processPayday(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return end
+
+    local played = PlayedMinutes[source] or 0
+    PlayedMinutes[source] = 0
+
+    if played < 20 then
+        TriggerClientEvent('sunset:client:notify', source, ('Payday skipped: You played %d/20 min required this hour.'):format(played), 'info')
+        return
+    end
+
+    if char.is_dead == 1 or (exports.sunset_factions and exports.sunset_factions:GetDetentionState(source) == 'jailed') then
+        TriggerClientEvent('sunset:client:notify', source, 'Payday suspended while incapacitated or serving a jail sentence.', 'warning')
+        return
+    end
 
     local salary, civilianSalary, factionSalary = getSalary(char, source)
     local tax = math.floor(salary * (Sunset.Config.TaxRate or 0))
@@ -59,7 +92,7 @@ local function broadcastTime()
     local hour = tonumber(os.date('%H'))
     local minute = tonumber(os.date('%M'))
     local nextH = (hour + 1) % 24
-  TriggerClientEvent('sunset:client:serverTime', -1, {
+    TriggerClientEvent('sunset:client:serverTime', -1, {
         time = os.date('%H:%M'),
         hour = hour,
         minute = minute,
@@ -90,6 +123,12 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     local shop = Sunset.Shops[shopId]
     if not shop then return nil, 'Shop not found' end
 
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil, 'Invalid player ped' end
+    if shop.coords and #(GetEntityCoords(ped) - shop.coords) > 15.0 then
+        return nil, 'You must be at the shop location to buy items'
+    end
+
     local shopItem
     for _, row in ipairs(shop.items) do
         if row.item == itemName then shopItem = row break end
@@ -97,14 +136,16 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     if not shopItem then return nil, 'Item not sold here' end
 
     local total = shopItem.price * amount
+    local chargedAccount = 'cash'
     if not exports.sunset_core:RemoveMoney(source, 'cash', total, 'shop') then
         if not exports.sunset_core:RemoveMoney(source, 'bank', total, 'shop') then
             return nil, 'Not enough money'
         end
+        chargedAccount = 'bank'
     end
 
     if not exports.sunset_inventory:AddItem(source, itemName, amount) then
-        exports.sunset_core:AddMoney(source, 'cash', total, 'shop_refund')
+        exports.sunset_core:AddMoney(source, chargedAccount, total, 'shop_refund')
         return nil, 'Inventory full'
     end
 

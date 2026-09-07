@@ -26,4 +26,4 @@ server_scripts {
     'server/access.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_factions' }
+dependencies { 'sunset_core' }

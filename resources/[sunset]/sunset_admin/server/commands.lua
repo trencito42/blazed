@@ -73,7 +73,8 @@ local function resolvePlayer(source, idArg)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)
         local name = string.lower(exports.sunset_core:GetPlayerDisplayName(src) or '')
-        if name == needle or name:find(needle, 1, true) then
+        local baseName = string.lower(exports.sunset_core:GetPlayerBaseName(src) or '')
+        if name == needle or baseName == needle then
             return src
         end
     end
@@ -808,6 +809,199 @@ RegisterNetEvent('sunset:admin:requestSpeed', function(arg)
     TriggerClientEvent('sunset:admin:setSpeed', source, mult)
 end)
 
+-- ═══ REPORT & HELPME TICKETING SYSTEM ═══
+local ActiveReports = {}
+local ReportSeq = 0
+local LastReportTime = {}
+
+local function broadcastStaff(msg, msgType)
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src and IsAdmin(src, 1) then
+            exports.sunset_core:CommandReply(src, msg, msgType or 'info')
+        end
+    end
+end
+
+registerServerCommand('report', function(source, args)
+    if source == 0 then return print('[SunsetAdmin] Console cannot report') end
+
+    local targetId = tonumber(args[1])
+    local reason = table.concat(args, ' ', 2)
+    reason = reason:gsub('^%s*(.-)%s*$', '%1')
+
+    if not targetId or reason == '' then
+        return notify(source, 'Usage: /report [player id] [reason]', 'error')
+    end
+
+    if targetId == source then
+        return notify(source, 'You cannot report yourself.', 'error')
+    end
+
+    if not isOnline(targetId) then
+        return notify(source, ('Player ID %d is not online.'):format(targetId), 'error')
+    end
+
+    local now = os.time()
+    if now - (LastReportTime[source] or 0) < 30 then
+        return notify(source, ('Please wait %d seconds before filing another report.'):format(30 - (now - (LastReportTime[source] or 0))), 'error')
+    end
+    LastReportTime[source] = now
+
+    ReportSeq = ReportSeq + 1
+    local ticketId = ReportSeq
+    local reporterName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
+    local targetName = exports.sunset_core:GetPlayerDisplayName(targetId) or GetPlayerName(targetId)
+
+    ActiveReports[ticketId] = {
+        id = ticketId,
+        reporter = source,
+        reporterName = reporterName,
+        target = targetId,
+        targetName = targetName,
+        reason = reason,
+        isHelpme = false,
+        status = 'open',
+        handler = nil,
+        handlerName = nil,
+        createdAt = now,
+    }
+
+    notify(source, ('Report #%d sent to online staff. Reason: "%s"'):format(ticketId, reason), 'success')
+    broadcastStaff(('^1[REPORT #%d]^7 %s (#%d) reported %s (#%d): %s (Use /ar %d)'):format(
+        ticketId, reporterName, source, targetName, targetId, reason, ticketId), 'warning')
+end)
+
+registerServerCommand('helpme', function(source, args)
+    if source == 0 then return print('[SunsetAdmin] Console cannot use helpme') end
+
+    local question = table.concat(args, ' ')
+    question = question:gsub('^%s*(.-)%s*$', '%1')
+
+    if question == '' then
+        return notify(source, 'Usage: /helpme [question]', 'error')
+    end
+
+    local now = os.time()
+    if now - (LastReportTime[source] or 0) < 20 then
+        return notify(source, ('Please wait %d seconds before asking another question.'):format(20 - (now - (LastReportTime[source] or 0))), 'error')
+    end
+    LastReportTime[source] = now
+
+    ReportSeq = ReportSeq + 1
+    local ticketId = ReportSeq
+    local reporterName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
+
+    ActiveReports[ticketId] = {
+        id = ticketId,
+        reporter = source,
+        reporterName = reporterName,
+        target = nil,
+        targetName = nil,
+        reason = question,
+        isHelpme = true,
+        status = 'open',
+        handler = nil,
+        handlerName = nil,
+        createdAt = now,
+    }
+
+    notify(source, ('Helpme question #%d sent: "%s". Staff will reply shortly.'):format(ticketId, question), 'success')
+    broadcastStaff(('^2[HELPME #%d]^7 %s (#%d): %s (Use /ar %d)'):format(
+        ticketId, reporterName, source, question, ticketId), 'info')
+end)
+
+registerServerCommand('ar', function(source, args)
+    if not requirePerm(source, 'ar') then return end
+
+    local ticketId = tonumber(args[1])
+    if not ticketId then
+        return notify(source, 'Usage: /ar [ticket id]', 'error')
+    end
+
+    local ticket = ActiveReports[ticketId]
+    if not ticket then
+        return notify(source, ('Ticket #%d not found or already closed.'):format(ticketId), 'error')
+    end
+
+    if ticket.status == 'claimed' and ticket.handler ~= source then
+        return notify(source, ('Ticket #%d is already being handled by %s.'):format(ticketId, ticket.handlerName or 'another staff member'), 'error')
+    end
+
+    local staffName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
+    ticket.status = 'claimed'
+    ticket.handler = source
+    ticket.handlerName = staffName
+
+    notify(source, ('You accepted %s #%d from %s.'):format(ticket.isHelpme and 'question' or 'report', ticketId, ticket.reporterName), 'success')
+
+    if isOnline(ticket.reporter) then
+        notify(ticket.reporter, ('Staff member %s accepted your %s #%d and is now assisting you.'):format(
+            staffName, ticket.isHelpme and 'question' or 'report', ticketId), 'info')
+    end
+
+    broadcastStaff(('%s accepted %s #%d from %s.'):format(
+        staffName, ticket.isHelpme and 'helpme' or 'report', ticketId, ticket.reporterName), 'info')
+end)
+
+registerServerCommand('cr', function(source, args)
+    if not requirePerm(source, 'cr') then return end
+
+    local ticketId = tonumber(args[1])
+    local replyMsg = table.concat(args, ' ', 2)
+    replyMsg = replyMsg:gsub('^%s*(.-)%s*$', '%1')
+
+    if not ticketId then
+        return notify(source, 'Usage: /cr [ticket id] [optional reply/reason]', 'error')
+    end
+
+    local ticket = ActiveReports[ticketId]
+    if not ticket then
+        return notify(source, ('Ticket #%d not found or already closed.'):format(ticketId), 'error')
+    end
+
+    local staffName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
+    ActiveReports[ticketId] = nil
+
+    notify(source, ('Closed ticket #%d.'):format(ticketId), 'success')
+
+    if isOnline(ticket.reporter) then
+        local msg = ('Your %s #%d has been closed by %s.'):format(
+            ticket.isHelpme and 'question' or 'report', ticketId, staffName)
+        if replyMsg ~= '' then
+            msg = msg .. ' Note: ' .. replyMsg
+        end
+        notify(ticket.reporter, msg, 'info')
+    end
+
+    broadcastStaff(('%s closed %s #%d.'):format(
+        staffName, ticket.isHelpme and 'helpme' or 'report', ticketId), 'info')
+end)
+
+registerServerCommand('reports', function(source, args)
+    if not requirePerm(source, 'reports') then return end
+
+    local count = 0
+    notify(source, '─── Active Reports & Questions ───', 'info')
+    for id, ticket in pairs(ActiveReports) do
+        count = count + 1
+        local typeLabel = ticket.isHelpme and 'HELPME' or 'REPORT'
+        local statusLabel = ticket.status == 'claimed' and ('[HANDLED by %s]'):format(ticket.handlerName or '?') or '[OPEN]'
+        if ticket.isHelpme then
+            notify(source, ('#%d [%s] %s %s (#%d): "%s"'):format(
+                id, typeLabel, statusLabel, ticket.reporterName, ticket.reporter, ticket.reason), 'info')
+        else
+            notify(source, ('#%d [%s] %s %s (#%d) -> %s (#%d): "%s"'):format(
+                id, typeLabel, statusLabel, ticket.reporterName, ticket.reporter, ticket.targetName or '?', ticket.target or 0, ticket.reason), 'warning')
+        end
+    end
+    if count == 0 then
+        notify(source, 'There are currently no active reports or questions.', 'success')
+    else
+        notify(source, ('Total active: %d. Use /ar [id] to accept or /cr [id] [reason] to close.'):format(count), 'info')
+    end
+end)
+
 function ExecutePlayerCommand(source, name, args)
     name = string.lower(tostring(name or ''))
     local handler = SunsetAdmin.ServerHandlers[name]
@@ -824,3 +1018,4 @@ RegisterNetEvent('sunset:admin:weaponGiveFailed', function(adminSource, weapon)
 end)
 
 exports('ExecutePlayerCommand', ExecutePlayerCommand)
+

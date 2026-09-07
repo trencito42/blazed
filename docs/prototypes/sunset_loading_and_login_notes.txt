@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset OS - Login & Loading Screen</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Sunset Palette */
+            --sunset-purple: #b900ff;
+            --sunset-purple-dim: rgba(185, 0, 255, 0.2);
+            --sunset-purple-glow: 0 0 15px rgba(185, 0, 255, 0.6);
+            
+            --sunset-orange: #ff7700;
+            --sunset-orange-dim: rgba(255, 119, 0, 0.2);
+            --sunset-orange-glow: 0 0 15px rgba(255, 119, 0, 0.6);
+            
+            --bg-dark: rgba(7, 3, 12, 0.9);
+            --bg-panel: rgba(10, 5, 15, 0.75);
+            
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-data: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            /* Fundal cu o stradă noaptea / apus - pentru a se potrivi cu SS-ul tău */
+            background: url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-data);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Scanline Overlay pentru feel-ul de monitor joc */
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0),
+                rgba(255, 255, 255, 0) 2px,
+                rgba(0, 0, 0, 0.2) 2px,
+                rgba(0, 0, 0, 0.2) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Vignetă pentru a întuneca marginile */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.8) 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #auth-panel {
+            position: relative;
+            z-index: 10;
+            width: 420px;
+            height: auto;
+            background: var(--bg-dark);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 3px solid var(--sunset-purple);
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.6s cubic-bezier(0.8, 0, 0.2, 1), opacity 0.5s, filter 0.5s;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        #auth-panel.hidden {
+            transform: scale(0.9) translateY(-20px);
+            opacity: 0;
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        /* Header Logo & Titlu */
+        .brand-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .brand-subtitle {
+            font-size: 13px;
+            color: var(--sunset-orange);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .brand-title {
+            font-family: var(--font-title);
+            font-size: 32px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--sunset-orange), var(--sunset-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 119, 0, 0.3));
+        }
+
+        .brand-desc {
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 15px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5);
+            padding: 12px;
+            font-family: var(--font-title);
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            /* Design tehnic */
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: var(--sunset-orange-dim);
+            border-color: var(--sunset-orange);
+            color: var(--sunset-orange);
+            box-shadow: inset 0 0 15px rgba(255, 119, 0, 0.1);
+        }
+
+        .form-container {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .form-container.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .input-group input {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            padding: 15px;
+            color: #fff;
+            font-family: var(--font-data);
+            font-size: 16px;
+            font-weight: 600;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-group input:focus {
+            background: rgba(255,255,255,0.05);
+            border-bottom-color: var(--sunset-orange);
+            box-shadow: 0 5px 15px rgba(255, 119, 0, 0.1);
+        }
+
+        .btn-submit {
+            background: var(--sunset-orange);
+            color: #000;
+            border: none;
+            padding: 16px;
+            font-family: var(--font-title);
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            transform: skewX(-20deg);
+            transition: 0.5s;
+        }
+
+        .btn-submit:hover {
+            box-shadow: var(--sunset-orange-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:hover::after {
+            left: 200%;
+        }
+
+        .footer-text {
+            margin-top: 30px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        #loading-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 80px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease-in-out;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.6) 100%);
+        }
+
+        #loading-screen.active {
+            opacity: 1;
+        }
+
+        .loading-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-family: var(--font-title);
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--sunset-orange);
+            text-shadow: var(--sunset-orange-glow);
+        }
+
+        .loading-subtext {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .loading-percent {
+            font-family: var(--font-title);
+            font-size: 48px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 0.8;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+
+        .loading-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+            position: relative;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--sunset-purple), var(--sunset-orange));
+            box-shadow: var(--sunset-orange-glow);
+            transition: width 0.2s linear;
+            /* Segmented effect */
+            -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 12px);
+            mask-image: repeating-linear-gradient(to right, black 0, black 8px, transparent 8px, transparent 12px);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #auth-panel {
+                width: 100%;
+                padding: 40px 20px;
+            }
+            #loading-screen {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="vignette"></div>
+
+    <!-- PANOU AUTENTIFICARE (CENTRU) -->
+    <div id="auth-panel">
+        
+        <div class="brand-header">
+            <div class="brand-subtitle">Welcome to Los Santos</div>
+            <div class="brand-title">Sunset Roleplay</div>
+            <div class="brand-desc">Enter the city. Your story starts at sunset. Sistem de securitate conectat.</div>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+            <button class="tab-btn" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="form-login" class="form-container active">
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" placeholder="Ex: trencito" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" placeholder="••••••••••••">
+            </div>
+            <button class="btn-submit" onclick="enterCity()">Enter City</button>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="form-register" class="form-container">
+            <div class="input-group">
+                <label>Choose Username</label>
+                <input type="text" placeholder="Username" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" placeholder="••••••••••••">
+            </div>
+            <div class="input-group">
+                <label>Confirm Password</label>
+                <input type="password" placeholder="••••••••••••">
+            </div>
+            <button class="btn-submit" onclick="enterCity()">Create Account</button>
+        </div>
+
+        <div class="footer-text">
+            Sunset RP - FiveM Roleplay v2.4
+        </div>
+    </div>
+
+    <!-- ECRAN DE ÎNCĂRCARE (Ascuns inițial) -->
+    <div id="loading-screen">
+        <div class="loading-info">
+            <div>
+                <div class="loading-text">LOADING ASSETS</div>
+                <div class="loading-subtext" id="loading-status">Connecting to server instance...</div>
+            </div>
+            <div class="loading-percent" id="loading-pct">0%</div>
+        </div>
+        <div class="loading-bar-container">
+            <div class="loading-bar-fill" id="loading-bar"></div>
+        </div>
+    </div>
+
+    <script>
+        // Logica pentru Tab-uri
+        function switchTab(target) {
+            // Butoane
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Formulare
+            document.getElementById('form-login').classList.remove('active');
+            document.getElementById('form-register').classList.remove('active');
+            
+            document.getElementById('form-' + target).classList.add('active');
+        }
+
+        // Simulare Loading Screen (Intrarea în oraș)
+        function enterCity() {
+            const authPanel = document.getElementById('auth-panel');
+            const loadingScreen = document.getElementById('loading-screen');
+            const pctText = document.getElementById('loading-pct');
+            const barFill = document.getElementById('loading-bar');
+            const statusText = document.getElementById('loading-status');
+
+            // 1. Ascunde panoul de auth (glisare spre stânga)
+            authPanel.classList.add('hidden');
+
+            // 2. Afișează ecranul de loading după un scurt delay
+            setTimeout(() => {
+                loadingScreen.classList.add('active');
+                
+                // 3. Simulare progres încărcare resurse FiveM
+                let progress = 0;
+                const totalTime = 8000; // 8 secunde durata simulată
+                const intervalTime = 50; 
+                const increment = 100 / (totalTime / intervalTime);
+
+                const statusMessages = [
+                    "Connecting to server instance...",
+                    "Downloading map assets...",
+                    "Loading Sunset Custom Vehicles...",
+                    "Initializing UI Systems...",
+                    "Fetching character data...",
+                    "Synchronizing weather protocols...",
+                    "Awaiting game state..."
+                ];
+
+                const loadingInterval = setInterval(() => {
+                    progress += increment;
+                    
+                    // Adaugă variație random (uneori se blochează puțin cum e la FiveM)
+                    if(Math.random() > 0.8) progress -= increment * 0.8;
+
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(loadingInterval);
+                        statusText.innerText = "Entering Los Santos...";
+                        
+                        // Aici s-ar face hide complet in LUA
+                        setTimeout(() => {
+                            document.body.style.opacity = '0'; // Fade out complet
+                        }, 1000);
+                    }
+
+                    // Update UI
+                    pctText.innerText = Math.floor(progress) + "%";
+                    barFill.style.width = progress + "%";
+
+                    // Schimbă textul la anumite procente
+                    const msgIndex = Math.floor((progress / 100) * statusMessages.length);
+                    if(statusMessages[msgIndex]) {
+                        statusText.innerText = statusMessages[msgIndex];
+                    }
+
+                }, intervalTime);
+
+            }, 500); // Așteaptă să iasă panoul
+
+            /*
+            Pentru implementare NUI în FiveM:
+            Când dai click pe Enter City, trimiți un post către client:
+            fetch(`https://${GetParentResourceName()}/triggerLogin`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    username: usernameInput.value,
+                    password: passwordInput.value
+                })
+            });
+            */
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset OS - Fishing Minigame</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,400&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sunset-purple: #b900ff;
+            --sunset-orange: #ff7700;
+            --green: #00ff66;
+            --red: #ff2a2a;
+            
+            --bg-hud: rgba(10, 5, 15, 0.75);
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-data: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            /* Imagine de fundal (screenshot de pe un doc) pentru a vizualiza contextul */
+            background: url('https://images.unsplash.com/photo-1518098268026-4e89f1a2cb8b?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-data);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 80px; /* Distanța de la baza ecranului */
+        }
+
+        /* Întunecăm puțin fundalul de test */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 80%, transparent 20%, rgba(0,0,0,0.6) 100%);
+            z-index: 0;
+        }
+
+        #fishing-panel {
+            position: relative;
+            z-index: 10;
+            background: var(--bg-hud);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            width: 380px;
+            padding: 20px 25px;
+            /* Design tehnic cu colțuri tăiate */
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+            border-bottom: 4px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.2s ease-out;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .header-icon {
+            width: 24px;
+            height: 24px;
+            transition: color 0.2s;
+        }
+
+        .panel-title {
+            font-family: var(--font-title);
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            flex-grow: 1;
+            transition: color 0.2s;
+        }
+
+        .main-message {
+            font-family: var(--font-title);
+            font-size: 26px;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+            margin: 5px 0;
+            transition: color 0.2s;
+        }
+
+        /* Tasta interactivă (Iconița cu E) */
+        .key-prompt {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-bottom-width: 4px;
+            border-radius: 6px;
+            min-width: 36px;
+            height: 36px;
+            font-family: var(--font-title);
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            padding: 0 10px;
+            margin: 0 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        }
+
+        .key-prompt.active-press {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--sunset-purple);
+            /* Aspect segmentat tehnic */
+            -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+            mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+        }
+
+
+        /* 1. IDLE (Așteaptă să arunci) */
+        .state-idle { border-bottom-color: var(--sunset-orange); }
+        .state-idle .panel-title, .state-idle .header-icon { color: var(--sunset-orange); }
+        
+        /* 2. WAITING (Peștele se gândește) */
+        .state-waiting { border-bottom-color: var(--sunset-purple); }
+        .state-waiting .panel-title, .state-waiting .header-icon { color: var(--sunset-purple); }
+        .state-waiting .progress-fill {
+            background: var(--sunset-purple);
+            width: 100%;
+            animation: scanningBar 2s infinite linear;
+        }
+
+        @keyframes scanningBar {
+            0% { transform: translateX(-100%); width: 50%; }
+            100% { transform: translateX(200%); width: 50%; }
+        }
+
+        /* 3. BITE (A MUȘCAT! VERDE + TREMUR) */
+        .state-bite {
+            border-bottom-color: var(--green);
+            background: rgba(0, 255, 102, 0.15);
+            box-shadow: 0 0 40px rgba(0, 255, 102, 0.3);
+            animation: aggressiveShake 0.4s infinite cubic-bezier(.36,.07,.19,.97);
+        }
+        .state-bite .panel-title, .state-bite .header-icon, .state-bite .main-message {
+            color: var(--green);
+            text-shadow: 0 0 10px rgba(0, 255, 102, 0.6);
+        }
+        .state-bite .key-prompt {
+            border-color: var(--green);
+            color: var(--green);
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+            animation: pulseKey 0.3s infinite alternate;
+        }
+        .state-bite .progress-fill {
+            background: var(--green);
+            width: 100%;
+            /* Această tranziție liniară va scadea bara exact in timpul dat din JS */
+            transition: width 1.5s linear;
+        }
+
+        /* 4. FAILED (Roșu) */
+        .state-failed {
+            border-bottom-color: var(--red);
+            background: rgba(255, 42, 42, 0.15);
+            box-shadow: 0 0 30px rgba(255, 42, 42, 0.3);
+            animation: errorGlitch 0.3s ease-out;
+        }
+        .state-failed .panel-title, .state-failed .header-icon, .state-failed .main-message {
+            color: var(--red);
+            text-shadow: 0 0 10px rgba(255, 42, 42, 0.6);
+        }
+        .state-failed .progress-fill { background: var(--red); width: 0% !important; transition: none; }
+
+        /* 5. SUCCESS (Mov Neon / Portocaliu) */
+        .state-success {
+            border-bottom-color: var(--sunset-purple);
+            background: rgba(185, 0, 255, 0.15);
+            box-shadow: 0 0 40px rgba(185, 0, 255, 0.4);
+            transform: scale(1.05);
+        }
+        .state-success .panel-title, .state-success .header-icon { color: var(--sunset-orange); }
+        .state-success .main-message { color: var(--sunset-purple); text-shadow: 0 0 15px var(--sunset-purple); }
+        .state-success .progress-fill { background: var(--sunset-orange); width: 100% !important; transition: width 0.3s; }
+
+        @keyframes aggressiveShake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        @keyframes pulseKey {
+            from { transform: scale(1); background: rgba(0,255,102,0.1); }
+            to { transform: scale(1.15); background: rgba(0,255,102,0.3); }
+        }
+
+        @keyframes errorGlitch {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-10px) skewX(10deg); }
+            40% { transform: translateX(10px) skewX(-10deg); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="fishing-panel" class="state-idle">
+        
+        <div class="header-row">
+            <!-- SVG Undiță -->
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M16.5 7.5L5.5 18.5"/><path d="M12.5 11.5L9.5 8.5"/><path d="M21 3L16.5 7.5"/><path d="M16 11l5 5c1 1 1 2.5 0 3.5s-2.5 1-3.5 0l-5-5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M8.5 15.5l-3-3"/></svg>
+            <div class="panel-title" id="ui-title">Sistem Pescuit</div>
+        </div>
+
+        <div class="main-message" id="ui-message">
+            Apasă <span class="key-prompt">E</span> pentru a arunca
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-fill" id="ui-progress"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const panel = document.getElementById('fishing-panel');
+        const uiTitle = document.getElementById('ui-title');
+        const uiMessage = document.getElementById('ui-message');
+        const uiProgress = document.getElementById('ui-progress');
+        
+        // Stările posibile: 'idle', 'waiting', 'bite', 'result'
+        let currentState = 'idle';
+        
+        // Timere
+        let waitTimer = null;
+        let catchWindowTimer = null;
+        let resetTimer = null;
+
+        const CATCH_WINDOW_MS = 1500; // 1.5 secunde pentru a apăsa E
+
+        // Funcție utilitară pentru a schimba starea vizuală
+        function setUIState(stateClass, title, messageHtml) {
+            panel.className = stateClass;
+            uiTitle.innerText = title;
+            uiMessage.innerHTML = messageHtml;
+        }
+
+        // 1. Aruncăm undița
+        function castLine() {
+            currentState = 'waiting';
+            setUIState('state-waiting', 'Undiță aruncată', 'Se așteaptă o mușcătură...');
+            
+            // Setăm un timp random între 2 și 5 secunde până mușcă peștele
+            const randomWait = Math.floor(Math.random() * 3000) + 2000;
+            
+            waitTimer = setTimeout(() => {
+                triggerBite();
+            }, randomWait);
+        }
+
+        // 2. Acțiunea - Peștele a mușcat!
+        function triggerBite() {
+            currentState = 'bite';
+            
+            setUIState('state-bite', 'BITE!', 'APASĂ <span class="key-prompt" id="key-e">E</span> ACUM!');
+            
+            // Animăm scurgerea timpului folosind CSS Transition
+            // 1. Resetăm lățimea la 100% și dezactivăm tranziția pentru o clipă
+            uiProgress.style.transition = 'none';
+            uiProgress.style.width = '100%';
+            
+            // 2. Forțăm browserul să randeze (reflow)
+            void uiProgress.offsetWidth;
+            
+            // 3. Activăm tranziția de 1.5s și setăm lățimea la 0%
+            uiProgress.style.transition = `width ${CATCH_WINDOW_MS}ms linear`;
+            uiProgress.style.width = '0%';
+
+            // Dacă nu apasă în 1.5s, peștele scapă
+            catchWindowTimer = setTimeout(() => {
+                if (currentState === 'bite') {
+                    fishEscaped("Timpul a expirat!");
+                }
+            }, CATCH_WINDOW_MS);
+        }
+
+        // 3a. Succes - A apăsat la timp
+        function catchFish() {
+            currentState = 'result';
+            clearTimeout(catchWindowTimer);
+            
+            // Oprim tranziția barei la nivelul la care era
+            const computedWidth = window.getComputedStyle(uiProgress).width;
+            uiProgress.style.transition = 'none';
+            uiProgress.style.width = computedWidth;
+
+            setUIState('state-success', 'SUCCES', 'Ai prins un pește!');
+            
+            // Reset după 2.5s
+            scheduleReset();
+        }
+
+        // 3b. Eșec - A expirat timpul
+        function fishEscaped(reason) {
+            currentState = 'result';
+            
+            setUIState('state-failed', 'EȘEC', `${reason}`);
+            
+            // Reset după 2s
+            scheduleReset();
+        }
+
+        // 3c. Eșec - A apăsat prea devreme (în timp ce aștepta)
+        function earlyPull() {
+            currentState = 'result';
+            clearTimeout(waitTimer);
+            
+            setUIState('state-failed', 'EȘEC', 'Ai tras prea devreme!');
+            
+            scheduleReset();
+        }
+
+        // 4. Reset la starea inițială
+        function scheduleReset() {
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => {
+                currentState = 'idle';
+                setUIState('state-idle', 'Sistem Pescuit', 'Apasă <span class="key-prompt">E</span> pentru a arunca');
+                uiProgress.style.transition = 'none';
+                uiProgress.style.width = '0%';
+            }, 2500);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'e') {
+                
+                // Efect vizual apăsare tastă (dacă elementul există pe ecran)
+                const keyEl = document.querySelector('.key-prompt');
+                if (keyEl) keyEl.classList.add('active-press');
+
+                // Rutare în funcție de stare
+                if (currentState === 'idle') {
+                    castLine();
+                } 
+                else if (currentState === 'waiting') {
+                    earlyPull(); // A tras înainte să muște
+                } 
+                else if (currentState === 'bite') {
+                    catchFish(); // A prins peștele
+                }
+            }
+        });
+
+        // Eliminare efect de apăsare la ridicarea tastei
+        window.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'e') {
+                const keyEl = document.querySelector('.key-prompt');
+                if (keyEl) keyEl.classList.remove('active-press');
+            }
+        });
+
+        /* Pentru integrare în FiveM client.lua (Exemplu):
+        
+        -- Când declanșezi pescuitul:
+        SendNUIMessage({
+            type = "startFishing"
+        })
+
+        -- În JS asculți rezultatul și îl trimiți înapoi în LUA:
+        function catchFish() {
+            ...
+            fetch(`https://${GetParentResourceName()}/fishingResult`, {
+                method: 'POST',
+                body: JSON.stringify({ success: true })
+            });
+        }
+        */
+    </script>
+</body>
+</html>

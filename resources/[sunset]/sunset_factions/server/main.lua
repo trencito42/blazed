@@ -480,28 +480,89 @@ exports.sunset_core:RegisterCallback('sunset:mechanicRepair', function(source, t
     return true
 end)
 
+local PendingTaxiFares = {}
+
 exports.sunset_core:RegisterCallback('sunset:taxiFare', function(source, targetId, amount)
     if not hasPerm(source, 'fare') then return nil, FactionCore.accessError(source, 'fare', 'charge a taxi fare') end
     targetId = tonumber(targetId)
     amount = math.floor(tonumber(amount) or 0)
-    if not targetId or amount < 1 or amount > 25000 then return nil, 'Invalid fare' end
+    if not targetId or amount < 1 or amount > 1000 then
+        return nil, 'Invalid fare amount ($1 - $1,000)'
+    end
     if not GetPlayerName(targetId) then return nil, 'Passenger not found' end
+    if targetId == source then return nil, 'You cannot charge yourself a fare' end
 
-    local driverPos = FactionCore.playerCoords(source)
-    local passengerPos = FactionCore.playerCoords(targetId)
-    if FactionCore.distBetween(driverPos, passengerPos) > 8.0 then
-        return nil, 'You must be near the passenger'
+    local driverPed = GetPlayerPed(source)
+    local passengerPed = GetPlayerPed(targetId)
+    if not driverPed or not passengerPed or driverPed == 0 or passengerPed == 0 then
+        return nil, 'Invalid player entity'
     end
 
-    if not exports.sunset_core:RemoveMoney(targetId, 'cash', amount, 'taxi') then
-        if not exports.sunset_core:RemoveMoney(targetId, 'bank', amount, 'taxi') then
-            return nil, 'Passenger cannot pay'
+    local driverVeh = GetVehiclePedIsIn(driverPed, false)
+    local passVeh = GetVehiclePedIsIn(passengerPed, false)
+    if driverVeh == 0 or driverVeh ~= passVeh then
+        return nil, 'The passenger must be inside your taxi vehicle'
+    end
+
+    local driverChar = getChar(source)
+    local driverName = driverChar and (driverChar.firstname .. ' ' .. driverChar.lastname) or GetPlayerName(source)
+
+    PendingTaxiFares[targetId] = {
+        driverSource = source,
+        driverName = driverName,
+        amount = amount,
+        expiresAt = os.time() + 30,
+    }
+
+    TriggerClientEvent('sunset:faction:taxiFareOffered', targetId, {
+        driverName = driverName,
+        amount = amount,
+        expiresIn = 30,
+    })
+
+    return { sent = true, amount = amount }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiAcceptFare', function(source)
+    local fare = PendingTaxiFares[source]
+    if not fare or fare.expiresAt < os.time() then
+        PendingTaxiFares[source] = nil
+        return nil, 'No active taxi fare offer or offer has expired'
+    end
+
+    local driverSrc = fare.driverSource
+    if not GetPlayerName(driverSrc) then
+        PendingTaxiFares[source] = nil
+        return nil, 'Taxi driver is no longer online'
+    end
+
+    local amount = fare.amount
+    if not exports.sunset_core:RemoveMoney(source, 'cash', amount, 'taxi') then
+        if not exports.sunset_core:RemoveMoney(source, 'bank', amount, 'taxi') then
+            return nil, 'You do not have enough cash or bank balance to pay this fare'
         end
     end
+
     local cut = math.floor(amount * (Sunset.Taxi and Sunset.Taxi.companyCut or 0.12))
-    exports.sunset_core:AddMoney(source, 'cash', amount - cut, 'taxi_fare')
+    exports.sunset_core:AddMoney(driverSrc, 'cash', amount - cut, 'taxi_fare')
     addSociety('taxi', cut)
-    TriggerClientEvent('sunset:client:notify', targetId, ('Taxi fare: $%s'):format(amount), 'info')
+
+    PendingTaxiFares[source] = nil
+
+    TriggerClientEvent('sunset:client:notify', driverSrc, ('Passenger paid fare: $%s'):format(amount), 'success')
+    return { paid = true, amount = amount, driverName = fare.driverName }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:taxiDeclineFare', function(source)
+    local fare = PendingTaxiFares[source]
+    if not fare then return nil, 'No pending fare offer' end
+
+    local driverSrc = fare.driverSource
+    PendingTaxiFares[source] = nil
+
+    if GetPlayerName(driverSrc) then
+        TriggerClientEvent('sunset:client:notify', driverSrc, 'Passenger declined the taxi fare offer.', 'error')
+    end
     return true
 end)
 

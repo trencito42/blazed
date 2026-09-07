@@ -20,6 +20,11 @@ local function normalizeStore(data)
     if type(data.accounts) ~= 'table' then
         data.accounts = {}
     end
+    for _, row in ipairs(data.accounts) do
+        if type(row) == 'table' then
+            row.password = nil
+        end
+    end
     return data
 end
 
@@ -141,7 +146,6 @@ function Accounts.upsert(license, username, password, quickLogin)
         if string.lower(tostring(row.username or '')) == target then
             store.accounts[index] = {
                 username = name,
-                password = pass,
                 lastLogin = now,
                 avatar = row.avatar,
                 characterName = row.characterName,
@@ -157,7 +161,6 @@ function Accounts.upsert(license, username, password, quickLogin)
     if not found then
         table.insert(store.accounts, 1, {
             username = name,
-            password = pass,
             lastLogin = now,
         })
     end

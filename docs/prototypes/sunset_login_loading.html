@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset OS - Auth & Loading</title>
+
+    <!-- Fonturi Tehnice -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Sunset Palette */
+            --sunset-purple: #b900ff;
+            --sunset-purple-dim: rgba(185, 0, 255, 0.2);
+            --sunset-purple-glow: 0 0 15px rgba(185, 0, 255, 0.6);
+            
+            --sunset-orange: #ff7700;
+            --sunset-orange-dim: rgba(255, 119, 0, 0.2);
+            --sunset-orange-glow: 0 0 15px rgba(255, 119, 0, 0.6);
+            
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-data: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            /* Fundal cinematic pentru login */
+            background: url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-data);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #050508; /* Fallback */
+        }
+
+        /* Vignetă pentru a întuneca marginile și a scoate panoul în evidență */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.85) 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* CRT Scanline Overlay subtil */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.15) 2px,
+                rgba(0, 0, 0, 0.15) 4px
+            );
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        /* --- AUTH PANEL (Login / Register) --- */
+        #auth-panel {
+            position: relative;
+            z-index: 10;
+            width: 400px;
+            background: linear-gradient(180deg, rgba(20,25,35,0.85) 0%, rgba(10,12,18,0.95) 100%);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: transform 0.6s cubic-bezier(0.8, 0, 0.2, 1), opacity 0.5s, filter 0.5s;
+        }
+
+        /* Linia de accent superioară (specifică Sunset OS) */
+        #auth-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--sunset-orange), transparent);
+            box-shadow: var(--sunset-orange-glow);
+        }
+
+        #auth-panel.hidden {
+            transform: scale(1.05) translateY(-30px);
+            opacity: 0;
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .brand-title {
+            font-family: var(--font-title);
+            font-size: 32px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            margin-bottom: 5px;
+        }
+
+        .brand-subtitle {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.4);
+            padding: 12px;
+            font-family: var(--font-title);
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; width: 100%; height: 2px;
+            background: var(--sunset-orange);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            box-shadow: var(--sunset-orange-glow);
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            color: var(--sunset-orange);
+            text-shadow: 0 0 8px rgba(255, 119, 0, 0.4);
+        }
+
+        .tab-btn.active::after {
+            transform: scaleX(1);
+        }
+
+        .form-container {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .form-container.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.5);
+            font-family: var(--font-title);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid transparent;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding: 12px 15px;
+            color: #fff;
+            font-family: var(--font-data);
+            font-size: 16px;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-wrapper input:focus {
+            background: rgba(0,0,0,0.6);
+            border-bottom-color: var(--sunset-purple);
+            box-shadow: 0 10px 20px -10px var(--sunset-purple-dim);
+        }
+
+        .btn-submit {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            font-family: var(--font-title);
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-submit:hover {
+            background: var(--sunset-orange);
+            color: #000;
+            border-color: var(--sunset-orange);
+            box-shadow: var(--sunset-orange-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:hover::before {
+            left: 100%;
+        }
+
+        /* --- LOADING SCREEN --- */
+        #loading-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 60px 80px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #loading-screen.active {
+            opacity: 1;
+        }
+
+        .loading-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 25px;
+        }
+
+        .loading-title {
+            font-family: var(--font-title);
+            font-size: 36px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: #fff;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+        }
+
+        .loading-subtitle {
+            font-size: 14px;
+            color: var(--sunset-orange);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 600;
+            text-shadow: var(--sunset-orange-glow);
+        }
+
+        .loading-percent {
+            font-family: var(--font-title);
+            font-size: 64px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 0.8;
+            font-style: italic;
+            font-variant-numeric: tabular-nums; /* Oprește tremuratul cifrelor */
+            text-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        
+        .loading-percent span {
+            font-size: 24px;
+            color: var(--sunset-purple);
+        }
+
+        .loading-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--sunset-purple);
+            box-shadow: 0 0 15px var(--sunset-purple);
+            transition: width 0.1s linear;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+
+    <!-- PANOU AUTENTIFICARE -->
+    <div id="auth-panel">
+        
+        <div class="brand-header">
+            <div class="brand-title">Sunset RP</div>
+            <div class="brand-subtitle">Authentication Required</div>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+            <button class="tab-btn" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="form-login" class="form-container active">
+            <div class="input-group">
+                <label>Username</label>
+                <div class="input-wrapper">
+                    <input type="text" placeholder="Enter username..." autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <div class="input-wrapper">
+                    <input type="password" placeholder="••••••••••••">
+                </div>
+            </div>
+            <button class="btn-submit" onclick="enterCity()">Connect</button>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="form-register" class="form-container">
+            <div class="input-group">
+                <label>Choose Username</label>
+                <div class="input-wrapper">
+                    <input type="text" placeholder="Enter username..." autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <div class="input-wrapper">
+                    <input type="password" placeholder="••••••••••••">
+                </div>
+            </div>
+            <button class="btn-submit" onclick="enterCity()">Create Account</button>
+        </div>
+
+    </div>
+
+    <!-- ECRAN DE ÎNCĂRCARE (Ascuns inițial) -->
+    <div id="loading-screen">
+        <div class="loading-info">
+            <div>
+                <div class="loading-title">Entering Los Santos</div>
+                <div class="loading-subtitle" id="loading-status">Establishing connection...</div>
+            </div>
+            <div class="loading-percent"><span id="loading-pct">0</span><span>%</span></div>
+        </div>
+        <div class="loading-bar-container">
+            <div class="loading-bar-fill" id="loading-bar"></div>
+        </div>
+    </div>
+
+    <script>
+        // Logica pentru Tab-uri
+        function switchTab(target) {
+            // Butoane
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Formulare
+            document.getElementById('form-login').classList.remove('active');
+            document.getElementById('form-register').classList.remove('active');
+            
+            document.getElementById('form-' + target).classList.add('active');
+        }
+
+        // Simulare Loading Screen (Intrarea în oraș)
+        function enterCity() {
+            const authPanel = document.getElementById('auth-panel');
+            const loadingScreen = document.getElementById('loading-screen');
+            const pctText = document.getElementById('loading-pct');
+            const barFill = document.getElementById('loading-bar');
+            const statusText = document.getElementById('loading-status');
+
+            // 1. Ascunde panoul de auth (glisare fină + blur)
+            authPanel.classList.add('hidden');
+
+            // 2. Afișează ecranul de loading cinematic după un scurt delay
+            setTimeout(() => {
+                loadingScreen.classList.add('active');
+                
+                // 3. Simulare progres încărcare resurse FiveM
+                let progress = 0;
+                const totalTime = 6000; // 6 secunde durata simulată
+                const intervalTime = 30; 
+                const increment = 100 / (totalTime / intervalTime);
+
+                const statusMessages = [
+                    "Establishing connection...",
+                    "Handshaking with Sunset OS...",
+                    "Downloading map assets...",
+                    "Loading custom vehicles...",
+                    "Fetching character data...",
+                    "Synchronizing weather protocols...",
+                    "Awaiting game state..."
+                ];
+
+                const loadingInterval = setInterval(() => {
+                    // Creștere randomizată pentru realism
+                    let currentIncrement = increment + (Math.random() * 0.5 - 0.2);
+                    progress += currentIncrement;
+                    
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(loadingInterval);
+                        statusText.innerText = "Welcome to Sunset RP.";
+                        
+                        // Aici s-ar face hide complet in LUA (NUI)
+                        setTimeout(() => {
+                            document.body.style.transition = 'opacity 1s';
+                            document.body.style.opacity = '0'; // Fade out complet
+                        }, 1000);
+                    }
+
+                    // Update UI
+                    pctText.innerText = Math.floor(progress);
+                    barFill.style.width = progress + "%";
+
+                    // Schimbă textul la anumite procente
+                    const msgIndex = Math.floor((progress / 100) * statusMessages.length);
+                    if(statusMessages[msgIndex] && progress < 99) {
+                        statusText.innerText = statusMessages[msgIndex];
+                    }
+
+                }, intervalTime);
+
+            }, 600); // Așteaptă să iasă panoul
+
+            /*
+            Pentru implementare NUI în FiveM:
+            fetch(`https://${GetParentResourceName()}/triggerLogin`, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'login' })
+            });
+            */
+        }
+    </script>
+</body>
+</html>

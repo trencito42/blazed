@@ -186,8 +186,6 @@ exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(sour
     end)
 
     pcall(function()
-        MySQL.update.await('UPDATE characters SET cash = ?, bank = ? WHERE id = ?',
-            { char.cash or 0, char.bank or 0, char.id })
         MySQL.insert.await([[
             INSERT INTO dealership_sales (character_id, vehicle_id, model, plate, price, payment_account)
             VALUES (?, ?, ?, ?, ?, ?)

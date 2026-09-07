@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset RP - Screen HUD</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,400&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Sunset Palette */
+            --sunset-purple: #b900ff;
+            --sunset-purple-dim: rgba(185, 0, 255, 0.2);
+            --sunset-purple-glow: 0 0 10px rgba(185, 0, 255, 0.6);
+            
+            --sunset-orange: #ff7700;
+            --sunset-orange-dim: rgba(255, 119, 0, 0.2);
+            --sunset-orange-glow: 0 0 10px rgba(255, 119, 0, 0.6);
+            
+            --green: #00ff66;
+            --red: #ff2a2a;
+            
+            /* Glassmorphism */
+            --bg-hud: rgba(10, 5, 15, 0.65);
+            
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-data: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            /* Imagine de fundal (screenshot din joc) DOAR pentru a previzualiza HUD-ul în context */
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-data);
+            color: #fff;
+        }
+
+        /* Containerul principal - transparent */
+        #screen-ui {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; /* Lasă click-urile să treacă prin el către joc */
+        }
+
+        /* =========================================
+           TOP RIGHT HUD (Bani, Ceas, Viață, Armură)
+           ========================================= */
+        .hud-top-right {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        /* Panel Bani & Ceas */
+        .info-panel {
+            background: var(--bg-hud);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 12px 20px;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+            border-right: 3px solid var(--sunset-purple);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .clock-display {
+            font-family: var(--font-title);
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .clock-display svg {
+            width: 20px; height: 20px;
+            color: var(--sunset-purple);
+            filter: drop-shadow(var(--sunset-purple-glow));
+        }
+
+        .money-display {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            border-left: 1px solid rgba(255,255,255,0.1);
+            padding-left: 15px;
+        }
+
+        .money-cash {
+            font-family: var(--font-title);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--green);
+            text-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+            line-height: 1;
+        }
+
+        .money-bank {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+
+        /* Bare Status (Viață & Armură) */
+        .status-bars-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-bar-wrapper {
+            background: var(--bg-hud);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 8px 12px;
+            clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 140px;
+        }
+
+        .status-icon {
+            width: 16px; height: 16px;
+        }
+
+        .bar-track {
+            flex-grow: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            clip-path: polygon(2px 0, 100% 0, 100% calc(100% - 2px), calc(100% - 2px) 100%, 0 100%, 0 2px);
+        }
+
+        .bar-fill {
+            height: 100%;
+            -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 3px, transparent 3px, transparent 4px);
+            mask-image: repeating-linear-gradient(to right, black 0, black 3px, transparent 3px, transparent 4px);
+        }
+
+        .fill-hp { background: var(--green); box-shadow: 0 0 5px var(--green); width: 85%; }
+        .fill-armor { background: var(--sunset-purple); box-shadow: var(--sunset-purple-glow); width: 60%; }
+
+        /* =========================================
+           BOTTOM LEFT HUD (Locație, Stradă, Cartier)
+           ========================================= */
+        .hud-bottom-left {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .compass-heading {
+            background: var(--bg-hud);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            width: 50px; height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: var(--font-title);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--sunset-orange);
+            text-shadow: var(--sunset-orange-glow);
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            border-left: 2px solid var(--sunset-orange);
+        }
+
+        .location-panel {
+            background: linear-gradient(90deg, var(--bg-hud) 0%, transparent 100%);
+            padding: 5px 30px 5px 15px;
+            border-left: 3px solid var(--sunset-purple);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .street-name {
+            font-family: var(--font-title);
+            font-size: 22px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            line-height: 1.1;
+        }
+
+        .zone-name {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--sunset-purple);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            margin-top: 2px;
+        }
+
+        /* Animație subtilă de boot */
+        .fade-in {
+            animation: bootUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes bootUp {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =========================================
+           BOTTOM RIGHT HUD (Speedometer)
+           ========================================= */
+        .hud-bottom-right {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .speedo-panel {
+            background: var(--bg-hud);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 15px 25px;
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+            border-bottom: 3px solid var(--sunset-orange);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 260px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .speed-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .speed-val-container {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .speed-val {
+            font-family: var(--font-title);
+            font-size: 52px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 0.8;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-style: italic; /* Ofera o senzatie de viteza */
+            
+            /* MODIFICĂRI NOI: Oprește mișcarea stânga-dreapta */
+            font-variant-numeric: tabular-nums; /* Forțează cifre de lățime fixă */
+            min-width: 95px; /* Lățime fixă pt 3 cifre (ex: 280) */
+            text-align: right;
+            display: inline-block;
+        }
+
+        .speed-unit {
+            font-size: 16px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        .speed-gear {
+            font-family: var(--font-title);
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--sunset-purple);
+            text-shadow: var(--sunset-purple-glow);
+            font-style: italic;
+            display: inline-block;
+        }
+
+        /* ANIMAȚII NOI PENTRU VITEZOMETRU */
+        .anim-speed {
+            animation: speedPulse 0.15s ease-out;
+        }
+
+        @keyframes speedPulse {
+            0% { transform: scale(1); text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+            50% { transform: scale(1.04); text-shadow: 0 0 12px rgba(255, 255, 255, 0.7); }
+            100% { transform: scale(1); text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        }
+
+        .anim-gear {
+            animation: gearPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes gearPop {
+            0% { transform: scale(1) translateY(0); color: var(--sunset-purple); }
+            50% { transform: scale(1.3) translateY(-4px); color: var(--sunset-orange); text-shadow: var(--sunset-orange-glow); }
+            100% { transform: scale(1) translateY(0); color: var(--sunset-purple); }
+        }
+
+        .rpm-track {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+        }
+
+        .rpm-fill {
+            height: 100%;
+            width: 75%;
+            background: linear-gradient(90deg, var(--green) 0%, var(--sunset-orange) 70%, var(--red) 100%);
+            -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 5px, transparent 5px, transparent 7px);
+            mask-image: repeating-linear-gradient(to right, black 0, black 5px, transparent 5px, transparent 7px);
+            transition: width 0.1s ease-out;
+        }
+
+        .veh-status-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .veh-mini-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .veh-mini-icon {
+            width: 16px; height: 16px;
+        }
+
+        .veh-mini-bar-track {
+            flex-grow: 1;
+            height: 5px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .veh-mini-bar-fill {
+            height: 100%;
+            -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 3px, transparent 3px, transparent 4px);
+            mask-image: repeating-linear-gradient(to right, black 0, black 3px, transparent 3px, transparent 4px);
+        }
+
+        .fill-engine { background: var(--sunset-orange); box-shadow: var(--sunset-orange-glow); width: 90%; }
+        .fill-fuel { background: var(--sunset-purple); box-shadow: var(--sunset-purple-glow); width: 45%; }
+
+    </style>
+</head>
+<body>
+
+    <div id="screen-ui">
+
+        <!-- TOP RIGHT: Bani, Timp, Viață -->
+        <div class="hud-top-right fade-in">
+            
+            <div class="info-panel">
+                <div class="clock-display" id="hud-clock">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>14:20</span>
+                </div>
+                <div class="money-display">
+                    <div class="money-cash">$ 4,250</div>
+                    <div class="money-bank">$ 142,890</div>
+                </div>
+            </div>
+
+            <div class="status-bars-container">
+                <!-- HP Bar -->
+                <div class="status-bar-wrapper" style="border-bottom: 2px solid var(--green);">
+                    <svg class="status-icon" style="color: var(--green);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <div class="bar-track">
+                        <div class="bar-fill fill-hp" id="hp-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Armor Bar -->
+                <div class="status-bar-wrapper" style="border-bottom: 2px solid var(--sunset-purple);">
+                    <svg class="status-icon" style="color: var(--sunset-purple);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <div class="bar-track">
+                        <div class="bar-fill fill-armor" id="armor-bar"></div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- BOTTOM LEFT: Locație -->
+        <div class="hud-bottom-left fade-in" style="animation-delay: 0.2s;">
+            <div class="compass-heading">
+                NW
+            </div>
+            <div class="location-panel">
+                <div class="street-name">ECLIPSE BLVD</div>
+                <div class="zone-name">VINEWOOD HILLS</div>
+            </div>
+        </div>
+
+        <!-- BOTTOM RIGHT: Speedometer -->
+        <div class="hud-bottom-right fade-in" style="animation-delay: 0.4s;">
+            <div class="speedo-panel">
+                
+                <!-- Speed & Gear -->
+                <div class="speed-row">
+                    <div class="speed-val-container">
+                        <div class="speed-val" id="hud-speed">124</div>
+                        <div class="speed-unit">KM/H</div>
+                    </div>
+                    <div class="speed-gear" id="hud-gear">G4</div>
+                </div>
+                
+                <!-- RPM Bar -->
+                <div class="rpm-track">
+                    <div class="rpm-fill" id="hud-rpm"></div>
+                </div>
+
+                <!-- Engine & Fuel Status -->
+                <div class="veh-status-row">
+                    <!-- Engine -->
+                    <div class="veh-mini-stat">
+                        <svg class="veh-mini-icon" style="color: var(--sunset-orange);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="8" width="18" height="12" rx="2" ry="2"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+                        <div class="veh-mini-bar-track">
+                            <div class="veh-mini-bar-fill fill-engine" id="hud-engine"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fuel -->
+                    <div class="veh-mini-stat">
+                        <svg class="veh-mini-icon" style="color: var(--sunset-purple);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="4" y="6" width="12" height="16" rx="2" ry="2"/><path d="M4 10h12"/><path d="M16 10l4-2v4c0 2-2 4-4 4"/></svg>
+                        <div class="veh-mini-bar-track">
+                            <div class="veh-mini-bar-fill fill-fuel" id="hud-fuel"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Script simplu pentru a actualiza ceasul real pentru efectul imersiv
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            const clockSpan = document.querySelector('#hud-clock span');
+            if(clockSpan) {
+                clockSpan.textContent = `${hours}:${minutes}`;
+            }
+        }
+
+        // Inițializare ceas
+        updateClock();
+        setInterval(updateClock, 10000); // Update la fiecare 10 secunde
+
+        // ==========================================
+        // SIMULARE VITEZOMETRU (PENTRU PREVIEW)
+        // ==========================================
+        const speedEl = document.getElementById('hud-speed');
+        const rpmEl = document.getElementById('hud-rpm');
+        const gearEl = document.getElementById('hud-gear');
+
+        let currentSpeed = 124;
+        let currentRpm = 75;
+        let gear = 4;
+        
+        // Variabile noi pentru a detecta schimbările și a declanșa animațiile
+        let lastGear = 4;
+        let lastSpeed = 124;
+
+        setInterval(() => {
+            // Randomizare usoara a vitezei
+            currentSpeed += Math.floor(Math.random() * 7) - 3;
+            if(currentSpeed < 0) currentSpeed = 0;
+            if(currentSpeed > 280) currentSpeed = 280;
+            
+            // Calculam RPM-ul (logica falsa pt aspect)
+            currentRpm = (currentSpeed % 40) * 2.5; 
+            if(currentRpm < 15 && currentSpeed > 0) currentRpm = 15;
+            if(currentSpeed === 0) currentRpm = 0;
+            
+            // Calculam Treapta de viteza (Gear)
+            gear = Math.floor(currentSpeed / 40) + 1;
+            if(gear > 6) gear = 6;
+            if(currentSpeed === 0) gear = 'N';
+
+            // Update Viteza + Animație
+            if(speedEl && currentSpeed !== lastSpeed) {
+                speedEl.textContent = currentSpeed;
+                speedEl.classList.remove('anim-speed');
+                void speedEl.offsetWidth; // Truc tehnic: forțează browserul să restarteze animația CSS
+                speedEl.classList.add('anim-speed');
+                lastSpeed = currentSpeed;
+            }
+            
+            // Update RPM Bar
+            if(rpmEl) rpmEl.style.width = currentRpm + '%';
+            
+            // Update Gear + Animație agresivă
+            if(gearEl && gear !== lastGear) {
+                gearEl.textContent = gear === 'N' ? 'N' : 'G' + gear;
+                gearEl.classList.remove('anim-gear');
+                void gearEl.offsetWidth; // Truc tehnic
+                gearEl.classList.add('anim-gear');
+                lastGear = gear;
+            }
+        }, 150);
+
+        /* Exemplu de NUI Listener pentru FiveM (Comentat)
+        Se folosește pentru a actualiza HUD-ul cu date din joc (LUA)
+
+        window.addEventListener('message', function(event) {
+            let data = event.data;
+
+            if (data.action === "updateHUD") {
+                // Update Bani
+                document.querySelector('.money-cash').innerText = "$ " + data.cash;
+                document.querySelector('.money-bank').innerText = "$ " + data.bank;
+                
+                // Update Status (Viață & Armură)
+                document.getElementById('hp-bar').style.width = data.health + "%";
+                document.getElementById('armor-bar').style.width = data.armor + "%";
+
+                // Update Locație
+                document.querySelector('.street-name').innerText = data.street;
+                document.querySelector('.zone-name').innerText = data.zone;
+                document.querySelector('.compass-heading').innerText = data.heading;
+            }
+        });
+        */
+    </script>
+</body>
+</html>

@@ -50,4 +50,7 @@ SunsetAdmin.Commands = {
     givelicense = 2,
     agivelicense = 2,
     revokelicense = 2,
+    ar = 1,
+    cr = 1,
+    reports = 1,
 }

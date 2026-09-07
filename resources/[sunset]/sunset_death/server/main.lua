@@ -147,14 +147,13 @@ RegisterNetEvent('sunset:death:playerKilled', function(victimId)
     if not victimId or victimId == killer or not GetPlayerName(victimId) then return end
     if isOnDutyPolice(killer) then return end
     if MurderWindow[victimId] then return end
+
     MurderWindow[victimId] = { killerId = killer, expires = os.time() + 60 }
-    TriggerClientEvent('sunset:client:notify', victimId, 'You have 60 seconds to /112 or your attacker will be wanted for first-degree murder.', 'error', 8000)
+    TriggerClientEvent('sunset:client:notify', victimId, 'You were attacked! You have 60 seconds to use /112 to call emergency services and report your attacker.', 'error', 10000)
     SetTimeout(61000, function()
         local pending = MurderWindow[victimId]
-        if not pending or pending.killerId ~= killer then return end
-        MurderWindow[victimId] = nil
-        if GetPlayerName(killer) then
-            TriggerEvent('sunset:police:autoWanted', killer, 'murder', 'First-degree murder')
+        if pending and pending.killerId == killer then
+            MurderWindow[victimId] = nil
         end
     end)
 end)
@@ -163,18 +162,27 @@ RegisterNetEvent('sunset:death:call112', function()
     local src = source
     local pending = MurderWindow[src]
     if not pending or os.time() > pending.expires then
-        TriggerClientEvent('sunset:client:notify', src, 'No emergency window is open.', 'error')
+        TriggerClientEvent('sunset:client:notify', src, 'No emergency report window is open.', 'error')
         return
     end
+
+    local killer = pending.killerId
     MurderWindow[src] = nil
+
     local ped = GetPlayerPed(src)
     local coords = ped ~= 0 and GetEntityCoords(ped) or nil
     if coords and GetResourceState('sunset_dispatch') == 'started' then
         pcall(function()
-            exports.sunset_dispatch:CreateServiceCall(src, 'medic', coords, { system = true, emergency = '112' }, '112 emergency')
+            exports.sunset_dispatch:CreateServiceCall(src, 'medic', coords, { system = true, emergency = '112' }, '112 emergency - Assault Victim')
         end)
     end
-    TriggerClientEvent('sunset:client:notify', src, '112 received — medic dispatched.', 'success')
+
+    if killer and GetPlayerName(killer) then
+        TriggerEvent('sunset:police:autoWanted', killer, 'murder', 'First-degree murder (Reported via 112)')
+        TriggerClientEvent('sunset:client:notify', killer, 'A 112 emergency call reported your assault! You are now wanted for murder.', 'error', 10000)
+    end
+
+    TriggerClientEvent('sunset:client:notify', src, '112 received — medic dispatched and attacker reported for murder.', 'success')
 end)
 
 AddEventHandler('playerDropped', function()

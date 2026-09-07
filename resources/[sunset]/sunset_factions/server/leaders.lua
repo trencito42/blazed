@@ -208,7 +208,8 @@ exports.sunset_core:RegisterCallback('sunset:factionGiveRank', function(source, 
     end
 
     local target = FactionCore.getChar(targetId)
-    if not target or select(1, FactionCore.getFactionOf(target)) ~= factionId then
+    local targetFaction, targetGrade = FactionCore.getFactionOf(target)
+    if not target or targetFaction ~= factionId then
         return nil, 'Target is not in your faction'
     end
 

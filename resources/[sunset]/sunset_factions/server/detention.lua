@@ -239,6 +239,17 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
+    local char = exports.sunset_core:GetCharacter(src)
+    if char and (Cuffed[src] or (Detention and Detention.isCuffed(src))) then
+        local combatLogSeconds = 1800 -- 30 minutes
+        local releaseAt = os.time() + combatLogSeconds
+        if Police and Police.saveJailToDb then
+            pcall(function()
+                Police.saveJailToDb(char.id, releaseAt, combatLogSeconds, 'Combat Logging (Disconnected while cuffed)', nil)
+            end)
+            print(('[SECURITY] Player %s (Char #%d) disconnected while cuffed. Persisted 30m combat log jail.'):format(GetPlayerName(src) or '?', char.id))
+        end
+    end
     Detention.clear(src)
     State[src] = nil
     for target, officer in pairs(Escorted) do

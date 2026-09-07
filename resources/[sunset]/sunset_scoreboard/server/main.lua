@@ -50,7 +50,6 @@ CreateThread(function()
                 clanTag = clanTag,
                 clanTagColor = clanTagColor,
                 clanTagStyle = clanTagStyle,
-                money = char and char.cash or 0,
                 level = char and (tonumber(char.level) or 1) or 1,
                 admin = adminLevel,
             })

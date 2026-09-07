@@ -292,8 +292,42 @@ end)
 
 RegisterCommand('fare', function(_, args)
     local ok, err = Sunset.AwaitCallback('sunset:taxiFare', tonumber(args[1]), tonumber(args[2]))
-    if ok then exports.sunset_ui:Notify('Fare collected', 'success')
-    else exports.sunset_ui:Notify(err or 'Fare could not be charged. Check duty, passenger ID, distance, amount and funds.', 'error') end
+    if ok then
+        exports.sunset_ui:Notify(('Fare offer ($%d) sent to passenger. Waiting for confirmation.'):format(ok.amount), 'success')
+    else
+        exports.sunset_ui:Notify(err or 'Fare could not be offered. Check duty, passenger ID, same vehicle, and amount ($1-$1,000).', 'error')
+    end
+end, false)
+
+RegisterNetEvent('sunset:faction:taxiFareOffered', function(data)
+    exports.sunset_ui:Notify(
+        ('%s offered a taxi fare of $%s. Use /acceptfare or /declinefare within %d seconds.'):format(
+            data.driverName, data.amount, data.expiresIn or 30),
+        'info', 10000)
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0, type = 'faction_info', name = 'TAXI FARE',
+        message = ('%s is requesting a taxi fare of $%s. Type /acceptfare to pay or /declinefare to refuse.'):format(
+            data.driverName, data.amount), time = '',
+    })
+end)
+
+local function acceptTaxiFare()
+    local result, err = Sunset.AwaitCallback('sunset:taxiAcceptFare')
+    if result then
+        exports.sunset_ui:Notify(('Paid $%s to %s for taxi ride.'):format(result.amount, result.driverName), 'success')
+    else
+        exports.sunset_ui:Notify(err or 'Could not pay taxi fare.', 'error')
+    end
+end
+
+RegisterCommand('acceptfare', acceptTaxiFare, false)
+RegisterCommand('declinefare', function()
+    local ok, err = Sunset.AwaitCallback('sunset:taxiDeclineFare')
+    if ok then
+        exports.sunset_ui:Notify('Taxi fare declined.', 'info')
+    else
+        exports.sunset_ui:Notify(err or 'No pending fare to decline.', 'error')
+    end
 end, false)
 
 RegisterCommand('finvite', function(_, args)
@@ -323,10 +357,14 @@ end
 
 RegisterCommand('acceptfaction', acceptFactionInvite, false)
 RegisterCommand('accept', function(_, args)
-    if string.lower(tostring(args[1] or '')) ~= 'faction' then
-        return exports.sunset_ui:Notify('Usage: /accept faction', 'error')
+    local sub = string.lower(tostring(args[1] or ''))
+    if sub == 'faction' then
+        acceptFactionInvite()
+    elseif sub == 'fare' or sub == 'taxi' then
+        acceptTaxiFare()
+    else
+        return exports.sunset_ui:Notify('Usage: /accept [faction/fare]', 'error')
     end
-    acceptFactionInvite()
 end, false)
 
 RegisterCommand('declinefaction', function()

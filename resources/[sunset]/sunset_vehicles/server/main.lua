@@ -75,8 +75,7 @@ local function plateTextMatches(a, b)
     a = normalizePlate(a)
     b = normalizePlate(b)
     if a == '' or b == '' then return false end
-    if a == b then return true end
-    return a:find(b, 1, true) ~= nil or b:find(a, 1, true) ~= nil
+    return a == b
 end
 
 local function findOwnedVehicle(charId, plate)
@@ -271,6 +270,9 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         char.id,
     })
     if not changed or changed < 1 then return nil, 'Vehicle could not be stored' end
+    if DoesEntityExist(vehicle) then
+        DeleteEntity(vehicle)
+    end
     return true
 end
 
@@ -338,9 +340,34 @@ AddEventHandler('playerDropped', function()
     StateSyncRate[source] = nil
 end)
 
+local function isNearGasStation(playerCoords, maxDist)
+    maxDist = maxDist or 30.0
+    if not Sunset or not Sunset.GasStations then return false end
+    for _, station in ipairs(Sunset.GasStations) do
+        if station.coords and #(playerCoords - station.coords) <= maxDist then
+            return true
+        end
+        if station.pumps then
+            for _, pump in ipairs(station.pumps) do
+                local pCoords = vector3(pump.x, pump.y, pump.z)
+                if #(playerCoords - pCoords) <= 15.0 then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(source, fromFuel, toFuel, plate)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil, 'Invalid player ped' end
+    if not isNearGasStation(GetEntityCoords(ped)) then
+        return nil, 'You must be at a gas station pump to refuel'
+    end
 
     fromFuel = tonumber(fromFuel) or 0
     toFuel = tonumber(toFuel) or 0
@@ -374,6 +401,13 @@ end)
 exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targetLiters)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil, 'Invalid player ped' end
+    if not isNearGasStation(GetEntityCoords(ped)) then
+        return nil, 'You must be at a gas station pump to fill a gas can'
+    end
+
     if not exports.sunset_inventory:HasItem(source, 'gas_can', 1) then
         return nil, 'You need a gas can'
     end

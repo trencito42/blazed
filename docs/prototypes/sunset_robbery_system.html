@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sunset OS - Robbery UI</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sunset-purple: #b900ff;
+            --sunset-orange: #ff7700;
+            --sunset-cyan: #00e5ff;
+            --success-green: #00ff66;
+            --error-red: #ff2a2a;
+            
+            --bg-hud: rgba(10, 12, 16, 0.85);
+            --bg-hack: rgba(5, 6, 8, 0.95);
+            
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-data: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            /* Fundal simuland jocul noaptea in magazin */
+            background: radial-gradient(circle at center, #1a1c24 0%, #050608 100%);
+            height: 100vh; overflow: hidden;
+            font-family: var(--font-data);
+            color: #fff;
+        }
+
+        /* Scanlines pt Hack & Overlay */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(to bottom, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px);
+            pointer-events: none; z-index: 9998; opacity: 0; transition: 0.3s;
+        }
+        .scanlines.active { opacity: 1; }
+
+        /* =========================================
+           1. HACKING MINIGAME (CIRCUIT BYPASS)
+           ========================================= */
+        #hack-ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 800px; max-width: 95vw;
+            background: var(--bg-hack);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), inset 0 0 30px rgba(0, 229, 255, 0.1);
+            display: none; flex-direction: column;
+            padding: 30px; z-index: 100;
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+        }
+        #hack-ui.active { display: flex; animation: bootHack 0.4s ease-out forwards; }
+        @keyframes bootHack { 0% { opacity: 0; transform: translate(-50%, -45%) scale(0.95); filter: blur(4px); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); } }
+
+        .hack-header {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 30px;
+        }
+        .hack-title { font-family: var(--font-title); font-size: 28px; color: var(--sunset-cyan); letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 10px rgba(0,229,255,0.5); }
+        .hack-subtitle { font-family: var(--font-mono); font-size: 14px; color: rgba(255,255,255,0.5); }
+        
+        .hack-stats { display: flex; gap: 30px; }
+        .h-stat { display: flex; flex-direction: column; align-items: flex-end; }
+        .h-label { font-family: var(--font-mono); font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
+        .h-val-time { font-family: var(--font-mono); font-size: 24px; color: var(--sunset-orange); }
+        .h-val-trace { font-family: var(--font-mono); font-size: 24px; color: var(--error-red); }
+        
+        .trace-bar { width: 150px; height: 6px; background: rgba(255,42,42,0.2); margin-top: 5px; }
+        .trace-fill { width: 0%; height: 100%; background: var(--error-red); box-shadow: 0 0 10px var(--error-red); transition: 0.3s; }
+
+        .hack-grid {
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px;
+            margin: 0 auto; width: 100%; max-width: 600px;
+        }
+
+        .hack-node {
+            aspect-ratio: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+            transition: 0.2s; position: relative;
+        }
+        .hack-node::before { content: ''; width: 8px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 50%; transition: 0.2s; }
+        .hack-node:hover { background: rgba(0, 229, 255, 0.1); border-color: var(--sunset-cyan); }
+        .hack-node:hover::before { background: var(--sunset-cyan); box-shadow: 0 0 10px var(--sunset-cyan); }
+        
+        /* Node States */
+        .hack-node.source { border-color: var(--sunset-cyan); background: rgba(0, 229, 255, 0.1); }
+        .hack-node.source::before { background: var(--sunset-cyan); width: 16px; height: 16px; border-radius: 0; animation: pulseNode 1s infinite; }
+        
+        .hack-node.target { border-color: var(--sunset-orange); background: rgba(255, 119, 0, 0.1); }
+        .hack-node.target::before { background: var(--sunset-orange); width: 16px; height: 16px; border-radius: 0; box-shadow: 0 0 10px var(--sunset-orange); }
+
+        .hack-node.connected { background: rgba(0, 255, 102, 0.1); border-color: var(--success-green); pointer-events: none; }
+        .hack-node.connected::before { background: var(--success-green); box-shadow: 0 0 10px var(--success-green); }
+
+        .hack-node.error { animation: flashRed 0.3s; }
+
+        @keyframes pulseNode { 0%, 100% { box-shadow: 0 0 5px var(--sunset-cyan); } 50% { box-shadow: 0 0 20px var(--sunset-cyan); } }
+        @keyframes flashRed { 0%, 100% { background: rgba(255,42,42,0.5); border-color: var(--error-red); } }
+
+        /* =========================================
+           2. IN-GAME HUD (OVERLAY DISCRET)
+           ========================================= */
+        #robbery-hud {
+            position: absolute; top: 40px; right: 40px; width: 260px;
+            background: linear-gradient(135deg, rgba(10,12,16,0.95) 0%, rgba(5,6,8,0.85) 100%);
+            border-left: 3px solid var(--sunset-orange);
+            padding: 15px 20px; display: none; flex-direction: column; gap: 15px;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 50;
+        }
+        #robbery-hud.active { display: flex; animation: slideInHud 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards; }
+        @keyframes slideInHud { 0% { transform: translateX(100px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+
+        .hud-status { font-family: var(--font-title); font-size: 18px; font-weight: 700; color: var(--sunset-orange); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; margin-bottom: 5px; }
+        
+        .hud-row { display: flex; justify-content: space-between; align-items: center; }
+        .hud-label { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; font-family: var(--font-mono); }
+        .hud-val { font-family: var(--font-title); font-size: 22px; color: #fff; font-weight: 700; }
+        
+        .val-bag { color: var(--sunset-cyan); text-shadow: 0 0 8px rgba(0,229,255,0.4); }
+        .val-money { color: var(--success-green); text-shadow: 0 0 8px rgba(0,255,102,0.4); }
+        .val-time { font-family: var(--font-mono); color: var(--error-red); font-size: 18px; }
+
+        /* =========================================
+           3. LOOT MINIGAME (DISPLAY CASE)
+           ========================================= */
+        #loot-ui {
+            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+            width: 700px; max-width: 90vw;
+            background: var(--bg-hud); border: 1px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--sunset-purple); padding: 20px;
+            display: none; flex-direction: column; z-index: 60;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+        }
+        #loot-ui.active { display: flex; animation: slideUpLoot 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards; }
+        @keyframes slideUpLoot { 0% { transform: translate(-50%, 50px); opacity: 0; } 100% { transform: translate(-50%, 0); opacity: 1; } }
+
+        .loot-header { font-family: var(--font-title); font-size: 16px; color: var(--sunset-purple); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; display: flex; justify-content: space-between;}
+        
+        .loot-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        
+        .loot-item {
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); padding: 15px 5px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
+            transition: 0.2s; position: relative;
+        }
+        .loot-item:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+        .loot-item:active { transform: scale(0.95); }
+        
+        .l-icon { width: 36px; height: 36px; color: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
+        .l-name { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.7); text-align: center; line-height: 1.1;}
+        .l-val { font-family: var(--font-mono); font-size: 12px; color: var(--success-green); }
+
+        /* Tiers */
+        .tier-rare .l-icon { color: var(--sunset-cyan); filter: drop-shadow(0 0 5px rgba(0,229,255,0.5)); }
+        .tier-epic .l-icon { color: var(--sunset-purple); filter: drop-shadow(0 0 5px rgba(185,0,255,0.5)); }
+        .tier-legendary .l-icon { color: var(--sunset-orange); filter: drop-shadow(0 0 5px rgba(255,119,0,0.5)); }
+
+        .loot-item.collected { pointer-events: none; opacity: 0; transform: scale(0.5); transition: 0.3s; }
+
+        /* =========================================
+           TEST CONTROLS (DOAR PENTRU DEMO)
+           ========================================= */
+        #demo-panel { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+        .demo-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 8px 15px; font-family: var(--font-data); font-size: 12px; text-transform: uppercase; cursor: pointer; }
+        .demo-btn:hover { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines" id="scanlines"></div>
+
+    <!-- CONTROALE TESTARE -->
+    <div id="demo-panel">
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--sunset-orange);">SIMULATOR FIVE M</div>
+        <button class="demo-btn" onclick="startHack()">1. Start Hack (Terminal)</button>
+        <button class="demo-btn" onclick="startLooting()">2. Smash Display (Vitrină)</button>
+        <button class="demo-btn" onclick="triggerEscape()">3. Trigger Escape</button>
+        <button class="demo-btn" onclick="location.reload()" style="border-color: var(--error-red); color: var(--error-red);">Reset</button>
+    </div>
+
+    <!-- UI 1: HACK MINIGAME -->
+    <div id="hack-ui">
+        <div class="hack-header">
+            <div>
+                <div class="hack-subtitle">SYSTEM_NODE_04-B // ENCRYPTED</div>
+                <div class="hack-title">CIRCUIT BYPASS</div>
+            </div>
+            <div class="hack-stats">
+                <div class="h-stat">
+                    <span class="h-label">SECURITY TRACE</span>
+                    <span class="h-val-trace" id="ui-trace">0%</span>
+                    <div class="trace-bar"><div class="trace-fill" id="ui-trace-bar"></div></div>
+                </div>
+                <div class="h-stat">
+                    <span class="h-label">TIME LIMIT</span>
+                    <span class="h-val-time" id="ui-hack-time">20.0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Nodes 6x4 -->
+        <div class="hack-grid" id="hack-grid">
+            <!-- JS Generated -->
+        </div>
+        <div style="text-align: center; margin-top: 20px; font-family: var(--font-mono); color: rgba(255,255,255,0.5); font-size: 12px;">CONECTEAZĂ SURSA (CYAN) LA TARGET (PORTOCALIU) PRIN NODURILE CORECTE</div>
+    </div>
+
+    <!-- UI 2: ROBBERY HUD -->
+    <div id="robbery-hud">
+        <div class="hud-status" id="hud-status-text">SECURITY BREACH</div>
+        
+        <div class="hud-row">
+            <span class="hud-label">Duffel Bag</span>
+            <span class="hud-val val-bag"><span id="hud-bag">0</span> / 12</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Est. Value</span>
+            <span class="hud-val val-money">$<span id="hud-val">0</span></span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Police ETA</span>
+            <span class="hud-val val-time" id="hud-eta">02:15</span>
+        </div>
+    </div>
+
+    <!-- UI 3: LOOT MINIGAME (Display Case) -->
+    <div id="loot-ui">
+        <div class="loot-header">
+            <span>DISPLAY CASE #4</span>
+            <span style="color: rgba(255,255,255,0.5); font-size: 12px; font-family: var(--font-mono);">[ CLICK RAPID PENTRU A FURA ]</span>
+        </div>
+        <div class="loot-grid" id="loot-grid">
+            <!-- JS Generated -->
+        </div>
+    </div>
+
+    <script>
+        /* --- GLOBAL VARIABLES --- */
+        let bagCapacity = 12;
+        let currentLoot = 0;
+        let totalValue = 0;
+        let policeTime = 135; // 2 min 15 sec
+        let policeInterval;
+
+        /* --- DOM ELEMENTS --- */
+        const hackUI = document.getElementById('hack-ui');
+        const hudUI = document.getElementById('robbery-hud');
+        const lootUI = document.getElementById('loot-ui');
+        const scanlines = document.getElementById('scanlines');
+
+        /* ==========================================
+           HACK MINIGAME LOGIC
+           ========================================== */
+        let hackTrace = 0;
+        let hackTime = 20.0;
+        let hackTimer;
+        let currentPathIndex = 0;
+        
+        // Un path predefinit pt demo (indexuri din 24 noduri)
+        const validPath = [0, 1, 7, 13, 14, 15, 21, 22, 23]; 
+
+        function startHack() {
+            hackUI.classList.add('active');
+            scanlines.classList.add('active');
+            hudUI.classList.remove('active');
+            lootUI.classList.remove('active');
+            
+            hackTrace = 0; hackTime = 20.0; currentPathIndex = 0;
+            updateHackUI();
+            generateHackGrid();
+
+            clearInterval(hackTimer);
+            hackTimer = setInterval(() => {
+                hackTime -= 0.1;
+                document.getElementById('ui-hack-time').innerText = hackTime.toFixed(1);
+                if(hackTime <= 0) endHack(false);
+            }, 100);
+        }
+
+        function generateHackGrid() {
+            const grid = document.getElementById('hack-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<24; i++) {
+                const node = document.createElement('div');
+                node.className = 'hack-node';
+                
+                if(i === validPath[0]) node.classList.add('source');
+                if(i === validPath[validPath.length-1]) node.classList.add('target');
+
+                node.onclick = () => handleNodeClick(node, i);
+                grid.appendChild(node);
+            }
+        }
+
+        function handleNodeClick(node, index) {
+            if(node.classList.contains('connected') || node.classList.contains('source')) return;
+
+            // Daca a clickat corect urmatorul nod din path
+            if(index === validPath[currentPathIndex + 1]) {
+                node.classList.add('connected');
+                currentPathIndex++;
+                
+                if(index === validPath[validPath.length-1]) {
+                    endHack(true); // Succes!
+                }
+            } else {
+                // Eroare - Creste TRACE
+                node.classList.add('error');
+                setTimeout(() => node.classList.remove('error'), 300);
+                
+                hackTrace += 20; // 5 greseli = fail
+                if(hackTrace >= 100) hackTrace = 100;
+                updateHackUI();
+                
+                if(hackTrace >= 100) endHack(false);
+            }
+        }
+
+        function updateHackUI() {
+            document.getElementById('ui-trace').innerText = hackTrace + '%';
+            document.getElementById('ui-trace-bar').style.width = hackTrace + '%';
+        }
+
+        function endHack(success) {
+            clearInterval(hackTimer);
+            if(success) {
+                // Hack Reusit
+                hackUI.innerHTML = `<div style="text-align:center; padding: 50px;"><div style="font-family:var(--font-title); font-size:40px; color:var(--success-green); text-shadow:0 0 20px var(--success-green);">FIREWALL BYPASSED</div><div style="font-family:var(--font-mono); color:#fff; margin-top:10px;">ALARM DELAYED BY 20 SECONDS</div></div>`;
+                setTimeout(() => {
+                    hackUI.classList.remove('active');
+                    scanlines.classList.remove('active');
+                    startRobberyPhase(); // Intra in faza 2
+                }, 2000);
+            } else {
+                // Hack Picat
+                hackUI.innerHTML = `<div style="text-align:center; padding: 50px;"><div style="font-family:var(--font-title); font-size:40px; color:var(--error-red); text-shadow:0 0 20px var(--error-red);">SYSTEM LOCKDOWN</div><div style="font-family:var(--font-mono); color:#fff; margin-top:10px;">POLICE ALERTED IMMEDIATELY</div></div>`;
+                setTimeout(() => {
+                    hackUI.classList.remove('active');
+                    scanlines.classList.remove('active');
+                    // In FiveM aici ai da trigger sa se auda alarma
+                    startRobberyPhase();
+                }, 2000);
+            }
+        }
+
+
+        /* ==========================================
+           ROBBERY PHASE & HUD LOGIC
+           ========================================== */
+        function startRobberyPhase() {
+            hudUI.classList.add('active');
+            
+            clearInterval(policeInterval);
+            policeInterval = setInterval(() => {
+                policeTime--;
+                let m = Math.floor(policeTime / 60);
+                let s = policeTime % 60;
+                document.getElementById('hud-eta').innerText = `0${m}:${s < 10 ? '0'+s : s}`;
+                
+                if(policeTime <= 0) {
+                    clearInterval(policeInterval);
+                    document.getElementById('hud-eta').innerText = "ARRIVED";
+                    document.getElementById('hud-eta').style.animation = "flashRed 0.5s infinite";
+                }
+            }, 1000);
+        }
+
+        function triggerEscape() {
+            if(!hudUI.classList.contains('active')) return;
+            lootUI.classList.remove('active');
+            
+            const statusText = document.getElementById('hud-status-text');
+            statusText.innerText = "ESCAPE THE AREA";
+            statusText.style.color = "var(--error-red)";
+            statusText.style.animation = "flashRed 0.5s infinite";
+        }
+
+
+        /* ==========================================
+           LOOTING MINIGAME LOGIC
+           ========================================== */
+        const lootItems = [
+            { name: "Silver Watch", tier: "common", val: 850, icon: '<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="6"/>' },
+            { name: "Luxury Watch", tier: "rare", val: 3200, icon: '<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="12"/>' },
+            { name: "Diamond Ring", tier: "epic", val: 5400, icon: '<path d="M6 3h12l4 6-10 13L2 9z"/><path d="M12 22l4-13-4-6-4 6z"/><path d="M2 9h20"/>' },
+            { name: "Gold Bracelet", tier: "legendary", val: 8900, icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>' }
+        ];
+
+        function startLooting() {
+            if(currentLoot >= bagCapacity) {
+                alert("Sacul este plin!"); return;
+            }
+            if(!hudUI.classList.contains('active')) startRobberyPhase(); // fallback
+            
+            lootUI.classList.add('active');
+            const grid = document.getElementById('loot-grid');
+            grid.innerHTML = '';
+
+            // Generam 10 obiecte pt vitrina asta
+            for(let i=0; i<10; i++) {
+                let rand = Math.random();
+                let item;
+                if(rand < 0.5) item = lootItems[0];
+                else if(rand < 0.8) item = lootItems[1];
+                else if(rand < 0.95) item = lootItems[2];
+                else item = lootItems[3];
+
+                const div = document.createElement('div');
+                div.className = `loot-item tier-${item.tier}`;
+                div.innerHTML = `
+                    <svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
+                    <div class="l-name">${item.name}</div>
+                    <div class="l-val">$${item.val}</div>
+                `;
+                
+                div.onclick = () => grabLoot(div, item.val);
+                grid.appendChild(div);
+            }
+        }
+
+        function grabLoot(element, value) {
+            if(currentLoot >= bagCapacity) return; // Full
+            
+            element.classList.add('collected');
+            
+            currentLoot++;
+            totalValue += value;
+
+            // Update HUD
+            document.getElementById('hud-bag').innerText = currentLoot;
+            document.getElementById('hud-val').innerText = totalValue.toLocaleString();
+
+            // Animatie mica pe HUD
+            const valEl = document.getElementById('hud-val');
+            valEl.style.color = "#fff";
+            setTimeout(() => valEl.style.color = "", 200);
+
+            if(currentLoot >= bagCapacity) {
+                document.querySelector('.val-bag').style.color = "var(--error-red)";
+                setTimeout(() => lootUI.classList.remove('active'), 500);
+            }
+            
+            // Daca se goleste vitrina, inchidem UI-ul
+            if(document.querySelectorAll('.loot-item:not(.collected)').length === 0) {
+                setTimeout(() => lootUI.classList.remove('active'), 500);
+            }
+        }
+
+    </script>
+</body>
+</html>
