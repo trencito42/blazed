@@ -1,8 +1,11 @@
 local STC = SunsetTuningClient
 
+local lastThrottle = 0.0
+local lastRpm = 0.0
+
 local function playExhaustPop(veh, intensity)
     if not DoesEntityExist(veh) then return end
-    local scale = 0.35 + (intensity * 0.65)
+    local scale = 0.4 + (intensity * 0.8)
     local bones = { 'exhaust', 'exhaust_2', 'exhaust_3', 'exhaust_4' }
     for _, name in ipairs(bones) do
         local bone = GetEntityBoneIndexByName(veh, name)
@@ -11,19 +14,20 @@ local function playExhaustPop(veh, intensity)
             StartParticleFxNonLoopedOnEntityBone('veh_backfire', veh, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, bone, scale, false, false, false)
         end
     end
+    PlaySoundFromEntity(-1, 'Crackle', veh, 'DLC_HEIST_FLEECA_SOUNDSET', false, 0)
 end
 
 local function flameBurst(veh, intensity)
     if not DoesEntityExist(veh) then return end
     local coords = GetOffsetFromEntityInWorldCoords(veh, 0.0, -2.2, 0.2)
     UseParticleFxAssetNextCall('core')
-    StartParticleFxNonLoopedAtCoord('ent_sht_flame', coords.x, coords.y, coords.z, 0.0, 0.0, 0.0, 0.45 + intensity * 0.35, false, false, false)
+    StartParticleFxNonLoopedAtCoord('ent_sht_flame', coords.x, coords.y, coords.z, 0.0, 0.0, 0.0, 0.5 + intensity * 0.4, false, false, false)
 end
 
-local function shouldPop(tune, rpm)
-    if not tune.pop.enabled then return false end
-    local maxRpm = (tonumber(tune.pop.rpmMax) or 92) / 100.0
-    return rpm >= maxRpm
+local function exhaustActive(tune)
+    if not tune or not tune.pop or not tune.pop.enabled then return false end
+    local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
+    return mode ~= nil
 end
 
 CreateThread(function()
@@ -31,6 +35,8 @@ CreateThread(function()
         Wait(0)
         local ped = PlayerPedId()
         if not IsPedInAnyVehicle(ped, false) then
+            lastThrottle = 0.0
+            lastRpm = 0.0
             Wait(500)
             goto continue
         end
@@ -43,7 +49,7 @@ CreateThread(function()
 
         local state = STC.appliedVehicles[veh]
         local tune = state and state.tune
-        if not tune then
+        if not tune or SunsetTuning.IsStockTune(tune) then
             Wait(400)
             goto continue
         end
@@ -52,30 +58,34 @@ CreateThread(function()
         local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
         local rpm = GetVehicleCurrentRpm(veh)
         local throttle = GetControlNormal(0, 71)
-        local popping = shouldPop(tune, rpm)
+        local rpmThreshold = (tonumber(tune.pop.rpmMax) or 88) / 100.0
+        local liftThrottle = lastThrottle > 0.45 and throttle < 0.15
+        local highRpm = rpm >= math.max(0.55, rpmThreshold - 0.12) or lastRpm >= rpmThreshold
 
-        if tune.antiLag.enabled and throttle > 0.65 and rpm > 0.35 and rpm < 0.72 then
-            if math.random() < ((tonumber(tune.antiLag.intensity) or 55) / 400.0) then
-                playExhaustPop(veh, mult.popIntensity * 0.8)
+        if tune.antiLag.enabled and throttle > 0.55 and rpm > 0.32 and rpm < 0.78 then
+            if math.random() < ((tonumber(tune.antiLag.intensity) or 55) / 280.0) then
+                playExhaustPop(veh, mult.popIntensity * 0.75)
             end
         end
 
-        if popping and throttle < 0.12 and rpm > 0.55 then
-            if math.random() < (0.12 + mult.popIntensity * 0.22) then
+        if exhaustActive(tune) and liftThrottle and highRpm and rpm > 0.45 then
+            if math.random() < (0.18 + mult.popIntensity * 0.28) then
                 playExhaustPop(veh, mult.popIntensity)
                 if mode.flames then flameBurst(veh, mult.popIntensity) end
-                if tune.pop.secondBurst and math.random() < 0.45 then
+                if tune.pop.secondBurst and math.random() < 0.5 then
                     Wait(tonumber(tune.pop.durationMs) or 100)
                     playExhaustPop(veh, mult.popIntensity * 0.85)
-                    if mode.flames then flameBurst(veh, mult.popIntensity * 0.8) end
+                    if mode.flames then flameBurst(veh, mult.popIntensity * 0.75) end
                 end
             end
-        elseif mode.diesel and throttle > 0.4 and rpm > 0.25 and rpm < 0.55 then
-            if math.random() < 0.03 then
-                playExhaustPop(veh, mult.popIntensity * 0.5)
+        elseif mode.diesel and tune.pop.enabled and throttle > 0.35 and rpm > 0.22 and rpm < 0.58 then
+            if math.random() < 0.045 then
+                playExhaustPop(veh, mult.popIntensity * 0.45)
             end
         end
 
+        lastThrottle = throttle
+        lastRpm = rpm
         ::continue::
     end
 end)

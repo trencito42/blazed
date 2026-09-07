@@ -3,12 +3,15 @@ const rail = document.getElementById('rail');
 const panels = document.getElementById('panels');
 const shopLabel = document.getElementById('shopLabel');
 const plateLabel = document.getElementById('plateLabel');
+const ecuStatus = document.getElementById('ecuStatus');
 const btnCancel = document.getElementById('btnCancel');
 const btnSave = document.getElementById('btnSave');
 
 let tune = null;
 let costs = { save: 750, flash: 150, dyno: 250 };
 let activeTab = 'exhaust_pop';
+let hasSavedMap = false;
+let previewDirty = false;
 
 const tabs = [
     { group: 'EVACUARE', items: [
@@ -45,22 +48,22 @@ function post(name, data = {}) {
     }).then((r) => r.json()).catch(() => ({}));
 }
 
-function defaultTune() {
+function stockTune() {
     return {
-        stage: 'sport',
+        stage: 'civil',
         power: 100,
         torque: 100,
         exhaust: 'pop_bang',
-        pop: { enabled: true, rpmMax: 92, durationMs: 100, secondBurst: true, burstStage: 'sport' },
+        pop: { enabled: false, rpmMax: 88, durationMs: 100, secondBurst: false, burstStage: 'civil' },
         antiLag: { enabled: false, intensity: 55 },
         drift: { enabled: false, grip: 45 },
-        hud: { enabled: true },
+        hud: { enabled: false },
         dyno: { lastHp: 0, lastTorque: 0, lastRunAt: 0 },
     };
 }
 
 function ensureTune(raw) {
-    const base = defaultTune();
+    const base = stockTune();
     const src = raw && typeof raw === 'object' ? raw : {};
     return {
         ...base,
@@ -71,6 +74,20 @@ function ensureTune(raw) {
         hud: { ...base.hud, ...(src.hud || {}) },
         dyno: { ...base.dyno, ...(src.dyno || {}) },
     };
+}
+
+function updateStatusBanner() {
+    if (!ecuStatus) return;
+    if (previewDirty) {
+        ecuStatus.textContent = 'PREVIEW — NESALVAT';
+        ecuStatus.className = 'ecu-status ecu-status--preview';
+    } else if (hasSavedMap) {
+        ecuStatus.textContent = 'MAPA SALVATA';
+        ecuStatus.className = 'ecu-status ecu-status--saved';
+    } else {
+        ecuStatus.textContent = 'FACTORY MAP';
+        ecuStatus.className = 'ecu-status ecu-status--stock';
+    }
 }
 
 function labelId(key) {
@@ -86,6 +103,8 @@ function exhaustForTab(tab) {
 
 function preview() {
     if (!tune) return;
+    previewDirty = true;
+    updateStatusBanner();
     post('tuningPreview', { tune });
 }
 
@@ -108,6 +127,7 @@ function renderRail() {
                 activeTab = item.id;
                 if (item.id.startsWith('exhaust_')) {
                     tune.exhaust = exhaustForTab(item.id);
+                    if (item.id !== 'exhaust_pop') tune.pop.enabled = true;
                     preview();
                 }
                 renderAll();
@@ -242,7 +262,7 @@ function panelDynoPower() {
     const el = document.createElement('div');
     el.className = 'panel';
     el.innerHTML = '<h2>DYNO — PUTERE</h2><p class="subtitle">Ultima rulare salvată pe vehicul</p>';
-    const dyno = tune.dyno || defaultTune().dyno;
+    const dyno = tune.dyno || stockTune().dyno;
     const stats = document.createElement('div');
     stats.className = 'dyno-stats';
     stats.innerHTML = `
@@ -335,6 +355,7 @@ function renderPanels() {
 
 function renderAll() {
     tune = ensureTune(tune);
+    updateStatusBanner();
     renderRail();
     renderPanels();
 }
@@ -348,6 +369,8 @@ window.addEventListener('message', (event) => {
     const data = payload.data || payload;
     if (action === 'open') {
         tune = ensureTune(data.tune);
+        hasSavedMap = data.saved === true;
+        previewDirty = false;
         costs = data.costs || costs;
         if (shopLabel) shopLabel.textContent = data.shop || 'ECU Bay';
         if (plateLabel) plateLabel.textContent = data.plate || '—';
@@ -357,10 +380,19 @@ window.addEventListener('message', (event) => {
     }
     if (action === 'close' && app) {
         app.classList.add('hidden');
+        previewDirty = false;
+    }
+    if (action === 'saved') {
+        hasSavedMap = true;
+        previewDirty = false;
+        if (data?.tune) tune = ensureTune(data.tune);
+        renderAll();
     }
     if (action === 'dynoResult' && data?.dyno) {
         tune = ensureTune(tune);
         tune.dyno = { ...tune.dyno, ...data.dyno };
+        hasSavedMap = true;
+        previewDirty = false;
         activeTab = 'dyno_power';
         if (app) app.classList.remove('hidden');
         renderAll();

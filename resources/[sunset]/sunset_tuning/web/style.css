@@ -75,6 +75,29 @@ html, body {
     text-transform: uppercase;
 }
 
+.ecu-status {
+    margin-top: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font: 700 9px/1 var(--os-title);
+    letter-spacing: 0.14em;
+}
+.ecu-status--stock {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ecu-status--saved {
+    color: #ffb11c;
+    background: rgba(255, 119, 0, 0.15);
+    border: 1px solid rgba(255, 119, 0, 0.4);
+}
+.ecu-status--preview {
+    color: #fff;
+    background: rgba(255, 119, 0, 0.28);
+    border: 1px solid rgba(255, 119, 0, 0.55);
+}
+
 .ecu-shell {
     display: grid;
     grid-template-columns: 148px minmax(0, 1fr);

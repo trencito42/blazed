@@ -753,7 +753,11 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     local props = decodeVehicleProps(vehData.props)
     resetOdometerTracking(vehData.plate, props and props.odometer or 0, props)
     if props and props.ecu and GetResourceState('sunset_tuning') == 'started' then
-        pcall(function() exports.sunset_tuning:ApplyTune(vehicle, props.ecu) end)
+        pcall(function()
+            if not exports.sunset_tuning:FormatVehicleInfo(props.ecu).stock then
+                exports.sunset_tuning:ApplyTune(vehicle, props.ecu, false)
+            end
+        end)
     end
 
     spawnedOwnedVehicle = vehicle

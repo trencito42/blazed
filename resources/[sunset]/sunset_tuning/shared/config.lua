@@ -35,35 +35,40 @@ SunsetTuning.Shops = {
     },
 }
 
-function SunsetTuning.DefaultTune()
+--- Factory map — nothing enabled until player saves a tune.
+function SunsetTuning.StockTune()
     return {
-        stage = 'sport',
+        stage = 'civil',
         power = 100,
         torque = 100,
         exhaust = 'pop_bang',
         pop = {
-            enabled = true,
-            rpmMax = 92,
+            enabled = false,
+            rpmMax = 88,
             durationMs = 100,
-            secondBurst = true,
-            burstStage = 'sport',
+            secondBurst = false,
+            burstStage = 'civil',
         },
         antiLag = { enabled = false, intensity = 55 },
         drift = { enabled = false, grip = 45 },
-        hud = { enabled = true },
+        hud = { enabled = false },
         dyno = { lastHp = 0, lastTorque = 0, lastRunAt = 0 },
     }
 end
 
+function SunsetTuning.DefaultTune()
+    return SunsetTuning.StockTune()
+end
+
 function SunsetTuning.SanitizeTune(raw)
-    local def = SunsetTuning.DefaultTune()
+    local def = SunsetTuning.StockTune()
     if type(raw) ~= 'table' then return def end
 
     local stage = tostring(raw.stage or def.stage)
-    if not SunsetTuning.Stages[stage] then stage = 'sport' end
+    if not SunsetTuning.Stages[stage] then stage = def.stage end
 
     local exhaust = tostring(raw.exhaust or def.exhaust)
-    if not SunsetTuning.ExhaustModes[exhaust] then exhaust = 'pop_bang' end
+    if not SunsetTuning.ExhaustModes[exhaust] then exhaust = def.exhaust end
 
     local pop = type(raw.pop) == 'table' and raw.pop or {}
     local antiLag = type(raw.antiLag) == 'table' and raw.antiLag or {}
@@ -77,10 +82,10 @@ function SunsetTuning.SanitizeTune(raw)
         torque = math.max(85, math.min(120, math.floor(tonumber(raw.torque) or def.torque))),
         exhaust = exhaust,
         pop = {
-            enabled = pop.enabled ~= false,
+            enabled = pop.enabled == true,
             rpmMax = math.max(70, math.min(100, math.floor(tonumber(pop.rpmMax) or def.pop.rpmMax))),
             durationMs = math.max(40, math.min(250, math.floor(tonumber(pop.durationMs) or def.pop.durationMs))),
-            secondBurst = pop.secondBurst ~= false,
+            secondBurst = pop.secondBurst == true,
             burstStage = SunsetTuning.Stages[tostring(pop.burstStage or stage)] and tostring(pop.burstStage or stage) or stage,
         },
         antiLag = {
@@ -91,7 +96,7 @@ function SunsetTuning.SanitizeTune(raw)
             enabled = drift.enabled == true,
             grip = math.max(20, math.min(80, math.floor(tonumber(drift.grip) or def.drift.grip))),
         },
-        hud = { enabled = hud.enabled ~= false },
+        hud = { enabled = hud.enabled == true },
         dyno = {
             lastHp = math.max(0, math.floor(tonumber(dyno.lastHp) or 0)),
             lastTorque = math.max(0, math.floor(tonumber(dyno.lastTorque) or 0)),
@@ -100,8 +105,17 @@ function SunsetTuning.SanitizeTune(raw)
     }
 end
 
+function SunsetTuning.IsStockTune(raw)
+    if type(raw) ~= 'table' then return true end
+    local tune = SunsetTuning.SanitizeTune(raw)
+    if tune.stage ~= 'civil' or tune.power ~= 100 or tune.torque ~= 100 then return false end
+    if tune.pop.enabled or tune.antiLag.enabled or tune.drift.enabled or tune.hud.enabled then return false end
+    if (tune.dyno.lastHp or 0) > 0 then return false end
+    return true
+end
+
 function SunsetTuning.BuildVehicleInfo(raw)
-    if type(raw) ~= 'table' then
+    if type(raw) ~= 'table' or SunsetTuning.IsStockTune(raw) then
         return {
             tuned = false,
             stock = true,
@@ -115,7 +129,7 @@ function SunsetTuning.BuildVehicleInfo(raw)
     end
 
     local tune = SunsetTuning.SanitizeTune(raw)
-    local stage = SunsetTuning.Stages[tune.stage] or SunsetTuning.Stages.sport
+    local stage = SunsetTuning.Stages[tune.stage] or SunsetTuning.Stages.civil
     local exhaust = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
 
     local chips = { string.upper(tune.stage) }

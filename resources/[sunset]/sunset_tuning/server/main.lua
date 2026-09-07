@@ -27,7 +27,11 @@ local function saveTuneToVehicle(charId, plate, tune)
     if not row then return false, 'Vehicle not found in your garage' end
 
     local props = decodeProps(row.props)
-    props.ecu = tune
+    if SunsetTuning.IsStockTune(tune) then
+        props.ecu = nil
+    else
+        props.ecu = tune
+    end
     MySQL.update.await('UPDATE vehicles SET props = ? WHERE id = ? AND character_id = ?',
         { json.encode(props), row.id, charId })
     return true
@@ -43,7 +47,16 @@ exports.sunset_core:RegisterCallback('sunset:tuning:getTune', function(source, p
     if not row then return nil, 'Not your vehicle' end
 
     local props = decodeProps(row.props)
-    return SunsetTuning.SanitizeTune(props.ecu)
+    if props.ecu and not SunsetTuning.IsStockTune(props.ecu) then
+        return {
+            tune = SunsetTuning.SanitizeTune(props.ecu),
+            saved = true,
+        }
+    end
+    return {
+        tune = SunsetTuning.StockTune(),
+        saved = false,
+    }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, plate, tune, flash)
@@ -76,7 +89,7 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
     return { tune = sanitized, cost = cost }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, plate, hp, torque)
+exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, plate, hp, torque, clientTune)
     local char = getCharacter(source)
     if not char then return nil, 'No character' end
     plate = normalizePlate(plate)
@@ -90,7 +103,12 @@ exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, p
     end
 
     local props = decodeProps(row.props)
-    local tune = SunsetTuning.SanitizeTune(props.ecu)
+    local tune
+    if type(clientTune) == 'table' then
+        tune = SunsetTuning.SanitizeTune(clientTune)
+    else
+        tune = SunsetTuning.SanitizeTune(props.ecu)
+    end
     tune.dyno.lastHp = math.max(0, math.min(2000, math.floor(tonumber(hp) or 0)))
     tune.dyno.lastTorque = math.max(0, math.min(2000, math.floor(tonumber(torque) or 0)))
     tune.dyno.lastRunAt = os.time()

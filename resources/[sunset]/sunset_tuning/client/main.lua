@@ -2,6 +2,7 @@ local STC = SunsetTuningClient
 local panelOpen = false
 local currentShop = nil
 local draftTune = nil
+local hasSavedTune = false
 local currentPlate = ''
 local currentVeh = 0
 
@@ -41,11 +42,18 @@ local function sendUi(action, data)
     SendNUIMessage({ action = action, data = data or {} })
 end
 
-local function closePanel()
+local function closePanel(restoreStock)
     if not panelOpen then return end
     panelOpen = false
     SetNuiFocus(false, false)
     sendUi('close')
+    if restoreStock and currentVeh ~= 0 and DoesEntityExist(currentVeh) then
+        if hasSavedTune and STC.plateTunes[currentPlate] then
+            ApplyTune(currentVeh, STC.plateTunes[currentPlate], false)
+        else
+            ApplyTune(currentVeh, SunsetTuning.StockTune(), false)
+        end
+    end
 end
 
 local function openPanel(shop)
@@ -59,18 +67,26 @@ local function openPanel(shop)
     currentPlate = STC.plateOf(veh)
     currentShop = shop or nearestShop()
 
-    local tune, err = Sunset.AwaitCallback('sunset:tuning:getTune', currentPlate)
-    if not tune then
+    local payload, err = Sunset.AwaitCallback('sunset:tuning:getTune', currentPlate)
+    if not payload then
         notify(err or 'Nu pot incarca ECU pentru aceasta masina', 'error')
         return
     end
 
-    draftTune = SunsetTuning.SanitizeTune(tune)
+    if type(payload) == 'table' and payload.tune then
+        draftTune = SunsetTuning.SanitizeTune(payload.tune)
+        hasSavedTune = payload.saved == true
+    else
+        draftTune = SunsetTuning.SanitizeTune(payload)
+        hasSavedTune = not SunsetTuning.IsStockTune(draftTune)
+    end
+
     panelOpen = true
     SetNuiFocus(true, true)
 
     sendUi('open', {
         tune = draftTune,
+        saved = hasSavedTune,
         plate = currentPlate,
         shop = currentShop and currentShop.label or 'ECU Bay',
         costs = {
@@ -81,6 +97,8 @@ local function openPanel(shop)
         stages = SunsetTuning.Stages,
         exhaustModes = SunsetTuning.ExhaustModes,
     })
+
+    ApplyTune(currentVeh, draftTune, false)
 end
 
 function OpenTuningPanel()
@@ -95,14 +113,14 @@ end
 exports('OpenTuningPanel', OpenTuningPanel)
 
 RegisterNUICallback('tuningClose', function(_, cb)
-    closePanel()
+    closePanel(true)
     cb({ ok = true })
 end)
 
 RegisterNUICallback('tuningPreview', function(data, cb)
     if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
     draftTune = SunsetTuning.SanitizeTune(data.tune or draftTune)
-    ApplyTune(currentVeh, draftTune)
+    ApplyTune(currentVeh, draftTune, false)
     cb({ ok = true })
 end)
 
@@ -117,22 +135,26 @@ RegisterNUICallback('tuningSave', function(data, cb)
     end
 
     draftTune = SunsetTuning.SanitizeTune(saved.tune)
+    hasSavedTune = true
     STC.plateTunes[currentPlate] = draftTune
-    ApplyTune(currentVeh, draftTune)
+    STC.persistedPlates[currentPlate] = true
+    ApplyTune(currentVeh, draftTune, true)
     if flash then TriggerServerEvent('sunset:tuning:flashApplied', currentPlate) end
     notify(('ECU salvat — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
+    sendUi('saved', { saved = true, tune = draftTune })
     cb({ ok = true, tune = draftTune })
 end)
 
 RegisterNUICallback('tuningDyno', function(_, cb)
     if not panelOpen or currentPlate == '' then cb({ ok = false }) return end
-    closePanel()
+    notify('Dyno pornit — tine accelerația 12 secunde!', 'info')
     SunsetTuningClient.RunDynoTest(currentShop, function(result)
-        local dynoSaved, err = Sunset.AwaitCallback('sunset:tuning:runDyno', currentPlate, result.hp, result.torque)
+        local dynoSaved, err = Sunset.AwaitCallback('sunset:tuning:runDyno', currentPlate, result.hp, result.torque, draftTune)
         if dynoSaved then
             if draftTune then
                 draftTune.dyno = dynoSaved
                 STC.plateTunes[currentPlate] = draftTune
+                hasSavedTune = true
             end
             sendUi('dynoResult', { dyno = dynoSaved, result = result })
         else
@@ -198,7 +220,7 @@ CreateThread(function()
 end)
 
 RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData)
-    if not vehData or not vehData.props then return end
+    if not vehData or not vehData.plate then return end
     CreateThread(function()
         Wait(1200)
         local plate = STC.normalizePlate(vehData.plate)
@@ -207,14 +229,19 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData)
             local ok, decoded = pcall(json.decode, props)
             props = ok and decoded or {}
         end
-        if props and props.ecu then
-            STC.plateTunes[plate] = SunsetTuning.SanitizeTune(props.ecu)
+        if props and props.ecu and not SunsetTuning.IsStockTune(props.ecu) then
+            local tune = SunsetTuning.SanitizeTune(props.ecu)
+            STC.plateTunes[plate] = tune
+            STC.persistedPlates[plate] = true
             for _, veh in ipairs(GetGamePool('CVehicle')) do
                 if STC.plateOf(veh) == plate then
-                    ApplyTune(veh, props.ecu)
+                    ApplyTune(veh, tune, false)
                     break
                 end
             end
+        else
+            STC.plateTunes[plate] = nil
+            STC.persistedPlates[plate] = nil
         end
     end)
 end)

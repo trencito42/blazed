@@ -61,7 +61,7 @@ function RunDynoTest(shop, onComplete)
 
         dynoActive = false
         local state = STC.appliedVehicles[veh]
-        local tune = state and state.tune or SunsetTuning.DefaultTune()
+        local tune = state and state.tune or SunsetTuning.StockTune()
         local hp, torque = estimatePower(veh, tune)
         local bonus = math.floor(peakSpeed * 1.4 + peakRpm * 120)
         hp = math.min(980, hp + math.floor(bonus * 0.35))
