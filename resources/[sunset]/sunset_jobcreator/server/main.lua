@@ -63,7 +63,19 @@ function GetPublishedForHire()
     return list
 end
 
-exports('IsCreatorJob', IsCreatorJob)
+function EnsureCivilianJobsRegistered()
+    if JCStorage_RegisterCivilianJobs then
+        JCStorage_RegisterCivilianJobs()
+    end
+    return true
+end
+
+function GetLegacyJobId(jobId)
+    return SunsetJobCreator.GetLegacyJobId(jobId)
+end
+
+exports('EnsureCivilianJobsRegistered', EnsureCivilianJobsRegistered)
+exports('GetLegacyJobId', GetLegacyJobId)
 exports('GetJobDefinition', GetJobDefinition)
 exports('GetPublishedJobs', GetPublishedJobs)
 exports('GetPublishedForHire', GetPublishedForHire)

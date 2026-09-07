@@ -236,7 +236,16 @@ function Sunset.SetJob(source, job, grade)
     local char = Sunset.GetCharacter(source)
     if not char then return false end
     if Sunset.Factions[job] then return false end
-    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then return false end
+
+    if GetResourceState('sunset_jobcreator') == 'started' then
+        pcall(function()
+            exports.sunset_jobcreator:EnsureCivilianJobsRegistered()
+        end)
+    end
+
+    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then
+        return false
+    end
 
     grade = tonumber(grade) or 0
     if not Sunset.CivilianJobs[job].grades[grade] then return false end

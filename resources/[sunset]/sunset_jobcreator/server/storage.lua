@@ -181,10 +181,6 @@ end
 
 function JCStorage_RegisterCivilianJobs()
     local migrated = SunsetJobCreator.LegacyMigrations or {}
-    local hideLegacy = {}
-    for legacy, creatorId in pairs(migrated) do
-        if Published[creatorId] then hideLegacy[legacy] = true end
-    end
 
     for jobId, job in pairs(Published) do
         local def = job.definition or {}
@@ -204,8 +200,26 @@ function JCStorage_RegisterCivilianJobs()
         }
     end
 
-    for legacy in pairs(hideLegacy) do
-        Sunset.CivilianJobs[legacy] = nil
-        if Sunset.JobsConfig then Sunset.JobsConfig[legacy] = nil end
+    for legacy, creatorId in pairs(migrated) do
+        local creator = Published[creatorId]
+        if creator then
+            local def = creator.definition or {}
+            local label = (creator.label or legacy):gsub(' %(Creator%)', ''):gsub(' %(creator%)', '')
+            Sunset.CivilianJobs[legacy] = {
+                label = label,
+                type = 'civilian',
+                description = creator.description or '',
+                grades = { [0] = { label = 'Worker', salary = tonumber(def.salary) or 140, perms = {} } },
+                creatorJob = creatorId,
+            }
+            Sunset.JobsConfig = Sunset.JobsConfig or {}
+            Sunset.JobsConfig[legacy] = {
+                label = label,
+                help = creator.description or 'Use /work to start your shift.',
+                timeoutSec = tonumber(def.timeoutSec) or 1800,
+                creator = true,
+                creatorJob = creatorId,
+            }
+        end
     end
 end

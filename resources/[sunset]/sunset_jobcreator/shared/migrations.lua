@@ -12,3 +12,24 @@ SunsetJobCreator.LegacyMigrations = {
 function SunsetJobCreator.GetMigrationTarget(legacyJobId)
     return SunsetJobCreator.LegacyMigrations[legacyJobId]
 end
+
+function SunsetJobCreator.GetLegacyJobId(jobId)
+    jobId = tostring(jobId or '')
+    if SunsetJobCreator.LegacyMigrations[jobId] then
+        return jobId
+    end
+    for legacy, creatorId in pairs(SunsetJobCreator.LegacyMigrations) do
+        if creatorId == jobId then
+            return legacy
+        end
+    end
+    return nil
+end
+
+function SunsetJobCreator.GetCreatorJobId(jobId)
+    jobId = tostring(jobId or '')
+    if SunsetJobCreator.IsCreatorJobId(jobId) then
+        return jobId
+    end
+    return SunsetJobCreator.LegacyMigrations[jobId]
+end
