@@ -16,6 +16,7 @@ shared_scripts {
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/apply.lua',
+    'client/exhaust_ptfx.lua',
     'client/effects.lua',
     'client/dyno.lua',
     'client/bootstrap.lua',

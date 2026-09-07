@@ -55,6 +55,7 @@ function stockTune() {
         torque: 100,
         exhaust: 'pop_bang',
         pop: { enabled: false, rpmMax: 88, durationMs: 100, secondBurst: false, burstStage: 'civil' },
+        flames: { enabled: false },
         antiLag: { enabled: false, intensity: 55 },
         drift: { enabled: false, grip: 45 },
         hud: { enabled: false },
@@ -69,6 +70,7 @@ function ensureTune(raw) {
         ...base,
         ...src,
         pop: { ...base.pop, ...(src.pop || {}) },
+        flames: { ...base.flames, ...(src.flames || {}) },
         antiLag: { ...base.antiLag, ...(src.antiLag || {}) },
         drift: { ...base.drift, ...(src.drift || {}) },
         hud: { ...base.hud, ...(src.hud || {}) },
@@ -127,7 +129,12 @@ function renderRail() {
                 activeTab = item.id;
                 if (item.id.startsWith('exhaust_')) {
                     tune.exhaust = exhaustForTab(item.id);
-                    if (item.id !== 'exhaust_pop') tune.pop.enabled = true;
+                    if (item.id === 'exhaust_pop') tune.pop.enabled = true;
+                    if (item.id === 'exhaust_flames' || item.id === 'exhaust_extra') {
+                        tune.flames.enabled = true;
+                        tune.pop.enabled = true;
+                    }
+                    if (item.id === 'exhaust_diesel') tune.pop.enabled = true;
                     preview();
                 }
                 renderAll();
@@ -240,7 +247,7 @@ function panelExhaust() {
         el.appendChild(stageCards('pop.burstStage', 'STAGE POP'));
     }
     if (activeTab === 'exhaust_flames' || activeTab === 'exhaust_extra') {
-        el.appendChild(toggleRow('FLĂCĂRI LA EVACUARE', 'pop.enabled'));
+        el.appendChild(toggleRow('FLĂCĂRI LA EVACUARE', 'flames.enabled'));
     }
     if (activeTab === 'exhaust_diesel') {
         el.appendChild(sliderField('INTENSITATE DIESEL', 'pop.rpmMax', 25, 80, '%'));

@@ -49,6 +49,7 @@ function SunsetTuning.StockTune()
             secondBurst = false,
             burstStage = 'civil',
         },
+        flames = { enabled = false },
         antiLag = { enabled = false, intensity = 55 },
         drift = { enabled = false, grip = 45 },
         hud = { enabled = false },
@@ -71,6 +72,7 @@ function SunsetTuning.SanitizeTune(raw)
     if not SunsetTuning.ExhaustModes[exhaust] then exhaust = def.exhaust end
 
     local pop = type(raw.pop) == 'table' and raw.pop or {}
+    local flames = type(raw.flames) == 'table' and raw.flames or {}
     local antiLag = type(raw.antiLag) == 'table' and raw.antiLag or {}
     local drift = type(raw.drift) == 'table' and raw.drift or {}
     local hud = type(raw.hud) == 'table' and raw.hud or {}
@@ -87,6 +89,9 @@ function SunsetTuning.SanitizeTune(raw)
             durationMs = math.max(40, math.min(250, math.floor(tonumber(pop.durationMs) or def.pop.durationMs))),
             secondBurst = pop.secondBurst == true,
             burstStage = SunsetTuning.Stages[tostring(pop.burstStage or stage)] and tostring(pop.burstStage or stage) or stage,
+        },
+        flames = {
+            enabled = flames.enabled == true or exhaust == 'flames' or exhaust == 'extra',
         },
         antiLag = {
             enabled = antiLag.enabled == true,
@@ -110,6 +115,7 @@ function SunsetTuning.IsStockTune(raw)
     local tune = SunsetTuning.SanitizeTune(raw)
     if tune.stage ~= 'civil' or tune.power ~= 100 or tune.torque ~= 100 then return false end
     if tune.pop.enabled or tune.antiLag.enabled or tune.drift.enabled or tune.hud.enabled then return false end
+    if tune.flames.enabled then return false end
     if (tune.dyno.lastHp or 0) > 0 then return false end
     return true
 end
@@ -135,6 +141,7 @@ function SunsetTuning.BuildVehicleInfo(raw)
     local chips = { string.upper(tune.stage) }
     chips[#chips + 1] = exhaust.label:upper()
     if tune.pop.enabled then chips[#chips + 1] = 'POP&BANG' end
+    if tune.flames.enabled then chips[#chips + 1] = 'FLAMES' end
     if tune.antiLag.enabled then chips[#chips + 1] = 'ANTI-LAG' end
     if tune.drift.enabled then chips[#chips + 1] = 'DRIFT' end
     if tune.hud.enabled then chips[#chips + 1] = 'HUD' end
@@ -146,6 +153,7 @@ function SunsetTuning.BuildVehicleInfo(raw)
         { label = 'CUPLU', value = tune.torque .. '%' },
         { label = 'EVACUARE', value = exhaust.label },
         { label = 'POP & BANG', value = tune.pop.enabled and 'Activ' or 'Oprit' },
+        { label = 'FLĂCĂRI', value = tune.flames.enabled and 'Activ' or 'Oprit' },
         { label = 'RPM POP', value = tune.pop.rpmMax .. '%' },
         { label = 'ANTI-LAG', value = tune.antiLag.enabled and ('Activ (' .. tune.antiLag.intensity .. '%)') or 'Oprit' },
         { label = 'DRIFT', value = tune.drift.enabled and ('Activ · grip ' .. tune.drift.grip .. '%') or 'Oprit' },
