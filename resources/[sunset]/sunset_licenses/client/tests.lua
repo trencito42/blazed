@@ -74,6 +74,8 @@ local function spawnTestVehicle(model, spawn, opts)
         TriggerEvent('sunset:vehicles:setEngineState', veh, false)
     end
     SetPedIntoVehicle(PlayerPedId(), veh, -1)
+    Wait(50)
+    SetFollowPedCamViewMode(1)
     local netId = VehToNet(veh)
     SetNetworkIdCanMigrate(netId, true)
     SetModelAsNoLongerNeeded(model)
@@ -284,27 +286,34 @@ end
 local function trackVehicleDamage(veh, cfg, penalties)
     penalties = penalties or newPenaltyState(cfg)
     if veh == 0 or not DoesEntityExist(veh) then return penalties end
-    if not penalties.lastBody or penalties.lastBody <= 0.0 then
-        penalties.lastBody = GetVehicleBodyHealth(veh)
-    end
-    if HasEntityCollidedWithAnything(veh) then
-        local body = GetVehicleBodyHealth(veh)
-        if body < penalties.lastBody - 18.0 then
-            penalties.lastBody = body
-            local count, failed = addPenalty(penalties, ('Too many penalties (%d/%d) — test failed.'):format(
-                penalties.count, penalties.max))
-            UpdateLicenseTestHud({
-                licenseType = 'driver',
-                state = 'warning',
-                title = 'Driving School',
-                penalties = count,
-                maxPenalties = penalties.max,
-                message = ('PENALTY %d/%d — HARD IMPACT. Drive carefully.'):format(count, penalties.max),
-            })
-            if failed then return penalties end
-        end
+
+    local body = GetVehicleBodyHealth(veh)
+    local prevBody = penalties.lastBody or body
+    penalties.lastBody = body
+
+    if not HasEntityCollidedWithAnything(veh) then return penalties end
+
+    local impactKmh = GetEntitySpeed(veh) * 3.6
+    local minImpact = cfg.minImpactKmh or 28
+    if impactKmh < minImpact then
         ClearEntityLastDamageEntity(veh)
+        return penalties
     end
+
+    if (prevBody - body) >= 18.0 and GetGameTimer() >= (penalties.lockUntil or 0) then
+        local count, failed = addPenalty(penalties, ('Too many penalties (%d/%d) — test failed.'):format(
+            penalties.count, penalties.max))
+        UpdateLicenseTestHud({
+            licenseType = 'driver',
+            state = 'warning',
+            title = 'Driving School',
+            penalties = count,
+            maxPenalties = penalties.max,
+            message = ('PENALTY %d/%d — HARD IMPACT. Drive carefully.'):format(count, penalties.max),
+        })
+        if failed then return penalties end
+    end
+    ClearEntityLastDamageEntity(veh)
     return penalties
 end
 
@@ -494,6 +503,7 @@ local function runDriverRoute(cfg, vehicle)
     CreateThread(function()
         local started = GetGameTimer()
         local validationCooldown = 0
+        local finishHudKey = ''
         while practicalState and practicalState.licenseType == 'driver' do
             Wait(0)
             if cfg.maxTimeSec and (GetGameTimer() - started) > cfg.maxTimeSec * 1000 then
@@ -537,15 +547,32 @@ local function runDriverRoute(cfg, vehicle)
                     local fp = asVector3(finish)
                     if #(pos - fp) <= fr then
                         local engineOn = veh ~= 0 and GetIsVehicleEngineRunning(veh)
-                        BeginTextCommandDisplayHelp('STRING')
-                        AddTextComponentString('Press ~INPUT_CONTEXT~ to finish (engine off if required)')
-                        EndTextCommandDisplayHelp(0, false, true, -1)
-                        if IsControlJustReleased(0, 38) then
-                                return completeTest('driver', {
-                                    engineOn = engineOn,
-                                    penalties = penalties.count,
-                                })
+                        local finishMsg = engineOn
+                            and 'Turn off the engine, then press E to finish.'
+                            or 'Press E to finish the driving test.'
+                        local finishKey = engineOn and 'engine_on' or 'engine_off'
+                        if finishKey ~= finishHudKey then
+                            finishHudKey = finishKey
+                            UpdateLicenseTestHud({
+                                licenseType = 'driver',
+                                state = 'driver',
+                                title = 'Driving School',
+                                checkpoint = #checkpoints,
+                                checkpoints = #checkpoints,
+                                penalties = penalties.count,
+                                maxPenalties = penalties.max,
+                                message = finishMsg,
+                                progress = 95,
+                            })
                         end
+                        if IsControlJustReleased(0, 38) then
+                            return completeTest('driver', {
+                                engineOn = engineOn,
+                                penalties = penalties.count,
+                            })
+                        end
+                    else
+                        finishHudKey = ''
                     end
                 end
             end
@@ -739,6 +766,8 @@ end
 
 function StartPracticalTest(licenseType, payload)
     CleanupPracticalTest()
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'hide' })
     practicalState = { licenseType = licenseType }
     local cfg = resolvePracticalCfg(licenseType, payload)
     local facility = payload and payload.facility

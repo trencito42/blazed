@@ -20,10 +20,12 @@ const LicenseTestHud = {
         }[ch]));
     },
 
-    _highlight(text) {
+    _highlight(text, plain) {
         if (text == null || text === '') return '';
+        if (plain) return this._escape(String(text));
         let html = this._escape(String(text));
-        html = html.replace(/\b([0-9]{1,3}|E|K|H)\b/g, (key) => `<span class="license-test__key">${key}</span>`);
+        html = html.replace(/\b([EKH])\b/g, (key) => `<span class="license-test__key">${key}</span>`);
+        html = html.replace(/\b([2])\b/g, (key) => `<span class="license-test__key">${key}</span>`);
         return html;
     },
 
@@ -57,7 +59,12 @@ const LicenseTestHud = {
         this._panel.classList.remove('hidden');
         if (this._title) this._title.textContent = data.title || 'License Test';
         if (this._meta) this._meta.textContent = this._metaLine(data);
-        if (this._message) this._message.innerHTML = this._highlight(data.message || '');
+        const plainMessage = data.state === 'warning'
+            || String(data.message || '').startsWith('REDUCE SPEED')
+            || String(data.message || '').startsWith('PENALTY');
+        if (this._message) {
+            this._message.innerHTML = this._highlight(data.message || '', plainMessage);
+        }
         this._setProgress(data.progress);
     },
 
@@ -68,8 +75,7 @@ const LicenseTestHud = {
     hide() {
         this.init();
         if (!this._panel) return;
-        this._panel.classList.add('hidden');
-        this._panel.classList.remove('is-visible');
+        this._panel.className = 'license-test-shell hidden state-driver';
         this._setProgress(0);
     },
 };

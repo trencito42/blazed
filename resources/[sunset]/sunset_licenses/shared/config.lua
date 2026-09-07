@@ -237,7 +237,8 @@ SunsetLicenses.Practical = {
         engineOffOnSpawn = true,
         maxPenalties = 4,
         speedCountdownSec = 5,
-        speedGraceKmh = 5,
+        speedGraceKmh = 0,
+        minImpactKmh = 28,
         maxCollisions = 3,
         briefing = {
             {
