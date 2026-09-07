@@ -44,12 +44,15 @@ const LicenseTestHud = {
         if (this._meta) {
             const parts = [];
             if (data.step && data.total) parts.push(`Step ${data.step}/${data.total}`);
-            if (data.checkpoint && data.checkpoints) parts.push(`Checkpoint ${data.checkpoint}/${data.checkpoints}`);
+            if (data.checkpoints) parts.push(`Checkpoint ${data.checkpoint ?? 0}/${data.checkpoints}`);
             if (data.collisions !== undefined && data.maxCollisions !== undefined) {
                 parts.push(`Hits ${data.collisions}/${data.maxCollisions}`);
             }
-            if (data.targetsHit !== undefined && data.targetsRequired !== undefined) {
-                parts.push(`Targets ${data.targetsHit}/${data.targetsRequired}`);
+            if (data.speed !== undefined && data.speedLimit !== undefined) {
+                parts.push(`${data.speed}/${data.speedLimit} km/h`);
+            }
+            if (data.speedStrikes !== undefined && data.maxSpeedStrikes !== undefined) {
+                parts.push(`Speed warnings ${data.speedStrikes}/${data.maxSpeedStrikes}`);
             }
             this._meta.textContent = parts.join(' · ') || (data.meta || '');
         }

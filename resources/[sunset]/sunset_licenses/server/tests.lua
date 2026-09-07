@@ -233,6 +233,11 @@ exports.sunset_core:RegisterCallback('sunset:license:validateFinish', function(s
         if collisions > maxColl then
             return false, ('Too many collisions during the test (%d/%d).'):format(collisions, maxColl)
         end
+        local maxSpeed = practical.maxSpeedStrikes or 4
+        local speedStrikes = tonumber(data and data.speedStrikes) or 0
+        if speedStrikes >= maxSpeed then
+            return false, ('Too many speed violations during the test (%d/%d).'):format(speedStrikes, maxSpeed)
+        end
     end
 
     session.phase = 'validated'

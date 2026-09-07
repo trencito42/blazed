@@ -241,6 +241,65 @@ local function trackVehicleDamage(veh, cfg, collisions)
     return collisions
 end
 
+local function driverSpeedLimit(cpIndex, cfg, finishing)
+    if finishing then return 40 end
+    cpIndex = tonumber(cpIndex) or 1
+    for _, zone in ipairs(cfg.speedZones or {}) do
+        if cpIndex >= zone.from and cpIndex <= zone.to then
+            return zone.limit or cfg.speedLimitDefault or 80
+        end
+    end
+    return cfg.speedLimitDefault or 80
+end
+
+local function checkpointHint(cfg, cpIndex, finishing)
+    if finishing then return cfg.finishHint end
+    local hints = cfg.checkpointHints or {}
+    return hints[cpIndex] or 'Follow the route markers and obey the speed limit.'
+end
+
+local function trackDriverSpeed(veh, cfg, cpIndex, finishing, state)
+    state = state or { strikes = 0, overLimitSince = 0, hardSince = 0 }
+    if veh == 0 or not DoesEntityExist(veh) then return state, 0, driverSpeedLimit(cpIndex, cfg, finishing), nil end
+
+    local speed = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
+    local limit = driverSpeedLimit(cpIndex, cfg, finishing)
+    local hard = cfg.speedLimitHard or 115
+    local maxStrikes = cfg.maxSpeedStrikes or 4
+    local now = GetGameTimer()
+    local message
+
+    if speed > hard then
+        if state.hardSince == 0 then state.hardSince = now end
+        message = ('Slow down now! %d km/h is reckless — max %d on this exam.'):format(speed, hard)
+        if now - state.hardSince >= 1800 then
+            state.strikes = state.strikes + 1
+            state.hardSince = now
+            message = ('Speed violation %d/%d — ease off the throttle immediately.'):format(state.strikes, maxStrikes)
+        end
+    else
+        state.hardSince = 0
+        if speed > limit + 8 then
+            if state.overLimitSince == 0 then state.overLimitSince = now end
+            message = ('Slow down — %d km/h. Limit here is %d km/h.'):format(speed, limit)
+            if now - state.overLimitSince >= 2800 then
+                state.strikes = state.strikes + 1
+                state.overLimitSince = now
+                message = ('Speed warning %d/%d — drive like an exam, not a race.'):format(state.strikes, maxStrikes)
+            end
+        else
+            state.overLimitSince = 0
+            message = checkpointHint(cfg, cpIndex, finishing)
+        end
+    end
+
+    if state.strikes >= maxStrikes then
+        failTest(('Too many speed violations (%d/%d) — test failed.'):format(state.strikes, maxStrikes))
+    end
+
+    return state, speed, limit, message
+end
+
 local function pickTestSpawn(cfg)
     local spawns = cfg.spawns
     if type(spawns) == 'table' and #spawns > 0 then
@@ -261,6 +320,8 @@ local function runDriverTest(cfg)
     runBriefing('driver', cfg, spawn, function()
         local cpIndex = 1
         local collisions = { count = 0, lastBody = GetVehicleBodyHealth(vehicle) }
+        local speedState = { strikes = 0, overLimitSince = 0, hardSince = 0 }
+        local hudMessage = checkpointHint(cfg, 1, false)
         addCheckpointBlips(cfg.checkpoints, 2)
 
         ShowLicenseTestHud({
@@ -271,9 +332,46 @@ local function runDriverTest(cfg)
             checkpoints = #(cfg.checkpoints or {}),
             collisions = 0,
             maxCollisions = cfg.maxCollisions or 3,
-            message = 'Exit through the DMV gate, then follow all 14 route markers. Park at the DMV lot to finish.',
+            speed = 0,
+            speedLimit = driverSpeedLimit(1, cfg, false),
+            speedStrikes = 0,
+            maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
+            message = hudMessage,
             progress = 0,
         })
+
+        CreateThread(function()
+            while practicalState and practicalState.licenseType == 'driver' do
+                Wait(450)
+                local ped = PlayerPedId()
+                local veh = GetVehiclePedIsIn(ped, false)
+                local finishing = cpIndex > #(cfg.checkpoints or {})
+                local speed, limit, msg
+                speedState, speed, limit, msg = trackDriverSpeed(veh, cfg, cpIndex, finishing, speedState)
+                if msg then hudMessage = msg end
+                local progress
+                if finishing then
+                    progress = 95
+                else
+                    progress = math.floor((math.max(cpIndex - 1, 0) / math.max(#(cfg.checkpoints or {}), 1)) * 100)
+                end
+                UpdateLicenseTestHud({
+                    licenseType = 'driver',
+                    state = speedState.strikes >= 2 and 'warning' or 'driver',
+                    title = 'Driving School',
+                    checkpoint = math.min(cpIndex - 1, #(cfg.checkpoints or {})),
+                    checkpoints = #(cfg.checkpoints or {}),
+                    collisions = collisions.count,
+                    maxCollisions = cfg.maxCollisions or 3,
+                    speed = speed,
+                    speedLimit = limit,
+                    speedStrikes = speedState.strikes,
+                    maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
+                    message = hudMessage,
+                    progress = progress,
+                })
+            end
+        end)
 
         CreateThread(function()
             local started = GetGameTimer()
@@ -300,6 +398,7 @@ local function runDriverTest(cfg)
                         if ok then
                             cpIndex = cpIndex + 1
                             updateRoute(cpIndex)
+                            hudMessage = checkpointHint(cfg, cpIndex, cpIndex > #cps)
                             UpdateLicenseTestHud({
                                 licenseType = 'driver',
                                 state = 'driver',
@@ -308,7 +407,9 @@ local function runDriverTest(cfg)
                                 checkpoints = #cps,
                                 collisions = collisions.count,
                                 maxCollisions = cfg.maxCollisions or 3,
-                                message = ('Checkpoint %d/%d cleared. Keep it smooth.'):format(cpIndex - 1, #cps),
+                                speedStrikes = speedState.strikes,
+                                maxSpeedStrikes = cfg.maxSpeedStrikes or 4,
+                                message = ('Checkpoint %d/%d — %s'):format(cpIndex - 1, #cps, hudMessage),
                                 progress = math.floor(((cpIndex - 1) / math.max(#cps, 1)) * 100),
                             })
                         elseif err then
@@ -330,6 +431,7 @@ local function runDriverTest(cfg)
                                 return completeTest('driver', {
                                     engineOn = engineOn,
                                     collisions = collisions.count,
+                                    speedStrikes = speedState.strikes,
                                 })
                             end
                         end
