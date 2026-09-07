@@ -36,7 +36,6 @@ RegisterNUICallback('licenseQuizSubmit', function(data, cb)
         cb('ok')
         return
     end
-    exports.sunset_ui:Notify('Theory passed — starting practical test.', 'success', 7000)
     TriggerEvent('sunset:licenses:beginPractical', licenseType, result)
     cb('ok')
 end)

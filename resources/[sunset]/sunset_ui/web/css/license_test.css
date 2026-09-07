@@ -1,18 +1,25 @@
 #license-test-panel,
 .license-test-shell {
+    --lt-accent: rgba(255, 159, 67, 0.85);
     position: fixed;
     left: 50%;
     bottom: 80px;
     transform: translateX(-50%);
     z-index: 55;
-    width: min(760px, 94vw);
+    width: min(720px, 94vw);
     pointer-events: none;
-    color: #fff8ef;
+    color: var(--sunset-text, #f6f2e9);
     font-family: var(--sunset-body, 'Rajdhani', sans-serif);
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
     opacity: 0;
     translate: 0 16px;
     transition: opacity 0.2s ease, translate 0.2s ease;
+    overflow: visible;
+}
+
+.license-test-frame {
+    display: none;
 }
 
 #license-test-panel.is-visible,
@@ -26,16 +33,26 @@
     display: none;
 }
 
-.license-test__body {
+.license-test-panel__body {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 14px 16px 16px;
-    background: linear-gradient(155deg, rgba(12, 10, 8, 0.92), rgba(6, 6, 6, 0.88));
-    border: 1px solid rgba(255, 159, 67, 0.28);
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
-    border-bottom: 4px solid var(--lt-accent, rgba(255, 159, 67, 0.85));
+    gap: 14px;
+    padding: 12px 8px;
+    background: transparent;
+}
+
+.license-test-panel__body::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--lt-accent);
+    pointer-events: none;
 }
 
 .license-test__header {
@@ -58,37 +75,50 @@
 }
 
 .license-test__title {
-    font-size: 1.1rem;
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.06em;
     text-transform: uppercase;
+    letter-spacing: 3px;
     color: #ff9f43;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 12px rgba(0, 0, 0, 0.85);
 }
 
 .license-test__meta {
-    font-size: 0.84rem;
-    opacity: 0.88;
-    color: #f0e6d8;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin-top: 2px;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 10px rgba(0, 0, 0, 0.8);
 }
 
 .license-test__message {
-    width: 100%;
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 22px;
+    font-weight: 700;
     text-align: center;
-    font-size: 1.05rem;
-    line-height: 1.45;
-    font-weight: 600;
-    color: #fff8ef;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    line-height: 1.35;
+    color: #ffffff;
+    width: 100%;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 14px rgba(0, 0, 0, 0.9);
 }
 
 .license-test__key {
     display: inline-block;
-    min-width: 1.35rem;
-    padding: 0 0.35rem;
-    border: 1px solid rgba(255, 159, 67, 0.65);
-    background: rgba(255, 159, 67, 0.12);
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border: 1px solid rgba(255, 159, 67, 0.75);
     color: #ff9f43;
     font-weight: 700;
     text-align: center;
@@ -108,9 +138,20 @@
     transition: width 0.35s ease;
 }
 
-.state-driver .license-test__body { --lt-accent: rgba(255, 159, 67, 0.85); }
-.state-weapon .license-test__body { --lt-accent: rgba(120, 200, 120, 0.85); }
-.state-pilot .license-test__body { --lt-accent: rgba(100, 180, 255, 0.85); }
-.state-boat .license-test__body { --lt-accent: rgba(80, 200, 220, 0.85); }
-.state-warning .license-test__body { --lt-accent: rgba(255, 80, 80, 0.9); }
-.state-success .license-test__body { --lt-accent: rgba(80, 220, 120, 0.9); }
+.state-driver { --lt-accent: rgba(255, 159, 67, 0.85); }
+.state-weapon { --lt-accent: rgba(120, 200, 120, 0.85); }
+.state-pilot { --lt-accent: rgba(100, 180, 255, 0.85); }
+.state-boat { --lt-accent: rgba(80, 200, 220, 0.85); }
+.state-warning { --lt-accent: rgba(255, 80, 80, 0.9); }
+.state-success { --lt-accent: rgba(80, 220, 120, 0.9); }
+
+.state-driver .license-test__title,
+.state-driver .license-test__icon { color: #ff9f43; }
+.state-warning .license-test__title,
+.state-warning .license-test__icon { color: #ff554f; }
+.state-success .license-test__title,
+.state-success .license-test__icon { color: #59e391; }
+
+@media (max-width: 760px) {
+    .license-test__message { font-size: 18px; }
+}

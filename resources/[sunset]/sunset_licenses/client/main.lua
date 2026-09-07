@@ -73,7 +73,9 @@ CreateThread(function()
                 local dist = #(coords - facility.marker)
                 if dist < 40.0 then
                     sleep = 0
-                    drawMarker(facility.marker, 50, 200, 80)
+                    if not activeTest then
+                        drawMarker(facility.marker, 50, 200, 80)
+                    end
                     if dist < (facility.markerRadius or 2.5) and not activeTest then
                         BeginTextCommandDisplayHelp('STRING')
                         AddTextComponentString(('Press ~INPUT_CONTEXT~ — %s theory test'):format(facility.label or 'License'))

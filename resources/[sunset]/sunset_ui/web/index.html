@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="css/fuel_pump.css">
     <link rel="stylesheet" href="css/theme.css?v=8">
     <link rel="stylesheet" href="css/fishing.css?v=2">
-    <link rel="stylesheet" href="css/license_test.css?v=2">
+    <link rel="stylesheet" href="css/license_test.css?v=3">
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=10">
@@ -165,7 +165,10 @@
     </div>
 
     <div id="license-test-panel" class="license-test-shell hidden state-driver" aria-live="polite">
-        <div class="license-test__body">
+        <svg class="license-test-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path class="license-test-frame__path" vector-effect="non-scaling-stroke" d="M5 .5 L99.5 .5 L99.5 95 L95 99.5 L.5 99.5 L.5 5 Z" />
+        </svg>
+        <div class="license-test-panel__body">
             <div class="license-test__header">
                 <svg class="license-test__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
                     <path d="M4 17h16M6 11l2-5h8l2 5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>
@@ -1512,7 +1515,7 @@
     <script src="js/spawn.js?v=4"></script>
     <script src="js/fuel_pump.js"></script>
     <script src="js/fishing.js"></script>
-    <script src="js/license_test.js?v=2"></script>
+    <script src="js/license_test.js?v=3"></script>
     <script src="js/radar.js"></script>
     <script src="js/courier.js"></script>
     <script src="js/factions.js?v=6"></script>

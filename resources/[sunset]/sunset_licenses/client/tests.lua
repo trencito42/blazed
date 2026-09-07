@@ -23,14 +23,13 @@ local function resolvePracticalCfg(licenseType, payload)
     return payload and payload.practical
 end
 
-local function drawRouteMarker(point, active)
-    local pos = GetEntityCoords(PlayerPedId())
-    if #(pos - point) > 140.0 then return end
-    local r, g, b = active and 255 or 180, active and 159 or 180, active and 67 or 90
-    DrawMarker(2, point.x, point.y, point.z + 1.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        1.4, 1.4, 1.2, r, g, b, 200, false, true, 2, false, nil, nil, false)
-    DrawMarker(1, point.x, point.y, point.z - 0.35, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        3.2, 3.2, 0.45, r, g, b, 90, false, false, 2, false, nil, nil, false)
+local function notifyOnce(state, msg, kind)
+    state = state or {}
+    local now = GetGameTimer()
+    if state.msg == msg and state.at and (now - state.at) < 5000 then return end
+    state.msg = msg
+    state.at = now
+    notify(msg, kind)
 end
 
 local function clearBlips()
@@ -350,9 +349,10 @@ local function runDriverBriefing(cfg, spawn)
         local stepIndex = 1
         local readyPressed = false
         local stepShownAt = {}
+        local lastHudKey = ''
 
         while practicalState and practicalState.licenseType == 'driver' and stepIndex <= #steps do
-            Wait(200)
+            Wait(250)
             local step = steps[stepIndex]
             local met
             if not step.require then
@@ -368,15 +368,19 @@ local function runDriverBriefing(cfg, spawn)
                 met = readyPressed
             end
 
-            UpdateLicenseTestHud({
-                licenseType = 'driver',
-                state = 'driver',
-                title = step.title or 'Driving School',
-                step = stepIndex,
-                total = #steps,
-                message = step.message,
-                progress = math.floor(((stepIndex - 1) / #steps) * 100),
-            })
+            local hudKey = ('%d:%s'):format(stepIndex, step.message or '')
+            if hudKey ~= lastHudKey then
+                lastHudKey = hudKey
+                UpdateLicenseTestHud({
+                    licenseType = 'driver',
+                    state = 'driver',
+                    title = step.title or 'Driving School',
+                    step = stepIndex,
+                    total = #steps,
+                    message = step.message,
+                    progress = math.floor(((stepIndex - 1) / #steps) * 100),
+                })
+            end
 
             if met then
                 stepIndex = stepIndex + 1
@@ -392,9 +396,9 @@ local function runDriverRoute(cfg, vehicle)
     local speedState = { strikes = 0, overLimitSince = 0, hardSince = 0 }
     local hudMessage = checkpointHint(cfg, 1, false)
     local checkpoints = cfg.checkpoints or {}
+    local checkpointNotify = {}
 
     addCheckpointBlips(checkpoints, 47)
-    notify('Follow the orange GPS route to each checkpoint.', 'info')
 
     UpdateLicenseTestHud({
         licenseType = 'driver',
@@ -413,8 +417,9 @@ local function runDriverRoute(cfg, vehicle)
     })
 
     CreateThread(function()
+        local lastHudKey = ''
         while practicalState and practicalState.licenseType == 'driver' do
-            Wait(450)
+            Wait(900)
             local ped = PlayerPedId()
             local veh = GetVehiclePedIsIn(ped, false)
             local finishing = cpIndex > #checkpoints
@@ -427,6 +432,10 @@ local function runDriverRoute(cfg, vehicle)
             else
                 progress = math.floor((math.max(cpIndex - 1, 0) / math.max(#checkpoints, 1)) * 100)
             end
+            local hudKey = ('%d:%d:%d:%d:%s'):format(
+                cpIndex, speed or 0, speedState.strikes, collisions.count, hudMessage or '')
+            if hudKey == lastHudKey then goto continue end
+            lastHudKey = hudKey
             UpdateLicenseTestHud({
                 licenseType = 'driver',
                 state = speedState.strikes >= 2 and 'warning' or 'driver',
@@ -442,6 +451,7 @@ local function runDriverRoute(cfg, vehicle)
                 message = hudMessage,
                 progress = progress,
             })
+            ::continue::
         end
     end)
 
@@ -462,7 +472,6 @@ local function runDriverRoute(cfg, vehicle)
             if cpIndex <= #checkpoints then
                 local cp = asVector3(checkpoints[cpIndex])
                 local radius = cfg.checkpointRadius or 8.0
-                drawRouteMarker(cp, true)
                 if #(pos - cp) <= radius and GetGameTimer() >= validationCooldown then
                     validationCooldown = GetGameTimer() + 1000
                     local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', 'driver', cpIndex)
@@ -484,7 +493,7 @@ local function runDriverRoute(cfg, vehicle)
                             progress = math.floor(((cpIndex - 1) / math.max(#checkpoints, 1)) * 100),
                         })
                     elseif err then
-                        notify(err, 'error')
+                        notifyOnce(checkpointNotify, err, 'error')
                     end
                 end
             else
@@ -492,7 +501,6 @@ local function runDriverRoute(cfg, vehicle)
                 if finish then
                     local fr = cfg.finishRadius or 10.0
                     local fp = asVector3(finish)
-                    drawRouteMarker(fp, true)
                     if #(pos - fp) <= fr then
                         local engineOn = veh ~= 0 and GetIsVehicleEngineRunning(veh)
                         BeginTextCommandDisplayHelp('STRING')
@@ -532,7 +540,7 @@ local function runDriverTest(cfg)
         checkpoints = #(cfg.checkpoints or {}),
         collisions = 0,
         maxCollisions = cfg.maxCollisions or 3,
-        message = (steps[1] and steps[1].message) or checkpointHint(cfg, 1, false),
+        message = (steps[1] and steps[1].message) or 'Follow the orange GPS route to each checkpoint.',
         progress = 0,
     })
 
@@ -664,7 +672,6 @@ local function runCheckpointTest(licenseType, cfg, facility)
             if cpIndex <= #cps then
                 local cp = asVector3(cps[cpIndex])
                 local radius = cfg.checkpointRadius or 8.0
-                drawRouteMarker(cp, true)
                 if #(pos - cp) <= radius and GetGameTimer() >= validationCooldown then
                     validationCooldown = GetGameTimer() + 1000
                     local ok, err = Sunset.AwaitCallback('sunset:license:validateCheckpoint', licenseType, cpIndex)
@@ -681,7 +688,6 @@ local function runCheckpointTest(licenseType, cfg, facility)
                 if finish then
                     local fr = cfg.finishRadius or 10.0
                     local fp = asVector3(finish)
-                    drawRouteMarker(fp, true)
                     if #(pos - fp) <= fr then
                         local veh = GetVehiclePedIsIn(ped, false)
                         local engineOn = veh ~= 0 and GetIsVehicleEngineRunning(veh)
