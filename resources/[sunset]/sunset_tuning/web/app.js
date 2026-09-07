@@ -297,7 +297,16 @@ function panelDynoRank() {
 function panelDynoStand() {
     const el = document.createElement('div');
     el.className = 'panel';
-    el.innerHTML = '<h2>STAND DYNO</h2><p class="subtitle">Pornește testul — accelerează la maxim 12 secunde</p>';
+    el.innerHTML = `
+        <h2>STAND DYNO</h2>
+        <p class="subtitle">Testul se face pe loc — nu trebuie să mergi cu mașina.</p>
+        <div class="dyno-steps">
+            <p><strong>1.</strong> Apasă START — mașina sare pe standul dyno</p>
+            <p><strong>2.</strong> Meniul se închide temporar (normal)</p>
+            <p><strong>3.</strong> Countdown 3…2…1</p>
+            <p><strong>4.</strong> Ține <strong>W</strong> apăsat 10 secunde (accelerație la maxim)</p>
+            <p><strong>5.</strong> Mașina e blocată pe stand — doar dai gaz, nu conduci</p>
+        </div>`;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-secondary';
@@ -387,6 +396,12 @@ window.addEventListener('message', (event) => {
         previewDirty = false;
         if (data?.tune) tune = ensureTune(data.tune);
         renderAll();
+    }
+    if (action === 'dynoRunning') {
+        if (app) app.classList.add('hidden');
+    }
+    if (action === 'dynoDone' && data?.ok === false && app) {
+        app.classList.remove('hidden');
     }
     if (action === 'dynoResult' && data?.dyno) {
         tune = ensureTune(tune);

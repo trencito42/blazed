@@ -147,8 +147,19 @@ end)
 
 RegisterNUICallback('tuningDyno', function(_, cb)
     if not panelOpen or currentPlate == '' then cb({ ok = false }) return end
-    notify('Dyno pornit — tine accelerația 12 secunde!', 'info')
+    if STC.IsDynoActive and STC.IsDynoActive() then cb({ ok = false }) return end
+
+    SetNuiFocus(false, false)
+    sendUi('dynoRunning', {})
+
     SunsetTuningClient.RunDynoTest(currentShop, function(result)
+        SetNuiFocus(true, true)
+        if not result then
+            sendUi('dynoDone', { ok = false })
+            cb({ ok = false })
+            return
+        end
+
         local dynoSaved, err = Sunset.AwaitCallback('sunset:tuning:runDyno', currentPlate, result.hp, result.torque, draftTune)
         if dynoSaved then
             if draftTune then
@@ -158,10 +169,11 @@ RegisterNUICallback('tuningDyno', function(_, cb)
             end
             sendUi('dynoResult', { dyno = dynoSaved, result = result })
         else
-            notify(err or 'Dyno esuat', 'error')
+            notify(err or 'Dyno esuat — verifica banii in banca ($' .. SunsetTuning.DynoCost .. ')', 'error')
+            sendUi('dynoDone', { ok = false })
         end
+        cb({ ok = true })
     end)
-    cb({ ok = true })
 end)
 
 RegisterNUICallback('tuningLeaderboard', function(_, cb)

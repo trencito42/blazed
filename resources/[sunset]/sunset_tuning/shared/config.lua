@@ -23,7 +23,7 @@ SunsetTuning.Shops = {
         id = 'lsc_main',
         label = 'LS Customs — ECU Bay',
         coords = vector3(-337.52, -136.57, 39.01),
-        dyno = vector4(-336.15, -142.85, 39.01, 250.0),
+        dyno = vector4(-339.85, -142.35, 39.01, 68.0),
         blip = { sprite = 72, color = 47, scale = 0.85 },
     },
     {
