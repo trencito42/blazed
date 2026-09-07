@@ -89,6 +89,14 @@ local SERVER_CHAT_COMMANDS = {
     f = true, r = true, d = true, gov = true, m = true, megaphone = true,
 }
 
+local function isClientOnlyCommand(cmd)
+    if SERVER_CHAT_COMMANDS[cmd] then return false end
+    if adminRequired(cmd) then return false end
+    if not (Sunset.ClientCommands and Sunset.ClientCommands[cmd]) then return false end
+    if serverCommands[cmd] then return false end
+    return true
+end
+
 local function tryRunServerChatCommand(src, cmd, args)
     cmd = string.lower(tostring(cmd or ''))
     args = args or {}
@@ -191,6 +199,11 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
         chatSystem(src,
             ('/%s is registered but has no handler on this server. Contact staff or reconnect.'):format(cmd),
             'error')
+        return
+    end
+
+    if isClientOnlyCommand(cmd) then
+        TriggerClientEvent('sunset:chat:executeCommand', src, line)
         return
     end
 

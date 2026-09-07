@@ -248,7 +248,8 @@ for _, name in ipairs({
     'acceptfaction', 'declinefaction', 'faction', 'factions', 'crafting', 'quitjob', 'jobhelp', 'documents',
     'id', 'licenses', 'givekeys', 'takekeys', 'park', 'recovertrailer', 'service',
     'f', 'r', 'd', 'gov', 'm', 'megaphone', 'calls', 'servicecalls', 'cancel',
-    'c', 'cwarn', 'cw', 'clan', 'clans',
+    'c', 'cwarn', 'cw', 'clan', 'clans', 'acceptclan', 'declineclan',
+    'help', 'pass', 'missions', 'stats', 'inventory', 'phone', 'emotes', 'jobs', 'skills', 'fish',
     'firestart', 'firecalls', 'respawn', 'sethome', 'renthouse', 'unrent',
     'stabilize', 'heal', 'revive', 'rob', 'duty', 'fw', 'v', 'garage',
 }) do
