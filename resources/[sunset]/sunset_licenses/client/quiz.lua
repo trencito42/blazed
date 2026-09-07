@@ -3,20 +3,20 @@ local quizOpen = false
 local function closeQuiz()
     if not quizOpen then return end
     quizOpen = false
-    SetNuiFocus(false, false)
+    exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('licenseQuizHide', {})
 end
 
 function OpenTheoryQuiz(licenseType, theory)
     if quizOpen then return end
     quizOpen = true
-    SetNuiFocus(true, true)
     exports.sunset_ui:Send('licenseQuizShow', {
         licenseType = licenseType,
         title = theory.title,
         intro = theory.intro,
         questions = theory.questions,
     })
+    exports.sunset_ui:SetFocus(true, true)
 end
 
 AddEventHandler('sunset:nui:licenseQuizClose', function()
