@@ -16,7 +16,7 @@ local function listJobsForAdmin()
         return { jobs = jobs }
     end)
     if not ok then
-        return nil, ('Job Creator database error: %s'):format(tostring(err))
+        return nil, ('Job Creator database error: %s'):format(tostring(result))
     end
     return result
 end

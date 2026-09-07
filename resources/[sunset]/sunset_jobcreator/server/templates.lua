@@ -524,8 +524,6 @@ local function garbageTemplate()
     }
 end
 
-end
-
 local function minerTemplate()
     return {
         startStage = 'init',
