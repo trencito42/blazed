@@ -46,6 +46,7 @@ function JCSessions_Create(source, jobRow, testMode)
         id = seq,
         jobId = jobRow.id,
         label = jobRow.label,
+        icon = jobRow.icon or (def.ui and def.ui.icon) or 'briefcase',
         definition = def,
         stageId = def.startStage,
         variables = vars,

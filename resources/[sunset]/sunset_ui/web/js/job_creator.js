@@ -85,6 +85,22 @@ const PROP_PRESETS = [
     { id: 'prop_rock_4_c', label: 'Rocă (miner)' },
 ];
 
+const JOB_ICON_PRESETS = [
+    { id: 'truck', label: 'Camion' },
+    { id: 'fish', label: 'Pescuit' },
+    { id: 'axe', label: 'Topor' },
+    { id: 'package', label: 'Colet' },
+    { id: 'trash', label: 'Gunoi' },
+    { id: 'pickaxe', label: 'Târnăcop' },
+    { id: 'hardhat', label: 'Șantier' },
+    { id: 'box', label: 'Cutie' },
+    { id: 'wheat', label: 'Fermă' },
+    { id: 'tree', label: 'Copac' },
+    { id: 'briefcase', label: 'Job' },
+    { id: 'car', label: 'Mașină' },
+    { id: 'wrench', label: 'Service' },
+];
+
 const JobCreator = {
     _jobs: [], _selectedId: null, _draft: null, _tab: 'general',
     _selectedStageIdx: 0, _dragFromIdx: null, _inited: false,
@@ -275,6 +291,49 @@ const JobCreator = {
     _esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); },
 
     _meta(type) { return STAGE_META[type] || { icon: '▸', cat: 'logica', label: type, hint: '' }; },
+
+    _resolveJobIcon(d, def) {
+        const cur = String(d.icon || def.ui?.icon || 'briefcase').trim();
+        if (window.JobIcons && JobIcons.isEmoji(cur)) return { preset: '', custom: cur };
+        const known = JOB_ICON_PRESETS.some((p) => p.id === cur);
+        return { preset: known ? cur : 'briefcase', custom: '' };
+    },
+
+    _iconPickerHtml(d, def) {
+        const { preset, custom } = this._resolveJobIcon(d, def);
+        const opts = JOB_ICON_PRESETS.map((p) =>
+            `<option value="${p.id}" ${p.id === preset ? 'selected' : ''}>${p.label}</option>`
+        ).join('');
+        return `
+            <div class="jc-field-row jc-icon-row">
+                <div class="jc-field">
+                    <label>Iconă HUD (în joc)</label>
+                    <select id="jc-f-icon">${opts}</select>
+                </div>
+                <div class="jc-field">
+                    <label>Sau emoji (ex: 🪓 🚚)</label>
+                    <input id="jc-f-icon-custom" maxlength="4" value="${this._esc(custom)}" placeholder="🪓" />
+                </div>
+                <div class="jc-icon-preview-wrap">
+                    <label>Preview</label>
+                    <div class="jc-icon-preview" id="jc-f-icon-preview"></div>
+                </div>
+            </div>
+            <p class="jc-hint">Iconița apare în panoul de job (jos-centru). Poți folosi preset sau un emoji.</p>`;
+    },
+
+    _bindIconPicker(mount) {
+        const updatePreview = () => {
+            const slot = mount.querySelector('#jc-f-icon-preview');
+            if (!slot || !window.JobIcons) return;
+            const custom = mount.querySelector('#jc-f-icon-custom')?.value?.trim();
+            const preset = mount.querySelector('#jc-f-icon')?.value || 'briefcase';
+            JobIcons.apply(slot, custom || preset);
+        };
+        mount.querySelector('#jc-f-icon')?.addEventListener('change', updatePreview);
+        mount.querySelector('#jc-f-icon-custom')?.addEventListener('input', updatePreview);
+        updatePreview();
+    },
 
     /** Toate variabilele folosite în job + preset-uri comune. */
     _allVarNames() {
@@ -838,6 +897,7 @@ const JobCreator = {
                     <div class="jc-field"><label>Salariu afișat</label><input id="jc-f-salary" type="number" value="${def.salary || 140}" /></div>
                     <div class="jc-field"><label>Titlu pe ecran</label><input id="jc-f-ui-title" value="${this._esc(def.ui?.title || d.label)}" /></div>
                 </div>
+                ${this._iconPickerHtml(d, def)}
                 ${this._variablesEditorHtml(def.variables)}
                 <details class="jc-advanced-box"><summary>Mai multe setări</summary>
                     <div class="jc-field-row">
@@ -848,6 +908,7 @@ const JobCreator = {
                     <div class="jc-field"><label>ID intern</label><input id="jc-f-id" value="${d.id || ''}" /></div>
                 </details>`;
             this._bindVariablesEditor(mount);
+            this._bindIconPicker(mount);
             return;
         }
 
@@ -1029,8 +1090,18 @@ const JobCreator = {
             d.label = document.getElementById('jc-f-label').value || d.label;
             d.description = document.getElementById('jc-f-desc')?.value || '';
             d.id = document.getElementById('jc-f-id')?.value || d.id;
+            const iconCustom = document.getElementById('jc-f-icon-custom')?.value?.trim();
+            const iconPreset = document.getElementById('jc-f-icon')?.value || 'briefcase';
+            const icon = iconCustom || iconPreset;
+            d.icon = icon;
             def.salary = Number(document.getElementById('jc-f-salary')?.value) || 140;
-            def.ui = { title: document.getElementById('jc-f-ui-title')?.value || d.label, key: 'E' };
+            const prevUi = def.ui || {};
+            def.ui = {
+                title: document.getElementById('jc-f-ui-title')?.value || d.label,
+                key: prevUi.key || 'E',
+                icon,
+                bagLabel: prevUi.bagLabel,
+            };
             def.progression = {
                 payPerTask: Number(document.getElementById('jc-f-pay')?.value) || 75,
                 xpPerTask: Number(document.getElementById('jc-f-xp')?.value) || 15,

@@ -13,6 +13,13 @@ const Fishing = {
         this._bag = document.getElementById('fishing-bag');
         this._message = document.getElementById('fishing-message');
         this._progress = document.getElementById('fishing-progress');
+        this._iconSlot = document.getElementById('fishing-icon-slot');
+    },
+
+    _setIcon(icon) {
+        if (window.JobIcons && this._iconSlot) {
+            JobIcons.apply(this._iconSlot, icon || 'fish');
+        }
     },
 
     _keyHtml() {
@@ -83,6 +90,7 @@ const Fishing = {
         if (!this._panel) return;
 
         this._setBag(data.carried, data.capacity, data.bagLabel);
+        this._setIcon(data.icon);
         this._panel.classList.remove('hidden');
 
         const state = this._resolveState(data);
@@ -161,6 +169,7 @@ const Fishing = {
         if (hasBag) {
             this._setBag(data.carried, data.capacity, data.bagLabel);
         }
+        if (data.icon) this._setIcon(data.icon);
 
         const hasContent = data.state || data.message || data.title || data.windowMs;
         if (!hasContent) return;
@@ -186,6 +195,7 @@ const Fishing = {
         if (!this._panel) return;
 
         this._setBag(data.carried, data.capacity, data.bagLabel);
+        this._setIcon(data.icon);
         this._panel.classList.remove('hidden');
         this._applyState(
             'state-bite',

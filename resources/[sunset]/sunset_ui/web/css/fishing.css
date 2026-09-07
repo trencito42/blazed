@@ -79,6 +79,16 @@
     transition: color 0.2s;
 }
 
+.fishing__icon-emoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    line-height: 1;
+}
+
 .fishing__title-wrap {
     flex: 1;
     min-width: 0;

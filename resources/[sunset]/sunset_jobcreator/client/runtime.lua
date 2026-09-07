@@ -96,6 +96,7 @@ local function fishingHud(data, extra)
     local payload = {
         title = ui.title or data.label or 'Work',
         bagLabel = ui.bagLabel or 'Task',
+        icon = data.icon or ui.icon or 'briefcase',
     }
     if total > 0 then
         payload.carried = done
@@ -148,6 +149,7 @@ local function syncHud(data, override)
         title = title,
         message = message,
         bagLabel = bagLabel,
+        icon = data.icon or ui.icon or 'briefcase',
     }
     if total > 0 then
         payload.carried = done

@@ -41,7 +41,7 @@ end
 
 local function sessionBagPayload()
     local carried, capacity = bagCounts()
-    return { carried = carried, capacity = capacity }
+    return { carried = carried, capacity = capacity, icon = 'fish', bagLabel = 'Bag' }
 end
 
 local function isFishermanShift()

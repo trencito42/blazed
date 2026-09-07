@@ -10,7 +10,7 @@ local function courierTemplate()
         startStage = 'init_total',
         timeoutSec = 1200,
         salary = 140,
-        ui = { title = 'Courier', key = 'E' },
+        ui = { title = 'Courier', key = 'E', icon = 'package', bagLabel = 'Packages' },
         progression = { xpPerTask = 18, payPerTask = 75 },
         variables = { done = 0, total = 4, leg = 1 },
         locations = {
@@ -98,7 +98,7 @@ local function routeTemplate()
         startStage = 'init',
         timeoutSec = 1800,
         salary = 180,
-        ui = { title = 'Trucker', key = 'E' },
+        ui = { title = 'Trucker', key = 'E', icon = 'truck', bagLabel = 'Deliveries' },
         progression = { xpPerTask = 45, payPerTask = 0 },
         variables = { done = 0, total = 3 },
         locations = {
@@ -279,7 +279,7 @@ local function gatherTemplate()
         startStage = 'init',
         timeoutSec = 1500,
         salary = 120,
-        ui = { title = 'Fisherman', key = 'E' },
+        ui = { title = 'Fisherman', key = 'E', icon = 'fish', bagLabel = 'Bag' },
         progression = { xpPerTask = 12, payPerTask = 55 },
         variables = { caught = 0, total = 5 },
         locations = {
@@ -376,7 +376,7 @@ local function garbageTemplate()
         startStage = 'init',
         timeoutSec = 1500,
         salary = 130,
-        ui = { title = 'Garbage', key = 'E' },
+        ui = { title = 'Garbage', key = 'E', icon = 'trash', bagLabel = 'Bins' },
         progression = { xpPerTask = 12, payPerTask = 48 },
         variables = { done = 0, total = 6 },
         locations = {
@@ -529,7 +529,7 @@ local function minerTemplate()
         startStage = 'init',
         timeoutSec = 1500,
         salary = 125,
-        ui = { title = 'Miner', key = 'E' },
+        ui = { title = 'Miner', key = 'E', icon = 'pickaxe', bagLabel = 'Ore' },
         progression = { xpPerTask = 14, payPerTask = 65 },
         variables = { mined = 0, total = 6 },
         locations = {
@@ -565,7 +565,7 @@ local function lumberTemplate()
         startStage = 'init',
         timeoutSec = 1500,
         salary = 120,
-        ui = { title = 'Lumberjack', key = 'E', bagLabel = 'Logs' },
+        ui = { title = 'Lumberjack', key = 'E', icon = 'axe', bagLabel = 'Logs' },
         progression = { xpPerTask = 16, payPerTask = 70 },
         variables = { logs = 0, total = 4 },
         locations = {
@@ -615,7 +615,7 @@ local function constructionTemplate()
         startStage = 'init',
         timeoutSec = 1800,
         salary = 160,
-        ui = { title = 'Construction', key = 'E' },
+        ui = { title = 'Construction', key = 'E', icon = 'hardhat', bagLabel = 'Tasks' },
         progression = { xpPerTask = 20, payPerTask = 85 },
         variables = { tasks = 0, total = 4 },
         party = { soloEnabled = true, partyEnabled = true, minPlayers = 1, maxPlayers = 4 },
@@ -645,7 +645,7 @@ local function warehouseTemplate()
         startStage = 'init',
         timeoutSec = 1200,
         salary = 135,
-        ui = { title = 'Warehouse', key = 'E' },
+        ui = { title = 'Warehouse', key = 'E', icon = 'box', bagLabel = 'Pallets' },
         progression = { xpPerTask = 12, payPerTask = 55 },
         variables = { sorted = 0, total = 6 },
         locations = {
@@ -680,7 +680,7 @@ local function farmerTemplate()
         startStage = 'init',
         timeoutSec = 1500,
         salary = 115,
-        ui = { title = 'Farmer', key = 'E' },
+        ui = { title = 'Farmer', key = 'E', icon = 'wheat', bagLabel = 'Harvest' },
         progression = { xpPerTask = 10, payPerTask = 50 },
         variables = { harvested = 0, total = 6 },
         locations = {
@@ -800,5 +800,19 @@ function JCTemplates_Seed()
         lumberMeta.status = row.status
         JCStorage_Save('jc_tpl_lumber', lumberMeta, lumberTemplate(), 'system-upgrade')
         print('[sunset_jobcreator] Refreshed jc_tpl_lumber template.')
+    end
+
+    local truckerMeta = {
+        label = 'Trucker (Creator)',
+        description = 'Pick up cargo and deliver across San Andreas. Route-based trucking template.',
+        category = 'transport',
+        icon = 'truck',
+        status = 'published',
+    }
+    if JCStorage_Get('jc_tpl_route') then
+        local row = JCStorage_Get('jc_tpl_route')
+        truckerMeta.status = row.status
+        JCStorage_Save('jc_tpl_route', truckerMeta, routeTemplate(), 'system-upgrade')
+        print('[sunset_jobcreator] Refreshed jc_tpl_route template.')
     end
 end

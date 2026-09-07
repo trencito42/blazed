@@ -61,6 +61,7 @@ function JCEngine_BuildClientPayload(session)
     return {
         jobId = session.jobId,
         label = session.label,
+        icon = session.icon,
         stageId = session.stageId,
         stage = stage,
         variables = session.variables,
