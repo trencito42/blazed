@@ -202,6 +202,7 @@ RegisterNUICallback('tuningDyno', function(_, cb)
     end
 
     SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
     sendUi('dynoRunning', {})
 
     SunsetTuningClient.RunDynoTest(currentShop, function(result)

@@ -53,8 +53,8 @@ local function startOverrun(veh, rpm, now, tune)
     overrun.untilMs = now + holdMs
 end
 
-local function burstExhaust(veh, tune, mult, kind, withFlames)
-    local intensity = (mult and mult.popIntensity) or 0.75
+local function burstExhaust(veh, tune, mult, kind, withFlames, intensityScale)
+    local intensity = ((mult and mult.popIntensity) or 0.75) * (tonumber(intensityScale) or 1.0)
     local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
     local color = flameColorOf(tune)
     local showFlames = withFlames and flamesActive(tune)
@@ -79,7 +79,7 @@ local function burstExhaust(veh, tune, mult, kind, withFlames)
     syncFx(veh, 'pop', intensity, color)
 
     if showFlames then
-        EP.burst(veh, 'flame', intensity * 0.8, color)
+        EP.burst(veh, 'flame', intensity * 1.15, color)
         syncFx(veh, 'flame', intensity, color)
     end
 
@@ -174,8 +174,8 @@ CreateThread(function()
         if tune.pop.enabled and liftOff and wasHighRpm and lastRpm >= rpmThreshold - 0.1 then
             startOverrun(veh, rpm, now, tune)
             if now > popCooldown then
-                popCooldown = now + 70
-                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true)
+                popCooldown = now + 105
+                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.18)
             end
         end
 
@@ -185,15 +185,19 @@ CreateThread(function()
             elseif tune.pop.enabled and throttle < 0.28 and rpm > minOverrunRpm and now > popCooldown then
                 local rpmRange = math.max(0.15, overrun.peakRpm - minOverrunRpm)
                 local rpmPos = (rpm - minOverrunRpm) / rpmRange
-                local chance = 0.42 + mult.popIntensity * 0.38
-                if rpmFalling then chance = chance + 0.28 end
-                if rpmPos > 0.55 then chance = chance + 0.12 end
-                if tune.pop.secondBurst then chance = chance + 0.1 end
+                local rpmDrop = math.max(0.0, lastRpm - rpm)
+                local chance = 0.10 + mult.popIntensity * 0.22
+                if rpmFalling then chance = chance + math.min(0.52, rpmDrop * 12.0) end
+                if rpmPos > 0.62 then chance = chance + 0.16 end
+                if tune.pop.secondBurst then chance = chance + 0.08 end
 
                 if math.random() < chance then
-                    local gap = 70 + math.floor((1.0 - rpmPos) * 90)
+                    -- Sharp individual reports high in the rev range, with
+                    -- progressively wider spacing as the engine spins down.
+                    local gap = 105 + math.floor((1.0 - rpmPos) * 145) + math.random(0, 38)
                     popCooldown = now + gap
-                    burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true)
+                    local strength = 0.82 + rpmPos * 0.48 + math.min(0.2, rpmDrop * 4.0)
+                    burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, strength)
                 end
             end
         end

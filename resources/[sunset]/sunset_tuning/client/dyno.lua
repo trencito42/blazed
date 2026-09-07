@@ -55,6 +55,19 @@ local function pinVehicle(veh, pose)
     SetVehicleForwardSpeed(veh, 0.0)
 end
 
+-- The handbrake holds the car on the rollers. Re-applying coordinates and
+-- forward speed every frame cancels GTA's throttle/RPM simulation, so only
+-- correct the vehicle if it has actually drifted off the stand.
+local function holdVehicleOnDyno(veh, pose)
+    if not veh or veh == 0 or not DoesEntityExist(veh) or not pose then return end
+    SetVehicleHandbrake(veh, true)
+    local coords = GetEntityCoords(veh)
+    local dx, dy, dz = coords.x - pose.x, coords.y - pose.y, coords.z - pose.z
+    if (dx * dx + dy * dy) > 0.64 or math.abs(dz) > 0.45 then
+        pinVehicle(veh, pose)
+    end
+end
+
 local function prepareDynoVehicle(veh)
     local pose = captureDynoPose(veh)
     SetVehicleEngineOn(veh, true, true, false)
@@ -118,6 +131,7 @@ CreateThread(function()
     while true do
         if dynoHud.active then
             drawDynoHud()
+            EnableControlAction(0, 71, true)   -- vehicle accelerate
             DisableControlAction(0, 75, true)  -- exit vehicle
             DisableControlAction(0, 59, true)  -- steer left
             DisableControlAction(0, 60, true)  -- steer right
@@ -159,11 +173,15 @@ function RunDynoTest(shop, onComplete)
     local testMs = 10000
     local start = GetGameTimer()
     local peakRpm = 0.0
+    local nextPositionCheck = 0
 
     while GetGameTimer() - start < testMs do
         if not DoesEntityExist(veh) then break end
-        pinVehicle(veh, pose)
         local elapsed = GetGameTimer() - start
+        if elapsed >= nextPositionCheck then
+            holdVehicleOnDyno(veh, pose)
+            nextPositionCheck = elapsed + 250
+        end
         local rpm = GetVehicleCurrentRpm(veh)
         if rpm > peakRpm then peakRpm = rpm end
         dynoHud.rpm = rpm

@@ -76,8 +76,9 @@ RegisterNUICallback('lscRepair', function(_, cb)
 end)
 
 RegisterNUICallback('lscTune', function(_, cb)
+    local shop = pendingShop
     closeLscMenu()
-    exports.sunset_tuning:OpenTuningPanel(pendingShop)
+    exports.sunset_tuning:OpenTuningPanel(shop)
     cb({ ok = true })
 end)
 
