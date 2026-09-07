@@ -551,6 +551,69 @@
     padding: 12px 0;
 }
 
+.clan-tabs--officer {
+    overflow-y: auto;
+    max-height: 100%;
+    padding-bottom: 8px;
+}
+
+.clan-tabs--officer .clan-tab {
+    font-size: 10px;
+    padding: 9px 8px 9px 10px;
+    letter-spacing: 0.1em;
+}
+
+.clan-manage-form--identity {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.clan-color-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12px;
+}
+
+.clan-preview--compact {
+    padding: 10px 12px;
+    margin: 0;
+}
+
+.clan-save-btn {
+    margin-top: 4px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 140, 0, 0.55);
+    background: rgba(255, 140, 0, 0.22);
+    color: #fff;
+    font: 700 11px/1 var(--os-title, 'Chakra Petch', sans-serif);
+    letter-spacing: 0.1em;
+    cursor: pointer;
+}
+
+.clan-save-btn:hover {
+    background: rgba(255, 140, 0, 0.34);
+}
+
+.clan-manage-grid--single {
+    grid-template-columns: 1fr;
+}
+
+.clan-rank-label-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 28vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
 @media (max-width: 900px) {
     .clan-stats,
     .clan-cards,

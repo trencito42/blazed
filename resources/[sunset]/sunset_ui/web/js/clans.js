@@ -463,9 +463,11 @@ const ClanPanels = {
 
         document.querySelector('.clan-tab--overview')?.classList.toggle('hidden', !inClan);
         document.querySelector('.clan-tab--roster')?.classList.toggle('hidden', !inClan);
-        document.querySelector('.clan-tab--manage')?.classList.toggle('hidden', !inClan || !(
-            perms.invite || perms.motd || perms.settings || perms.promote || perms.warn || perms.rankLabels || perms.dissolve || perms.leave
-        ));
+        document.querySelector('.clan-tab--tag')?.classList.toggle('hidden', !inClan || !perms.settings);
+        document.querySelector('.clan-tab--comms')?.classList.toggle('hidden', !inClan || !perms.motd);
+        document.querySelector('.clan-tab--recruit')?.classList.toggle('hidden', !inClan || !perms.invite);
+        document.querySelector('.clan-tab--actions')?.classList.toggle('hidden', !inClan || !(perms.kick || perms.promote || perms.warn));
+        document.querySelector('.clan-tab--org')?.classList.toggle('hidden', !inClan || !(perms.rankLabels || perms.leave || perms.dissolve));
         document.querySelector('.clan-tab--create')?.classList.toggle('hidden', inClan);
         document.querySelector('.clan-tab--browse')?.classList.toggle('hidden', false);
 
@@ -488,13 +490,6 @@ const ClanPanels = {
             else if (action === 'create') allowed = false;
             form.classList.toggle('hidden', action !== 'create' && !allowed);
         });
-
-        const settingsForm = document.querySelector('[data-clan-action="settings"]');
-        const manageBar = $('#clan-manage-bar');
-        if (manageBar) {
-            const showBar = inClan && perms.settings && settingsForm && !settingsForm.classList.contains('hidden');
-            manageBar.classList.toggle('hidden', !showBar);
-        }
 
         if (inClan) {
             const rankEl = $('#clan-rank');
@@ -595,7 +590,11 @@ const ClanPanels = {
         if (panelWasHidden && !this.dashboard) {
             document.querySelector('.clan-tab--overview')?.classList.add('hidden');
             document.querySelector('.clan-tab--roster')?.classList.add('hidden');
-            document.querySelector('.clan-tab--manage')?.classList.add('hidden');
+            document.querySelector('.clan-tab--tag')?.classList.add('hidden');
+            document.querySelector('.clan-tab--comms')?.classList.add('hidden');
+            document.querySelector('.clan-tab--recruit')?.classList.add('hidden');
+            document.querySelector('.clan-tab--actions')?.classList.add('hidden');
+            document.querySelector('.clan-tab--org')?.classList.add('hidden');
             document.querySelector('.clan-tab--create')?.classList.remove('hidden');
             const title = $('#clan-panel-title');
             if (title) title.innerHTML = 'SERVER <span>CLANS</span>';

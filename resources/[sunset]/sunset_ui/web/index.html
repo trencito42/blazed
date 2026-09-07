@@ -22,8 +22,8 @@
     <link rel="stylesheet" href="css/radar.css">
     <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=10">
-    <link rel="stylesheet" href="css/clans.css?v=10">
-    <link rel="stylesheet" href="css/org-panels.css?v=3">
+    <link rel="stylesheet" href="css/clans.css?v=11">
+    <link rel="stylesheet" href="css/org-panels.css?v=4">
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=4">
@@ -985,11 +985,15 @@
             </header>
             <main class="menu-panels menu-panels--solo">
                 <section class="menu-panel-view tech-panel accent-orange is-active clan-dashboard org-shell">
-                    <nav class="org-rail clan-tabs" id="clan-tabs" aria-label="Clan sections">
+                    <nav class="org-rail clan-tabs clan-tabs--officer" id="clan-tabs" aria-label="Clan sections">
                         <span class="org-rail__label">UNIT</span>
                         <button type="button" class="clan-tab clan-tab--overview is-active" data-clan-tab="overview">STATUS</button>
                         <button type="button" class="clan-tab clan-tab--roster" data-clan-tab="roster">CREW</button>
-                        <button type="button" class="clan-tab clan-tab--manage hidden" data-clan-tab="manage">COMMAND</button>
+                        <button type="button" class="clan-tab clan-tab--tag hidden" data-clan-tab="tag">TAG</button>
+                        <button type="button" class="clan-tab clan-tab--comms hidden" data-clan-tab="comms">COMMS</button>
+                        <button type="button" class="clan-tab clan-tab--recruit hidden" data-clan-tab="recruit">RECRUIT</button>
+                        <button type="button" class="clan-tab clan-tab--actions hidden" data-clan-tab="actions">ACTIONS</button>
+                        <button type="button" class="clan-tab clan-tab--org hidden" data-clan-tab="org">ORG</button>
                         <button type="button" class="clan-tab clan-tab--create" data-clan-tab="create">REGISTER</button>
                         <button type="button" class="clan-tab clan-tab--browse" data-clan-tab="browse">LISTING</button>
                     </nav>
@@ -1013,98 +1017,84 @@
                         </div>
                         <div id="clan-roster" class="clan-roster"></div>
                     </div>
-                    <div class="clan-tab-panel" data-clan-panel="manage">
-                        <p class="org-hint">Officer tools — use <span class="menu-keycap">F10</span> for server IDs.</p>
-                        <div class="clan-manage-body org-manage-sections">
-                            <section class="org-section org-section--identity">
-                                <div class="org-section__head"><span>TAG &amp; CALLSIGN</span><i></i></div>
-                                <form class="clan-manage-form clan-manage-form--identity" id="clan-settings-form" data-clan-action="settings">
-                                    <input type="text" name="tag" minlength="2" maxlength="6" placeholder="Tag (e.g. uS)" required>
-                                    <select name="tagStyle" required></select>
-                                    <label class="clan-color-field">Tag color <input type="color" name="tagColor" value="#FF8C00"></label>
-                                    <textarea name="description" rows="2" maxlength="512" placeholder="Clan description"></textarea>
-                                    <div class="clan-preview clan-preview--compact"><span class="clan-preview-label">Preview</span><div id="clan-settings-preview" class="clan-preview-name">—</div></div>
-                                </form>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>COMMS</span><i></i></div>
-                                <div class="clan-manage-grid clan-manage-grid--single">
-                                    <form class="clan-manage-form" data-clan-action="motd">
-                                        <strong>MOTD</strong>
-                                        <p>Members see this on connect and via <strong>/cmotd</strong>.</p>
-                                        <textarea name="message" rows="2" maxlength="512" placeholder="Clan MOTD..." required></textarea>
-                                        <button type="submit">SAVE MOTD</button>
-                                    </form>
+                    <div class="clan-tab-panel" data-clan-panel="tag">
+                        <span class="clan-section-label">TAG &amp; CALLSIGN</span>
+                        <p class="org-hint">How your unit appears in chat and scoreboard.</p>
+                        <form class="clan-manage-form clan-manage-form--identity" id="clan-settings-form" data-clan-action="settings">
+                            <input type="text" name="tag" minlength="2" maxlength="6" placeholder="Tag (e.g. uN)" required>
+                            <select name="tagStyle" required></select>
+                            <label class="clan-color-field">Tag color <input type="color" name="tagColor" value="#FF8C00"></label>
+                            <textarea name="description" rows="2" maxlength="512" placeholder="Clan description"></textarea>
+                            <div class="clan-preview clan-preview--compact"><span class="clan-preview-label">Preview</span><div id="clan-settings-preview" class="clan-preview-name">—</div></div>
+                            <button type="submit" class="clan-save-btn">SAVE TAG &amp; IDENTITY</button>
+                        </form>
+                    </div>
+                    <div class="clan-tab-panel" data-clan-panel="comms">
+                        <span class="clan-section-label">COMMS</span>
+                        <p class="org-hint">Members see MOTD on connect and via <strong>/cmotd</strong>.</p>
+                        <form class="clan-manage-form" data-clan-action="motd">
+                            <textarea name="message" rows="4" maxlength="512" placeholder="Clan MOTD..." required></textarea>
+                            <button type="submit">SAVE MOTD</button>
+                        </form>
+                    </div>
+                    <div class="clan-tab-panel" data-clan-panel="recruit">
+                        <span class="clan-section-label">RECRUITMENT</span>
+                        <p class="org-hint">Invite an online player — server ID from <span class="menu-keycap">F10</span>.</p>
+                        <form class="clan-manage-form" data-clan-action="invite">
+                            <input type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
+                            <button type="submit">SEND INVITE</button>
+                        </form>
+                    </div>
+                    <div class="clan-tab-panel" data-clan-panel="actions">
+                        <span class="clan-section-label">CREW ACTIONS</span>
+                        <p class="org-hint">Discipline and rank changes — target must be online.</p>
+                        <div class="clan-manage-grid">
+                            <form class="clan-manage-form" data-clan-action="kick">
+                                <strong>Remove member</strong>
+                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                <button type="submit" class="is-danger">REMOVE</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="rankUp">
+                                <strong>Promote</strong>
+                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                <button type="submit">RANK UP</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="rankDown">
+                                <strong>Demote</strong>
+                                <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                <button type="submit">RANK DOWN</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="warn">
+                                <strong>Clan strike</strong>
+                                <p>Max 3 — auto-kick at limit.</p>
+                                <div class="clan-manage-row">
+                                    <input type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                    <input type="text" name="reason" maxlength="128" placeholder="Reason">
                                 </div>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>RECRUITMENT</span><i></i></div>
-                                <div class="clan-manage-grid">
-                                    <form class="clan-manage-form" data-clan-action="invite">
-                                        <strong>Recruit player</strong>
-                                        <p>Invite an online player into your clan.</p>
-                                        <input type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
-                                        <button type="submit">SEND INVITE</button>
-                                    </form>
-                                </div>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>CREW ACTIONS</span><i></i></div>
-                                <div class="clan-manage-grid">
-                                    <form class="clan-manage-form" data-clan-action="kick">
-                                        <strong>Remove member</strong>
-                                        <p>Instant removal from the clan.</p>
-                                        <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                        <button type="submit" class="is-danger">REMOVE</button>
-                                    </form>
-                                    <form class="clan-manage-form" data-clan-action="rankUp">
-                                        <strong>Promote</strong>
-                                        <p>Move member up one rank.</p>
-                                        <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                        <button type="submit">RANK UP</button>
-                                    </form>
-                                    <form class="clan-manage-form" data-clan-action="rankDown">
-                                        <strong>Demote</strong>
-                                        <p>Move member down one rank.</p>
-                                        <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                        <button type="submit">RANK DOWN</button>
-                                    </form>
-                                    <form class="clan-manage-form" data-clan-action="warn">
-                                        <strong>Clan strike</strong>
-                                        <p>Max 3 — auto-kick at limit.</p>
-                                        <div class="clan-manage-row">
-                                            <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                            <input type="text" name="reason" maxlength="128" placeholder="Reason">
-                                        </div>
-                                        <button type="submit" class="is-danger">ISSUE STRIKE</button>
-                                    </form>
-                                </div>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>RANKS &amp; ORG</span><i></i></div>
-                                <div class="clan-manage-grid">
-                                    <form class="clan-manage-form" data-clan-action="rankLabels" id="clan-rank-labels-form">
-                                        <strong>Rank titles</strong>
-                                        <p>Leader only — ranks 1 through 7.</p>
-                                        <div id="clan-rank-label-fields" class="clan-rank-label-fields"></div>
-                                        <button type="submit">SAVE RANKS</button>
-                                    </form>
-                                    <form class="clan-manage-form" data-clan-action="leave">
-                                        <strong>Leave clan</strong>
-                                        <p>Leaders must dissolve instead.</p>
-                                        <button type="submit" class="is-danger">LEAVE UNIT</button>
-                                    </form>
-                                    <form class="clan-manage-form" data-clan-action="dissolve">
-                                        <strong>Dissolve clan</strong>
-                                        <p>Permanent — removes everyone.</p>
-                                        <button type="submit" class="is-danger">DISSOLVE</button>
-                                    </form>
-                                </div>
-                            </section>
+                                <button type="submit" class="is-danger">ISSUE STRIKE</button>
+                            </form>
                         </div>
-                        <div class="clan-manage-bar hidden" id="clan-manage-bar">
-                            <span class="clan-manage-bar__hint">Tag, color and description</span>
-                            <button type="submit" form="clan-settings-form" class="clan-manage-bar__btn">SAVE TAG &amp; IDENTITY</button>
+                    </div>
+                    <div class="clan-tab-panel" data-clan-panel="org">
+                        <span class="clan-section-label">ORGANIZATION</span>
+                        <p class="org-hint">Rank titles, leave or dissolve the unit.</p>
+                        <div class="clan-manage-grid clan-manage-grid--single">
+                            <form class="clan-manage-form" data-clan-action="rankLabels" id="clan-rank-labels-form">
+                                <strong>Rank titles</strong>
+                                <p>Leader only — ranks 1 through 7.</p>
+                                <div id="clan-rank-label-fields" class="clan-rank-label-fields"></div>
+                                <button type="submit">SAVE RANKS</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="leave">
+                                <strong>Leave clan</strong>
+                                <p>Leaders must dissolve instead.</p>
+                                <button type="submit" class="is-danger">LEAVE UNIT</button>
+                            </form>
+                            <form class="clan-manage-form" data-clan-action="dissolve">
+                                <strong>Dissolve clan</strong>
+                                <p>Permanent — removes everyone.</p>
+                                <button type="submit" class="is-danger">DISSOLVE</button>
+                            </form>
                         </div>
                     </div>
                     <div class="clan-tab-panel" data-clan-panel="create">
@@ -1522,7 +1512,7 @@
         </aside>
     </div>
 
-    <script src="js/clans.js?v=10"></script>
+    <script src="js/clans.js?v=11"></script>
     <script src="js/app.js?v=13"></script>
     <script src="js/characters.js"></script>
     <script src="js/hud.js?v=6"></script>
