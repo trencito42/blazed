@@ -43,6 +43,18 @@ dependencies {
     'sunset_admin',
 }
 
+server_exports {
+    'IsCreatorJob',
+    'GetJobDefinition',
+    'GetPublishedJobs',
+    'GetMigrationTarget',
+    'StartJob',
+    'CancelJob',
+    'GetActiveJob',
+    'RegisterStageType',
+    'ExecutePlayerCommand',
+}
+
 exports {
     'IsCreatorJob',
     'GetJobDefinition',

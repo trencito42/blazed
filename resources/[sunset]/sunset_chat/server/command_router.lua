@@ -80,6 +80,7 @@ local RESOURCE_COMMAND_EXPORTS = {
     'sunset_admin',
     'sunset_vehicles',
     'sunset_jobs',
+    'sunset_jobcreator',
     'sunset_factions',
     'sunset_core',
     'sunset_dispatch',
@@ -114,6 +115,11 @@ local function tryRunAdminCommand(src, cmd, rest)
 
     ok, result = pcall(function()
         return exports.sunset_jobs:ExecutePlayerCommand(src, cmd, args)
+    end)
+    if ok and result then return true end
+
+    ok, result = pcall(function()
+        return exports.sunset_jobcreator:ExecutePlayerCommand(src, cmd, args)
     end)
     if ok and result then return true end
 

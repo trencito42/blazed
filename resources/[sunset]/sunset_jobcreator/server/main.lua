@@ -61,15 +61,23 @@ end)
 
 RegisterCommand('jobcreator', function(source)
     if source == 0 then return end
+    runJobCreator(source)
+end, false)
+
+RegisterCommand('jcdebug', function(source)
+    if source == 0 then return end
+    runJcDebug(source)
+end, false)
+
+function runJobCreator(source)
     if not exports.sunset_admin:IsAdmin(source, 3) then
         exports.sunset_core:CommandDenyAdmin(source, 'jobcreator')
         return
     end
     TriggerClientEvent('sunset:jobcreator:openPanel', source)
-end, false)
+end
 
-RegisterCommand('jcdebug', function(source)
-    if source == 0 then return end
+function runJcDebug(source)
     if not exports.sunset_admin:IsAdmin(source, 3) then return end
     local session = JCSessions_Get(source)
     if not session then
@@ -78,7 +86,22 @@ RegisterCommand('jcdebug', function(source)
     end
     local payload, err = JCEngine_DebugSkip(source)
     exports.sunset_core:CommandReply(source, err or ('Skipped to stage: %s'):format(payload and payload.stageId or '?'), 'info')
-end, false)
+end
+
+function ExecutePlayerCommand(source, name, args)
+    name = string.lower(tostring(name or ''))
+    if name == 'jobcreator' then
+        runJobCreator(source)
+        return true
+    end
+    if name == 'jcdebug' then
+        runJcDebug(source)
+        return true
+    end
+    return false
+end
+
+exports('ExecutePlayerCommand', ExecutePlayerCommand)
 
 TriggerEvent('chat:addSuggestion', '/jobcreator', 'Open the civilian Job Creator (admin)')
 TriggerEvent('chat:addSuggestion', '/jcdebug', 'Skip current creator job stage (admin)')
