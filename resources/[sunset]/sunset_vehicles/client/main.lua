@@ -739,6 +739,14 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     if spawnProps and (spawnProps.color1 or spawnProps.color2) then
         SetVehicleColours(vehicle, tonumber(spawnProps.color1) or 0, tonumber(spawnProps.color2) or 0)
     end
+    local cosmetics = spawnProps and spawnProps.cosmetics
+    if type(cosmetics) == 'table' and cosmetics.primary then
+        SetVehicleModColor_1(vehicle, 0)
+        SetVehicleModColor_2(vehicle, 0)
+        SetVehicleCustomPrimaryColour(vehicle, cosmetics.primary.r or 0, cosmetics.primary.g or 0, cosmetics.primary.b or 0)
+        SetVehicleCustomSecondaryColour(vehicle, cosmetics.secondary.r or 111, cosmetics.secondary.g or 111, cosmetics.secondary.b or 111)
+        if cosmetics.pearl then SetVehicleExtraColours(vehicle, cosmetics.pearl or 0, cosmetics.wheel or 0) end
+    end
     Wait(50)
     SetVehicleEngineHealth(vehicle, vehEngine)
     SetVehicleBodyHealth(vehicle, vehBody)

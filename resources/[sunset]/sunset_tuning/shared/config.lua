@@ -49,7 +49,7 @@ function SunsetTuning.StockTune()
             secondBurst = false,
             burstStage = 'civil',
         },
-        flames = { enabled = false },
+        flames = { enabled = false, color = { r = 255, g = 120, b = 40 } },
         antiLag = { enabled = false, intensity = 55 },
         drift = { enabled = false, grip = 45 },
         hud = { enabled = false },
@@ -92,6 +92,11 @@ function SunsetTuning.SanitizeTune(raw)
         },
         flames = {
             enabled = flames.enabled == true or exhaust == 'flames' or exhaust == 'extra',
+            color = {
+                r = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.r) or 255))),
+                g = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.g) or 120))),
+                b = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.b) or 40))),
+            },
         },
         antiLag = {
             enabled = antiLag.enabled == true,
@@ -154,6 +159,7 @@ function SunsetTuning.BuildVehicleInfo(raw)
         { label = 'EVACUARE', value = exhaust.label },
         { label = 'POP & BANG', value = tune.pop.enabled and 'Activ' or 'Oprit' },
         { label = 'FLĂCĂRI', value = tune.flames.enabled and 'Activ' or 'Oprit' },
+        { label = 'CULOARE FLAME', value = ('RGB %d/%d/%d'):format(tune.flames.color.r, tune.flames.color.g, tune.flames.color.b) },
         { label = 'RPM POP', value = tune.pop.rpmMax .. '%' },
         { label = 'ANTI-LAG', value = tune.antiLag.enabled and ('Activ (' .. tune.antiLag.intensity .. '%)') or 'Oprit' },
         { label = 'DRIFT', value = tune.drift.enabled and ('Activ · grip ' .. tune.drift.grip .. '%') or 'Oprit' },
@@ -174,5 +180,37 @@ function SunsetTuning.BuildVehicleInfo(raw)
         chips = chips,
         lines = lines,
         tune = tune,
+    }
+end
+
+function SunsetTuning.DefaultCosmetics()
+    return {
+        primary = { r = 0, g = 0, b = 0 },
+        secondary = { r = 111, g = 111, b = 111 },
+        pearl = 0,
+        wheel = 0,
+        plateText = '',
+    }
+end
+
+function SunsetTuning.SanitizeCosmetics(raw)
+    local def = SunsetTuning.DefaultCosmetics()
+    if type(raw) ~= 'table' then return def end
+    local function rgb(src, fallback)
+        src = type(src) == 'table' and src or {}
+        return {
+            r = math.max(0, math.min(255, math.floor(tonumber(src.r) or fallback.r))),
+            g = math.max(0, math.min(255, math.floor(tonumber(src.g) or fallback.g))),
+            b = math.max(0, math.min(255, math.floor(tonumber(src.b) or fallback.b))),
+        }
+    end
+    local plate = tostring(raw.plateText or ''):gsub('%s+', ''):upper()
+    if #plate > 8 then plate = plate:sub(1, 8) end
+    return {
+        primary = rgb(raw.primary, def.primary),
+        secondary = rgb(raw.secondary, def.secondary),
+        pearl = math.max(0, math.min(160, math.floor(tonumber(raw.pearl) or def.pearl))),
+        wheel = math.max(0, math.min(160, math.floor(tonumber(raw.wheel) or def.wheel))),
+        plateText = plate,
     }
 end

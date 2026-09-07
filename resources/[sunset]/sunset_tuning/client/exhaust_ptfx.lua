@@ -1,40 +1,34 @@
---- Low-level exhaust particle + sound layer.
---- References (GTA V built-in assets, no external resource required):
----   core / veh_backfire          — standard backfire pop (ak4y-hud, Advanced Nitro, most FiveM scripts)
----   veh_xs_vehicle_mods / veh_nitrous — nitro / flame burst at exhaust
----   core / ent_sht_flame         — short flame flash
----   core / exp_grd_bzgas_smoke   — diesel smoke puff
----   core / ent_amb_exhaust_thick — rolling coal style smoke
---- Sounds:
----   dlc_xs_vehicle_mods_sounds / backfire
----   DLC_Tuner_Car_Meet_Sounds / Backfire
+--- Low-level exhaust particle + sound layer (entity-bone attached only — no ground spawns).
 
 local STC = SunsetTuningClient
-
 STC.ExhaustPtfx = STC.ExhaustPtfx or {}
-
 local EP = STC.ExhaustPtfx
 EP.loaded = {}
 
-local ASSETS = { 'core', 'veh_xs_vehicle_mods', 'scr_recartheft' }
-
+local ASSETS = { 'core', 'veh_xs_vehicle_mods' }
 local EXHAUST_BONES = { 'exhaust' }
 for i = 2, 16 do EXHAUST_BONES[#EXHAUST_BONES + 1] = 'exhaust_' .. i end
 
+local DEFAULT_FLAME = { r = 255, g = 120, b = 40 }
+
+function EP.normalizeColor(color)
+    if type(color) ~= 'table' then return DEFAULT_FLAME end
+    return {
+        r = math.max(0, math.min(255, math.floor(tonumber(color.r) or DEFAULT_FLAME.r))),
+        g = math.max(0, math.min(255, math.floor(tonumber(color.g) or DEFAULT_FLAME.g))),
+        b = math.max(0, math.min(255, math.floor(tonumber(color.b) or DEFAULT_FLAME.b))),
+    }
+end
+
 function EP.ensureAssets()
     for _, asset in ipairs(ASSETS) do
-        if not EP.loaded[asset] then
-            RequestNamedPtfxAsset(asset)
-        end
+        if not EP.loaded[asset] then RequestNamedPtfxAsset(asset) end
     end
     local deadline = GetGameTimer() + 10000
     while GetGameTimer() < deadline do
         local ready = true
         for _, asset in ipairs(ASSETS) do
-            if not HasNamedPtfxAssetLoaded(asset) then
-                ready = false
-                break
-            end
+            if not HasNamedPtfxAssetLoaded(asset) then ready = false break end
         end
         if ready then
             for _, asset in ipairs(ASSETS) do EP.loaded[asset] = true end
@@ -46,9 +40,7 @@ function EP.ensureAssets()
     return EP.loaded.core == true
 end
 
-CreateThread(function()
-    EP.ensureAssets()
-end)
+CreateThread(function() EP.ensureAssets() end)
 
 function EP.eachExhaustBone(veh, fn)
     if not veh or veh == 0 then return end
@@ -62,79 +54,65 @@ function EP.eachExhaustBone(veh, fn)
     end
 end
 
-function EP.hasExhaustBones(veh)
-    local found = false
-    EP.eachExhaustBone(veh, function() found = true end)
-    return found
+local function ptfxColor(color)
+    local c = EP.normalizeColor(color)
+    SetParticleFxNonLoopedColour(c.r / 255.0, c.g / 255.0, c.b / 255.0)
 end
 
---- Standard backfire pop — networked so other players see it.
-function EP.backfire(veh, scale)
-    if not EP.ensureAssets() then return end
-    scale = scale or 1.0
-    EP.eachExhaustBone(veh, function(_, off)
-        UseParticleFxAssetNextCall('core')
-        StartNetworkedParticleFxNonLoopedOnEntity(
-            'veh_backfire', veh, off.x, off.y, off.z,
-            0.0, 0.0, 0.0, scale, false, false, false
-        )
+--- Spawn PTFX on exhaust bone, pushed slightly out of the pipe (local -Y).
+local function onExhaustBone(veh, bone, scale, asset, effect, color, yPush)
+    UseParticleFxAssetNextCall(asset)
+    if color then ptfxColor(color) end
+    StartNetworkedParticleFxNonLoopedOnEntityBone(
+        effect, veh,
+        0.0, yPush or -0.12, 0.0,
+        0.0, 0.0, 0.0,
+        bone, scale, false, false, false
+    )
+end
+
+function EP.flashAtCoord(pos, color, intensity, durationMs)
+    if not pos then return end
+    local c = EP.normalizeColor(color)
+    intensity = intensity or 0.8
+    durationMs = durationMs or 100
+    CreateThread(function()
+        local endAt = GetGameTimer() + durationMs
+        while GetGameTimer() < endAt do
+            DrawLightWithRange(pos.x, pos.y, pos.z, c.r, c.g, c.b, 2.5, 8.0 * intensity)
+            Wait(0)
+        end
     end)
 end
 
---- Nitro-style flame from XS vehicle mods DLC.
-function EP.flames(veh, scale)
+function EP.backfire(veh, scale, color)
     if not EP.ensureAssets() then return end
     scale = scale or 1.0
-    EP.eachExhaustBone(veh, function(_, off, pos)
+    EP.eachExhaustBone(veh, function(bone, _, pos)
+        onExhaustBone(veh, bone, scale, 'core', 'veh_backfire', color, -0.1)
+        EP.flashAtCoord(pos, color or DEFAULT_FLAME, scale * 0.5, 60)
+    end)
+end
+
+function EP.flames(veh, scale, color)
+    if not EP.ensureAssets() then return end
+    scale = scale or 1.0
+    color = color or DEFAULT_FLAME
+    EP.eachExhaustBone(veh, function(bone, _, pos)
+        onExhaustBone(veh, bone, scale * 0.95, 'core', 'veh_backfire', color, -0.14)
         if HasNamedPtfxAssetLoaded('veh_xs_vehicle_mods') then
-            UseParticleFxAssetNextCall('veh_xs_vehicle_mods')
-            StartNetworkedParticleFxNonLoopedOnEntity(
-                'veh_nitrous', veh, off.x, off.y, off.z - 0.04,
-                0.0, 0.0, 0.0, scale * 0.9, false, false, false
-            )
+            onExhaustBone(veh, bone, scale * 0.8, 'veh_xs_vehicle_mods', 'veh_nitrous', color, -0.16)
         end
-        UseParticleFxAssetNextCall('core')
-        StartNetworkedParticleFxNonLoopedAtCoord(
-            'ent_sht_flame', pos.x, pos.y, pos.z,
-            0.0, 0.0, 0.0, scale * 0.75, false, false, false
-        )
-        if HasNamedPtfxAssetLoaded('scr_recartheft') then
-            UseParticleFxAssetNextCall('scr_recartheft')
-            StartNetworkedParticleFxNonLoopedAtCoord(
-                'scr_wheel_burnout', pos.x, pos.y, pos.z - 0.1,
-                0.0, 0.0, 0.0, scale * 0.45, false, false, false
-            )
-        end
+        onExhaustBone(veh, bone, scale * 0.55, 'core', 'ent_sht_electrical_box', color, -0.12)
+        EP.flashAtCoord(pos, color, scale * 0.75, 90)
     end)
 end
 
 function EP.smoke(veh, scale)
     if not EP.ensureAssets() then return end
     scale = scale or 1.0
-    EP.eachExhaustBone(veh, function(_, off, pos)
-        UseParticleFxAssetNextCall('core')
-        StartNetworkedParticleFxNonLoopedOnEntity(
-            'exp_grd_bzgas_smoke', veh, off.x, off.y - 0.08, off.z,
-            0.0, 0.0, 0.0, scale, false, false, false
-        )
-        UseParticleFxAssetNextCall('core')
-        StartNetworkedParticleFxNonLoopedAtCoord(
-            'ent_amb_exhaust_thick', pos.x, pos.y, pos.z,
-            0.0, 0.0, 0.0, scale * 0.65, false, false, false
-        )
-    end)
-end
-
-function EP.flashLight(veh, intensity, durationMs)
-    intensity = intensity or 0.8
-    durationMs = durationMs or 120
-    CreateThread(function()
-        local endAt = GetGameTimer() + durationMs
-        while GetGameTimer() < endAt and DoesEntityExist(veh) do
-            local c = GetEntityCoords(veh)
-            DrawLightWithRange(c.x, c.y, c.z - 0.5, 255, 140, 40, 5.0, 12.0 * intensity)
-            Wait(0)
-        end
+    EP.eachExhaustBone(veh, function(bone)
+        onExhaustBone(veh, bone, scale, 'core', 'exp_grd_bzgas_smoke', nil, -0.14)
     end)
 end
 
@@ -150,27 +128,26 @@ function EP.playBackfireSound(veh, loud)
     end
 end
 
-function EP.burst(veh, kind, intensity)
+function EP.burst(veh, kind, intensity, flameColor)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
     intensity = math.max(0.35, math.min(1.4, tonumber(intensity) or 0.85))
     kind = kind or 'pop'
+    local color = flameColor or DEFAULT_FLAME
 
     if kind == 'pop' or kind == 'antilag' or kind == 'twostep' then
-        EP.backfire(veh, 0.9 + intensity * 0.5)
+        EP.backfire(veh, 0.9 + intensity * 0.5, color)
         EP.playBackfireSound(veh, intensity > 0.7)
     end
     if kind == 'flame' or kind == 'extra' or kind == 'antilag' then
-        EP.flames(veh, 0.75 + intensity * 0.55)
-        EP.flashLight(veh, intensity, 100)
+        EP.flames(veh, 0.75 + intensity * 0.55, color)
     end
     if kind == 'diesel' or kind == 'smoke' then
         EP.smoke(veh, 0.85 + intensity * 0.4)
         EP.playBackfireSound(veh, false)
     end
     if kind == 'flash' then
-        EP.backfire(veh, 1.2)
-        EP.flames(veh, 1.0)
-        EP.flashLight(veh, 1.0, 180)
+        EP.backfire(veh, 1.2, color)
+        EP.flames(veh, 1.0, color)
         EP.playBackfireSound(veh, true)
     end
 end

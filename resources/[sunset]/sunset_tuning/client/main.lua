@@ -2,6 +2,8 @@ local STC = SunsetTuningClient
 local panelOpen = false
 local currentShop = nil
 local draftTune = nil
+local draftCosmetics = nil
+local savedCosmetics = nil
 local hasSavedTune = false
 local currentPlate = ''
 local currentVeh = 0
@@ -48,6 +50,9 @@ local function closePanel(restoreStock)
     SetNuiFocus(false, false)
     sendUi('close')
     if restoreStock and currentVeh ~= 0 and DoesEntityExist(currentVeh) then
+        if savedCosmetics then
+            ApplyCosmetics(currentVeh, savedCosmetics)
+        end
         if hasSavedTune and STC.plateTunes[currentPlate] then
             ApplyTune(currentVeh, STC.plateTunes[currentPlate], false)
         else
@@ -80,16 +85,23 @@ local function openPanel(shop)
     if type(payload) == 'table' and payload.tune then
         draftTune = SunsetTuning.SanitizeTune(payload.tune)
         hasSavedTune = payload.saved == true
+        draftCosmetics = SunsetTuning.SanitizeCosmetics(payload.cosmetics or ReadCosmeticsFromVehicle(veh))
     else
         draftTune = SunsetTuning.SanitizeTune(payload)
         hasSavedTune = not SunsetTuning.IsStockTune(draftTune)
+        draftCosmetics = ReadCosmeticsFromVehicle(veh)
     end
+    if draftCosmetics.plateText == '' then
+        draftCosmetics.plateText = currentPlate
+    end
+    savedCosmetics = draftCosmetics
 
     panelOpen = true
     SetNuiFocus(true, true)
 
     sendUi('open', {
         tune = draftTune,
+        cosmetics = draftCosmetics,
         saved = hasSavedTune,
         plate = currentPlate,
         shop = currentShop and currentShop.label or 'ECU Bay',
@@ -103,6 +115,7 @@ local function openPanel(shop)
     })
 
     ApplyTune(currentVeh, draftTune, false)
+    ApplyCosmetics(currentVeh, draftCosmetics)
 end
 
 function OpenTuningPanel(shop)
@@ -119,14 +132,25 @@ end)
 RegisterNUICallback('tuningPreview', function(data, cb)
     if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
     draftTune = SunsetTuning.SanitizeTune(data.tune or draftTune)
+    if data.cosmetics then
+        draftCosmetics = SunsetTuning.SanitizeCosmetics(data.cosmetics)
+    end
     ApplyTune(currentVeh, draftTune, false)
+    ApplyCosmetics(currentVeh, draftCosmetics)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('tuningTestFlame', function(_, cb)
+    if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
+    if STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 3) end
     cb({ ok = true })
 end)
 
 RegisterNUICallback('tuningSave', function(data, cb)
     if not panelOpen or currentPlate == '' then cb({ ok = false }) return end
     local flash = data.flash == true
-    local saved, err = Sunset.AwaitCallback('sunset:tuning:saveTune', currentPlate, data.tune or draftTune, flash)
+    draftCosmetics = SunsetTuning.SanitizeCosmetics(data.cosmetics or draftCosmetics)
+    local saved, err = Sunset.AwaitCallback('sunset:tuning:saveTune', currentPlate, data.tune or draftTune, flash, data.cosmetics or draftCosmetics)
     if not saved then
         notify(err or 'Salvare esuata', 'error')
         cb({ ok = false, error = err })
@@ -134,14 +158,18 @@ RegisterNUICallback('tuningSave', function(data, cb)
     end
 
     draftTune = SunsetTuning.SanitizeTune(saved.tune)
+    if saved.cosmetics then draftCosmetics = SunsetTuning.SanitizeCosmetics(saved.cosmetics) end
+    if saved.plate and saved.plate ~= '' then currentPlate = STC.normalizePlate(saved.plate) end
     hasSavedTune = true
+    savedCosmetics = draftCosmetics
     STC.plateTunes[currentPlate] = draftTune
     STC.persistedPlates[currentPlate] = true
     ApplyTune(currentVeh, draftTune, true)
+    ApplyCosmetics(currentVeh, draftCosmetics)
     if flash and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 5) end
     if flash then TriggerServerEvent('sunset:tuning:flashApplied', currentPlate, draftTune) end
     notify(('ECU salvat & flash — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
-    sendUi('saved', { saved = true, tune = draftTune })
+    sendUi('saved', { saved = true, tune = draftTune, cosmetics = draftCosmetics, plate = currentPlate })
     cb({ ok = true, tune = draftTune })
 end)
 

@@ -437,3 +437,22 @@ html, body {
     width: 100%;
     text-align: center;
 }
+
+.color-field label { display: flex; justify-content: space-between; align-items: center; }
+.color-swatch { width: 28px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.25); }
+.color-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 10px; color: var(--os-muted); }
+.color-row input { flex: 1; }
+.flame-presets { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.preset-btn { width: 32px; height: 32px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2); cursor: pointer; }
+.plate-input {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--os-border);
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    font: 700 14px/1 var(--os-title);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}

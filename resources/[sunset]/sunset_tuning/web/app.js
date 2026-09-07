@@ -8,6 +8,7 @@ const btnCancel = document.getElementById('btnCancel');
 const btnSave = document.getElementById('btnSave');
 
 let tune = null;
+let cosmetics = null;
 let costs = { save: 750, flash: 150, dyno: 250 };
 let activeTab = 'exhaust_pop';
 let hasSavedMap = false;
@@ -21,6 +22,7 @@ const tabs = [
         { id: 'exhaust_extra', label: 'EXTRA' },
     ]},
     { group: 'TUNING', items: [{ id: 'tuning', label: 'TUNING' }] },
+    { group: 'VIZUAL', items: [{ id: 'visual', label: 'CULORI' }] },
     { group: 'DYNO', items: [
         { id: 'dyno_power', label: 'PUTERE' },
         { id: 'dyno_rank', label: 'CLASAMENT' },
@@ -55,11 +57,32 @@ function stockTune() {
         torque: 100,
         exhaust: 'pop_bang',
         pop: { enabled: false, rpmMax: 88, durationMs: 100, secondBurst: false, burstStage: 'civil' },
-        flames: { enabled: false },
+        flames: { enabled: false, color: { r: 255, g: 120, b: 40 } },
         antiLag: { enabled: false, intensity: 55 },
         drift: { enabled: false, grip: 45 },
         hud: { enabled: false },
         dyno: { lastHp: 0, lastTorque: 0, lastRunAt: 0 },
+    };
+}
+
+function stockCosmetics() {
+    return {
+        primary: { r: 0, g: 0, b: 0 },
+        secondary: { r: 111, g: 111, b: 111 },
+        pearl: 0,
+        wheel: 0,
+        plateText: '',
+    };
+}
+
+function ensureCosmetics(raw) {
+    const base = stockCosmetics();
+    const src = raw && typeof raw === 'object' ? raw : {};
+    return {
+        ...base,
+        ...src,
+        primary: { ...base.primary, ...(src.primary || {}) },
+        secondary: { ...base.secondary, ...(src.secondary || {}) },
     };
 }
 
@@ -70,7 +93,7 @@ function ensureTune(raw) {
         ...base,
         ...src,
         pop: { ...base.pop, ...(src.pop || {}) },
-        flames: { ...base.flames, ...(src.flames || {}) },
+        flames: { ...base.flames, ...(src.flames || {}), color: { ...(base.flames.color || {}), ...((src.flames && src.flames.color) || {}) } },
         antiLag: { ...base.antiLag, ...(src.antiLag || {}) },
         drift: { ...base.drift, ...(src.drift || {}) },
         hud: { ...base.hud, ...(src.hud || {}) },
@@ -107,7 +130,7 @@ function preview() {
     if (!tune) return;
     previewDirty = true;
     updateStatusBanner();
-    post('tuningPreview', { tune });
+    post('tuningPreview', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics) });
 }
 
 function renderRail() {
@@ -234,6 +257,95 @@ function stageCards(key, title) {
     return wrap;
 }
 
+function colorRgbField(label, key) {
+    const field = document.createElement('div');
+    field.className = 'field color-field';
+    const parts = String(key).split('.');
+    const getColor = () => {
+        let ref = tune;
+        for (const p of parts) ref = ref && ref[p];
+        return ref || { r: 255, g: 120, b: 40 };
+    };
+    const setChannel = (ch, val) => {
+        let ref = tune;
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (!ref[parts[i]]) ref[parts[i]] = {};
+            ref = ref[parts[i]];
+        }
+        if (!ref[parts[parts.length - 1]]) ref[parts[parts.length - 1]] = { r: 255, g: 120, b: 40 };
+        ref[parts[parts.length - 1]][ch] = Number(val);
+        preview();
+    };
+    const c = getColor();
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<span>${label}</span><span class="color-swatch" style="background:rgb(${c.r},${c.g},${c.b})"></span>`;
+    field.appendChild(lbl);
+    ['r', 'g', 'b'].forEach((ch) => {
+        const row = document.createElement('div');
+        row.className = 'color-row';
+        row.innerHTML = `<span>${ch.toUpperCase()}</span>`;
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = 0;
+        input.max = 255;
+        input.value = c[ch] || 0;
+        input.addEventListener('input', () => {
+            setChannel(ch, input.value);
+            const col = getColor();
+            const sw = lbl.querySelector('.color-swatch');
+            if (sw) sw.style.background = `rgb(${col.r},${col.g},${col.b})`;
+        });
+        row.appendChild(input);
+        field.appendChild(row);
+    });
+    return field;
+}
+
+function cosmeticsColorField(label, key) {
+    const field = document.createElement('div');
+    field.className = 'field color-field';
+    const parts = String(key).split('.');
+    const getColor = () => {
+        let ref = cosmetics;
+        for (const p of parts) ref = ref && ref[p];
+        return ref || { r: 0, g: 0, b: 0 };
+    };
+    const setChannel = (ch, val) => {
+        cosmetics = ensureCosmetics(cosmetics);
+        let ref = cosmetics;
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (!ref[parts[i]]) ref[parts[i]] = {};
+            ref = ref[parts[i]];
+        }
+        if (!ref[parts[parts.length - 1]]) ref[parts[parts.length - 1]] = { r: 0, g: 0, b: 0 };
+        ref[parts[parts.length - 1]][ch] = Number(val);
+        preview();
+    };
+    const c = getColor();
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<span>${label}</span><span class="color-swatch" style="background:rgb(${c.r},${c.g},${c.b})"></span>`;
+    field.appendChild(lbl);
+    ['r', 'g', 'b'].forEach((ch) => {
+        const row = document.createElement('div');
+        row.className = 'color-row';
+        row.innerHTML = `<span>${ch.toUpperCase()}</span>`;
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = 0;
+        input.max = 255;
+        input.value = c[ch] || 0;
+        input.addEventListener('input', () => {
+            setChannel(ch, input.value);
+            const col = getColor();
+            const sw = lbl.querySelector('.color-swatch');
+            if (sw) sw.style.background = `rgb(${col.r},${col.g},${col.b})`;
+        });
+        row.appendChild(input);
+        field.appendChild(row);
+    });
+    return field;
+}
+
 function panelExhaust() {
     const meta = exhaustMeta[activeTab] || exhaustMeta.exhaust_pop;
     const el = document.createElement('div');
@@ -248,10 +360,65 @@ function panelExhaust() {
     }
     if (activeTab === 'exhaust_flames' || activeTab === 'exhaust_extra') {
         el.appendChild(toggleRow('FLĂCĂRI LA EVACUARE', 'flames.enabled'));
+        el.appendChild(colorRgbField('CULOARE FLĂCĂRI', 'flames.color'));
+        const presets = document.createElement('div');
+        presets.className = 'flame-presets';
+        const presetList = [
+            { name: 'Portocaliu', r: 255, g: 120, b: 40 },
+            { name: 'Albastru', r: 80, g: 160, b: 255 },
+            { name: 'Violet', r: 180, g: 60, b: 255 },
+            { name: 'Verde', r: 80, g: 255, b: 120 },
+            { name: 'Roșu', r: 255, g: 40, b: 40 },
+            { name: 'Alb', r: 255, g: 255, b: 255 },
+        ];
+        presetList.forEach((p) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'preset-btn';
+            btn.style.background = `rgb(${p.r},${p.g},${p.b})`;
+            btn.title = p.name;
+            btn.addEventListener('click', () => {
+                tune.flames.color = { r: p.r, g: p.g, b: p.b };
+                preview();
+                renderPanels();
+            });
+            presets.appendChild(btn);
+        });
+        el.appendChild(presets);
+        const testBtn = document.createElement('button');
+        testBtn.type = 'button';
+        testBtn.className = 'btn btn-secondary';
+        testBtn.textContent = 'TEST FLĂCĂRI';
+        testBtn.addEventListener('click', () => post('tuningTestFlame'));
+        el.appendChild(testBtn);
     }
     if (activeTab === 'exhaust_diesel') {
         el.appendChild(sliderField('INTENSITATE DIESEL', 'pop.rpmMax', 25, 80, '%'));
     }
+    return el;
+}
+
+function panelVisual() {
+    const el = document.createElement('div');
+    el.className = 'panel';
+    el.innerHTML = '<h2>CULORI & PLĂCUȚĂ</h2><p class="subtitle">Vopsea custom și număr de înmatriculare</p>';
+    el.appendChild(cosmeticsColorField('CULOARE PRIMARĂ', 'primary'));
+    el.appendChild(cosmeticsColorField('CULOARE SECUNDARĂ', 'secondary'));
+    const plateField = document.createElement('div');
+    plateField.className = 'field';
+    plateField.innerHTML = '<label><span>PLĂCUȚĂ (max 8)</span></label>';
+    const plateInput = document.createElement('input');
+    plateInput.type = 'text';
+    plateInput.maxLength = 8;
+    plateInput.className = 'plate-input';
+    plateInput.value = (cosmetics && cosmetics.plateText) || '';
+    plateInput.addEventListener('input', () => {
+        cosmetics = ensureCosmetics(cosmetics);
+        cosmetics.plateText = plateInput.value.replace(/\s+/g, '').toUpperCase();
+        preview();
+    });
+    plateField.appendChild(plateInput);
+    el.appendChild(plateField);
     return el;
 }
 
@@ -358,6 +525,7 @@ function renderPanels() {
         exhaust_diesel: panelExhaust,
         exhaust_extra: panelExhaust,
         tuning: panelTuning,
+        visual: panelVisual,
         dyno_power: panelDynoPower,
         dyno_rank: panelDynoRank,
         dyno_stand: panelDynoStand,
@@ -377,7 +545,7 @@ function renderAll() {
 }
 
 if (btnCancel) btnCancel.addEventListener('click', () => post('tuningClose'));
-if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), flash: true }));
+if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: true }));
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -419,11 +587,12 @@ window.addEventListener('message', (event) => {
     if (action === 'open') {
         if (lscApp) lscApp.classList.add('hidden');
         tune = ensureTune(data.tune);
+        cosmetics = ensureCosmetics(data.cosmetics);
         hasSavedMap = data.saved === true;
         previewDirty = false;
         costs = data.costs || costs;
         if (shopLabel) shopLabel.textContent = data.shop || 'ECU Bay';
-        if (plateLabel) plateLabel.textContent = data.plate || '—';
+        if (plateLabel) plateLabel.textContent = data.plate || cosmetics.plateText || '—';
         activeTab = 'exhaust_pop';
         if (app) app.classList.remove('hidden');
         renderAll();
@@ -436,6 +605,8 @@ window.addEventListener('message', (event) => {
         hasSavedMap = true;
         previewDirty = false;
         if (data?.tune) tune = ensureTune(data.tune);
+        if (data?.cosmetics) cosmetics = ensureCosmetics(data.cosmetics);
+        if (data?.plate && plateLabel) plateLabel.textContent = data.plate;
         renderAll();
     }
     if (action === 'dynoRunning') {

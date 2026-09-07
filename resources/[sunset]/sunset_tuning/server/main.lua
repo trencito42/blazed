@@ -22,9 +22,9 @@ local function getOwnedVehicleRow(charId, plate)
     )
 end
 
-local function saveTuneToVehicle(charId, plate, tune)
+local function saveTuneToVehicle(charId, plate, tune, cosmetics)
     local row = getOwnedVehicleRow(charId, plate)
-    if not row then return false, 'Vehicle not found in your garage' end
+    if not row then return false, 'Vehicle not found in your garage', plate end
 
     local props = decodeProps(row.props)
     if SunsetTuning.IsStockTune(tune) then
@@ -32,9 +32,30 @@ local function saveTuneToVehicle(charId, plate, tune)
     else
         props.ecu = tune
     end
-    MySQL.update.await('UPDATE vehicles SET props = ? WHERE id = ? AND character_id = ?',
-        { json.encode(props), row.id, charId })
-    return true
+
+    if type(cosmetics) == 'table' then
+        props.cosmetics = SunsetTuning.SanitizeCosmetics(cosmetics)
+    end
+
+    local newPlate = plate
+    local vanity = props.cosmetics and props.cosmetics.plateText
+    if vanity and vanity ~= '' then
+        vanity = normalizePlate(vanity)
+        if vanity ~= '' and vanity ~= plate then
+            local taken = MySQL.single.await(
+                'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND id != ? LIMIT 1',
+                { vanity, row.id }
+            )
+            if taken then return false, 'Numarul de inmatriculare este deja folosit', plate end
+            newPlate = vanity
+        end
+    end
+
+    MySQL.update.await(
+        'UPDATE vehicles SET props = ?, plate = ? WHERE id = ? AND character_id = ?',
+        { json.encode(props), newPlate, row.id, charId }
+    )
+    return true, nil, newPlate
 end
 
 exports.sunset_core:RegisterCallback('sunset:tuning:getTune', function(source, plate)
@@ -47,19 +68,22 @@ exports.sunset_core:RegisterCallback('sunset:tuning:getTune', function(source, p
     if not row then return nil, 'Not your vehicle' end
 
     local props = decodeProps(row.props)
+    local cosmetics = SunsetTuning.SanitizeCosmetics(props.cosmetics)
     if props.ecu and not SunsetTuning.IsStockTune(props.ecu) then
         return {
             tune = SunsetTuning.SanitizeTune(props.ecu),
             saved = true,
+            cosmetics = cosmetics,
         }
     end
     return {
         tune = SunsetTuning.StockTune(),
         saved = false,
+        cosmetics = cosmetics,
     }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, plate, tune, flash)
+exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, plate, tune, flash, cosmetics)
     local char = getCharacter(source)
     if not char then return nil, 'No character' end
     plate = normalizePlate(plate)
@@ -80,13 +104,13 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
         return nil, ('Need $%d in bank for ECU save'):format(cost)
     end
 
-    local ok, err = saveTuneToVehicle(char.id, plate, sanitized)
+    local ok, err, newPlate = saveTuneToVehicle(char.id, plate, sanitized, cosmetics)
     if not ok then
         exports.sunset_core:AddMoney(source, 'bank', cost, 'ECU tune refund')
         return nil, err or 'Save failed'
     end
 
-    return { tune = sanitized, cost = cost }
+    return { tune = sanitized, cost = cost, plate = newPlate or plate, cosmetics = SunsetTuning.SanitizeCosmetics(cosmetics) }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, plate, hp, torque, clientTune)
@@ -113,7 +137,7 @@ exports.sunset_core:RegisterCallback('sunset:tuning:runDyno', function(source, p
     tune.dyno.lastTorque = math.max(0, math.min(2000, math.floor(tonumber(torque) or 0)))
     tune.dyno.lastRunAt = os.time()
 
-    local ok, err = saveTuneToVehicle(char.id, plate, tune)
+    local ok, err = saveTuneToVehicle(char.id, plate, tune, nil)
     if not ok then
         exports.sunset_core:AddMoney(source, 'bank', SunsetTuning.DynoCost, 'Dyno refund')
         return nil, err or 'Dyno save failed'
@@ -169,12 +193,13 @@ RegisterNetEvent('sunset:tuning:flashApplied', function(plate, tune)
     TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, plate, tune)
 end)
 
-RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensity)
+RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensity, color)
     local src = source
     netId = tonumber(netId)
     if not netId or netId == 0 then return end
     fxType = type(fxType) == 'string' and fxType or 'pop'
     intensity = math.max(0.1, math.min(1.0, tonumber(intensity) or 0.5))
+    if type(color) ~= 'table' then color = { r = 255, g = 120, b = 40 } end
 
     local srcPed = GetPlayerPed(src)
     if not srcPed or srcPed == 0 then return end
@@ -185,7 +210,7 @@ RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensit
         if pid and pid ~= src then
             local ped = GetPlayerPed(pid)
             if ped and ped ~= 0 and #(coords - GetEntityCoords(ped)) < 90.0 then
-                TriggerClientEvent('sunset:tuning:client:exhaustFx', pid, netId, fxType, intensity)
+                TriggerClientEvent('sunset:tuning:client:exhaustFx', pid, netId, fxType, intensity, color)
             end
         end
     end

@@ -5,16 +5,16 @@ local lastThrottle = 0.0
 local lastRpm = 0.0
 local popCooldown = 0
 
-local function syncFx(veh, kind, intensity)
+local function syncFx(veh, kind, intensity, color)
     if not NetworkGetEntityIsNetworked(veh) then return end
     local netId = VehToNet(veh)
     if netId and netId ~= 0 then
-        TriggerServerEvent('sunset:tuning:syncExhaustFx', netId, kind, intensity)
+        TriggerServerEvent('sunset:tuning:syncExhaustFx', netId, kind, intensity, color)
     end
 end
 
-function STC.PlayExhaustFx(veh, fxType, intensity)
-    EP.burst(veh, fxType, intensity)
+function STC.PlayExhaustFx(veh, fxType, intensity, color)
+    EP.burst(veh, fxType, intensity, color)
 end
 
 local function flamesActive(tune)
@@ -23,28 +23,36 @@ local function flamesActive(tune)
     return (tune.flames and tune.flames.enabled) or (mode and mode.flames) or tune.exhaust == 'extra' or tune.exhaust == 'flames'
 end
 
+local function flameColorOf(tune)
+    if tune and tune.flames and tune.flames.color then
+        return STC.ExhaustPtfx.normalizeColor(tune.flames.color)
+    end
+    return STC.ExhaustPtfx.normalizeColor(nil)
+end
+
 local function burstExhaust(veh, tune, mult, kind)
     local intensity = (mult and mult.popIntensity) or 0.75
     local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
+    local color = flameColorOf(tune)
 
-    EP.burst(veh, (kind == 'antilag') and 'antilag' or 'pop', intensity)
-    syncFx(veh, 'pop', intensity)
+    EP.burst(veh, (kind == 'antilag') and 'antilag' or 'pop', intensity, color)
+    syncFx(veh, 'pop', intensity, color)
 
     if flamesActive(tune) or kind == 'flame' or kind == 'extra' then
-        EP.burst(veh, 'flame', intensity)
-        syncFx(veh, 'flame', intensity)
+        EP.burst(veh, 'flame', intensity, color)
+        syncFx(veh, 'flame', intensity, color)
     end
 
     if mode.diesel or kind == 'diesel' or tune.exhaust == 'diesel' then
-        EP.burst(veh, 'diesel', intensity)
-        syncFx(veh, 'diesel', intensity)
+        EP.burst(veh, 'diesel', intensity, color)
+        syncFx(veh, 'diesel', intensity, color)
     end
 
     if tune.pop.secondBurst and kind ~= 'antilag' then
         SetTimeout(tonumber(tune.pop.durationMs) or 90, function()
             if DoesEntityExist(veh) then
-                EP.burst(veh, 'pop', intensity * 0.9)
-                if flamesActive(tune) then EP.burst(veh, 'flame', intensity * 0.8) end
+                EP.burst(veh, 'pop', intensity * 0.9, color)
+                if flamesActive(tune) then EP.burst(veh, 'flame', intensity * 0.8, color) end
             end
         end)
     end
@@ -64,10 +72,10 @@ function STC.BurstExhaust(veh, kind, count)
     end
 end
 
-RegisterNetEvent('sunset:tuning:client:exhaustFx', function(netId, fxType, intensity)
+RegisterNetEvent('sunset:tuning:client:exhaustFx', function(netId, fxType, intensity, color)
     local veh = NetworkGetEntityFromNetworkId(netId)
     if veh and veh ~= 0 and DoesEntityExist(veh) then
-        EP.burst(veh, fxType, intensity)
+        EP.burst(veh, fxType, intensity, color)
     end
 end)
 
@@ -156,8 +164,9 @@ CreateThread(function()
         if flamesActive(tune) and rpm > 0.55 and throttle > 0.4 then
             if now > popCooldown + 30 and math.random() < 0.1 then
                 popCooldown = now + 110
-                EP.burst(veh, 'flame', mult.popIntensity * 0.85)
-                syncFx(veh, 'flame', mult.popIntensity * 0.85)
+                local color = flameColorOf(tune)
+                EP.burst(veh, 'flame', mult.popIntensity * 0.85, color)
+                syncFx(veh, 'flame', mult.popIntensity * 0.85, color)
             end
         end
 
