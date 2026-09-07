@@ -4,6 +4,7 @@ local EP = STC.ExhaustPtfx
 local lastThrottle = 0.0
 local lastRpm = 0.0
 local popCooldown = 0
+local twostepArmed = false
 
 local function syncFx(veh, kind, intensity, color)
     if not NetworkGetEntityIsNetworked(veh) then return end
@@ -30,16 +31,33 @@ local function flameColorOf(tune)
     return STC.ExhaustPtfx.normalizeColor(nil)
 end
 
-local function burstExhaust(veh, tune, mult, kind)
+local function burstExhaust(veh, tune, mult, kind, withFlames)
     local intensity = (mult and mult.popIntensity) or 0.75
     local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
     local color = flameColorOf(tune)
+    local showFlames = withFlames and flamesActive(tune)
 
-    EP.burst(veh, (kind == 'antilag') and 'antilag' or 'pop', intensity, color)
+    if kind == 'antilag' then
+        EP.burst(veh, 'antilag', intensity * 0.85, color)
+        if showFlames and math.random() < 0.22 then
+            EP.burst(veh, 'flame', intensity * 0.65, color)
+        end
+        syncFx(veh, 'pop', intensity, color)
+        return
+    end
+
+    if kind == 'twostep' then
+        EP.burst(veh, 'twostep', math.min(1.2, intensity * 1.05), color)
+        if showFlames then EP.burst(veh, 'flame', intensity * 0.75, color) end
+        syncFx(veh, 'pop', intensity, color)
+        return
+    end
+
+    EP.burst(veh, 'pop', intensity, color)
     syncFx(veh, 'pop', intensity, color)
 
-    if flamesActive(tune) or kind == 'flame' or kind == 'extra' then
-        EP.burst(veh, 'flame', intensity, color)
+    if showFlames then
+        EP.burst(veh, 'flame', intensity * 0.8, color)
         syncFx(veh, 'flame', intensity, color)
     end
 
@@ -48,11 +66,13 @@ local function burstExhaust(veh, tune, mult, kind)
         syncFx(veh, 'diesel', intensity, color)
     end
 
-    if tune.pop.secondBurst and kind ~= 'antilag' then
+    if tune.pop.secondBurst and kind == 'pop' then
         SetTimeout(tonumber(tune.pop.durationMs) or 90, function()
             if DoesEntityExist(veh) then
-                EP.burst(veh, 'pop', intensity * 0.9, color)
-                if flamesActive(tune) then EP.burst(veh, 'flame', intensity * 0.8, color) end
+                EP.burst(veh, 'pop', intensity * 0.85, color)
+                if showFlames and math.random() < 0.6 then
+                    EP.burst(veh, 'flame', intensity * 0.7, color)
+                end
             end
         end)
     end
@@ -64,10 +84,12 @@ function STC.BurstExhaust(veh, kind, count)
     local tune = state and state.tune
     if not tune or SunsetTuning.IsStockTune(tune) then return end
     local mult = state.mult or STC.getStageMultipliers(tune)
-    count = math.max(1, math.min(8, tonumber(count) or 1))
+    count = math.max(1, math.min(6, tonumber(count) or 1))
     for i = 1, count do
-        SetTimeout((i - 1) * 130, function()
-            if DoesEntityExist(veh) then burstExhaust(veh, tune, mult, kind or 'pop') end
+        SetTimeout((i - 1) * 160, function()
+            if DoesEntityExist(veh) then
+                burstExhaust(veh, tune, mult, kind or 'pop', true)
+            end
         end)
     end
 end
@@ -87,11 +109,12 @@ end
 
 CreateThread(function()
     while true do
-        Wait(0)
+        local waitMs = 50
         local ped = PlayerPedId()
         if not IsPedInAnyVehicle(ped, false) then
             lastThrottle = 0.0
             lastRpm = 0.0
+            twostepArmed = false
             Wait(400)
             goto continue
         end
@@ -104,11 +127,7 @@ CreateThread(function()
 
         local state = STC.appliedVehicles[veh]
         local tune = state and state.tune
-        if STC.dynoActive then
-            Wait(300)
-            goto continue
-        end
-        if not tuneHasEffects(tune) then
+        if STC.dynoActive or not tuneHasEffects(tune) then
             Wait(300)
             goto continue
         end
@@ -121,57 +140,58 @@ CreateThread(function()
         local speed = GetEntitySpeed(veh) * 3.6
         local now = GetGameTimer()
         local rpmThreshold = (tonumber(tune.pop.rpmMax) or 88) / 100.0
-        local liftThrottle = lastThrottle > 0.22 and throttle < 0.2
-        local rpmDrop = (lastRpm - rpm) > 0.04 and rpm > 0.32
-        local highRpm = rpm >= math.max(0.45, rpmThreshold - 0.2) or lastRpm >= rpmThreshold
 
-        -- Anti-lag: pops while accelerating in mid RPM
-        if tune.antiLag.enabled and throttle > 0.3 and rpm > 0.22 and rpm < 0.9 and brake < 0.4 then
-            local chance = ((tonumber(tune.antiLag.intensity) or 55) / 100.0)
-            if now > popCooldown and math.random() < chance then
-                popCooldown = now + 45
-                burstExhaust(veh, tune, mult, 'antilag')
+        -- Real pop & bang: lift-off after high RPM (decel), not while holding gas.
+        local liftOff = lastThrottle > 0.45 and throttle < 0.18
+        local rpmFalling = (lastRpm - rpm) > 0.055 and lastRpm >= (rpmThreshold - 0.08)
+        local wasHighRpm = lastRpm >= math.max(0.58, rpmThreshold - 0.12)
+
+        if tune.pop.enabled and now > popCooldown and liftOff and wasHighRpm and rpm > 0.28 then
+            local chance = 0.38 + mult.popIntensity * 0.42
+            if math.random() < chance then
+                popCooldown = now + 180
+                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true)
             end
         end
 
-        -- Pop & bang: lift-off deceleration
-        if tune.pop.enabled then
-            if now > popCooldown and (liftThrottle or rpmDrop) and highRpm and rpm > 0.3 then
-                if math.random() < (0.55 + mult.popIntensity * 0.35) then
-                    popCooldown = now + 80
-                    burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop')
+        -- 2-step / launch: stationary rev limiter — only on repeated lift at very high RPM.
+        if tune.pop.enabled and speed < 6.0 and rpm > 0.82 then
+            if throttle < 0.12 and lastThrottle > 0.55 then twostepArmed = true end
+            if twostepArmed and now > popCooldown and throttle < 0.1 and rpm > 0.78 then
+                if math.random() < 0.55 then
+                    popCooldown = now + 220
+                    twostepArmed = false
+                    burstExhaust(veh, tune, mult, 'twostep', true)
                 end
-            elseif highRpm and throttle > 0.65 and rpm > (rpmThreshold - 0.05) then
-                if now > popCooldown and math.random() < 0.18 then
-                    popCooldown = now + 100
-                    burstExhaust(veh, tune, mult, 'pop')
-                end
-            elseif speed < 8.0 and rpm > 0.78 and throttle < 0.15 then
-                -- 2-step style at standstill
-                if now > popCooldown and math.random() < 0.35 then
-                    popCooldown = now + 70
-                    burstExhaust(veh, tune, mult, 'antilag')
-                end
-            elseif mode.diesel and throttle > 0.2 and rpm > 0.15 and rpm < 0.68 then
-                if now > popCooldown and math.random() < 0.12 then
-                    popCooldown = now + 140
-                    burstExhaust(veh, tune, mult, 'diesel')
+            end
+        else
+            twostepArmed = false
+        end
+
+        -- Anti-lag: short burps on throttle blips in spool range — never constant hold.
+        if tune.antiLag.enabled and brake < 0.35 then
+            local throttleBlip = lastThrottle > 0.42 and throttle < 0.28 and rpm > 0.38 and rpm < 0.82
+            local spoolHold = throttle > 0.55 and rpm > 0.48 and rpm < 0.72 and (now % 900) < 40
+            if now > popCooldown and (throttleBlip or spoolHold) then
+                local chance = ((tonumber(tune.antiLag.intensity) or 55) / 320.0)
+                if math.random() < chance then
+                    popCooldown = now + 280
+                    burstExhaust(veh, tune, mult, 'antilag', false)
                 end
             end
         end
 
-        -- Flames while on throttle at high RPM
-        if flamesActive(tune) and rpm > 0.55 and throttle > 0.4 then
-            if now > popCooldown + 30 and math.random() < 0.1 then
-                popCooldown = now + 110
-                local color = flameColorOf(tune)
-                EP.burst(veh, 'flame', mult.popIntensity * 0.85, color)
-                syncFx(veh, 'flame', mult.popIntensity * 0.85, color)
+        -- Diesel smoke: low RPM crawl only, rare.
+        if mode.diesel and tune.pop.enabled and speed < 25 and throttle > 0.25 and rpm > 0.15 and rpm < 0.55 then
+            if now > popCooldown and math.random() < 0.03 then
+                popCooldown = now + 400
+                burstExhaust(veh, tune, mult, 'diesel', false)
             end
         end
 
         lastThrottle = throttle
         lastRpm = rpm
+        Wait(waitMs)
         ::continue::
     end
 end)

@@ -194,23 +194,57 @@ const Menu = {
         return `https://docs.fivem.net/vehicles/${m}.webp`;
     },
 
-    formatEcuBlock(info) {
+    formatEcuBlock(info, vehicleId) {
         const ecu = info || {};
+        const vid = Number(vehicleId) || 0;
         if (ecu.stock) {
-            return `<div class="menu-vcard__ecu menu-vcard__ecu--stock">
-                <div class="menu-vcard__ecu-head"><span>ECU</span><em>Stock factory map</em></div>
+            return `<div class="menu-vcard__ecu-strip menu-vcard__ecu-strip--stock">
+                <span class="menu-vcard__ecu-pill">STOCK ECU</span>
             </div>`;
         }
-        const chips = (ecu.chips || []).map((c) => `<span class="menu-vcard__ecu-chip">${this.escape(c)}</span>`).join('');
-        const lines = (ecu.lines || []).map((line) => `
+
+        const chips = (ecu.chips || []).slice(0, 5);
+        const dyno = (ecu.lines || []).find((line) => (line.label || '').toUpperCase() === 'DYNO');
+        const chipHtml = chips.map((c) => `<span class="menu-vcard__ecu-chip">${this.escape(c)}</span>`).join('');
+        const detailLines = (ecu.lines || []).map((line) => `
             <div class="menu-vcard__ecu-line">
                 <span>${this.escape(line.label || '')}</span>
                 <em>${this.escape(line.value || '')}</em>
             </div>`).join('');
-        return `<div class="menu-vcard__ecu">
-            <div class="menu-vcard__ecu-head"><span>ECU TUNE</span><em>${this.escape(ecu.summary || 'Custom map')}</em></div>
-            <div class="menu-vcard__ecu-chips">${chips}</div>
-            <div class="menu-vcard__ecu-lines">${lines}</div>
+
+        return `<div class="menu-vcard__ecu-strip" data-ecu-id="${vid}">
+            <div class="menu-vcard__ecu-strip-main">
+                <span class="menu-vcard__ecu-pill">TUNED</span>
+                <span class="menu-vcard__ecu-summary">${this.escape(ecu.summary || 'Custom map')}</span>
+                ${dyno ? `<span class="menu-vcard__ecu-dyno">${this.escape(dyno.value)}</span>` : ''}
+                <button type="button" class="menu-vcard__ecu-toggle" data-ecu-toggle="${vid}" aria-label="Detalii ECU">⋯</button>
+            </div>
+            <div class="menu-vcard__ecu-chips">${chipHtml}</div>
+            <div class="menu-vcard__ecu-detail hidden" data-ecu-detail="${vid}">${detailLines}</div>
+        </div>`;
+    },
+
+    bindEcuToggles(root) {
+        if (!root) return;
+        root.querySelectorAll('[data-ecu-toggle]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.ecuToggle;
+                const detail = root.querySelector(`[data-ecu-detail="${id}"]`);
+                if (!detail) return;
+                const open = detail.classList.toggle('hidden');
+                btn.classList.toggle('is-open', !open);
+                btn.textContent = open ? '⋯' : '−';
+            });
+        });
+    },
+
+    vitalsRow(label, pct) {
+        const value = Math.max(0, Math.min(100, Math.round(pct)));
+        return `<div class="menu-vcard__vital" title="${label} ${value}%">
+            <span>${label}</span>
+            <i><b style="width:${value}%"></b></i>
+            <em>${value}%</em>
         </div>`;
     },
 
@@ -260,30 +294,31 @@ const Menu = {
                     <button type="button" class="menu-vcard__btn" data-v-action="store" data-v-id="${Number(v.id) || 0}">Store</button>`;
             }
 
-            return `<article class="menu-vcard">
+            return `<article class="menu-vcard menu-vcard--garage">
                 <div class="menu-vcard__img-wrap">
                     <img class="menu-vcard__img" src="${this.vehicleImage(v.model)}" alt="${model}" loading="lazy"
                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                     <div class="menu-vcard__img-fallback" style="display:none">${model.charAt(0)}</div>
+                    <span class="menu-vcard__status menu-vcard__status--${statusClass}">${status}</span>
                 </div>
                 <div class="menu-vcard__body">
                     <div class="menu-vcard__top">
                         <strong>${model}</strong>
-                        <span class="menu-vcard__status menu-vcard__status--${statusClass}">${status}</span>
+                        ${odoLine ? odoLine.replace('menu-vcard__odo', 'menu-vcard__odo menu-vcard__odo--inline') : ''}
                     </div>
                     <div class="menu-vcard__plate">${plate}</div>
-                    <div class="menu-vcard__meta">${garage}</div>
-                    ${odoLine}
-                    <div class="menu-vcard__diag">
-                        <span>FUEL <i><b style="width:${fuel}%"></b></i><em>${fuel}%</em></span>
-                        <span>ENGINE <i><b style="width:${engine}%"></b></i><em>${engine}%</em></span>
-                        <span>BODY <i><b style="width:${body}%"></b></i><em>${body}%</em></span>
+                    <div class="menu-vcard__vitals">
+                        ${this.vitalsRow('FUEL', fuel)}
+                        ${this.vitalsRow('ENG', engine)}
+                        ${this.vitalsRow('BODY', body)}
                     </div>
-                    ${this.formatEcuBlock(v.ecuInfo)}
+                    ${this.formatEcuBlock(v.ecuInfo, v.id)}
                     <div class="menu-vcard__actions">${actions}</div>
                 </div>
             </article>`;
         }).join('');
+
+        this.bindEcuToggles(grid);
 
         grid.querySelectorAll('[data-v-action]').forEach((btn) => {
             btn.addEventListener('click', () => {

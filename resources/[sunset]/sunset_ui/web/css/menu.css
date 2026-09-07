@@ -444,9 +444,173 @@
 
 .menu-vehicle-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
     overflow-y: auto;
+    padding-right: 4px;
+}
+
+.menu-vcard--garage {
+    grid-template-columns: 108px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 119, 0, 0.12);
+    background: linear-gradient(145deg, rgba(18, 12, 8, 0.55), rgba(8, 8, 10, 0.35));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.menu-vcard--garage .menu-vcard__img-wrap {
+    min-height: 96px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.menu-vcard--garage .menu-vcard__img,
+.menu-vcard--garage .menu-vcard__img-fallback {
+    height: 96px;
+}
+
+.menu-vcard--garage .menu-vcard__status {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    border-radius: 4px;
+}
+
+.menu-vcard__vitals {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.menu-vcard__vital {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 7px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.menu-vcard__vital span {
+    color: var(--os-muted);
+    font: 700 7px/1 var(--os-title);
+    letter-spacing: 0.12em;
+}
+
+.menu-vcard__vital i {
+    display: block;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.menu-vcard__vital i b {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #ff8f1a, #ff5e00);
+    border-radius: 999px;
+}
+
+.menu-vcard__vital em {
+    color: #fff;
+    font: 600 9px/1 var(--os-title);
+    font-style: normal;
+}
+
+.menu-vcard__ecu-strip {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 119, 0, 0.2);
+    background: rgba(255, 119, 0, 0.05);
+}
+
+.menu-vcard__ecu-strip--stock {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+    padding: 6px 10px;
+}
+
+.menu-vcard__ecu-strip-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.menu-vcard__ecu-pill {
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: rgba(255, 119, 0, 0.2);
+    color: var(--os-accent-bright, #ffb11c);
+    font: 700 8px/1 var(--os-title);
+    letter-spacing: 0.1em;
+}
+
+.menu-vcard__ecu-strip--stock .menu-vcard__ecu-pill {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--os-muted);
+}
+
+.menu-vcard__ecu-summary {
+    flex: 1;
+    min-width: 0;
+    color: #fff;
+    font: 600 10px/1.2 var(--os-title);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.menu-vcard__ecu-dyno {
+    flex: 0 0 auto;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--os-accent-bright);
+    font: 700 8px/1 var(--os-title);
+    letter-spacing: 0.06em;
+}
+
+.menu-vcard__ecu-toggle {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--os-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.menu-vcard__ecu-toggle.is-open {
+    color: var(--os-accent-bright);
+    border-color: rgba(255, 119, 0, 0.45);
+}
+
+.menu-vcard__ecu-strip .menu-vcard__ecu-chips {
+    margin: 6px 0 0;
+}
+
+.menu-vcard__ecu-detail {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.menu-vcard__ecu-detail.hidden { display: none; }
+
+.menu-vcard__odo--inline {
+    margin: 0 !important;
+    font-size: 9px !important;
 }
 
 .menu-vcard {

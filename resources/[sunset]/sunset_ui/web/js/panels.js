@@ -663,7 +663,7 @@ const Panels = {
                     </div>
                     <div class="menu-vcard__plate">${v.plate}</div>
                     <div class="menu-vcard__meta">${v.garage || 'legion'}</div>
-                    ${window.Menu ? window.Menu.formatEcuBlock(v.ecuInfo) : ''}
+                    ${window.Menu ? window.Menu.formatEcuBlock(v.ecuInfo, v.id) : ''}
                     <div class="menu-vcard__actions"></div>
                 </div>`;
 

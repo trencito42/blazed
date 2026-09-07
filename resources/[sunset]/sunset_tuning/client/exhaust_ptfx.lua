@@ -101,10 +101,9 @@ function EP.flames(veh, scale, color)
     EP.eachExhaustBone(veh, function(bone, _, pos)
         onExhaustBone(veh, bone, scale * 0.95, 'core', 'veh_backfire', color, -0.14)
         if HasNamedPtfxAssetLoaded('veh_xs_vehicle_mods') then
-            onExhaustBone(veh, bone, scale * 0.8, 'veh_xs_vehicle_mods', 'veh_nitrous', color, -0.16)
+            onExhaustBone(veh, bone, scale * 0.75, 'veh_xs_vehicle_mods', 'veh_nitrous', color, -0.16)
         end
-        onExhaustBone(veh, bone, scale * 0.55, 'core', 'ent_sht_electrical_box', color, -0.12)
-        EP.flashAtCoord(pos, color, scale * 0.75, 90)
+        EP.flashAtCoord(pos, color, scale * 0.55, 70)
     end)
 end
 
@@ -119,12 +118,15 @@ end
 function EP.playBackfireSound(veh, loud)
     if not veh or veh == 0 then return end
     local sid = GetSoundId()
-    PlaySoundFromEntity(sid, 'backfire', veh, 'dlc_xs_vehicle_mods_sounds', false, 0)
+    PlaySoundFromEntity(sid, 'Backfire', veh, 'DLC_Tuner_Car_Meet_Sounds', false, 0)
     ReleaseSoundId(sid)
+    local sid2 = GetSoundId()
+    PlaySoundFromEntity(sid2, 'backfire', veh, 'dlc_xs_vehicle_mods_sounds', false, 0)
+    ReleaseSoundId(sid2)
     if loud then
-        local sid2 = GetSoundId()
-        PlaySoundFromEntity(sid2, 'Backfire', veh, 'DLC_Tuner_Car_Meet_Sounds', false, 0)
-        ReleaseSoundId(sid2)
+        local sid3 = GetSoundId()
+        PlaySoundFromEntity(sid3, 'Crackle', veh, 'DLC_Tuner_Car_Meet_Sounds', false, 0)
+        ReleaseSoundId(sid3)
     end
 end
 
@@ -134,16 +136,19 @@ function EP.burst(veh, kind, intensity, flameColor)
     kind = kind or 'pop'
     local color = flameColor or DEFAULT_FLAME
 
-    if kind == 'pop' or kind == 'antilag' or kind == 'twostep' then
+    if kind == 'pop' or kind == 'twostep' then
         EP.backfire(veh, 0.9 + intensity * 0.5, color)
-        EP.playBackfireSound(veh, intensity > 0.7)
+        EP.playBackfireSound(veh, intensity > 0.65 or kind == 'twostep')
     end
-    if kind == 'flame' or kind == 'extra' or kind == 'antilag' then
+    if kind == 'antilag' then
+        EP.backfire(veh, 0.65 + intensity * 0.35, color)
+        EP.playBackfireSound(veh, false)
+    end
+    if kind == 'flame' or kind == 'extra' then
         EP.flames(veh, 0.75 + intensity * 0.55, color)
     end
     if kind == 'diesel' or kind == 'smoke' then
         EP.smoke(veh, 0.85 + intensity * 0.4)
-        EP.playBackfireSound(veh, false)
     end
     if kind == 'flash' then
         EP.backfire(veh, 1.2, color)
