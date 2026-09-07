@@ -68,6 +68,7 @@ server_exports {
     'AddRobPoints',
     'GetSpawnPosition',
     'SetSpawnPreference',
+    'ExecutePlayerCommand',
     'CompleteAuthentication',
     'CommandReply',
     'CommandDenyAdmin',

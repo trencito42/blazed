@@ -1,4 +1,20 @@
 local CHAT_RANGE = 22.0
+local CHAT_COOLDOWN_MS = 350
+local ChatRateLimits = {}
+
+local function checkChatRateLimit(source, key, cooldownMs)
+    local now = GetGameTimer()
+    local bucket = ChatRateLimits[source] or {}
+    local last = bucket[key] or 0
+    if now - last < (cooldownMs or CHAT_COOLDOWN_MS) then return false end
+    bucket[key] = now
+    ChatRateLimits[source] = bucket
+    return true
+end
+
+AddEventHandler('playerDropped', function()
+    ChatRateLimits[source] = nil
+end)
 
 local function cleanChatText(value, maxLength)
     if type(value) ~= 'string' then return nil end
@@ -71,6 +87,10 @@ end
 
 RegisterNetEvent('sunset:chat:send', function(message)
     local src = source
+    if not checkChatRateLimit(src, 'say', CHAT_COOLDOWN_MS) then
+        TriggerClientEvent('sunset:chat:system', src, 'Slow down — message rate limited.', 'warning')
+        return
+    end
     message = cleanChatText(message, 256)
     if not message then return end
 

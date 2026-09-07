@@ -515,7 +515,7 @@ RegisterCommand('rob', function(source)
     TriggerClientEvent('sunset:robbery:tryCommand', source)
 end, false)
 
-RegisterCommand('robdebug', function(source, args)
+local function runRobDebug(source, args)
     if source == 0 then return end
     if not SunsetRobbery.Debug then
         return RobberyAdapter.notify(source, 'Robbery debug is disabled', 'error')
@@ -542,4 +542,24 @@ RegisterCommand('robdebug', function(source, args)
     else
         RobberyAdapter.notify(source, 'Usage: /robdebug reset|force|points', 'info')
     end
+end
+
+RegisterCommand('robdebug', function(source, args)
+    runRobDebug(source, args)
 end, false)
+
+function ExecutePlayerCommand(source, name, args)
+    if source == 0 then return false end
+    name = string.lower(tostring(name or ''))
+    args = args or {}
+    if name == 'rob' then
+        TriggerClientEvent('sunset:robbery:tryCommand', source)
+        return true
+    end
+    if name == 'robdebug' then
+        runRobDebug(source, args)
+        return true
+    end
+    return false
+end
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

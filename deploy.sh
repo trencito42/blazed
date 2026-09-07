@@ -98,7 +98,12 @@ for migration in sql/[0-9][0-9]-*.sql; do
   esac
   echo "[deploy] -> $base"
   if ! docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < "$migration"; then
-    echo "[deploy] warning: $base returned errors (may be ok if already applied)" >&2
+    if [ "${DEPLOY_IGNORE_MIGRATION_ERRORS:-0}" = "1" ]; then
+      echo "[deploy] warning: $base returned errors (DEPLOY_IGNORE_MIGRATION_ERRORS=1)" >&2
+    else
+      echo "[deploy] ERROR: migration $base failed. Fix schema or set DEPLOY_IGNORE_MIGRATION_ERRORS=1 only if already applied." >&2
+      exit 1
+    fi
   fi
 done
 

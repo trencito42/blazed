@@ -322,11 +322,21 @@ exports.sunset_core:RegisterCallback('sunset:pass:claim', function(source, data)
         local reward = tierReward(level, track)
         if not reward then return nil, 'No reward on this tier.' end
 
-        local ok, err = grantReward(source, reward)
-        if not ok then return nil, err or 'Could not grant reward.' end
-
         claimed[key] = true
         saveRow(char.id, xp, premium, claimed, decodeJson(row.mission_progress))
+        local saved = loadRow(char.id)
+        if not decodeJson(saved.claimed)[key] then
+            claimed[key] = false
+            return nil, 'Could not save your claim. Please try again.'
+        end
+
+        local ok, err = grantReward(source, reward)
+        if not ok then
+            claimed[key] = false
+            saveRow(char.id, xp, premium, claimed, decodeJson(row.mission_progress))
+            return nil, err or 'Could not grant reward.'
+        end
+
         passAnnounce(source, 'REWARD CLAIMED', ('Tier %d — %s'):format(level, reward.label or 'reward'), 'success')
         return buildPayload(source, loadRow(char.id))
     end)

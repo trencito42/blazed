@@ -52,6 +52,13 @@ local function message(source, text, kind)
     end
 end
 
+local PropertyChatHandlers = {}
+local function registerPropertyCommand(name, handler)
+    name = string.lower(name)
+    PropertyChatHandlers[name] = handler
+    RegisterCommand(name, handler, false)
+end
+
 local function publicRow(row, char)
     local owned = tonumber(row.owner_character_id) == tonumber(char.id)
     local rented = activeRental(char.id, row.id) ~= nil
@@ -483,7 +490,7 @@ AddEventHandler('onResourceStop',function(resource)
     for player in pairs(Inside) do SetPlayerRoutingBucket(player,0) end
 end)
 
-RegisterCommand('acreatehouse',function(source,args)
+registerPropertyCommand('acreatehouse',function(source,args)
     if source==0 or not exports.sunset_admin:IsAdmin(source,SunsetProperties.AdminLevel) then return message(source,'Admin level 3 is required to create houses.','error') end
     local price,interior,level=tonumber(args[1]),tostring(args[2] or ''),tonumber(args[3]); local preset=SunsetProperties.Interiors[interior]
     if not price or price<1 or not preset or not level or level<1 then return message(source,'Usage: /acreatehouse [price] [interior] [minimum level] [name]. Use /houseinteriors first.','error') end
@@ -496,39 +503,39 @@ RegisterCommand('acreatehouse',function(source,args)
       VALUES(?,?,?,?,?,?,?,1,1)]],{label,math.floor(price),interior,encodePos(pos,heading),encodePos(preset.coords,preset.coords.w),encodePos(pos,heading),math.floor(level)})
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     message(source,('House #%d "%s" created: $%d, %s, level %d.'):format(id,label,price,interior,level),'success')
-end,false)
+end)
 
-RegisterCommand('houseinteriors',function(source)
+registerPropertyCommand('houseinteriors',function(source)
     local list={}; for id,preset in pairs(SunsetProperties.Interiors) do list[#list+1]=id..' ('..preset.label..')' end; table.sort(list)
     message(source,'Available interiors: '..table.concat(list,', '),'info')
-end,false)
+end)
 
-RegisterCommand('houselock',function(source,args) local ok,msg=toggleLock(source,tonumber(args[1])); message(source,msg,ok and 'success' or 'error') end,false)
+registerPropertyCommand('houselock',function(source,args) local ok,msg=toggleLock(source,tonumber(args[1])); message(source,msg,ok and 'success' or 'error') end)
 
-RegisterCommand('houserent',function(source,args)
+registerPropertyCommand('houserent',function(source,args)
     local price=tonumber(args[1]); local _,prop,err=ownedProperty(source,tonumber(args[2])); if not prop then return message(source,err,'error') end
     if args[1]=='off' then MySQL.update.await('UPDATE properties SET rent_enabled=0 WHERE id=?',{prop.id}); TriggerClientEvent('sunset:client:propertiesChanged',-1); return message(source,'New rentals disabled; existing renters keep access.','success') end
     if not price or price<SunsetProperties.RentMin or price>SunsetProperties.RentMax then return message(source,('Usage: /houserent [price|off] [house id]. Limit: $%d-$%d per payday.'):format(SunsetProperties.RentMin,SunsetProperties.RentMax),'error') end
     MySQL.update.await('UPDATE properties SET rent_enabled=1,rent_price=? WHERE id=?',{math.floor(price),prop.id}); TriggerClientEvent('sunset:client:propertiesChanged',-1)
     message(source,('Rent enabled at $%d per payday.'):format(price),'success')
-end,false)
+end)
 
-RegisterCommand('housemaxrenters',function(source,args)
+registerPropertyCommand('housemaxrenters',function(source,args)
     local count=tonumber(args[1]); local _,prop,err=ownedProperty(source,tonumber(args[2])); if not prop then return message(source,err,'error') end
     if not count or count<SunsetProperties.MaxRentersMin or count>SunsetProperties.MaxRentersMax then return message(source,('Usage: /housemaxrenters [%d-%d] [house id].'):format(SunsetProperties.MaxRentersMin,SunsetProperties.MaxRentersMax),'error') end
     MySQL.update.await('UPDATE properties SET max_renters=? WHERE id=?',{math.floor(count),prop.id}); TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('Maximum renters set to %d.'):format(count),'success')
-end,false)
+end)
 
-RegisterCommand('houseinterior',function(source,args)
+registerPropertyCommand('houseinterior',function(source,args)
     local key=tostring(args[1] or ''); local preset=SunsetProperties.Interiors[key]
     if not preset then return message(source,'Unknown interior. Use /houseinteriors to see valid names.','error') end
     local _,prop,err=ownedProperty(source,tonumber(args[2])); if not prop then return message(source,err,'error') end
     for player,id in pairs(Inside) do if id==prop.id and tonumber(player)~=source then return message(source,'Everyone else must leave before the interior is changed.','error') end end
     MySQL.update.await('UPDATE properties SET interior=?,interior_pos=? WHERE id=?',{key,encodePos(preset.coords,preset.coords.w),prop.id})
     message(source,('Interior changed to %s. Re-enter to see it.'):format(preset.label),'success')
-end,false)
+end)
 
-RegisterCommand('hdescription',function(source,args)
+registerPropertyCommand('hdescription',function(source,args)
     local _,prop,err=ownedProperty(source,nil); if not prop then return message(source,err,'error') end
     local text=table.concat(args,' '):match('^%s*(.-)%s*$')
     if text=='' then return message(source,'Usage: /hdescription [text], or /hdescription off to remove it. Maximum 160 characters.','error') end
@@ -536,27 +543,27 @@ RegisterCommand('hdescription',function(source,args)
     MySQL.update.await('UPDATE properties SET description=? WHERE id=?',{text,prop.id})
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     message(source,text and ('House description updated: '..text) or 'House description removed.','success')
-end,false)
+end)
 
-RegisterCommand('houserenters',function(source,args)
+registerPropertyCommand('houserenters',function(source,args)
     local _,prop,err=ownedProperty(source,tonumber(args[1])); if not prop then return message(source,err,'error') end
     local rows=MySQL.query.await([[SELECT r.character_id,TRIM(CONCAT(c.firstname,' ',c.lastname)) name,r.rent_price,r.last_paid_at
       FROM property_rentals r JOIN characters c ON c.id=r.character_id WHERE r.property_id=? AND r.active=1 ORDER BY r.started_at]],{prop.id}) or {}
     if #rows==0 then return message(source,'This house currently has no renters.','info') end
     local list={}; for _,row in ipairs(rows) do list[#list+1]=('#%d %s ($%d/payday)'):format(row.character_id,row.name,row.rent_price) end
     message(source,'Renters: '..table.concat(list,', '),'info')
-end,false)
+end)
 
-RegisterCommand('housekickrenter',function(source,args)
+registerPropertyCommand('housekickrenter',function(source,args)
     local characterId=tonumber(args[1]); local _,prop,err=ownedProperty(source,tonumber(args[2])); if not prop then return message(source,err,'error') end
     if not characterId then return message(source,'Usage: /housekickrenter [character id] [house id]','error') end
     local changed=MySQL.update.await('UPDATE property_rentals SET active=0 WHERE property_id=? AND character_id=? AND active=1',{prop.id,characterId})
     if changed<1 then return message(source,'That character is not an active renter in this house.','error') end
     clearHome(characterId,prop.id,('The owner removed you from %s. Your job and faction were not changed.'):format(prop.label))
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('Renter #%d was removed.'):format(characterId),'success')
-end,false)
+end)
 
-RegisterCommand('sellhouse',function(source,args)
+registerPropertyCommand('sellhouse',function(source,args)
     local id=tonumber(args[1]); local owner,prop,err=ownedProperty(source,id); if not prop then return message(source,err,'error') end
     if tostring(args[2] or ''):lower()~='confirm' then return message(source,('This permanently sells %s for 70%% ($%d). Use /sellhouse %d confirm.'):format(prop.label,math.floor(prop.price*0.7),prop.id),'error') end
     local refund=math.floor((tonumber(prop.price) or 0)*0.7)
@@ -567,9 +574,9 @@ RegisterCommand('sellhouse',function(source,args)
     MySQL.update.await('UPDATE properties SET owner_character_id=NULL,locked=1,rent_enabled=0 WHERE id=? AND owner_character_id=?',{prop.id,owner.id})
     exports.sunset_core:SetHomeProperty(source,nil); exports.sunset_core:AddMoney(source,'bank',refund,'house_sale')
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('House sold. $%d was deposited in your bank.'):format(refund),'success')
-end,false)
+end)
 
-RegisterCommand('ahouseedit',function(source,args)
+registerPropertyCommand('ahouseedit',function(source,args)
     if source==0 or not exports.sunset_admin:IsAdmin(source,SunsetProperties.AdminLevel) then return message(source,'Admin level 3 is required.','error') end
     local id,field=tonumber(args[1]),tostring(args[2] or ''):lower(); local fields={price='price',level='minimum_level',name='label',description='description',sale='for_sale',enabled='enabled'}
     if not id or not fields[field] then return message(source,'Usage: /ahouseedit [id] [price|level|name|description|sale|enabled] [value]','error') end
@@ -579,9 +586,9 @@ RegisterCommand('ahouseedit',function(source,args)
     local changed=MySQL.update.await(('UPDATE properties SET %s=? WHERE id=?'):format(fields[field]),{value,id})
     if changed<1 then return message(source,'House not found or value unchanged.','error') end
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,('House #%d updated: %s = %s.'):format(id,field,tostring(value)),'success')
-end,false)
+end)
 
-RegisterCommand('aenablerent', function(source, args)
+registerPropertyCommand('aenablerent', function(source, args)
     if source==0 or not exports.sunset_admin:IsAdmin(source,SunsetProperties.AdminLevel) then return message(source,'Admin level 3 is required.','error') end
     local price = math.floor(tonumber(args[1]) or SunsetProperties.DefaultRentPrice or 500)
     local changed = MySQL.update.await(
@@ -592,13 +599,13 @@ RegisterCommand('aenablerent', function(source, args)
     message(source, ('Rent enabled on %d owned houses at $%d per payday.'):format(tonumber(changed) or 0, price), 'success')
 end, false)
 
-RegisterCommand('renthouse',function(source) message(source,'Stand at a house marker, press E, then choose RENT. Owner must have rent enabled. /properties lists all houses.','info') end,false)
-RegisterCommand('unrent',function(source)
+registerPropertyCommand('renthouse',function(source) message(source,'Stand at a house marker, press E, then choose RENT. Owner must have rent enabled. /properties lists all houses.','info') end)
+registerPropertyCommand('unrent',function(source)
     local char=exports.sunset_core:GetCharacter(source); if not char then return end; local rent=activeRental(char.id)
     if not rent then return message(source,'You do not currently rent a house.','error') end
     MySQL.update.await('UPDATE property_rentals SET active=0 WHERE id=?',{rent.id}); if tonumber(char.home_property_id)==tonumber(rent.property_id) then exports.sunset_core:SetHomeProperty(source,nil) end
     TriggerClientEvent('sunset:client:propertiesChanged',-1); message(source,'Rental ended. Your civilian job and faction are unchanged.','success')
-end,false)
+end)
 
 function ProcessRentPayday(source)
     local char=exports.sunset_core:GetCharacter(source); if not char then return {charged=0} end
@@ -613,3 +620,13 @@ function ProcessRentPayday(source)
     return {charged=price,label=rent.label}
 end
 exports('ProcessRentPayday',ProcessRentPayday)
+
+function ExecutePlayerCommand(source, name, args)
+    if source == 0 then return false end
+    name = string.lower(tostring(name or ''))
+    local handler = PropertyChatHandlers[name]
+    if not handler then return false end
+    handler(source, args or {})
+    return true
+end
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

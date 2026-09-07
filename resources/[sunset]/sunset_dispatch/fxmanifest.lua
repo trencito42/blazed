@@ -45,4 +45,5 @@ server_exports {
     'GetPlayerActiveCall',
     'UpdateCallState',
     'IsProviderForType',
+    'ExecutePlayerCommand',
 }

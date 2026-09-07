@@ -368,6 +368,18 @@ RegisterCommand('buylevel', function(source)
     TriggerClientEvent('sunset:client:notify', source, message or (ok and 'Level purchased.' or 'Level purchase failed.'), ok and 'success' or 'error', ok and 9000 or 7000)
 end, false)
 
+function ExecutePlayerCommand(source, name, args)
+    if source == 0 then return false end
+    name = string.lower(tostring(name or ''))
+    if name == 'buylevel' then
+        local ok, message = buyLevel(source)
+        TriggerClientEvent('sunset:client:notify', source, message or (ok and 'Level purchased.' or 'Level purchase failed.'), ok and 'success' or 'error', ok and 9000 or 7000)
+        return true
+    end
+    return false
+end
+exports('ExecutePlayerCommand', ExecutePlayerCommand)
+
 AddEventHandler('playerDropped', function()
     BuyLevelLocks[source] = nil
 end)

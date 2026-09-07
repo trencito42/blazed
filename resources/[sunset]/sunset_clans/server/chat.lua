@@ -96,6 +96,14 @@ function RunChatCommand(source, name, args)
         TriggerClientEvent('sunset:clans:openDirectory', source)
         return true
     end
+    if name == 'group' then
+        TriggerClientEvent('sunset:clans:openDashboard', source)
+        return true
+    end
+    if name == 'cmotd' then
+        exports.sunset_clans:RunMotdCommand(source, args)
+        return true
+    end
     return false
 end
 exports('RunChatCommand', RunChatCommand)

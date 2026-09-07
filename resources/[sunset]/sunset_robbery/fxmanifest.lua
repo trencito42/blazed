@@ -46,3 +46,7 @@ dependencies {
     'sunset_ui',
     'sunset_inventory',
 }
+
+server_exports {
+    'ExecutePlayerCommand',
+}

@@ -284,6 +284,10 @@ function RunChatCommand(source, name, args)
         TriggerClientEvent('sunset:police:tryStopRadar', source)
         return true
     end
+    if name == 'fmotd' then
+        exports.sunset_factions:RunFactionMotdCommand(source, args)
+        return true
+    end
 
     local handler
     if name == 'f' then handler = runFactionChat

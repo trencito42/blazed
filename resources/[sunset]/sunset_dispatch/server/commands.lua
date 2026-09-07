@@ -1,8 +1,10 @@
+local DispatchChatHandlers = {}
+
 local function notify(source, msg, typ)
     TriggerClientEvent('sunset:client:notify', source, msg, typ or 'info')
 end
 
-RegisterCommand('service', function(source, args)
+local function runService(source, args)
     if source == 0 then return end
     local callType = args[1]
     if not callType then
@@ -13,9 +15,9 @@ RegisterCommand('service', function(source, args)
     local call, err = ServiceCore.createServiceCall(source, callType, nil, nil, description)
     if not call then notify(source, err or 'Could not create service call', 'error'); return end
     TriggerEvent('sunset:dispatch:serviceCommand', source, call.callType, call.id, description)
-end, false)
+end
 
-RegisterCommand('servicecalls', function(source)
+local function runServiceCalls(source)
     if source == 0 then return end
     local openCalls = ServiceCore.getActiveCalls(nil, { status = Sunset.Dispatch.States.OPEN })
     local lines = {}
@@ -38,9 +40,9 @@ RegisterCommand('servicecalls', function(source)
         return
     end
     notify(source, ('Open calls (%d): %s'):format(shown, table.concat(lines, ' | ')), 'info')
-end, false)
+end
 
-RegisterCommand('accept', function(source, args)
+local function runAccept(source, args)
     if source == 0 then return end
     local callType, callId = args[1], args[2]
     if not callType or not callId then
@@ -49,9 +51,9 @@ RegisterCommand('accept', function(source, args)
     end
     local call, err = ServiceCore.acceptCall(source, callType, callId)
     if not call then notify(source, err or 'Could not accept call', 'error') end
-end, false)
+end
 
-RegisterCommand('cancel', function(source, args)
+local function runCancel(source, args)
     if source == 0 then return end
     local callType, callId = args[1], args[2]
     if not callType or not callId then
@@ -61,7 +63,28 @@ RegisterCommand('cancel', function(source, args)
     local ok, err = ServiceCore.cancelCall(source, callType, callId)
     if not ok then notify(source, err or 'Could not cancel call', 'error')
     else notify(source, 'Service call cancelled', 'success') end
-end, false)
+end
+
+local function registerDispatchCommand(name, handler)
+    name = string.lower(name)
+    DispatchChatHandlers[name] = handler
+    RegisterCommand(name, handler, false)
+end
+
+registerDispatchCommand('service', function(source, args) runService(source, args) end)
+registerDispatchCommand('servicecalls', function(source) runServiceCalls(source) end)
+registerDispatchCommand('accept', function(source, args) runAccept(source, args) end)
+registerDispatchCommand('cancel', function(source, args) runCancel(source, args) end)
+
+function ExecutePlayerCommand(source, name, args)
+    if source == 0 then return false end
+    name = string.lower(tostring(name or ''))
+    local handler = DispatchChatHandlers[name]
+    if not handler then return false end
+    handler(source, args or {})
+    return true
+end
+exports('ExecutePlayerCommand', ExecutePlayerCommand)
 
 CreateThread(function()
     Wait(500)

@@ -137,6 +137,50 @@ local function safeSyncMembers(clanId)
     end
 end
 
+local function clanManageDashboard(source, cid)
+    local fresh = ClanDisplay.getMembership(cid)
+    if not fresh then
+        return nil, 'Your clan membership could not be reloaded. Reopen /clan.'
+    end
+    local ok, dashboard = pcall(dashboardPayload, source, fresh, cid)
+    if not ok then
+        print(('^1[sunset_clans]^7 dashboard failed: %s'):format(tostring(dashboard)))
+        return nil, 'Changes saved. Reopen /clan to see the update.'
+    end
+    return dashboard
+end
+
+local function showClanMotd(source)
+    local row, cid = membershipFor(source)
+    if not cid then return false, 'Your character is not loaded. Reconnect and try again.' end
+    if not row then return false, 'You are not in a clan.' end
+    local message = tostring(row.motd or '')
+    TriggerClientEvent('sunset:chat:message', source, {
+        type = 'clan_motd',
+        id = 0,
+        time = '',
+        clanTag = row.tag,
+        clanName = row.name,
+        name = row.name,
+        message = message ~= '' and message or 'No message of the day has been set.',
+        command = '/cmotd',
+    })
+    return true
+end
+
+local function applyClanMotd(source, message)
+    local row, cid = membershipFor(source)
+    if not cid then return nil, 'Your character is not loaded. Reconnect and try again.' end
+    if not row or not isOfficer(row, cid) then return nil, 'Only clan leaders and officers can set the MOTD.' end
+    local motd = cleanText(message, SunsetClans.MaxMotdLength)
+    MySQL.update.await('UPDATE clans SET motd = ? WHERE id = ?', { motd, row.clan_id })
+    safeAudit(row.clan_id, cid, 'motd', { motd = motd })
+    safeBroadcast(row.clan_id, source,
+        motd ~= '' and ('updated the clan MOTD: %s'):format(motd) or 'cleared the clan MOTD.')
+    safeSyncMembers(row.clan_id)
+    return clanManageDashboard(source, cid)
+end
+
 local function cleanColor(hex)
     hex = tostring(hex or ''):gsub('#', '')
     if not hex:match('^%x%x%x%x%x%x$') then return '#FF8C00' end
@@ -514,14 +558,7 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
     if not cid then return nil, 'Your character is not loaded. Reconnect and try again.' end
 
     if action == 'motd' then
-        if not row or not isOfficer(row, cid) then return nil, 'Only clan leaders and officers can set the MOTD.' end
-        local motd = cleanText(payload.message, SunsetClans.MaxMotdLength)
-        MySQL.update.await('UPDATE clans SET motd = ? WHERE id = ?', { motd, row.clan_id })
-        audit(row.clan_id, cid, 'motd', { motd = motd })
-        broadcastClanManagement(row.clan_id, source,
-            motd ~= '' and ('updated the clan MOTD: %s'):format(motd) or 'cleared the clan MOTD.')
-        syncClanMembers(row.clan_id)
-        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+        return applyClanMotd(source, payload.message)
     end
 
     if action == 'settings' then
@@ -537,16 +574,7 @@ exports.sunset_core:RegisterCallback('sunset:clanManage', function(source, paylo
         safeAudit(row.clan_id, cid, 'settings', { tagColor = tagColor, tagStyle = tagStyle })
         safeBroadcast(row.clan_id, source, 'updated clan settings.')
         safeSyncMembers(row.clan_id)
-        local fresh = ClanDisplay.getMembership(cid)
-        if not fresh then
-            return nil, 'Clan settings saved, but your membership could not be reloaded. Reopen /clan.'
-        end
-        local ok, dashboard = pcall(dashboardPayload, source, fresh, cid)
-        if not ok then
-            print(('^1[sunset_clans]^7 settings dashboard failed: %s'):format(tostring(dashboard)))
-            return nil, 'Clan settings saved. Reopen /clan to see the update.'
-        end
-        return dashboard
+        return clanManageDashboard(source, cid)
     end
 
     if action == 'invite' then
@@ -819,6 +847,27 @@ exports.sunset_core:RegisterCallback('sunset:clanDeclineInvite', function(source
     end
     return true
 end)
+
+function RunMotdCommand(source, args)
+    if source == 0 then return true end
+    args = args or {}
+    local msg = table.concat(args, ' ')
+    if msg == '' then
+        local ok, err = showClanMotd(source)
+        if not ok then
+            TriggerClientEvent('sunset:client:notify', source, err or 'Clan MOTD could not be loaded.', 'error', 6000)
+        end
+        return true
+    end
+    local dashboard, err = applyClanMotd(source, msg)
+    if dashboard then
+        TriggerClientEvent('sunset:client:notify', source, 'Clan MOTD updated.', 'success', 6000)
+    else
+        TriggerClientEvent('sunset:client:notify', source, err or 'MOTD update failed. Officers can set it with /cmotd [message].', 'error', 7000)
+    end
+    return true
+end
+exports('RunMotdCommand', RunMotdCommand)
 
 RegisterCommand('clan', function(source)
     if source == 0 then return end

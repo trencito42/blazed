@@ -536,6 +536,11 @@ const ClanPanels = {
                     this.dashboard.tagStyle
                 );
             }
+            const motdForm = document.querySelector('[data-clan-action="motd"]');
+            if (motdForm) {
+                const motdInput = motdForm.querySelector('[name="message"]');
+                if (motdInput) motdInput.value = this.dashboard.motd || '';
+            }
             this.updateSettingsPreview();
             this.renderRankLabelEditor(this.dashboard.rankLabels);
             this.setTab('overview');

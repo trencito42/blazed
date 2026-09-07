@@ -1,4 +1,20 @@
 local serverCommands = {}
+local COMMAND_RATE_MS = 400
+local CommandRateLimits = {}
+
+AddEventHandler('playerDropped', function()
+    CommandRateLimits[source] = nil
+end)
+
+local function checkCommandRateLimit(source, key)
+    local now = GetGameTimer()
+    local bucket = CommandRateLimits[source] or {}
+    local last = bucket[key] or 0
+    if now - last < COMMAND_RATE_MS then return false end
+    bucket[key] = now
+    CommandRateLimits[source] = bucket
+    return true
+end
 
 local function refreshServerCommands()
     serverCommands = {}
@@ -60,6 +76,29 @@ local function parseArgs(rest)
     return args
 end
 
+local RESOURCE_COMMAND_EXPORTS = {
+    'sunset_admin',
+    'sunset_vehicles',
+    'sunset_jobs',
+    'sunset_factions',
+    'sunset_core',
+    'sunset_dispatch',
+    'sunset_robbery',
+    'sunset_properties',
+}
+
+local function tryRunResourceCommand(src, cmd, args)
+    for _, resource in ipairs(RESOURCE_COMMAND_EXPORTS) do
+        if GetResourceState(resource) == 'started' then
+            local ok, result = pcall(function()
+                return exports[resource]:ExecutePlayerCommand(src, cmd, args)
+            end)
+            if ok and result then return true end
+        end
+    end
+    return false
+end
+
 local function tryRunAdminCommand(src, cmd, rest)
     local args = parseArgs(rest)
     local ok, result = pcall(function()
@@ -87,7 +126,21 @@ end
 
 local SERVER_CHAT_COMMANDS = {
     f = true, r = true, d = true, gov = true, m = true, megaphone = true,
+    cmotd = true, fmotd = true,
 }
+
+local function hasFactionMedicPerm(src, cmd)
+    if cmd ~= 'heal' and cmd ~= 'revive' then return false end
+    local ok, allowed = pcall(function()
+        return exports.sunset_factions:HasFactionPerm(src, cmd)
+    end)
+    return ok and allowed == true
+end
+
+local function shouldDelegateAcceptToClient(cmd, args)
+    if cmd ~= 'accept' then return false end
+    return #args < 2
+end
 
 local function isClientOnlyCommand(cmd)
     if SERVER_CHAT_COMMANDS[cmd] then return false end
@@ -138,6 +191,10 @@ end
 
 RegisterNetEvent('sunset:chat:runCommand', function(line)
     local src = source
+    if not checkCommandRateLimit(src, 'runCommand') then
+        chatSystem(src, 'Slow down — wait before running another command.', 'warning')
+        return
+    end
     if type(line) ~= 'string' then return end
 
     line = line:match('^%s*(.-)%s*$') or ''
@@ -152,10 +209,12 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
         return
     end
 
+    local args = parseArgs(rest)
+
     local need = adminRequired(cmd)
     if need then
         local level = getAdminLevel(src)
-        if level < need then
+        if level < need and not hasFactionMedicPerm(src, cmd) then
             local label = (SunsetAdmin.Levels and SunsetAdmin.Levels[need]) or ('Level ' .. need)
             chatSystem(src, ('No access to /%s. Requires %s (admin level %d). Your level: %d.'):format(
                 cmd, label, need, level
@@ -173,6 +232,11 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
         end
     end
 
+    if shouldDelegateAcceptToClient(cmd, args) then
+        TriggerClientEvent('sunset:chat:executeCommand', src, line)
+        return
+    end
+
     if adminRequired(cmd) then
         if tryRunAdminCommand(src, cmd, rest) then
             return
@@ -181,19 +245,13 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
             TriggerClientEvent('sunset:chat:executeCommand', src, line)
             return
         end
+        if serverCommands[cmd] and tryRunResourceCommand(src, cmd, args) then
+            return
+        end
         if serverCommands[cmd] then
-            local args = parseArgs(rest)
-            local ok, err = pcall(function()
-                if exports.sunset_factions:ExecutePlayerCommand(src, cmd, args) then
-                    return
-                end
-                error('command handler returned false')
-            end)
-            if not ok then
-                chatSystem(src,
-                    ('/%s failed on the server: %s'):format(cmd, tostring(err)),
-                    'error')
-            end
+            chatSystem(src,
+                ('/%s failed on the server. Reconnect or contact staff if this persists.'):format(cmd),
+                'error')
             return
         end
         chatSystem(src,
@@ -207,16 +265,21 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
         return
     end
 
-    if tryRunServerChatCommand(src, cmd, parseArgs(rest)) then
-        return
-    end
-
-    if Sunset.ClientCommands[cmd] or adminRequired(cmd) then
-        TriggerClientEvent('sunset:chat:executeCommand', src, line)
+    if tryRunServerChatCommand(src, cmd, args) then
         return
     end
 
     if serverCommands[cmd] then
+        if tryRunResourceCommand(src, cmd, args) then
+            return
+        end
+        chatSystem(src,
+            ('/%s could not be executed on the server. Reconnect or contact staff.'):format(cmd),
+            'error')
+        return
+    end
+
+    if Sunset.ClientCommands[cmd] then
         TriggerClientEvent('sunset:chat:executeCommand', src, line)
         return
     end

@@ -274,7 +274,7 @@ exports.sunset_core:RegisterCallback('sunset:factionWarn', function(source, targ
     return { warns = nextCount, count = nextCount }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:factionSetMotd', function(source, message)
+local function setFactionMotd(source, message)
     local char, factionId = requireLeaderPerm(source, 'fmotd')
     if not char then return nil, factionId end
     message = tostring(message or ''):gsub('^%s+', ''):gsub('%s+$', ''):sub(1, 512)
@@ -293,6 +293,10 @@ exports.sunset_core:RegisterCallback('sunset:factionSetMotd', function(source, m
     local faction = Sunset.Factions[factionId]
     sendFactionInfo(factionId, ('%s MOTD'):format(faction and faction.label or 'FACTION'), message)
     return { message = message }
+end
+
+exports.sunset_core:RegisterCallback('sunset:factionSetMotd', function(source, message)
+    return setFactionMotd(source, message)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:factionGetMotd', function(source)
@@ -303,6 +307,45 @@ exports.sunset_core:RegisterCallback('sunset:factionGetMotd', function(source)
     local faction = Sunset.Factions[factionId]
     return { factionId = factionId, label = faction and faction.label or factionId, message = getFactionMotd(factionId) }
 end)
+
+function RunFactionMotdCommand(source, args)
+    if source == 0 then return true end
+    args = args or {}
+    local msg = table.concat(args, ' ')
+    if msg == '' then
+        local char = FactionCore.getChar(source)
+        if not char then
+            FactionCore.notify(source, 'Your character is not loaded. Reconnect and select it again.', 'error')
+            return true
+        end
+        local factionId = select(1, FactionCore.getFactionOf(char))
+        if not factionId then
+            FactionCore.notify(source, 'You are not a member of a faction.', 'error')
+            return true
+        end
+        local faction = Sunset.Factions[factionId]
+        local message = getFactionMotd(factionId)
+        TriggerClientEvent('sunset:chat:message', source, {
+            type = 'faction_motd',
+            id = 0,
+            time = '',
+            factionId = factionId,
+            factionLabel = faction and faction.label or factionId,
+            name = faction and faction.label or factionId,
+            message = message ~= '' and message or 'No message of the day has been set.',
+            command = '/fmotd',
+        })
+        return true
+    end
+    local ok, err = setFactionMotd(source, msg)
+    if ok then
+        FactionCore.notify(source, 'Faction MOTD updated.', 'success')
+    else
+        FactionCore.notify(source, err or 'MOTD update failed. Check your faction permission and message.', 'error')
+    end
+    return true
+end
+exports('RunFactionMotdCommand', RunFactionMotdCommand)
 
 function GetConnectMotd(source, char)
     char = char or FactionCore.getChar(source)
