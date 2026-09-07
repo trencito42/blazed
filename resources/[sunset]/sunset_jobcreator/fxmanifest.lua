@@ -14,6 +14,7 @@ shared_scripts {
     'shared/schema.lua',
     'shared/locale.lua',
     'shared/stage_catalog.lua',
+    'shared/modules.lua',
     'shared/migrations.lua',
 }
 

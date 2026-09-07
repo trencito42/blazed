@@ -10,7 +10,7 @@ SunsetJobCreator.DefaultDefinition = {
     pools = {},
     variables = {},
     stages = {},
-    progression = { xpPerTask = 15, payPerTask = 60 },
+    progression = { xpPerTask = 15, payPerTask = 60, progressVar = 'done', progressTotalVar = 'total' },
     ui = { title = 'Work', key = 'E' },
     contracts = {},
     party = { soloEnabled = true, partyEnabled = false, minPlayers = 1, maxPlayers = 1 },

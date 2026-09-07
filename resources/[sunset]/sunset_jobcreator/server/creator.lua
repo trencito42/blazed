@@ -110,6 +110,14 @@ exports.sunset_core:RegisterCallback('sunset:jobcreator:stageCatalog', function(
     return { catalog = SunsetJobCreator.GetStageCatalog() }
 end)
 
+exports.sunset_core:RegisterCallback('sunset:jobcreator:modules', function(source)
+    if not requireAdmin(source) then return nil, SunsetJobCreator.L('not_admin') end
+    return {
+        modules = SunsetJobCreator.GetModules(),
+        categories = SunsetJobCreator.GetModuleCategories(),
+    }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:jobcreator:startWork', function(source, testJobId)
     local existing = JCSessions_Get(source)
     if existing then

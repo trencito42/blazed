@@ -105,6 +105,7 @@ const JobCreator = {
     _jobs: [], _selectedId: null, _draft: null, _tab: 'general',
     _selectedStageIdx: 0, _dragFromIdx: null, _inited: false,
     _autoFlow: false, _placeMode: 'location', _placePool: 'deliveries',
+    _modules: null, _moduleCategories: {},
 
     init() {
         if (this._inited) return;
@@ -138,8 +139,119 @@ const JobCreator = {
         return res.json();
     },
 
+    async _loadModules() {
+        if (this._modules) return;
+        const res = await this._post('jobCreatorModules', {});
+        if (res.ok) {
+            this._modules = res.modules || [];
+            this._moduleCategories = res.categories || {};
+        } else {
+            this._modules = [];
+            this._moduleCategories = {};
+        }
+    },
+
+    _insertModule(mod) {
+        if (!this._draft || !mod) return;
+        this._collectStagesFromDom();
+        const def = this._def();
+        const suffix = `_${Date.now().toString(36).slice(-4)}`;
+        const stages = def.stages || [];
+        const existingIds = new Set(stages.map((s) => s.id));
+        const idMap = {};
+        (mod.stages || []).forEach((s) => {
+            let newId = s.id;
+            if (existingIds.has(newId)) newId = `${s.id}${suffix}`;
+            idMap[s.id] = newId;
+            existingIds.add(newId);
+        });
+        const remap = (target) => {
+            if (!target) return undefined;
+            if (target === 'next') return undefined;
+            if (target === 'complete' || target === 'fail') return target;
+            return idMap[target] || target;
+        };
+        const newStages = (mod.stages || []).map((s) => {
+            const copy = JSON.parse(JSON.stringify(s));
+            copy.id = idMap[s.id];
+            ['onSuccess', 'onFailure'].forEach((k) => {
+                if (copy[k]) {
+                    const r = remap(copy[k]);
+                    if (r) copy[k] = r; else delete copy[k];
+                }
+            });
+            if (copy.ifTrue) copy.ifTrue = remap(copy.ifTrue) || copy.ifTrue;
+            if (copy.ifFalse) copy.ifFalse = remap(copy.ifFalse) || copy.ifFalse;
+            return copy;
+        });
+        if (mod.variables) {
+            def.variables = def.variables || {};
+            Object.entries(mod.variables).forEach(([k, v]) => {
+                if (def.variables[k] === undefined) def.variables[k] = v;
+            });
+        }
+        if (mod.locations) {
+            def.locations = def.locations || {};
+            Object.entries(mod.locations).forEach(([k, v]) => {
+                if (!def.locations[k]) def.locations[k] = JSON.parse(JSON.stringify(v));
+            });
+        }
+        if (mod.pools) {
+            def.pools = def.pools || {};
+            Object.entries(mod.pools).forEach(([k, v]) => {
+                if (!def.pools[k] || !def.pools[k].length) def.pools[k] = JSON.parse(JSON.stringify(v));
+            });
+        }
+        const prevLast = stages[stages.length - 1];
+        const firstNew = newStages[0];
+        if (prevLast && firstNew && !['complete', 'fail', 'branch'].includes(prevLast.type)) {
+            if (!prevLast.onSuccess || prevLast.onSuccess === 'next') prevLast.onSuccess = firstNew.id;
+        }
+        def.stages = [...stages, ...newStages];
+        this._selectedStageIdx = Math.max(0, def.stages.length - newStages.length);
+        this.renderEditor();
+        this.setStatus(`✅ Modul „${mod.label}” — ${newStages.length} pași. Verifică locurile/pool-urile în tab Locuri.`);
+    },
+
+    _showModulePicker() {
+        const picker = document.getElementById('jc-module-picker');
+        if (!picker) return;
+        picker.classList.remove('hidden');
+        const cats = this._moduleCategories || {};
+        const byCat = {};
+        (this._modules || []).forEach((m) => {
+            const c = m.category || 'gameplay';
+            if (!byCat[c]) byCat[c] = [];
+            byCat[c].push(m);
+        });
+        let grid = '';
+        Object.entries(byCat).forEach(([cat, items]) => {
+            grid += `<div class="jc-picker-cat"><h4>${this._esc(cats[cat] || cat)}</h4><div class="jc-picker-grid">`;
+            grid += items.map((m) =>
+                `<button type="button" class="jc-module-item" data-mod="${this._esc(m.id)}" title="${this._esc(m.hint || m.description)}">
+                    <span class="jc-picker-icon">${m.icon || '🧩'}</span>
+                    <span class="jc-module-label">${this._esc(m.label)}</span>
+                    <small>${this._esc(m.description || '')}</small>
+                </button>`
+            ).join('');
+            grid += '</div></div>';
+        });
+        picker.innerHTML = `<div class="jc-picker-head"><strong>Inserează modul Lego (bloc gata făcut):</strong>
+            <button type="button" class="jc-close-picker">✕</button></div>
+            <p class="jc-hint">Modulele adaugă pași + variabile + locuri/pool-uri. Leagă-le în ordine sau cu „🔗 Leagă pașii”.</p>${grid}`;
+        picker.querySelector('.jc-close-picker')?.addEventListener('click', () => picker.classList.add('hidden'));
+        picker.querySelectorAll('.jc-module-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const mod = (this._modules || []).find((m) => m.id === btn.dataset.mod);
+                if (mod) this._insertModule(mod);
+                picker.classList.add('hidden');
+            });
+        });
+    },
+
     async show(data = {}) {
         this.init();
+        await this._loadModules();
         const resumeDraft = this._draft;
         const resumeId = this._selectedId;
         this._jobs = data.jobs || [];
@@ -529,6 +641,20 @@ const JobCreator = {
                 <div class="jc-field"><label>Maxim</label><input id="jc-s-max" type="number" value="${st.max ?? 10}" /></div>
             </div>`;
             break;
+        case 'set_variable':
+            body += `<div class="jc-flow-title">Schimbă variabile (fără E)</div>`;
+            body += this._varSelect('jc-s-actionVar', st.actions?.[0]?.var || 'done', 'Variabilă');
+            body += `<div class="jc-field-row">
+                <div class="jc-field"><label>Operație</label>
+                    <select id="jc-s-actionType">
+                        <option value="increment" ${st.actions?.[0]?.type === 'increment' ? 'selected' : ''}>Adaugă (+)</option>
+                        <option value="set" ${st.actions?.[0]?.type === 'set' ? 'selected' : ''}>Setează la</option>
+                        <option value="decrement" ${st.actions?.[0]?.type === 'decrement' ? 'selected' : ''}>Scade (-)</option>
+                    </select></div>
+                <div class="jc-field"><label>Valoare</label><input id="jc-s-actionVal" type="number" value="${st.actions?.[0]?.value ?? 1}" /></div>
+            </div>`;
+            body += `<p class="jc-hint">Rulează instant la intrarea în pas — folosit după plată pentru +1 done.</p>`;
+            break;
         case 'wait':
             body += `<div class="jc-field"><label>Secunde</label><input id="jc-s-seconds" type="number" min="1" value="${st.seconds || 3}" /></div>`;
             break;
@@ -711,6 +837,12 @@ const JobCreator = {
 
         if (g('jc-s-var')) st.var = this._readVarSelect('jc-s-var');
         if (g('jc-s-resetVar')) st.resetVar = this._readVarSelect('jc-s-resetVar');
+        if (st.type === 'set_variable' && g('jc-s-actionVar')) {
+            const v = this._readVarSelect('jc-s-actionVar');
+            const t = g('jc-s-actionType')?.value || 'increment';
+            const val = Number(g('jc-s-actionVal')?.value) || 1;
+            if (v) st.actions = [{ type: t, var: v, value: val }];
+        }
         if (g('jc-s-base')) st.base = Number(g('jc-s-base').value);
         if (g('jc-s-perLevel')) st.perLevel = Number(g('jc-s-perLevel').value);
         if (g('jc-s-max')) st.max = Number(g('jc-s-max').value);
@@ -886,16 +1018,32 @@ const JobCreator = {
         const def = d.definition || {};
 
         if (this._tab === 'general') {
+            const prog = def.progression || {};
             mount.innerHTML = `
+                <div class="jc-arch-box">
+                    <div class="jc-arch-title">🧩 Cum funcționează un job (4 piese Lego)</div>
+                    <div class="jc-arch-grid">
+                        <div class="jc-arch-card"><strong>📍 Loc fix</strong><span>Hub, depozit, vânzare — tab <em>Locuri</em></span></div>
+                        <div class="jc-arch-card"><strong>📋 Pool</strong><span>Listă puncte random — livrări, vene, copaci</span></div>
+                        <div class="jc-arch-card"><strong>🔢 Variabile</strong><span><code>done</code> / <code>total</code> / <code>target</code> — contoare</span></div>
+                        <div class="jc-arch-card"><strong>▶ Pași</strong><span>Lanț de acțiuni — tab <em>Pași</em> sau <em>module Lego</em></span></div>
+                    </div>
+                    <p class="jc-hint">Exemplu curier: <em>Init level</em> → <em>Du-te hub</em> → <em>Loop livrări</em> → <em>Final vânzare</em>. Deschide template Trucker/Miner și uită-te la flow.</p>
+                </div>
                 <div class="jc-field"><label>Nume job</label><input id="jc-f-label" value="${this._esc(d.label)}" placeholder="Ex: Trucker, Curier..." /></div>
                 <div class="jc-field"><label>Descriere (Job Center)</label><input id="jc-f-desc" value="${this._esc(d.description || '')}" placeholder="Ce face jucătorul?" /></div>
                 <div class="jc-field-row">
-                    <div class="jc-field"><label>💵 Plată / sarcină</label><input id="jc-f-pay" type="number" value="${def.progression?.payPerTask || 75}" /></div>
-                    <div class="jc-field"><label>⭐ XP / sarcină</label><input id="jc-f-xp" type="number" value="${def.progression?.xpPerTask || 15}" /></div>
+                    <div class="jc-field"><label>💵 Plată / sarcină</label><input id="jc-f-pay" type="number" value="${prog.payPerTask || 75}" /></div>
+                    <div class="jc-field"><label>⭐ XP / sarcină</label><input id="jc-f-xp" type="number" value="${prog.xpPerTask || 15}" /></div>
                 </div>
                 <div class="jc-field-row">
                     <div class="jc-field"><label>Salariu afișat</label><input id="jc-f-salary" type="number" value="${def.salary || 140}" /></div>
                     <div class="jc-field"><label>Titlu pe ecran</label><input id="jc-f-ui-title" value="${this._esc(def.ui?.title || d.label)}" /></div>
+                    <div class="jc-field"><label>Etichetă contor HUD</label><input id="jc-f-bag-label" value="${this._esc(def.ui?.bagLabel || 'Task')}" placeholder="Ore, Colete, Lemne..." /></div>
+                </div>
+                <div class="jc-field-row">
+                    ${this._varSelect('jc-f-progress-var', prog.progressVar || 'done', 'Variabilă progres (done)')}
+                    ${this._varSelect('jc-f-progress-total', prog.progressTotalVar || 'total', 'Variabilă total')}
                 </div>
                 ${this._iconPickerHtml(d, def)}
                 ${this._variablesEditorHtml(def.variables)}
@@ -968,11 +1116,12 @@ const JobCreator = {
         if (this._selectedStageIdx >= stages.length) this._selectedStageIdx = Math.max(0, stages.length - 1);
         const st = stages[this._selectedStageIdx] || {};
 
-        mount.innerHTML = `
+            mount.innerHTML = `
             ${this._flowStripHtml()}
             <div class="jc-stages-layout">
                 <div class="jc-stages-list-wrap">
-                    <button type="button" class="jc-btn" id="jc-add-stage">+ Adaugă pas</button>
+                    <button type="button" class="jc-btn" id="jc-add-module">🧩 Inserează modul Lego</button>
+                    <button type="button" class="jc-btn ghost" id="jc-add-stage">+ Adaugă pas singular</button>
                     <button type="button" class="jc-btn ghost" id="jc-auto-flow">🔗 Leagă pașii în ordine</button>
                     <div class="jc-field"><label>Pas de start</label>
                         <select id="jc-f-start">${stages.map((s) =>
@@ -986,7 +1135,10 @@ const JobCreator = {
                     <button type="button" class="jc-btn danger" id="jc-del-stage">Șterge pasul</button>
                 </div>
             </div>
-            <div id="jc-step-picker" class="jc-step-picker hidden"></div>`;
+            <div id="jc-step-picker" class="jc-step-picker hidden"></div>
+            <div id="jc-module-picker" class="jc-step-picker jc-module-picker hidden"></div>`;
+
+        mount.querySelector('#jc-add-module')?.addEventListener('click', () => this._showModulePicker());
 
         const list = mount.querySelector('#jc-stage-list');
         stages.forEach((stage, idx) => {
@@ -1105,7 +1257,11 @@ const JobCreator = {
             def.progression = {
                 payPerTask: Number(document.getElementById('jc-f-pay')?.value) || 75,
                 xpPerTask: Number(document.getElementById('jc-f-xp')?.value) || 15,
+                progressVar: this._readVarSelect('jc-f-progress-var') || 'done',
+                progressTotalVar: this._readVarSelect('jc-f-progress-total') || 'total',
             };
+            const bagLabel = document.getElementById('jc-f-bag-label')?.value?.trim();
+            if (bagLabel) def.ui.bagLabel = bagLabel;
             def.variables = this._readVariablesFromDom();
             if (document.getElementById('jc-f-party')) {
                 def.party = {

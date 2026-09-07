@@ -208,6 +208,13 @@ RegisterNUICallback('jobCreatorPlace', function(_, cb)
     cb({ ok = true })
 end)
 
+RegisterNUICallback('jobCreatorModules', function(_, cb)
+    exports.sunset_core:TriggerCallback('sunset:jobcreator:modules', function(result, err)
+        if err then cb({ ok = false, error = tostring(err) }) return end
+        cb({ ok = true, modules = result and result.modules, categories = result and result.categories })
+    end)
+end)
+
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)
     cb('ok')

@@ -103,9 +103,12 @@ local function formatMessage(stage, key)
     return msg:gsub('{key}', key or 'E')
 end
 
-local function jobProgress(vars)
-    local total = tonumber(vars.total) or tonumber(vars.caught) or 0
-    local done = tonumber(vars.logs) or tonumber(vars.done) or tonumber(vars.mined)
+local function jobProgress(vars, data)
+    local prog = (data and data.definition and data.definition.progression) or {}
+    local totalVar = prog.progressTotalVar or 'total'
+    local doneVar = prog.progressVar or 'done'
+    local total = tonumber(vars[totalVar]) or tonumber(vars.total) or tonumber(vars.caught) or 0
+    local done = tonumber(vars[doneVar]) or tonumber(vars.logs) or tonumber(vars.done) or tonumber(vars.mined)
         or tonumber(vars.tasks) or tonumber(vars.sorted) or tonumber(vars.harvest)
         or tonumber(vars.caught) or 0
     return done, total
@@ -114,7 +117,7 @@ end
 local function fishingHud(data, extra)
     local ui = (data.definition and data.definition.ui) or {}
     local vars = data.variables or {}
-    local done, total = jobProgress(vars)
+    local done, total = jobProgress(vars, data)
     local payload = {
         title = ui.title or data.label or 'Work',
         bagLabel = ui.bagLabel or 'Task',
@@ -136,7 +139,7 @@ local function syncHud(data, override)
     local ui = (data.definition and data.definition.ui) or {}
     local stage = data.stage or {}
     local vars = data.variables or {}
-    local done, total = jobProgress(vars)
+    local done, total = jobProgress(vars, data)
     local key = ui.key or 'E'
     local title = ui.title or data.label or 'Work'
     local bagLabel = ui.bagLabel or 'Task'
