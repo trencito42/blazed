@@ -73,8 +73,9 @@ end)
 RegisterNUICallback('passBuyPremium', function(_, cb)
     local result, err = Sunset.AwaitCallback('sunset:pass:buyPremium')
     if not result then
-        notify(err or 'Could not unlock premium pass.', 'error')
-        cb({ ok = false, error = err })
+        local message = (type(err) == 'string' and err ~= '') and err or 'Could not unlock premium pass.'
+        notify(message, 'error')
+        cb({ ok = false, error = message })
         return
     end
     send('passUpdate', { state = result })

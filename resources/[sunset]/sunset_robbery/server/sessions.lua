@@ -220,6 +220,14 @@ function RobberySessions.begin(source, locationId, skipGates)
             if RobberySessions.locationBusy[locationId] == source then RobberySessions.locationBusy[locationId] = nil end
             return nil, 'Not enough rob points'
         end
+        if SunsetRobbery.ConsumeRequiredItemOnStart then
+            if not RobberyAdapter.removeItem(source, SunsetRobbery.RequiredItem, 1) then
+                RobberyAdapter.refundRobPoints(source, SunsetRobbery.RobPointsToStart or 1)
+                RobberySessions.starting[source] = nil
+                if RobberySessions.locationBusy[locationId] == source then RobberySessions.locationBusy[locationId] = nil end
+                return nil, 'You need a lockpick to bypass the store security.'
+            end
+        end
     end
     local session = {
         id = ('%s_%d_%d_%06d'):format(locationId, source, os.time(), math.random(0, 999999)),

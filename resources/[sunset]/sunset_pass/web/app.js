@@ -181,14 +181,20 @@ function renderHeader(data) {
     const tierPct = data.tierGoal > 0 ? ((data.tierXp || 0) / data.tierGoal) * 100 : 0;
     if (tierFill) tierFill.style.width = `${tierPct}%`;
 
+    const wallet = document.getElementById('pass-wallet-bp');
+    if (wallet) wallet.textContent = `${data.accountCoins || 0} BP`;
+
     const premiumBtn = document.getElementById('pass-buy-premium');
     if (!premiumBtn) return;
+    const costLabel = data.premiumCostLabel || `${data.premiumCost || 250} BP`;
     if (data.premium) {
         premiumBtn.textContent = 'Premium Active';
         premiumBtn.classList.add('is-owned');
+        premiumBtn.disabled = true;
     } else {
-        premiumBtn.textContent = `Upgrade Pass (${data.premiumCost || 0} BP)`;
+        premiumBtn.textContent = `Upgrade Pass (${costLabel})`;
         premiumBtn.classList.remove('is-owned');
+        premiumBtn.disabled = false;
         premiumBtn.title = `You have ${data.accountCoins || 0} Blaze Points`;
     }
 }
@@ -218,7 +224,13 @@ document.getElementById('pass-buy-premium')?.addEventListener('click', async () 
     btn.disabled = true;
     const res = await post('passBuyPremium');
     btn.disabled = false;
-    if (res?.state) renderAll(res.state);
+    if (res?.state) {
+        renderAll(res.state);
+        return;
+    }
+    if (res?.error) {
+        btn.title = res.error;
+    }
 });
 
 document.querySelectorAll('.pass-tab').forEach((btn) => {

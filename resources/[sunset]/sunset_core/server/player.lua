@@ -104,6 +104,54 @@ function Sunset.SetPersistentStat(source, scope, field, value)
     return true
 end
 
+function Sunset.RefreshBlazePoints(source)
+    local player = Sunset.GetPlayer(source)
+    if not player or not player.account_id then return 0 end
+    local row = MySQL.single.await(
+        'SELECT premium_points FROM accounts WHERE id = ? LIMIT 1',
+        { player.account_id }
+    )
+    if not row then return tonumber(player.premium_points) or 0 end
+    local value = tonumber(row.premium_points) or 0
+    player.premium_points = value
+    return value
+end
+
+function Sunset.SpendBlazePoints(source, amount)
+    amount = math.floor(tonumber(amount) or 0)
+    if amount <= 0 then return true end
+    local player = Sunset.GetPlayer(source)
+    if not player or not player.account_id then return false, 'Account data is unavailable.' end
+    if not player.character then return false, 'Character data is unavailable.' end
+
+    local changed = MySQL.update.await(
+        'UPDATE accounts SET premium_points = premium_points - ? WHERE id = ? AND premium_points >= ?',
+        { amount, player.account_id, amount }
+    )
+    if not changed or changed < 1 then
+        local balance = Sunset.RefreshBlazePoints(source)
+        return false, ('You need %d Blaze Points (you have %d).'):format(amount, balance)
+    end
+    player.premium_points = math.max(0, (tonumber(player.premium_points) or 0) - amount)
+    return true
+end
+
+function Sunset.AddBlazePoints(source, amount)
+    amount = math.floor(tonumber(amount) or 0)
+    if amount <= 0 then return true end
+    local player = Sunset.GetPlayer(source)
+    if not player or not player.account_id then return false, 'Account data is unavailable.' end
+    if not player.character then return false, 'Character data is unavailable.' end
+
+    local changed = MySQL.update.await(
+        'UPDATE accounts SET premium_points = premium_points + ? WHERE id = ?',
+        { amount, player.account_id }
+    )
+    if not changed or changed < 1 then return false, 'Could not add Blaze Points.' end
+    player.premium_points = (tonumber(player.premium_points) or 0) + amount
+    return true
+end
+
 function Sunset.SetHomeProperty(source, propertyId)
     local char = Sunset.GetCharacter(source)
     if not char then return false end
@@ -456,6 +504,9 @@ exports('AddMoney', Sunset.AddMoney)
 exports('RemoveMoney', Sunset.RemoveMoney)
 exports('GetMoney', Sunset.GetMoney)
 exports('SetPersistentStat', Sunset.SetPersistentStat)
+exports('RefreshBlazePoints', Sunset.RefreshBlazePoints)
+exports('SpendBlazePoints', Sunset.SpendBlazePoints)
+exports('AddBlazePoints', Sunset.AddBlazePoints)
 exports('SetHomeProperty', Sunset.SetHomeProperty)
 exports('RefreshMoney', Sunset.RefreshMoney)
 exports('SetJob', Sunset.SetJob)

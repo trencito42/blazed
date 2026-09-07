@@ -422,11 +422,11 @@ Sunset.FactionCommandCatalog = {
 }
 
 Sunset.IllegalSellPrices = {
-    sunset_cartel = { item = 'sealed_pouch', price = 450, label = 'Sealed Pouch' },
+    sunset_cartel = { item = 'sealed_pouch', price = 280, label = 'Sealed Pouch' },
     night_syndicate = {
-        { item = 'shiv', price = 120, label = 'Shiv' },
-        { item = 'ammo_9mm', price = 85, label = '9mm Ammo' },
-        { item = 'lockpick', price = 40, label = 'Lockpick' },
+        { item = 'shiv', price = 75, label = 'Shiv' },
+        { item = 'ammo_9mm', price = 55, label = '9mm Ammo' },
+        { item = 'lockpick', price = 25, label = 'Lockpick' },
     },
 }
 

@@ -51,12 +51,12 @@ Sunset.Police = {
     },
 
     violations = {
-        { code = 'speeding', label = 'Speeding', amount = 150 },
-        { code = 'reckless', label = 'Reckless Driving', amount = 350 },
-        { code = 'parking', label = 'Illegal Parking', amount = 75 },
-        { code = 'redlight', label = 'Running Red Light', amount = 200 },
-        { code = 'noinsurance', label = 'No Insurance', amount = 500 },
-        { code = 'disturbance', label = 'Public Disturbance', amount = 250 },
+        { code = 'speeding', label = 'Speeding', amount = 180 },
+        { code = 'reckless', label = 'Reckless Driving', amount = 420 },
+        { code = 'parking', label = 'Illegal Parking', amount = 90 },
+        { code = 'redlight', label = 'Running Red Light', amount = 240 },
+        { code = 'noinsurance', label = 'No Insurance', amount = 600 },
+        { code = 'disturbance', label = 'Public Disturbance', amount = 300 },
     },
 
     confiscatable = {

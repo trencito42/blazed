@@ -189,6 +189,29 @@ html, body {
     color: var(--sunset-muted);
 }
 
+.pass-wallet {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+
+.pass-wallet__label {
+    color: var(--sunset-muted);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.pass-wallet__value {
+    color: var(--sunset-amber);
+    font-family: var(--sunset-display);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
 .pass-btn {
     border: none;
     cursor: pointer;

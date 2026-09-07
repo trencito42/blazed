@@ -2,22 +2,23 @@ SunsetRobbery = SunsetRobbery or {}
 
 SunsetRobbery.Debug = false
 
-SunsetRobbery.MinPolice = 3
-SunsetRobbery.PlayerCooldownSec = 30 * 60
-SunsetRobbery.LocationCooldownSec = 45 * 60
+SunsetRobbery.MinPolice = 4
+SunsetRobbery.PlayerCooldownSec = 60 * 60
+SunsetRobbery.LocationCooldownSec = 90 * 60
 SunsetRobbery.RobPointsPerPayday = 1
-SunsetRobbery.RobPointsToStart = 1
+SunsetRobbery.RobPointsToStart = 2
+SunsetRobbery.ConsumeRequiredItemOnStart = true
 SunsetRobbery.HackTimeSec = 34
 SunsetRobbery.HackTraceFail = 100
 SunsetRobbery.HackWrongClickTrace = 18
 SunsetRobbery.PerfectHackDelaySec = 20
 SunsetRobbery.NormalHackDelaySec = 5
 SunsetRobbery.FailedHackDelaySec = 0
-SunsetRobbery.BagCapacity = 12
+SunsetRobbery.BagCapacity = 8
 SunsetRobbery.EscapeRadius = 300.0
 SunsetRobbery.StoreInteractRadius = 2.0
 SunsetRobbery.StartRadius = 18.0
-SunsetRobbery.DisplayLootCount = { min = 6, max = 10 }
+SunsetRobbery.DisplayLootCount = { min = 4, max = 7 }
 SunsetRobbery.PoliceEscalateSec = 20
 SunsetRobbery.PoliceVehicleSec = 40
 SunsetRobbery.RateLimitMs = 220
@@ -39,22 +40,22 @@ SunsetRobbery.Fence = {
 
 SunsetRobbery.LootTables = {
     watches = {
-        { id = 'stolen_silver_watch', label = 'Silver Watch', tier = 'COMMON', weight = 1, baseValue = 850, rarity = 45, family = 'watch' },
-        { id = 'stolen_luxury_watch', label = 'Luxury Watch', tier = 'RARE', weight = 1, baseValue = 4200, rarity = 28, family = 'watch' },
-        { id = 'stolen_gold_watch', label = 'Gold Watch', tier = 'RARE', weight = 1, baseValue = 3600, rarity = 18, family = 'watch' },
-        { id = 'stolen_diamond_watch', label = 'Diamond Watch', tier = 'EPIC', weight = 2, baseValue = 7800, rarity = 7, family = 'watch' },
-        { id = 'stolen_collector_watch', label = 'Collector Watch', tier = 'VERY_RARE', weight = 2, baseValue = 12500, rarity = 2, family = 'watch' },
+        { id = 'stolen_silver_watch', label = 'Silver Watch', tier = 'COMMON', weight = 1, baseValue = 283, rarity = 45, family = 'watch' },
+        { id = 'stolen_luxury_watch', label = 'Luxury Watch', tier = 'RARE', weight = 1, baseValue = 1400, rarity = 28, family = 'watch' },
+        { id = 'stolen_gold_watch', label = 'Gold Watch', tier = 'RARE', weight = 1, baseValue = 1200, rarity = 18, family = 'watch' },
+        { id = 'stolen_diamond_watch', label = 'Diamond Watch', tier = 'EPIC', weight = 2, baseValue = 2600, rarity = 7, family = 'watch' },
+        { id = 'stolen_collector_watch', label = 'Collector Watch', tier = 'VERY_RARE', weight = 2, baseValue = 4166, rarity = 2, family = 'watch' },
     },
     jewelry = {
-        { id = 'stolen_bracelet', label = 'Basic Bracelet', tier = 'COMMON', weight = 1, baseValue = 620, rarity = 42, family = 'jewelry' },
-        { id = 'stolen_gold_chain', label = 'Gold Chain', tier = 'RARE', weight = 1, baseValue = 2900, rarity = 26, family = 'gold' },
-        { id = 'stolen_gold_bracelet', label = 'Gold Bracelet', tier = 'RARE', weight = 1, baseValue = 2400, rarity = 20, family = 'gold' },
-        { id = 'stolen_diamond_jewelry', label = 'Designer Jewelry', tier = 'EPIC', weight = 2, baseValue = 6900, rarity = 9, family = 'jewelry' },
-        { id = 'stolen_collector_watch', label = 'Collector Piece', tier = 'VERY_RARE', weight = 2, baseValue = 11000, rarity = 3, family = 'jewelry' },
+        { id = 'stolen_bracelet', label = 'Basic Bracelet', tier = 'COMMON', weight = 1, baseValue = 206, rarity = 42, family = 'jewelry' },
+        { id = 'stolen_gold_chain', label = 'Gold Chain', tier = 'RARE', weight = 1, baseValue = 966, rarity = 26, family = 'gold' },
+        { id = 'stolen_gold_bracelet', label = 'Gold Bracelet', tier = 'RARE', weight = 1, baseValue = 800, rarity = 20, family = 'gold' },
+        { id = 'stolen_diamond_jewelry', label = 'Designer Jewelry', tier = 'EPIC', weight = 2, baseValue = 2300, rarity = 9, family = 'jewelry' },
+        { id = 'stolen_collector_watch', label = 'Collector Piece', tier = 'VERY_RARE', weight = 2, baseValue = 3666, rarity = 3, family = 'jewelry' },
     },
 }
 
-SunsetRobbery.SellVariance = { min = 0.72, max = 0.88 }
+SunsetRobbery.SellVariance = { min = 0.50, max = 0.68 }
 
 SunsetRobbery.Animations = {
     hack = { dict = 'anim@heists@keypad@', clip = 'idle_a', flag = 49 },

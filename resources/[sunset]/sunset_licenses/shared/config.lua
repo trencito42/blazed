@@ -6,9 +6,9 @@ SunsetLicenses.InstructorAuthorizationSeconds = 300
 SunsetLicenses.InstructorMaxDistance = 12.0
 SunsetLicenses.CandidateFailMistakes = 3.0
 
--- Exam fee scales from Sunset.Config.StartingCash (default $500 → $50 at 10%).
+-- Exam fee scales from Sunset.Config.StartingCash (default $250 → $25 at 10%, min $30).
 SunsetLicenses.ExamFeePercentOfStartingCash = 0.10
-SunsetLicenses.ExamFeeMin = 40
+SunsetLicenses.ExamFeeMin = 30
 SunsetLicenses.ExamFeeMax = 100
 SunsetLicenses.TheoryTimeSec = 600
 

@@ -66,12 +66,12 @@ INSERT IGNORE INTO `societies` (`name`, `label`, `balance`) VALUES
 
 -- Seed starter properties (apartments near airport + city)
 INSERT IGNORE INTO `properties` (`id`, `label`, `price`, `entry`, `interior_pos`) VALUES
-    (1, 'LSIA Motel Room', 25000,
+    (1, 'LSIA Motel Room', 32000,
         '{"x":-1037.58,"y":-2737.58,"z":20.17,"w":328.0}',
         '{"x":-1037.58,"y":-2737.58,"z":20.17,"w":328.0}'),
-    (2, 'Vespucci Studio', 75000,
+    (2, 'Vespucci Studio', 90000,
         '{"x":-1151.0,"y":-1520.0,"z":10.6,"w":35.0}',
         '{"x":-1151.0,"y":-1520.0,"z":10.6,"w":35.0}'),
-    (3, 'Vinewood Hills House', 250000,
+    (3, 'Vinewood Hills House', 320000,
         '{"x":-174.0,"y":497.0,"z":137.0,"w":90.0}',
         '{"x":-174.0,"y":497.0,"z":137.0,"w":90.0}');

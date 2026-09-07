@@ -54,22 +54,22 @@ SELECT seed.* FROM (
         'Blista' AS `label`,
         'Dinka' AS `brand`,
         'compact' AS `category`,
-        12000 AS `price`,
+        16500 AS `price`,
         12 AS `stock`,
         1 AS `available`,
         1 AS `test_drive_enabled`,
         10 AS `display_order`
-    UNION ALL SELECT 'issi2', 'Issi', 'Weeny', 'compact', 14500, 10, 1, 1, 20
-    UNION ALL SELECT 'prairie', 'Prairie', 'Bollokan', 'compact', 18000, 8, 1, 1, 30
-    UNION ALL SELECT 'asea', 'Asea', 'Declasse', 'sedan', 22000, 10, 1, 1, 40
-    UNION ALL SELECT 'tailgater', 'Tailgater', 'Obey', 'sedan', 42000, 6, 1, 1, 50
-    UNION ALL SELECT 'buffalo', 'Buffalo', 'Bravado', 'sport', 65000, 5, 1, 1, 60
-    UNION ALL SELECT 'sultan', 'Sultan', 'Karin', 'sport', 72000, 5, 1, 1, 70
-    UNION ALL SELECT 'baller2', 'Baller', 'Gallivanter', 'suv', 85000, 4, 1, 1, 80
-    UNION ALL SELECT 'dubsta', 'Dubsta', 'Benefactor', 'suv', 95000, 4, 1, 1, 90
-    UNION ALL SELECT 'bati', 'Bati 801', 'Pegassi', 'motorcycle', 38000, 6, 1, 1, 100
-    UNION ALL SELECT 'comet2', 'Comet', 'Pfister', 'sport', 145000, 3, 1, 1, 110
-    UNION ALL SELECT 'adder', 'Adder', 'Truffade', 'super', 850000, 1, 1, 1, 120
+    UNION ALL SELECT 'issi2', 'Issi', 'Weeny', 'compact', 18000, 10, 1, 1, 20
+    UNION ALL SELECT 'prairie', 'Prairie', 'Bollokan', 'compact', 22000, 8, 1, 1, 30
+    UNION ALL SELECT 'asea', 'Asea', 'Declasse', 'sedan', 28000, 10, 1, 1, 40
+    UNION ALL SELECT 'tailgater', 'Tailgater', 'Obey', 'sedan', 48000, 6, 1, 1, 50
+    UNION ALL SELECT 'buffalo', 'Buffalo', 'Bravado', 'sport', 72000, 5, 1, 1, 60
+    UNION ALL SELECT 'sultan', 'Sultan', 'Karin', 'sport', 82000, 5, 1, 1, 70
+    UNION ALL SELECT 'baller2', 'Baller', 'Gallivanter', 'suv', 95000, 4, 1, 1, 80
+    UNION ALL SELECT 'dubsta', 'Dubsta', 'Benefactor', 'suv', 105000, 4, 1, 1, 90
+    UNION ALL SELECT 'bati', 'Bati 801', 'Pegassi', 'motorcycle', 42000, 6, 1, 1, 100
+    UNION ALL SELECT 'comet2', 'Comet', 'Pfister', 'sport', 165000, 3, 1, 1, 110
+    UNION ALL SELECT 'adder', 'Adder', 'Truffade', 'super', 480000, 1, 1, 1, 120
 ) AS seed
 WHERE NOT EXISTS (
     SELECT 1 FROM `dealership_meta` WHERE `meta_key` = 'initial_catalog_v1'

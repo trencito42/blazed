@@ -46,6 +46,38 @@ local function setPremiumPoints(source, value)
     return exports.sunset_core:SetPersistentStat(source, 'account', 'premium_points', value)
 end
 
+local function refreshBlazePoints(source)
+    if GetResourceState('sunset_core') ~= 'started' then return 0 end
+    return exports.sunset_core:RefreshBlazePoints(source) or 0
+end
+
+local function isPremiumRow(row)
+    if not row then return false end
+    local premium = row.premium
+    return premium == true or premium == 1 or tonumber(premium) == 1
+end
+
+local function refundPremiumPayment(source, payment)
+    if not payment or payment.method ~= 'blaze_points' then return end
+    exports.sunset_core:AddBlazePoints(source, payment.amount)
+end
+
+local function chargePremiumPayment(source)
+    local bpCost = math.floor(tonumber(SunsetPass.PremiumCost) or 0)
+    if bpCost <= 0 then return false, nil, 'Premium pass is not for sale yet.' end
+
+    local balance = refreshBlazePoints(source)
+    local ok, err = exports.sunset_core:SpendBlazePoints(source, bpCost)
+    if ok then return true, { method = 'blaze_points', amount = bpCost }, nil end
+    return false, nil, err or ('You need %d Blaze Points (you have %d).'):format(bpCost, balance)
+end
+
+local function premiumCostLabel()
+    local bpCost = math.floor(tonumber(SunsetPass.PremiumCost) or 0)
+    if bpCost > 0 then return ('%d BP'):format(bpCost) end
+    return 'Unavailable'
+end
+
 local function maxTier()
     return #(SunsetPass.Tiers or {})
 end
@@ -186,7 +218,7 @@ function AddMissionProgress(source, missionId, amount)
         end
         missionProgress[missionId] = entry
 
-        saveRow(char.id, xp, tonumber(row.premium) == 1, decodeJson(row.claimed), missionProgress)
+        saveRow(char.id, xp, isPremiumRow(row), decodeJson(row.claimed), missionProgress)
         TriggerClientEvent('sunset:pass:refresh', source)
 
         if justCompleted then
@@ -215,7 +247,7 @@ local function buildPayload(source, row)
     if not char then return nil end
 
     local xp = tonumber(row.xp) or 0
-    local premium = tonumber(row.premium) == 1
+    local premium = isPremiumRow(row)
     local claimed = decodeJson(row.claimed)
     local missionProgress = decodeJson(row.mission_progress)
     local currentTier = tierFromXp(xp)
@@ -284,7 +316,8 @@ local function buildPayload(source, row)
         tierGoal = per,
         premium = premium,
         premiumCost = SunsetPass.PremiumCost or 250,
-        accountCoins = player and (tonumber(player.premium_points) or 0) or 0,
+        premiumCostLabel = premiumCostLabel(),
+        accountCoins = refreshBlazePoints(source),
         tiers = tiers,
         missions = missions,
     }
@@ -311,7 +344,7 @@ exports.sunset_core:RegisterCallback('sunset:pass:claim', function(source, data)
     return withCharacterLock(char.id, function()
         local row = loadRow(char.id)
         local xp = tonumber(row.xp) or 0
-        local premium = tonumber(row.premium) == 1
+        local premium = isPremiumRow(row)
         local claimed = decodeJson(row.claimed)
         local key = claimKey(level, track)
 
@@ -344,36 +377,42 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:pass:buyPremium', function(source)
     local char = getCharacter(source)
-    local player = getPlayer(source)
-    if not char or not player then return nil, 'Character not loaded.' end
+    if not char then return nil, 'Character not loaded.' end
 
     return withCharacterLock(char.id, function()
         local row = loadRow(char.id)
-        if tonumber(row.premium) == 1 then return nil, 'Premium pass already unlocked.' end
+        if isPremiumRow(row) then return nil, 'Premium pass already unlocked.' end
 
-        -- Refresh the account inside the lock; a stale balance must never overwrite
-        -- coins changed by another server action.
-        player = getPlayer(source)
-        if not player then return nil, 'Account data unavailable.' end
-        local cost = math.floor(tonumber(SunsetPass.PremiumCost) or 0)
-        local balance = tonumber(player.premium_points) or 0
-        if cost <= 0 then return nil, 'Premium pass is not for sale yet.' end
-        if balance < cost then
-            return nil, ('You need %d Blaze Points (you have %d).'):format(cost, balance)
-        end
-
-        local ok, err = setPremiumPoints(source, balance - cost)
-        if not ok then return nil, err or 'Payment failed.' end
+        local paid, payment, payErr = chargePremiumPayment(source)
+        if not paid then return nil, payErr or 'Premium pass payment failed.' end
 
         upsertRow(char.id, tonumber(row.xp) or 0, true, decodeJson(row.claimed), decodeJson(row.mission_progress))
         local saved = loadRow(char.id)
-        if tonumber(saved.premium) ~= 1 then
-            setPremiumPoints(source, balance)
-            return nil, 'Premium pass payment succeeded but progress could not be saved. Your Blaze Points were refunded.'
+        if not isPremiumRow(saved) then
+            refundPremiumPayment(source, payment)
+            return nil, 'Premium pass payment succeeded but progress could not be saved. You were refunded.'
         end
+
+        local payload = buildPayload(source, saved)
+        if not payload then
+            return nil, 'Premium pass unlocked, but the menu could not refresh. Reopen /pass.'
+        end
+
         passAnnounce(source, 'PREMIUM UNLOCKED', 'Blaze Pass premium track is now active for this season.', 'success')
-        return buildPayload(source, saved)
+        return payload
     end)
+end)
+
+CreateThread(function()
+    Wait(1500)
+    local ok = MySQL.scalar.await([[
+        SELECT 1 FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'character_pass_progress'
+        LIMIT 1
+    ]])
+    if not ok then
+        print('^1[sunset_pass]^7 Missing table character_pass_progress — run sql/17-sunset-pass.sql on the database.')
+    end
 end)
 
 -- Payday mission hook (safe, isolated from robbery edits).

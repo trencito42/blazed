@@ -8,7 +8,7 @@ Sunset.Fire = {
     extinguishRange = 8.0,
     extinguishRate = 12,
     fireHealth = 100,
-    payout = 350,
+    payout = 280,
     societyCut = 0.15,
     spawnPoints = {
         -- Roadside/industrial scenes away from faction HQs and public spawn.

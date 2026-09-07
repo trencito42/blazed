@@ -13,10 +13,16 @@ local function mergePerms(...)
     return out
 end
 
+local function legalSalaryBoost(grade)
+    grade = tonumber(grade) or 0
+    if grade <= 4 then return 1.10 end
+    return 1.05
+end
+
 function Sunset.BuildLawEnforcementGrades(salaryScale)
     salaryScale = tonumber(salaryScale) or 1.0
-    local function pay(base)
-        return math.floor(base * salaryScale)
+    local function pay(base, grade)
+        return math.floor(base * salaryScale * legalSalaryBoost(grade))
     end
 
     local base = { cuff = true, uncuff = true, escort = true, frisk = true, members = true }
@@ -30,14 +36,14 @@ function Sunset.BuildLawEnforcementGrades(salaryScale)
     local chief = { promote = true }
 
     return {
-        [0] = { label = 'Cadet', salary = pay(380), perms = mergePerms(base, cite) },
-        [1] = { label = 'Officer I', salary = pay(480), perms = mergePerms(base, cite, { mdc = true }) },
-        [2] = { label = 'Officer II', salary = pay(560), perms = mergePerms(base, cite, patrol) },
-        [3] = { label = 'Sergeant', salary = pay(680), perms = mergePerms(base, cite, patrol, full) },
-        [4] = { label = 'Lieutenant', salary = pay(820), perms = mergePerms(base, cite, patrol, full) },
-        [5] = { label = 'Captain', salary = pay(960), perms = mergePerms(base, cite, patrol, full) },
-        [6] = { label = 'Deputy Chief', salary = pay(1120), perms = mergePerms(base, cite, patrol, full, command) },
-        [7] = { label = 'Chief', salary = pay(1280), perms = mergePerms(base, cite, patrol, full, command, chief) },
+        [0] = { label = 'Cadet', salary = pay(380, 0), perms = mergePerms(base, cite) },
+        [1] = { label = 'Officer I', salary = pay(480, 1), perms = mergePerms(base, cite, { mdc = true }) },
+        [2] = { label = 'Officer II', salary = pay(560, 2), perms = mergePerms(base, cite, patrol) },
+        [3] = { label = 'Sergeant', salary = pay(680, 3), perms = mergePerms(base, cite, patrol, full) },
+        [4] = { label = 'Lieutenant', salary = pay(820, 4), perms = mergePerms(base, cite, patrol, full) },
+        [5] = { label = 'Captain', salary = pay(960, 5), perms = mergePerms(base, cite, patrol, full) },
+        [6] = { label = 'Deputy Chief', salary = pay(1120, 6), perms = mergePerms(base, cite, patrol, full, command) },
+        [7] = { label = 'Chief', salary = pay(1280, 7), perms = mergePerms(base, cite, patrol, full, command, chief) },
     }
 end
 
@@ -45,14 +51,14 @@ function Sunset.BuildEmsGrades()
     local heal = { stabilize = true, heal = true, revive = true }
     local lead = { invite = true, giverank = true, fmotd = true, fwarn = true, uninvite = true }
     return {
-        [0] = { label = 'Trainee', salary = 320, perms = { stabilize = true, members = true } },
-        [1] = { label = 'EMT', salary = 420, perms = { stabilize = true, heal = true, members = true } },
-        [2] = { label = 'Paramedic', salary = 520, perms = mergePerms(heal, { members = true }) },
-        [3] = { label = 'Senior Paramedic', salary = 620, perms = mergePerms(heal, { members = true }) },
-        [4] = { label = 'Doctor', salary = 740, perms = mergePerms(heal, { members = true }) },
-        [5] = { label = 'Surgeon', salary = 860, perms = mergePerms(heal, { members = true }) },
-        [6] = { label = 'Deputy Chief', salary = 980, perms = mergePerms(heal, lead) },
-        [7] = { label = 'Chief Medical', salary = 1100, perms = mergePerms(heal, lead, { promote = true }) },
+        [0] = { label = 'Trainee', salary = math.floor(320 * legalSalaryBoost(0)), perms = { stabilize = true, members = true } },
+        [1] = { label = 'EMT', salary = math.floor(420 * legalSalaryBoost(1)), perms = { stabilize = true, heal = true, members = true } },
+        [2] = { label = 'Paramedic', salary = math.floor(520 * legalSalaryBoost(2)), perms = mergePerms(heal, { members = true }) },
+        [3] = { label = 'Senior Paramedic', salary = math.floor(620 * legalSalaryBoost(3)), perms = mergePerms(heal, { members = true }) },
+        [4] = { label = 'Doctor', salary = math.floor(740 * legalSalaryBoost(4)), perms = mergePerms(heal, { members = true }) },
+        [5] = { label = 'Surgeon', salary = math.floor(860 * legalSalaryBoost(5)), perms = mergePerms(heal, { members = true }) },
+        [6] = { label = 'Deputy Chief', salary = math.floor(980 * legalSalaryBoost(6)), perms = mergePerms(heal, lead) },
+        [7] = { label = 'Chief Medical', salary = math.floor(1100 * legalSalaryBoost(7)), perms = mergePerms(heal, lead, { promote = true }) },
     }
 end
 
@@ -60,14 +66,14 @@ function Sunset.BuildFireGrades()
     local rescue = { stabilize = true, heal = true, revive = true }
     local lead = { invite = true, giverank = true, fmotd = true, fwarn = true, uninvite = true }
     return {
-        [0] = { label = 'Probationary', salary = 300, perms = { stabilize = true, members = true } },
-        [1] = { label = 'Firefighter', salary = 400, perms = { stabilize = true, heal = true, members = true } },
-        [2] = { label = 'Engineer', salary = 500, perms = mergePerms(rescue, { members = true }) },
-        [3] = { label = 'Senior Firefighter', salary = 600, perms = mergePerms(rescue, { members = true }) },
-        [4] = { label = 'Captain', salary = 720, perms = mergePerms(rescue, { members = true }) },
-        [5] = { label = 'Battalion Chief', salary = 840, perms = mergePerms(rescue, { members = true }) },
-        [6] = { label = 'Deputy Chief', salary = 960, perms = mergePerms(rescue, lead) },
-        [7] = { label = 'Fire Chief', salary = 1080, perms = mergePerms(rescue, lead, { promote = true }) },
+        [0] = { label = 'Probationary', salary = math.floor(300 * legalSalaryBoost(0)), perms = { stabilize = true, members = true } },
+        [1] = { label = 'Firefighter', salary = math.floor(400 * legalSalaryBoost(1)), perms = { stabilize = true, heal = true, members = true } },
+        [2] = { label = 'Engineer', salary = math.floor(500 * legalSalaryBoost(2)), perms = mergePerms(rescue, { members = true }) },
+        [3] = { label = 'Senior Firefighter', salary = math.floor(600 * legalSalaryBoost(3)), perms = mergePerms(rescue, { members = true }) },
+        [4] = { label = 'Captain', salary = math.floor(720 * legalSalaryBoost(4)), perms = mergePerms(rescue, { members = true }) },
+        [5] = { label = 'Battalion Chief', salary = math.floor(840 * legalSalaryBoost(5)), perms = mergePerms(rescue, { members = true }) },
+        [6] = { label = 'Deputy Chief', salary = math.floor(960 * legalSalaryBoost(6)), perms = mergePerms(rescue, lead) },
+        [7] = { label = 'Fire Chief', salary = math.floor(1080 * legalSalaryBoost(7)), perms = mergePerms(rescue, lead, { promote = true }) },
     }
 end
 
@@ -85,7 +91,7 @@ function Sunset.BuildServiceGrades(permKey, labels, salaries)
         if i == 0 then perms.members = true end
         grades[i] = {
             label = labels[i + 1] or ('Rank ' .. i),
-            salary = salaries[i + 1] or (200 + i * 80),
+            salary = math.floor((salaries[i + 1] or (200 + i * 80)) * legalSalaryBoost(i)),
             perms = perms,
         }
     end
@@ -99,14 +105,14 @@ function Sunset.BuildEducationGrades()
         review_license_tests = true,
     }
     return {
-        [0] = { label = 'Trainee Instructor', salary = 280, perms = { members = true } },
-        [1] = { label = 'Instructor', salary = 360, perms = mergePerms(instruct) },
-        [2] = { label = 'Senior Instructor', salary = 440, perms = mergePerms(instruct) },
-        [3] = { label = 'Lead Instructor', salary = 520, perms = mergePerms(instruct) },
-        [4] = { label = 'Supervisor', salary = 600, perms = mergePerms(instruct) },
-        [5] = { label = 'Chief Instructor', salary = 680, perms = mergePerms(instruct, lead) },
-        [6] = { label = 'Deputy Director', salary = 760, perms = mergePerms(instruct, lead) },
-        [7] = { label = 'Director', salary = 840, perms = mergePerms(instruct, lead, { promote = true }) },
+        [0] = { label = 'Trainee Instructor', salary = math.floor(280 * legalSalaryBoost(0)), perms = { members = true } },
+        [1] = { label = 'Instructor', salary = math.floor(360 * legalSalaryBoost(1)), perms = mergePerms(instruct) },
+        [2] = { label = 'Senior Instructor', salary = math.floor(440 * legalSalaryBoost(2)), perms = mergePerms(instruct) },
+        [3] = { label = 'Lead Instructor', salary = math.floor(520 * legalSalaryBoost(3)), perms = mergePerms(instruct) },
+        [4] = { label = 'Supervisor', salary = math.floor(600 * legalSalaryBoost(4)), perms = mergePerms(instruct) },
+        [5] = { label = 'Chief Instructor', salary = math.floor(680 * legalSalaryBoost(5)), perms = mergePerms(instruct, lead) },
+        [6] = { label = 'Deputy Director', salary = math.floor(760 * legalSalaryBoost(6)), perms = mergePerms(instruct, lead) },
+        [7] = { label = 'Director', salary = math.floor(840 * legalSalaryBoost(7)), perms = mergePerms(instruct, lead, { promote = true }) },
     }
 end
 
