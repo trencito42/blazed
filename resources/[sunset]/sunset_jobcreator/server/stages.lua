@@ -209,7 +209,7 @@ StageHandlers.give_reward = {
         local payJobId = session.jobId
         local char = exports.sunset_core:GetCharacter(source)
         if char then
-            local charJob = select(1, Sunset.GetCharacterJob(char))
+            local charJob = char.job or 'unemployed'
             if SunsetJobCreator.GetMigrationTarget(charJob) == session.jobId then
                 payJobId = charJob
             end
