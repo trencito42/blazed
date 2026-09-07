@@ -39,6 +39,13 @@ function JCEngine_ClientAction(source, data)
             if k ~= 'entity' then copy[k] = v end
         end
         session.variables[stage.storeAs or 'prop'] = copy
+        local locVar = stage.locationVar
+        if locVar and type(session.variables[locVar]) == 'table' and copy.x and copy.y and copy.z then
+            local target = session.variables[locVar]
+            target.x = copy.x
+            target.y = copy.y
+            target.z = copy.z
+        end
         return JCEngine_Advance(source, stage.onSuccess)
     elseif stage.type == 'delete_vehicle' or stage.type == 'remove_npc' then
         return JCEngine_Advance(source, stage.onSuccess)

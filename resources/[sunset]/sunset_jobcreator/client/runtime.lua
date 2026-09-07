@@ -74,6 +74,27 @@ local function stageLocation(data)
         local npcVar = data.stage.npcVar or 'npc'
         loc = (data.variables or {})[npcVar] or loc
     end
+    if loc then
+        local stage = data.stage
+        local propVar = stage.propVar
+        if not propVar and stage.locationVar == 'tree' then
+            propVar = 'treeProp'
+        end
+        if propVar and JCEntities.propByVar[propVar] then
+            local ent = JCEntities.propByVar[propVar]
+            if ent and DoesEntityExist(ent) then
+                local c = GetEntityCoords(ent)
+                loc = {
+                    x = c.x, y = c.y, z = c.z,
+                    radius = loc.radius,
+                    zTolerance = loc.zTolerance,
+                    label = loc.label,
+                    blip = loc.blip,
+                    poolKey = loc.poolKey,
+                }
+            end
+        end
+    end
     return loc
 end
 

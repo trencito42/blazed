@@ -23,6 +23,40 @@ local function vec4From(loc, heading)
     return vector4(loc.x, loc.y, loc.z, h)
 end
 
+local function resolveGroundZ(x, y, hintZ)
+    hintZ = tonumber(hintZ) or 50.0
+    RequestCollisionAtCoord(x, y, hintZ)
+
+    for _ = 1, 25 do
+        local found, groundZ = GetGroundZFor_3dCoord(x, y, hintZ + 80.0, false)
+        if found then return groundZ end
+        found, groundZ = GetGroundZFor_3dCoord(x, y, hintZ + 80.0, true)
+        if found then return groundZ end
+        Wait(0)
+        RequestCollisionAtCoord(x, y, hintZ)
+    end
+
+    local handle = StartShapeTestRay(x, y, hintZ + 120.0, x, y, hintZ - 120.0, 511, 0, 4)
+    local retval, hit, endCoords = GetShapeTestResult(handle)
+    while retval == 1 do
+        Wait(0)
+        retval, hit, endCoords = GetShapeTestResult(handle)
+    end
+    if hit == 1 and endCoords then return endCoords.z end
+    return hintZ
+end
+
+local function placePropOnGround(obj, x, y, hintZ)
+    local groundZ = resolveGroundZ(x, y, hintZ)
+    SetEntityCoordsNoOffset(obj, x, y, groundZ + 0.05, false, false, false)
+    for _ = 1, 4 do
+        PlaceObjectOnGroundProperly(obj)
+        Wait(0)
+    end
+    local coords = GetEntityCoords(obj)
+    return coords.x, coords.y, coords.z
+end
+
 function JCEntities_Cleanup()
     for _, veh in ipairs(JCEntities.vehicles) do
         if veh and DoesEntityExist(veh) then
@@ -106,15 +140,16 @@ function JCEntities_SpawnProp(stage, variables, definition)
     if not hash then return nil, 'Invalid prop model.' end
 
     local x, y, z = loc.x, loc.y, loc.z
-    local found, groundZ = GetGroundZFor_3dCoord(x, y, z + 50.0, false)
-    if found then z = groundZ end
+    RequestCollisionAtCoord(x, y, z)
+    Wait(100)
 
     local heading = stage.heading or loc.heading or math.random(0, 359) + 0.0
-    local obj = CreateObject(hash, x, y, z - 0.15, true, true, false)
+    local spawnZ = resolveGroundZ(x, y, z)
+    local obj = CreateObject(hash, x, y, spawnZ + 2.0, true, true, false)
     if not obj or obj == 0 then return nil, 'Could not spawn prop.' end
 
     SetEntityAsMissionEntity(obj, true, true)
-    PlaceObjectOnGroundProperly(obj)
+    x, y, z = placePropOnGround(obj, x, y, spawnZ)
     SetEntityHeading(obj, heading)
     FreezeEntityPosition(obj, true)
     SetModelAsNoLongerNeeded(hash)
