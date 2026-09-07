@@ -21,6 +21,8 @@ const STAGE_META = {
     require_vehicle: { icon: '🔒', cat: 'vehicul', label: 'Trebuie în vehicul', hint: 'Verifică că e în vehiculul jobului.' },
     return_vehicle: { icon: '🏁', cat: 'vehicul', label: 'Înapoi cu vehiculul', hint: 'Adu mașina la depozit / punct de return.' },
     spawn_npc: { icon: '🧑', cat: 'lume', label: 'Spawn NPC', hint: 'Apare un personaj la un loc.' },
+    spawn_prop: { icon: '🌲', cat: 'lume', label: 'Spawn obiect (copac)', hint: 'Apare un copac/obiect la locul marcat — vizibil în joc.' },
+    chop_prop: { icon: '🪓', cat: 'gameplay', label: 'Taie / lovește obiect', hint: 'Topor în mână + animație chop. Șterge obiectul după.' },
     remove_npc: { icon: '👋', cat: 'lume', label: 'Elimină NPC', hint: 'Șterge NPC-ul din variabilă.' },
     require_item: { icon: '📦', cat: 'item', label: 'Necesită obiect', hint: 'Verifică că are itemul în inventar.' },
     give_item: { icon: '🎁', cat: 'item', label: 'Dă obiect', hint: 'Adaugă item în inventar.' },
@@ -42,6 +44,7 @@ const COMMON_VARS = [
     { id: 'target', label: 'target — destinația curentă' },
     { id: 'leg', label: 'leg — etapa / runda curentă' },
     { id: 'caught', label: 'caught — prins / colectat' },
+    { id: 'logs', label: 'logs — lemne tăiate' },
     { id: 'truck', label: 'truck — vehiculul jobului' },
     { id: 'trailer', label: 'trailer — remorca' },
     { id: 'npc', label: 'npc — personaj spawnat' },
@@ -73,6 +76,13 @@ const BRANCH_OPS = [
     { v: '<', label: 'mai mic decât' }, { v: '<=', label: 'mai mic sau egal' },
     { v: '>', label: 'mai mare decât' }, { v: '>=', label: 'mai mare sau egal' },
     { v: '==', label: 'egal cu' },
+];
+
+const PROP_PRESETS = [
+    { id: 'prop_tree_pine_02', label: 'Pin mare' },
+    { id: 'prop_tree_pine_01', label: 'Pin mic' },
+    { id: 'prop_logpile_06', label: 'Grămadă lemne' },
+    { id: 'prop_rock_4_c', label: 'Rocă (miner)' },
 ];
 
 const JobCreator = {
@@ -486,6 +496,22 @@ const JobCreator = {
             body += this._locationModeSelect(st);
             body += this._varSelect('jc-s-storeAs', st.storeAs || 'npc', 'Salvează NPC în');
             break;
+        case 'spawn_prop':
+            body += this._presetSelect('jc-s-prop', PROP_PRESETS, st.model, 'Model obiect');
+            body += this._locationModeSelect(st);
+            body += this._varSelect('jc-s-storeAs', st.storeAs || 'treeProp', 'Salvează obiectul în');
+            break;
+        case 'chop_prop':
+            body += this._locationModeSelect(st);
+            body += this._varSelect('jc-s-propVar', st.propVar || 'treeProp', 'Obiect spawnat (variabilă)');
+            body += this._presetSelect('jc-s-prop', PROP_PRESETS, st.model, 'Model fallback');
+            body += `<div class="jc-field-row">
+                <div class="jc-field"><label>Loveituri (swings)</label><input id="jc-s-swings" type="number" min="1" value="${st.swings ?? 5}" /></div>
+                <div class="jc-field"><label>Regenerare (sec)</label><input id="jc-s-regen" type="number" min="0" value="${st.regenerateSec ?? 45}" /></div>
+            </div>`;
+            body += `<div class="jc-field"><label>Durată totală (sec)</label>
+                <input id="jc-s-seconds" type="number" min="1" value="${st.seconds || Math.round((st.durationMs || 6000) / 1000)}" /></div>`;
+            break;
         case 'talk_to_npc':
             body += this._varSelect('jc-s-npcVar', st.npcVar || 'npc', 'NPC (variabilă)');
             break;
@@ -552,6 +578,7 @@ const JobCreator = {
         bindCustom('#jc-s-vehicle', '#jc-s-vehicle-custom');
         bindCustom('#jc-s-trailer', '#jc-s-trailer-custom');
         bindCustom('#jc-s-npc', '#jc-s-npc-custom');
+        bindCustom('#jc-s-prop', '#jc-s-prop-custom');
         bindCustom('#jc-s-item', '#jc-s-item-custom');
         bindCustom('#jc-s-locationField', '#jc-s-locationField-custom');
 
@@ -630,12 +657,18 @@ const JobCreator = {
         if (g('jc-s-max')) st.max = Number(g('jc-s-max').value);
 
         const sec = g('jc-s-seconds')?.value;
-        if (sec) { st.seconds = Number(sec); if (st.type === 'progress') st.durationMs = Number(sec) * 1000; }
+        if (sec) {
+            st.seconds = Number(sec);
+            if (st.type === 'progress' || st.type === 'chop_prop') st.durationMs = Number(sec) * 1000;
+        }
         const win = g('jc-s-windowSec')?.value;
         if (win) st.windowMs = Number(win) * 1000;
 
-        const model = this._readPreset('jc-s-vehicle') || this._readPreset('jc-s-npc');
+        const model = this._readPreset('jc-s-vehicle') || this._readPreset('jc-s-npc') || this._readPreset('jc-s-prop');
         if (model) st.model = model;
+        if (g('jc-s-propVar')) st.propVar = this._readVarSelect('jc-s-propVar');
+        if (g('jc-s-swings')) st.swings = Number(g('jc-s-swings').value);
+        if (g('jc-s-regen')) st.regenerateSec = Number(g('jc-s-regen').value);
         const trailer = this._readPreset('jc-s-trailer');
         if (trailer) st.trailerModel = trailer;
         if (g('jc-s-warp')) st.warp = g('jc-s-warp').checked || undefined;

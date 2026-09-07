@@ -565,29 +565,45 @@ local function lumberTemplate()
         startStage = 'init',
         timeoutSec = 1500,
         salary = 120,
-        ui = { title = 'Lumberjack', key = 'E' },
+        ui = { title = 'Lumberjack', key = 'E', bagLabel = 'Logs' },
         progression = { xpPerTask = 16, payPerTask = 70 },
-        variables = { logs = 0, total = 5 },
+        variables = { logs = 0, total = 4 },
         locations = {
-            mill = { x = -552.45, y = 5328.22, z = 74.65, radius = 6.0, zTolerance = 5.0, label = 'Sawmill', blip = { sprite = 477, color = 25, scale = 0.85 } },
+            mill = {
+                x = -552.45, y = 5328.22, z = 74.65, radius = 8.0, zTolerance = 6.0,
+                label = 'Paleto Sawmill',
+                blip = { sprite = 477, color = 25, scale = 0.9 },
+            },
         },
         pools = {
             trees = {
-                { x = -570.22, y = 5365.45, z = 70.22, radius = 3.0, zTolerance = 4.0, label = 'Pine stand', weight = 1 },
-                { x = -595.88, y = 5388.12, z = 69.88, radius = 3.0, zTolerance = 4.0, label = 'Cedar grove', weight = 1 },
-                { x = -540.45, y = 5395.22, z = 71.45, radius = 3.0, zTolerance = 4.0, label = 'Oak patch', weight = 1 },
+                { id = 'pine_a', x = -501.2, y = 5390.5, z = 75.2, radius = 3.5, zTolerance = 4.0, label = 'Pine A', weight = 1 },
+                { id = 'pine_b', x = -520.8, y = 5415.3, z = 74.8, radius = 3.5, zTolerance = 4.0, label = 'Pine B', weight = 1 },
+                { id = 'pine_c', x = -545.1, y = 5430.2, z = 73.5, radius = 3.5, zTolerance = 4.0, label = 'Pine C', weight = 1 },
+                { id = 'cedar_a', x = -578.3, y = 5398.7, z = 72.1, radius = 3.5, zTolerance = 4.0, label = 'Cedar A', weight = 1 },
+                { id = 'cedar_b', x = -610.5, y = 5375.4, z = 71.8, radius = 3.5, zTolerance = 4.0, label = 'Cedar B', weight = 1 },
+                { id = 'oak_a', x = -635.2, y = 5350.1, z = 70.5, radius = 3.5, zTolerance = 4.0, label = 'Oak A', weight = 1 },
+                { id = 'pine_d', x = -565.8, y = 5362.4, z = 73.2, radius = 3.5, zTolerance = 4.0, label = 'Pine D', weight = 1 },
+                { id = 'pine_e', x = -588.4, y = 5345.6, z = 72.0, radius = 3.5, zTolerance = 4.0, label = 'Pine E', weight = 1 },
+                { id = 'pine_f', x = -512.3, y = 5368.9, z = 75.0, radius = 3.5, zTolerance = 4.0, label = 'Pine F', weight = 1 },
+                { id = 'pine_g', x = -548.7, y = 5388.2, z = 73.8, radius = 3.5, zTolerance = 4.0, label = 'Pine G', weight = 1 },
             },
         },
         stages = {
             { id = 'init', type = 'scale_from_level', var = 'total', resetVar = 'logs', base = 4, perLevel = 1, max = 10, onSuccess = 'to_mill' },
-            { id = 'to_mill', type = 'goto_zone', location = 'mill', message = 'Go to the sawmill', onSuccess = 'pick_tree' },
-            { id = 'pick_tree', type = 'pick_random', pool = 'trees', storeAs = 'tree', onSuccess = 'to_tree' },
-            { id = 'to_tree', type = 'goto_zone', locationVar = 'tree', message = 'Go to the marked tree', onSuccess = 'chop' },
-            { id = 'chop', type = 'progress', locationVar = 'tree', durationMs = 6000, label = 'Chopping...', message = 'Press {key} to chop', onSuccess = 'pay_log' },
+            { id = 'to_mill', type = 'goto_zone', label = 'Start shift', location = 'mill', message = 'Go to the Paleto sawmill', onSuccess = 'pick_tree' },
+            { id = 'pick_tree', type = 'pick_random', pool = 'trees', storeAs = 'tree', respectCooldown = true, onSuccess = 'spawn_tree' },
+            { id = 'spawn_tree', type = 'spawn_prop', locationVar = 'tree', model = 'prop_tree_pine_02', storeAs = 'treeProp', onSuccess = 'to_tree' },
+            { id = 'to_tree', type = 'goto_zone', label = 'Find tree', locationVar = 'tree', message = 'Go to the marked tree', onSuccess = 'chop' },
+            {
+                id = 'chop', type = 'chop_prop', label = 'Chopping...', locationVar = 'tree', propVar = 'treeProp',
+                model = 'prop_tree_pine_02', swings = 5, durationMs = 6000,
+                message = 'Press {key} to chop the tree', regenerateSec = 50, onSuccess = 'pay_log',
+            },
             { id = 'pay_log', type = 'give_reward', onSuccess = 'inc_logs' },
             { id = 'inc_logs', type = 'set_variable', actions = { { type = 'increment', var = 'logs', value = 1 } }, onSuccess = 'check_logs' },
             { id = 'check_logs', type = 'branch', condition = { var = 'logs', op = '<', valueRef = 'total' }, ifTrue = 'pick_tree', ifFalse = 'deliver' },
-            { id = 'deliver', type = 'zone_interact', location = 'mill', message = 'Press {key} to deliver logs', onSuccess = 'bonus' },
+            { id = 'deliver', type = 'zone_interact', label = 'Deliver logs', location = 'mill', message = 'Press {key} to deliver logs at the sawmill', onSuccess = 'bonus' },
             { id = 'bonus', type = 'give_reward', pay = 130, xp = 28, onSuccess = 'finish' },
             { id = 'finish', type = 'complete', label = 'Shift complete' },
         },
@@ -769,5 +785,20 @@ function JCTemplates_Seed()
 
     if seeded > 0 then
         print(('[sunset_jobcreator] Seeded %d template(s).'):format(seeded))
+    end
+
+    -- Always refresh lumber template (gameplay upgrades)
+    local lumberMeta = {
+        label = 'Lumberjack (Creator)',
+        description = 'Chop spawned trees in Paleto Forest and deliver logs to the sawmill.',
+        category = 'gathering',
+        icon = 'axe',
+        status = 'published',
+    }
+    if JCStorage_Get('jc_tpl_lumber') then
+        local row = JCStorage_Get('jc_tpl_lumber')
+        lumberMeta.status = row.status
+        JCStorage_Save('jc_tpl_lumber', lumberMeta, lumberTemplate(), 'system-upgrade')
+        print('[sunset_jobcreator] Refreshed jc_tpl_lumber template.')
     end
 end

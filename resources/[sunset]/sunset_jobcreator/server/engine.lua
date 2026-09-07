@@ -33,10 +33,21 @@ function JCEngine_ClientAction(source, data)
     elseif stage.type == 'spawn_npc' and data.npcData then
         session.variables[stage.storeAs or 'npc'] = data.npcData
         return JCEngine_Advance(source, stage.onSuccess)
+    elseif stage.type == 'spawn_prop' and data.propData then
+        local copy = {}
+        for k, v in pairs(data.propData) do
+            if k ~= 'entity' then copy[k] = v end
+        end
+        session.variables[stage.storeAs or 'prop'] = copy
+        return JCEngine_Advance(source, stage.onSuccess)
     elseif stage.type == 'delete_vehicle' or stage.type == 'remove_npc' then
         return JCEngine_Advance(source, stage.onSuccess)
-    elseif stage.type == 'progress' or stage.type == 'skill_check' then
+    elseif stage.type == 'progress' or stage.type == 'skill_check' or stage.type == 'chop_prop' then
         if data.success then
+            if stage.type == 'chop_prop' and data.poolKey then
+                session.variables._poolCooldown = session.variables._poolCooldown or {}
+                session.variables._poolCooldown[data.poolKey] = os.time() + (tonumber(stage.regenerateSec) or 45)
+            end
             return JCEngine_Advance(source, stage.onSuccess)
         end
         return JCEngine_Advance(source, stage.onFailure or stage.onSuccess)

@@ -28,6 +28,27 @@ local function inZone(source, loc)
     return math.abs(pos.z - t.z) <= zTol
 end
 
+local function poolEntryKey(entry)
+    if entry.id then return tostring(entry.id) end
+    return string.format('%.1f_%.1f', tonumber(entry.x) or 0, tonumber(entry.y) or 0)
+end
+
+local function filterPool(session, pool)
+    pool = pool or {}
+    local cooldown = session.variables._poolCooldown or {}
+    local now = os.time()
+    local filtered = {}
+    for _, e in ipairs(pool) do
+        local key = poolEntryKey(e)
+        e.poolKey = key
+        if not cooldown[key] or cooldown[key] <= now then
+            filtered[#filtered + 1] = e
+        end
+    end
+    if #filtered == 0 then return pool end
+    return filtered
+end
+
 local function pickWeighted(pool)
     pool = pool or {}
     if #pool == 0 then return nil end
@@ -55,8 +76,12 @@ local function runActions(session, actions)
         elseif t == 'pick_random' and var then
             local poolKey = act.pool
             local pool = session.definition.pools and session.definition.pools[poolKey]
+            if act.respectCooldown then pool = filterPool(session, pool) end
             local pick = pickWeighted(pool)
-            if pick then session.variables[var] = pick end
+            if pick then
+                pick.poolKey = poolEntryKey(pick)
+                session.variables[var] = pick
+            end
         end
     end
 end
@@ -131,7 +156,14 @@ StageHandlers.branch = {
 
 StageHandlers.pick_random = {
     enter = function(source, session, stage)
-        runActions(session, { { type = 'pick_random', var = stage.storeAs or 'picked', pool = stage.pool } })
+        runActions(session, {
+            {
+                type = 'pick_random',
+                var = stage.storeAs or 'picked',
+                pool = stage.pool,
+                respectCooldown = stage.respectCooldown ~= false,
+            },
+        })
         return true, resolveNext(stage, true)
     end,
 }
@@ -358,6 +390,14 @@ StageHandlers.talk_to_npc = {
 
 -- Client-driven gameplay
 StageHandlers.progress = {
+    enter = function() return true, nil end,
+}
+
+StageHandlers.chop_prop = {
+    enter = function() return true, nil end,
+}
+
+StageHandlers.spawn_prop = {
     enter = function() return true, nil end,
 }
 

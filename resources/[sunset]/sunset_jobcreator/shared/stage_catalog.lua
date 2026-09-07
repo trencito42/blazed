@@ -18,6 +18,8 @@ SunsetJobCreator.StageCatalog = {
     { type = 'require_vehicle', category = 'vehicles', label = 'Must be in job vehicle', fields = { 'vehicleVar', 'message', 'onSuccess', 'onFailure' } },
     { type = 'return_vehicle', category = 'vehicles', label = 'Return vehicle at zone', fields = { 'vehicleVar', 'location', 'locationVar', 'message', 'onSuccess', 'onFailure' } },
     { type = 'spawn_npc', category = 'world', label = 'Spawn NPC', fields = { 'model', 'location', 'locationVar', 'heading', 'storeAs', 'scenario', 'onSuccess' } },
+    { type = 'spawn_prop', category = 'world', label = 'Spawn prop (tree, object)', fields = { 'model', 'location', 'locationVar', 'heading', 'storeAs', 'onSuccess' } },
+    { type = 'chop_prop', category = 'gameplay', label = 'Chop / mine prop (axe anim)', fields = { 'locationVar', 'propVar', 'model', 'swings', 'durationMs', 'message', 'regenerateSec', 'onSuccess', 'onFailure' } },
     { type = 'remove_npc', category = 'world', label = 'Remove NPC', fields = { 'npcVar', 'onSuccess' } },
     { type = 'talk_to_npc', category = 'interaction', label = 'Talk to NPC', fields = { 'npcVar', 'message', 'onSuccess', 'onFailure' } },
     { type = 'require_item', category = 'items', label = 'Require item', fields = { 'item', 'count', 'onSuccess', 'onFailure' } },

@@ -11,6 +11,7 @@ local INTERACT_STAGES = {
     zone_interact = true,
     talk_to_npc = true,
     progress = true,
+    chop_prop = true,
     skill_check = true,
     party_gate = true,
     return_vehicle = true,
@@ -75,23 +76,65 @@ local function stageLocation(data)
     return loc
 end
 
-local function syncHud(data)
+local function formatMessage(stage, key)
+    local msg = stage.message or stage.label or 'Follow the marker'
+    return msg:gsub('{key}', key or 'E')
+end
+
+local function jobProgress(vars)
+    local total = tonumber(vars.total) or tonumber(vars.caught) or 0
+    local done = tonumber(vars.logs) or tonumber(vars.done) or tonumber(vars.mined)
+        or tonumber(vars.tasks) or tonumber(vars.sorted) or tonumber(vars.harvest)
+        or tonumber(vars.caught) or 0
+    return done, total
+end
+
+local function syncHud(data, override)
     if not data then return end
     local ui = (data.definition and data.definition.ui) or {}
     local stage = data.stage or {}
     local vars = data.variables or {}
-    local total = tonumber(vars.total) or tonumber(vars.caught) or 0
-    local done = tonumber(vars.done) or tonumber(vars.caught) or 0
-    local progress = total > 0 and math.floor((done / total) * 100) or 0
-    exports.sunset_ui:Send('jobShiftShow', {
-        title = ui.title or data.label or 'Work',
-        state = 'active',
-        counter = total > 0 and ('Task %d/%d'):format(done, total) or stage.label or '',
-        message = stage.message or 'Follow the marker',
-        detail = stage.label or '',
-        progress = progress,
-        key = ui.key or 'E',
-    })
+    local done, total = jobProgress(vars)
+    local key = ui.key or 'E'
+    local title = ui.title or data.label or 'Work'
+    local bagLabel = ui.bagLabel or 'Task'
+
+    local state = 'shift'
+    local message = formatMessage(stage, key)
+
+    if override then
+        state = override.state or state
+        message = override.message or message
+    else
+        local stageType = stage.type
+        if stageType == 'zone_interact' or stageType == 'progress' or stageType == 'chop_prop' or stageType == 'skill_check' then
+            if progressActive or skillActive then
+                state = 'waiting'
+                message = stage.label or 'Working...'
+            else
+                state = 'idle'
+                message = formatMessage(stage, key)
+            end
+        elseif stageType == 'give_reward' or stageType == 'complete' then
+            state = 'success'
+            message = formatMessage(stage, key)
+        else
+            state = 'shift'
+            message = formatMessage(stage, key)
+        end
+    end
+
+    local payload = {
+        state = state,
+        title = title,
+        message = message,
+        bagLabel = bagLabel,
+    }
+    if total > 0 then
+        payload.carried = done
+        payload.capacity = total
+    end
+    exports.sunset_ui:Send('fishingShow', payload)
 end
 
 local function endShift(reason, failed)
@@ -101,7 +144,7 @@ local function endShift(reason, failed)
     progressActive = false
     skillActive = false
     clearBlips()
-    exports.sunset_ui:Send('jobShiftHide', {})
+    exports.sunset_ui:Send('fishingHide', {})
     exports.sunset_ui:Send('jobSkillHide', {})
     JCEntities_Cleanup()
     if reason then notify(reason, failed and 'error' or 'success') end
@@ -113,6 +156,8 @@ local function sendClientAction(stageId, body)
         error = body.error,
         netId = body.netId,
         npcData = body.npcData,
+        propData = body.propData,
+        poolKey = body.poolKey,
         success = body.success,
     })
     if err then notify(err, 'error') end
@@ -151,9 +196,24 @@ local function runClientSetup(data)
             sendClientAction(data.stageId, { npcData = npcData, error = err })
         end)
         clientSetupDone = key
+    elseif stage.type == 'spawn_prop' then
+        CreateThread(function()
+            local propData, err = JCEntities_SpawnProp(stage, vars, def)
+            sendClientAction(data.stageId, { propData = propData, error = err })
+        end)
+        clientSetupDone = key
     elseif stage.type == 'remove_npc' then
         JCEntities_RemoveNpc(vars, stage.npcVar)
         sendClientAction(data.stageId, { success = true })
+        clientSetupDone = key
+    elseif stage.type == 'chop_prop' then
+        local propVar = stage.propVar or 'treeProp'
+        local ent = JCEntities.propByVar[propVar]
+        if not ent or not DoesEntityExist(ent) then
+            CreateThread(function()
+                JCEntities_SpawnProp({ model = stage.model, locationVar = stage.locationVar, storeAs = propVar }, vars, def)
+            end)
+        end
         clientSetupDone = key
     end
 end
@@ -172,10 +232,37 @@ local function startProgressStage(data)
         end
     end
     progressActive = true
+    syncHud(data, { state = 'waiting', message = stage.label or 'Working...' })
     local duration = tonumber(stage.durationMs) or 5000
     exports.sunset_ui:ProgressBar(stage.label or 'Working...', duration, function()
         progressActive = false
         sendClientAction(data.stageId, { success = true })
+    end)
+end
+
+local function startChopStage(data)
+    if progressActive then return end
+    local stage = data.stage
+    local loc = stageLocation(data)
+    if loc then
+        local pos = GetEntityCoords(PlayerPedId())
+        local radius = tonumber(loc.radius) or 3.5
+        local dx, dy = pos.x - loc.x, pos.y - loc.y
+        if math.sqrt(dx * dx + dy * dy) > radius then
+            notify(SunsetJobCreator.L('interact_far'), 'error')
+            return
+        end
+    end
+    progressActive = true
+    syncHud(data, { state = 'waiting', message = stage.label or 'Chopping...' })
+    CreateThread(function()
+        local swings = tonumber(stage.swings) or 5
+        local duration = tonumber(stage.durationMs) or (swings * 1200)
+        JCEntities_PlayChopAnim(swings, duration)
+        local propVar = stage.propVar or 'treeProp'
+        JCEntities_RemoveProp(data.variables or {}, propVar)
+        progressActive = false
+        sendClientAction(data.stageId, { success = true, poolKey = loc and (loc.poolKey or (loc.x and string.format('%.1f_%.1f', loc.x, loc.y))) })
     end)
 end
 
@@ -296,12 +383,20 @@ CreateThread(function()
                     if result then TriggerEvent('sunset:jobcreator:sessionSync', result) end
                 end
             elseif INTERACT_STAGES[stageType] and (near or stageType == 'party_gate' or stageType == 'require_vehicle') then
+                local helpMsg = formatMessage(stage, (payload.definition and payload.definition.ui and payload.definition.ui.key) or 'E')
                 if stageType == 'progress' then
                     BeginTextCommandDisplayHelp('STRING')
-                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. (stage.message or 'Start'))
+                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. helpMsg)
                     EndTextCommandDisplayHelp(0, false, true, -1)
                     if IsControlJustReleased(0, 38) and not progressActive then
                         startProgressStage(payload)
+                    end
+                elseif stageType == 'chop_prop' then
+                    BeginTextCommandDisplayHelp('STRING')
+                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. helpMsg)
+                    EndTextCommandDisplayHelp(0, false, true, -1)
+                    if IsControlJustReleased(0, 38) and not progressActive then
+                        startChopStage(payload)
                     end
                 elseif stageType == 'skill_check' then
                     BeginTextCommandDisplayHelp('STRING')
@@ -312,7 +407,7 @@ CreateThread(function()
                     end
                 else
                     BeginTextCommandDisplayHelp('STRING')
-                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. (stage.message or 'Interact'))
+                    AddTextComponentString('Press ~INPUT_CONTEXT~ — ' .. helpMsg)
                     EndTextCommandDisplayHelp(0, false, true, -1)
                     if IsControlJustReleased(0, 38) then
                         local result, err = Sunset.AwaitCallback('sunset:jobcreator:interact')

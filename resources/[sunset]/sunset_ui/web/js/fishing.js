@@ -41,12 +41,17 @@ const Fishing = {
         return html.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] || '');
     },
 
-    _setBag(carried, capacity) {
+    _setBag(carried, capacity, bagLabel) {
         if (!this._bag) return;
+        const label = bagLabel || 'Bag';
+        if (carried === undefined && capacity === undefined) {
+            this._bag.classList.add('hidden');
+            return;
+        }
         const c = Math.max(0, Number(carried) || 0);
         const cap = Math.max(1, Number(capacity) || 2);
-        this._bag.textContent = `Bag ${c}/${cap}`;
-        this._bag.classList.toggle('hidden', carried === undefined && capacity === undefined);
+        this._bag.textContent = `${label} ${c}/${cap}`;
+        this._bag.classList.remove('hidden');
     },
 
     _applyState(stateClass, title, messageHtml) {
@@ -77,7 +82,7 @@ const Fishing = {
         this.init();
         if (!this._panel) return;
 
-        this._setBag(data.carried, data.capacity);
+        this._setBag(data.carried, data.capacity, data.bagLabel);
         this._panel.classList.remove('hidden');
 
         const state = this._resolveState(data);
@@ -140,7 +145,7 @@ const Fishing = {
 
         const hasBag = data.carried !== undefined || data.capacity !== undefined;
         if (hasBag) {
-            this._setBag(data.carried, data.capacity);
+            this._setBag(data.carried, data.capacity, data.bagLabel);
         }
 
         const hasContent = data.state || data.message || data.title || data.windowMs;
@@ -162,7 +167,7 @@ const Fishing = {
         this.init();
         if (!this._panel) return;
 
-        this._setBag(data.carried, data.capacity);
+        this._setBag(data.carried, data.capacity, data.bagLabel);
         this._panel.classList.remove('hidden');
         this._applyState(
             'state-bite',

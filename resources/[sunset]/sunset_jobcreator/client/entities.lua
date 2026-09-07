@@ -2,6 +2,7 @@ JCEntities = JCEntities or {
     vehicles = {},
     peds = {},
     objects = {},
+    propByVar = {},
 }
 
 local function loadModel(model)
@@ -42,6 +43,7 @@ function JCEntities_Cleanup()
     JCEntities.vehicles = {}
     JCEntities.peds = {}
     JCEntities.objects = {}
+    JCEntities.propByVar = {}
 end
 
 function JCEntities_SpawnVehicle(stage, variables, definition)
@@ -94,6 +96,89 @@ function JCEntities_AttachTrailer(stage, variables, definition)
 
     JCEntities.vehicles[#JCEntities.vehicles + 1] = trailer
     return NetworkGetNetworkIdFromEntity(trailer)
+end
+
+function JCEntities_SpawnProp(stage, variables, definition)
+    local loc = SunsetJobCreator.StageLocation(definition, stage, variables)
+    if not loc then return nil, 'No prop location.' end
+    local model = stage.model or 'prop_tree_pine_02'
+    local hash = loadModel(model)
+    if not hash then return nil, 'Invalid prop model.' end
+
+    local x, y, z = loc.x, loc.y, loc.z
+    local found, groundZ = GetGroundZFor_3dCoord(x, y, z + 50.0, false)
+    if found then z = groundZ end
+
+    local heading = stage.heading or loc.heading or math.random(0, 359) + 0.0
+    local obj = CreateObject(hash, x, y, z - 0.15, true, true, false)
+    if not obj or obj == 0 then return nil, 'Could not spawn prop.' end
+
+    SetEntityAsMissionEntity(obj, true, true)
+    PlaceObjectOnGroundProperly(obj)
+    SetEntityHeading(obj, heading)
+    FreezeEntityPosition(obj, true)
+    SetModelAsNoLongerNeeded(hash)
+
+    JCEntities.objects[#JCEntities.objects + 1] = obj
+    local storeKey = stage.storeAs or stage.propVar or 'prop'
+    JCEntities.propByVar[storeKey] = obj
+    return {
+        x = x, y = y, z = z,
+        radius = tonumber(stage.radius) or tonumber(loc.radius) or 3.0,
+        zTolerance = tonumber(loc.zTolerance) or 4.0,
+        label = stage.label or loc.label or 'Target',
+        entity = obj,
+        model = model,
+        poolKey = loc.poolKey,
+    }
+end
+
+function JCEntities_RemoveProp(variables, propVar)
+    propVar = propVar or 'prop'
+    local ent = JCEntities.propByVar[propVar]
+    if ent and DoesEntityExist(ent) then
+        DeleteObject(ent)
+    end
+    local data = variables and variables[propVar]
+    if data and data.entity and DoesEntityExist(data.entity) then
+        DeleteObject(data.entity)
+    end
+    JCEntities.propByVar[propVar] = nil
+    for i = #JCEntities.objects, 1, -1 do
+        local obj = JCEntities.objects[i]
+        if not DoesEntityExist(obj) then
+            table.remove(JCEntities.objects, i)
+        end
+    end
+    return true
+end
+
+function JCEntities_PlayChopAnim(swings, durationMs)
+    local ped = PlayerPedId()
+    local axeHash = loadModel('prop_tool_fireaxe')
+    local axe = nil
+    if axeHash then
+        local coords = GetEntityCoords(ped)
+        axe = CreateObject(axeHash, coords.x, coords.y, coords.z, true, true, false)
+        AttachEntityToEntity(axe, ped, GetPedBoneIndex(ped, 57005), 0.12, 0.02, 0.0, -90.0, 0.0, 0.0, true, true, false, true, 1, true)
+        SetModelAsNoLongerNeeded(axeHash)
+    end
+
+    local dict = 'melee@hatchet@streamed_core'
+    RequestAnimDict(dict)
+    local deadline = GetGameTimer() + 3000
+    while not HasAnimDictLoaded(dict) and GetGameTimer() < deadline do Wait(10) end
+
+    local count = math.max(1, tonumber(swings) or 4)
+    local perSwing = math.max(800, math.floor((tonumber(durationMs) or 5000) / count))
+    for _ = 1, count do
+        if HasAnimDictLoaded(dict) then
+            TaskPlayAnim(ped, dict, 'plyr_rear_takedown_b', 8.0, -8.0, perSwing, 0, 0, false, false, false)
+        end
+        Wait(perSwing)
+    end
+    ClearPedTasks(ped)
+    if axe and DoesEntityExist(axe) then DeleteObject(axe) end
 end
 
 function JCEntities_DeleteVehicles()
