@@ -1,7 +1,7 @@
 SunsetLicenses = SunsetLicenses or {}
 
 -- Licenses expire after this many completed paydays, matching the RPG progression loop.
-SunsetLicenses.PaydayExpiry = 200
+SunsetLicenses.PaydayExpiry = 150
 SunsetLicenses.InstructorAuthorizationSeconds = 300
 SunsetLicenses.InstructorMaxDistance = 12.0
 SunsetLicenses.CandidateFailMistakes = 3.0

@@ -1,96 +1,55 @@
-# Sunset ECU — Exhaust Effects
+# Sunset Performance — ECU, hardware and exhaust
 
-Documentație tehnică pentru pop & bang, flăcări, diesel smoke și anti-lag.
+## What the system installs
 
-## Nu folosim resurse externe
+The saved map remains backward-compatible in `vehicles.props.ecu`, but now contains two distinct layers:
 
-Totul rulează din **asset-uri native GTA V** încărcate la runtime cu `RequestNamedPtfxAsset`. Nu e nevoie de `bnExhaust`, `InteractSound` sau alte dependențe.
+- GTA V hardware mods: engine, brakes, transmission, suspension, armor and turbo.
+- Fine calibration: power, torque, steering, brake force, suspension response and traction.
+- Exhaust: overrun pop & bang, flames, diesel smoke, anti-lag and launch-control/2-step.
+- Per-vehicle dyno history, ECU HUD and drift setup.
 
-| Efect | PTFX Asset | Particle Name | Referință |
-|-------|------------|---------------|-----------|
-| Pop / backfire | `core` | `veh_backfire` | ak4y-hud Nitro, Advanced Nitro System |
-| Flăcări nitro | `veh_xs_vehicle_mods` | `veh_nitrous` | Cfx.re forum — XS Vehicle Mods DLC |
-| Flash flame | `core` | `ent_sht_flame` | Standard exhaust flame |
-| Burnout puff | `scr_recartheft` | `scr_wheel_burnout` | Secondary flame visual |
-| Diesel smoke | `core` | `exp_grd_bzgas_smoke` | Rolling coal style scripts |
-| Thick smoke | `core` | `ent_amb_exhaust_thick` | RollCoal / diesel |
+The UI offers Factory, Street, Track and Drift starting builds. Every control can then be adjusted individually. Hardware levels are clamped to the number of mods supported by the current model.
 
-### Sunet
+## Exhaust implementation
 
-| Sunet | Soundset |
-|-------|----------|
-| `backfire` | `dlc_xs_vehicle_mods_sounds` |
-| `Backfire` | `DLC_Tuner_Car_Meet_Sounds` |
+Particles use native GTA V assets (`core/veh_backfire`, `veh_xs_vehicle_mods/veh_nitrous` and `core/ent_sht_metal`). They are attached to every valid `exhaust`, `exhaust_2` … `exhaust_16` bone. Sounds use the GTA Tuner and XS Vehicle Mods audio banks.
 
-## Implementare corectă (FiveM)
+The origin client renders one local burst. It sends only the vehicle network ID and requested effect to the server; the server verifies the sender is the driver, owns that exact vehicle, has a compatible saved map and respects the rate limit. Only then are nearby clients asked to render their local copy. No explosion native is used as an audio workaround.
 
-**Greșit** (nu apare vizual pentru alții / uneori deloc):
-```lua
-StartParticleFxNonLoopedOnEntityBone('veh_backfire', veh, 0,0,0, 0,0,0, bone, scale, ...)
-```
+| Effect | Trigger |
+| --- | --- |
+| Pop & bang | throttle lift after high RPM, followed by a short RPM-dependent overrun sequence |
+| 2-step | launch control installed, vehicle almost stationary and high RPM |
+| Anti-lag | turbo/anti-lag installed and a throttle blip inside the spool range |
+| Sparks | strong 2-step or anti-lag bursts only |
+| Flames | explicit flames/extra exhaust configuration |
+| Diesel smoke | diesel exhaust at low/medium RPM |
 
-**Corect** (pattern folosit în scripturi care funcționează):
-```lua
-local pos = GetWorldPositionOfEntityBone(veh, boneIndex)
-local off = GetOffsetFromEntityGivenWorldCoords(veh, pos.x, pos.y, pos.z)
-UseParticleFxAssetNextCall('core')
-StartNetworkedParticleFxNonLoopedOnEntity('veh_backfire', veh, off.x, off.y, off.z, 0,0,0, scale, false, false, false)
-```
+## Persistence and pricing
 
-Fișier: `client/exhaust_ptfx.lua`
+The server sanitizes the complete tune, verifies driver seat, plate, ownership and workshop proximity, calculates the install price from the old saved build, removes money, and refunds it if the database update fails. The UI quote mirrors the same calculation but is informational; the server total is authoritative.
 
-## Când se declanșează efectele
+Dyno runs use a paid, single-use session token. The dyno can no longer be abused to save an unsold draft tune for the cheaper dyno fee. The saved build is measured and the token expires after the run window.
 
-| Feature | Condiție în joc |
-|---------|-----------------|
-| **Pop & bang** | RPM ridicat + eliberezi accelerația (lift-off) sau scădere bruscă RPM |
-| **2-step** | Mașina stă pe loc, RPM > 78%, fără gaz |
-| **Anti-lag** | Accelerație medie (W), RPM 22–90% |
-| **Flăcări** | Tab Flammen/Extra Loud + toggle FLĂCĂRI, sau RPM mare cu gaz |
-| **Diesel** | Mod evacuare Diesel, RPM mediu |
-| **Flash la intrare** | La urcare în mașină cu ECU salvat — 3 burst-uri de confirmare |
-| **Flash la save** | La salvare ECU cu flash — 5 burst-uri |
+## Runtime files
 
-## Schema tune (`vehicles.props.ecu`)
+| File | Responsibility |
+| --- | --- |
+| `shared/config.lua` | schema, limits, hardware slots and authoritative price calculation |
+| `client/apply.lua` | actual GTA mod slots and reversible handling changes |
+| `client/effects.lua` | RPM/throttle state machine and nearby synchronization request |
+| `client/exhaust_ptfx.lua` | exhaust-bone particles, sparks and layered native audio |
+| `client/dyno.lua` | in-place dyno sequence and measurement |
+| `server/main.lua` | ownership/shop validation, persistence, pricing, dyno sessions and FX security |
 
-```json
-{
-  "stage": "race",
-  "power": 100,
-  "torque": 100,
-  "exhaust": "extra",
-  "pop": { "enabled": true, "rpmMax": 95, "durationMs": 100, "secondBurst": true },
-  "flames": { "enabled": true },
-  "antiLag": { "enabled": true, "intensity": 100 },
-  "drift": { "enabled": false },
-  "hud": { "enabled": true },
-  "dyno": { "lastHp": 980, "lastTorque": 1100 }
-}
-```
+## Manual QA
 
-- `pop.enabled` — evacuare activă / pop & bang
-- `flames.enabled` — flăcări (auto ON pentru `exhaust: flames` sau `extra`)
-- `exhaust` — `pop_bang` | `flames` | `diesel` | `extra`
-
-## Acces în joc
-
-- **LS Customs HQ** (Mechanic) — [E] în vehicul → Reparație sau ECU Tuning
-- **Harmony** — doar ECU Tuning
-- Fără `/ecu`
-
-## Fișiere
-
-| Fișier | Rol |
-|--------|-----|
-| `client/exhaust_ptfx.lua` | Particule + sunet (layer jos) |
-| `client/effects.lua` | Logică RPM/throttle, anti-lag, sync |
-| `client/bootstrap.lua` | Încarcă ECU la intrare în vehicul |
-| `client/apply.lua` | Handling / putere motor |
-| `server/main.lua` | `syncExhaustFx` pentru jucători din zonă |
-
-## Test rapid
-
-1. Intră pe Zentorno cu ECU salvat → ar trebui 3 pop-uri la ~0.6s după intrare
-2. Ține W până la RPM 80%+, apoi lasă — pop & bang
-3. La loc, RPM sus fără gaz — 2-step pops
-4. Anti-lag ON + W la RPM mediu — pop-uri rapide continue
+1. Open the shop in an owned car and verify unsupported hardware levels are disabled.
+2. Apply each quick build, cancel, and confirm the original handling/mods return.
+3. Save a build, store/retrieve the car and reconnect; hardware, handling and effects must return.
+4. Rev above the configured threshold, release throttle and check that pops follow RPM decay instead of looping constantly.
+5. Confirm 2-step is silent until Launch Control is installed, and anti-lag forces turbo installation.
+6. Observe the same exhaust burst with a second nearby player; it must render once per client.
+7. Try save/dyno away from the shop, from the passenger seat, with another player's plate, and with insufficient bank money.
+8. Start a dyno and cancel/fail it; the fee must be refunded. Complete it and confirm the token cannot be reused.

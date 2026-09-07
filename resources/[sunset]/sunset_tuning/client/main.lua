@@ -44,6 +44,16 @@ local function sendUi(action, data)
     SendNUIMessage({ action = action, data = data or {} })
 end
 
+local function hardwareAvailability(veh)
+    local out = {}
+    SetVehicleModKit(veh, 0)
+    for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
+        out[key] = math.max(0, GetNumVehicleMods(veh, slot.modType))
+    end
+    out.turbo = true
+    return out
+end
+
 local function closePanel(restoreStock)
     if not panelOpen then return end
     panelOpen = false
@@ -112,10 +122,13 @@ local function openPanel(shop)
         },
         stages = SunsetTuning.Stages,
         exhaustModes = SunsetTuning.ExhaustModes,
+        hardwareAvailability = hardwareAvailability(veh),
+        hardwareSlots = SunsetTuning.HardwareSlots,
+        featureCosts = SunsetTuning.FeatureCosts,
     })
 
     ApplyTune(currentVeh, draftTune, false)
-    ApplyCosmetics(currentVeh, draftCosmetics)
+        ApplyCosmetics(currentVeh, draftCosmetics, false)
 end
 
 function OpenTuningPanel(shop)
@@ -136,7 +149,7 @@ RegisterNUICallback('tuningPreview', function(data, cb)
         draftCosmetics = SunsetTuning.SanitizeCosmetics(data.cosmetics)
     end
     ApplyTune(currentVeh, draftTune, false)
-    ApplyCosmetics(currentVeh, draftCosmetics)
+    ApplyCosmetics(currentVeh, draftCosmetics, false)
     cb({ ok = true })
 end)
 
@@ -157,6 +170,7 @@ RegisterNUICallback('tuningSave', function(data, cb)
         return
     end
 
+    local oldPlate = currentPlate
     draftTune = SunsetTuning.SanitizeTune(saved.tune)
     if saved.cosmetics then draftCosmetics = SunsetTuning.SanitizeCosmetics(saved.cosmetics) end
     if saved.plate and saved.plate ~= '' then currentPlate = STC.normalizePlate(saved.plate) end
@@ -164,10 +178,13 @@ RegisterNUICallback('tuningSave', function(data, cb)
     savedCosmetics = draftCosmetics
     STC.plateTunes[currentPlate] = draftTune
     STC.persistedPlates[currentPlate] = true
+    if oldPlate ~= currentPlate then
+        STC.plateTunes[oldPlate] = nil
+        STC.persistedPlates[oldPlate] = nil
+    end
     ApplyTune(currentVeh, draftTune, true)
     ApplyCosmetics(currentVeh, draftCosmetics)
     if flash and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 5) end
-    if flash then TriggerServerEvent('sunset:tuning:flashApplied', currentPlate, draftTune) end
     notify(('ECU salvat & flash — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
     sendUi('saved', { saved = true, tune = draftTune, cosmetics = draftCosmetics, plate = currentPlate })
     cb({ ok = true, tune = draftTune })
@@ -177,18 +194,26 @@ RegisterNUICallback('tuningDyno', function(_, cb)
     if not panelOpen or currentPlate == '' then cb({ ok = false }) return end
     if STC.IsDynoActive and STC.IsDynoActive() then cb({ ok = false }) return end
 
+    local dynoSession, beginError = Sunset.AwaitCallback('sunset:tuning:beginDyno', currentPlate)
+    if not dynoSession or not dynoSession.token then
+        notify(beginError or ('Dyno indisponibil — ai nevoie de $%d in banca'):format(SunsetTuning.DynoCost), 'error')
+        cb({ ok = false, error = beginError })
+        return
+    end
+
     SetNuiFocus(false, false)
     sendUi('dynoRunning', {})
 
     SunsetTuningClient.RunDynoTest(currentShop, function(result)
         SetNuiFocus(true, true)
         if not result then
+            Sunset.AwaitCallback('sunset:tuning:cancelDyno', dynoSession.token)
             sendUi('dynoDone', { ok = false })
             cb({ ok = false })
             return
         end
 
-        local dynoSaved, err = Sunset.AwaitCallback('sunset:tuning:runDyno', currentPlate, result.hp, result.torque, draftTune)
+        local dynoSaved, err = Sunset.AwaitCallback('sunset:tuning:finishDyno', dynoSession.token, result.hp, result.torque)
         if dynoSaved then
             if draftTune then
                 draftTune.dyno = dynoSaved

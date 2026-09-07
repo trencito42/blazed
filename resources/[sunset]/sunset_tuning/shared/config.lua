@@ -5,8 +5,33 @@ SunsetTuning.SaveBaseCost = 750
 SunsetTuning.DynoCost = 250
 SunsetTuning.FlashCost = 150
 
+-- GTA V performance slots. Level 0 means factory, positive levels map to the
+-- available mod index on that specific vehicle (and are clamped client-side).
+SunsetTuning.HardwareSlots = {
+    engine = { label = 'Motor', modType = 11, maxLevel = 4, unitCost = 1800 },
+    brakes = { label = 'Frane', modType = 12, maxLevel = 3, unitCost = 1200 },
+    transmission = { label = 'Transmisie', modType = 13, maxLevel = 3, unitCost = 1600 },
+    suspension = { label = 'Suspensie', modType = 15, maxLevel = 4, unitCost = 1100 },
+    armor = { label = 'Protectie', modType = 16, maxLevel = 5, unitCost = 1500 },
+}
+
+SunsetTuning.FeatureCosts = {
+    turbo = 4500,
+    launchControl = 2200,
+    pop = 950,
+    flames = 800,
+    antiLag = 2400,
+    drift = 1400,
+    hud = 350,
+    sportMap = 2200,
+    raceMap = 5200,
+    customMapStep = 55,
+    cosmetics = 600,
+    vanityPlate = 1800,
+}
+
 SunsetTuning.Stages = {
-    civil = { label = 'Silent (Civil)', power = 0.98, torque = 0.98, grip = 1.02, popIntensity = 0.35 },
+    civil = { label = 'Silent (Civil)', power = 1.0, torque = 1.0, grip = 1.0, popIntensity = 0.35 },
     sport = { label = 'Normal (Sport)', power = 1.06, torque = 1.05, grip = 1.0, popIntensity = 0.65 },
     race = { label = 'Aggressive (Race)', power = 1.14, torque = 1.12, grip = 0.94, popIntensity = 1.0 },
 }
@@ -52,6 +77,21 @@ function SunsetTuning.StockTune()
         flames = { enabled = false, color = { r = 255, g = 120, b = 40 } },
         antiLag = { enabled = false, intensity = 55 },
         drift = { enabled = false, grip = 45 },
+        hardware = {
+            engine = 0,
+            brakes = 0,
+            transmission = 0,
+            suspension = 0,
+            armor = 0,
+            turbo = false,
+            launchControl = false,
+        },
+        handling = {
+            steering = 100,
+            brakePower = 100,
+            suspension = 100,
+            traction = 100,
+        },
         hud = { enabled = false },
         dyno = { lastHp = 0, lastTorque = 0, lastRunAt = 0 },
     }
@@ -75,6 +115,8 @@ function SunsetTuning.SanitizeTune(raw)
     local flames = type(raw.flames) == 'table' and raw.flames or {}
     local antiLag = type(raw.antiLag) == 'table' and raw.antiLag or {}
     local drift = type(raw.drift) == 'table' and raw.drift or {}
+    local hardware = type(raw.hardware) == 'table' and raw.hardware or {}
+    local handling = type(raw.handling) == 'table' and raw.handling or {}
     local hud = type(raw.hud) == 'table' and raw.hud or {}
     local dyno = type(raw.dyno) == 'table' and raw.dyno or {}
 
@@ -106,6 +148,21 @@ function SunsetTuning.SanitizeTune(raw)
             enabled = drift.enabled == true,
             grip = math.max(20, math.min(80, math.floor(tonumber(drift.grip) or def.drift.grip))),
         },
+        hardware = {
+            engine = math.max(0, math.min(4, math.floor(tonumber(hardware.engine) or 0))),
+            brakes = math.max(0, math.min(3, math.floor(tonumber(hardware.brakes) or 0))),
+            transmission = math.max(0, math.min(3, math.floor(tonumber(hardware.transmission) or 0))),
+            suspension = math.max(0, math.min(4, math.floor(tonumber(hardware.suspension) or 0))),
+            armor = math.max(0, math.min(5, math.floor(tonumber(hardware.armor) or 0))),
+            turbo = hardware.turbo == true or antiLag.enabled == true or hardware.launchControl == true,
+            launchControl = hardware.launchControl == true,
+        },
+        handling = {
+            steering = math.max(85, math.min(120, math.floor(tonumber(handling.steering) or 100))),
+            brakePower = math.max(85, math.min(140, math.floor(tonumber(handling.brakePower) or 100))),
+            suspension = math.max(80, math.min(130, math.floor(tonumber(handling.suspension) or 100))),
+            traction = math.max(75, math.min(120, math.floor(tonumber(handling.traction) or 100))),
+        },
         hud = { enabled = hud.enabled == true },
         dyno = {
             lastHp = math.max(0, math.floor(tonumber(dyno.lastHp) or 0)),
@@ -121,8 +178,25 @@ function SunsetTuning.IsStockTune(raw)
     if tune.stage ~= 'civil' or tune.power ~= 100 or tune.torque ~= 100 then return false end
     if tune.pop.enabled or tune.antiLag.enabled or tune.drift.enabled or tune.hud.enabled then return false end
     if tune.flames.enabled then return false end
+    for key in pairs(SunsetTuning.HardwareSlots) do
+        if (tune.hardware[key] or 0) > 0 then return false end
+    end
+    if tune.hardware.turbo or tune.hardware.launchControl then return false end
+    if tune.handling.steering ~= 100 or tune.handling.brakePower ~= 100
+        or tune.handling.suspension ~= 100 or tune.handling.traction ~= 100 then return false end
     if (tune.dyno.lastHp or 0) > 0 then return false end
     return true
+end
+
+function SunsetTuning.HasPerformanceChanges(raw)
+    local tune = SunsetTuning.SanitizeTune(raw)
+    if tune.stage ~= 'civil' or tune.power ~= 100 or tune.torque ~= 100 or tune.drift.enabled then return true end
+    for key in pairs(SunsetTuning.HardwareSlots) do
+        if (tune.hardware[key] or 0) > 0 then return true end
+    end
+    if tune.hardware.turbo or tune.hardware.launchControl then return true end
+    return tune.handling.steering ~= 100 or tune.handling.brakePower ~= 100
+        or tune.handling.suspension ~= 100 or tune.handling.traction ~= 100
 end
 
 function SunsetTuning.BuildVehicleInfo(raw)
@@ -150,6 +224,8 @@ function SunsetTuning.BuildVehicleInfo(raw)
     if tune.antiLag.enabled then chips[#chips + 1] = 'ANTI-LAG' end
     if tune.drift.enabled then chips[#chips + 1] = 'DRIFT' end
     if tune.hud.enabled then chips[#chips + 1] = 'HUD' end
+    if tune.hardware.turbo then chips[#chips + 1] = 'TURBO' end
+    if tune.hardware.engine > 0 then chips[#chips + 1] = 'ENGINE ' .. tune.hardware.engine end
     if tune.dyno.lastHp > 0 then chips[#chips + 1] = tune.dyno.lastHp .. ' CP' end
 
     local lines = {
@@ -163,6 +239,11 @@ function SunsetTuning.BuildVehicleInfo(raw)
         { label = 'RPM POP', value = tune.pop.rpmMax .. '%' },
         { label = 'ANTI-LAG', value = tune.antiLag.enabled and ('Activ (' .. tune.antiLag.intensity .. '%)') or 'Oprit' },
         { label = 'DRIFT', value = tune.drift.enabled and ('Activ · grip ' .. tune.drift.grip .. '%') or 'Oprit' },
+        { label = 'MOTOR', value = ('Nivel %d/4'):format(tune.hardware.engine) },
+        { label = 'TURBO', value = tune.hardware.turbo and 'Instalat' or 'Stock' },
+        { label = 'TRANSMISIE', value = ('Nivel %d/3'):format(tune.hardware.transmission) },
+        { label = 'FRANE', value = ('Nivel %d/3'):format(tune.hardware.brakes) },
+        { label = 'SUSPENSIE', value = ('Nivel %d/4'):format(tune.hardware.suspension) },
         { label = 'HUD ECU', value = tune.hud.enabled and 'Activ' or 'Oprit' },
     }
 
@@ -181,6 +262,50 @@ function SunsetTuning.BuildVehicleInfo(raw)
         lines = lines,
         tune = tune,
     }
+end
+
+local function sameRgb(a, b)
+    a, b = type(a) == 'table' and a or {}, type(b) == 'table' and b or {}
+    return tonumber(a.r) == tonumber(b.r) and tonumber(a.g) == tonumber(b.g) and tonumber(a.b) == tonumber(b.b)
+end
+
+-- Server-authoritative quote. Upgrades cost money; removing/rebalancing parts
+-- only costs the workshop/flash fee, so a client cannot invent a cheap total.
+function SunsetTuning.CalculateInstallCost(oldRaw, newRaw, oldCosmetics, newCosmetics, flash)
+    local oldTune = SunsetTuning.SanitizeTune(oldRaw)
+    local newTune = SunsetTuning.SanitizeTune(newRaw)
+    local feature = SunsetTuning.FeatureCosts
+    local cost = SunsetTuning.SaveBaseCost + (flash and SunsetTuning.FlashCost or 0)
+
+    for key, slot in pairs(SunsetTuning.HardwareSlots) do
+        local delta = math.max(0, (newTune.hardware[key] or 0) - (oldTune.hardware[key] or 0))
+        cost = cost + delta * slot.unitCost
+    end
+    if newTune.hardware.turbo and not oldTune.hardware.turbo then cost = cost + feature.turbo end
+    if newTune.hardware.launchControl and not oldTune.hardware.launchControl then cost = cost + feature.launchControl end
+    if newTune.pop.enabled and not oldTune.pop.enabled then cost = cost + feature.pop end
+    if newTune.flames.enabled and not oldTune.flames.enabled then cost = cost + feature.flames end
+    if newTune.antiLag.enabled and not oldTune.antiLag.enabled then cost = cost + feature.antiLag end
+    if newTune.drift.enabled and not oldTune.drift.enabled then cost = cost + feature.drift end
+    if newTune.hud.enabled and not oldTune.hud.enabled then cost = cost + feature.hud end
+    if newTune.stage ~= oldTune.stage then
+        cost = cost + (newTune.stage == 'race' and feature.raceMap or newTune.stage == 'sport' and feature.sportMap or 0)
+    end
+    local mapDelta = math.abs(newTune.power - oldTune.power) + math.abs(newTune.torque - oldTune.torque)
+        + math.abs(newTune.handling.steering - oldTune.handling.steering)
+        + math.abs(newTune.handling.brakePower - oldTune.handling.brakePower)
+        + math.abs(newTune.handling.suspension - oldTune.handling.suspension)
+        + math.abs(newTune.handling.traction - oldTune.handling.traction)
+    cost = cost + mapDelta * feature.customMapStep
+
+    local oldCos = SunsetTuning.SanitizeCosmetics(oldCosmetics)
+    local newCos = SunsetTuning.SanitizeCosmetics(newCosmetics)
+    if not sameRgb(oldCos.primary, newCos.primary) or not sameRgb(oldCos.secondary, newCos.secondary)
+        or oldCos.pearl ~= newCos.pearl or oldCos.wheel ~= newCos.wheel then
+        cost = cost + feature.cosmetics
+    end
+    if newCos.plateText ~= '' and newCos.plateText ~= oldCos.plateText then cost = cost + feature.vanityPlate end
+    return math.max(0, math.floor(cost))
 end
 
 function SunsetTuning.DefaultCosmetics()
@@ -204,7 +329,7 @@ function SunsetTuning.SanitizeCosmetics(raw)
             b = math.max(0, math.min(255, math.floor(tonumber(src.b) or fallback.b))),
         }
     end
-    local plate = tostring(raw.plateText or ''):gsub('%s+', ''):upper()
+    local plate = tostring(raw.plateText or ''):upper():gsub('[^A-Z0-9]', '')
     if #plate > 8 then plate = plate:sub(1, 8) end
     return {
         primary = rgb(raw.primary, def.primary),

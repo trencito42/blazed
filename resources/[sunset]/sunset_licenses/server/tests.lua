@@ -25,6 +25,15 @@ local function practicalVehicleModel(licenseType)
     return facility and facility.testVehicle or practical and practical.vehicle
 end
 
+local function validSupervisor(session)
+    local instructor = session and tonumber(session.instructor)
+    if not instructor or not GetPlayerName(instructor) then return nil end
+    local char = exports.sunset_core:GetCharacter(instructor)
+    if not char or Sunset.GetCharacterFaction(char) ~= 'lssi'
+        or not exports.sunset_factions:IsOnDuty(instructor) then return nil end
+    return GetPlayerPed(instructor)
+end
+
 local function validateTestVehicle(source, session)
     local netId = tonumber(session.testVehicleNet)
     if not netId or netId <= 0 then
@@ -44,6 +53,13 @@ local function validateTestVehicle(source, session)
     local ped = GetPlayerPed(source)
     if ped == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then
         return nil, 'You must be in the driver seat of your assigned training vehicle.'
+    end
+    local def = SunsetLicenses.Types[session.licenseType]
+    if def and def.instructorFaction and session.licenseType ~= 'weapon' then
+        local instructorPed = validSupervisor(session) or 0
+        if instructorPed == 0 or GetVehiclePedIsIn(instructorPed, false) ~= vehicle then
+            return nil, 'Your LSSI instructor must supervise the practical from the assigned vehicle.'
+        end
     end
     return vehicle
 end
@@ -213,6 +229,10 @@ exports.sunset_core:RegisterCallback('sunset:license:validateFinish', function(s
         local facility = SunsetLicenses.Facilities.range
         if #(pos - facility.marker) > (facility.markerRadius or 2.5) + 3.0 then
             return false, 'Return to the range booth to finish the test.'
+        end
+        local instructorPed = validSupervisor(session) or 0
+        if instructorPed == 0 or #(GetEntityCoords(instructorPed) - practical.zoneCenter) > (practical.zoneRadius or 22.0) + 5.0 then
+            return false, 'Your LSSI instructor must remain at the range until the exam is finished.'
         end
     else
         if not session.allCheckpoints then return false, 'Complete all checkpoints before finishing.' end

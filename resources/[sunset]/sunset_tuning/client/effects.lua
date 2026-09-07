@@ -5,6 +5,12 @@ local lastThrottle = 0.0
 local lastRpm = 0.0
 local popCooldown = 0
 local twostepArmed = false
+local overrun = {
+    active = false,
+    veh = 0,
+    peakRpm = 0.0,
+    untilMs = 0,
+}
 
 local function syncFx(veh, kind, intensity, color)
     if not NetworkGetEntityIsNetworked(veh) then return end
@@ -29,6 +35,22 @@ local function flameColorOf(tune)
         return STC.ExhaustPtfx.normalizeColor(tune.flames.color)
     end
     return STC.ExhaustPtfx.normalizeColor(nil)
+end
+
+local function clearOverrun()
+    overrun.active = false
+    overrun.veh = 0
+    overrun.peakRpm = 0.0
+    overrun.untilMs = 0
+end
+
+local function startOverrun(veh, rpm, now, tune)
+    local duration = tonumber(tune.pop.durationMs) or 100
+    local holdMs = 1800 + math.min(1400, duration * 8)
+    overrun.active = true
+    overrun.veh = veh
+    overrun.peakRpm = math.max(overrun.peakRpm, rpm, lastRpm)
+    overrun.untilMs = now + holdMs
 end
 
 local function burstExhaust(veh, tune, mult, kind, withFlames)
@@ -69,9 +91,9 @@ local function burstExhaust(veh, tune, mult, kind, withFlames)
     if tune.pop.secondBurst and kind == 'pop' then
         SetTimeout(tonumber(tune.pop.durationMs) or 90, function()
             if DoesEntityExist(veh) then
-                EP.burst(veh, 'pop', intensity * 0.85, color)
-                if showFlames and math.random() < 0.6 then
-                    EP.burst(veh, 'flame', intensity * 0.7, color)
+                EP.burst(veh, 'pop', intensity * 0.9, color)
+                if showFlames and math.random() < 0.65 then
+                    EP.burst(veh, 'flame', intensity * 0.75, color)
                 end
             end
         end)
@@ -109,12 +131,13 @@ end
 
 CreateThread(function()
     while true do
-        local waitMs = 50
+        local waitMs = 35
         local ped = PlayerPedId()
         if not IsPedInAnyVehicle(ped, false) then
             lastThrottle = 0.0
             lastRpm = 0.0
             twostepArmed = false
+            clearOverrun()
             Wait(400)
             goto continue
         end
@@ -128,6 +151,7 @@ CreateThread(function()
         local state = STC.appliedVehicles[veh]
         local tune = state and state.tune
         if STC.dynoActive or not tuneHasEffects(tune) then
+            clearOverrun()
             Wait(300)
             goto continue
         end
@@ -140,33 +164,46 @@ CreateThread(function()
         local speed = GetEntitySpeed(veh) * 3.6
         local now = GetGameTimer()
         local rpmThreshold = (tonumber(tune.pop.rpmMax) or 88) / 100.0
+        local minOverrunRpm = 0.26
 
-        -- Real pop & bang: lift-off after high RPM (decel), not while holding gas.
-        local liftOff = lastThrottle > 0.45 and throttle < 0.18
-        local rpmFalling = (lastRpm - rpm) > 0.055 and lastRpm >= (rpmThreshold - 0.08)
-        local wasHighRpm = lastRpm >= math.max(0.58, rpmThreshold - 0.12)
+        local liftOff = lastThrottle > 0.35 and throttle < 0.22
+        local wasHighRpm = lastRpm >= math.max(0.52, rpmThreshold - 0.15)
+        local rpmFalling = (lastRpm - rpm) > 0.018
 
-        if tune.pop.enabled and now > popCooldown and liftOff and wasHighRpm and rpm > 0.28 then
-            local chance = 0.52 + mult.popIntensity * 0.38
-            if math.random() < chance then
-                popCooldown = now + 160
+        -- Pop & bang: arm overrun on lift-off, then pops while RPM spins down.
+        if tune.pop.enabled and liftOff and wasHighRpm and lastRpm >= rpmThreshold - 0.1 then
+            startOverrun(veh, rpm, now, tune)
+            if now > popCooldown then
+                popCooldown = now + 70
                 burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true)
-                if mult.popIntensity > 0.7 and math.random() < 0.45 then
-                    SetTimeout(110, function()
-                        if DoesEntityExist(veh) then
-                            EP.burst(veh, 'pop', mult.popIntensity, flameColorOf(tune))
-                        end
-                    end)
+            end
+        end
+
+        if overrun.active then
+            if veh ~= overrun.veh or now > overrun.untilMs or rpm < minOverrunRpm or throttle > 0.42 or brake > 0.5 then
+                clearOverrun()
+            elseif tune.pop.enabled and throttle < 0.28 and rpm > minOverrunRpm and now > popCooldown then
+                local rpmRange = math.max(0.15, overrun.peakRpm - minOverrunRpm)
+                local rpmPos = (rpm - minOverrunRpm) / rpmRange
+                local chance = 0.42 + mult.popIntensity * 0.38
+                if rpmFalling then chance = chance + 0.28 end
+                if rpmPos > 0.55 then chance = chance + 0.12 end
+                if tune.pop.secondBurst then chance = chance + 0.1 end
+
+                if math.random() < chance then
+                    local gap = 70 + math.floor((1.0 - rpmPos) * 90)
+                    popCooldown = now + gap
+                    burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true)
                 end
             end
         end
 
-        -- 2-step / launch: stationary rev limiter — only on repeated lift at very high RPM.
-        if tune.pop.enabled and speed < 6.0 and rpm > 0.82 then
+        -- 2-step at standstill
+        if tune.pop.enabled and tune.hardware and tune.hardware.launchControl and speed < 6.0 and rpm > 0.82 then
             if throttle < 0.12 and lastThrottle > 0.55 then twostepArmed = true end
             if twostepArmed and now > popCooldown and throttle < 0.1 and rpm > 0.78 then
-                if math.random() < 0.55 then
-                    popCooldown = now + 220
+                if math.random() < 0.6 then
+                    popCooldown = now + 200
                     twostepArmed = false
                     burstExhaust(veh, tune, mult, 'twostep', true)
                 end
@@ -175,20 +212,14 @@ CreateThread(function()
             twostepArmed = false
         end
 
-        -- Anti-lag: short burps on throttle blips in spool range — never constant hold.
-        if tune.antiLag.enabled and brake < 0.35 then
+        if tune.antiLag.enabled and brake < 0.35 and not overrun.active then
             local throttleBlip = lastThrottle > 0.42 and throttle < 0.28 and rpm > 0.38 and rpm < 0.82
-            local spoolHold = throttle > 0.55 and rpm > 0.48 and rpm < 0.72 and (now % 900) < 40
-            if now > popCooldown and (throttleBlip or spoolHold) then
-                local chance = ((tonumber(tune.antiLag.intensity) or 55) / 320.0)
-                if math.random() < chance then
-                    popCooldown = now + 280
-                    burstExhaust(veh, tune, mult, 'antilag', false)
-                end
+            if now > popCooldown and throttleBlip and math.random() < ((tonumber(tune.antiLag.intensity) or 55) / 280.0) then
+                popCooldown = now + 260
+                burstExhaust(veh, tune, mult, 'antilag', false)
             end
         end
 
-        -- Diesel smoke: low RPM crawl only, rare.
         if mode.diesel and tune.pop.enabled and speed < 25 and throttle > 0.25 and rpm > 0.15 and rpm < 0.55 then
             if now > popCooldown and math.random() < 0.03 then
                 popCooldown = now + 400

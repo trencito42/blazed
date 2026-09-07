@@ -6,6 +6,7 @@
 - Pilot, boat and firearm exams require an on-duty LSSI instructor to authorize and supervise them.
 - Every license expires after 150 completed paydays.
 - The server validates the assigned test vehicle, driver seat, checkpoint order, positions, range targets and finish state.
+- During pilot and boat practicals, the on-duty instructor must supervise from the assigned vehicle. During the firearm practical, the instructor must remain at the range until completion.
 
 ## Instructor workflow
 

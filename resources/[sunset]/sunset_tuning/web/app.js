@@ -10,29 +10,37 @@ const btnSave = document.getElementById('btnSave');
 let tune = null;
 let cosmetics = null;
 let costs = { save: 750, flash: 150, dyno: 250 };
-let activeTab = 'exhaust_pop';
+let activeTab = 'overview';
 let hasSavedMap = false;
 let previewDirty = false;
+let hardwareAvailability = {};
+let previewTimer = 0;
+let hardwareSlots = {};
+let featureCosts = {};
+let installedTune = null;
+let installedCosmetics = null;
 
 const tabs = [
+    { group: 'BUILD', items: [{ id: 'overview', label: 'SETUP RAPID' }] },
+    { group: 'PERFORMANȚĂ', items: [
+        { id: 'powertrain', label: 'MOTOR & TURBO' },
+        { id: 'chassis', label: 'ȘASIU' },
+        { id: 'handling', label: 'HANDLING' },
+    ]},
     { group: 'EVACUARE', items: [
         { id: 'exhaust_pop', label: 'POP & BANG' },
         { id: 'exhaust_flames', label: 'FLAMMEN' },
         { id: 'exhaust_diesel', label: 'DIESEL' },
         { id: 'exhaust_extra', label: 'EXTRA' },
+        { id: 'antilag', label: 'ANTI-LAG' },
     ]},
-    { group: 'TUNING', items: [{ id: 'tuning', label: 'TUNING' }] },
     { group: 'VIZUAL', items: [{ id: 'visual', label: 'CULORI' }] },
     { group: 'DYNO', items: [
         { id: 'dyno_power', label: 'PUTERE' },
         { id: 'dyno_rank', label: 'CLASAMENT' },
         { id: 'dyno_stand', label: 'STAND' },
     ]},
-    { group: 'SPECIAL', items: [
-        { id: 'drift', label: 'DRIFT' },
-        { id: 'antilag', label: 'ANTI-LAG' },
-        { id: 'hud', label: 'HUD' },
-    ]},
+    { group: 'SPECIAL', items: [{ id: 'drift', label: 'DRIFT' }, { id: 'hud', label: 'HUD' }] },
 ];
 
 const exhaustMeta = {
@@ -60,6 +68,8 @@ function stockTune() {
         flames: { enabled: false, color: { r: 255, g: 120, b: 40 } },
         antiLag: { enabled: false, intensity: 55 },
         drift: { enabled: false, grip: 45 },
+        hardware: { engine: 0, brakes: 0, transmission: 0, suspension: 0, armor: 0, turbo: false, launchControl: false },
+        handling: { steering: 100, brakePower: 100, suspension: 100, traction: 100 },
         hud: { enabled: false },
         dyno: { lastHp: 0, lastTorque: 0, lastRunAt: 0 },
     };
@@ -96,9 +106,51 @@ function ensureTune(raw) {
         flames: { ...base.flames, ...(src.flames || {}), color: { ...(base.flames.color || {}), ...((src.flames && src.flames.color) || {}) } },
         antiLag: { ...base.antiLag, ...(src.antiLag || {}) },
         drift: { ...base.drift, ...(src.drift || {}) },
+        hardware: { ...base.hardware, ...(src.hardware || {}) },
+        handling: { ...base.handling, ...(src.handling || {}) },
         hud: { ...base.hud, ...(src.hud || {}) },
         dyno: { ...base.dyno, ...(src.dyno || {}) },
     };
+}
+
+function sameColor(a, b) {
+    return ['r', 'g', 'b'].every((key) => Number(a?.[key]) === Number(b?.[key]));
+}
+
+function installQuote() {
+    if (!installedTune || !tune) return Number(costs.save || 0) + Number(costs.flash || 0);
+    const old = ensureTune(installedTune);
+    const next = ensureTune(tune);
+    const oldCos = ensureCosmetics(installedCosmetics);
+    const nextCos = ensureCosmetics(cosmetics);
+    let total = Number(costs.save || 0) + Number(costs.flash || 0);
+    Object.entries(hardwareSlots || {}).forEach(([key, slot]) => {
+        total += Math.max(0, Number(next.hardware[key] || 0) - Number(old.hardware[key] || 0)) * Number(slot.unitCost || 0);
+    });
+    ['turbo', 'launchControl'].forEach((key) => {
+        if (next.hardware[key] && !old.hardware[key]) total += Number(featureCosts[key] || 0);
+    });
+    [['pop', next.pop.enabled, old.pop.enabled], ['flames', next.flames.enabled, old.flames.enabled],
+        ['antiLag', next.antiLag.enabled, old.antiLag.enabled], ['drift', next.drift.enabled, old.drift.enabled],
+        ['hud', next.hud.enabled, old.hud.enabled]].forEach(([key, enabled, wasEnabled]) => {
+        if (enabled && !wasEnabled) total += Number(featureCosts[key] || 0);
+    });
+    if (next.stage !== old.stage) total += Number(next.stage === 'race' ? featureCosts.raceMap : next.stage === 'sport' ? featureCosts.sportMap : 0);
+    const tuningKeys = [['power'], ['torque'], ['handling', 'steering'], ['handling', 'brakePower'], ['handling', 'suspension'], ['handling', 'traction']];
+    tuningKeys.forEach((path) => {
+        const get = (obj) => path.reduce((value, key) => value?.[key], obj);
+        total += Math.abs(Number(get(next) || 0) - Number(get(old) || 0)) * Number(featureCosts.customMapStep || 0);
+    });
+    if (!sameColor(oldCos.primary, nextCos.primary) || !sameColor(oldCos.secondary, nextCos.secondary)
+        || Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)) {
+        total += Number(featureCosts.cosmetics || 0);
+    }
+    if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) total += Number(featureCosts.vanityPlate || 0);
+    return Math.max(0, Math.floor(total));
+}
+
+function updateInstallButton() {
+    if (btnSave) btnSave.textContent = `INSTALEAZĂ & FLASH — $${installQuote().toLocaleString('en-US')}`;
 }
 
 function updateStatusBanner() {
@@ -130,7 +182,11 @@ function preview() {
     if (!tune) return;
     previewDirty = true;
     updateStatusBanner();
-    post('tuningPreview', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics) });
+    updateInstallButton();
+    window.clearTimeout(previewTimer);
+    previewTimer = window.setTimeout(() => {
+        post('tuningPreview', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics) });
+    }, 70);
 }
 
 function renderRail() {
@@ -227,6 +283,106 @@ function toggleRow(label, key) {
     row.appendChild(span);
     row.appendChild(sw);
     return row;
+}
+
+function hardwareField(label, key, configuredMax) {
+    const available = Number(hardwareAvailability[key]);
+    const max = Number.isFinite(available) ? Math.max(0, Math.min(configuredMax, available)) : configuredMax;
+    const field = sliderField(label, `hardware.${key}`, 0, max, `/${max}`);
+    if (max === 0) {
+        field.classList.add('is-unavailable');
+        const input = field.querySelector('input');
+        if (input) input.disabled = true;
+    }
+    return field;
+}
+
+function applyPreset(name) {
+    const dyno = { ...(tune.dyno || {}) };
+    const presets = {
+        stock: stockTune(),
+        street: {
+            ...stockTune(), stage: 'sport', power: 105, torque: 106,
+            hardware: { ...stockTune().hardware, engine: 2, brakes: 1, transmission: 1, suspension: 1, turbo: true },
+            handling: { steering: 104, brakePower: 110, suspension: 105, traction: 104 },
+        },
+        track: {
+            ...stockTune(), stage: 'race', power: 112, torque: 110,
+            hardware: { engine: 4, brakes: 3, transmission: 3, suspension: 3, armor: 1, turbo: true, launchControl: true },
+            handling: { steering: 110, brakePower: 130, suspension: 118, traction: 112 },
+            pop: { ...stockTune().pop, enabled: true, rpmMax: 84, secondBurst: true },
+            flames: { ...stockTune().flames, enabled: true },
+        },
+        drift: {
+            ...stockTune(), stage: 'sport', power: 108, torque: 112,
+            hardware: { engine: 3, brakes: 2, transmission: 2, suspension: 2, armor: 0, turbo: true, launchControl: true },
+            handling: { steering: 116, brakePower: 112, suspension: 108, traction: 84 },
+            drift: { enabled: true, grip: 38 },
+            pop: { ...stockTune().pop, enabled: true, rpmMax: 82 },
+        },
+    };
+    tune = ensureTune(presets[name] || presets.stock);
+    tune.dyno = dyno;
+    preview();
+    renderAll();
+}
+
+function panelOverview() {
+    const el = document.createElement('div');
+    el.className = 'panel';
+    el.innerHTML = '<h2>BUILD SETUP</h2><p class="subtitle">Alege o bază NFS-style, apoi reglează fiecare componentă separat.</p>';
+    const grid = document.createElement('div');
+    grid.className = 'build-grid';
+    [
+        ['stock', 'FACTORY', 'Comportament original, fără efecte'],
+        ['street', 'STREET', 'Daily rapid, controlabil și discret'],
+        ['track', 'TRACK', 'Grip, frânare și răspuns maxim'],
+        ['drift', 'DRIFT', 'Cuplu, steering și aderență redusă'],
+    ].forEach(([id, title, desc]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'build-card';
+        button.innerHTML = `<strong>${title}</strong><span>${desc}</span><em>APLICĂ SETUP →</em>`;
+        button.addEventListener('click', () => applyPreset(id));
+        grid.appendChild(button);
+    });
+    el.appendChild(grid);
+    return el;
+}
+
+function panelPowertrain() {
+    const el = document.createElement('div');
+    el.className = 'panel';
+    el.innerHTML = '<h2>MOTOR & TURBO</h2><p class="subtitle">Piese GTA reale plus calibrare ECU fină.</p>';
+    el.appendChild(stageCards('stage', 'MAPĂ ECU'));
+    el.appendChild(hardwareField('UPGRADE MOTOR', 'engine', 4));
+    el.appendChild(hardwareField('TRANSMISIE', 'transmission', 3));
+    el.appendChild(toggleRow('TURBO', 'hardware.turbo'));
+    el.appendChild(toggleRow('LAUNCH CONTROL / 2-STEP', 'hardware.launchControl'));
+    el.appendChild(sliderField('PUTERE ECU', 'power', 85, 120, '%'));
+    el.appendChild(sliderField('CUPLU ECU', 'torque', 85, 120, '%'));
+    return el;
+}
+
+function panelChassis() {
+    const el = document.createElement('div');
+    el.className = 'panel';
+    el.innerHTML = '<h2>ȘASIU</h2><p class="subtitle">Frâne, suspensie și protecție — nivelurile disponibile depind de mașină.</p>';
+    el.appendChild(hardwareField('FRÂNE', 'brakes', 3));
+    el.appendChild(hardwareField('SUSPENSIE', 'suspension', 4));
+    el.appendChild(hardwareField('ARMURĂ', 'armor', 5));
+    return el;
+}
+
+function panelHandling() {
+    const el = document.createElement('div');
+    el.className = 'panel';
+    el.innerHTML = '<h2>HANDLING</h2><p class="subtitle">Reglaj fin; 100% reprezintă geometria originală a vehiculului.</p>';
+    el.appendChild(sliderField('UNGHI DIRECȚIE', 'handling.steering', 85, 120, '%'));
+    el.appendChild(sliderField('PUTERE FRÂNARE', 'handling.brakePower', 85, 140, '%'));
+    el.appendChild(sliderField('RIGIDITATE SUSPENSIE', 'handling.suspension', 80, 130, '%'));
+    el.appendChild(sliderField('ADERENȚĂ', 'handling.traction', 75, 120, '%'));
+    return el;
 }
 
 function stageCards(key, title) {
@@ -504,6 +660,7 @@ function panelAntilag() {
     el.className = 'panel';
     el.innerHTML = '<h2>ANTI-LAG</h2><p class="subtitle">Pop-uri la accelerație în regim mediu</p>';
     el.appendChild(toggleRow('ANTI-LAG ACTIV', 'antiLag.enabled'));
+    el.appendChild(toggleRow('TURBO', 'hardware.turbo'));
     el.appendChild(sliderField('INTENSITATE', 'antiLag.intensity', 0, 100, '%'));
     return el;
 }
@@ -520,6 +677,10 @@ function renderPanels() {
     if (!panels || !tune) return;
     panels.innerHTML = '';
     const map = {
+        overview: panelOverview,
+        powertrain: panelPowertrain,
+        chassis: panelChassis,
+        handling: panelHandling,
         exhaust_pop: panelExhaust,
         exhaust_flames: panelExhaust,
         exhaust_diesel: panelExhaust,
@@ -591,13 +752,19 @@ window.addEventListener('message', (event) => {
         hasSavedMap = data.saved === true;
         previewDirty = false;
         costs = data.costs || costs;
+        hardwareSlots = data.hardwareSlots || {};
+        featureCosts = data.featureCosts || {};
+        installedTune = ensureTune(data.tune);
+        installedCosmetics = ensureCosmetics(data.cosmetics);
         if (shopLabel) shopLabel.textContent = data.shop || 'ECU Bay';
         if (plateLabel) plateLabel.textContent = data.plate || cosmetics.plateText || '—';
-        activeTab = 'exhaust_pop';
+        hardwareAvailability = data.hardwareAvailability || {};
+        activeTab = 'overview';
         if (app) app.classList.remove('hidden');
         renderAll();
     }
     if (action === 'close' && app) {
+        window.clearTimeout(previewTimer);
         app.classList.add('hidden');
         previewDirty = false;
     }
@@ -606,6 +773,8 @@ window.addEventListener('message', (event) => {
         previewDirty = false;
         if (data?.tune) tune = ensureTune(data.tune);
         if (data?.cosmetics) cosmetics = ensureCosmetics(data.cosmetics);
+        installedTune = ensureTune(tune);
+        installedCosmetics = ensureCosmetics(cosmetics);
         if (data?.plate && plateLabel) plateLabel.textContent = data.plate;
         renderAll();
     }
@@ -625,3 +794,26 @@ window.addEventListener('message', (event) => {
         renderAll();
     }
 });
+
+if (new URLSearchParams(window.location.search).get('qa') === 'tuning') {
+    window.postMessage({
+        action: 'open',
+        data: {
+            plate: 'BLZ 2046',
+            shop: 'LS Customs — ECU Bay',
+            saved: true,
+            tune: {
+                ...stockTune(), stage: 'sport', power: 106, torque: 108,
+                hardware: { engine: 2, brakes: 1, transmission: 1, suspension: 1, armor: 0, turbo: true, launchControl: false },
+            },
+            cosmetics: stockCosmetics(),
+            costs: { save: 750, flash: 150, dyno: 250 },
+            hardwareAvailability: { engine: 4, brakes: 3, transmission: 3, suspension: 4, armor: 5, turbo: true },
+            hardwareSlots: {
+                engine: { unitCost: 1800 }, brakes: { unitCost: 1200 }, transmission: { unitCost: 1600 },
+                suspension: { unitCost: 1100 }, armor: { unitCost: 1500 },
+            },
+            featureCosts: { turbo: 4500, launchControl: 2200, pop: 950, flames: 800, antiLag: 2400, drift: 1400, hud: 350, sportMap: 2200, raceMap: 5200, customMapStep: 55, cosmetics: 600, vanityPlate: 1800 },
+        },
+    }, '*');
+}

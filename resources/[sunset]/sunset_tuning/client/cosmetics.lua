@@ -14,7 +14,7 @@ function ReadCosmeticsFromVehicle(veh)
     })
 end
 
-function ApplyCosmetics(veh, cosmetics)
+function ApplyCosmetics(veh, cosmetics, applyPlate)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return false end
     cosmetics = SunsetTuning.SanitizeCosmetics(cosmetics)
     local p = cosmetics.primary
@@ -28,7 +28,7 @@ function ApplyCosmetics(veh, cosmetics)
         SetVehicleExtraColours(veh, cosmetics.pearl, cosmetics.wheel or 0)
     end
 
-    if cosmetics.plateText and cosmetics.plateText ~= '' then
+    if applyPlate ~= false and cosmetics.plateText and cosmetics.plateText ~= '' then
         SetVehicleNumberPlateText(veh, cosmetics.plateText)
     end
     return true

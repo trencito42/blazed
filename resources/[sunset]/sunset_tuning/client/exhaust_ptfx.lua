@@ -40,7 +40,11 @@ function EP.ensureAssets()
     return EP.loaded.core == true
 end
 
-CreateThread(function() EP.ensureAssets() end)
+CreateThread(function()
+    EP.ensureAssets()
+    RequestScriptAudioBank('DLC_TUNER_CAR_MEET', false)
+    RequestScriptAudioBank('DLC_XS_VEHICLE_MODS', false)
+end)
 
 function EP.eachExhaustBone(veh, fn)
     if not veh or veh == 0 then return end
@@ -63,12 +67,23 @@ end
 local function onExhaustBone(veh, bone, scale, asset, effect, color, yPush)
     UseParticleFxAssetNextCall(asset)
     if color then ptfxColor(color) end
-    StartNetworkedParticleFxNonLoopedOnEntityBone(
+    -- The resource performs its own server-validated nearby sync. Keeping the
+    -- particle local prevents the origin player from seeing the same burst twice.
+    StartParticleFxNonLoopedOnEntityBone(
         effect, veh,
         0.0, yPush or -0.12, 0.0,
         0.0, 0.0, 0.0,
         bone, scale, false, false, false
     )
+end
+
+function EP.sparks(veh, scale, color)
+    if not EP.ensureAssets() then return end
+    scale = scale or 0.45
+    EP.eachExhaustBone(veh, function(bone, _, pos)
+        onExhaustBone(veh, bone, scale, 'core', 'ent_sht_metal', color, -0.16)
+        EP.flashAtCoord(pos, color or DEFAULT_FLAME, scale * 0.35, 45)
+    end)
 end
 
 function EP.flashAtCoord(pos, color, intensity, durationMs)
@@ -128,10 +143,10 @@ local function playSoundLayer(veh, soundName, soundSet, coords)
     PlaySoundFromEntity(sid, soundName, veh, soundSet, false, 0)
     if coords then
         local sid2 = GetSoundId()
-        PlaySoundFromCoord(sid2, soundName, coords.x, coords.y, coords.z, soundSet, false, 35, false)
-        SetTimeout(900, function() ReleaseSoundId(sid2) end)
+        PlaySoundFromCoord(sid2, soundName, coords.x, coords.y, coords.z, soundSet, false, 45, false)
+        SetTimeout(1200, function() ReleaseSoundId(sid2) end)
     end
-    SetTimeout(900, function() ReleaseSoundId(sid) end)
+    SetTimeout(1200, function() ReleaseSoundId(sid) end)
 end
 
 function EP.playBackfireSound(veh, loud)
@@ -147,9 +162,14 @@ function EP.playBackfireSound(veh, loud)
         end)
     end
     if loud then
-        SetTimeout(120, function()
+        SetTimeout(130, function()
             if DoesEntityExist(veh) then
                 playSoundLayer(veh, 'Crackle', 'DLC_Tuner_Car_Meet_Sounds', rear)
+            end
+        end)
+        SetTimeout(220, function()
+            if DoesEntityExist(veh) then
+                playSoundLayer(veh, 'backfire', 'dlc_xs_vehicle_mods_sounds', rear)
             end
         end)
     end
@@ -163,10 +183,12 @@ function EP.burst(veh, kind, intensity, flameColor)
 
     if kind == 'pop' or kind == 'twostep' then
         EP.backfire(veh, 1.0 + intensity * 0.55, color)
+        if kind == 'twostep' or intensity > 0.9 then EP.sparks(veh, 0.3 + intensity * 0.2, color) end
         EP.playBackfireSound(veh, true)
     end
     if kind == 'antilag' then
         EP.backfire(veh, 0.75 + intensity * 0.4, color)
+        if intensity > 0.75 then EP.sparks(veh, 0.28 + intensity * 0.18, color) end
         EP.playBackfireSound(veh, true)
     end
     if kind == 'flame' or kind == 'extra' then

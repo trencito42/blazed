@@ -36,7 +36,18 @@ local function cacheOriginalHandling(veh)
         tractionMax = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fTractionCurveMax'),
         tractionMin = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fTractionCurveMin'),
         tractionLat = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fTractionCurveLateral'),
+        brakeForce = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fBrakeForce'),
+        steeringLock = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fSteeringLock'),
+        suspensionForce = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fSuspensionForce'),
+        suspensionRebound = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fSuspensionReboundDamp'),
+        lowSpeedTractionLoss = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fLowSpeedTractionLossMult'),
+        mods = {},
+        turbo = IsToggleModOn(veh, 18),
     }
+    SetVehicleModKit(veh, 0)
+    for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
+        base.mods[key] = GetVehicleMod(veh, slot.modType)
+    end
     STC.appliedVehicles[veh] = STC.appliedVehicles[veh] or {}
     STC.appliedVehicles[veh].base = base
     return base
@@ -58,10 +69,30 @@ local function restoreBaseHandling(veh)
     setHandlingFloat(veh, 'fTractionCurveMax', base.tractionMax)
     setHandlingFloat(veh, 'fTractionCurveMin', base.tractionMin)
     setHandlingFloat(veh, 'fTractionCurveLateral', base.tractionLat)
-    SetVehicleEnginePowerMultiplier(veh, 1.0)
+    setHandlingFloat(veh, 'fBrakeForce', base.brakeForce)
+    setHandlingFloat(veh, 'fSteeringLock', base.steeringLock)
+    setHandlingFloat(veh, 'fSuspensionForce', base.suspensionForce)
+    setHandlingFloat(veh, 'fSuspensionReboundDamp', base.suspensionRebound)
+    setHandlingFloat(veh, 'fLowSpeedTractionLossMult', base.lowSpeedTractionLoss)
+    SetVehicleModKit(veh, 0)
+    for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
+        SetVehicleMod(veh, slot.modType, base.mods[key] or -1, false)
+    end
+    ToggleVehicleMod(veh, 18, base.turbo == true)
+    SetVehicleEnginePowerMultiplier(veh, 0.0)
     SetVehicleEngineTorqueMultiplier(veh, 1.0)
     ModifyVehicleTopSpeed(veh, 0.0)
     SetVehicleTurboPressure(veh, 0.0)
+end
+
+local function applyHardware(veh, tune)
+    SetVehicleModKit(veh, 0)
+    for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
+        local count = math.max(0, GetNumVehicleMods(veh, slot.modType))
+        local level = math.max(0, math.min(tonumber(tune.hardware[key]) or 0, count))
+        SetVehicleMod(veh, slot.modType, level > 0 and (level - 1) or -1, false)
+    end
+    ToggleVehicleMod(veh, 18, tune.hardware.turbo == true)
 end
 
 function ApplyTune(veh, tune, persist)
@@ -69,11 +100,12 @@ function ApplyTune(veh, tune, persist)
     tune = SunsetTuning.SanitizeTune(tune)
     local mult = STC.getStageMultipliers(tune)
     local base = cacheOriginalHandling(veh)
-    local isStock = SunsetTuning.IsStockTune(tune)
+    local isStock = not SunsetTuning.HasPerformanceChanges(tune)
 
     if isStock then
         restoreBaseHandling(veh)
     else
+        applyHardware(veh, tune)
         setHandlingFloat(veh, 'fInitialDriveForce', base.driveForce * mult.power)
         setHandlingFloat(veh, 'fDriveInertia', base.driveInertia * (0.92 + (mult.torque * 0.08)))
         setHandlingFloat(veh, 'fInitialDriveMaxFlatVel', base.maxVel * (0.98 + (mult.power * 0.04)))
@@ -88,7 +120,15 @@ function ApplyTune(veh, tune, persist)
         setHandlingFloat(veh, 'fTractionCurveMin', base.tractionMin * gripMult)
         setHandlingFloat(veh, 'fTractionCurveLateral', base.tractionLat * (gripMult * 0.96))
 
-        SetVehicleEnginePowerMultiplier(veh, mult.power)
+        local handling = tune.handling or {}
+        setHandlingFloat(veh, 'fBrakeForce', base.brakeForce * ((handling.brakePower or 100) / 100.0))
+        setHandlingFloat(veh, 'fSteeringLock', base.steeringLock * ((handling.steering or 100) / 100.0))
+        setHandlingFloat(veh, 'fSuspensionForce', base.suspensionForce * ((handling.suspension or 100) / 100.0))
+        setHandlingFloat(veh, 'fSuspensionReboundDamp', base.suspensionRebound * (0.9 + ((handling.suspension or 100) / 1000.0)))
+        setHandlingFloat(veh, 'fLowSpeedTractionLossMult', base.lowSpeedTractionLoss * math.max(0.55, 2.0 - ((handling.traction or 100) / 100.0)))
+
+        -- This native expects percentage added above stock (0.0 = factory), not a 1.x factor.
+        SetVehicleEnginePowerMultiplier(veh, (mult.power - 1.0) * 100.0)
         SetVehicleEngineTorqueMultiplier(veh, mult.torque)
         ModifyVehicleTopSpeed(veh, math.floor((mult.power - 1.0) * 22.0))
 

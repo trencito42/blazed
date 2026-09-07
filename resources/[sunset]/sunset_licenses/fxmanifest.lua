@@ -48,6 +48,7 @@ client_exports {
     'IsInLicenseTest',
     'IsInLocalTest',
     'OpenTheoryQuiz',
+    'CloseTheoryQuiz',
     'StartPracticalTest',
     'CleanupPracticalTest',
 }

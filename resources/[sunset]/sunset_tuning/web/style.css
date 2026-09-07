@@ -37,7 +37,8 @@ html, body {
     max-height: 88vh;
     border: 1px solid rgba(255, 119, 0, 0.35);
     border-radius: 14px;
-    background: linear-gradient(145deg, rgba(8, 7, 8, 0.96), rgba(18, 12, 8, 0.94));
+    background: linear-gradient(145deg, rgba(8, 7, 8, 0.84), rgba(24, 14, 7, 0.76));
+    backdrop-filter: blur(12px) saturate(1.12);
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 177, 28, 0.12);
     overflow: hidden;
 }
@@ -48,7 +49,7 @@ html, body {
     justify-content: space-between;
     padding: 14px 18px;
     border-bottom: 2px solid rgba(255, 119, 0, 0.45);
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.22);
 }
 
 .ecu-brand { display: flex; flex-direction: column; gap: 2px; }
@@ -111,7 +112,7 @@ html, body {
     gap: 4px;
     padding: 10px 8px;
     border-right: 1px solid var(--os-border);
-    background: rgba(0, 0, 0, 0.28);
+    background: rgba(0, 0, 0, 0.16);
     overflow-y: auto;
 }
 
@@ -198,7 +199,7 @@ html, body {
     padding: 12px 14px;
     border: 1px solid var(--os-border);
     border-radius: 10px;
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.20);
     margin-bottom: 12px;
 }
 
@@ -413,7 +414,8 @@ html, body {
     padding: 28px 24px;
     border-radius: 16px;
     border: 1px solid var(--os-border);
-    background: linear-gradient(160deg, rgba(18, 12, 6, 0.96), rgba(8, 8, 10, 0.98));
+    background: linear-gradient(160deg, rgba(18, 12, 6, 0.84), rgba(8, 8, 10, 0.78));
+    backdrop-filter: blur(12px) saturate(1.12);
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;
@@ -455,4 +457,50 @@ html, body {
     font: 700 14px/1 var(--os-title);
     letter-spacing: 0.12em;
     text-transform: uppercase;
+}
+
+.build-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.build-card {
+    min-height: 132px;
+    padding: 18px;
+    border: 1px solid rgba(255, 145, 25, .22);
+    border-left: 3px solid #ff9119;
+    background: linear-gradient(135deg, rgba(255, 145, 25, .12), rgba(7, 7, 9, .52) 48%, rgba(7, 7, 9, .68));
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.build-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 145, 25, .72);
+    background: linear-gradient(135deg, rgba(255, 145, 25, .18), rgba(10, 9, 10, .80) 52%, rgba(7, 7, 9, .92));
+}
+
+.build-card strong,
+.build-card span,
+.build-card em { display: block; }
+.build-card strong { font-size: 22px; letter-spacing: .08em; }
+.build-card span { min-height: 38px; margin-top: 8px; color: rgba(255, 255, 255, .60); font-size: 13px; }
+.build-card em { margin-top: 14px; color: #ffad38; font-size: 11px; font-style: normal; font-weight: 700; letter-spacing: .12em; }
+
+.field.is-unavailable { opacity: .42; }
+.field.is-unavailable::after {
+    content: 'INDISPONIBIL PE ACEST VEHICUL';
+    display: block;
+    margin-top: 7px;
+    color: rgba(255,255,255,.52);
+    font-size: 10px;
+    letter-spacing: .1em;
+}
+
+@media (max-width: 900px) {
+    .build-grid { grid-template-columns: 1fr; }
 }
