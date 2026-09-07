@@ -17,6 +17,12 @@ const AuthAccounts = {
         return clean.slice(0, 2).toUpperCase();
     },
 
+    money(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount) || amount < 0) return '$—';
+        return '$' + Math.floor(amount).toLocaleString('en-US');
+    },
+
     syncRememberCheckboxes() {
         const checked = this.quickLogin === true;
         const login = $('#auth-remember-quick');
@@ -60,12 +66,18 @@ const AuthAccounts = {
                 ? `<img src="${this.escape(acc.avatar)}" alt="">`
                 : `<span>${this.escape(this.initials(acc.characterName || username))}</span>`;
             const identity = String(acc.characterName || username).trim();
-            const id = Number(acc.characterId) > 0 ? `CID ${Number(acc.characterId)}` : 'Saved account';
+            const level = Number(acc.level) >= 1 ? Math.floor(Number(acc.level)) : '—';
+            const availableMoney = Number(acc.cash) + Number(acc.bank);
+            const totalMoney = Number.isFinite(availableMoney) ? availableMoney : acc.cash;
             pick.innerHTML = `
                 <span class="auth-account-card__avatar">${avatar}</span>
                 <span class="auth-account-card__body">
+                    <span class="auth-account-card__account">${this.escape(username)}</span>
                     <strong class="auth-account-card__name">${this.escape(identity)}</strong>
-                    <span class="auth-account-card__meta">${this.escape(id)} · ${this.escape(username)}</span>
+                    <span class="auth-account-card__stats">
+                        <span class="auth-account-card__level">LVL ${this.escape(level)}</span>
+                        <span class="auth-account-card__money">FUNDS ${this.escape(this.money(totalMoney))}</span>
+                    </span>
                 </span>
             `;
             pick.addEventListener('click', () => {
@@ -150,6 +162,9 @@ const AuthAccounts = {
                     username,
                     characterName: data.characterName,
                     characterId: data.characterId,
+                    level: data.level,
+                    cash: data.cash,
+                    bank: data.bank,
                     avatar: canvas.toDataURL('image/jpeg', 0.78),
                 });
             } catch (_) {
@@ -157,6 +172,9 @@ const AuthAccounts = {
                     username,
                     characterName: data.characterName,
                     characterId: data.characterId,
+                    level: data.level,
+                    cash: data.cash,
+                    bank: data.bank,
                 });
             }
         };
@@ -164,6 +182,9 @@ const AuthAccounts = {
             username,
             characterName: data.characterName,
             characterId: data.characterId,
+            level: data.level,
+            cash: data.cash,
+            bank: data.bank,
         });
         image.crossOrigin = 'anonymous';
         image.src = source;

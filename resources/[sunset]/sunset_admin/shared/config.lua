@@ -45,4 +45,7 @@ SunsetAdmin.Commands = {
     setstat = 3,
     setjobstat = 3,
     setrob = 3,
+    givelicense = 2,
+    agivelicense = 2,
+    revokelicense = 2,
 }

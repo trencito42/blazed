@@ -3,6 +3,7 @@ local sessionLicense = nil
 local pendingAuth = nil
 local authenticatedUsername = nil
 local loadedCharacter = nil
+local profileSaveRevision = 0
 
 local function isEnabled(value)
     if value == true or value == 1 then return true end
@@ -199,10 +200,35 @@ AddEventHandler('sunset:client:onCharacterLoaded', function(char)
     loadedCharacter = char
 end)
 
+local function saveCharacterSnapshot()
+    if not authenticatedUsername then return end
+    local char = exports.sunset_core:GetCharacter() or loadedCharacter
+    if not char then return end
+    loadedCharacter = char
+    SunsetAuthAccounts.updateProfile(activeLicense(), authenticatedUsername, {
+        characterName = (tostring(char.firstname or '') .. ' ' .. tostring(char.lastname or '')):gsub('%s+$', ''),
+        characterId = char.id,
+        level = char.level,
+        cash = char.cash,
+        bank = char.bank,
+    })
+end
+
+AddEventHandler('sunset:client:onCharacterUpdated', function()
+    profileSaveRevision = profileSaveRevision + 1
+    local revision = profileSaveRevision
+    CreateThread(function()
+        Wait(1500)
+        if revision == profileSaveRevision then saveCharacterSnapshot() end
+    end)
+end)
+
 AddEventHandler('sunset:client:characterFlowComplete', function()
     if not authenticatedUsername or not loadedCharacter then return end
     CreateThread(function()
         Wait(800)
+        saveCharacterSnapshot()
+        local currentCharacter = exports.sunset_core:GetCharacter() or loadedCharacter
         local ped = PlayerPedId()
         local handle = RegisterPedheadshot(ped)
         local timeout = GetGameTimer() + 4000
@@ -213,8 +239,11 @@ AddEventHandler('sunset:client:characterFlowComplete', function()
             local txd = GetPedheadshotTxdString(handle)
             exports.sunset_ui:Send('authCapturePortrait', {
                 username = authenticatedUsername,
-                characterName = (tostring(loadedCharacter.firstname or '') .. ' ' .. tostring(loadedCharacter.lastname or '')):gsub('%s+$', ''),
-                characterId = loadedCharacter.id,
+                characterName = (tostring(currentCharacter.firstname or '') .. ' ' .. tostring(currentCharacter.lastname or '')):gsub('%s+$', ''),
+                characterId = currentCharacter.id,
+                level = currentCharacter.level,
+                cash = currentCharacter.cash,
+                bank = currentCharacter.bank,
                 source = ('https://nui-img/%s/%s'):format(txd, txd),
             })
             Wait(2500)
@@ -230,5 +259,8 @@ AddEventHandler('sunset:nui:authSavePortrait', function(data)
         avatar = data and data.avatar,
         characterName = data and data.characterName,
         characterId = data and data.characterId,
+        level = data and data.level,
+        cash = data and data.cash,
+        bank = data and data.bank,
     })
 end)

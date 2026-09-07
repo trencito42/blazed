@@ -3,13 +3,14 @@
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $sunset = Join-Path $root 'resources\[sunset]'
+$fail = 0
 $manifests = Get-ChildItem -LiteralPath $sunset -Filter fxmanifest.lua -Recurse
 Write-Host "`n[manifests] $($manifests.Count) sunset resources"
 
 # 2. Missing script references in manifests (basic)
 foreach ($mf in $manifests) {
     $dir = $mf.DirectoryName
-    $text = Get-Content $mf.FullName -Raw
+    $text = Get-Content -LiteralPath $mf.FullName -Raw
     $patterns = @(
         "client_scripts\s*\{([^}]+)\}",
         "server_scripts\s*\{([^}]+)\}",
@@ -24,7 +25,7 @@ foreach ($mf in $manifests) {
                 if ($rel -match '^\@') { continue }
                 if ($rel -match '\*') { continue }
                 $path = Join-Path $dir ($rel -replace '/', '\')
-                if (-not (Test-Path $path)) {
+                if (-not (Test-Path -LiteralPath $path)) {
                     Write-Host "  MISSING: $($mf.Directory.Name) -> $rel" -ForegroundColor Red
                     $fail++
                 }
@@ -38,7 +39,7 @@ $cmdMap = @{}
 Get-ChildItem -LiteralPath $sunset -Filter *.lua -Recurse | ForEach-Object {
     $side = if ($_.FullName -match '\\client\\') { 'client' } elseif ($_.FullName -match '\\server\\') { 'server' } else { 'other' }
     if ($side -eq 'other') { return }
-    $content = Get-Content $_.FullName -Raw
+    $content = Get-Content -LiteralPath $_.FullName -Raw
     foreach ($m in [regex]::Matches($content, 'RegisterCommand\(''([^'']+)')) {
         $name = $m.Groups[1].Value.ToLower()
         if (-not $cmdMap[$name]) { $cmdMap[$name] = @() }
@@ -52,15 +53,17 @@ foreach ($d in $dual) {
 }
 
 # 4. Secret scan (lightweight)
-$secretHits = Select-String -Path (Join-Path $root 'resources\[sunset]\**\*.lua') -Pattern 'cfxk_|api[_-]?key\s*=\s*["''][^"''\s]+|password\s*=\s*["''][^"''\s]{8,}' -SimpleMatch:$false -ErrorAction SilentlyContinue
+$luaFiles = Get-ChildItem -LiteralPath $sunset -Filter *.lua -Recurse | Select-Object -ExpandProperty FullName
+$secretHits = Select-String -LiteralPath $luaFiles -Pattern 'cfxk_|api[_-]?key\s*=\s*["''][^"''\s]+|password\s*=\s*["''][^"''\s]{8,}' -SimpleMatch:$false -ErrorAction SilentlyContinue
 if ($secretHits) {
     Write-Host "`n[secrets] possible hits in sunset lua:" -ForegroundColor Yellow
     $secretHits | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Path):$($_.LineNumber)" }
 }
 
 # 5. SQL migrations
-$migs = Get-ChildItem (Join-Path $root 'sql\[0-9][0-9]-*.sql') -ErrorAction SilentlyContinue
-Write-Host "`n[migrations] $($migs.Count) numbered SQL files (02-23 expected)"
+$migs = Get-ChildItem -LiteralPath (Join-Path $root 'sql') -Filter '*.sql' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^\d{2}-.+\.sql$' }
+Write-Host "`n[migrations] $($migs.Count) numbered SQL files"
 
 if ($fail -gt 0) {
     Write-Host "`nFAILED: $fail manifest reference issues" -ForegroundColor Red

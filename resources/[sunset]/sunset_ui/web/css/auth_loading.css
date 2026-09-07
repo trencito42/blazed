@@ -291,7 +291,7 @@
 
 .auth-account-list {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     max-height: 210px;
     overflow-y: auto;
@@ -308,12 +308,12 @@
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     min-width: 0;
-    padding: 11px 34px 11px 11px;
+    padding: 10px 34px 10px 10px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-left: 3px solid rgba(255, 119, 0, 0.55);
-    background: rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(31, 23, 18, 0.58), rgba(8, 8, 9, 0.46));
     color: #fff;
     text-align: left;
     cursor: pointer;
@@ -321,15 +321,15 @@
 }
 
 .auth-account-card__pick:hover {
-    background: rgba(255, 119, 0, 0.12);
+    background: linear-gradient(135deg, rgba(255, 119, 0, 0.16), rgba(12, 10, 9, 0.58));
     border-left-color: #ff7700;
     transform: translateY(-1px);
 }
 
 .auth-account-card__avatar {
     flex: 0 0 auto;
-    width: 54px;
-    height: 64px;
+    width: 58px;
+    height: 68px;
     display: grid;
     place-items: center;
     overflow: hidden;
@@ -350,7 +350,8 @@
 .auth-account-card__body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    justify-content: center;
     min-width: 0;
 }
 
@@ -362,11 +363,34 @@
     white-space: nowrap;
 }
 
-.auth-account-card__meta {
-    font-size: 11px;
-    letter-spacing: 0.08em;
+.auth-account-card__account {
+    font: 600 9px/1 'Chakra Petch', sans-serif;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.38);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-account-card__stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font: 700 10px/1 'Chakra Petch', sans-serif;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.auth-account-card__level {
+    color: #ff8a1f;
+}
+
+.auth-account-card__money {
+    color: #59e391;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .auth-account-card__remove {
@@ -457,7 +481,7 @@
 .auth-account-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }
 
 @media (max-width: 760px) {
-    .auth-account-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .auth-account-list { grid-template-columns: 1fr; }
 }
 
 .auth-email-modal {

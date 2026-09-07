@@ -77,7 +77,9 @@ function Accounts.publicList(store)
                 lastLogin = tonumber(row.lastLogin) or 0,
                 avatar = type(row.avatar) == 'string' and row.avatar or nil,
                 characterName = type(row.characterName) == 'string' and row.characterName or nil,
-                characterId = tonumber(row.characterId),
+                level = tonumber(row.level),
+                cash = tonumber(row.cash),
+                bank = tonumber(row.bank),
             }
         end
     end
@@ -144,6 +146,9 @@ function Accounts.upsert(license, username, password, quickLogin)
                 avatar = row.avatar,
                 characterName = row.characterName,
                 characterId = row.characterId,
+                level = row.level,
+                cash = row.cash,
+                bank = row.bank,
             }
             found = true
             break
@@ -182,6 +187,13 @@ function Accounts.updateProfile(license, username, profile)
     if characterName ~= '' then row.characterName = characterName end
     local characterId = tonumber(profile.characterId)
     if characterId and characterId > 0 then row.characterId = math.floor(characterId) end
+
+    local level = tonumber(profile.level)
+    if level and level >= 1 then row.level = math.floor(math.min(level, 9999)) end
+    local cash = tonumber(profile.cash)
+    if cash and cash >= 0 then row.cash = math.floor(cash) end
+    local bank = tonumber(profile.bank)
+    if bank and bank >= 0 then row.bank = math.floor(bank) end
 
     return store, Accounts.save(license, store)
 end
