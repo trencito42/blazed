@@ -94,6 +94,10 @@ function FactionRoster.adjustGrade(source, characterId, delta)
         and not FactionCore.isFactionLeader(char.id, factionId) then
         return nil, 'You cannot set rank to your level or higher'
     end
+    if delta > 0 then
+        local eligible, eligibilityError = FactionCore.checkPromotionEligibility(factionId, characterId, newGrade)
+        if not eligible then return nil, eligibilityError end
+    end
 
     local targetSource = onlineSourceForCharacter(characterId)
     if targetSource then

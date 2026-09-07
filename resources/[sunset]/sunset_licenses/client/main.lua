@@ -1,7 +1,7 @@
 local blips = {}
 local activeTest = nil
 local licenseCache = {}
-local cacheAt = 0
+local cacheAt = {}
 
 local function notify(msg, kind)
     exports.sunset_ui:Notify(msg, kind or 'info', 7000)
@@ -30,17 +30,19 @@ end
 
 function HasLicense(licenseType)
     local now = GetGameTimer()
-    if licenseCache[licenseType] ~= nil and (now - cacheAt) < 30000 then
+    if licenseCache[licenseType] ~= nil and (now - (cacheAt[licenseType] or 0)) < 30000 then
         return licenseCache[licenseType]
     end
     local ok = Sunset.AwaitCallback('sunset:license:has', licenseType)
     licenseCache[licenseType] = ok == true
-    cacheAt = now
+    cacheAt[licenseType] = now
     return licenseCache[licenseType]
 end
 
-function IsInLicenseTest()
-    return activeTest ~= nil
+function IsInLicenseTest(licenseType)
+    if not activeTest then return false end
+    if licenseType then return activeTest.licenseType == tostring(licenseType) end
+    return true
 end
 
 exports('HasLicense', HasLicense)
@@ -89,22 +91,29 @@ CreateThread(function()
 end)
 
 RegisterNetEvent('sunset:licenses:beginPractical', function(licenseType, payload)
+    licenseCache[licenseType] = nil
+    cacheAt[licenseType] = nil
     activeTest = { licenseType = licenseType, data = payload }
     StartPracticalTest(licenseType, payload)
 end)
 
 RegisterNetEvent('sunset:licenses:testAbort', function()
+    licenseCache = {}
+    cacheAt = {}
     activeTest = nil
     CleanupPracticalTest()
 end)
 
 RegisterNetEvent('sunset:licenses:testComplete', function()
+    licenseCache = {}
+    cacheAt = {}
     activeTest = nil
     CleanupPracticalTest()
 end)
 
 RegisterNetEvent('sunset:licenses:refresh', function()
     licenseCache = {}
+    cacheAt = {}
 end)
 
 AddEventHandler('onResourceStop', function(res)

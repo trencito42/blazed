@@ -1,20 +1,144 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background: transparent; color: #f5f5f5; }
+body { font-family: 'Rajdhani', 'Segoe UI', sans-serif; background: transparent; color: #f6f2e9; }
+
 .hidden { display: none !important; }
+
 #quiz {
-    position: fixed; inset: 10% 15%; max-width: 720px; margin: 0 auto;
-    background: rgba(18, 18, 18, 0.92); border: 1px solid rgba(255, 140, 0, 0.45);
-    border-radius: 12px; padding: 20px 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.45);
 }
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-h1 { font-size: 1.25rem; color: #ff9f43; }
-#quiz-close { background: none; border: none; color: #ccc; font-size: 1.2rem; cursor: pointer; }
-.intro { margin-bottom: 16px; line-height: 1.45; color: #ddd; font-size: 0.95rem; }
-.question { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.question strong { display: block; margin-bottom: 8px; }
-.question label { display: block; margin: 6px 0; cursor: pointer; font-size: 0.92rem; }
-footer { margin-top: 12px; text-align: right; }
-.primary {
-    background: linear-gradient(135deg, #ff8c00, #e67300); border: none; color: #111;
-    padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
+
+.quiz-shell {
+    width: min(760px, 96vw);
+    background: rgba(12, 12, 14, 0.94);
+    border: 1px solid rgba(255, 159, 67, 0.45);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    padding: 22px 24px 18px;
+}
+
+.quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid rgba(255, 159, 67, 0.75);
+}
+
+h1 {
+    font-size: 1.2rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #ff9f43;
+}
+
+.quiz-progress {
+    margin-top: 4px;
+    font-size: 0.88rem;
+    opacity: 0.7;
+}
+
+#quiz-close {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.quiz-intro {
+    margin-bottom: 14px;
+    line-height: 1.45;
+    color: #ddd;
+    font-size: 0.95rem;
+}
+
+.quiz-question {
+    font-size: 1.08rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 16px;
+}
+
+.quiz-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.quiz-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+    color: #f6f2e9;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.quiz-option:hover {
+    border-color: rgba(255, 159, 67, 0.55);
+    background: rgba(255, 159, 67, 0.08);
+}
+
+.quiz-option.selected {
+    border-color: #ff9f43;
+    background: rgba(255, 159, 67, 0.16);
+}
+
+.quiz-option-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 159, 67, 0.65);
+    color: #ff9f43;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.quiz-option-text {
+    line-height: 1.35;
+    font-size: 0.95rem;
+}
+
+.quiz-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.quiz-btn {
+    border: none;
+    padding: 10px 18px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.quiz-btn.primary {
+    background: linear-gradient(135deg, #ff9f43, #e67300);
+    color: #111;
+}
+
+.quiz-btn.ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ddd;
+}
+
+@media (max-width: 640px) {
+    .quiz-options { grid-template-columns: 1fr; }
 }

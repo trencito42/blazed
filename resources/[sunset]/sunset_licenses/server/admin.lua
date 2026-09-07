@@ -22,7 +22,7 @@ local function runGiveLicense(source, args)
         licenseType = string.lower(tostring(args[2] or ''))
     end
     if not target then
-        notify(source, 'Usage: /givelicense [player id] [driver|pilot|boat|weapon]', 'error')
+        notify(source, 'Usage: /agivelicense [player id] [driver|pilot|boat|weapon]', 'error')
         return
     end
     if not SunsetLicenses.Types[licenseType] then
@@ -61,6 +61,14 @@ RegisterCommand('givelicense', function(source, args)
     runGiveLicense(source, args or {})
 end, false)
 
+RegisterCommand('agivelicense', function(source, args)
+    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 2) then
+        notify(source, 'Admin level 2+ required for /agivelicense.', 'error')
+        return
+    end
+    runGiveLicense(source, args or {})
+end, false)
+
 RegisterCommand('revokelicense', function(source, args)
     if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 2) then
         notify(source, 'Admin level 2+ required.', 'error')
@@ -72,9 +80,12 @@ end, false)
 function ExecutePlayerCommand(source, name, args)
     name = string.lower(tostring(name or ''))
     args = args or {}
-    if name == 'givelicense' then
+    if name == 'issuelicense' then
+        return RunInstructorLicenseCommand(source, args)
+    end
+    if name == 'givelicense' or name == 'agivelicense' then
         if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 2) then
-            notify(source, 'Admin level 2+ required for /givelicense.', 'error')
+            notify(source, 'Admin level 2+ required for /agivelicense.', 'error')
             return true
         end
         runGiveLicense(source, args)
@@ -87,6 +98,24 @@ function ExecutePlayerCommand(source, name, args)
         end
         runRevokeLicense(source, args)
         return true
+    end
+    if name == 'lssireviews' then
+        return RunLssiReviewsCommand(source, args)
+    end
+    if name == 'lssireview' then
+        return RunLssiReviewCommand(source, args)
+    end
+    if name == 'lssireport' then
+        return RunLssiReportCommand(source, args)
+    end
+    if name == 'lssiperformance' then
+        return RunLssiPerformanceCommand(source, args)
+    end
+    if name == 'lssimark' then
+        return RunLssiMarkCommand(source, args)
+    end
+    if name == 'lssiunmark' then
+        return RunLssiUnmarkCommand(source, args)
     end
     return false
 end

@@ -94,7 +94,10 @@ end
 
 function Sunset.BuildEducationGrades()
     local instruct = { issue_license = true, conduct_test = true, members = true }
-    local lead = { invite = true, giverank = true, fmotd = true, fwarn = true, uninvite = true }
+    local lead = {
+        invite = true, giverank = true, fmotd = true, fwarn = true, uninvite = true,
+        review_license_tests = true,
+    }
     return {
         [0] = { label = 'Trainee Instructor', salary = 280, perms = { members = true } },
         [1] = { label = 'Instructor', salary = 360, perms = mergePerms(instruct) },

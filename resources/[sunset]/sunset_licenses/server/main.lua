@@ -1,4 +1,7 @@
 local TestSessions = {}
+local AuthorizedTests = {}
+local ServerLicenseCache = {}
+local LastWeaponWarning = {}
 
 local function notify(source, message, kind)
     TriggerClientEvent('sunset:client:notify', source, message, kind or 'info', 7000)
@@ -28,6 +31,39 @@ local function isInstructor(source)
     local grade = select(2, Sunset.GetCharacterFaction(char))
     return Sunset.HasFactionPerm('lssi', grade, 'issue_license')
         or Sunset.HasFactionPerm('lssi', grade, 'conduct_test')
+end
+
+local function playerCoords(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil end
+    return GetEntityCoords(ped)
+end
+
+local function near(source, position, radius)
+    local coords = playerCoords(source)
+    if not coords or not position then return false end
+    return #(coords - vector3(position.x, position.y, position.z)) <= radius
+end
+
+local function sessionTimedOut(session)
+    if not session then return true end
+    local practical = SunsetLicenses.Practical[session.licenseType]
+    local maxSeconds = practical and tonumber(practical.maxTimeSec) or 600
+    local began = tonumber(session.practicalStartedAt or session.startedAt) or 0
+    return began <= 0 or os.time() - began > maxSeconds + 30
+end
+
+local function sanitizedTheory(theory)
+    local result = {
+        title = theory.title,
+        intro = theory.intro,
+        passScore = theory.passScore,
+        questions = {},
+    }
+    for i, question in ipairs(theory.questions or {}) do
+        result.questions[i] = { q = question.q, options = question.options }
+    end
+    return result
 end
 
 function IsInLicenseTest(source)
@@ -62,7 +98,8 @@ function HasLicense(source, licenseType)
     if not def then return false, 'Unknown license type.' end
     if IsInLicenseTest(source) then
         local session = TestSessions[source]
-        if session and session.licenseType == licenseType then
+        if session and session.licenseType == licenseType
+            and (session.phase == 'practical' or session.phase == 'validated') then
             return true, 'test'
         end
     end
@@ -83,14 +120,42 @@ function HasLicense(source, licenseType)
 end
 exports('HasLicense', HasLicense)
 
+local function cachedHasLicense(source, licenseType)
+    local session = TestSessions[source]
+    if session and session.licenseType == licenseType
+        and (session.phase == 'practical' or session.phase == 'validated') then return true end
+    local now = os.time()
+    ServerLicenseCache[source] = ServerLicenseCache[source] or {}
+    local cached = ServerLicenseCache[source][licenseType]
+    if cached and now - cached.at < 10 then return cached.value end
+    local allowed = HasLicense(source, licenseType) == true
+    ServerLicenseCache[source][licenseType] = { value = allowed, at = now }
+    return allowed
+end
+
+local meleeHashes = {}
+for weaponName in pairs(SunsetLicenses.MeleeWeapons or {}) do meleeHashes[GetHashKey(weaponName)] = true end
+AddEventHandler('weaponDamageEvent', function(sender, data)
+    if type(data) ~= 'table' then return end
+    local weaponHash = tonumber(data.weaponType)
+    if not weaponHash or weaponHash == 0 or meleeHashes[weaponHash] then return end
+    if cachedHasLicense(sender, 'weapon') then return end
+    CancelEvent()
+    local now = os.time()
+    if now - (LastWeaponWarning[sender] or 0) >= 5 then
+        LastWeaponWarning[sender] = now
+        notify(sender, 'Firearm damage blocked: you need a valid Firearm License.', 'error')
+    end
+end)
+
 function GrantLicense(source, licenseType, issuedByCharacterId)
     licenseType = tostring(licenseType or '')
     if not SunsetLicenses.Types[licenseType] then return false, 'Invalid license type.' end
     local cid = charId(source)
     if not cid then return false, 'Character not loaded.' end
     local paydays = currentPaydays(source)
-    local expires = paydays + (SunsetLicenses.PaydayExpiry or 200)
-    MySQL.insert.await([[
+    local expires = paydays + (SunsetLicenses.PaydayExpiry or 150)
+    local saved, result = pcall(MySQL.insert.await, [[
         INSERT INTO character_licenses (character_id, license_type, issued_at_payday, expires_at_payday, issued_by_character_id)
         VALUES (?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
@@ -99,9 +164,15 @@ function GrantLicense(source, licenseType, issuedByCharacterId)
             expires_at_payday = VALUES(expires_at_payday),
             issued_by_character_id = VALUES(issued_by_character_id)
     ]], { cid, licenseType, paydays, expires, issuedByCharacterId })
+    if not saved or result == nil then
+        print(('[sunset_licenses] Failed to persist %s for character %d: %s'):format(
+            licenseType, cid, tostring(result)))
+        return false, 'The license could not be saved. No license was issued; contact an administrator.'
+    end
     notify(source, ('%s issued — valid until payday #%d.'):format(
         SunsetLicenses.Types[licenseType].label, expires), 'success')
     TriggerClientEvent('sunset:licenses:refresh', source)
+    ServerLicenseCache[source] = nil
     return true
 end
 exports('GrantLicense', GrantLicense)
@@ -115,6 +186,7 @@ function RevokeLicense(source, licenseType)
         { cid, licenseType }
     )
     TriggerClientEvent('sunset:licenses:refresh', source)
+    ServerLicenseCache[source] = nil
     return true
 end
 exports('RevokeLicense', RevokeLicense)
@@ -150,6 +222,30 @@ local function canStartTest(source, licenseType)
     if ok and err ~= 'test' then
         return false, ('You already hold a valid %s.'):format(def.label)
     end
+    local facility = SunsetLicenses.Facilities[def.facility]
+    if not facility or not near(source, facility.marker, (facility.markerRadius or 3.0) + 2.0) then
+        return false, ('Stand at the %s marker to start this exam.'):format(
+            facility and facility.label or 'license school')
+    end
+    if def.instructorFaction then
+        local authorization = AuthorizedTests[source]
+        if not authorization or authorization.licenseType ~= licenseType
+            or authorization.expiresAt < os.time() then
+            AuthorizedTests[source] = nil
+            return false, ('An on-duty LSSI instructor must authorize your %s exam first.'):format(def.label)
+        end
+        local instructor = authorization.instructor
+        if not GetPlayerName(instructor) or not isInstructor(instructor) then
+            AuthorizedTests[source] = nil
+            return false, 'Your LSSI instructor is no longer available or on duty.'
+        end
+        local sourcePos, instructorPos = playerCoords(source), playerCoords(instructor)
+        if not sourcePos or not instructorPos
+            or #(sourcePos - instructorPos) > (SunsetLicenses.InstructorMaxDistance or 12.0)
+            or not near(instructor, facility.marker, (facility.markerRadius or 3.0) + 8.0) then
+            return false, 'Stay beside your LSSI instructor at the exam facility.'
+        end
+    end
     return true
 end
 
@@ -176,12 +272,26 @@ exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(sour
     if not ok then return nil, err end
     local theory = SunsetLicenses.Theory[licenseType]
     if not theory then return nil, 'No theory exam configured for this license.' end
+    local def = SunsetLicenses.Types[licenseType]
+    local authorization = AuthorizedTests[source]
     TestSessions[source] = {
         licenseType = licenseType,
         phase = 'theory',
         startedAt = os.time(),
+        instructor = authorization and authorization.instructor or nil,
+        issuerCharacterId = authorization and authorization.issuerCharacterId or nil,
     }
-    return theory
+    if def and def.instructorFaction then
+        local reportId = type(CreateLicenseExamReport) == 'function'
+            and CreateLicenseExamReport(source, TestSessions[source]) or nil
+        if not reportId then
+            TestSessions[source] = nil
+            AuthorizedTests[source] = nil
+            return nil, 'The supervised exam audit record could not be created. No test started; contact staff.'
+        end
+    end
+    AuthorizedTests[source] = nil
+    return sanitizedTheory(theory)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(source, licenseType, answers)
@@ -193,19 +303,29 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     local theory = SunsetLicenses.Theory[licenseType]
     if not theory then return nil, 'Invalid exam.' end
     answers = type(answers) == 'table' and answers or {}
+    local answerKey = SunsetLicenseTheoryAnswers and SunsetLicenseTheoryAnswers[licenseType]
+    if not answerKey then return nil, 'The server answer key is not configured for this exam.' end
     local score = 0
     for i, q in ipairs(theory.questions or {}) do
-        if tonumber(answers[i] or answers[tostring(i)]) == tonumber(q.correct) then
+        if tonumber(answers[i] or answers[tostring(i)]) == tonumber(answerKey[i]) then
             score = score + 1
         end
     end
     local need = tonumber(theory.passScore) or math.ceil(#(theory.questions or {}) * 0.75)
+    if type(RecordLicenseTheoryResult) == 'function' then
+        RecordLicenseTheoryResult(session, score, #(theory.questions or {}), score >= need)
+    end
     if score < need then
+        if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'failed') end
         TestSessions[source] = nil
         return nil, ('Theory failed (%d/%d). Study the rules and try again.'):format(score, #(theory.questions or {}))
     end
     session.phase = 'practical'
     session.theoryPassedAt = os.time()
+    session.practicalStartedAt = os.time()
+    session.lastCheckpoint = 0
+    session.allCheckpoints = false
+    session.practicalValidatedAt = nil
     local practical = SunsetLicenses.Practical[licenseType]
     local facilityKey = SunsetLicenses.Types[licenseType].facility
     local facility = facilityKey and SunsetLicenses.Facilities[facilityKey]
@@ -217,6 +337,9 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
 end)
 
 exports.sunset_core:RegisterCallback('sunset:license:abortTest', function(source)
+    local session = TestSessions[source]
+    if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
+    if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
     TestSessions[source] = nil
     TriggerClientEvent('sunset:licenses:testAbort', source)
     return true
@@ -225,22 +348,47 @@ end)
 exports.sunset_core:RegisterCallback('sunset:license:completePractical', function(source, licenseType)
     licenseType = tostring(licenseType or '')
     local session = TestSessions[source]
-    if not session or session.licenseType ~= licenseType or session.phase ~= 'practical' then
-        return nil, 'No active practical test to complete.'
+    if not session or session.licenseType ~= licenseType or session.phase ~= 'validated'
+        or not session.practicalValidatedAt then
+        return nil, 'The practical test has not been validated by the server.'
     end
+    if sessionTimedOut(session) or os.time() - session.practicalValidatedAt > 20 then
+        if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
+        if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
+        TestSessions[source] = nil
+        return nil, 'The practical result expired. Start the exam again.'
+    end
+    local def = SunsetLicenses.Types[licenseType]
+    if def and def.instructorFaction then
+        if not session.instructor or not GetPlayerName(session.instructor) or not isInstructor(session.instructor) then
+            if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
+            if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
+            TestSessions[source] = nil
+            return nil, 'Your LSSI instructor must remain online and on duty until the exam is completed.'
+        end
+    end
+    local candidateMistakes = tonumber(session.candidateMistakes) or 0
+    local failAt = tonumber(SunsetLicenses.CandidateFailMistakes) or 3.0
+    if def and def.instructorFaction and candidateMistakes >= failAt then
+        if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
+        if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'failed') end
+        TestSessions[source] = nil
+        notify(session.instructor, ('Candidate #%d failed the practical with %.1f/%.1f recorded mistakes.'):format(
+            source, candidateMistakes, failAt), 'warning')
+        return nil, ('Practical failed: the instructor recorded %.1f/%.1f mistakes. Ask LSSI management to review the report if needed.'):format(
+            candidateMistakes, failAt)
+    end
+    if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
     TestSessions[source] = nil
-    local issuer = charId(source)
+    local issuer = session.issuerCharacterId
     local ok, err = GrantLicense(source, licenseType, issuer)
-    if not ok then return nil, err end
+    if not ok then
+        if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
+        return nil, err
+    end
+    if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'passed') end
     TriggerClientEvent('sunset:licenses:testComplete', source, licenseType)
     return { licenseType = licenseType }
-end)
-
-RegisterNetEvent('sunset:licenses:registerTestVehicle', function(netId)
-    local src = source
-    local session = TestSessions[src]
-    if not session then return end
-    session.testVehicleNet = tonumber(netId)
 end)
 
 AddEventHandler('sunset:payday:processed', function(source)
@@ -257,39 +405,93 @@ AddEventHandler('sunset:payday:processed', function(source)
             )
             local def = SunsetLicenses.Types[row.license_type]
             notify(source, ('Your %s expired after %d paydays.'):format(
-                def and def.label or row.license_type, SunsetLicenses.PaydayExpiry or 200), 'warning')
+                def and def.label or row.license_type, SunsetLicenses.PaydayExpiry or 150), 'warning')
             TriggerClientEvent('sunset:licenses:refresh', source)
+            ServerLicenseCache[source] = nil
         end
     end
 end)
 
 AddEventHandler('playerDropped', function()
+    local droppedSource = source
+    local session = TestSessions[source]
+    if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
+    if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
     TestSessions[source] = nil
+    AuthorizedTests[source] = nil
+    ServerLicenseCache[source] = nil
+    LastWeaponWarning[source] = nil
+    for target, authorization in pairs(AuthorizedTests) do
+        if authorization.instructor == droppedSource then AuthorizedTests[target] = nil end
+    end
+    for target, activeSession in pairs(TestSessions) do
+        if activeSession.instructor == droppedSource then
+            if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(activeSession, 'aborted') end
+            if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(target) end
+            TestSessions[target] = nil
+            notify(target, 'Your LSSI exam ended because the supervising instructor disconnected.', 'error')
+            TriggerClientEvent('sunset:licenses:testAbort', target)
+        end
+    end
 end)
 
-RegisterCommand('issuelicense', function(source, args)
-    if source ~= 0 and not isInstructor(source) then
+function RunInstructorLicenseCommand(source, args)
+    if source == 0 then
+        print('[sunset_licenses] /issuelicense must be used in game by an LSSI instructor. Admins can use /agivelicense.')
+        return true
+    end
+    if not isInstructor(source) then
         notify(source, 'LSSI instructors on duty only.', 'error')
-        return
+        return true
     end
     local target = tonumber(args[1])
     local licenseType = string.lower(tostring(args[2] or ''))
     if not target or not GetPlayerName(target) then
         notify(source, 'Usage: /issuelicense [player id] [pilot|boat|weapon]', 'error')
-        return
+        return true
     end
     local def = SunsetLicenses.Types[licenseType]
     if not def or not def.instructorFaction then
-        notify(source, 'Instructors may issue: pilot, boat, weapon.', 'error')
-        return
+        notify(source, 'LSSI may conduct tests for: pilot, boat, weapon. Driving tests are self-service.', 'error')
+        return true
     end
-    local issuer = source ~= 0 and charId(source)
-    local ok, err = GrantLicense(target, licenseType, issuer)
-    if ok then
-        notify(source, ('Issued %s to player #%d.'):format(licenseType, target), 'success')
-    else
-        notify(source, err or 'Could not issue license.', 'error')
+    if target == source then
+        notify(source, 'You cannot conduct your own license test.', 'error')
+        return true
     end
+    local facility = SunsetLicenses.Facilities[def.facility]
+    local instructorPos, targetPos = playerCoords(source), playerCoords(target)
+    if not instructorPos or not targetPos
+        or #(instructorPos - targetPos) > (SunsetLicenses.InstructorMaxDistance or 12.0) then
+        notify(source, 'The candidate must be beside you.', 'error')
+        return true
+    end
+    if not facility or not near(source, facility.marker, (facility.markerRadius or 3.0) + 8.0)
+        or not near(target, facility.marker, (facility.markerRadius or 3.0) + 8.0) then
+        notify(source, ('You and the candidate must be at %s.'):format(
+            facility and facility.label or 'the exam facility'), 'error')
+        return true
+    end
+    local has, hasErr = HasLicense(target, licenseType)
+    if has and hasErr ~= 'test' then
+        notify(source, ('Player #%d already has a valid %s.'):format(target, def.label), 'error')
+        return true
+    end
+    AuthorizedTests[target] = {
+        licenseType = licenseType,
+        instructor = source,
+        issuerCharacterId = charId(source),
+        expiresAt = os.time() + (SunsetLicenses.InstructorAuthorizationSeconds or 300),
+    }
+    notify(source, ('Authorized %s exam for player #%d. They must press E at the marker within 5 minutes.'):format(
+        def.label, target), 'success')
+    notify(target, ('LSSI instructor #%d authorized your %s exam. Press E at this marker to begin.'):format(
+        source, def.label), 'success')
+    return true
+end
+
+RegisterCommand('issuelicense', function(source, args)
+    RunInstructorLicenseCommand(source, args or {})
 end, false)
 
 -- Used by tests.lua server validation

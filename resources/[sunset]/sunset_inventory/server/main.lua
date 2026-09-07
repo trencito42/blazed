@@ -1,4 +1,15 @@
 local Inventories = {}
+local LICENSE_EXEMPT_WEAPONS = {
+    WEAPON_UNARMED = true, WEAPON_KNIFE = true, WEAPON_SWITCHBLADE = true,
+    WEAPON_BAT = true, WEAPON_CROWBAR = true, WEAPON_FLASHLIGHT = true,
+    WEAPON_NIGHTSTICK = true, WEAPON_HAMMER = true, WEAPON_GOLFCLUB = true,
+    WEAPON_BOTTLE = true, WEAPON_DAGGER = true, WEAPON_HATCHET = true,
+    WEAPON_KNUCKLE = true, WEAPON_MACHETE = true, WEAPON_WRENCH = true,
+    WEAPON_POOLCUE = true, WEAPON_BATTLEAXE = true, WEAPON_STONE_HATCHET = true,
+    WEAPON_FIREEXTINGUISHER = true, WEAPON_PETROLCAN = true, WEAPON_HAZARDCAN = true,
+    WEAPON_FERTILIZERCAN = true, WEAPON_BALL = true, WEAPON_SNOWBALL = true,
+    GADGET_PARACHUTE = true,
+}
 
 local function emitClient(eventName, target, ...)
     target = tonumber(target)
@@ -94,6 +105,12 @@ end
 function AddItem(source, item, count, slot, metadata)
     local char = exports.sunset_core:GetCharacter(source)
     if not char or not Sunset.Items[item] then return false end
+    local itemDef = Sunset.Items[item]
+    local meleeWeapon = itemDef.weapon and LICENSE_EXEMPT_WEAPONS[string.upper(itemDef.weapon)]
+    if itemDef.weapon and not meleeWeapon and GetResourceState('sunset_licenses') == 'started' then
+        local allowed = exports.sunset_licenses:HasLicense(source, 'weapon')
+        if not allowed then return false end
+    end
     count = math.floor(count or 1)
     if count < 1 then return false end
 

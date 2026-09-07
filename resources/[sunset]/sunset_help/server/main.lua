@@ -89,7 +89,9 @@ local function buildFactionCategory(source, char)
     local entries = copyEntries(Sunset.GetFactionCommandsForGrade(factionId, grade, leader))
 
     if isOnDuty(source) then
-        entries[#entries + 1] = { cmd = '/r [message]', desc = 'Internal faction radio (same faction only)' }
+        if Sunset.IsEmergencyDepartment(factionId) then
+            entries[#entries + 1] = { cmd = '/r [message]', desc = 'Internal faction radio (same faction only)' }
+        end
         if Sunset.FactionTypeMatches(factionId, 'law_enforcement')
             or Sunset.FactionTypeMatches(factionId, 'ems')
             or Sunset.FactionTypeMatches(factionId, 'fire_rescue') then

@@ -24,9 +24,6 @@ exports.sunset_core:RegisterCallback('sunset:getDocuments', function(source, kin
     end
 
     local invLicenses = {}
-    if exports.sunset_inventory:HasItem(source, 'driver_license') then
-        invLicenses[#invLicenses + 1] = { license_type = 'driver', label = 'Driver License', issued_at = 'Inventory item', valid = true }
-    end
     if exports.sunset_inventory:HasItem(source, 'id_card') then
         invLicenses[#invLicenses + 1] = { license_type = 'id_card', label = 'ID Card', issued_at = 'Inventory item', valid = true }
     end

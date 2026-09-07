@@ -8,15 +8,23 @@
 </head>
 <body>
     <div id="quiz" class="hidden">
-        <header>
-            <h1 id="quiz-title">Theory Exam</h1>
-            <button id="quiz-close" type="button">✕</button>
-        </header>
-        <p id="quiz-intro" class="intro"></p>
-        <form id="quiz-form"></form>
-        <footer>
-            <button type="submit" form="quiz-form" class="primary">Submit answers</button>
-        </footer>
+        <div class="quiz-shell">
+            <header class="quiz-header">
+                <div>
+                    <h1 id="quiz-title">Theory Exam</h1>
+                    <p id="quiz-progress" class="quiz-progress">Question 1 / 4</p>
+                </div>
+                <button id="quiz-close" type="button" aria-label="Close">✕</button>
+            </header>
+            <p id="quiz-intro" class="quiz-intro"></p>
+            <div id="quiz-question" class="quiz-question"></div>
+            <div id="quiz-options" class="quiz-options"></div>
+            <footer class="quiz-footer">
+                <button type="button" id="quiz-prev" class="quiz-btn ghost hidden">Back</button>
+                <button type="button" id="quiz-next" class="quiz-btn primary hidden">Next</button>
+                <button type="button" id="quiz-submit" class="quiz-btn primary hidden">Submit exam</button>
+            </footer>
+        </div>
     </div>
     <script src="quiz.js"></script>
 </body>

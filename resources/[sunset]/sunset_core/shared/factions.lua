@@ -319,10 +319,22 @@ Sunset.Factions = {
         description = 'Los Santos Safety Institute — pilot, boat, and firearm licensing instructors.',
         society = 'lssi',
         duty = true,
-        hq = vector3(20.5, -1105.0, 29.8),
-        hqHint = '[E] LSSI HQ — instructors: toggle duty | issue pilot/boat/weapon licenses',
+        hq = vector3(219.05, -1390.18, 30.59),
+        hqHint = '[E] LSSI HQ — instructors: toggle duty | conduct pilot/boat/weapon tests',
         blip = { sprite = 498, color = 2, scale = 0.85 },
         marker = { 50, 200, 80 },
+        depot = {
+            label = 'LSSI Training Fleet',
+            coords = vector3(216.15, -1386.65, 30.58),
+            spawn = vector4(211.90, -1381.35, 30.58, 135.0),
+            platePrefix = 'LSSI',
+            vehicles = {
+                { model = 'asea', label = 'Instructor Sedan', minGrade = 0 },
+                { model = 'speedo', label = 'Training Equipment Van', minGrade = 1 },
+                { model = 'seminole', label = 'Field Training SUV', minGrade = 2 },
+                { model = 'schafter2', label = 'Senior Instructor Sedan', minGrade = 4 },
+            },
+        },
         grades = Sunset.BuildEducationGrades(),
         loadout = Sunset.BuildServiceLoadout('lssi'),
     },
@@ -399,7 +411,12 @@ Sunset.FactionCommandCatalog = {
     { perm = 'fare', cmd = '/fare [id] [amount]', desc = 'Charge a manual taxi fare' },
     { perm = 'sell', cmd = '/sellpouch', desc = 'Sell sealed pouches at HQ (Cartel)' },
     { perm = 'fence', cmd = '/fence', desc = 'Fence contraband at HQ (Syndicate)' },
-    { perm = 'issue_license', cmd = '/issuelicense [id] [pilot|boat|weapon]', desc = 'Grant license (LSSI instructor)' },
+    { perm = 'issue_license', cmd = '/issuelicense [id] [pilot|boat|weapon]', desc = 'Authorize a supervised exam at its facility' },
+    { perm = 'conduct_test', cmd = '/lssimark [id] [0.5|1] [reason]', desc = 'Record an observed candidate mistake during your exam' },
+    { perm = 'conduct_test', cmd = '/lssiunmark [id]', desc = 'Undo your last candidate mark during the active exam' },
+    { perm = 'review_license_tests', cmd = '/lssireviews [pending|all]', desc = 'Rank 5+: review completed instructor exams' },
+    { perm = 'review_license_tests', cmd = '/lssireport [report]', desc = 'Rank 5+: inspect route, marks and outcome before review' },
+    { perm = 'review_license_tests', cmd = '/lssireview [report] [mistakes] [approved|improve] [notes]', desc = 'Rank 5+: grade instructor procedure (0.5 steps)' },
     { perm = 'invite', cmd = '/finvite [id]', desc = 'Leader: invite an accepted applicant nearby' },
     { perm = 'promote', cmd = '/fpromote [id] [grade]', desc = 'Promote a faction member' },
 }
@@ -530,6 +547,9 @@ function Sunset.GetFactionCommandsForGrade(jobId, grade, isLeader)
     end
     if Sunset.HasFactionPerm(jobId, grade, 'fwarn') then
         list[#list + 1] = { cmd = '/fwarn [id] [reason]', desc = 'Issue faction warning' }
+    end
+    if jobId == 'lssi' and (grade or 0) >= 1 then
+        list[#list + 1] = { cmd = '/lssiperformance [server id?]', desc = 'View your instructor QA history; rank 5+ may inspect others' }
     end
     if Sunset.HasFactionPerm(jobId, grade, 'uninvite') then
         list[#list + 1] = { cmd = '/funinvite [id]', desc = 'Remove member from faction' }

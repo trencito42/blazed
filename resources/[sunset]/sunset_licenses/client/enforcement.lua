@@ -4,16 +4,6 @@ local function notify(msg)
     exports.sunset_ui:Notify(msg, 'error', 6000)
 end
 
-local function isOnDuty()
-    if GetResourceState('sunset_factions') ~= 'started' then return false end
-    local ok, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
-    return ok and onDuty == true
-end
-
-local function inTest()
-    return type(IsInLicenseTest) == 'function' and IsInLicenseTest()
-end
-
 local function licensed(licenseType)
     if type(HasLicense) ~= 'function' then return false end
     return HasLicense(licenseType) == true
@@ -23,7 +13,7 @@ CreateThread(function()
     while true do
         local sleep = 500
         local ped = PlayerPedId()
-        if IsPedInAnyVehicle(ped, false) and not isOnDuty() and not inTest() then
+        if IsPedInAnyVehicle(ped, false) then
             local veh = GetVehiclePedIsIn(ped, false)
             if GetPedInVehicleSeat(veh, -1) == ped then
                 local classId = GetVehicleClass(veh)

@@ -352,6 +352,20 @@ function FactionCore.auditLog(factionId, actorCharId, action, targetCharId, deta
     end)
 end
 
+function FactionCore.checkPromotionEligibility(factionId, characterId, newGrade)
+    if factionId ~= 'lssi' then return true end
+    if GetResourceState('sunset_licenses') ~= 'started' then
+        return false, 'LSSI promotion checks are unavailable because sunset_licenses is not running.'
+    end
+    local ok, allowed, reason = pcall(function()
+        return exports.sunset_licenses:AssessInstructorPromotion(characterId, newGrade)
+    end)
+    if not ok then
+        return false, 'LSSI promotion quality records could not be checked. Try again or inspect the license resource.'
+    end
+    return allowed == true, reason
+end
+
 function FactionCore.canManageMembers(source)
     local char = FactionCore.getChar(source)
     if not char then return false end

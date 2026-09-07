@@ -231,13 +231,19 @@ exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, t
     end
 
     local target = getChar(targetId)
-    local targetFaction, _ = target and getFactionOf(target)
+    local targetFaction, targetGrade
+    if target then targetFaction, targetGrade = getFactionOf(target) end
     if not target or targetFaction ~= myFaction then return nil, 'Target is not in your faction' end
 
     local faction = Sunset.Factions[myFaction]
     if not faction or not faction.grades[newGrade] then return nil, 'Invalid grade' end
     if newGrade >= (myGrade or 0) and source ~= targetId then
         return nil, 'You cannot promote to your rank or higher'
+    end
+
+    if newGrade > (tonumber(targetGrade) or 0) then
+        local eligible, eligibilityError = FactionCore.checkPromotionEligibility(myFaction, target.id, newGrade)
+        if not eligible then return nil, eligibilityError end
     end
 
     exports.sunset_core:SetFaction(targetId, myFaction, newGrade)

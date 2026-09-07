@@ -1,0 +1,105 @@
+#license-test-panel,
+.license-test-shell {
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    z-index: 45;
+    width: min(760px, 94vw);
+    pointer-events: none;
+    color: var(--sunset-text, #f6f2e9);
+    font-family: var(--sunset-body, 'Rajdhani', sans-serif);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
+    opacity: 0;
+    translate: 0 16px;
+    transition: opacity 0.2s ease, translate 0.2s ease;
+}
+
+#license-test-panel.is-visible,
+.license-test-shell.is-visible {
+    opacity: 1;
+    translate: 0 0;
+}
+
+#license-test-panel.hidden,
+.license-test-shell.hidden {
+    display: none;
+}
+
+.license-test__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px 14px;
+    border-bottom: 4px solid var(--lt-accent, rgba(255, 159, 67, 0.85));
+}
+
+.license-test__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.license-test__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #ff9f43;
+}
+
+.license-test__title-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.license-test__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.license-test__meta {
+    font-size: 0.82rem;
+    opacity: 0.75;
+}
+
+.license-test__message {
+    width: 100%;
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.license-test__key {
+    display: inline-block;
+    min-width: 1.35rem;
+    padding: 0 0.35rem;
+    border: 1px solid rgba(255, 159, 67, 0.65);
+    color: #ff9f43;
+    font-weight: 700;
+    text-align: center;
+}
+
+.license-test__progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+.license-test__progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff9f43, #ffb347);
+    transition: width 0.35s ease;
+}
+
+.state-driver .license-test__body { --lt-accent: rgba(255, 159, 67, 0.85); }
+.state-weapon .license-test__body { --lt-accent: rgba(120, 200, 120, 0.85); }
+.state-pilot .license-test__body { --lt-accent: rgba(100, 180, 255, 0.85); }
+.state-boat .license-test__body { --lt-accent: rgba(80, 200, 220, 0.85); }
+.state-warning .license-test__body { --lt-accent: rgba(255, 80, 80, 0.9); }
+.state-success .license-test__body { --lt-accent: rgba(80, 220, 120, 0.9); }

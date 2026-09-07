@@ -571,6 +571,15 @@ window.addEventListener('message', (event) => {
         case 'fishingHide':
             if (window.Fishing) Fishing.hide();
             break;
+        case 'licenseTestShow':
+            if (window.LicenseTestHud) LicenseTestHud.show(data || event.data.data);
+            break;
+        case 'licenseTestUpdate':
+            if (window.LicenseTestHud) LicenseTestHud.update(data || event.data.data);
+            break;
+        case 'licenseTestHide':
+            if (window.LicenseTestHud) LicenseTestHud.hide();
+            break;
         case 'radarShow':
             if (window.RadarHud) RadarHud.show(data || event.data.data);
             break;
@@ -797,9 +806,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.Panels?.showAuth({
             quickLogin: true,
             accounts: [
-                { username: 'trencito', characterName: 'Trencito Blaze', characterId: 1, hasPassword: true },
-                { username: 'stefan', characterName: 'Stefan Ionescu', characterId: 7, hasPassword: true },
-                { username: 'tester', characterName: 'Alex Pop', characterId: 12, hasPassword: true },
+                { username: 'trencito', characterName: 'Trencito Blaze', level: 32, cash: 106209, bank: 5316, hasPassword: true },
+                { username: 'stefan', characterName: 'Stefan Ionescu', level: 12, cash: 18450, bank: 42100, hasPassword: true },
+                { username: 'tester', characterName: 'Alex Pop', level: 4, cash: 2350, bank: 8900, hasPassword: true },
             ],
         });
     } else if (qa === 'spawn') {

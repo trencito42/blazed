@@ -149,6 +149,11 @@ end
 
 local function runRadioChat(source, args)
     if source == 0 then return end
+    local char, factionId = resolveFactionMember(source)
+    if not char then return end
+    if not isEmergencyDepartment(factionId) then
+        return FactionCore.notify(source, 'Faction radio (/r) is for LSPD, Sheriff, FIB, EMS, and LSFD — use /f instead.', 'error')
+    end
     sendFactionChat(source, 'r', args, function(src, c, senderFactionId)
         return memberInFaction(src, c, senderFactionId)
     end)

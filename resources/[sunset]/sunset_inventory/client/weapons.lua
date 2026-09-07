@@ -20,20 +20,22 @@ local MELEE_WEAPONS = {
     WEAPON_POOLCUE = true,
     WEAPON_BATTLEAXE = true,
     WEAPON_STONE_HATCHET = true,
+    WEAPON_FIREEXTINGUISHER = true,
+    WEAPON_PETROLCAN = true,
+    WEAPON_HAZARDCAN = true,
+    WEAPON_FERTILIZERCAN = true,
+    WEAPON_BALL = true,
+    WEAPON_SNOWBALL = true,
+    GADGET_PARACHUTE = true,
 }
 
-local function isOnDuty()
-    if GetResourceState('sunset_factions') ~= 'started' then return false end
-    local ok, onDuty = pcall(function()
-        return exports.sunset_factions:IsOnDuty()
-    end)
-    return ok and onDuty == true
-end
+local EXEMPT_WEAPON_HASHES = {}
+for name in pairs(MELEE_WEAPONS) do EXEMPT_WEAPON_HASHES[joaat(name)] = true end
 
 local function inWeaponTest()
     if GetResourceState('sunset_licenses') ~= 'started' then return false end
     local ok, active = pcall(function()
-        return exports.sunset_licenses:IsInLicenseTest()
+        return exports.sunset_licenses:IsInLicenseTest('weapon')
     end)
     return ok and active == true
 end
@@ -79,7 +81,7 @@ local function ensureUnarmed(ped)
 end
 
 local function mayCarryWeapon(itemName)
-    if isOnDuty() or inWeaponTest() then return true end
+    if inWeaponTest() then return true end
     if isFirearmItem(itemName) and not hasWeaponLicense() then
         return false
     end
@@ -87,8 +89,6 @@ local function mayCarryWeapon(itemName)
 end
 
 function SyncInventoryWeapons(items)
-    if isOnDuty() then return end
-
     local ped = PlayerPedId()
     clearSyncedWeapons(ped)
     ensureUnarmed(ped)
@@ -121,10 +121,6 @@ AddEventHandler('sunset:client:playerSpawned', function()
 end)
 
 RegisterNetEvent('sunset:client:dutyState', function(state)
-    if state then
-        clearSyncedWeapons(PlayerPedId())
-        return
-    end
     local data = Sunset.AwaitCallback('sunset:getInventory')
     if data and data.items then
         SyncInventoryWeapons(data.items)
@@ -142,7 +138,7 @@ end)
 
 CreateThread(function()
     while true do
-        if not isOnDuty() and not inWeaponTest() and not hasWeaponLicense() then
+        if not inWeaponTest() and not hasWeaponLicense() then
             local ped = PlayerPedId()
             for _, def in pairs(Sunset.Items or {}) do
                 if def.weapon and isFirearmWeapon(def.weapon) then
@@ -156,6 +152,10 @@ CreateThread(function()
             if HasPedGotWeapon(ped, testHash, false) then
                 RemoveWeaponFromPed(ped, testHash)
             end
+            local selected = GetSelectedPedWeapon(ped)
+            if selected ~= UNARMED and not EXEMPT_WEAPON_HASHES[selected] then
+                RemoveWeaponFromPed(ped, selected)
+            end
             SetCurrentPedWeapon(ped, UNARMED, true)
         end
         Wait(1500)
@@ -164,11 +164,9 @@ end)
 
 CreateThread(function()
     while true do
-        if not isOnDuty() then
-            local ped = PlayerPedId()
-            ensureUnarmed(ped)
-            SetPedCanSwitchWeapon(ped, true)
-        end
+        local ped = PlayerPedId()
+        ensureUnarmed(ped)
+        SetPedCanSwitchWeapon(ped, true)
         Wait(5000)
     end
 end)

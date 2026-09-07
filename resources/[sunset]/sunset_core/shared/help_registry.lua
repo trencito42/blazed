@@ -41,7 +41,8 @@ Sunset.HelpAdminDescriptions = {
     setpp = 'Alias for /setsc — set Blaze Points (premium points)',
     setrob = 'Set a player robbery points: /setrob [id] [value]',
     setjobstat = 'Set civilian job progress: /setjobstat [id] [job] [xp|level|tasks|earned] [value]',
-    givelicense = 'Grant a license: /givelicense [id] [driver|pilot|boat|weapon]',
+    givelicense = 'Admin: grant a license: /givelicense [id] [driver|pilot|boat|weapon]',
+    agivelicense = 'Admin: grant a license: /agivelicense [id] [driver|pilot|boat|weapon]',
     revokelicense = 'Revoke a license: /revokelicense [id] [driver|pilot|boat|weapon]',
 }
 
@@ -113,7 +114,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = '/declineclan', desc = 'Decline a pending clan invitation' },
     { cmd = '/f [message]', desc = 'Faction chat' },
     { cmd = '/fmotd [message?]', desc = 'Read faction MOTD; leaders may set it' },
-    { cmd = '/r [message]', desc = 'Faction radio (your department)' },
+    { cmd = '/r [message]', desc = 'Faction radio — LSPD, Sheriff, FIB, EMS, LSFD only (same faction)' },
     { cmd = '/d [message]', desc = 'Inter-agency department radio (LSPD, Sheriff, FIB, EMS, LSFD)' },
     { cmd = '/spy', desc = 'Admin: toggle spy on faction /f, /r, and /d traffic' },
     { cmd = '/service [type] [msg]', desc = 'Request taxi, medic, fire, or mechanic' },
@@ -165,6 +166,16 @@ Sunset.CommandUsage = {
     setstat = { usage = '/setstat [server id] [stat] [value]', minArgs = 3 },
     setrob = { usage = '/setrob [server id] [value]', minArgs = 2 },
     setjobstat = { usage = '/setjobstat [server id] [job] [stat] [value]', minArgs = 4 },
+    givelicense = { usage = '/givelicense [server id] [driver|pilot|boat|weapon]', minArgs = 2 },
+    agivelicense = { usage = '/agivelicense [server id] [driver|pilot|boat|weapon]', minArgs = 2 },
+    revokelicense = { usage = '/revokelicense [server id] [driver|pilot|boat|weapon]', minArgs = 2 },
+    issuelicense = { usage = '/issuelicense [server id] [pilot|boat|weapon]', minArgs = 2 },
+    lssireviews = { usage = '/lssireviews [pending|all]', minArgs = 0 },
+    lssireport = { usage = '/lssireport [report id]', minArgs = 1 },
+    lssireview = { usage = '/lssireview [report id] [mistakes: 0, 0.5, 1...] [approved|improve] [notes]', minArgs = 4 },
+    lssiperformance = { usage = '/lssiperformance [server id]', minArgs = 0 },
+    lssimark = { usage = '/lssimark [candidate id] [0.5|1] [observed mistake]', minArgs = 3 },
+    lssiunmark = { usage = '/lssiunmark [candidate id]', minArgs = 1 },
     me = { usage = '/me [action text]', minArgs = 1 },
     ['do'] = { usage = '/do [scene text]', minArgs = 1 },
     gov = { usage = '/gov [announcement]', minArgs = 1 },
@@ -255,6 +266,8 @@ for _, name in ipairs({
     'help', 'pass', 'missions', 'stats', 'inventory', 'phone', 'emotes', 'jobs', 'skills', 'fish',
     'firestart', 'firecalls', 'respawn', 'sethome', 'renthouse', 'unrent',
     'stabilize', 'heal', 'revive', 'rob', 'duty', 'fw', 'v', 'garage',
+    'lssireviews', 'lssireview', 'lssireport', 'lssiperformance',
+    'lssimark', 'lssiunmark',
 }) do
     markClientCommand(name)
 end

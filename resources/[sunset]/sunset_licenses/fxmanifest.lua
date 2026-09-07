@@ -14,6 +14,7 @@ shared_scripts {
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/main.lua',
+    'client/test_hud.lua',
     'client/tests.lua',
     'client/quiz.lua',
     'client/enforcement.lua',
@@ -21,8 +22,10 @@ client_scripts {
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    'server/theory_answers.lua',
     'server/main.lua',
     'server/tests.lua',
+    'server/reviews.lua',
     'server/admin.lua',
 }
 
@@ -64,4 +67,5 @@ server_exports {
     'RevokeLicense',
     'GetLicenses',
     'GetLicenseRows',
+    'AssessInstructorPromotion',
 }

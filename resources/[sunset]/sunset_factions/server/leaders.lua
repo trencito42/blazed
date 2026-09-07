@@ -181,7 +181,9 @@ exports.sunset_core:RegisterCallback('sunset:factionUninvite', function(source, 
         return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
     end
     local target = FactionCore.getChar(targetId)
-    if not target or select(1, FactionCore.getFactionOf(target)) ~= factionId then
+    local targetFaction, targetGrade
+    if target then targetFaction, targetGrade = FactionCore.getFactionOf(target) end
+    if not target or targetFaction ~= factionId then
         return nil, 'Target is not in your faction'
     end
 
@@ -214,6 +216,11 @@ exports.sunset_core:RegisterCallback('sunset:factionGiveRank', function(source, 
     if not faction or not faction.grades[newGrade] then return nil, 'Invalid grade' end
     if newGrade >= (myGrade or 0) and source ~= targetId and not FactionCore.isFactionLeader(char.id, factionId) then
         return nil, 'You cannot set rank to your level or higher'
+    end
+
+    if newGrade > (tonumber(targetGrade) or 0) then
+        local eligible, eligibilityError = FactionCore.checkPromotionEligibility(factionId, target.id, newGrade)
+        if not eligible then return nil, eligibilityError end
     end
 
     exports.sunset_core:SetFaction(targetId, factionId, newGrade)

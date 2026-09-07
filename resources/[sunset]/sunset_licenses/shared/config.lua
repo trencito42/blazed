@@ -1,6 +1,21 @@
 SunsetLicenses = SunsetLicenses or {}
 
+-- Licenses expire after this many completed paydays, matching the RPG progression loop.
 SunsetLicenses.PaydayExpiry = 200
+SunsetLicenses.InstructorAuthorizationSeconds = 300
+SunsetLicenses.InstructorMaxDistance = 12.0
+SunsetLicenses.CandidateFailMistakes = 3.0
+
+-- LSSI promotions use completed management reviews, not raw test count. This keeps
+-- senior ranks tied to teaching quality and can be tuned without changing code.
+SunsetLicenses.InstructorPromotionRequirements = {
+    [2] = { reviewed = 5, maxAverageMistakes = 1.5 },
+    [3] = { reviewed = 10, maxAverageMistakes = 1.0 },
+    [4] = { reviewed = 18, maxAverageMistakes = 0.75 },
+    [5] = { reviewed = 25, maxAverageMistakes = 0.5 },
+    [6] = { reviewed = 35, maxAverageMistakes = 0.5 },
+    [7] = { reviewed = 50, maxAverageMistakes = 0.25 },
+}
 
 SunsetLicenses.Types = {
     driver = {
@@ -60,9 +75,9 @@ SunsetLicenses.Facilities = {
         testVehicle = 'dinghy',
     },
     range = {
-        label = 'Weapon Range — LSSI',
+        label = 'LSSI Weapon Range — Sandy Shores',
         blip = { sprite = 313, color = 2, scale = 0.85 },
-        marker = vector3(13.2, -1097.5, 29.8),
+        marker = vector3(1690.5, 3748.8, 34.7),
         markerRadius = 2.5,
         license = 'weapon',
     },
@@ -87,6 +102,13 @@ SunsetLicenses.MeleeWeapons = {
     WEAPON_POOLCUE = true,
     WEAPON_BATTLEAXE = true,
     WEAPON_STONE_HATCHET = true,
+    WEAPON_FIREEXTINGUISHER = true,
+    WEAPON_PETROLCAN = true,
+    WEAPON_HAZARDCAN = true,
+    WEAPON_FERTILIZERCAN = true,
+    WEAPON_BALL = true,
+    WEAPON_SNOWBALL = true,
+    GADGET_PARACHUTE = true,
 }
 
 function SunsetLicenses.isFirearmWeapon(weaponName)
@@ -115,22 +137,18 @@ SunsetLicenses.Theory = {
             {
                 q = 'What should you do at a red traffic light?',
                 options = { 'Speed through if clear', 'Stop and wait for green', 'Honk and go', 'Reverse' },
-                correct = 2,
             },
             {
                 q = 'When may you use your phone while driving?',
                 options = { 'Never while the vehicle is moving', 'At any time', 'Only on highways', 'Only at night' },
-                correct = 1,
             },
             {
                 q = 'Who has priority at a pedestrian crossing?',
                 options = { 'The vehicle', 'Pedestrians on the crossing', 'Whoever is faster', 'Emergency vehicles only' },
-                correct = 2,
             },
             {
                 q = 'What does a solid double yellow line mean?',
                 options = { 'Pass freely', 'No passing / stay in lane', 'Parking allowed', 'U-turn required' },
-                correct = 2,
             },
         },
     },
@@ -142,22 +160,18 @@ SunsetLicenses.Theory = {
             {
                 q = 'Before takeoff you must:',
                 options = { 'Check fuel and controls', 'Skip preflight', 'Take off immediately', 'Land first' },
-                correct = 1,
             },
             {
                 q = 'If you lose engine power you should:',
                 options = { 'Panic and bail', 'Attempt a controlled landing', 'Fly upside down', 'Increase throttle only' },
-                correct = 2,
             },
             {
                 q = 'Helicopter yaw is controlled mainly by:',
                 options = { 'Rudder pedals / anti-torque', 'Brakes', 'Horn', 'Seatbelt' },
-                correct = 1,
             },
             {
                 q = 'After landing you must:',
                 options = { 'Leave engine running', 'Shut down engine safely', 'Take off again', 'Abandon aircraft' },
-                correct = 2,
             },
         },
     },
@@ -169,22 +183,18 @@ SunsetLicenses.Theory = {
             {
                 q = 'Near swimmers you should:',
                 options = { 'Speed up', 'Slow down and keep distance', 'Rev engine', 'Ignore them' },
-                correct = 2,
             },
             {
                 q = 'At night boats need:',
                 options = { 'No lights', 'Proper navigation lights', 'Only horn', 'Flares only' },
-                correct = 2,
             },
             {
                 q = 'Before starting the engine:',
                 options = { 'Check fuel and area is clear', 'Jump in water', 'Speed away', 'Close eyes' },
-                correct = 1,
             },
             {
                 q = 'Returning to dock you should:',
                 options = { 'Ram the pier', 'Approach slowly', 'Full throttle', 'Abandon boat' },
-                correct = 2,
             },
         },
     },
@@ -196,22 +206,18 @@ SunsetLicenses.Theory = {
             {
                 q = 'First rule of firearm safety:',
                 options = { 'Always treat as loaded', 'Point at friends', 'Keep finger on trigger', 'Ignore surroundings' },
-                correct = 1,
             },
             {
                 q = 'You may discharge only:',
                 options = { 'Anywhere in the city', 'At authorized range targets', 'At vehicles', 'At buildings' },
-                correct = 2,
             },
             {
                 q = 'Without a license you may carry:',
                 options = { 'Any rifle', 'Melee tools only (no firearms)', 'Explosives', 'Heavy MG' },
-                correct = 2,
             },
             {
                 q = 'After the practical you must:',
                 options = { 'Keep the test weapon', 'Holster / clear and end test', 'Sell the gun', 'Shoot in town' },
-                correct = 2,
             },
         },
     },
@@ -220,18 +226,59 @@ SunsetLicenses.Theory = {
 SunsetLicenses.Practical = {
     driver = {
         vehicle = 'blista',
-        spawn = vector4(222.5, -1388.2, 30.58, 270.0),
-        checkpointRadius = 6.0,
-        maxTimeSec = 420,
-        checkpoints = {
-            vector3(250.0, -1388.0, 30.5),
-            vector3(280.0, -1350.0, 30.5),
-            vector3(310.0, -1388.0, 30.5),
-            vector3(280.0, -1420.0, 30.5),
-            vector3(240.0, -1388.0, 30.5),
+        spawn = vector4(216.57, -1381.31, 30.38, 271.30),
+        spawns = {
+            vector4(216.57, -1381.31, 30.38, 271.30),
+            vector4(218.75, -1384.64, 30.39, 271.85),
+            vector4(222.47, -1387.95, 30.37, 267.42),
         },
-        finish = vector3(222.5, -1388.2, 30.58),
+        departGate = vector4(220.96, -1406.25, 29.33, 145.74),
+        gateRadius = 10.0,
+        engineOffOnSpawn = true,
+        maxCollisions = 3,
+        briefing = {
+            {
+                title = 'Driving School',
+                message = 'Welcome to Driving School. Listen carefully — we will get you on the road safely.',
+            },
+            {
+                message = "Let's get on the road. Press 2 to start the engine.",
+                require = 'engine_on',
+            },
+            {
+                message = 'Buckle up — press K to fasten your seatbelt.',
+                require = 'seatbelt',
+            },
+            {
+                message = 'Press H to set your headlights for traffic.',
+                require = 'lights',
+            },
+            {
+                message = 'Exit through the DMV gate and follow the route markers.',
+                require = 'depart',
+            },
+        },
+        checkpointRadius = 10.0,
+        maxTimeSec = 1200,
+        checkpoints = {
+            vector3(184.23, -1396.56, 29.08),
+            vector3(219.33, -1147.71, 29.16),
+            vector3(284.90, -877.49, 29.11),
+            vector3(771.18, -15.32, 61.75),
+            vector3(1129.63, 366.75, 91.29),
+            vector3(855.23, 22.28, 78.91),
+            vector3(979.01, -175.79, 72.55),
+            vector3(1189.87, -442.33, 66.75),
+            vector3(1194.34, -712.68, 59.49),
+            vector3(1234.10, -1323.58, 34.74),
+            vector3(735.79, -1432.23, 30.63),
+            vector3(445.57, -1429.79, 29.17),
+            vector3(227.32, -1424.06, 29.09),
+            vector3(243.88, -1401.63, 30.40),
+        },
+        finish = vector3(281.51, -1353.65, 31.76),
         finishRadius = 8.0,
+        requireEngineOff = true,
     },
     pilot = {
         checkpointRadius = 35.0,
@@ -265,14 +312,27 @@ SunsetLicenses.Practical = {
         targetsRequired = 5,
         targetRadius = 1.2,
         maxTimeSec = 300,
-        targets = {
-            vector4(15.5, -1083.2, 29.8, 180.0),
-            vector4(18.0, -1083.2, 29.8, 180.0),
-            vector4(20.5, -1083.2, 29.8, 180.0),
-            vector4(15.5, -1086.0, 29.8, 180.0),
-            vector4(20.5, -1086.0, 29.8, 180.0),
+        briefing = {
+            {
+                title = 'LSSI Firearms Range',
+                message = 'Welcome to the LSSI range. Treat every weapon as loaded and keep the muzzle downrange.',
+            },
+            {
+                message = 'Step to the firing line. Press E when you are ready to receive your training pistol.',
+                require = 'ready',
+            },
+            {
+                message = 'Hit every marked target, then return to the booth to finish.',
+            },
         },
-        zoneCenter = vector3(16.5, -1094.0, 29.8),
+        targets = {
+            vector4(1693.5, 3762.0, 34.7, 270.0),
+            vector4(1696.0, 3762.0, 34.7, 270.0),
+            vector4(1698.5, 3762.0, 34.7, 270.0),
+            vector4(1693.5, 3759.0, 34.7, 270.0),
+            vector4(1698.5, 3759.0, 34.7, 270.0),
+        },
+        zoneCenter = vector3(1696.0, 3760.5, 34.7),
         zoneRadius = 22.0,
     },
 }
