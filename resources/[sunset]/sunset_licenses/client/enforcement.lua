@@ -11,11 +11,12 @@ local function isOnDuty()
 end
 
 local function inTest()
-    if GetResourceState('sunset_licenses') ~= 'started' then return false end
-    local ok, active = pcall(function() return exports.sunset_licenses:IsInLicenseTest() end)
-    if ok and active then return true end
-    ok, active = pcall(function() return exports.sunset_licenses:IsInLocalTest() end)
-    return ok and active == true
+    return type(IsInLicenseTest) == 'function' and IsInLicenseTest()
+end
+
+local function licensed(licenseType)
+    if type(HasLicense) ~= 'function' then return false end
+    return HasLicense(licenseType) == true
 end
 
 CreateThread(function()
@@ -29,10 +30,7 @@ CreateThread(function()
                 local licenseType = SunsetLicenses.vehicleClassForLicense(classId)
                 if licenseType then
                     sleep = 0
-                    local ok, reason = pcall(function()
-                        return exports.sunset_licenses:HasLicense(licenseType)
-                    end)
-                    if not ok or reason == false then
+                    if not licensed(licenseType) then
                         SetVehicleEngineOn(veh, false, true, true)
                         DisableControlAction(0, 71, true)
                         DisableControlAction(0, 72, true)

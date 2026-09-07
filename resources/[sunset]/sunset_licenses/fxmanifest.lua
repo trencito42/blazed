@@ -14,9 +14,9 @@ shared_scripts {
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/main.lua',
-    'client/enforcement.lua',
     'client/tests.lua',
     'client/quiz.lua',
+    'client/enforcement.lua',
 }
 
 server_scripts {

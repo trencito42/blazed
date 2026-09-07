@@ -1,5 +1,7 @@
 local blips = {}
 local activeTest = nil
+local licenseCache = {}
+local cacheAt = 0
 
 local function notify(msg, kind)
     exports.sunset_ui:Notify(msg, kind or 'info', 7000)
@@ -25,6 +27,25 @@ local function setupBlips()
         end
     end
 end
+
+function HasLicense(licenseType)
+    local now = GetGameTimer()
+    if licenseCache[licenseType] ~= nil and (now - cacheAt) < 30000 then
+        return licenseCache[licenseType]
+    end
+    local ok = Sunset.AwaitCallback('sunset:license:has', licenseType)
+    licenseCache[licenseType] = ok == true
+    cacheAt = now
+    return licenseCache[licenseType]
+end
+
+function IsInLicenseTest()
+    return activeTest ~= nil
+end
+
+exports('HasLicense', HasLicense)
+exports('IsInLicenseTest', IsInLicenseTest)
+exports('IsInLocalTest', IsInLicenseTest)
 
 local function startAtFacility(facility)
     if activeTest then
@@ -82,31 +103,9 @@ RegisterNetEvent('sunset:licenses:testComplete', function()
     CleanupPracticalTest()
 end)
 
-local licenseCache = {}
-local cacheAt = 0
-
 RegisterNetEvent('sunset:licenses:refresh', function()
     licenseCache = {}
 end)
-
-function HasLicense(licenseType)
-    local now = GetGameTimer()
-    if licenseCache[licenseType] ~= nil and (now - cacheAt) < 30000 then
-        return licenseCache[licenseType]
-    end
-    local ok = Sunset.AwaitCallback('sunset:license:has', licenseType)
-    licenseCache[licenseType] = ok == true
-    cacheAt = now
-    return licenseCache[licenseType]
-end
-
-function IsInLicenseTest()
-    return activeTest ~= nil
-end
-
-exports('HasLicense', HasLicense)
-exports('IsInLicenseTest', IsInLicenseTest)
-exports('IsInLocalTest', IsInLicenseTest)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
