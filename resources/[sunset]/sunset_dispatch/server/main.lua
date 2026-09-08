@@ -135,4 +135,57 @@ exports('IsProviderForType', function(source, callType)
     return ServiceCore.isProviderForType(source, callType)
 end)
 
+exports.sunset_core:RegisterCallback('sunset:dispatch:call112', function(source, category, description, street, area, coords)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character loaded' end
+
+    category = tostring(category or 'emergency')
+    description = tostring(description or ''):gsub('^%s*(.-)%s*$', '%1')
+    if description == '' then description = 'Citizen reported 112 emergency' end
+
+    local ped = GetPlayerPed(source)
+    local pCoords = (ped and ped ~= 0) and GetEntityCoords(ped) or vector3(0, 0, 0)
+    if type(coords) == 'table' and tonumber(coords.x) then
+        pCoords = vector3(tonumber(coords.x), tonumber(coords.y), tonumber(coords.z))
+    end
+
+    local metadata = {
+        emergency = '112',
+        category = category,
+        street = street or 'Unknown street',
+        area = area or 'Los Santos',
+        callerPhone = char.phone_number or 'Hidden',
+        callerName = (char.firstname or '') .. ' ' .. (char.lastname or ''),
+        timestamp = os.time(),
+    }
+
+    local callType = 'police'
+    if category == 'medical' then callType = 'medic'
+    elseif category == 'fire' then callType = 'fire' end
+
+    local call, err = ServiceCore.createServiceCall(source, callType, pCoords, metadata, description)
+    if not call then return nil, err end
+
+    -- Broadcast alert to all active emergency responders
+    for _, id in ipairs(GetPlayers()) do
+        local officerSrc = tonumber(id)
+        if officerSrc and (ServiceCore.isProviderForType(officerSrc, 'police') or ServiceCore.isProviderForType(officerSrc, callType)) then
+            TriggerClientEvent('sunset:dispatch:112CallAlert', officerSrc, {
+                callId = call.id,
+                callType = callType,
+                category = category,
+                street = metadata.street,
+                area = metadata.area,
+                caller = metadata.callerName,
+                phone = metadata.callerPhone,
+                description = description,
+                coords = { x = pCoords.x, y = pCoords.y, z = pCoords.z },
+            })
+        end
+    end
+
+    return { ok = true, callId = call.id, street = metadata.street, area = metadata.area }
+end)
+
 print('[sunset_dispatch] exports and callbacks ready')
+

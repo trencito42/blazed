@@ -4,6 +4,8 @@ local WantedOnline = {}
 local JailedOnline = {}
 local RadarSessions = {}
 local DeathCapturePending = {}
+local UnitStatuses = {}
+local Bolos = {}
 
 local function wantedStarSeconds()
     return math.max(60, math.floor(tonumber(Sunset.Police and Sunset.Police.wantedStarSeconds) or 900))
@@ -1100,52 +1102,447 @@ exports.sunset_core:RegisterCallback('sunset:policeUnjail', function(source, tar
     return true
 end)
 
-exports.sunset_core:RegisterCallback('sunset:policeMdcLookup', function(source, targetId)
+local function findOnlineSourceByCharacterId(characterId)
+    characterId = tonumber(characterId)
+    if not characterId then return nil end
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local c = FactionCore.getChar(src)
+        if c and tonumber(c.id) == characterId then
+            return src
+        end
+    end
+    return nil
+end
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    UnitStatuses[src] = nil
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcData', function(source)
     if not FactionCore.hasPerm(source, 'mdc') then
-        return { error = FactionCore.accessError(source, 'mdc', 'search the MDC', 'law_enforcement') }
+        return nil, FactionCore.accessError(source, 'mdc', 'access the MDT', 'law_enforcement')
     end
 
-    targetId = tonumber(targetId)
-    if not targetId or not GetPlayerName(targetId) then
-        return { error = 'Player not online — search by server ID' }
+    local char = FactionCore.getChar(source)
+    local factionId = char and select(1, FactionCore.getFactionOf(char)) or 'police'
+    local _, grade = FactionCore.getFactionOf(char)
+    local gradeInfo = factionId and Sunset.GetFactionGrade and Sunset.GetFactionGrade(factionId, grade)
+    local factionObj = Sunset.Factions and Sunset.Factions[factionId]
+
+    local deptLabel = 'Los Santos Police Department'
+    local shortDept = 'LSPD'
+    if factionId == 'sheriff' then
+        deptLabel = "San Andreas Sheriff's Department"
+        shortDept = 'SASD'
+    elseif factionId == 'fib' then
+        deptLabel = 'Federal Investigation Bureau'
+        shortDept = 'FIB'
     end
 
-    local char = FactionCore.getChar(targetId)
-    if not char then return { error = 'No character loaded' } end
+    local callsign = ('%s-%02d'):format(shortDept:sub(1, 1) .. '-UNIT', source)
+    local officerInfo = {
+        id = source,
+        charId = char and char.id or 0,
+        name = exports.sunset_core:GetPlayerDisplayName(source),
+        department = factionId,
+        departmentLabel = deptLabel,
+        shortDept = shortDept,
+        rank = (gradeInfo and gradeInfo.label) or 'Officer',
+        callsign = callsign,
+        status = UnitStatuses[source] or '10-8',
+    }
 
-    local wanted = WantedOnline[targetId]
-    local jailed = JailedOnline[targetId]
+    -- Active 112 & Police Calls
+    local activeCalls = {}
+    if GetResourceState('sunset_dispatch') == 'started' then
+        local calls = exports.sunset_dispatch:GetActiveCalls() or {}
+        for _, c in ipairs(calls) do
+            if c.callType == 'police' or c.callType == 'police_backup' or (c.metadata and c.metadata.emergency == '112') then
+                local meta = c.metadata or {}
+                activeCalls[#activeCalls + 1] = {
+                    id = c.id,
+                    callType = c.callType,
+                    status = c.status,
+                    callerName = c.callerName or 'Citizen',
+                    callerPhone = meta.callerPhone or 'N/A',
+                    category = meta.category or (c.callType == 'police_backup' and 'Officer Backup' or 'Emergency'),
+                    street = meta.street or 'Unknown Location',
+                    area = meta.area or 'Los Santos',
+                    description = c.description or 'Emergency reported',
+                    coords = c.coords or { x = 0, y = 0, z = 0 },
+                    createdAt = c.createdAt or os.time(),
+                    responderName = c.responderName,
+                    isResponder = char and char.id == c.responderCharacterId,
+                }
+            end
+        end
+    end
+
+    -- Active Wanted List
+    local wanted = buildWantedListRows()
+
+    -- Online Law Enforcement Units
+    local units = {}
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src and FactionCore.isOnDuty(src) and FactionCore.isLawEnforcementMember(src) then
+            local uChar = FactionCore.getChar(src)
+            local uFactionId = uChar and select(1, FactionCore.getFactionOf(uChar)) or 'police'
+            local _, uGrade = FactionCore.getFactionOf(uChar)
+            local uGradeInfo = uFactionId and Sunset.GetFactionGrade and Sunset.GetFactionGrade(uFactionId, uGrade)
+            local uShort = uFactionId == 'sheriff' and 'SASD' or (uFactionId == 'fib' and 'FIB' or 'LSPD')
+            units[#units + 1] = {
+                id = src,
+                name = exports.sunset_core:GetPlayerDisplayName(src),
+                department = uFactionId,
+                shortDept = uShort,
+                rank = (uGradeInfo and uGradeInfo.label) or 'Officer',
+                status = UnitStatuses[src] or '10-8',
+                isMe = src == source,
+            }
+        end
+    end
+
+    -- Active BOLOs
+    local activeBolos = {}
+    for _, b in pairs(Bolos) do
+        activeBolos[#activeBolos + 1] = b
+    end
+    table.sort(activeBolos, function(a, b) return (a.createdAt or 0) > (b.createdAt or 0) end)
+
+    return {
+        officer = officerInfo,
+        calls = activeCalls,
+        wanted = wanted,
+        units = units,
+        bolos = activeBolos,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcLookup', function(source, query)
+    if not FactionCore.hasPerm(source, 'mdc') then
+        return { error = FactionCore.accessError(source, 'mdc', 'search the MDT', 'law_enforcement') }
+    end
+
+    query = tostring(query or ''):gsub('^%s*(.-)%s*$', '%1')
+    if query == '' then
+        return { error = 'Enter a citizen name, server ID, or citizen ID to search.' }
+    end
+
+    local targetChar = nil
+    local onlineSrc = nil
+    local num = tonumber(query)
+
+    -- If numeric: first try online server ID
+    if num and num > 0 and num <= 256 and GetPlayerName(num) then
+        local c = FactionCore.getChar(num)
+        if c then
+            targetChar = c
+            onlineSrc = num
+        end
+    end
+
+    -- If not found by server ID, try character ID
+    if not targetChar and num and num > 0 then
+        local row = MySQL.single.await('SELECT * FROM characters WHERE id = ?', { num })
+        if row then
+            targetChar = row
+            onlineSrc = findOnlineSourceByCharacterId(row.id)
+        end
+    end
+
+    -- If not found yet, try searching by name
+    if not targetChar then
+        local namePattern = '%' .. query .. '%'
+        local rows = MySQL.query.await([[
+            SELECT * FROM characters
+            WHERE CONCAT(firstname, ' ', lastname) LIKE ?
+               OR firstname LIKE ?
+               OR lastname LIKE ?
+            ORDER BY id DESC LIMIT 5
+        ]], { namePattern, namePattern, namePattern }) or {}
+
+        if #rows > 0 then
+            targetChar = rows[1]
+            onlineSrc = findOnlineSourceByCharacterId(targetChar.id)
+        end
+    end
+
+    if not targetChar then
+        return { error = ('No citizen record found matching "%s".'):format(query) }
+    end
+
+    local charId = targetChar.id
+    local meta = type(targetChar.metadata) == 'table' and targetChar.metadata or (type(targetChar.metadata) == 'string' and json.decode(targetChar.metadata) or {})
+    local phone = targetChar.phone_number or meta.phone or ('555-%04d'):format(charId)
+    local fullName = ('%s %s'):format(targetChar.firstname or '', targetChar.lastname or ''):gsub('^%s*(.-)%s*$', '%1')
+
+    -- Check Wanted
+    local isWanted = false
+    local wantedLevel = 0
+    local wantedReason = ''
+    local wantedSurrenderable = true
+    if onlineSrc and WantedOnline[onlineSrc] then
+        isWanted = true
+        wantedLevel = WantedOnline[onlineSrc].level or 1
+        wantedReason = WantedOnline[onlineSrc].reason or 'Active Wanted'
+        wantedSurrenderable = WantedOnline[onlineSrc].surrenderable ~= false
+    end
+
+    -- Past wanted records from MySQL
+    local wantedHistory = MySQL.query.await([[
+        SELECT level, reason_label, surrenderable, active, created_at
+        FROM wanted_records
+        WHERE character_id = ?
+        ORDER BY id DESC LIMIT 10
+    ]], { charId }) or {}
+
+    local wantedRows = {}
+    for _, w in ipairs(wantedHistory) do
+        wantedRows[#wantedRows + 1] = {
+            level = w.level,
+            reason = w.reason_label,
+            surrenderable = w.surrenderable == 1 or w.surrenderable == true,
+            active = w.active == 1 or w.active == true,
+            date = w.created_at and tostring(w.created_at):sub(1, 16) or '',
+        }
+        if w.active == 1 and not isWanted then
+            isWanted = true
+            wantedLevel = w.level
+            wantedReason = w.reason_label
+            wantedSurrenderable = w.surrenderable == 1
+        end
+    end
+
+    -- Jail status
+    local isJailed = false
+    local jailMinutesRemaining = 0
+    if onlineSrc and JailedOnline[onlineSrc] then
+        isJailed = true
+        jailMinutesRemaining = math.max(1, math.ceil((JailedOnline[onlineSrc].releaseAt - os.time()) / 60))
+    end
+
+    -- Cazier (past convictions and jail sentences)
+    local sentences = MySQL.query.await([[
+        SELECT id, reason, duration_minutes, status, created_at, released_at
+        FROM jail_sentences
+        WHERE character_id = ?
+        ORDER BY id DESC LIMIT 15
+    ]], { charId }) or {}
+
+    local cazierRows = {}
+    for _, s in ipairs(sentences) do
+        cazierRows[#cazierRows + 1] = {
+            id = s.id,
+            reason = s.reason or 'Sentence',
+            duration = s.duration_minutes,
+            status = s.status or 'served',
+            date = s.created_at and tostring(s.created_at):sub(1, 16) or '',
+        }
+        if s.status == 'active' then
+            isJailed = true
+        end
+    end
+
+    -- Unpaid fines and tickets history
     local unpaid = MySQL.scalar.await(
         'SELECT COALESCE(SUM(amount), 0) FROM tickets WHERE target_character_id = ? AND paid = 0',
-        { char.id }
+        { charId }
     ) or 0
 
-    local charges = MySQL.query.await([[
-        SELECT reason, amount, created_at FROM tickets
+    local tickets = MySQL.query.await([[
+        SELECT id, amount, reason, reason_code, paid, paid_at, created_at
+        FROM tickets
         WHERE target_character_id = ?
-        ORDER BY created_at DESC LIMIT 8
-    ]], { char.id }) or {}
+        ORDER BY id DESC LIMIT 15
+    ]], { charId }) or {}
 
-    local chargeRows = {}
-    for _, row in ipairs(charges) do
-        chargeRows[#chargeRows + 1] = {
-            reason = row.reason,
-            amount = row.amount,
-            date = row.created_at and tostring(row.created_at):sub(1, 10) or '',
+    local ticketRows = {}
+    for _, t in ipairs(tickets) do
+        ticketRows[#ticketRows + 1] = {
+            id = t.id,
+            amount = t.amount,
+            reason = t.reason,
+            violationCode = t.reason_code,
+            paid = t.paid == 1 or t.paid == true,
+            date = t.created_at and tostring(t.created_at):sub(1, 16) or '',
         }
     end
 
+    -- Registered Personal Vehicles
+    local vehicles = MySQL.query.await([[
+        SELECT id, plate, model, stored, garage, fuel
+        FROM vehicles
+        WHERE character_id = ?
+        ORDER BY id DESC LIMIT 15
+    ]], { charId }) or {}
+
+    local vehicleRows = {}
+    for _, v in ipairs(vehicles) do
+        local plateClean = tostring(v.plate):upper():gsub('^%s*(.-)%s*$', '%1')
+        local bolo = Bolos[plateClean]
+        vehicleRows[#vehicleRows + 1] = {
+            id = v.id,
+            plate = plateClean,
+            model = v.model,
+            stored = v.stored == 1 or v.stored == true,
+            garage = v.garage or 'legion',
+            fuel = math.floor(tonumber(v.fuel) or 100),
+            bolo = bolo ~= nil,
+            boloReason = bolo and bolo.reason or nil,
+        }
+    end
+
+    -- Character Licenses
+    local licenses = MySQL.query.await([[
+        SELECT license_type, issued_at
+        FROM character_licenses
+        WHERE character_id = ?
+    ]], { charId }) or {}
+
+    local licenseRows = {}
+    for _, lic in ipairs(licenses) do
+        licenseRows[#licenseRows + 1] = {
+            type = lic.license_type,
+            issuedAt = lic.issued_at and tostring(lic.issued_at):sub(1, 10) or '',
+        }
+    end
+
+    -- Person BOLO check
+    local personBolo = Bolos[fullName:upper()] or Bolos[tostring(charId)]
+
     return {
-        id = targetId,
-        name = exports.sunset_core:GetPlayerDisplayName(targetId),
-        wanted = wanted ~= nil,
-        wantedLevel = wanted and wanted.level or 0,
-        wantedReason = wanted and wanted.reason or '',
-        jailed = jailed ~= nil,
-        jailMinutes = jailed and math.max(1, math.ceil((jailed.releaseAt - os.time()) / 60)) or 0,
-        finesOwed = unpaid,
-        charges = chargeRows,
+        found = true,
+        id = charId,
+        serverId = onlineSrc,
+        isOnline = onlineSrc ~= nil,
+        name = fullName,
+        dob = targetChar.dateofbirth and tostring(targetChar.dateofbirth):sub(1, 10) or 'Unknown',
+        gender = tonumber(targetChar.gender) == 1 and 'Female' or 'Male',
+        nationality = targetChar.nationality or 'San Andreas',
+        phone = phone,
+        job = targetChar.job or 'Unemployed',
+        wanted = isWanted,
+        wantedLevel = wantedLevel,
+        wantedReason = wantedReason,
+        wantedSurrenderable = wantedSurrenderable,
+        wantedHistory = wantedRows,
+        jailed = isJailed,
+        jailMinutes = jailMinutesRemaining,
+        cazier = cazierRows,
+        unpaidFines = unpaid,
+        tickets = ticketRows,
+        vehicles = vehicleRows,
+        licenses = licenseRows,
+        bolo = personBolo ~= nil,
+        boloReason = personBolo and personBolo.reason or nil,
     }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcVehicleLookup', function(source, query)
+    if not FactionCore.hasPerm(source, 'mdc') then
+        return { error = FactionCore.accessError(source, 'mdc', 'search vehicle DMV', 'law_enforcement') }
+    end
+    query = tostring(query or ''):gsub('^%s*(.-)%s*$', '%1')
+    if query == '' then return { error = 'Enter a plate or model to search' } end
+
+    local pattern = '%' .. query:upper() .. '%'
+    local rows = MySQL.query.await([[
+        SELECT v.id, v.character_id, v.plate, v.model, v.fuel, v.stored, v.garage,
+               c.firstname, c.lastname, c.phone_number, c.metadata
+        FROM vehicles v
+        LEFT JOIN characters c ON v.character_id = c.id
+        WHERE UPPER(v.plate) LIKE ? OR UPPER(v.model) LIKE ?
+        ORDER BY v.id DESC LIMIT 15
+    ]], { pattern, pattern }) or {}
+
+    local results = {}
+    for _, row in ipairs(rows) do
+        local plateClean = tostring(row.plate):upper():gsub('^%s*(.-)%s*$', '%1')
+        local bolo = Bolos[plateClean]
+        local meta = type(row.metadata) == 'table' and row.metadata or (type(row.metadata) == 'string' and json.decode(row.metadata) or {})
+        local ownerPhone = row.phone_number or meta.phone or ('555-%04d'):format(row.character_id or 0)
+        results[#results + 1] = {
+            id = row.id,
+            plate = plateClean,
+            model = row.model,
+            characterId = row.character_id,
+            ownerName = (row.firstname and row.lastname) and (row.firstname .. ' ' .. row.lastname) or 'Unknown / Impounded',
+            ownerPhone = ownerPhone,
+            stored = row.stored == 1 or row.stored == true,
+            garage = row.garage or 'Unknown',
+            fuel = math.floor(tonumber(row.fuel) or 100),
+            bolo = bolo ~= nil,
+            boloReason = bolo and bolo.reason or nil,
+            boloDate = bolo and bolo.date or nil,
+            boloOfficer = bolo and bolo.officer or nil,
+        }
+    end
+    return { results = results }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcToggleBolo', function(source, targetType, targetKey, reason, notes)
+    if not FactionCore.hasPerm(source, 'mdc') then
+        return { error = FactionCore.accessError(source, 'mdc', 'manage BOLOs', 'law_enforcement') }
+    end
+    targetKey = tostring(targetKey or ''):upper():gsub('^%s*(.-)%s*$', '%1')
+    if targetKey == '' then return { error = 'Target identifier required' } end
+
+    local officerName = exports.sunset_core:GetPlayerDisplayName(source)
+    if Bolos[targetKey] then
+        Bolos[targetKey] = nil
+        broadcastToPolice('BOLO', ('BOLO CLEARED: %s by %s'):format(targetKey, officerName))
+        return { ok = true, active = false, key = targetKey }
+    else
+        Bolos[targetKey] = {
+            type = targetType or 'vehicle',
+            key = targetKey,
+            reason = reason or 'Wanted in connection with active police investigation',
+            notes = notes or '',
+            officer = officerName,
+            officerId = source,
+            date = os.date('%Y-%m-%d %H:%M'),
+            createdAt = os.time(),
+        }
+        broadcastToPolice('BOLO', ('NEW BOLO ISSUED: %s — %s (by %s)'):format(targetKey, reason or 'Active BOLO', officerName))
+        return { ok = true, active = true, bolo = Bolos[targetKey] }
+    end
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcSetUnitStatus', function(source, status)
+    if not FactionCore.isLawEnforcementMember(source) or not FactionCore.isOnDuty(source) then
+        return { error = 'You must be on duty as law enforcement' }
+    end
+    status = tostring(status or '10-8'):upper()
+    UnitStatuses[source] = status
+    return { ok = true, status = status }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcSetCallStatus', function(source, callId, action)
+    if not FactionCore.isLawEnforcementMember(source) or not FactionCore.isOnDuty(source) then
+        return { error = 'You must be on duty as law enforcement' }
+    end
+    callId = tonumber(callId)
+    if not callId then return { error = 'Invalid call ID' } end
+
+    if action == 'respond' then
+        if GetResourceState('sunset_dispatch') == 'started' then
+            local res, err = exports.sunset_dispatch:AcceptCall(source, 'police', callId)
+            if not res then return { error = err or 'Could not attach to call' } end
+            UnitStatuses[source] = '10-97'
+            return { ok = true, status = 'ASSIGNED' }
+        end
+    elseif action == 'clear' then
+        if GetResourceState('sunset_dispatch') == 'started' then
+            local res, err = exports.sunset_dispatch:CompleteCall(callId, source)
+            if not res then return { error = err or 'Could not clear call' } end
+            UnitStatuses[source] = '10-8'
+            return { ok = true, status = 'COMPLETED' }
+        end
+    end
+    return { error = 'Unknown action' }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeIssueTicket', function(source, targetId, amount, reason, reasonCode)

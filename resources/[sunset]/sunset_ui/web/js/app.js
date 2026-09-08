@@ -402,13 +402,31 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideAtm();
             break;
         case 'mdcShow':
-            if (window.Panels) Panels.showMdc(data || event.data.data);
+            if (window.MdcTablet) MdcTablet.open(data || event.data.data);
+            else if (window.Panels) Panels.showMdc(data || event.data.data);
+            break;
+        case 'mdcRefresh':
+            if (window.MdcTablet) MdcTablet.refresh(data || event.data.data);
+            break;
+        case 'mdcUpdateCitizen':
+            if (window.MdcTablet) MdcTablet.updateCitizen((data || event.data.data)?.citizen);
+            break;
+        case 'mdcUpdateVehicles':
+            if (window.MdcTablet) MdcTablet.updateVehicles((data || event.data.data)?.vehicles);
             break;
         case 'mdcUpdate':
-            if (window.Panels) Panels.updateMdcLookup((data || event.data.data)?.lookup);
+            if (window.MdcTablet) MdcTablet.updateCitizen((data || event.data.data)?.lookup || (data || event.data.data)?.citizen);
+            else if (window.Panels) Panels.updateMdcLookup((data || event.data.data)?.lookup);
             break;
         case 'mdcHide':
-            if (window.Panels) Panels.hideMdc();
+            if (window.MdcTablet) MdcTablet.close();
+            else if (window.Panels) Panels.hideMdc();
+            break;
+        case 'dispatch112Show':
+            if (window.MdcTablet) MdcTablet.open112(data || event.data.data);
+            break;
+        case 'dispatch112Hide':
+            if (window.MdcTablet) MdcTablet.close112();
             break;
         case 'ticketShow':
             if (window.Panels) Panels.showTicket(data || event.data.data);

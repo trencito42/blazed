@@ -1,0 +1,1217 @@
+/* ==========================================================================
+   POLICE TOUGHBOOK MDT (MOBILE DATA TERMINAL) & 112 DISPATCH CONSOLE
+   ========================================================================== */
+
+/* Toughbook Tablet Wrapper (Full Screen Overlay) */
+.mdc-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 4, 10, 0.72);
+    backdrop-filter: blur(6px);
+    opacity: 1;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    user-select: none;
+    font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #e2e8f0;
+}
+
+.mdc-overlay.hidden {
+    display: none !important;
+}
+
+/* Rugged Toughbook Tablet Outer Frame */
+.mdc-tablet {
+    position: relative;
+    width: 1240px;
+    max-width: 95vw;
+    height: 780px;
+    max-height: 94vh;
+    background: linear-gradient(145deg, #1e2227, #13161a);
+    border-radius: 24px;
+    border: 3px solid #333a42;
+    box-shadow: 
+        0 25px 60px rgba(0, 0, 0, 0.85),
+        0 0 0 4px #0c0e10,
+        inset 0 1px 2px rgba(255, 255, 255, 0.15),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* Rugged Rubber Shock Bumpers on 4 corners */
+.mdc-tablet::before,
+.mdc-tablet::after {
+    content: '';
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    background: #0d0f12;
+    border: 2px solid #282e35;
+    z-index: 10;
+    pointer-events: none;
+}
+.mdc-tablet::before {
+    top: -4px;
+    left: -4px;
+    border-top-left-radius: 20px;
+    border-bottom-right-radius: 8px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.6);
+}
+.mdc-tablet::after {
+    top: -4px;
+    right: -4px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 8px;
+    box-shadow: -2px 2px 5px rgba(0, 0, 0, 0.6);
+}
+
+/* Tablet Top Rugged Bezel Bar (Camera, Mic, LEDs, Brand) */
+.mdc-bezel-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+    padding: 0 16px 8px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mdc-bezel-brand {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: #64748b;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mdc-bezel-cam {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mdc-bezel-lens {
+    width: 9px;
+    height: 9px;
+    background: radial-gradient(circle, #1a365d 40%, #000 90%);
+    border: 2px solid #334155;
+    border-radius: 50%;
+    box-shadow: inset 0 0 2px rgba(59, 130, 246, 0.8);
+}
+
+.mdc-bezel-mic {
+    width: 4px;
+    height: 4px;
+    background: #090a0c;
+    border-radius: 50%;
+    border: 1px solid #222;
+}
+
+.mdc-bezel-leds {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #64748b;
+}
+
+.mdc-led {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mdc-led__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #334155;
+}
+
+.mdc-led--pwr .mdc-led__dot {
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+}
+
+.mdc-led--gps .mdc-led__dot {
+    background: #06b6d4;
+    box-shadow: 0 0 6px #06b6d4;
+}
+
+.mdc-led--cell .mdc-led__dot {
+    background: #3b82f6;
+    box-shadow: 0 0 6px #3b82f6;
+}
+
+.mdc-led--rec .mdc-led__dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+    animation: mdcBlink 1.4s infinite;
+}
+
+@keyframes mdcBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+/* Tablet Inner Screen (Glass display with OS UI) */
+.mdc-screen {
+    flex: 1;
+    background: #0a0d11;
+    border-radius: 12px;
+    border: 2px solid #1a202c;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.95);
+}
+
+/* Department Header (Theme Switchable: LSPD, Sheriff, FIB) */
+.mdc-header-bar {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: linear-gradient(90deg, #102136 0%, #0c1724 60%, #070e17 100%);
+    border-bottom: 2px solid #1e3a5f;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Department Themes */
+.mdc-tablet.theme--police .mdc-header-bar {
+    background: linear-gradient(90deg, #0e2444 0%, #0b1c36 60%, #071324 100%);
+    border-bottom-color: #2563eb;
+}
+
+.mdc-tablet.theme--sheriff .mdc-header-bar {
+    background: linear-gradient(90deg, #242c18 0%, #1c2313 60%, #12180c 100%);
+    border-bottom-color: #eab308;
+}
+
+.mdc-tablet.theme--fib .mdc-header-bar {
+    background: linear-gradient(90deg, #0d1520 0%, #091018 60%, #04080e 100%);
+    border-bottom-color: #06b6d4;
+}
+
+.mdc-header-dept {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mdc-dept-badge {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.mdc-dept-info h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #f8fafc;
+    text-transform: uppercase;
+    line-height: 1.1;
+}
+
+.mdc-dept-info span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.mdc-header-status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.mdc-callsign-tag {
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #38bdf8;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.mdc-clock {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #cbd5e1;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.mdc-btn-close {
+    padding: 6px 14px;
+    background: #b91c1c;
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mdc-btn-close:hover {
+    background: #dc2626;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
+}
+
+/* Main Terminal Workspace (Sidebar + Views) */
+.mdc-workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Left Navigation Sidebar */
+.mdc-sidebar {
+    width: 230px;
+    background: #0d1117;
+    border-right: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 10px;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+/* Officer Card in Sidebar */
+.mdc-officer-card {
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.mdc-officer-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mdc-officer-rank {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.mdc-status-selector {
+    width: 100%;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #38bdf8;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+/* Sidebar Navigation Tabs */
+.mdc-nav-tab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.mdc-nav-tab-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mdc-nav-tab:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mdc-nav-tab.is-active {
+    background: rgba(37, 99, 235, 0.18);
+    border-color: #2563eb;
+    color: #60a5fa;
+}
+
+.theme--sheriff .mdc-nav-tab.is-active {
+    background: rgba(234, 179, 8, 0.15);
+    border-color: #eab308;
+    color: #facc15;
+}
+
+.theme--fib .mdc-nav-tab.is-active {
+    background: rgba(6, 182, 212, 0.16);
+    border-color: #06b6d4;
+    color: #38bdf8;
+}
+
+.mdc-badge-pill {
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+/* Main Viewport Container */
+.mdc-viewport {
+    flex: 1;
+    background: #090c10;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.mdc-view {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+}
+
+.mdc-view.is-active {
+    display: flex;
+}
+
+/* View Header & Action Bar */
+.mdc-view-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+}
+
+.mdc-view-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #f8fafc;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mdc-view-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Search Bar Utility */
+.mdc-search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.mdc-search-bar input {
+    flex: 1;
+    background: #131923;
+    border: 1px solid #283344;
+    padding: 9px 14px;
+    border-radius: 6px;
+    color: #f1f5f9;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.mdc-search-bar input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.mdc-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.mdc-btn--primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #3b82f6;
+}
+.mdc-btn--primary:hover {
+    background: #1d4ed8;
+}
+
+.mdc-btn--danger {
+    background: #dc2626;
+    color: #fff;
+    border-color: #ef4444;
+}
+.mdc-btn--danger:hover {
+    background: #b91c1c;
+}
+
+.mdc-btn--success {
+    background: #059669;
+    color: #fff;
+    border-color: #10b981;
+}
+.mdc-btn--success:hover {
+    background: #047857;
+}
+
+.mdc-btn--warning {
+    background: #d97706;
+    color: #fff;
+    border-color: #f59e0b;
+}
+.mdc-btn--warning:hover {
+    background: #b45309;
+}
+
+.mdc-btn--outline {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #334155;
+    color: #cbd5e1;
+}
+.mdc-btn--outline:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.mdc-btn--sm {
+    padding: 5px 10px;
+    font-size: 11px;
+}
+
+/* ==========================================================================
+   TAB 1: 112 EMERGENCY CALLS FEED
+   ========================================================================== */
+.mdc-calls-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    max-height: 580px;
+    padding-right: 4px;
+}
+
+.mdc-call-card {
+    background: #101620;
+    border: 1px solid #1e293b;
+    border-left: 5px solid #3b82f6;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.mdc-call-card:hover {
+    border-color: #38bdf8;
+    background: #131c2a;
+}
+
+.mdc-call-card--shots,
+.mdc-call-card--urgent {
+    border-left-color: #ef4444;
+}
+
+.mdc-call-card--traffic {
+    border-left-color: #f59e0b;
+}
+
+.mdc-call-card--theft {
+    border-left-color: #8b5cf6;
+}
+
+.mdc-call-card--medical {
+    border-left-color: #10b981;
+}
+
+.mdc-call-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mdc-call-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.mdc-call-badge--shots {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.mdc-call-time {
+    font-size: 11px;
+    color: #64748b;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.mdc-call-location {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mdc-call-caller {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.mdc-call-desc {
+    font-size: 13px;
+    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 10px;
+    border-radius: 6px;
+    border-left: 2px solid #475569;
+}
+
+.mdc-call-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 8px;
+}
+
+.mdc-call-responder {
+    font-size: 11px;
+    font-weight: 600;
+    color: #38bdf8;
+}
+
+.mdc-call-btn-group {
+    display: flex;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   TAB 2: CITIZEN DOSSIER (CAZIER, VEHICLES, LICENSES)
+   ========================================================================== */
+.mdc-citizen-dossier {
+    display: grid;
+    grid-template-columns: 310px 1fr;
+    gap: 16px;
+    overflow-y: auto;
+    max-height: 580px;
+}
+
+/* Citizen ID Card */
+.mdc-id-card {
+    background: #111722;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: fit-content;
+}
+
+.mdc-id-card__avatar {
+    width: 80px;
+    height: 80px;
+    background: #1a2332;
+    border: 2px solid #334155;
+    border-radius: 50%;
+    margin: 0 auto 4px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.mdc-id-card__name {
+    font-size: 17px;
+    font-weight: 800;
+    color: #f8fafc;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.mdc-id-card__status {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.mdc-pill {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.mdc-pill--wanted {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.mdc-pill--clean {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.mdc-pill--jailed {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.mdc-id-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 10px;
+}
+
+.mdc-id-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.mdc-id-row span {
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.mdc-id-row strong {
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Dossier Main Panels (Right Column) */
+.mdc-dossier-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mdc-card-section {
+    background: #101620;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 14px;
+}
+
+.mdc-card-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Licenses Pill Grid */
+.mdc-licenses-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mdc-lic-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.mdc-lic-badge--none {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: #334155;
+    color: #64748b;
+}
+
+/* Vehicles List in Citizen Dossier */
+.mdc-veh-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mdc-veh-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.mdc-plate-badge {
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #94a3b8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.mdc-veh-model {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f1f5f9;
+    text-transform: uppercase;
+}
+
+.mdc-veh-status {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Cazier & Citations Tables */
+.mdc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.mdc-table th {
+    text-align: left;
+    padding: 6px 10px;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-bottom: 1px solid #1e293b;
+}
+
+.mdc-table td {
+    padding: 8px 10px;
+    color: #cbd5e1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.mdc-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* ==========================================================================
+   TAB 3: VEHICLE DMV & BOLO SYSTEM
+   ========================================================================== */
+.mdc-dmv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+    overflow-y: auto;
+    max-height: 580px;
+}
+
+.mdc-dmv-card {
+    background: #111722;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.mdc-dmv-card.is-bolo {
+    border-color: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+}
+
+.mdc-bolo-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #b91c1c;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-align: center;
+    padding: 2px 0;
+    text-transform: uppercase;
+}
+
+.mdc-dmv-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+.mdc-dmv-card__owner {
+    font-size: 12px;
+    color: #94a3b8;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.mdc-dmv-card__owner strong {
+    color: #38bdf8;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   TAB 4: WARRANTS & WANTED
+   ========================================================================== */
+.mdc-wanted-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 580px;
+}
+
+.mdc-wanted-card {
+    background: #111722;
+    border: 1px solid #1e293b;
+    border-left: 5px solid #ef4444;
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mdc-wanted-stars {
+    font-size: 15px;
+    color: #ef4444;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+/* ==========================================================================
+   TAB 5: ACTIVE UNITS ROSTER
+   ========================================================================== */
+.mdc-units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    overflow-y: auto;
+    max-height: 580px;
+}
+
+.mdc-unit-card {
+    background: #111722;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mdc-unit-status-tag {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.status--10-8 {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.status--10-6 {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.status--10-97 {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.status--10-7 {
+    background: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* ==========================================================================
+   TAB 6: PENAL CODE & 10-CODES REFERENCE
+   ========================================================================== */
+.mdc-ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    overflow-y: auto;
+    max-height: 580px;
+}
+
+.mdc-ref-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mdc-code-row {
+    background: #111722;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.mdc-code-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    color: #38bdf8;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   112 AUTOMATED DISPATCHER INTERACTIVE MODAL (CIVILIAN & EMERGENCIES)
+   ========================================================================== */
+.dispatch-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 4, 10, 0.75);
+    backdrop-filter: blur(8px);
+}
+
+.dispatch-modal-overlay.hidden {
+    display: none !important;
+}
+
+.dispatch-modal {
+    width: 520px;
+    max-width: 92vw;
+    background: linear-gradient(160deg, #18202c, #0d1219);
+    border-radius: 16px;
+    border: 2px solid #334155;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(239, 68, 68, 0.15);
+    padding: 24px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    user-select: none;
+    font-family: 'Rajdhani', sans-serif;
+    color: #e2e8f0;
+}
+
+.dispatch-modal__header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+}
+
+.dispatch-modal__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.3);
+}
+
+.dispatch-modal__header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #f8fafc;
+    text-transform: uppercase;
+}
+
+.dispatch-modal__header span {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.dispatch-modal__loc {
+    background: #0b0f15;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #38bdf8;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.dispatch-categories {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.dispatch-cat-btn {
+    padding: 10px 12px;
+    background: #111722;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.dispatch-cat-btn:hover {
+    background: #182334;
+    border-color: #38bdf8;
+    color: #fff;
+}
+
+.dispatch-cat-btn.is-active {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #fca5a5;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+}
+
+.dispatch-details-input {
+    width: 100%;
+    height: 75px;
+    background: #0b0f15;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px;
+    box-sizing: border-box;
+    color: #f1f5f9;
+    font-family: inherit;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.dispatch-details-input:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.dispatch-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}

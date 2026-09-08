@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=4">
+    <link rel="stylesheet" href="css/mdc_tablet.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -790,41 +791,306 @@
         </div>
     </div>
 
-    <!-- MDC -->
-    <div id="mdc" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide mdc-panel">
-            <div class="mdc-header">
-                <h2>MDC</h2>
-                <span class="mdc-sub">Mobile Data Terminal</span>
-            </div>
-            <div class="mdc-tabs">
-                <button type="button" class="mdc-tab is-active" data-mdc-tab="wanted">WANTED</button>
-                <button type="button" class="mdc-tab" data-mdc-tab="lookup">LOOKUP</button>
-            </div>
-            <div class="mdc-pane is-active" data-mdc-pane="wanted">
-                <ul class="mdc-wanted-list" id="mdc-wanted-list"></ul>
-            </div>
-            <div class="mdc-pane" data-mdc-pane="lookup">
-                <div class="mdc-search">
-                    <input type="number" id="mdc-search-id" min="1" placeholder="Player server ID">
-                    <button type="button" class="btn btn--primary" id="mdc-search-btn">SEARCH</button>
+    <!-- POLICE TOUGHBOOK MDT (MOBILE DATA TERMINAL) -->
+    <div id="mdc" class="mdc-overlay hidden">
+        <div class="mdc-tablet" id="mdc-tablet-box">
+            <!-- Tablet Top Bezel (Camera, LEDs, Rig Brand) -->
+            <div class="mdc-bezel-top">
+                <div class="mdc-bezel-brand">
+                    <span>PANASONIC TOUGHBOOK CF-33</span>
+                    <span style="color: #475569;">·</span>
+                    <span>POLICE MDT SYSTEM</span>
                 </div>
-                <div class="mdc-result hidden" id="mdc-result">
-                    <div class="mdc-result__head">
-                        <strong id="mdc-result-name">—</strong>
-                        <span class="mdc-result__id" id="mdc-result-id">#0</span>
-                    </div>
-                    <div class="mdc-result__grid">
-                        <div class="mdc-stat"><span>Wanted</span><strong id="mdc-result-wanted">—</strong></div>
-                        <div class="mdc-stat"><span>Jail</span><strong id="mdc-result-jail">—</strong></div>
-                        <div class="mdc-stat"><span>Fines owed</span><strong id="mdc-result-fines">—</strong></div>
-                    </div>
-                    <h3 class="mdc-section-title">Charges</h3>
-                    <ul class="mdc-charges" id="mdc-charges-list"></ul>
+                <div class="mdc-bezel-cam">
+                    <div class="mdc-bezel-mic"></div>
+                    <div class="mdc-bezel-lens"></div>
+                    <div class="mdc-bezel-mic"></div>
                 </div>
-                <p class="mdc-empty hidden" id="mdc-lookup-empty">Enter a player ID to view record.</p>
+                <div class="mdc-bezel-leds">
+                    <div class="mdc-led mdc-led--pwr"><div class="mdc-led__dot"></div><span>PWR</span></div>
+                    <div class="mdc-led mdc-led--gps"><div class="mdc-led__dot"></div><span>GPS</span></div>
+                    <div class="mdc-led mdc-led--cell"><div class="mdc-led__dot"></div><span>4G-LTE</span></div>
+                    <div class="mdc-led mdc-led--rec"><div class="mdc-led__dot"></div><span>REC</span></div>
+                </div>
             </div>
-            <button type="button" class="panel-close" id="mdc-close">Close (ESC)</button>
+
+            <!-- Tablet Screen Display -->
+            <div class="mdc-screen">
+                <!-- Department Header Bar -->
+                <div class="mdc-header-bar">
+                    <div class="mdc-header-dept">
+                        <div class="mdc-dept-badge" id="mdc-dept-badge">⭐</div>
+                        <div class="mdc-dept-info">
+                            <h1 id="mdc-dept-title">Los Santos Police Department</h1>
+                            <span id="mdc-dept-sub">LSPD MOBILE DATA TERMINAL v4.8</span>
+                        </div>
+                    </div>
+                    <div class="mdc-header-status">
+                        <div class="mdc-callsign-tag" id="mdc-callsign-tag">1-ADAM-12</div>
+                        <div class="mdc-clock" id="mdc-clock">00:00:00 UTC</div>
+                        <button type="button" class="mdc-btn-close" id="mdc-tablet-close">✕ EXIT TERMINAL</button>
+                    </div>
+                </div>
+
+                <!-- Main Terminal Workspace -->
+                <div class="mdc-workspace">
+                    <!-- Left Sidebar Navigation -->
+                    <div class="mdc-sidebar">
+                        <div class="mdc-officer-card">
+                            <div class="mdc-officer-name" id="mdc-officer-name">Officer</div>
+                            <div class="mdc-officer-rank" id="mdc-officer-rank">Officer · LSPD</div>
+                            <label style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Duty Status</label>
+                            <select id="mdc-status-selector" class="mdc-status-selector">
+                                <option value="10-8">10-8 | Available / In Service</option>
+                                <option value="10-6">10-6 | Busy / Investigating</option>
+                                <option value="10-97">10-97 | Arrived on Scene</option>
+                                <option value="10-7">10-7 | Out of Service</option>
+                            </select>
+                        </div>
+
+                        <button type="button" class="mdc-nav-tab is-active" data-tab="calls">
+                            <span class="mdc-nav-tab-label"><span>🚨</span> 112 CALLS</span>
+                            <span class="mdc-badge-pill" id="mdc-calls-count">0</span>
+                        </button>
+                        <button type="button" class="mdc-nav-tab" data-tab="citizen">
+                            <span class="mdc-nav-tab-label"><span>👤</span> CITIZEN LOOKUP</span>
+                        </button>
+                        <button type="button" class="mdc-nav-tab" data-tab="vehicles">
+                            <span class="mdc-nav-tab-label"><span>🚔</span> VEHICLE DMV</span>
+                        </button>
+                        <button type="button" class="mdc-nav-tab" data-tab="warrants">
+                            <span class="mdc-nav-tab-label"><span>📋</span> WARRANTS</span>
+                        </button>
+                        <button type="button" class="mdc-nav-tab" data-tab="units">
+                            <span class="mdc-nav-tab-label"><span>👥</span> ACTIVE UNITS</span>
+                        </button>
+                        <button type="button" class="mdc-nav-tab" data-tab="ref">
+                            <span class="mdc-nav-tab-label"><span>📜</span> 10-CODES / PENAL</span>
+                        </button>
+                    </div>
+
+                    <!-- Viewport Content Area -->
+                    <div class="mdc-viewport">
+                        <!-- TAB 1: 112 CALLS -->
+                        <div class="mdc-view is-active" data-view="calls">
+                            <div class="mdc-view-head">
+                                <div>
+                                    <h2 class="mdc-view-title">🚨 112 Emergency Dispatch Feed</h2>
+                                    <span class="mdc-view-subtitle">Live 911 / 112 citizen emergency reports</span>
+                                </div>
+                            </div>
+                            <div class="mdc-calls-grid" id="mdc-calls-list">
+                                <!-- Call cards generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: CITIZEN LOOKUP (CAZIER, VEHICLES, LICENSES) -->
+                        <div class="mdc-view" data-view="citizen">
+                            <div class="mdc-view-head">
+                                <div>
+                                    <h2 class="mdc-view-title">👤 Citizen Database & Criminal Records</h2>
+                                    <span class="mdc-view-subtitle">Search by Server ID, Citizen ID, or Full Name</span>
+                                </div>
+                            </div>
+                            <div class="mdc-search-bar">
+                                <input type="text" id="mdc-input-citizen" placeholder="Enter citizen name or ID (e.g. John Doe, or 4)...">
+                                <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-search-citizen">🔍 SEARCH</button>
+                            </div>
+                            <div id="mdc-citizen-loading" class="hidden" style="text-align: center; color: #38bdf8; padding: 24px;">
+                                <span>Accessing State Department of Justice Records...</span>
+                            </div>
+                            <div id="mdc-citizen-empty" class="hidden" style="text-align: center; color: #64748b; padding: 32px;">
+                                Enter a citizen name or ID above to query police records.
+                            </div>
+                            <div id="mdc-citizen-content" class="mdc-citizen-dossier hidden">
+                                <!-- Left Column: ID Card -->
+                                <div class="mdc-id-card">
+                                    <div class="mdc-id-card__avatar">👤</div>
+                                    <div class="mdc-id-card__name" id="mdc-cit-name">—</div>
+                                    <div class="mdc-id-card__status">
+                                        <span class="mdc-pill mdc-pill--clean" id="mdc-cit-wanted-pill">NO WARRANTS</span>
+                                        <span class="mdc-pill mdc-pill--clean" id="mdc-cit-jail-pill">STATUS: FREE</span>
+                                        <span class="mdc-pill mdc-pill--wanted" id="mdc-cit-bolo-pill" style="display: none;">BOLO</span>
+                                    </div>
+                                    <div class="mdc-id-card__details">
+                                        <div class="mdc-id-row"><span>Citizen ID</span><strong id="mdc-cit-id">#0</strong></div>
+                                        <div class="mdc-id-row"><span>Status</span><strong id="mdc-cit-server-id">ONLINE</strong></div>
+                                        <div class="mdc-id-row"><span>DOB</span><strong id="mdc-cit-dob">—</strong></div>
+                                        <div class="mdc-id-row"><span>Gender</span><strong id="mdc-cit-gender">—</strong></div>
+                                        <div class="mdc-id-row"><span>Origin</span><strong id="mdc-cit-nat">—</strong></div>
+                                        <div class="mdc-id-row"><span>Phone</span><strong id="mdc-cit-phone">—</strong></div>
+                                        <div class="mdc-id-row"><span>Job</span><strong id="mdc-cit-job">—</strong></div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Panels -->
+                                <div class="mdc-dossier-panels">
+                                    <!-- Licenses -->
+                                    <div class="mdc-card-section">
+                                        <h3><span>Licenses & Permits</span></h3>
+                                        <div class="mdc-licenses-grid" id="mdc-cit-licenses"></div>
+                                    </div>
+
+                                    <!-- Registered Vehicles -->
+                                    <div class="mdc-card-section">
+                                        <h3><span>Registered Personal Vehicles</span></h3>
+                                        <div class="mdc-veh-list" id="mdc-cit-vehicles"></div>
+                                    </div>
+
+                                    <!-- Criminal History Cazier -->
+                                    <div class="mdc-card-section">
+                                        <h3><span>Criminal Cazier & Conviction History</span></h3>
+                                        <table class="mdc-table">
+                                            <thead>
+                                                <tr><th>Date</th><th>Charge / Crime</th><th>Sentence</th><th>Status</th></tr>
+                                            </thead>
+                                            <tbody id="mdc-cit-cazier-body"></tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Citations & Fines -->
+                                    <div class="mdc-card-section">
+                                        <h3>
+                                            <span>Traffic Citations & Fines</span>
+                                            <span style="font-size: 11px; color: #ef4444;">Unpaid: <strong id="mdc-cit-unpaid-fines">$0</strong></span>
+                                        </h3>
+                                        <table class="mdc-table">
+                                            <thead>
+                                                <tr><th>Date</th><th>Violation Reason</th><th>Amount</th><th>Status</th></tr>
+                                            </thead>
+                                            <tbody id="mdc-cit-tickets-body"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: VEHICLE DMV -->
+                        <div class="mdc-view" data-view="vehicles">
+                            <div class="mdc-view-head">
+                                <div>
+                                    <h2 class="mdc-view-title">🚔 State DMV & Vehicle Registration</h2>
+                                    <span class="mdc-view-subtitle">Search by License Plate or Model Name</span>
+                                </div>
+                            </div>
+                            <div class="mdc-search-bar">
+                                <input type="text" id="mdc-input-veh" placeholder="Enter license plate or model (e.g. 46ABC, Sultan)...">
+                                <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-search-veh">🔍 DMV SEARCH</button>
+                            </div>
+                            <div id="mdc-dmv-loading" class="hidden" style="text-align: center; color: #38bdf8; padding: 24px;">
+                                <span>Scanning DMV registry...</span>
+                            </div>
+                            <div id="mdc-dmv-empty" class="hidden" style="text-align: center; color: #64748b; padding: 32px;">
+                                No vehicles found matching your search.
+                            </div>
+                            <div class="mdc-dmv-grid" id="mdc-dmv-grid"></div>
+                        </div>
+
+                        <!-- TAB 4: WARRANTS -->
+                        <div class="mdc-view" data-view="warrants">
+                            <div class="mdc-view-head">
+                                <div>
+                                    <h2 class="mdc-view-title">📋 Active Arrest Warrants</h2>
+                                    <span class="mdc-view-subtitle">Wanted suspects currently active in San Andreas</span>
+                                </div>
+                            </div>
+                            <div class="mdc-wanted-grid" id="mdc-wanted-grid"></div>
+                        </div>
+
+                        <!-- TAB 5: ACTIVE UNITS -->
+                        <div class="mdc-view" data-view="units">
+                            <div class="mdc-view-head">
+                                <div>
+                                    <h2 class="mdc-view-title">👥 Active Law Enforcement Units</h2>
+                                    <span class="mdc-view-subtitle">On-duty officers across LSPD, Sheriff, and FIB</span>
+                                </div>
+                            </div>
+                            <div class="mdc-units-grid" id="mdc-units-grid"></div>
+                        </div>
+
+                        <!-- TAB 6: PENAL CODE & 10-CODES -->
+                        <div class="mdc-view" data-view="ref">
+                            <div class="mdc-view-head">
+                                <div>
+                                    <h2 class="mdc-view-title">📜 10-Codes & Penal Reference</h2>
+                                    <span class="mdc-view-subtitle">Standard law enforcement communications and penalties</span>
+                                </div>
+                            </div>
+                            <div class="mdc-ref-grid">
+                                <div class="mdc-ref-col">
+                                    <h3 style="font-size: 13px; color: #94a3b8; text-transform: uppercase;">Radio 10-Codes</h3>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-4</span><span>Acknowledgment / Copy</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-6</span><span>Busy unless urgent</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-7</span><span>Out of service / Off duty</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-8</span><span>In service / Available for calls</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-20</span><span>Current location</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-97</span><span>Arrived on scene</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">10-99</span><span>Officer in distress / Emergency</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Code 2</span><span>Urgent response / No sirens</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Code 3</span><span>Emergency response / Lights & sirens</span></div>
+                                </div>
+                                <div class="mdc-ref-col">
+                                    <h3 style="font-size: 13px; color: #94a3b8; text-transform: uppercase;">Penal Code Summary</h3>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Traffic</span><span>Speeding / Red Light / Reckless Driving ($250 - $1,500)</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Misdemeanor</span><span>Disorderly Conduct / Trespass / Evading ($1,000 - $3,000)</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Grand Theft</span><span>Vehicle Theft / Commercial Burglary (10 - 20 min jail)</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Armed Robbery</span><span>Store / Bank Robbery with firearm (20 - 30 min jail)</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Assault LEO</span><span>Aggravated assault or shooting at police (30+ min jail)</span></div>
+                                    <div class="mdc-code-row"><span class="mdc-code-tag">Murder</span><span>Homicide / 1st Degree Murder (Maximum Federal sentence)</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 112 AUTOMATED EMERGENCY DISPATCHER MODAL -->
+    <div id="dispatch-112-modal" class="dispatch-modal-overlay hidden">
+        <div class="dispatch-modal">
+            <div class="dispatch-modal__header">
+                <div class="dispatch-modal__icon">🚨</div>
+                <div>
+                    <h2>911 / 112 Emergency Dispatch</h2>
+                    <span>Automated Emergency Routing System</span>
+                </div>
+            </div>
+            <div class="dispatch-modal__loc">
+                <span>📍 Location:</span>
+                <strong id="dispatch-112-location">Calculating GPS coordinates...</strong>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">
+                Select Emergency Category:
+            </div>
+            <div class="dispatch-categories">
+                <button type="button" class="dispatch-cat-btn is-active" data-category="shots">
+                    <span>💥</span> Shots Fired / Armed
+                </button>
+                <button type="button" class="dispatch-cat-btn" data-category="robbery">
+                    <span>💰</span> Robbery in Progress
+                </button>
+                <button type="button" class="dispatch-cat-btn" data-category="theft">
+                    <span>🚗</span> Stolen Vehicle / Carjacking
+                </button>
+                <button type="button" class="dispatch-cat-btn" data-category="assault">
+                    <span>🥊</span> Violent Assault / Fight
+                </button>
+                <button type="button" class="dispatch-cat-btn" data-category="traffic">
+                    <span>⚠️</span> Serious Traffic Accident
+                </button>
+                <button type="button" class="dispatch-cat-btn" data-category="suspicious">
+                    <span>👁️</span> Suspicious Activity
+                </button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Incident Details & Suspect Description:</label>
+                <textarea id="dispatch-112-details" class="dispatch-details-input" placeholder="Briefly describe what happened, suspect appearance, weapons, vehicle color/model, direction fled..."></textarea>
+            </div>
+            <div class="dispatch-actions">
+                <button type="button" class="mdc-btn mdc-btn--outline" id="dispatch-112-cancel">✕ HANG UP / CANCEL</button>
+                <button type="button" class="mdc-btn mdc-btn--danger" id="dispatch-112-submit">🚨 TRANSMIT 112 CALL</button>
+            </div>
         </div>
     </div>
 
@@ -1597,5 +1863,6 @@
     <script src="js/job_shift.js?v=3"></script>
     <script src="js/job_creator.js?v=9"></script>
     <script src="js/factions.js?v=6"></script>
+    <script src="js/mdc_tablet.js?v=1"></script>
 </body>
 </html>

@@ -189,5 +189,24 @@ AddEventHandler('gameEventTriggered', function(name, args)
 end)
 
 RegisterCommand('112', function()
-    TriggerServerEvent('sunset:death:call112')
+    local ped = PlayerPedId()
+    if downed or dead or IsPedDeadOrDying(ped, true) or GetEntityHealth(ped) <= 0 then
+        TriggerServerEvent('sunset:death:call112')
+    else
+        local coords = GetEntityCoords(ped)
+        local streetHash, crossingHash = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
+        local street = GetStreetNameFromHashKey(streetHash)
+        if crossingHash ~= 0 then
+            street = street .. ' & ' .. GetStreetNameFromHashKey(crossingHash)
+        end
+        local zone = GetLabelText(GetNameOfZone(coords.x, coords.y, coords.z))
+        if not zone or zone == 'NULL' or zone == '' then zone = 'Los Santos' end
+
+        exports.sunset_ui:Send('dispatch112Show', {
+            street = street,
+            area = zone,
+            coords = { x = coords.x, y = coords.y, z = coords.z },
+        })
+        exports.sunset_ui:SetFocus(true, true)
+    end
 end, false)

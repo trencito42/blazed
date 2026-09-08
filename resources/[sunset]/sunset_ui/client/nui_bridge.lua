@@ -34,6 +34,13 @@ forward('atmAction')
 forward('atmClose')
 forward('mdcClose')
 forward('mdcSearch')
+forward('mdcVehicleSearch')
+forward('mdcToggleBolo')
+forward('mdcSetUnitStatus')
+forward('mdcSetCallStatus')
+forward('mdcSetWaypoint')
+forward('submit112Call')
+forward('close112Modal')
 forward('ticketClose')
 forward('ticketIssue')
 forward('ticketPay')
@@ -325,6 +332,44 @@ end)
 
 AddEventHandler('sunset:nui:mdcSearch', function(data)
     TriggerEvent('sunset:ui:mdcSearchRequest', data)
+end)
+
+AddEventHandler('sunset:nui:mdcVehicleSearch', function(data)
+    TriggerEvent('sunset:ui:mdcVehicleSearch', data)
+end)
+
+AddEventHandler('sunset:nui:mdcToggleBolo', function(data)
+    TriggerEvent('sunset:ui:mdcToggleBolo', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSetUnitStatus', function(data)
+    TriggerEvent('sunset:ui:mdcSetUnitStatus', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSetCallStatus', function(data)
+    TriggerEvent('sunset:ui:mdcSetCallStatus', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSetWaypoint', function(data)
+    TriggerEvent('sunset:ui:mdcSetWaypoint', data)
+end)
+
+AddEventHandler('sunset:nui:close112Modal', function()
+    Send('dispatch112Hide', {})
+    SetFocus(false, false)
+end)
+
+AddEventHandler('sunset:nui:submit112Call', function(data)
+    data = data or {}
+    exports.sunset_core:TriggerCallback('sunset:dispatch:call112', function(res, err)
+        if res and res.ok then
+            exports.sunset_ui:Notify(('112 Dispatch: Emergency call registered at %s. Units notified.'):format(res.street or 'your location'), 'success', 8000)
+        else
+            exports.sunset_ui:Notify(err or 'Could not transmit 112 call.', 'error')
+        end
+    end, data.category, data.description, data.street, data.area, data.coords)
+    Send('dispatch112Hide', {})
+    SetFocus(false, false)
 end)
 
 AddEventHandler('sunset:nui:ticketPay', function(data)

@@ -581,11 +581,77 @@ RegisterCommand('cbackup', function()
     else actionError(err, 'Backup could not be cancelled. You may not have an active request.') end
 end, false)
 
+local isMdtOpen = false
+
+local function canAccessMdt(ped)
+    ped = ped or PlayerPedId()
+    if IsPedDeadOrDying(ped, true) or GetEntityHealth(ped) <= 0 then
+        return false
+    end
+
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    if vehicle ~= 0 then
+        if GetVehicleClass(vehicle) == 18 then return true end
+        if isAuthorizedRadarVehicle(vehicle) then return true end
+        local entState = Entity(vehicle).state.sunsetFactionVehicle
+        if entState == 'police' or entState == 'sheriff' or entState == 'fib' then return true end
+    end
+
+    local pCoords = GetEntityCoords(ped)
+    local terminals = {
+        vector3(441.8, -982.5, 30.7),   -- MRPD Mission Row front desk
+        vector3(459.7, -986.9, 30.7),   -- MRPD dispatch briefing
+        vector3(1853.2, 3682.1, 34.3),  -- Sandy Shores Sheriff office
+        vector3(-448.2, 6012.3, 31.7),  -- Paleto Bay Sheriff station
+        vector3(136.1, -749.1, 262.9),  -- FIB HQ executive office
+        vector3(94.2, -745.2, 45.8),    -- FIB ground floor lobby desk
+    }
+    for _, term in ipairs(terminals) do
+        if #(pCoords - term) <= 8.0 then
+            return true
+        end
+    end
+
+    local char = exports.sunset_core:GetCharacter()
+    local factionId = char and Sunset.GetCharacterFaction(char)
+    local faction = factionId and Sunset.Factions[factionId]
+    if faction and faction.hq and #(pCoords - vector3(faction.hq.x, faction.hq.y, faction.hq.z)) <= 15.0 then
+        return true
+    end
+
+    return false
+end
+
 RegisterCommand('mdc', function()
-    local list, err = Sunset.AwaitCallback('sunset:policeWantedList')
-    if not list then return actionError(err, 'MDC could not open. Check duty and rank.') end
-    exports.sunset_ui:Send('mdcShow', { wanted = list })
+    local ped = PlayerPedId()
+    if not canAccessMdt(ped) then
+        exports.sunset_ui:Notify('Access Denied: The MDT Toughbook can only be operated from inside an emergency vehicle or at a station terminal.', 'error', 6000)
+        return
+    end
+
+    local mdcData, err = Sunset.AwaitCallback('sunset:policeMdcData')
+    if not mdcData then
+        return actionError(err, 'MDT could not open. Check duty and rank.')
+    end
+
+    exports.sunset_ui:Send('mdcShow', mdcData)
     exports.sunset_ui:SetFocus(true, true)
+    isMdtOpen = true
+
+    PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+
+    CreateThread(function()
+        while isMdtOpen do
+            Wait(800)
+            if not canAccessMdt(PlayerPedId()) then
+                exports.sunset_ui:Send('mdcHide', {})
+                exports.sunset_ui:SetFocus(false, false)
+                isMdtOpen = false
+                exports.sunset_ui:Notify('MDT connection lost (exited vehicle/terminal).', 'warning')
+                break
+            end
+        end
+    end)
 end, false)
 
 RegisterCommand('ticket', function(_, args)
@@ -704,8 +770,67 @@ AddEventHandler('sunset:nui:ticketIssue', function(data)
 end)
 
 AddEventHandler('sunset:ui:mdcSearchRequest', function(data)
-    local result = Sunset.AwaitCallback('sunset:policeMdcLookup', tonumber(data and data.targetId))
-    exports.sunset_ui:Send('mdcUpdate', { lookup = result })
+    local query = data and (data.query or data.targetId or data.id)
+    local result = Sunset.AwaitCallback('sunset:policeMdcLookup', query)
+    exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = result })
+end)
+
+AddEventHandler('sunset:ui:mdcVehicleSearch', function(data)
+    local query = data and (data.query or data.plate or data.model)
+    local result = Sunset.AwaitCallback('sunset:policeMdcVehicleLookup', query)
+    exports.sunset_ui:Send('mdcUpdateVehicles', { vehicles = result and result.results or {} })
+end)
+
+AddEventHandler('sunset:ui:mdcToggleBolo', function(data)
+    if not data or not data.key then return end
+    local res, err = Sunset.AwaitCallback('sunset:policeMdcToggleBolo', data.type, data.key, data.reason, data.notes)
+    if res and res.ok then
+        exports.sunset_ui:Notify(res.active and ('BOLO issued for %s.'):format(res.key) or ('BOLO cleared for %s.'):format(res.key), 'success')
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err or (res and res.error), 'Failed to update BOLO.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcSetUnitStatus', function(data)
+    if not data or not data.status then return end
+    local res, err = Sunset.AwaitCallback('sunset:policeMdcSetUnitStatus', data.status)
+    if res and res.ok then
+        exports.sunset_ui:Notify(('Unit status updated: %s'):format(res.status), 'success')
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err or (res and res.error), 'Failed to update unit status.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcSetCallStatus', function(data)
+    if not data or not data.callId or not data.action then return end
+    local res, err = Sunset.AwaitCallback('sunset:policeMdcSetCallStatus', data.callId, data.action)
+    if res and res.ok then
+        exports.sunset_ui:Notify(data.action == 'respond' and 'Attached to 112 emergency (10-97 En Route).' or '112 call cleared (10-98 Complete).', 'success')
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err or (res and res.error), 'Failed to update call status.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcSetWaypoint', function(data)
+    if data and data.x and data.y then
+        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+        exports.sunset_ui:Notify('GPS route set to emergency call location.', 'success')
+    end
+end)
+
+RegisterNetEvent('sunset:dispatch:112CallAlert', function(callData)
+    PlaySoundFrontend(-1, 'Event_Start_Text', 'GTAO_FM_Events_Soundset', true)
+    exports.sunset_ui:Notify(('🚨 112 CALL: %s at %s (%s)'):format(callData.category or 'Emergency', callData.street or 'Unknown', callData.caller or 'Citizen'), 'warning', 10000)
+    if isMdtOpen then
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    end
 end)
 
 AddEventHandler('sunset:ui:ticketPayRequest', function(data)
@@ -734,6 +859,7 @@ AddEventHandler('sunset:nui:ticketClose', function()
 end)
 
 AddEventHandler('sunset:nui:mdcClose', function()
+    isMdtOpen = false
     exports.sunset_ui:SetFocus(false, false)
 end)
 

@@ -40,6 +40,11 @@ Sunset.Dispatch.ServiceTypes = {
         providerFactions = { 'police', 'medic', 'lsfd' },
         broadcastOnly = true,
     },
+    police = {
+        label = '112 Police Emergency',
+        factionTypes = { 'law_enforcement' },
+        providerFactions = { 'police', 'sheriff', 'fib' },
+    },
 }
 
 Sunset.Dispatch.rateLimits = {

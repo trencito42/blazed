@@ -269,7 +269,7 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
                 providers = providers + 1
             end
         end
-        if providers < 1 then
+        if providers < 1 and not (metadata and metadata.emergency) and callType ~= 'police' then
             return nil, ('No one is on duty for %s right now.'):format(callType)
         end
         local rateKey = callType == 'police_backup' and 'backupMs' or 'createMs'

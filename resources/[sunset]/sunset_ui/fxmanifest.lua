@@ -33,6 +33,7 @@ files {
     'web/css/spawn.css',
     'web/css/theme.css',
     'web/css/gameplay_glass.css',
+    'web/css/mdc_tablet.css',
     'web/js/*.js',
     'web/vendor/**/*',
     'web/assets/**/*',
