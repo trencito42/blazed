@@ -920,7 +920,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
         });
         window.Menu?.setTab('vehicle');
-    } else if (qa === 'inventory' || qa === 'inventory-trade') {
+    } else if (qa === 'inventory' || qa === 'inventory-trade' || qa === 'inventory-empty') {
+        const isEmpty = qa === 'inventory-empty' || new URLSearchParams(window.location.search).get('nearby') === '0';
         window.Panels?.showInventory({
             weight: 15.2,
             maxWeight: 30,
@@ -930,7 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 3, slot: 3, item: 'phone', label: 'Smartphone', count: 1, usable: false, icon: 'phone' },
                 { id: 4, slot: 8, item: 'weapon_pistol', label: 'Pistol', count: 1, usable: false, icon: 'weaponlicense' },
             ],
-            nearbyPlayers: [
+            nearbyPlayers: isEmpty ? [] : [
                 { id: 45, name: 'Alexandru Popa', distance: 1.4 },
                 { id: 12, name: 'Mihai Dobre', distance: 2.7 },
             ],
