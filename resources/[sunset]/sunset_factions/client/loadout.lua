@@ -26,6 +26,22 @@ local function giveWeapon(ped, weapon, ammo)
     dutyWeapons[weapon] = true
 end
 
+local function isFreemodePed(ped)
+    ped = ped or PlayerPedId()
+    local model = GetEntityModel(ped)
+    return model == `mp_m_freemode_01` or model == `mp_f_freemode_01`
+end
+
+local function applyOutfitComponents(ped, outfit)
+    if not outfit then return end
+    for comp, piece in pairs(outfit) do
+        local compId = tonumber(comp)
+        if compId and piece then
+            SetPedComponentVariation(ped, compId, piece.drawable or 0, piece.texture or 0, 2)
+        end
+    end
+end
+
 local function switchPedModel(modelInput)
     if not modelInput then return false end
     local hash = type(modelInput) == 'number' and modelInput or joaat(modelInput)
@@ -39,14 +55,16 @@ local function switchPedModel(modelInput)
         return false
     end
 
-    RequestModel(hash)
-    local timeout = GetGameTimer() + 6000
-    while not HasModelLoaded(hash) do
-        if GetGameTimer() > timeout then
-            print(('[SunsetFactions] Ped model loading timed out: %s'):format(tostring(modelInput)))
-            return false
+    if not HasModelLoaded(hash) then
+        RequestModel(hash)
+        local timeout = GetGameTimer() + 3000
+        while not HasModelLoaded(hash) do
+            if GetGameTimer() > timeout then
+                print(('[SunsetFactions] Ped model loading timed out: %s'):format(tostring(modelInput)))
+                return false
+            end
+            Wait(0)
         end
-        Wait(10)
     end
 
     local oldPed = PlayerPedId()
@@ -86,13 +104,25 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
     if not loadout then return end
 
     local gender = char.gender or 0
-    local targetSkin = customSkin or Sunset.ResolveFactionSkin(factionId, grade, gender)
+    local ped = PlayerPedId()
 
-    if targetSkin then
-        switchPedModel(targetSkin)
+    if customSkin then
+        switchPedModel(customSkin)
+        ped = PlayerPedId()
+    else
+        local freemode = isFreemodePed(ped)
+        local outfit = Sunset.ResolveFactionOutfit and Sunset.ResolveFactionOutfit(loadout, grade, gender)
+        if outfit and freemode then
+            applyOutfitComponents(ped, outfit)
+        else
+            local targetSkin = Sunset.ResolveFactionSkin and Sunset.ResolveFactionSkin(factionId, grade, gender)
+            if targetSkin then
+                switchPedModel(targetSkin)
+                ped = PlayerPedId()
+            end
+        end
     end
 
-    local ped = PlayerPedId()
     removeDutyWeapons(ped)
 
     if loadout.armor and loadout.armor > 0 then
