@@ -45,6 +45,10 @@ RegisterCommand('pass', function()
     openPass('battlepass')
 end, false)
 
+RegisterCommand('battlepass', function()
+    openPass('battlepass')
+end, false)
+
 RegisterCommand('missions', function()
     openPass('daily')
 end, false)

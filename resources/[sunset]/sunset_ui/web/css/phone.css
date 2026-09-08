@@ -592,8 +592,8 @@
     align-items: center;
     padding: 14px 12px;
     background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     border-radius: 32px;
     border: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -609,9 +609,9 @@
 }
 
 .ios-nav--blur {
-    background: rgba(0, 0, 0, 0.72);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(0, 0, 0, 0.88);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -621,9 +621,9 @@
     align-items: center;
     padding: 6px 12px 6px;
     min-height: 54px;
-    background: rgba(22, 22, 24, 0.88);
-    backdrop-filter: blur(25px) saturate(190%);
-    -webkit-backdrop-filter: blur(25px) saturate(190%);
+    background: rgba(22, 22, 24, 0.95);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -1069,9 +1069,9 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px 12px;
-    background: rgba(18, 18, 20, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(18, 18, 20, 0.98);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     border-top: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -1693,9 +1693,9 @@
 .phone-modal {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(0, 0, 0, 0.82);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     z-index: 100;
     display: flex;
     flex-direction: column;

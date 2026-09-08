@@ -236,8 +236,8 @@
     background: linear-gradient(180deg, rgba(22, 14, 14, 0.88) 0%, rgba(12, 8, 8, 0.92) 100%);
     border: 1px solid rgba(255, 71, 87, 0.35);
     border-radius: 8px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 
 .radar-alert__body::after {

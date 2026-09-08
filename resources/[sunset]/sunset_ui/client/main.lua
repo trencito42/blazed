@@ -138,37 +138,3 @@ CreateThread(function()
     end
 end)
 
-local battlepassOpen = false
-
-local function openBattlepass(tab)
-    battlepassOpen = true
-    SetNuiFocus(true, true)
-    SendNUIMessage({
-        action = 'battlepassShow',
-        data = { tab = tab or 'battlepass' }
-    })
-end
-
-local function closeBattlepass()
-    if not battlepassOpen then return end
-    battlepassOpen = false
-    SetNuiFocus(false, false)
-    SendNUIMessage({ action = 'battlepassHide' })
-end
-
-RegisterCommand('pass', function()
-    if battlepassOpen then closeBattlepass() else openBattlepass('battlepass') end
-end, false)
-
-RegisterCommand('battlepass', function()
-    if battlepassOpen then closeBattlepass() else openBattlepass('battlepass') end
-end, false)
-
-RegisterCommand('missions', function()
-    if battlepassOpen then closeBattlepass() else openBattlepass('daily') end
-end, false)
-
-RegisterNUICallback('battlepassClose', function(_, cb)
-    closeBattlepass()
-    cb('ok')
-end)

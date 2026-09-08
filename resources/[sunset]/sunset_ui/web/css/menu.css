@@ -1037,7 +1037,8 @@
     border-radius: 12px;
     background: rgba(13,13,20,.72);
     box-shadow: 0 20px 50px rgba(0,0,0,.45);
-    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 .premium-vmenu__sidebar {
     min-width: 0;

@@ -28,9 +28,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at center, rgba(10, 18, 16, 0.18) 0%, rgba(5, 10, 12, 0.38) 100%);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: radial-gradient(circle at center, rgba(10, 18, 16, 0.45) 0%, rgba(5, 10, 12, 0.72) 100%);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     opacity: 1;
     transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
     user-select: none;
