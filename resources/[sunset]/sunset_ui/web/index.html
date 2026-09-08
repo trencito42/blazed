@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=5">
-    <link rel="stylesheet" href="css/mdc_tablet.css?v=11">
+    <link rel="stylesheet" href="css/mdc_tablet.css?v=12">
     <link rel="stylesheet" href="css/player_interaction.css?v=1">
     <link rel="stylesheet" href="css/atm.css?v=1">
 </head>
@@ -1168,7 +1168,9 @@
                 <!-- Department Header Bar -->
                 <div class="mdc-header-bar">
                     <div class="mdc-header-dept">
-                        <div class="mdc-dept-badge" id="mdc-dept-badge">⭐</div>
+                        <div class="mdc-dept-badge" id="mdc-dept-badge">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+                        </div>
                         <div class="mdc-dept-info">
                             <h1 id="mdc-dept-title">Los Santos Police Department</h1>
                             <span id="mdc-dept-sub">LSPD MOBILE DATA TERMINAL v4.8</span>
@@ -1176,22 +1178,24 @@
                     </div>
                     <div class="mdc-header-status">
                         <button type="button" class="mdc-header-btn mdc-btn-panic" id="mdc-header-panic" title="Officer in Distress / Immediate Emergency (10-99)">
-                            🚨 10-99 PANIC
+                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            10-99 PANIC
                         </button>
                         <div class="mdc-backup-dropdown-wrap">
                             <button type="button" class="mdc-header-btn mdc-btn-backup" id="mdc-header-backup">
-                                🚔 BACKUP <span id="mdc-backup-badge" class="mdc-btn-badge hidden">ACTIVE</span>
+                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                BACKUP <span id="mdc-backup-badge" class="mdc-btn-badge hidden">ACTIVE</span>
                             </button>
                             <div class="mdc-backup-menu hidden" id="mdc-backup-menu">
-                                <button type="button" class="mdc-backup-opt" data-priority="code2">🟡 Code 2 (Urgent Response)</button>
-                                <button type="button" class="mdc-backup-opt" data-priority="code3">🔴 Code 3 (Lights & Sirens)</button>
-                                <button type="button" class="mdc-backup-opt mdc-backup-opt--danger" data-priority="panic">🚨 10-99 Officer in Distress</button>
-                                <button type="button" class="mdc-backup-opt mdc-backup-opt--cancel hidden" id="mdc-backup-cancel-btn">❌ Cancel Active Backup</button>
+                                <button type="button" class="mdc-backup-opt" data-priority="code2">[CODE 2] Urgent Response</button>
+                                <button type="button" class="mdc-backup-opt" data-priority="code3">[CODE 3] Lights & Sirens</button>
+                                <button type="button" class="mdc-backup-opt mdc-backup-opt--danger" data-priority="panic">[10-99] Officer in Distress</button>
+                                <button type="button" class="mdc-backup-opt mdc-backup-opt--cancel hidden" id="mdc-backup-cancel-btn">✕ Cancel Active Backup</button>
                             </div>
                         </div>
                         <div class="mdc-callsign-tag" id="mdc-callsign-tag">1-ADAM-12</div>
                         <div class="mdc-clock" id="mdc-clock">00:00:00 UTC</div>
-                        <button type="button" class="mdc-btn-close" id="mdc-tablet-close">✕ EXIT TERMINAL</button>
+                        <button type="button" class="mdc-btn-close" id="mdc-tablet-close">✕ EXIT</button>
                     </div>
                 </div>
 
@@ -1262,7 +1266,7 @@
                         <div class="mdc-view is-active" data-view="calls">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">🚨 112 Emergency Dispatch Feed</h2>
+                                    <h2 class="mdc-view-title">112 Emergency Dispatch Feed</h2>
                                     <span class="mdc-view-subtitle">Live 911 / 112 citizen emergency reports</span>
                                 </div>
                             </div>
@@ -1275,13 +1279,13 @@
                         <div class="mdc-view" data-view="citizen">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">👤 Citizen Database & Criminal Records</h2>
+                                    <h2 class="mdc-view-title">Citizen Database & Criminal Records</h2>
                                     <span class="mdc-view-subtitle">Search by Server ID, Citizen ID, or Full Name</span>
                                 </div>
                             </div>
                             <div class="mdc-search-bar">
                                 <input type="text" id="mdc-input-citizen" placeholder="Enter citizen name or ID (e.g. John Doe, or 4)...">
-                                <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-search-citizen">🔍 SEARCH</button>
+                                <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-search-citizen">SEARCH</button>
                             </div>
                             <div id="mdc-citizen-loading" class="hidden" style="text-align: center; color: #38bdf8; padding: 24px;">
                                 <span>Accessing State Department of Justice Records...</span>
@@ -1325,31 +1329,31 @@
                                         <div class="mdc-id-row"><span>Job</span><strong id="mdc-cit-job">—</strong></div>
                                     </div>
                                     <div class="mdc-cit-actions">
-                                        <div class="mdc-cit-actions-title">⚡ Law Enforcement Actions</div>
+                                        <div class="mdc-cit-actions-title">Officer Enforcement Actions</div>
                                         <div class="mdc-cit-actions-grid">
                                             <button type="button" class="mdc-action-btn mdc-action-btn--danger" id="mdc-act-wanted">
-                                                ⭐ + ADD WANTED (/su)
+                                                + ADD WANTED (/su)
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--warning" id="mdc-act-ticket">
-                                                📋 ISSUE CITATION (/ticket)
+                                                ISSUE CITATION (/ticket)
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--license" id="mdc-act-license">
-                                                🚫 SUSPENDĂ PERMIS
+                                                SUSPENDĂ PERMIS
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--primary" id="mdc-act-so">
-                                                📢 STOP ORDER (/so)
+                                                STOP ORDER (/so)
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--info" id="mdc-act-find">
-                                                📍 TRACK GPS (/find)
+                                                TRACK GPS (/find)
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--success" id="mdc-act-clear">
-                                                ❌ CLEAR WANTED (/clear)
+                                                CLEAR WANTED (/clear)
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--outline" id="mdc-act-unjail">
-                                                🔓 RELEASE / UNJAIL
+                                                RELEASE / UNJAIL
                                             </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--bolo" id="mdc-act-bolo">
-                                                🚨 FLAG BOLO
+                                                FLAG BOLO
                                             </button>
                                         </div>
                                     </div>
@@ -1401,13 +1405,13 @@
                         <div class="mdc-view" data-view="vehicles">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">🚔 State DMV & Vehicle Registration</h2>
+                                    <h2 class="mdc-view-title">State DMV & Vehicle Registration</h2>
                                     <span class="mdc-view-subtitle">Search by License Plate or Model Name</span>
                                 </div>
                             </div>
                             <div class="mdc-search-bar">
                                 <input type="text" id="mdc-input-veh" placeholder="Enter license plate or model (e.g. 46ABC, Sultan)...">
-                                <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-search-veh">🔍 DMV SEARCH</button>
+                                <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-search-veh">DMV SEARCH</button>
                             </div>
                             <div id="mdc-dmv-loading" class="hidden" style="text-align: center; color: #38bdf8; padding: 24px;">
                                 <span>Scanning DMV registry...</span>
@@ -1422,7 +1426,7 @@
                         <div class="mdc-view" data-view="warrants">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">📋 Active Arrest Warrants</h2>
+                                    <h2 class="mdc-view-title">Active Arrest Warrants</h2>
                                     <span class="mdc-view-subtitle">Wanted suspects currently active in San Andreas</span>
                                 </div>
                             </div>
@@ -1433,7 +1437,7 @@
                         <div class="mdc-view" data-view="units">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">👥 Active Law Enforcement Units</h2>
+                                    <h2 class="mdc-view-title">Active Law Enforcement Units</h2>
                                     <span class="mdc-view-subtitle">On-duty officers across LSPD, Sheriff, and FIB</span>
                                 </div>
                             </div>
@@ -1444,7 +1448,7 @@
                         <div class="mdc-view" data-view="ref">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">📜 10-Codes & Penal Reference</h2>
+                                    <h2 class="mdc-view-title">10-Codes & Penal Reference</h2>
                                     <span class="mdc-view-subtitle">Standard law enforcement communications and penalties</span>
                                 </div>
                             </div>
@@ -1477,7 +1481,7 @@
                         <div class="mdc-view" data-view="radar">
                             <div class="mdc-view-head">
                                 <div>
-                                    <h2 class="mdc-view-title">⚡ Mobile Speed Radar & Fixed Cameras</h2>
+                                    <h2 class="mdc-view-title">Mobile Speed Radar & Fixed Cameras</h2>
                                     <span class="mdc-view-subtitle">Patrol cruiser speed enforcement console</span>
                                 </div>
                             </div>
@@ -1504,8 +1508,8 @@
                                         </div>
                                         <div class="mdc-radar-actions-row">
                                             <input type="number" id="mdc-radar-custom-input" placeholder="Custom limit (20-250)..." min="20" max="250" value="90">
-                                            <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-radar-start">⚡ START RADAR</button>
-                                            <button type="button" class="mdc-btn mdc-btn--danger hidden" id="mdc-btn-radar-stop">⏹ STOP RADAR</button>
+                                            <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-btn-radar-start">START RADAR</button>
+                                            <button type="button" class="mdc-btn mdc-btn--danger hidden" id="mdc-btn-radar-stop">STOP RADAR</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1517,28 +1521,28 @@
                                                 <strong>Legion Square East</strong>
                                                 <div style="font-size: 11px; color: #94a3b8;">Limit: 45 MPH / 72 KM/H · Downtown Zone</div>
                                             </div>
-                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="215.4" data-y="-1024.8">📍 GPS</button>
+                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="215.4" data-y="-1024.8">GPS</button>
                                         </div>
                                         <div class="mdc-fixed-radar-row">
                                             <div>
                                                 <strong>Del Perro Freeway</strong>
                                                 <div style="font-size: 11px; color: #94a3b8;">Limit: 65 MPH / 105 KM/H · Westbound Highway</div>
                                             </div>
-                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="-1470.2" data-y="-499.5">📍 GPS</button>
+                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="-1470.2" data-y="-499.5">GPS</button>
                                         </div>
                                         <div class="mdc-fixed-radar-row">
                                             <div>
                                                 <strong>Route 68 Sandy Shores</strong>
                                                 <div style="font-size: 11px; color: #94a3b8;">Limit: 55 MPH / 90 KM/H · County Highway</div>
                                             </div>
-                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="1956.4" data-y="3842.1">📍 GPS</button>
+                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="1956.4" data-y="3842.1">GPS</button>
                                         </div>
                                         <div class="mdc-fixed-radar-row">
                                             <div>
                                                 <strong>Palomino Avenue</strong>
                                                 <div style="font-size: 11px; color: #94a3b8;">Limit: 40 MPH / 65 KM/H · East Los Santos</div>
                                             </div>
-                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="-517.8" data-y="-610.2">📍 GPS</button>
+                                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-fixed-radar-gps" data-x="-517.8" data-y="-610.2">GPS</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1554,7 +1558,7 @@
             <!-- Modal 1: BOLO Modal -->
             <div class="mdc-dialog-card hidden" id="mdc-dialog-bolo">
                 <div class="mdc-dialog-head">
-                    <h3 id="mdc-bolo-title">🚨 Issue State BOLO Alert</h3>
+                    <h3 id="mdc-bolo-title">Issue State BOLO Alert</h3>
                     <button type="button" class="mdc-dialog-close" data-close="bolo">✕</button>
                 </div>
                 <div class="mdc-dialog-body">
@@ -1579,7 +1583,7 @@
             <!-- Modal 2: Add Wanted Charge Modal (/su) -->
             <div class="mdc-dialog-card hidden" id="mdc-dialog-wanted">
                 <div class="mdc-dialog-head">
-                    <h3>⭐ Add Wanted Charge (/su)</h3>
+                    <h3>Add Wanted Charge (/su)</h3>
                     <button type="button" class="mdc-dialog-close" data-close="wanted">✕</button>
                 </div>
                 <div class="mdc-dialog-body">
@@ -1598,7 +1602,7 @@
             <!-- Modal 3: Issue Citation Modal (/ticket) -->
             <div class="mdc-dialog-card hidden" id="mdc-dialog-ticket">
                 <div class="mdc-dialog-head">
-                    <h3>📋 Issue Police Citation (/ticket)</h3>
+                    <h3>Issue Police Citation (/ticket)</h3>
                     <button type="button" class="mdc-dialog-close" data-close="ticket">✕</button>
                 </div>
                 <div class="mdc-dialog-body">
@@ -1617,7 +1621,7 @@
             <!-- Modal 4: Suspend License Modal -->
             <div class="mdc-dialog-card hidden" id="mdc-dialog-license">
                 <div class="mdc-dialog-head">
-                    <h3>🚫 Suspendă Permis (Conducere / Armă)</h3>
+                    <h3>Suspendare Permis (Conducere / Armă)</h3>
                     <button type="button" class="mdc-dialog-close" data-close="license">✕</button>
                 </div>
                 <div class="mdc-dialog-body">
@@ -1625,18 +1629,18 @@
                     
                     <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Tip Permis:</label>
                     <div class="mdc-reason-chips" id="mdc-license-type-chips">
-                        <button type="button" class="mdc-chip is-active" data-lic="driver">🚗 Permis Conducere</button>
-                        <button type="button" class="mdc-chip" data-lic="weapon">🔫 Permis Armă</button>
+                        <button type="button" class="mdc-chip is-active" data-lic="driver">Permis Conducere</button>
+                        <button type="button" class="mdc-chip" data-lic="weapon">Permis Armă</button>
                     </div>
 
                     <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 12px; display: block;">Motiv Suspendare (Presetări Legale):</label>
                     <div class="mdc-reason-chips" id="mdc-license-reason-chips">
-                        <button type="button" class="mdc-chip" data-reason="Viteză excesivă (+50 km/h peste limită)">⚡ Viteză excesivă (+50 km/h)</button>
-                        <button type="button" class="mdc-chip" data-reason="Conducere agresivă pe contrasens">⚠️ Conducere pe contrasens</button>
-                        <button type="button" class="mdc-chip" data-reason="Conducere sub influența alcoolului / substanțelor">🍺 Alcool / Substanțe</button>
-                        <button type="button" class="mdc-chip" data-reason="Neoprire la semnalele poliției / Evadare">🚨 Refuz oprire / Evadare</button>
-                        <button type="button" class="mdc-chip" data-reason="Participare la curse ilegale de stradă">🏁 Curse ilegale</button>
-                        <button type="button" class="mdc-chip" data-reason="Accident grav cu fugă de la fața locului">💥 Accident cu fugă</button>
+                        <button type="button" class="mdc-chip" data-reason="Viteză excesivă (+50 km/h peste limită)">Viteză excesivă (+50 km/h)</button>
+                        <button type="button" class="mdc-chip" data-reason="Conducere agresivă pe contrasens">Conducere pe contrasens</button>
+                        <button type="button" class="mdc-chip" data-reason="Conducere sub influența alcoolului / substanțelor">Alcool / Substanțe interzise</button>
+                        <button type="button" class="mdc-chip" data-reason="Neoprire la semnalele poliției / Evadare">Refuz oprire / Evadare</button>
+                        <button type="button" class="mdc-chip" data-reason="Participare la curse ilegale de stradă">Curse ilegale</button>
+                        <button type="button" class="mdc-chip" data-reason="Accident grav cu fugă de la fața locului">Accident cu fugă</button>
                     </div>
 
                     <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 10px; display: block;">Motiv Personalizat / Mențiuni PV:</label>
@@ -1668,7 +1672,7 @@
                         <div class="dispatch__subtitle">Sistem Centralizat Rutare Intervenție Rapidă</div>
                     </div>
                     <div class="dispatch__loc-badge">
-                        <span class="dispatch__loc-pin">📍</span>
+                        <svg class="dispatch__loc-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                         <span id="dispatch-112-location">Calculating GPS coordinates...</span>
                     </div>
                 </div>
@@ -1676,31 +1680,31 @@
                 <div class="dispatch__categories-title">Selectează Categoria Urgenței</div>
                 <div class="dispatch-categories">
                     <button type="button" class="dispatch-cat-btn is-active" data-category="medical">
-                        <span class="dispatch-cat-emoji">🚑</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                         <span>Urgență Medicală / Salvare</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="shots">
-                        <span class="dispatch-cat-emoji">💥</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
                         <span>Focuri de Armă / Înarmat</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="robbery">
-                        <span class="dispatch-cat-emoji">💰</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <span>Jaf în Desfășurare</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="theft">
-                        <span class="dispatch-cat-emoji">🚗</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                         <span>Furt Vehicul / Bunuri</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="assault">
-                        <span class="dispatch-cat-emoji">🥊</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         <span>Agresiune / Bătaie</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="traffic">
-                        <span class="dispatch-cat-emoji">⚠️</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         <span>Accident Rutier</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="suspicious">
-                        <span class="dispatch-cat-emoji">👁️</span>
+                        <svg class="dispatch-cat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         <span>Activitate Suspectă</span>
                     </button>
                 </div>
@@ -2584,7 +2588,7 @@
     <script src="js/job_creator.js?v=10"></script>
     <script src="js/factions.js?v=7"></script>
     <script src="js/clans.js?v=12"></script>
-    <script src="js/mdc_tablet.js?v=11"></script>
+    <script src="js/mdc_tablet.js?v=12"></script>
     <script src="js/player_interaction.js?v=1"></script>
     <script src="js/atm.js?v=1"></script>
 </body>

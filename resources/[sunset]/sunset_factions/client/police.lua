@@ -374,8 +374,13 @@ end)
 CreateThread(function()
     while true do
         if radarActive and radarVehicle ~= 0 and DoesEntityExist(radarVehicle) then
-            drawRadarZoneMarkers(radarVehicle, Sunset.Police and Sunset.Police.radar)
-            Wait(0)
+            local spd = GetEntitySpeed(radarVehicle)
+            if spd < 1.0 then
+                drawRadarZoneMarkers(radarVehicle, Sunset.Police and Sunset.Police.radar)
+                Wait(0)
+            else
+                Wait(250)
+            end
         else
             Wait(400)
         end
@@ -393,8 +398,6 @@ CreateThread(function()
                 stopRadar(false)
                 exports.sunset_ui:Notify('Radar stopped because you left the driver seat or patrol vehicle.', 'warning', 6000)
             else
-                FreezeEntityPosition(radarVehicle, true)
-                SetVehicleHandbrake(radarVehicle, true)
                 local veh, speed = getVehicleInCameraView()
                 if veh ~= 0 and speed > 0 then
                     local info = radarTargetInfo(veh, speed)
@@ -700,15 +703,15 @@ local function tryStartRadar(requestedLimit)
     radarVehicle = vehicle
     radarLimitKmh = result.limitKmh
     lastRadarLock = 0
-    FreezeEntityPosition(vehicle, true)
-    SetVehicleHandbrake(vehicle, true)
+    FreezeEntityPosition(vehicle, false)
+    SetVehicleHandbrake(vehicle, false)
     radarHits = {}
     pushRadarUi({
         state = 'scan',
         title = 'Mobile Radar',
-        message = 'Scanning lane…',
+        message = 'Scanning traffic…',
     })
-    radarFeedback(('Mobile radar active: %d km/h. Orange zone marks the scan lane ahead.'):format(radarLimitKmh), 'success')
+    radarFeedback(('Mobile radar active: %d km/h.'):format(radarLimitKmh), 'success')
 end
 
 RegisterNetEvent('sunset:police:tryStartRadar', function(limit)
@@ -1000,33 +1003,16 @@ AddEventHandler('sunset:ui:mdcSuspendLicense', function(data)
 end)
 
 AddEventHandler('sunset:ui:mdcStartRadar', function(data)
-    local ped = PlayerPedId()
-    local veh = GetVehiclePedIsIn(ped, false)
-    if veh == 0 then
-        exports.sunset_ui:Notify('You must be inside an authorized patrol car to start mobile radar.', 'error')
-        return
-    end
-    local netId = NetworkGetNetworkIdFromEntity(veh)
     local limit = tonumber(data and data.limitKmh) or 90
-    local res, err = Sunset.AwaitCallback('sunset:policeRadarStart', netId, limit)
-    if res then
-        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-        exports.sunset_ui:Notify(('Mobile radar active (Limit: %d km/h).'):format(res.limitKmh), 'success')
-        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
-        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
-    else
-        actionError(err, 'Could not start mobile radar.')
-    end
+    tryStartRadar(limit)
+    local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+    if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
 end)
 
 AddEventHandler('sunset:ui:mdcStopRadar', function()
-    local ok = Sunset.AwaitCallback('sunset:policeRadarStop')
-    if ok then
-        PlaySoundFrontend(-1, 'CANCEL', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-        exports.sunset_ui:Notify('Mobile radar deactivated.', 'info')
-        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
-        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
-    end
+    stopRadar(true)
+    local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+    if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
 end)
 
 RegisterNetEvent('sunset:dispatch:112CallAlert', function(callData)
@@ -1084,7 +1070,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/suspendlicense', 'Suspendă permisul de conducere sau de armă (PD)', { { name = 'id' }, { name = 'driver|weapon', help = 'opțional, default driver' }, { name = 'motiv' } })
     TriggerEvent('chat:addSuggestion', '/confiscatelicense', 'Alias pentru /suspendlicense', { { name = 'id' }, { name = 'driver|weapon' }, { name = 'motiv' } })
-    TriggerEvent('chat:addSuggestion', '/startradar', 'Lock an LSPD patrol vehicle and monitor speed', { { name = 'limit_kmh', help = '20-250, default 90' } })
+    TriggerEvent('chat:addSuggestion', '/startradar', 'Activate mobile speed radar and monitor traffic', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/setradar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/radar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/stopradar', 'Deactivate mobile speed radar')

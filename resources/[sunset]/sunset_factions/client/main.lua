@@ -681,7 +681,7 @@ local PD_HELP = {
     '/ticket [id] (or /fine [id]) — choose an official citation in UI',
     '/mdc — Mobile data terminal',
     '/confiscate [id] — Confiscate contraband',
-    '/startradar [limit_kmh] — Lock patrol car and monitor traffic',
+    '/startradar [limit_kmh] — Activate mobile radar and monitor traffic',
     '/stopradar — Deactivate speed radar',
     '/radars — List fixed speed cameras',
     '/r [msg] — Faction radio (LSPD only)',

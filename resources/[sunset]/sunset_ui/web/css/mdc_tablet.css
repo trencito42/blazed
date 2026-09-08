@@ -1425,8 +1425,12 @@
     box-shadow: 0 0 14px rgba(255, 119, 0, 0.35);
 }
 
-.dispatch-cat-emoji {
-    font-size: 15px;
+.dispatch-cat-emoji,
+.dispatch-cat-svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    flex-shrink: 0;
     line-height: 1;
 }
 

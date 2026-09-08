@@ -541,7 +541,7 @@
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="mdc-call-id">#${call.id}</span>
                                 <span class="mdc-call-category">${call.category || 'Emergency'}</span>
-                                ${call.isPanic ? '<span class="mdc-pill mdc-pill--wanted" style="animation: mdcBlink 0.8s infinite;">🚨 10-99 PANIC</span>' : ''}
+                                ${call.isPanic ? '<span class="mdc-pill mdc-pill--wanted" style="animation: mdcBlink 0.8s infinite;">[10-99 PANIC]</span>' : ''}
                             </div>
                             <span class="mdc-call-status ${isAssigned ? 'is-assigned' : 'is-pending'}">
                                 ${call.status || 'PENDING'}
@@ -549,9 +549,9 @@
                         </div>
                         <div class="mdc-call-desc">${call.description || 'No details provided'}</div>
                         <div class="mdc-call-meta">
-                            <span>📍 <strong>${call.street}</strong>, ${call.area}</span>
-                            <span>👤 Caller: <strong>${call.callerName}</strong> (${call.callerPhone})</span>
-                            ${call.responderName ? `<span>🚔 Unit: <strong>${call.responderName}</strong></span>` : ''}
+                            <span>LOC: <strong>${call.street}</strong>, ${call.area}</span>
+                            <span>CALLER: <strong>${call.callerName}</strong> (${call.callerPhone})</span>
+                            ${call.responderName ? `<span>UNIT: <strong>${call.responderName}</strong></span>` : ''}
                         </div>
                         <div class="mdc-call-actions">
                             <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-call-waypoint" data-x="${call.coords.x}" data-y="${call.coords.y}">
@@ -672,7 +672,7 @@
             // Update Action Buttons State
             const boloBtn = $('#mdc-act-bolo');
             if (boloBtn) {
-                boloBtn.textContent = citizen.bolo ? '🚨 CLEAR BOLO' : '🚨 FLAG BOLO';
+                boloBtn.textContent = citizen.bolo ? 'CLEAR BOLO' : 'FLAG BOLO';
             }
 
             const unjailBtn = $('#mdc-act-unjail');
@@ -693,7 +693,7 @@
                     licContainer.innerHTML = '<span class="mdc-lic-badge mdc-lic-badge--none">NO LICENSES ON RECORD</span>';
                 } else {
                     licContainer.innerHTML = licenses.map((lic) => `
-                        <span class="mdc-lic-badge">✓ ${lic.type || 'License'}</span>
+                        <span class="mdc-lic-badge">[LIC] ${lic.type || 'License'}</span>
                     `).join('');
                 }
             }
@@ -804,11 +804,11 @@
                 if (tune && tune.tuned) {
                     const chips = (tune.chips || []).slice(0, 6).map((c) => `<span class="mdc-chip-tune">${c}</span>`).join('');
                     const lines = (tune.lines || []).slice(0, 8).map((l) => `<div class="mdc-tune-line"><span>${l.label}:</span><strong>${l.value}</strong></div>`).join('');
-                    const mods = (tune.hardwareMods || []).map((m) => `<div class="mdc-tune-line mdc-tune-mod"><span>🔧 Mod:</span><strong>${m}</strong></div>`).join('');
+                    const mods = (tune.hardwareMods || []).map((m) => `<div class="mdc-tune-line mdc-tune-mod"><span>MOD:</span><strong>${m}</strong></div>`).join('');
                     tuningHtml = `
                         <div class="mdc-dmv-tuning-box is-tuned">
                             <div class="mdc-tuning-header">
-                                <span class="mdc-tuning-badge is-tuned">⚡ VEHICUL MODIFICAT / STAGE TUNE</span>
+                                <span class="mdc-tuning-badge is-tuned">[MODIFICAT] STAGE TUNE</span>
                                 <button type="button" class="mdc-tuning-toggle-btn" data-plate="${v.plate}">Fișă RAR ▼</button>
                             </div>
                             <div class="mdc-tuning-chips">${chips}</div>
@@ -822,11 +822,11 @@
                         </div>
                     `;
                 } else if (tune) {
-                    const mods = (tune.hardwareMods || []).map((m) => `<div class="mdc-tune-line mdc-tune-mod"><span>🔧 Mod:</span><strong>${m}</strong></div>`).join('');
+                    const mods = (tune.hardwareMods || []).map((m) => `<div class="mdc-tune-line mdc-tune-mod"><span>MOD:</span><strong>${m}</strong></div>`).join('');
                     tuningHtml = `
                         <div class="mdc-dmv-tuning-box is-stock">
                             <div class="mdc-tuning-header">
-                                <span class="mdc-tuning-badge is-stock">✓ FACTORY STOCK (OMOLOGAT RAR)</span>
+                                <span class="mdc-tuning-badge is-stock">[CONFORM] FACTORY STOCK (RAR)</span>
                             </div>
                             ${mods ? `<div class="mdc-tuning-grid" style="margin-top: 4px;">${mods}</div>` : ''}
                         </div>
@@ -835,7 +835,7 @@
                     tuningHtml = `
                         <div class="mdc-dmv-tuning-box is-stock">
                             <div class="mdc-tuning-header">
-                                <span class="mdc-tuning-badge is-stock">✓ FACTORY STOCK (OMOLOGAT RAR)</span>
+                                <span class="mdc-tuning-badge is-stock">[CONFORM] FACTORY STOCK (RAR)</span>
                             </div>
                         </div>
                     `;
@@ -1020,7 +1020,8 @@
                         <div style="display: flex; align-items: center; gap: 10px;">
                             ${hasCoords && !unit.isMe ? `
                                 <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-unit-gps" data-x="${unit.coords.x}" data-y="${unit.coords.y}" data-name="${unit.name}">
-                                    📍 GPS
+                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+                                    GPS
                                 </button>
                             ` : ''}
                             <span class="mdc-unit-status-tag ${statusClass}">
@@ -1061,7 +1062,7 @@
             const targetLabel = $('#mdc-bolo-target-label');
             const customInput = $('#mdc-bolo-custom-reason');
 
-            if (title) title.textContent = type === 'vehicle' ? `🚨 Flag Vehicle BOLO: ${key}` : `🚨 Flag Citizen BOLO: ${key}`;
+            if (title) title.textContent = type === 'vehicle' ? `Flag Vehicle BOLO: ${key}` : `Flag Citizen BOLO: ${key}`;
             if (targetLabel) targetLabel.textContent = `Target: ${key} (${type.toUpperCase()})`;
             if (customInput) customInput.value = defaultReason || '';
 
