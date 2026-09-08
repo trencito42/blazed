@@ -706,9 +706,9 @@
 
             // Reset category
             $$('.dispatch-cat-btn').forEach((b) => b.classList.remove('is-active'));
-            const defaultCat = $('.dispatch-cat-btn[data-category="shots"]');
+            const defaultCat = $('.dispatch-cat-btn[data-category="medical"]') || $('.dispatch-cat-btn[data-category="shots"]');
             if (defaultCat) defaultCat.classList.add('is-active');
-            this.selected112Category = 'shots';
+            this.selected112Category = defaultCat ? (defaultCat.dataset.category || 'medical') : 'medical';
 
             $('#dispatch-112-modal')?.classList.remove('hidden');
             setTimeout(() => {

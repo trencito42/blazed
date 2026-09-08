@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=5">
-    <link rel="stylesheet" href="css/mdc_tablet.css?v=2">
+    <link rel="stylesheet" href="css/mdc_tablet.css?v=3">
     <link rel="stylesheet" href="css/player_interaction.css?v=1">
 </head>
 <body>
@@ -1082,7 +1082,7 @@
         </div>
     </div>
 
-    <!-- 112 AUTOMATED EMERGENCY DISPATCHER — SUNSET JOB / FISHING SHELL STYLE AT BOTTOM -->
+    <!-- 112 AUTOMATED EMERGENCY DISPATCHER — SUNSET CIVILIAN WARM HUD STYLE -->
     <div id="dispatch-112-modal" class="dispatch-modal-overlay hidden">
         <div class="dispatch-shell">
             <div class="dispatch-shell__body">
@@ -1095,8 +1095,9 @@
                         </svg>
                     </div>
                     <div class="dispatch__title-wrap">
-                        <div class="dispatch__title">911 / 112 Emergency Dispatch</div>
-                        <div class="dispatch__subtitle">Automated Emergency Routing System</div>
+                        <div class="dispatch__eyebrow">APEL DE URGENȚĂ CIVIL · 112</div>
+                        <div class="dispatch__title">Dispecerat Național de Urgență</div>
+                        <div class="dispatch__subtitle">Sistem Centralizat Rutare Intervenție Rapidă</div>
                     </div>
                     <div class="dispatch__loc-badge">
                         <span class="dispatch__loc-pin">📍</span>
@@ -1104,44 +1105,48 @@
                     </div>
                 </div>
 
-                <div class="dispatch__categories-title">Select Emergency Category</div>
+                <div class="dispatch__categories-title">Selectează Categoria Urgenței</div>
                 <div class="dispatch-categories">
-                    <button type="button" class="dispatch-cat-btn is-active" data-category="shots">
+                    <button type="button" class="dispatch-cat-btn is-active" data-category="medical">
+                        <span class="dispatch-cat-emoji">🚑</span>
+                        <span>Urgență Medicală / Salvare</span>
+                    </button>
+                    <button type="button" class="dispatch-cat-btn" data-category="shots">
                         <span class="dispatch-cat-emoji">💥</span>
-                        <span>Shots Fired / Armed</span>
+                        <span>Focuri de Armă / Înarmat</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="robbery">
                         <span class="dispatch-cat-emoji">💰</span>
-                        <span>Robbery in Progress</span>
+                        <span>Jaf în Desfășurare</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="theft">
                         <span class="dispatch-cat-emoji">🚗</span>
-                        <span>Stolen Vehicle</span>
+                        <span>Furt Vehicul / Bunuri</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="assault">
                         <span class="dispatch-cat-emoji">🥊</span>
-                        <span>Violent Assault</span>
+                        <span>Agresiune / Bătaie</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="traffic">
                         <span class="dispatch-cat-emoji">⚠️</span>
-                        <span>Traffic Accident</span>
+                        <span>Accident Rutier</span>
                     </button>
                     <button type="button" class="dispatch-cat-btn" data-category="suspicious">
                         <span class="dispatch-cat-emoji">👁️</span>
-                        <span>Suspicious Activity</span>
+                        <span>Activitate Suspectă</span>
                     </button>
                 </div>
 
                 <div class="dispatch__input-wrap">
-                    <input type="text" id="dispatch-112-details" class="dispatch-details-input" placeholder="Briefly describe incident, suspect appearance, vehicle, direction... (optional)" maxlength="200" autocomplete="off">
+                    <input type="text" id="dispatch-112-details" class="dispatch-details-input" placeholder="Detalii incident: aspect suspecți, direcție de deplasare, vehicule... (opțional)" maxlength="200" autocomplete="off">
                 </div>
 
                 <div class="dispatch-actions">
                     <button type="button" class="dispatch-btn dispatch-btn--cancel" id="dispatch-112-cancel">
-                        <span class="dispatch__key">ESC</span> Hang Up
+                        <span class="dispatch__key">ESC</span> Anulează Apelul
                     </button>
                     <button type="button" class="dispatch-btn dispatch-btn--submit" id="dispatch-112-submit">
-                        <span class="dispatch__key">ENTER</span> Transmit 112 Call
+                        <span class="dispatch__key">ENTER</span> Transmite Apelul 112
                     </button>
                 </div>
             </div>
@@ -2010,7 +2015,7 @@
     <script src="js/job_shift.js?v=3"></script>
     <script src="js/job_creator.js?v=9"></script>
     <script src="js/factions.js?v=6"></script>
-    <script src="js/mdc_tablet.js?v=1"></script>
+    <script src="js/mdc_tablet.js?v=2"></script>
     <script src="js/player_interaction.js?v=1"></script>
 </body>
 </html>
