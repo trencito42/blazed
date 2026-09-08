@@ -301,14 +301,14 @@ const Menu = {
             const claimCost = selected.claimCost != null ? Number(selected.claimCost) : 250;
             const renewCost = selected.renewCost != null ? Number(selected.renewCost) : 750;
             if (points > 0) {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">REVENDICĂ ASIGURARE ($${formatMoney(claimCost)})</button>`;
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">REVENDICĂ ASIGURARE (${formatMoney(claimCost)})</button>`;
             } else {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">FĂRĂ PUNCTE — REÎNNOIEȘTE ($${formatMoney(renewCost)})</button>`;
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">FĂRĂ PUNCTE — REÎNNOIEȘTE (${formatMoney(renewCost)})</button>`;
             }
         } else if (status.stored) {
             actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">SPAWN VEHICLE</button>${actions}`;
             if ((selected.insurancePoints || 0) < 5) {
-                actions += `<button type="button" class="premium-vmenu__btn" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 PUNCTE ($${formatMoney(selected.renewCost || 750)})</button>`;
+                actions += `<button type="button" class="premium-vmenu__btn" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 PUNCTE (${formatMoney(selected.renewCost || 750)})</button>`;
             }
         } else if (status.inWorld) {
             if (selected.isCurrentVehicle) {
@@ -333,11 +333,12 @@ const Menu = {
                     ${this.vitalsRow('FUEL', fuel)}
                     ${this.vitalsRow('BODY', body)}
                     <div class="premium-vmenu__odo"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
-                    <div class="premium-vmenu__insurance-info"><span>ASIGURARE</span><strong>${selected.insurancePoints != null ? selected.insurancePoints : 5} PCT · NIVEL ${selected.insuranceLevel || 1}/11 · TAXĂ: $${formatMoney(selected.claimCost || 250)}</strong></div>
+                    <div class="premium-vmenu__insurance-info"><span>ASIGURARE</span><strong>${selected.insurancePoints != null ? selected.insurancePoints : 5} PCT · NIVEL ${selected.insuranceLevel || 1}/11 · TAXĂ: ${formatMoney(selected.claimCost || 250)}</strong></div>
                 </div>
                 ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
                 <div class="premium-vmenu__actions">${actions}</div>
             </section>`;
+
 
         this.bindEcuToggles(grid);
 

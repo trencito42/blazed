@@ -977,9 +977,11 @@ AddEventHandler('sunset:nui:garageClaimInsurance', function(data)
         if not data or not data.vehicleId then return end
         local result, err = Sunset.AwaitCallback('sunset:claimVehicleInsurance', tonumber(data.vehicleId))
         if result and result.ok then
-            local vehicles = Sunset.AwaitCallback('sunset:getVehicles')
-            if vehicles then
-                exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+            if not data.fromMenu then
+                local vehicles = Sunset.AwaitCallback('sunset:getVehicles')
+                if vehicles then
+                    exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+                end
             end
         else
             notify(err or 'Nu s-a putut revendica asigurarea.', 'error')
@@ -992,15 +994,18 @@ AddEventHandler('sunset:nui:garageRenewInsurance', function(data)
         if not data or not data.vehicleId then return end
         local result, err = Sunset.AwaitCallback('sunset:renewVehicleInsurance', tonumber(data.vehicleId))
         if result and result.ok then
-            local vehicles = Sunset.AwaitCallback('sunset:getVehicles')
-            if vehicles then
-                exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+            if not data.fromMenu then
+                local vehicles = Sunset.AwaitCallback('sunset:getVehicles')
+                if vehicles then
+                    exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+                end
             end
         else
             notify(err or 'Nu s-a putut reînnoi asigurarea.', 'error')
         end
     end)
 end)
+
 
 local reportedDestroyedVehicles = {}
 

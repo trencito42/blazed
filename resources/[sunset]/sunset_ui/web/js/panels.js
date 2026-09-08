@@ -817,7 +817,7 @@ const Panels = {
                     <div class="menu-vcard__insurance">
                         <span class="insurance-badge">🛡️ Asigurare: <strong>${points} pct</strong></span>
                         <span class="insurance-level ${level > 1 ? 'is-elevated' : ''}">Nivel ${level}/11</span>
-                        <span class="insurance-cost">Taxă: $${formatMoney(claimCost)}</span>
+                        <span class="insurance-cost">Taxă: ${formatMoney(claimCost)}</span>
                     </div>
                     ${window.Menu ? window.Menu.formatEcuBlock(v.ecuInfo, v.id) : ''}
                     <div class="menu-vcard__actions"></div>
@@ -826,16 +826,17 @@ const Panels = {
             const actions = li.querySelector('.menu-vcard__actions');
             if (isDestroyed) {
                 if (points > 0) {
-                    addBtn(actions, `Revendică Asigurare ($${formatMoney(claimCost)})`, 'menu-vcard__btn--danger', () => post('garageClaimInsurance', { vehicleId: v.id }));
+                    addBtn(actions, `Revendică Asigurare (${formatMoney(claimCost)})`, 'menu-vcard__btn--danger', () => post('garageClaimInsurance', { vehicleId: v.id }));
                 } else {
-                    addBtn(actions, `Fără Puncte — Reînnoiește ($${formatMoney(renewCost)})`, 'menu-vcard__btn--warning', () => post('garageRenewInsurance', { vehicleId: v.id }));
+                    addBtn(actions, `Fără Puncte — Reînnoiește (${formatMoney(renewCost)})`, 'menu-vcard__btn--warning', () => post('garageRenewInsurance', { vehicleId: v.id }));
                 }
             } else if (stored) {
                 addBtn(actions, 'Spawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
                 if (points < 5) {
-                    addBtn(actions, `+5 Pct ($${formatMoney(renewCost)})`, '', () => post('garageRenewInsurance', { vehicleId: v.id }));
+                    addBtn(actions, `+5 Pct (${formatMoney(renewCost)})`, '', () => post('garageRenewInsurance', { vehicleId: v.id }));
                 }
-            } else if (inWorld) {
+            }
+ else if (inWorld) {
                 addBtn(actions, 'GPS', '', () => post('garageLocate', { plate: v.plate, vehicleId: v.id }));
                 addBtn(actions, 'Store', 'menu-vcard__btn--primary', () => post('garageStore', { vehicleId: v.id }));
             } else {
