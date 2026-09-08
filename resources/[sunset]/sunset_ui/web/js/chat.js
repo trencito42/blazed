@@ -486,27 +486,32 @@ const Chat = {
         const chat = $('#chat');
         const wrap = $('#chat-input-wrap');
         const input = $('#chat-input');
+        const backdrop = $('#chat-backdrop');
         if (open) {
             this.setContext(data);
             ChatSettings.init();
             document.body.classList.add('chat-ui-open');
-            chat.classList.add('chat-open');
-            wrap.classList.remove('hidden');
+            chat?.classList.add('chat-open');
+            backdrop?.classList.remove('hidden');
+            wrap?.classList.remove('hidden');
             this._pendingRender = false;
             this.render();
             setTimeout(() => {
                 if (!this.isChatOpen()) return;
-                input.focus({ preventScroll: true });
+                input?.focus({ preventScroll: true });
             }, 50);
         } else {
             this.toggleSettings(false);
+            backdrop?.classList.add('hidden');
             document.body.classList.remove('chat-ui-open');
-            chat.classList.remove('chat-open');
-            wrap.classList.add('hidden');
+            chat?.classList.remove('chat-open');
+            wrap?.classList.add('hidden');
             this._pendingRender = false;
             this.render();
-            input.value = '';
-            input.blur();
+            if (input) {
+                input.value = '';
+                input.blur();
+            }
         }
     },
 
@@ -530,6 +535,13 @@ const Chat = {
         input.value = '';
     },
 };
+
+$('#chat-backdrop')?.addEventListener('click', () => {
+    if (Chat.settingsOpen) {
+        Chat.toggleSettings(false);
+    }
+    $('#chat-input')?.focus({ preventScroll: true });
+});
 
 $('#chat-messages')?.addEventListener('mouseup', () => {
     if (!Chat._pendingRender) return;

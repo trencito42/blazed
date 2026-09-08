@@ -23,11 +23,16 @@ end
 local function closeChat()
     if not chatOpen then return end
     chatOpen = false
-    exports.sunset_ui:SetFocus(false, false)
+    if exports.sunset_ui and exports.sunset_ui:IsOpen() then
+        exports.sunset_ui:SetFocus(true, true)
+    else
+        exports.sunset_ui:SetFocus(false, false)
+    end
     exports.sunset_ui:Send('chatToggle', { open = false })
 end
 
 RegisterCommand('sunset_chat', function()
+    if exports.sunset_ui and exports.sunset_ui:IsOpen() then return end
     openChat()
 end, false)
 RegisterKeyMapping('sunset_chat', 'Open chat', 'keyboard', 'T')

@@ -7,6 +7,30 @@
     --chat-line-height: 1.14;
 }
 
+/* Full-viewport transparent backdrop: guarantees CEF hit-testing and renders system mouse cursor */
+.chat-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(0, 0, 0, 0.001);
+    cursor: default !important;
+    pointer-events: auto !important;
+}
+
+.chat-backdrop.hidden {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+body.chat-ui-open {
+    cursor: default !important;
+    pointer-events: auto !important;
+}
+
+body.chat-ui-open * {
+    cursor: default;
+}
+
 .chat {
     position: fixed;
     top: 10px;
@@ -30,7 +54,8 @@
 
 .chat.chat-open .chat-toolbar {
     opacity: 1;
-    pointer-events: auto;
+    pointer-events: auto !important;
+    cursor: default !important;
 }
 
 .chat-settings-btn {
@@ -41,7 +66,8 @@
     color: rgba(255, 255, 255, 0.75);
     font-size: 14px;
     line-height: 1;
-    cursor: pointer;
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 .chat-settings-btn:hover {
@@ -102,6 +128,7 @@
 .menu-config-row input[type="range"] {
     width: 100%;
     accent-color: #ff8a00;
+    cursor: pointer !important;
 }
 
 .chat-settings-popover__actions,
@@ -117,6 +144,8 @@
 .menu-config__actions .menu-job-btn {
     padding: 6px 10px;
     font-size: 10px;
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 .chat-settings-hint,
@@ -126,7 +155,8 @@
 }
 
 .chat.chat-open {
-    pointer-events: auto;
+    pointer-events: auto !important;
+    cursor: default !important;
 }
 
 body.chat-ui-open .chat,
@@ -140,11 +170,14 @@ body.chat-ui-open .chat-msg *,
 .chat.chat-open .chat-msg * {
     user-select: text !important;
     -webkit-user-select: text !important;
-    pointer-events: auto;
+    pointer-events: auto !important;
 }
 
+body.chat-ui-open .chat-messages,
+body.chat-ui-open .chat-msg,
+.chat.chat-open .chat-messages,
 .chat.chat-open .chat-msg {
-    cursor: text;
+    cursor: text !important;
 }
 
 .chat-messages {
@@ -552,7 +585,8 @@ body.chat-ui-open .chat-msg *,
 
 .chat-input-wrap {
     margin-top: 6px;
-    pointer-events: auto;
+    pointer-events: auto !important;
+    cursor: default !important;
 }
 
 .chat-input-wrap.hidden { display: none; }
@@ -569,7 +603,8 @@ body.chat-ui-open .chat-msg *,
     outline: none;
     user-select: text !important;
     -webkit-user-select: text !important;
-    pointer-events: auto;
+    pointer-events: auto !important;
+    cursor: text !important;
     caret-color: #e85d2a;
 }
 
