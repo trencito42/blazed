@@ -167,11 +167,12 @@ exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(sour
         return finish(nil, 'A unique license plate could not be generated. Your money was returned.')
     end
 
+    local insuranceCost = math.max(250, math.min(15000, math.floor(price * 0.015)))
     local ok, vehicleId = pcall(function()
         return MySQL.insert.await([[
-            INSERT INTO vehicles (character_id, plate, model, stored, garage, fuel, engine, body)
-            VALUES (?, ?, ?, 1, ?, 100, 1000, 1000)
-        ]], { char.id, plate, model, Sunset.Dealership.purchaseGarage or 'legion' })
+            INSERT INTO vehicles (character_id, plate, model, stored, garage, fuel, engine, body, insurance_points, insurance_level, destroyed, insurance_cost)
+            VALUES (?, ?, ?, 1, ?, 100, 1000, 1000, 5, 1, 0, ?)
+        ]], { char.id, plate, model, Sunset.Dealership.purchaseGarage or 'legion', insuranceCost })
     end)
     if not ok or not vehicleId then
         exports.sunset_core:AddMoney(source, account, price, 'dealership_refund')

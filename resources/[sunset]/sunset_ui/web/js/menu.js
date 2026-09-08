@@ -1,5 +1,6 @@
 const Menu = {
     activeTab: 'player',
+    selectedVehicleId: null,
 
     init() {
         if (this._ready) return;
@@ -254,71 +255,98 @@ const Menu = {
         const vehicles = data.vehicles || [];
 
         if (!vehicles.length) {
-            grid.innerHTML = `<div class="menu-mgmt-empty">
-                <p>No vehicles yet.</p>
-                <span>Starter cars and purchases get a unique plate automatically.</span>
-            </div>`;
+            this.selectedVehicleId = null;
+            grid.innerHTML = `<div class="premium-vmenu__empty"><strong>NO VEHICLES</strong><span>Your purchased vehicles will appear here.</span></div>`;
             return;
         }
 
-        grid.innerHTML = vehicles.map((v) => {
-            const stored = v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1;
-            const inWorld = v.inWorld === true;
-            const status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
-            const statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
-            const fuelValue = Number(v.fuel);
-            const engineValue = Number(v.engine);
-            const bodyValue = Number(v.body);
-            const fuel = Math.max(0, Math.min(100, Math.round(Number.isFinite(fuelValue) ? fuelValue : 100)));
-            const engine = Math.max(0, Math.min(100, Math.round((Number.isFinite(engineValue) ? engineValue : 1000) / 10)));
-            const body = Math.max(0, Math.min(100, Math.round((Number.isFinite(bodyValue) ? bodyValue : 1000) / 10)));
-            const model = this.escape((v.model || 'vehicle').toUpperCase());
+        const selectedExists = vehicles.some((v) => String(v.id) === String(this.selectedVehicleId));
+        if (!selectedExists) this.selectedVehicleId = vehicles[0].id;
+        const selected = vehicles.find((v) => String(v.id) === String(this.selectedVehicleId)) || vehicles[0];
+
+        const stateOf = (v) => {
+            const isDestroyed = v.destroyed === true || v.destroyed === 1 || v.destroyed === '1';
+            const stored = !isDestroyed && (v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1);
+            const inWorld = !isDestroyed && v.inWorld === true;
+            const hasPark = Number.isFinite(Number(v.parked_x)) && Number.isFinite(Number(v.parked_y));
+            if (isDestroyed) return { key: 'destroyed', label: 'Distrus (Asigurare)', stored: false, inWorld: false, isDestroyed: true };
+            if (stored) return { key: 'garage', label: `In garage · ${v.garage || 'Legion'}`, stored, inWorld };
+            if (inWorld) return { key: 'out', label: 'Active in world', stored, inWorld };
+            if (hasPark) return { key: 'parked', label: 'Parked outside', stored, inWorld };
+            return { key: 'missing', label: 'Location unavailable', stored, inWorld };
+        };
+
+        const listHtml = vehicles.map((v) => {
+            const status = stateOf(v);
+            const model = this.escape((v.model || 'Vehicle').toUpperCase());
             const plate = this.escape(v.plate || '—');
-            const garage = this.escape(v.garage || 'legion');
-            const odometer = Number(v.odometer);
-            const odoLine = Number.isFinite(odometer) && odometer > 0
-                ? `<div class="menu-vcard__odo">ODOMETRU <em>${odometer.toFixed(1)} km</em></div>`
-                : '';
-
-            let actions = '';
-            if (stored) {
-                actions = `<button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${Number(v.id) || 0}">Spawn</button>`;
-            } else if (inWorld) {
-                actions = `
-                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(v.id) || 0}">GPS</button>
-                    <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="store" data-v-id="${Number(v.id) || 0}">Store</button>`;
-            } else {
-                actions = `
-                    <button type="button" class="menu-vcard__btn" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(v.id) || 0}">GPS</button>
-                    <button type="button" class="menu-vcard__btn menu-vcard__btn--primary" data-v-action="spawn" data-v-id="${Number(v.id) || 0}">Respawn</button>
-                    <button type="button" class="menu-vcard__btn" data-v-action="store" data-v-id="${Number(v.id) || 0}">Store</button>`;
-            }
-
-            return `<article class="menu-vcard menu-vcard--garage">
-                <div class="menu-vcard__img-wrap">
-                    <img class="menu-vcard__img" src="${this.vehicleImage(v.model)}" alt="${model}" loading="lazy"
-                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                    <div class="menu-vcard__img-fallback" style="display:none">${model.charAt(0)}</div>
-                    <span class="menu-vcard__status menu-vcard__status--${statusClass}">${status}</span>
-                </div>
-                <div class="menu-vcard__body">
-                    <div class="menu-vcard__top">
-                        <strong>${model}</strong>
-                        ${odoLine ? odoLine.replace('menu-vcard__odo', 'menu-vcard__odo menu-vcard__odo--inline') : ''}
-                    </div>
-                    <div class="menu-vcard__plate">${plate}</div>
-                    <div class="menu-vcard__vitals">
-                        ${this.vitalsRow('FUEL', fuel)}
-                        ${this.vitalsRow('ENG', engine)}
-                        ${this.vitalsRow('BODY', body)}
-                    </div>
-                    ${this.formatEcuBlock(v.ecuInfo, v.id)}
-                    <div class="menu-vcard__actions">${actions}</div>
-                </div>
-            </article>`;
+            const isSelected = String(v.id) === String(this.selectedVehicleId);
+            return `<button type="button" class="premium-vmenu__item ${isSelected ? 'is-selected' : ''}" data-v-select="${Number(v.id) || 0}">
+                <span class="premium-vmenu__model">${model}</span>
+                <span class="premium-vmenu__plate">${plate}</span>
+                <i class="premium-vmenu__dot premium-vmenu__dot--${status.key}" aria-label="${status.label}"></i>
+            </button>`;
         }).join('');
 
+        const status = stateOf(selected);
+        const model = this.escape((selected.model || 'Vehicle').toUpperCase());
+        const plate = this.escape(selected.plate || '—');
+        const fuel = Math.max(0, Math.min(100, Math.round(Number(selected.fuel) || 0)));
+        const engine = Math.max(0, Math.min(100, Math.round((Number(selected.engine) || 0) / 10)));
+        const body = Math.max(0, Math.min(100, Math.round((Number(selected.body) || 0) / 10)));
+        const odometer = Math.max(0, Number(selected.odometer) || 0);
+        let actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}">SET GPS</button>`;
+        if (status.isDestroyed) {
+            const points = selected.insurancePoints != null ? Number(selected.insurancePoints) : 5;
+            const claimCost = selected.claimCost != null ? Number(selected.claimCost) : 250;
+            const renewCost = selected.renewCost != null ? Number(selected.renewCost) : 750;
+            if (points > 0) {
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">REVENDICĂ ASIGURARE ($${formatMoney(claimCost)})</button>`;
+            } else {
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">FĂRĂ PUNCTE — REÎNNOIEȘTE ($${formatMoney(renewCost)})</button>`;
+            }
+        } else if (status.stored) {
+            actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">SPAWN VEHICLE</button>${actions}`;
+            if ((selected.insurancePoints || 0) < 5) {
+                actions += `<button type="button" class="premium-vmenu__btn" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 PUNCTE ($${formatMoney(selected.renewCost || 750)})</button>`;
+            }
+        } else if (status.inWorld) {
+            if (selected.isCurrentVehicle) {
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="park" data-v-id="${Number(selected.id) || 0}">PARK HERE</button>${actions}`;
+            } else {
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="store" data-v-id="${Number(selected.id) || 0}">STORE VEHICLE</button>${actions}`;
+            }
+        } else {
+            actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">RESPAWN HERE</button>${actions}`;
+        }
+
+        grid.innerHTML = `<aside class="premium-vmenu__sidebar">
+                <header><h3>PERSONAL GARAGE</h3><p>Select a vehicle for details</p></header>
+                <div class="premium-vmenu__list">${listHtml}</div>
+            </aside>
+            <section class="premium-vmenu__detail">
+                <div class="premium-vmenu__class">PERSONAL VEHICLE</div>
+                <h2>${model}</h2>
+                <div class="premium-vmenu__status premium-vmenu__status--${status.key}"><i></i>${this.escape(status.label)}</div>
+                <div class="premium-vmenu__stats">
+                    ${this.vitalsRow('ENGINE HEALTH', engine)}
+                    ${this.vitalsRow('FUEL', fuel)}
+                    ${this.vitalsRow('BODY', body)}
+                    <div class="premium-vmenu__odo"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
+                    <div class="premium-vmenu__insurance-info"><span>ASIGURARE</span><strong>${selected.insurancePoints != null ? selected.insurancePoints : 5} PCT · NIVEL ${selected.insuranceLevel || 1}/11 · TAXĂ: $${formatMoney(selected.claimCost || 250)}</strong></div>
+                </div>
+                ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
+                <div class="premium-vmenu__actions">${actions}</div>
+            </section>`;
+
         this.bindEcuToggles(grid);
+
+        grid.querySelectorAll('[data-v-select]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.selectedVehicleId = Number(button.dataset.vSelect);
+                this.renderVehicles(data);
+            });
+        });
 
         grid.querySelectorAll('[data-v-action]').forEach((btn) => {
             btn.addEventListener('click', () => {

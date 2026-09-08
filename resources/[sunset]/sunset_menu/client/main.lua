@@ -86,10 +86,12 @@ local function buildMenuData(forceExtras)
             currentVehicle = GetVehiclePedIsIn(ped, false)
             currentPlate = (GetVehicleNumberPlateText(currentVehicle) or ''):gsub('%s+', ''):upper()
         end
+        local drivingCurrentVehicle = currentVehicle ~= 0 and GetPedInVehicleSeat(currentVehicle, -1) == ped
         for _, v in ipairs(extras.vehicles or {}) do
             local plate = (v.plate or ''):gsub('%s+', ''):upper()
             if currentPlate ~= nil and currentPlate ~= '' and plate == currentPlate then
                 v.inWorld = true
+                v.isCurrentVehicle = drivingCurrentVehicle
                 v.fuel = exports.sunset_vehicles:GetFuelLevel()
                 v.engine = GetVehicleEngineHealth(currentVehicle)
                 v.body = GetVehicleBodyHealth(currentVehicle)
@@ -375,6 +377,24 @@ AddEventHandler('sunset:nui:menuVehicleAction', function(data)
             else
                 exports.sunset_ui:Notify(err or 'Could not spawn', 'error')
             end
+        elseif data.action == 'claim_insurance' then
+            TriggerEvent('sunset:nui:garageClaimInsurance', { vehicleId = tonumber(data.vehicleId) })
+            cachedExtras = nil
+            cachedExtrasAt = 0
+            Wait(400)
+            local refreshed, menuData = pcall(buildMenuData, true)
+            if refreshed and menuData then
+                exports.sunset_ui:Send('menuUpdate', menuData)
+            end
+        elseif data.action == 'renew_insurance' then
+            TriggerEvent('sunset:nui:garageRenewInsurance', { vehicleId = tonumber(data.vehicleId) })
+            cachedExtras = nil
+            cachedExtrasAt = 0
+            Wait(400)
+            local refreshed, menuData = pcall(buildMenuData, true)
+            if refreshed and menuData then
+                exports.sunset_ui:Send('menuUpdate', menuData)
+            end
         elseif data.action == 'store' then
             TriggerEvent('sunset:nui:garageStore', { vehicleId = tonumber(data.vehicleId) })
         elseif data.action == 'gps' then
@@ -382,6 +402,8 @@ AddEventHandler('sunset:nui:menuVehicleAction', function(data)
                 plate = data.plate,
                 vehicleId = tonumber(data.vehicleId),
             })
+        elseif data.action == 'park' then
+            TriggerEvent('sunset:vehicle:parkCurrent')
         end
     end)
 end)

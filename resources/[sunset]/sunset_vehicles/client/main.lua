@@ -964,6 +964,80 @@ AddEventHandler('sunset:nui:garageClose', function()
     exports.sunset_ui:Send('garageHide', {})
 end)
 
+AddEventHandler('sunset:nui:garageClaimInsurance', function(data)
+    CreateThread(function()
+        if not data or not data.vehicleId then return end
+        local result, err = Sunset.AwaitCallback('sunset:claimVehicleInsurance', tonumber(data.vehicleId))
+        if result and result.ok then
+            local vehicles = Sunset.AwaitCallback('sunset:getVehicles')
+            if vehicles then
+                exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+            end
+        else
+            notify(err or 'Nu s-a putut revendica asigurarea.', 'error')
+        end
+    end)
+end)
+
+AddEventHandler('sunset:nui:garageRenewInsurance', function(data)
+    CreateThread(function()
+        if not data or not data.vehicleId then return end
+        local result, err = Sunset.AwaitCallback('sunset:renewVehicleInsurance', tonumber(data.vehicleId))
+        if result and result.ok then
+            local vehicles = Sunset.AwaitCallback('sunset:getVehicles')
+            if vehicles then
+                exports.sunset_ui:Send('garageShow', { vehicles = vehicles })
+            end
+        else
+            notify(err or 'Nu s-a putut reînnoi asigurarea.', 'error')
+        end
+    end)
+end)
+
+local reportedDestroyedVehicles = {}
+
+local function reportVehicleDestroyed(veh)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    if reportedDestroyedVehicles[veh] then return end
+    reportedDestroyedVehicles[veh] = true
+
+    local plate = normalizePlate(GetVehicleNumberPlateText(veh))
+    if plate == '' then return end
+
+    TriggerServerEvent('sunset:server:vehicleDestroyed', VehToNet(veh), plate)
+    if spawnedOwnedVehicle == veh then
+        spawnedOwnedVehicle = nil
+    end
+
+    SetTimeout(60000, function()
+        reportedDestroyedVehicles[veh] = nil
+    end)
+end
+
+AddEventHandler('gameEventTriggered', function(name, args)
+    if name == 'CEventNetworkVehicleUndriveable' then
+        local veh = args and args[1]
+        if veh and veh ~= 0 and DoesEntityExist(veh) then
+            if (spawnedOwnedVehicle and spawnedOwnedVehicle == veh) or hasKeysFor(veh) then
+                reportVehicleDestroyed(veh)
+            end
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
+            if IsEntityDead(spawnedOwnedVehicle)
+                or GetVehicleEngineHealth(spawnedOwnedVehicle) <= -3900.0
+                or (IsEntityInWater(spawnedOwnedVehicle) and GetEntitySubmergedLevel(spawnedOwnedVehicle) >= 0.85) then
+                reportVehicleDestroyed(spawnedOwnedVehicle)
+            end
+        end
+        Wait(1000)
+    end
+end)
+
 local function resolveVehicleToStore()
     local ped = PlayerPedId()
     if IsPedInAnyVehicle(ped, false) then

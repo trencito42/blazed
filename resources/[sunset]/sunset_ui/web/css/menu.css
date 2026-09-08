@@ -632,6 +632,60 @@
 .menu-vcard__status--stored { color: var(--os-green); background: rgba(0, 255, 102, 0.1); }
 .menu-vcard__status--out { color: var(--os-accent-bright); background: var(--os-accent-dim); }
 .menu-vcard__status--missing { color: var(--os-red); background: rgba(255, 42, 42, 0.12); }
+.menu-vcard__status--destroyed { color: #ff3366; background: rgba(255, 51, 102, 0.15); border: 1px solid rgba(255, 51, 102, 0.35); }
+.menu-vcard__insurance {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    font-size: 9px;
+    font-family: var(--sunset-display, inherit);
+}
+.menu-vcard__insurance .insurance-badge {
+    color: #00e5ff;
+    font-weight: 700;
+}
+.menu-vcard__insurance .insurance-badge strong {
+    color: #fff;
+}
+.menu-vcard__insurance .insurance-level {
+    color: rgba(255, 255, 255, 0.6);
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+}
+.menu-vcard__insurance .insurance-level.is-elevated {
+    color: #ffaa00;
+    background: rgba(255, 170, 0, 0.15);
+    border: 1px solid rgba(255, 170, 0, 0.3);
+    font-weight: 700;
+}
+.menu-vcard__insurance .insurance-cost {
+    margin-left: auto;
+    color: #ff9b3d;
+    font-weight: 700;
+}
+.menu-vcard__btn--danger {
+    color: #fff !important;
+    background: linear-gradient(135deg, #d32f2f, #b71c1c) !important;
+    border: 1px solid rgba(255, 50, 50, 0.6) !important;
+    box-shadow: 0 0 10px rgba(211, 47, 47, 0.4);
+}
+.menu-vcard__btn--danger:hover {
+    background: linear-gradient(135deg, #f44336, #c62828) !important;
+    box-shadow: 0 0 14px rgba(244, 67, 54, 0.6);
+}
+.menu-vcard__btn--warning {
+    color: #120b05 !important;
+    background: linear-gradient(135deg, #ffb300, #ff8f00) !important;
+    border: 1px solid rgba(255, 179, 0, 0.6) !important;
+    font-weight: 800;
+}
 .menu-vcard__plate { margin-top: 5px; color: #fff; font: 600 12px/1 var(--os-title); letter-spacing: 0.12em; }
 .menu-vcard__meta { margin-top: 4px; color: var(--os-muted); font-size: 10px; }
 .menu-vcard__diag { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
@@ -963,3 +1017,130 @@
 }
 
 .menu-inventory-list .inventory-row button:hover { filter: brightness(1.08); }
+
+/* Premium split garage — adapted from the supplied vehicle-menu direction. */
+.menu-mgmt--vehicles { overflow: hidden; }
+.menu-vehicle-grid {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    width: 100%;
+    height: 100%;
+    min-height: 460px;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px;
+    background: rgba(13,13,20,.72);
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+    backdrop-filter: blur(15px);
+}
+.premium-vmenu__sidebar {
+    min-width: 0;
+    overflow: hidden;
+    border-right: 1px solid rgba(255,255,255,.1);
+    display: flex;
+    flex-direction: column;
+}
+.premium-vmenu__sidebar > header { padding: 25px 25px 15px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.premium-vmenu__sidebar h3 { margin: 0; color: #fff; font: 900 22px/1 Montserrat, var(--os-title); letter-spacing: 1px; }
+.premium-vmenu__sidebar p { margin: 6px 0 0; color: rgba(255,255,255,.5); font: 500 11px/1.3 Montserrat, sans-serif; }
+.premium-vmenu__list { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 15px; overflow-y: auto; }
+.premium-vmenu__list::-webkit-scrollbar { width: 4px; }
+.premium-vmenu__list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 10px; }
+.premium-vmenu__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 15px;
+    overflow: hidden;
+    color: #fff;
+    text-align: left;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(255,255,255,.03);
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+.premium-vmenu__item:hover { background: rgba(255,255,255,.08); transform: translateX(2px); }
+.premium-vmenu__item.is-selected { border-color: rgba(255,119,0,.42); background: rgba(255,119,0,.08); }
+.premium-vmenu__item.is-selected::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:#ff7700; }
+.premium-vmenu__model { font: 800 15px/1.1 Montserrat, var(--os-title); }
+.premium-vmenu__plate { padding: 3px 7px; color:#ff9b3d; border-radius:4px; background:rgba(255,119,0,.13); font:700 10px/1 Montserrat,sans-serif; letter-spacing:1px; }
+.premium-vmenu__dot { position:absolute; top:16px; right:15px; width:8px; height:8px; border-radius:50%; }
+.premium-vmenu__dot--garage { background:#00ffcc; box-shadow:0 0 8px #00ffcc; }
+.premium-vmenu__dot--out,.premium-vmenu__dot--parked { background:#ffcc00; box-shadow:0 0 8px #ffcc00; }
+.premium-vmenu__dot--missing { background:#ff3366; box-shadow:0 0 8px #ff3366; }
+.premium-vmenu__dot--destroyed { background:#ff2255; box-shadow:0 0 8px #ff2255; }
+.premium-vmenu__detail { min-width:0; display:flex; flex-direction:column; padding:40px; overflow-y:auto; }
+.premium-vmenu__class { margin-bottom:6px; color:rgba(255,255,255,.5); font:700 11px/1 Montserrat,sans-serif; letter-spacing:2px; }
+.premium-vmenu__detail h2 { margin:0 0 10px; color:#fff; font:900 30px/1.1 Montserrat,var(--os-title); }
+.premium-vmenu__status { display:inline-flex; align-items:center; align-self:flex-start; gap:7px; padding:5px 10px; color:#fff; border-radius:12px; background:rgba(255,255,255,.05); font:700 11px/1 Montserrat,sans-serif; }
+.premium-vmenu__status i { width:7px; height:7px; border-radius:50%; background:#ffcc00; }
+.premium-vmenu__status--garage i { background:#00ffcc; box-shadow:0 0 6px #00ffcc; }
+.premium-vmenu__status--missing i { background:#ff3366; box-shadow:0 0 6px #ff3366; }
+.premium-vmenu__status--destroyed i { background:#ff2255; box-shadow:0 0 6px #ff2255; }
+.premium-vmenu__stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin:30px 0 18px; padding:20px; border-radius:8px; background:rgba(255,255,255,.03); }
+.premium-vmenu__stats .menu-vcard__vital { padding:0; gap:8px; border:0; border-radius:0; background:transparent; }
+.premium-vmenu__stats .menu-vcard__vital span { color:rgba(255,255,255,.5); font:700 10px/1 Montserrat,sans-serif; }
+.premium-vmenu__stats .menu-vcard__vital i { height:6px; }
+.premium-vmenu__stats .menu-vcard__vital i b { background:#ff7700; }
+.premium-vmenu__stats .menu-vcard__vital em { font:700 11px/1 Montserrat,sans-serif; }
+.premium-vmenu__odo { display:flex; flex-direction:column; gap:8px; color:rgba(255,255,255,.5); font:700 10px/1 Montserrat,sans-serif; }
+.premium-vmenu__odo strong { color:#fff; font-size:12px; }
+.premium-vmenu__insurance-info {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.premium-vmenu__insurance-info span {
+    color: rgba(255, 255, 255, 0.5);
+    font: 700 10px/1 Montserrat, sans-serif;
+    letter-spacing: 1px;
+}
+.premium-vmenu__insurance-info strong {
+    color: #ff9b3d;
+    font: 800 12px/1.2 Montserrat, var(--os-title);
+    letter-spacing: 0.04em;
+}
+.premium-vmenu__detail .menu-vcard__ecu-strip { margin:0 0 18px; }
+.premium-vmenu__actions { display:flex; gap:15px; margin-top:auto; padding-top:20px; }
+.premium-vmenu__btn { flex:1; padding:15px 10px; border-radius:6px; font:800 12px/1 Montserrat,sans-serif; letter-spacing:1px; cursor:pointer; transition:transform .2s ease,box-shadow .2s ease,background .2s ease; }
+.premium-vmenu__btn:hover { transform:translateY(-2px); }
+.premium-vmenu__btn--primary { color:#120b05; border:0; background:#ff7700; }
+.premium-vmenu__btn--primary:hover { box-shadow:0 0 16px rgba(255,119,0,.38); }
+.premium-vmenu__btn--secondary { color:#fff; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.03); }
+.premium-vmenu__btn--danger {
+    color: #fff;
+    border: 0;
+    background: linear-gradient(135deg, #e53935, #c62828);
+    box-shadow: 0 0 14px rgba(229, 57, 53, 0.45);
+}
+.premium-vmenu__btn--danger:hover {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    box-shadow: 0 0 20px rgba(244, 67, 54, 0.65);
+}
+.premium-vmenu__btn--warning {
+    color: #120b05;
+    border: 0;
+    background: linear-gradient(135deg, #ffb300, #ff8f00);
+    box-shadow: 0 0 14px rgba(255, 179, 0, 0.35);
+}
+.premium-vmenu__btn--warning:hover {
+    background: linear-gradient(135deg, #ffc107, #ffa000);
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.55);
+}
+.premium-vmenu__empty { grid-column:1/-1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:rgba(255,255,255,.5); }
+.premium-vmenu__empty strong { color:#fff; font:900 20px/1 Montserrat,var(--os-title); }
+
+@media(max-width:900px) {
+    .menu-vehicle-grid { grid-template-columns:280px minmax(0,1fr); }
+    .premium-vmenu__detail { padding:28px; }
+}

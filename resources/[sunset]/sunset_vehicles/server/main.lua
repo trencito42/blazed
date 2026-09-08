@@ -48,6 +48,40 @@ local function buildVehicleEcuInfo(props)
     }
 end
 
+CreateThread(function()
+    Wait(500)
+    pcall(function()
+        MySQL.query.await([[
+            ALTER TABLE `vehicles`
+                ADD COLUMN IF NOT EXISTS `insurance_points` INT NOT NULL DEFAULT 5 AFTER `garage`,
+                ADD COLUMN IF NOT EXISTS `insurance_level` INT NOT NULL DEFAULT 1 AFTER `insurance_points`,
+                ADD COLUMN IF NOT EXISTS `destroyed` TINYINT(1) NOT NULL DEFAULT 0 AFTER `insurance_level`,
+                ADD COLUMN IF NOT EXISTS `insurance_cost` INT NOT NULL DEFAULT 250 AFTER `destroyed`;
+        ]])
+    end)
+end)
+
+local ModelPriceCache = {}
+
+local function getVehicleBasePrice(model)
+    model = tostring(model or ''):lower():gsub('%s+', '')
+    if model == '' then return 25000 end
+    if ModelPriceCache[model] then return ModelPriceCache[model] end
+    local row = MySQL.single.await('SELECT price FROM dealership_vehicles WHERE LOWER(model) = ? LIMIT 1', { model })
+    local price = row and tonumber(row.price) or 25000
+    ModelPriceCache[model] = price
+    return price
+end
+
+local function calculateVehicleInsuranceCost(model, savedCost)
+    if savedCost and tonumber(savedCost) and tonumber(savedCost) > 0 then
+        return tonumber(savedCost)
+    end
+    local carPrice = getVehicleBasePrice(model)
+    local baseInsurance = math.max(250, math.min(15000, math.floor(carPrice * 0.015)))
+    return baseInsurance
+end
+
 local function enrichVehicleRow(row)
     if type(row) ~= 'table' then return row end
     local props = decodeProps(row.props)
@@ -57,6 +91,15 @@ local function enrichVehicleRow(row)
     if row.ecuInfo and row.ecuInfo.tune then
         row.ecu = row.ecuInfo.tune
     end
+
+    local model = (row.model or ''):lower()
+    local insuranceCost = calculateVehicleInsuranceCost(model, row.insurance_cost)
+    row.insuranceCost = insuranceCost
+    row.insurancePoints = math.max(0, tonumber(row.insurance_points) or 5)
+    row.insuranceLevel = math.max(1, math.min(11, tonumber(row.insurance_level) or 1))
+    row.destroyed = (row.destroyed == 1 or row.destroyed == true or row.destroyed == '1')
+    row.claimCost = math.floor(insuranceCost * row.insuranceLevel)
+    row.renewCost = math.floor(insuranceCost * 3)
     return row
 end
 
@@ -154,7 +197,7 @@ exports.sunset_core:RegisterCallback('sunset:getVehicles', function(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return {} end
     local rows = MySQL.query.await(
-        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h, props FROM vehicles WHERE character_id = ?',
+        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h, props, insurance_points, insurance_level, destroyed, insurance_cost FROM vehicles WHERE character_id = ?',
         { char.id }
     ) or {}
     return enrichVehicleList(rows)
@@ -182,6 +225,10 @@ exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, veh
     )
     if not veh then return nil, 'Vehicle not found' end
 
+    if veh.destroyed == 1 or veh.destroyed == true or veh.destroyed == '1' then
+        return nil, 'Acest vehicul este distrus! Revendică asigurarea din meniul garajului (/v).'
+    end
+
     local stored = normalizeStored(veh.stored)
     local outPlates = {}
 
@@ -208,7 +255,7 @@ exports.sunset_core:RegisterCallback('sunset:getVehicleById', function(source, v
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil end
     return enrichVehicleRow(MySQL.single.await(
-        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h, props FROM vehicles WHERE id = ? AND character_id = ?',
+        'SELECT id, plate, model, fuel, engine, body, stored, garage, parked_x, parked_y, parked_z, parked_h, props, insurance_points, insurance_level, destroyed, insurance_cost FROM vehicles WHERE id = ? AND character_id = ?',
         { vehicleId, char.id }
     ))
 end)
@@ -313,6 +360,159 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:storeOwnedVehicle', function(source, netId, plate, props, fuelLevel, garageId, parked)
     return storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageId, parked)
+end)
+
+RegisterNetEvent('sunset:server:vehicleDestroyed', function(netId, plate)
+    local src = source
+    local char = exports.sunset_core:GetCharacter(src)
+    if not char then return end
+
+    plate = normalizePlate(plate)
+    if plate == '' then return end
+
+    local veh = MySQL.single.await(
+        'SELECT id, model, insurance_points, insurance_level, insurance_cost, destroyed FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?',
+        { plate, char.id }
+    )
+    if not veh then return end
+
+    if veh.destroyed == 1 or veh.destroyed == true or veh.destroyed == '1' then
+        return
+    end
+
+    local currentLevel = math.max(1, math.min(11, tonumber(veh.insurance_level) or 1))
+    local nextLevel = math.min(11, currentLevel + 1)
+    local currentPoints = math.max(0, tonumber(veh.insurance_points) or 0)
+    local nextPoints = math.max(0, currentPoints - 1)
+    local baseCost = calculateVehicleInsuranceCost(veh.model, veh.insurance_cost)
+    local claimCost = math.floor(baseCost * nextLevel)
+
+    MySQL.update.await([[
+        UPDATE vehicles
+        SET destroyed = 1,
+            stored = 0,
+            insurance_points = ?,
+            insurance_level = ?,
+            engine = -4000.0
+        WHERE id = ?
+    ]], { nextPoints, nextLevel, veh.id })
+
+    local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+    if vehicle == 0 or not DoesEntityExist(vehicle) then
+        vehicle = findVehicleEntityByPlate(plate)
+    end
+
+    TriggerClientEvent('sunset:client:notify', src,
+        ('Vehiculul tău [%s] a fost distrus! Asigurare: nivel %d/11 (Taxă: $%s) · Puncte rămase: %d. Deschide /v pentru recuperare.'):format(
+            plate, nextLevel, claimCost, nextPoints
+        ),
+        'error'
+    )
+
+    if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+        SetTimeout(12000, function()
+            if DoesEntityExist(vehicle) then
+                DeleteEntity(vehicle)
+            end
+            TriggerClientEvent('sunset:client:cleanupOwnedVehicles', -1, { { plate = plate } })
+        end)
+    end
+end)
+
+exports.sunset_core:RegisterCallback('sunset:claimVehicleInsurance', function(source, vehicleId)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'Nu ești conectat cu un caracter' end
+
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return nil, 'Vehicul invalid' end
+
+    local veh = MySQL.single.await(
+        'SELECT id, model, plate, destroyed, insurance_points, insurance_level, insurance_cost, garage FROM vehicles WHERE id = ? AND character_id = ?',
+        { vehicleId, char.id }
+    )
+    if not veh then return nil, 'Vehiculul nu a fost găsit' end
+
+    local isDestroyed = (veh.destroyed == 1 or veh.destroyed == true or veh.destroyed == '1')
+    if not isDestroyed then
+        return nil, 'Acest vehicul nu este distrus. Îl poți scoate direct din garaj.'
+    end
+
+    local points = math.max(0, tonumber(veh.insurance_points) or 0)
+    if points <= 0 then
+        return nil, 'Nu mai ai puncte de asigurare! Reînnoiește asigurarea mai întâi.'
+    end
+
+    local baseCost = calculateVehicleInsuranceCost(veh.model, veh.insurance_cost)
+    local level = math.max(1, math.min(11, tonumber(veh.insurance_level) or 1))
+    local claimCost = math.floor(baseCost * level)
+
+    local paidAccount = nil
+    if exports.sunset_core:RemoveMoney(source, 'bank', claimCost, 'vehicle_insurance_claim') then
+        paidAccount = 'bancă'
+    elseif exports.sunset_core:RemoveMoney(source, 'cash', claimCost, 'vehicle_insurance_claim') then
+        paidAccount = 'numerar'
+    else
+        return nil, ('Fonduri insuficiente. Ai nevoie de $%s (Bancă sau Cash).'):format(claimCost)
+    end
+
+    local plate = normalizePlate(veh.plate)
+    local entity = findVehicleEntityByPlate(plate)
+    if entity and entity ~= 0 and DoesEntityExist(entity) then
+        DeleteEntity(entity)
+    end
+    TriggerClientEvent('sunset:client:cleanupOwnedVehicles', -1, { { plate = plate } })
+
+    MySQL.update.await([[
+        UPDATE vehicles
+        SET stored = 1, destroyed = 0, engine = 1000.0, body = 1000.0, fuel = 100.0
+        WHERE id = ? AND character_id = ?
+    ]], { veh.id, char.id })
+
+    TriggerClientEvent('sunset:client:notify', source,
+        ('Asigurare revendicată cu succes pentru $%s (%s)! Vehiculul tău a fost reparat complet și te așteaptă în garaj.'):format(claimCost, paidAccount),
+        'success'
+    )
+
+    return { ok = true, claimCost = claimCost }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:renewVehicleInsurance', function(source, vehicleId)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'Nu ești conectat cu un caracter' end
+
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return nil, 'Vehicul invalid' end
+
+    local veh = MySQL.single.await(
+        'SELECT id, model, plate, insurance_points, insurance_level, insurance_cost FROM vehicles WHERE id = ? AND character_id = ?',
+        { vehicleId, char.id }
+    )
+    if not veh then return nil, 'Vehiculul nu a fost găsit' end
+
+    local baseCost = calculateVehicleInsuranceCost(veh.model, veh.insurance_cost)
+    local renewCost = math.floor(baseCost * 3)
+
+    local paidAccount = nil
+    if exports.sunset_core:RemoveMoney(source, 'bank', renewCost, 'vehicle_insurance_renew') then
+        paidAccount = 'bancă'
+    elseif exports.sunset_core:RemoveMoney(source, 'cash', renewCost, 'vehicle_insurance_renew') then
+        paidAccount = 'numerar'
+    else
+        return nil, ('Fonduri insuficiente. Ai nevoie de $%s pentru reînnoirea a 5 puncte de asigurare.'):format(renewCost)
+    end
+
+    MySQL.update.await([[
+        UPDATE vehicles
+        SET insurance_points = insurance_points + 5
+        WHERE id = ? AND character_id = ?
+    ]], { veh.id, char.id })
+
+    TriggerClientEvent('sunset:client:notify', source,
+        ('Ai achiziționat +5 puncte de asigurare pentru $%s (%s)!'):format(renewCost, paidAccount),
+        'success'
+    )
+
+    return { ok = true, renewCost = renewCost }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:getDrivenOwnedVehicleState', function(source, netId, plate)

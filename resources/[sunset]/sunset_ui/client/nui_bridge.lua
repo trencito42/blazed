@@ -75,6 +75,8 @@ forward('clanManage')
 forward('garageSpawn')
 forward('garageStore')
 forward('garageLocate')
+forward('garageClaimInsurance')
+forward('garageRenewInsurance')
 forward('garageClose')
 forward('fleetGarageSpawn')
 forward('fleetGarageClose')
@@ -430,9 +432,20 @@ AddEventHandler('sunset:nui:phoneTrigger112', function()
     ExecuteCommand('112')
 end)
 
+local function release112Focus()
+    local phoneStillOpen = false
+    if GetResourceState('sunset_phone') == 'started' then
+        local ok, result = pcall(function()
+            return exports.sunset_phone:IsPhoneOpen()
+        end)
+        phoneStillOpen = ok and result == true
+    end
+    SetFocus(phoneStillOpen, phoneStillOpen)
+end
+
 AddEventHandler('sunset:nui:close112Modal', function()
     Send('dispatch112Hide', {})
-    SetFocus(false, false)
+    release112Focus()
 end)
 
 AddEventHandler('sunset:nui:submit112Call', function(data)
@@ -445,7 +458,7 @@ AddEventHandler('sunset:nui:submit112Call', function(data)
         end
     end, data.category, data.description, data.street, data.area, data.coords)
     Send('dispatch112Hide', {})
-    SetFocus(false, false)
+    release112Focus()
 end)
 
 AddEventHandler('sunset:nui:ticketPay', function(data)
@@ -467,4 +480,3 @@ end)
 RegisterNetEvent('sunset:ui:radarAlert', function(data)
     Send('radarAlertShow', data or {})
 end)
-

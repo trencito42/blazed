@@ -182,17 +182,26 @@ const Panels = {
 
     showInventory(data) {
         this.init();
+        if (Array.isArray(data.nearbyPlayers)) this._inventoryNearby = data.nearbyPlayers;
         const list = $('#inventory-list');
         if (!list) return;
         list.innerHTML = '';
         const items = data.items || [];
-        if (!items.length) {
-            const empty = document.createElement('li');
-            empty.className = 'inventory-row inventory-row--empty';
-            empty.textContent = 'No items in your inventory.';
-            list.appendChild(empty);
-        }
-        items.forEach((row) => {
+        const bySlot = new Map(items.map((row, index) => [Math.max(1, Number(row.slot) || index + 1), row]));
+        const slotCount = Math.max(30, ...Array.from(bySlot.keys()), 0);
+        for (let slot = 1; slot <= slotCount; slot += 1) {
+            const row = bySlot.get(slot);
+            const cell = document.createElement('div');
+            cell.className = `premium-slot${row ? ' has-item' : ''}`;
+            cell.dataset.slot = String(slot);
+            const slotLabel = document.createElement('span');
+            slotLabel.className = 'premium-slot__number';
+            slotLabel.textContent = String(slot).padStart(2, '0');
+            cell.appendChild(slotLabel);
+            if (!row) {
+                list.appendChild(cell);
+                continue;
+            }
             const def = row.item || 'unknown';
             let label = row.label || def;
             if (def === 'gas_can' && row.metadata) {
@@ -209,30 +218,60 @@ const Panels = {
                 const value = Math.max(0, Number(row.metadata.value) || 0);
                 label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
             }
-            const li = document.createElement('li');
-            li.className = 'inventory-row';
-            li.appendChild(createItemArtwork(row, 'inventory-row__icon'));
-
+            const item = document.createElement(row.usable ? 'button' : 'div');
+            item.className = 'premium-item';
+            if (row.usable) {
+                item.type = 'button';
+                item.title = `Use ${label}`;
+                item.addEventListener('click', () => post('inventoryUse', { item: def }));
+            }
+            item.appendChild(createItemArtwork(row, 'premium-item__icon'));
             const details = document.createElement('div');
-            details.className = 'inventory-row__details';
+            details.className = 'premium-item__details';
             const name = document.createElement('strong');
             name.textContent = label;
             const meta = document.createElement('span');
-            meta.textContent = `${Math.max(0, Number(row.count) || 0)} unit${Number(row.count) === 1 ? '' : 's'}`;
+            meta.textContent = row.usable ? 'CLICK TO USE' : 'STORED ITEM';
             details.append(name, meta);
-            li.appendChild(details);
-
-            if (row.usable) {
-                const useButton = document.createElement('button');
-                useButton.type = 'button';
-                useButton.textContent = 'USE';
-                useButton.addEventListener('click', () => post('inventoryUse', { item: def }));
-                li.appendChild(useButton);
-            }
-            list.appendChild(li);
-        });
+            item.appendChild(details);
+            const count = document.createElement('span');
+            count.className = 'premium-item__count';
+            count.textContent = `x${Math.max(0, Number(row.count) || 0)}`;
+            item.appendChild(count);
+            cell.appendChild(item);
+            list.appendChild(cell);
+        }
         const currentWeight = Number(data.weight) || 0;
-        $('#inventory-weight').textContent = `${currentWeight.toFixed(1)} / ${Number(data.maxWeight) || 30} KG`;
+        const maxWeight = Number(data.maxWeight) || 30;
+        $('#inventory-weight').textContent = `${currentWeight.toFixed(1)} / ${maxWeight.toFixed(1)} KG`;
+        const fill = $('#inventory-weight-fill');
+        if (fill) fill.style.width = `${Math.min(100, Math.max(0, currentWeight / maxWeight * 100))}%`;
+        const nearbyList = $('#inventory-nearby-list');
+        if (nearbyList) {
+            nearbyList.innerHTML = '';
+            const nearby = Array.isArray(data.nearbyPlayers) ? data.nearbyPlayers : (this._inventoryNearby || []);
+            if (!nearby.length) {
+                const empty = document.createElement('div');
+                empty.className = 'premium-nearby-empty';
+                empty.innerHTML = '<strong>NO PLAYERS NEARBY</strong><span>Move within 3 metres of another player.</span>';
+                nearbyList.appendChild(empty);
+            } else {
+                nearby.forEach((player) => {
+                    const card = document.createElement('div');
+                    card.className = 'premium-player-card';
+                    const copy = document.createElement('div');
+                    const name = document.createElement('strong');
+                    name.textContent = player.name || `Player #${player.id}`;
+                    const distance = document.createElement('span');
+                    distance.textContent = `${Number(player.distance || 0).toFixed(1)} M AWAY`;
+                    copy.append(name, distance);
+                    const id = document.createElement('b');
+                    id.textContent = `ID ${player.id}`;
+                    card.append(copy, id);
+                    nearbyList.appendChild(card);
+                });
+            }
+        }
         document.body.classList.add('inventory-open');
         $('#inventory')?.classList.remove('hidden');
     },
@@ -648,10 +687,19 @@ const Panels = {
 
         (data.vehicles || []).forEach((v) => {
             const stored = v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1;
-            const inWorld = v.inWorld === true;
-            const status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
-            const statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
+            const isDestroyed = v.destroyed === true || v.destroyed === 1 || v.destroyed === '1';
+            const inWorld = v.inWorld === true && !isDestroyed;
+            let status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
+            let statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
+            if (isDestroyed) {
+                status = 'Distrus (Asigurare)';
+                statusClass = 'destroyed';
+            }
             const model = (v.model || 'vehicle').toUpperCase();
+            const points = v.insurancePoints != null ? Number(v.insurancePoints) : 5;
+            const level = v.insuranceLevel != null ? Number(v.insuranceLevel) : 1;
+            const claimCost = v.claimCost != null ? Number(v.claimCost) : 250;
+            const renewCost = v.renewCost != null ? Number(v.renewCost) : 750;
 
             const li = document.createElement('li');
             li.className = 'menu-vcard';
@@ -668,13 +716,27 @@ const Panels = {
                     </div>
                     <div class="menu-vcard__plate">${v.plate}</div>
                     <div class="menu-vcard__meta">${v.garage || 'legion'}</div>
+                    <div class="menu-vcard__insurance">
+                        <span class="insurance-badge">🛡️ Asigurare: <strong>${points} pct</strong></span>
+                        <span class="insurance-level ${level > 1 ? 'is-elevated' : ''}">Nivel ${level}/11</span>
+                        <span class="insurance-cost">Taxă: $${formatMoney(claimCost)}</span>
+                    </div>
                     ${window.Menu ? window.Menu.formatEcuBlock(v.ecuInfo, v.id) : ''}
                     <div class="menu-vcard__actions"></div>
                 </div>`;
 
             const actions = li.querySelector('.menu-vcard__actions');
-            if (stored) {
+            if (isDestroyed) {
+                if (points > 0) {
+                    addBtn(actions, `Revendică Asigurare ($${formatMoney(claimCost)})`, 'menu-vcard__btn--danger', () => post('garageClaimInsurance', { vehicleId: v.id }));
+                } else {
+                    addBtn(actions, `Fără Puncte — Reînnoiește ($${formatMoney(renewCost)})`, 'menu-vcard__btn--warning', () => post('garageRenewInsurance', { vehicleId: v.id }));
+                }
+            } else if (stored) {
                 addBtn(actions, 'Spawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
+                if (points < 5) {
+                    addBtn(actions, `+5 Pct ($${formatMoney(renewCost)})`, '', () => post('garageRenewInsurance', { vehicleId: v.id }));
+                }
             } else if (inWorld) {
                 addBtn(actions, 'GPS', '', () => post('garageLocate', { plate: v.plate, vehicleId: v.id }));
                 addBtn(actions, 'Store', 'menu-vcard__btn--primary', () => post('garageStore', { vehicleId: v.id }));
