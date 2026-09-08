@@ -46,8 +46,12 @@
 }
 
 .btn--primary:hover {
-    transform: translateY(-2px);
+    transform: scale(1.025);
     box-shadow: 0 8px 30px var(--color-primary-glow);
+}
+
+.btn:active, .btn--primary:active, .btn--ghost:active {
+    transform: scale(0.96);
 }
 
 .btn--ghost {
