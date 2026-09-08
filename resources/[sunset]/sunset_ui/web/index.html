@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="css/gameplay_glass.css?v=5">
     <link rel="stylesheet" href="css/mdc_tablet.css?v=3">
     <link rel="stylesheet" href="css/player_interaction.css?v=1">
+    <link rel="stylesheet" href="css/atm.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -780,17 +781,343 @@
         </div>
     </div>
 
-    <!-- ATM -->
-    <div id="atm" class="overlay-panel hidden">
-        <div class="overlay-panel__box">
-            <h2>ATM</h2>
-            <label class="field"><span>Amount</span><input type="number" id="atm-amount" min="1" value="100"></label>
-            <div class="btn-row">
-                <button type="button" class="btn btn--primary" id="atm-deposit">DEPOSIT</button>
-                <button type="button" class="btn btn--ghost" id="atm-withdraw">WITHDRAW</button>
+    <!-- FLEECA BANK 24/7 ATM KIOSK — AUTHENTIC REAL-WORLD BANCOMAT -->
+    <div id="atm-modal" class="atm-modal-overlay hidden" aria-hidden="true">
+        <div class="atm-kiosk">
+            <!-- Corner Security Rivets -->
+            <div class="atm-rivet atm-rivet--tl"></div>
+            <div class="atm-rivet atm-rivet--tr"></div>
+            <div class="atm-rivet atm-rivet--bl"></div>
+            <div class="atm-rivet atm-rivet--br"></div>
+
+            <!-- Top Illuminated Canopy -->
+            <div class="atm-canopy">
+                <div class="atm-canopy__brand">
+                    <div class="atm-canopy__logo-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4"/>
+                        </svg>
+                    </div>
+                    <div class="atm-canopy__text">
+                        <div class="atm-canopy__title">Fleeca Bank</div>
+                        <div class="atm-canopy__sub">
+                            <span class="atm-canopy__sub-dot"></span>
+                            <span>24/7 ATM Network · Encrypted EMV 4.2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="atm-canopy__security">
+                    <div class="atm-security-mirror" title="Convex Security Mirror"></div>
+                    <div class="atm-cctv">
+                        <div class="atm-cctv__lens"></div>
+                        <div class="atm-cctv__led"></div>
+                        <span>CCTV 24H</span>
+                    </div>
+                    <button type="button" class="atm-audio-btn" id="atm-audio-toggle" title="Comută Sunet ATM">
+                        <span id="atm-audio-icon">🔊</span>
+                    </button>
+                </div>
             </div>
-            <button type="button" class="panel-close" id="atm-close">Close</button>
+
+            <!-- Middle Section: Physical Side Buttons (FDK) & Recessed Anti-Glare Screen -->
+            <div class="atm-middle">
+                <!-- Left Function Keys (FDK) -->
+                <div class="atm-fdk-col atm-fdk-col--left">
+                    <button type="button" class="atm-fdk-btn" data-fdk="l1" title="Selectează Opțiunea 1"><span class="atm-fdk-arrow">►</span></button>
+                    <button type="button" class="atm-fdk-btn" data-fdk="l2" title="Selectează Opțiunea 2"><span class="atm-fdk-arrow">►</span></button>
+                    <button type="button" class="atm-fdk-btn" data-fdk="l3" title="Selectează Opțiunea 3"><span class="atm-fdk-arrow">►</span></button>
+                    <button type="button" class="atm-fdk-btn" data-fdk="l4" title="Selectează Opțiunea 4"><span class="atm-fdk-arrow">►</span></button>
+                </div>
+
+                <!-- Recessed Anti-Glare Screen Frame -->
+                <div class="atm-screen-frame">
+                    <div class="atm-screen-glass"></div>
+
+                    <!-- Screen Top Bar -->
+                    <div class="atm-screen-bar">
+                        <div class="atm-screen-bar__left">
+                            <span class="atm-chip-icon">💳</span>
+                            <span>Fleeca Secure Terminal #FL-4082</span>
+                        </div>
+                        <div class="atm-screen-bar__right">
+                            <span id="atm-date">--.--.----</span>
+                            <span id="atm-clock">--:--:--</span>
+                        </div>
+                    </div>
+
+                    <!-- Screen Body with Panes -->
+                    <div class="atm-screen-body">
+                        <!-- Balance Widget -->
+                        <div class="atm-balance-bar">
+                            <div class="atm-balance-item atm-balance-item--main">
+                                <span class="atm-balance-item__label">🏦 Sold Cont Bancar</span>
+                                <span class="atm-balance-item__val" id="atm-bank-balance">$0</span>
+                            </div>
+                            <div class="atm-balance-item">
+                                <span class="atm-balance-item__label">💵 Numerar (Portofel)</span>
+                                <span class="atm-balance-item__val atm-balance-item__val--cash" id="atm-cash-balance">$0</span>
+                            </div>
+                        </div>
+
+                        <!-- Cardholder info strip -->
+                        <div class="atm-cardholder-strip">
+                            <div>Titular: <span class="atm-cardholder-name" id="atm-cardholder-name">Citizen</span></div>
+                            <div>Card: <span class="atm-cardholder-num" id="atm-cardholder-num">4532 •••• •••• 8291</span></div>
+                            <div>IBAN: <span class="atm-cardholder-num" id="atm-cardholder-iban">LS82-FLCA-0042</span></div>
+                        </div>
+
+                        <!-- PANE 1: DASHBOARD -->
+                        <div id="atm-pane-dashboard" class="atm-pane">
+                            <div class="atm-pane__title">Meniu Principal · Selectează o Operațiune</div>
+                            <div class="atm-options-grid">
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l1')">
+                                    <span>◄ Retragere Numerar</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r1')">
+                                    <span>Retragere Rapidă $50 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l2')">
+                                    <span>◄ Depunere Numerar</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r2')">
+                                    <span>Retragere Rapidă $100 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l3')">
+                                    <span>◄ Chitanță / Extras</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r3')">
+                                    <span>Retragere Rapidă $500 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left atm-screen-opt--danger" onclick="AtmMachine.triggerFdkAction('l4')">
+                                    <span>◄ Ejectare Card [ESC]</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right atm-screen-opt--accent" onclick="AtmMachine.triggerFdkAction('r4')">
+                                    <span>Altă Sumă [PIN] ►</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANE 2: WITHDRAW PRESETS -->
+                        <div id="atm-pane-withdraw" class="atm-pane hidden">
+                            <div class="atm-pane__title">Retragere Numerar · Selectează Suma</div>
+                            <div class="atm-options-grid">
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l1')">
+                                    <span>◄ $50</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r1')">
+                                    <span>$1,000 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l2')">
+                                    <span>◄ $100</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r2')">
+                                    <span>$2,500 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l3')">
+                                    <span>◄ $250</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right atm-screen-opt--accent" onclick="AtmMachine.triggerFdkAction('r3')">
+                                    <span>Altă Sumă ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l4')">
+                                    <span>◄ $500</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right atm-screen-opt--danger" onclick="AtmMachine.triggerFdkAction('r4')">
+                                    <span>Înapoi la Meniu ►</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANE 3: DEPOSIT PRESETS -->
+                        <div id="atm-pane-deposit" class="atm-pane hidden">
+                            <div class="atm-pane__title">Depunere Numerar · Selectează Suma</div>
+                            <div class="atm-options-grid">
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l1')">
+                                    <span>◄ Depune $100</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r1')">
+                                    <span>Depune $2,500 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l2')">
+                                    <span>◄ Depune $500</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r2')">
+                                    <span>Depune $5,000 ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left" onclick="AtmMachine.triggerFdkAction('l3')">
+                                    <span>◄ Depune $1,000</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right atm-screen-opt--accent" onclick="AtmMachine.triggerFdkAction('r3')">
+                                    <span>Altă Sumă ►</span>
+                                </div>
+
+                                <div class="atm-screen-opt atm-screen-opt--left atm-screen-opt--accent" onclick="AtmMachine.triggerFdkAction('l4')">
+                                    <span>◄ Depune Tot Cash-ul</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right atm-screen-opt--danger" onclick="AtmMachine.triggerFdkAction('r4')">
+                                    <span>Înapoi la Meniu ►</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANE 4: CUSTOM AMOUNT INPUT -->
+                        <div id="atm-pane-custom" class="atm-pane hidden">
+                            <div class="atm-pane__title" id="atm-custom-title">SUMĂ PERSONALIZATĂ</div>
+                            <div class="atm-custom-wrap">
+                                <div class="atm-digit-screen">
+                                    <span class="atm-digit-currency">$</span>
+                                    <input type="text" id="atm-custom-amount-input" class="atm-digit-input" placeholder="0" maxlength="9" autocomplete="off">
+                                </div>
+                                <div class="atm-digit-hint">Folosește tastatura numerică din bancomat sau tastatura PC pentru a introduce suma.</div>
+                            </div>
+                            <div class="atm-options-grid">
+                                <div></div>
+                                <div class="atm-screen-opt atm-screen-opt--right atm-screen-opt--accent" onclick="AtmMachine.triggerFdkAction('r1')">
+                                    <span id="atm-custom-submit-label">Confirmă [ENTER] ►</span>
+                                </div>
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                                <div class="atm-screen-opt atm-screen-opt--left atm-screen-opt--danger" onclick="AtmMachine.triggerFdkAction('l4')">
+                                    <span>◄ Anulează [CLEAR]</span>
+                                </div>
+                                <div class="atm-screen-opt atm-screen-opt--right" onclick="AtmMachine.triggerFdkAction('r4')">
+                                    <span>Înapoi la Meniu ►</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANE 5: PROCESSING & DISPENSING ANIMATION -->
+                        <div id="atm-pane-processing" class="atm-pane hidden">
+                            <div class="atm-pane__title" id="atm-proc-action">TRANZACȚIE ÎN CURS</div>
+                            <div class="atm-processing-wrap">
+                                <div class="atm-spinner-bills">
+                                    <div class="atm-spinner-ring"></div>
+                                    <div class="atm-spinner-icon">💵</div>
+                                </div>
+                                <div class="atm-processing__msg" id="atm-proc-amount">$0</div>
+                                <div class="atm-processing__sub" id="atm-proc-status">Se contactează rețeaua bancară... Vă rugăm așteptați.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Printed Receipt Modal -->
+                    <div id="atm-receipt-modal" class="atm-receipt-modal hidden">
+                        <div class="atm-receipt-paper">
+                            <div class="atm-receipt-paper__head">
+                                <div>FLEECA BANK — ATM RECEIPT</div>
+                                <div>TERMINAL #FL-4082 · LEGION SQUARE</div>
+                            </div>
+                            <div class="atm-receipt-paper__line"><span>DATA / ORA:</span><span id="rcpt-date">--.--.---- --:--</span></div>
+                            <div class="atm-receipt-paper__line"><span>ID TRANZACȚIE:</span><span id="rcpt-txid">TX-902144</span></div>
+                            <div class="atm-receipt-paper__line"><span>TITULAR CONT:</span><span id="rcpt-name">Citizen</span></div>
+                            <div class="atm-receipt-paper__line"><span>CONT (IBAN):</span><span id="rcpt-account">LS82-FLCA-0042</span></div>
+                            <div class="atm-receipt-paper__line atm-receipt-paper__bold"><span>OPERAȚIUNE:</span><span id="rcpt-action">RETRAGERE</span></div>
+                            <div class="atm-receipt-paper__line atm-receipt-paper__bold"><span>SUMĂ:</span><span id="rcpt-amount">$0</span></div>
+                            <div class="atm-receipt-paper__line atm-receipt-paper__bold"><span>SOLD BANCAR RĂMAS:</span><span id="rcpt-bank-balance">$0</span></div>
+                            <div class="atm-receipt-paper__line"><span>NUMERAR PORTOFEL:</span><span id="rcpt-cash-balance">$0</span></div>
+                        </div>
+                        <button type="button" class="atm-receipt-close-btn" id="atm-receipt-close">RIDICĂ CHITANȚA & CONTINUĂ</button>
+                    </div>
+                </div>
+
+                <!-- Right Function Keys (FDK) -->
+                <div class="atm-fdk-col atm-fdk-col--right">
+                    <button type="button" class="atm-fdk-btn" data-fdk="r1" title="Selectează Opțiunea 5"><span class="atm-fdk-arrow">◄</span></button>
+                    <button type="button" class="atm-fdk-btn" data-fdk="r2" title="Selectează Opțiunea 6"><span class="atm-fdk-arrow">◄</span></button>
+                    <button type="button" class="atm-fdk-btn" data-fdk="r3" title="Selectează Opțiunea 7"><span class="atm-fdk-arrow">◄</span></button>
+                    <button type="button" class="atm-fdk-btn" data-fdk="r4" title="Selectează Opțiunea 8"><span class="atm-fdk-arrow">◄</span></button>
+                </div>
+            </div>
+
+            <!-- Lower Hardware Deck: Card Slot, Cash Dispenser Shutter, Stainless Steel Keypad -->
+            <div class="atm-deck">
+                <!-- Left Deck Section: Card Slot & Cash Dispenser -->
+                <div class="atm-deck__left">
+                    <!-- EMV Card Reader Slot -->
+                    <div class="atm-slot-card">
+                        <div class="atm-slot-card__header">
+                            <span>FANTĂ CITITOR CARD EMV</span>
+                            <div class="atm-slot-card__led"></div>
+                        </div>
+                        <div class="atm-card-receptacle">
+                            <div class="atm-phys-card" id="atm-phys-card" title="Card Bancar Introdus (Apasă pentru Ejectare)">
+                                <div class="atm-phys-card__chip"></div>
+                                <div class="atm-phys-card__info">
+                                    <div class="atm-phys-card__name" id="atm-phys-card-name">Citizen</div>
+                                    <div class="atm-phys-card__num" id="atm-phys-card-num">4532 •••• •••• 8291</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Motorized Cash Dispenser Shutter -->
+                    <div class="atm-slot-dispenser">
+                        <div class="atm-slot-card__header">
+                            <span>FANTĂ ELIBERARE NUMERAR</span>
+                            <span style="color: #34d399; font-size: 9px;">MOTOR SHUTTER</span>
+                        </div>
+                        <div class="atm-dispenser-shutter" id="atm-dispenser-shutter">
+                            <div class="atm-dispenser-shutter__glow"></div>
+                            <div class="atm-dispenser-bills">
+                                <span>💵</span>
+                                <span>NUMERAR PREGĂTIT PENTRU RIDICARE</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Receipt Printer Slit -->
+                    <div class="atm-slot-receipt">
+                        <span>FANTĂ IMPRIMARE CHITANȚĂ</span>
+                        <div class="atm-receipt-slit"></div>
+                    </div>
+                </div>
+
+                <!-- Right Deck Section: Stainless Steel Numeric Keypad (PIN Pad) -->
+                <div class="atm-keypad-wrap">
+                    <div class="atm-keypad-title">TASTATURĂ METALICĂ DE SECURITATE (PIN PAD)</div>
+                    <div class="atm-keypad">
+                        <button type="button" class="atm-key" data-key="1">1</button>
+                        <button type="button" class="atm-key" data-key="2">2</button>
+                        <button type="button" class="atm-key" data-key="3">3</button>
+                        <button type="button" class="atm-key atm-key--cancel" data-key="CANCEL" title="Cancel / Eject Card">CANCEL</button>
+
+                        <button type="button" class="atm-key" data-key="4">4</button>
+                        <button type="button" class="atm-key" data-key="5">5</button>
+                        <button type="button" class="atm-key" data-key="6">6</button>
+                        <button type="button" class="atm-key atm-key--clear" data-key="CLEAR" title="Clear Input">CLEAR</button>
+
+                        <button type="button" class="atm-key" data-key="7">7</button>
+                        <button type="button" class="atm-key" data-key="8">8</button>
+                        <button type="button" class="atm-key" data-key="9">9</button>
+                        <button type="button" class="atm-key atm-key--enter" data-key="ENTER" title="Confirm Transaction">ENTER</button>
+
+                        <button type="button" class="atm-key" data-key="*">*</button>
+                        <button type="button" class="atm-key" data-key="0">0</button>
+                        <button type="button" class="atm-key" data-key="#">#</button>
+                        <div></div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
+
+    <!-- Hidden compatibility container for legacy selectors if any -->
+    <div id="atm" class="hidden" style="display:none !important;" aria-hidden="true">
+        <input type="number" id="atm-amount" value="100">
+        <button id="atm-deposit"></button>
+        <button id="atm-withdraw"></button>
+        <button id="atm-close"></button>
     </div>
 
     <!-- POLICE TOUGHBOOK MDT (MOBILE DATA TERMINAL) -->
@@ -2017,5 +2344,6 @@
     <script src="js/factions.js?v=6"></script>
     <script src="js/mdc_tablet.js?v=2"></script>
     <script src="js/player_interaction.js?v=1"></script>
+    <script src="js/atm.js?v=1"></script>
 </body>
 </html>

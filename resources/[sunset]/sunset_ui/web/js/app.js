@@ -396,10 +396,16 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideShop();
             break;
         case 'atmShow':
-            if (window.Panels) Panels.showAtm();
+            if (window.AtmMachine) AtmMachine.open(data || event.data.data || {});
+            else if (window.Panels) Panels.showAtm(data || event.data.data);
             break;
         case 'atmHide':
+            if (window.AtmMachine) AtmMachine.close();
             if (window.Panels) Panels.hideAtm();
+            break;
+        case 'atmUpdate':
+            if (window.AtmMachine) AtmMachine.update(data || event.data.data || {});
+            if (window.Panels && Panels.updateAtm) Panels.updateAtm(data || event.data.data);
             break;
         case 'mdcShow':
             if (window.MdcTablet) MdcTablet.open(data || event.data.data);
@@ -419,7 +425,7 @@ window.addEventListener('message', (event) => {
             else if (window.Panels) Panels.updateMdcLookup((data || event.data.data)?.lookup);
             break;
         case 'mdcHide':
-            if (window.MdcTablet) MdcTablet.close();
+            if (window.MdcTablet) MdcTablet.hide();
             else if (window.Panels) Panels.hideMdc();
             break;
         case 'dispatch112Show':

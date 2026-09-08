@@ -44,7 +44,26 @@ end)
 
 AddEventHandler('sunset:world:openAtm', function()
     if IsNuiFocused() then return end
-    exports.sunset_ui:Send('atmShow', {})
+    local char = exports.sunset_core:GetCharacter()
+    local name = 'Citizen'
+    if char then
+        local first = char.first_name or ''
+        local last = char.last_name or ''
+        if first ~= '' or last ~= '' then
+            name = (first .. ' ' .. last):gsub('^%s*(.-)%s*$', '%1')
+        end
+    end
+    local cash = (char and tonumber(char.cash)) or 0
+    local bank = (char and tonumber(char.bank)) or 0
+    local cid = (char and tonumber(char.id)) or 1
+    exports.sunset_ui:Send('atmShow', {
+        name = name,
+        cash = cash,
+        bank = bank,
+        cid = cid,
+        account = string.format('LS%02d-FLCA-%04d', cid % 100, (cid * 137) % 9000 + 1000),
+        card = string.format('4532 88%02d %04d %04d', cid % 100, (cid * 311) % 9000 + 1000, (cid * 743) % 9000 + 1000)
+    })
     exports.sunset_ui:SetFocus(true, true)
 end)
 
@@ -66,9 +85,14 @@ AddEventHandler('sunset:nui:atmAction', function(data)
     local result, err = Sunset.AwaitCallback('sunset:atmTransfer', data.action, tonumber(data.amount))
     if result then
         exports.sunset_ui:Notify('Transaction complete', 'success')
+        result.ok = true
+        result.action = data.action
+        result.amount = tonumber(data.amount)
+        result.txId = string.format('TX-%d', math.random(100000, 999999))
         exports.sunset_ui:Send('atmUpdate', result)
     else
         exports.sunset_ui:Notify(err or 'Transaction failed', 'error')
+        exports.sunset_ui:Send('atmUpdate', { error = err or 'Transaction failed' })
     end
 end)
 

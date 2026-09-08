@@ -182,9 +182,14 @@
             this.renderUnits();
         },
 
-        close() {
+        hide() {
             $('#mdc')?.classList.add('hidden');
             if (this.clockInterval) clearInterval(this.clockInterval);
+            this.clockInterval = null;
+        },
+
+        close() {
+            this.hide();
             post('mdcClose');
         },
 
