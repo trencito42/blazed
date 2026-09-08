@@ -46,21 +46,37 @@ function JCTrucking_GetState(session, mustBeAttached, maxDistance)
     if model and GetEntityModel(trailer) ~= joaat(model) then
         return 'wrong_model'
     end
-    if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > (maxDistance or 35.0) then
+
+    local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
+    if dist > (maxDistance or 45.0) then
         return 'too_far'
     end
 
     if mustBeAttached then
-        local nativeOk, attached, attachedEntity = pcall(function()
-            return GetVehicleTrailerVehicle(truck)
-        end)
-        if nativeOk and attached and (not attachedEntity or attachedEntity == trailer) then
+        -- In FiveM OneSync server, physical vehicle-trailer joints cannot be checked via GetVehicleTrailerVehicle.
+        -- When the trailer is within 22m of the truck, or client explicitly confirmed attachment, state is OK.
+        if session.trailerClientAttached == true or (session.trailerClientAttached ~= false and dist <= 22.0) then
             return 'ok'
         end
-        return 'detached'
+        if dist > 26.0 then
+            return 'detached'
+        end
+        return 'ok'
     end
     return 'ok'
 end
+
+RegisterNetEvent('sunset:jobcreator:syncTrailerStatus', function(attached)
+    local src = source
+    local session = JCSessions_Get and JCSessions_Get(src)
+    if session then
+        session.trailerClientAttached = (attached == true)
+        if attached then
+            session.trailerDetachSince = nil
+            session.trailerWarned = nil
+        end
+    end
+end)
 
 function JCTrucking_TickSession(source, session)
     if not session.variables or not session.variables.trailer then return end

@@ -265,7 +265,11 @@ function JobClient.monitorVehicles()
             local trailerAlive = trailer and DoesEntityExist(trailer)
 
             if truck and trailer and truckAlive and trailerAlive then
-                local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
+                local isAttached = IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true
+                local hasTrailer, attachedEntity = GetVehicleTrailerVehicle(truck)
+                local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
+                local attachedStatus = isAttached or (hasTrailer and dist <= 22.0) or dist <= 18.0
+                TriggerServerEvent('sunset:jobs:syncTrailerStatus', attachedStatus)
             end
 
             if truckAlive and trailer and not trailerAlive and JobClient.jobId == 'trucker'

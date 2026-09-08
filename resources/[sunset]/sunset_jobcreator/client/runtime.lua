@@ -338,7 +338,11 @@ local function startChopStage(data)
         windowMs = duration,
     })
     CreateThread(function()
-        JCEntities_PlayChopAnim(swings, duration)
+        local tool = stage.toolModel
+        if not tool and stage.model and (stage.model:find('rock') or stage.model:find('ore') or stage.model:find('mine')) then
+            tool = 'prop_tool_pickaxe'
+        end
+        JCEntities_PlayChopAnim(swings, duration, tool)
         if not progressActive then return end
         local propVar = stage.propVar or 'treeProp'
         JCEntities_RemoveProp(data.variables or {}, propVar)
@@ -467,12 +471,16 @@ CreateThread(function()
 
             local near = false
             if loc and loc.x then
-                local pos = GetEntityCoords(PlayerPedId())
+                local ped = PlayerPedId()
+                local inVeh = IsPedInAnyVehicle(ped, false)
+                local pos = GetEntityCoords(ped)
                 local dx = pos.x - loc.x
                 local dy = pos.y - loc.y
-                local radius = tonumber(loc.radius) or 3.0
+                local baseRadius = tonumber(loc.radius) or 3.0
+                local radius = inVeh and math.max(baseRadius, 7.5) or baseRadius
+                local zTol = inVeh and math.max(tonumber(loc.zTolerance) or 5.0, 7.0) or (tonumber(loc.zTolerance) or 5.0)
                 near = math.sqrt(dx * dx + dy * dy) <= radius
-                    and math.abs(pos.z - loc.z) <= (tonumber(loc.zTolerance) or 5.0)
+                    and math.abs(pos.z - loc.z) <= zTol
             end
 
             if AUTO_ZONE_STAGES[stageType] and near then

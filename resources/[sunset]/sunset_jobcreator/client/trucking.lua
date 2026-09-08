@@ -89,33 +89,50 @@ function JCTrucking_Tick(payload, syncHudFn, notifyFn)
     end
     JCTrucking.destroySent = false
 
-    local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
-    if attached and attachedEntity == trailer then
+    local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
+    local nativeAttached = IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true
+    local hasTrailer, attachedEntity = GetVehicleTrailerVehicle(truck)
+    local isAttached = nativeAttached
+    if hasTrailer and (attachedEntity == trailer or dist <= 22.0) then
+        isAttached = true
+    end
+
+    -- If attached or right next to truck (under 20m), it's attached
+    if isAttached or dist <= 18.0 then
         JCTrucking.detachedSince = nil
+        TriggerServerEvent('sunset:jobcreator:syncTrailerStatus', true)
         return
     end
 
+    -- If truly detached and distance is > 20m:
+    TriggerServerEvent('sunset:jobcreator:syncTrailerStatus', false)
+    JCTrucking.detachedSince = JCTrucking.detachedSince or GetGameTimer()
+    local elapsed = math.floor((GetGameTimer() - JCTrucking.detachedSince) / 1000)
     local cfg = (payload.definition and payload.definition.trucking) or {}
-    local maxDist = tonumber(cfg.autoReattachDistance) or 28.0
-    local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
-    local ped = PlayerPedId()
-    local driving = GetPedInVehicleSeat(truck, -1) == ped
+    local grace = tonumber(cfg.trailerGraceSec) or 90
+    local remaining = math.max(0, grace - elapsed)
 
-    if driving and dist <= maxDist and GetGameTimer() - JCTrucking.lastAutoAttach > 3000 then
+    -- Auto-reattach only if vehicle is stationary / reversing into the trailer, NOT while driving forward
+    local speed = GetEntitySpeed(truck)
+    if speed < 2.0 and dist <= 14.0 and GetGameTimer() - JCTrucking.lastAutoAttach > 4000 then
         JCTrucking.lastAutoAttach = GetGameTimer()
-        if JCTrucking_TryReattach(truck, trailer) then
-            notifyFn('Remorcă reatașată automat.', 'success')
+        AttachVehicleToTrailer(truck, trailer, 1.0)
+        Wait(100)
+        if IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true then
+            JCTrucking.detachedSince = nil
+            TriggerServerEvent('sunset:jobcreator:syncTrailerStatus', true)
+            if notifyFn then notifyFn('Remorcă reatașată.', 'success') end
             return
         end
     end
 
-    JCTrucking.detachedSince = JCTrucking.detachedSince or GetGameTimer()
-    local elapsed = math.floor((GetGameTimer() - JCTrucking.detachedSince) / 1000)
-    syncHudFn(payload, {
-        state = 'failed',
-        message = ('⚠ Remorcă pierdută! Apropie camionul sau /recovertrailer (%ds)'):format(
-            math.max(0, (tonumber(cfg.trailerGraceSec) or 90) - elapsed)),
-    })
+    -- Only show warning if detached for more than 4 seconds and distance > 18m
+    if elapsed >= 4 then
+        syncHudFn(payload, {
+            state = 'failed',
+            message = ('⚠ Remorcă deconectată! Conectează remorca sau folosește /recovertrailer (%ds)'):format(remaining),
+        })
+    end
 end
 
 function JCTrucking_Reset()
@@ -123,6 +140,40 @@ function JCTrucking_Reset()
     JCTrucking.destroySent = false
     JCTrucking.lastAutoAttach = 0
 end
+
+RegisterCommand('recovertrailer', function()
+    local recovery, err = Sunset.AwaitCallback('sunset:jobcreator:recoverTrailer')
+    if not recovery then
+        return exports.sunset_ui:Notify(err or 'Recuperarea remorcii nu este disponibilă.', 'error')
+    end
+    if recovery.respawn then
+        TriggerEvent('sunset:jobcreator:trailerRespawn', recovery)
+        return
+    end
+    local truck = NetworkGetEntityFromNetworkId(recovery.truckNetId or 0)
+    local trailer = NetworkGetEntityFromNetworkId(recovery.trailerNetId or 0)
+    if truck == 0 or trailer == 0 or not DoesEntityExist(truck) or not DoesEntityExist(trailer) then
+        return exports.sunset_ui:Notify('Nu s-a putut găsi camionul sau remorca.', 'error')
+    end
+    if not requestControl(trailer) then
+        return exports.sunset_ui:Notify('Nu s-a putut prelua controlul remorcii — încearcă din nou.', 'error')
+    end
+    SetVehicleHandbrake(truck, true)
+    SetEntityVelocity(trailer, 0.0, 0.0, 0.0)
+    DetachVehicleFromTrailer(truck)
+    Wait(150)
+    local target = GetOffsetFromEntityInWorldCoords(truck, 0.0, -10.5, 1.0)
+    local heading = GetEntityHeading(truck)
+    SetEntityCoordsNoOffset(trailer, target.x, target.y, target.z, false, false, false)
+    SetEntityHeading(trailer, heading)
+    SetVehicleOnGroundProperly(trailer)
+    Wait(200)
+    AttachVehicleToTrailer(truck, trailer, 1.0)
+    SetVehicleHandbrake(truck, false)
+    TriggerServerEvent('sunset:jobcreator:syncTrailerStatus', true)
+    exports.sunset_ui:Notify(('Remorcă recuperată și conectată! (%d recuperări rămase)'):format(recovery.remaining or 0), 'success')
+end, false)
+TriggerEvent('chat:addSuggestion', '/recovertrailer', 'Reparați și reatașați remorca camionului')
 
 RegisterNetEvent('sunset:jobcreator:trailerRespawn', function(data)
     if not data or not data.trailerModel then return end

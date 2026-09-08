@@ -130,21 +130,34 @@ function SunsetJobs_GetTrailerState(source, mustBeAttached, maxDistance)
     if cfg and cfg.trailerModel and GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
         return 'wrong_model'
     end
-    if #(GetEntityCoords(truck) - GetEntityCoords(trailer)) > (maxDistance or 15.0) then
+    local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
+    if dist > (maxDistance or 45.0) then
         return 'too_far'
     end
 
     if mustBeAttached then
-        local nativeOk, attached, attachedEntity = pcall(function()
-            return GetVehicleTrailerVehicle(truck)
-        end)
-        if nativeOk and attached and (not attachedEntity or attachedEntity == trailer) then
+        if session.trailerClientAttached == true or (session.trailerClientAttached ~= false and dist <= 22.0) then
             return 'ok'
         end
-        return 'detached'
+        if dist > 26.0 then
+            return 'detached'
+        end
+        return 'ok'
     end
     return 'ok'
 end
+
+RegisterNetEvent('sunset:jobs:syncTrailerStatus', function(attached)
+    local src = source
+    local session = Sessions[src]
+    if session then
+        session.trailerClientAttached = (attached == true)
+        if attached then
+            session.trailerDetachSince = nil
+            session.trailerWarned = nil
+        end
+    end
+end)
 
 function SunsetJobs_ValidateTrailer(source, mustBeAttached, maxDistance)
     local state = SunsetJobs_GetTrailerState(source, mustBeAttached, maxDistance)

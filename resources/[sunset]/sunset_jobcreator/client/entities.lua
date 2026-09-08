@@ -188,9 +188,10 @@ function JCEntities_RemoveProp(variables, propVar)
     return true
 end
 
-function JCEntities_PlayChopAnim(swings, durationMs)
+function JCEntities_PlayChopAnim(swings, durationMs, toolModel)
     local ped = PlayerPedId()
-    local axeHash = loadModel('prop_tool_fireaxe')
+    local tool = toolModel or 'prop_tool_fireaxe'
+    local axeHash = loadModel(tool)
     local axe = nil
     if axeHash then
         local coords = GetEntityCoords(ped)

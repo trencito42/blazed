@@ -21,9 +21,13 @@ local function inZone(source, loc)
     if not loc then return false end
     local pos = playerPos(source)
     if not pos then return false end
+    local ped = GetPlayerPed(source)
+    local inVeh = ped and ped ~= 0 and GetVehiclePedIsIn(ped, false) ~= 0
     local t = vec3(loc)
-    local radius = tonumber(loc.radius) or 3.0
-    local zTol = tonumber(loc.zTolerance) or 5.0
+    local defaultRadius = inVeh and 8.0 or 3.0
+    local radius = tonumber(loc.radius) or defaultRadius
+    if inVeh and radius < 7.0 then radius = 7.0 end
+    local zTol = tonumber(loc.zTolerance) or (inVeh and 8.0 or 5.0)
     if dist2d(pos, t) > radius then return false end
     return math.abs(pos.z - t.z) <= zTol
 end
@@ -223,11 +227,18 @@ StageHandlers.give_reward = {
                 payJobId = charJob
             end
         end
+        local paidOk = false
         if pay > 0 and GetResourceState('sunset_jobs') == 'started' then
-            exports.sunset_jobs:PayReward(source, payJobId, pay, payJobId .. '_task', true)
+            paidOk = exports.sunset_jobs:PayReward(source, payJobId, pay, payJobId .. '_task', true)
+        end
+        if pay > 0 and not paidOk then
+            exports.sunset_core:AddMoney(source, 'cash', pay, 'jc_' .. session.jobId .. '_task')
+            exports.sunset_core:AddXP(source, math.max(1, math.floor(pay / 20)))
         end
         if xp > 0 and GetResourceState('sunset_jobs') == 'started' then
             exports.sunset_jobs:AddJobXP(source, payJobId, xp)
+        elseif xp > 0 then
+            exports.sunset_core:AddXP(source, xp)
         end
         TriggerClientEvent('sunset:jobcreator:paid', source, {
             pay = pay,

@@ -78,10 +78,14 @@ local function recoverTrailer()
             SetVehicleHandbrake(truck, false)
 
             Wait(250)
+            local isAttached = IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true
             local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
-            if not (attached and attachedEntity == trailer) then
+            local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
+            local recovered = isAttached or (attached and (attachedEntity == trailer or dist <= 20.0)) or dist <= 16.0
+            if not recovered then
                 return JC.notify('Trailer is upright but could not attach automatically — reverse into it', 'warning')
             end
+            TriggerServerEvent('sunset:jobs:syncTrailerStatus', true)
             return JC.notify(('Trailer recovered and attached. %d recoveries remain this shift.'):format(
                 jcRecovery.remaining or 0), 'success')
         end
@@ -133,11 +137,14 @@ local function recoverTrailer()
     SetVehicleHandbrake(truck, false)
 
     Wait(250)
+    local isAttached = IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true
     local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
-    local recovered = attached and attachedEntity == trailer
+    local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
+    local recovered = isAttached or (attached and (attachedEntity == trailer or dist <= 20.0)) or dist <= 16.0
     if not recovered then
         return JC.notify('Trailer is upright but could not attach automatically — reverse into it', 'warning')
     end
+    TriggerServerEvent('sunset:jobs:syncTrailerStatus', true)
     JC.notify(('Trailer recovered and attached. %d recoveries remain this shift.'):format(
         recovery.remaining or 0), 'success')
 end
