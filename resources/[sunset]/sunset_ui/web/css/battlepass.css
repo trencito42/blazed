@@ -1,0 +1,578 @@
+/* Battlepass & Missions 1:1 Production Port (from premium_battlepass_missions.html) */
+.battlepass-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent !important;
+    user-select: none;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.battlepass-overlay.hidden { display: none !important; }
+
+#bp-wrapper {
+    width: min(1140px, calc(100vw - 60px));
+    height: min(700px, calc(100vh - 80px));
+    background: rgba(13, 13, 20, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: row;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), inset 0 1px rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* SIDEBAR */
+.bp-sidebar {
+    width: 270px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    padding: 26px 0;
+    background: rgba(8, 8, 14, 0.6);
+}
+
+.bp-season-brand {
+    padding: 0 25px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.bp-season-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--screen-accent, #00ffcc);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+}
+
+.bp-season-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 1px;
+    margin-top: 5px;
+}
+
+.bp-profile-section {
+    padding: 0 25px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 15px;
+}
+
+.bp-level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.bp-level-val {
+    font-size: 32px;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.bp-level-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bp-xp-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bp-xp-bar-fill {
+    height: 100%;
+    background: var(--screen-accent, #00ffcc);
+    box-shadow: 0 0 10px var(--screen-accent, #00ffcc);
+    transition: width 0.4s ease;
+}
+
+.bp-xp-text {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    text-align: right;
+}
+
+.bp-nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px;
+    flex: 1;
+}
+
+.bp-nav-item {
+    padding: 12px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid transparent;
+}
+
+.bp-nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    transform: scale(1.02);
+}
+
+.bp-nav-item.active {
+    background: rgba(0, 255, 204, 0.12);
+    color: var(--screen-accent, #00ffcc);
+    border-color: rgba(0, 255, 204, 0.25);
+}
+
+.bp-nav-item svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.bp-premium-btn-container {
+    padding: 20px;
+}
+
+.bp-btn-upgrade {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #b829ff, #7000ff);
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 0 20px rgba(184, 41, 255, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.bp-btn-upgrade:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 28px rgba(184, 41, 255, 0.6);
+}
+
+/* CONTENT */
+.bp-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.bp-tab-section {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    animation: bpFadeIn 0.25s ease;
+}
+
+.bp-tab-section.active { display: flex; }
+
+@keyframes bpFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bp-section-header {
+    padding: 30px 36px 16px;
+}
+
+.bp-section-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bp-section-header p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* BATTLEPASS TRACK */
+.bp-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 10px 36px 36px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+    scroll-behavior: smooth;
+}
+
+.bp-container::-webkit-scrollbar { height: 6px; }
+.bp-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.25); border-radius: 3px; margin: 0 36px; }
+.bp-container::-webkit-scrollbar-thumb { background: rgba(0, 255, 204, 0.3); border-radius: 3px; }
+.bp-container::-webkit-scrollbar-thumb:hover { background: var(--screen-accent, #00ffcc); }
+
+.bp-track-wrapper {
+    display: flex;
+    gap: 18px;
+    position: relative;
+    min-height: 400px;
+    align-items: center;
+    padding-right: 36px;
+}
+
+.bp-line-bg {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+.bp-line-fill {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 4px;
+    background: var(--screen-accent, #00ffcc);
+    transform: translateY(-50%);
+    z-index: 2;
+    box-shadow: 0 0 10px var(--screen-accent, #00ffcc);
+    transition: width 0.4s ease;
+}
+
+.bp-tier {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 380px;
+    width: 140px;
+    z-index: 5;
+    position: relative;
+}
+
+.bp-level-marker {
+    width: 38px;
+    height: 38px;
+    background: #0d0d14;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.5);
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: all 0.2s ease;
+}
+
+.bp-tier.completed .bp-level-marker {
+    border-color: var(--screen-accent, #00ffcc);
+    color: var(--screen-accent, #00ffcc);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+}
+
+.bp-tier.current .bp-level-marker {
+    background: var(--screen-accent, #00ffcc);
+    color: #000;
+    border-color: var(--screen-accent, #00ffcc);
+    box-shadow: 0 0 20px var(--screen-accent, #00ffcc);
+    transform: translateY(-50%) scale(1.15);
+}
+
+.bp-reward-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    width: 100%;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    gap: 8px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.bp-reward-premium {
+    background: linear-gradient(180deg, rgba(184, 41, 255, 0.06) 0%, rgba(184, 41, 255, 0.16) 100%);
+    border-color: rgba(184, 41, 255, 0.35);
+}
+
+.bp-reward-icon {
+    font-size: 34px;
+    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.5));
+}
+
+.bp-reward-name {
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.bp-btn-claim {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background: var(--screen-accent, #00ffcc);
+    color: #000;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: absolute;
+    bottom: -12px;
+    box-shadow: 0 4px 10px rgba(0, 255, 204, 0.4);
+    transition: all 0.18s ease;
+}
+
+.bp-btn-claim:hover { transform: translateY(-2px) scale(1.05); }
+.bp-btn-claim.claimed {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
+
+.bp-reward-locked-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.bp-reward-locked-overlay svg {
+    width: 22px;
+    height: 22px;
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 2;
+    fill: none;
+    margin-bottom: 4px;
+}
+
+.bp-lock-text {
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bp-reward-type-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.4);
+    position: absolute;
+    top: -22px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.bp-label-premium { color: #b829ff; }
+
+/* MISSIONS LIST */
+.bp-missions-list {
+    flex: 1;
+    padding: 0 36px 36px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.bp-missions-list::-webkit-scrollbar { width: 4px; }
+.bp-missions-list::-webkit-scrollbar-track { background: transparent; }
+.bp-missions-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+
+.bp-mission-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 4px solid var(--screen-accent, #00ffcc);
+    border-radius: 8px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.18s ease;
+}
+
+.bp-mission-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: scale(1.01);
+}
+
+.bp-mission-card.completed {
+    border-left-color: #22c55e;
+    opacity: 0.75;
+}
+
+.bp-mission-card.weekly {
+    border-left-color: #ffcc00;
+}
+
+.bp-mission-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.bp-mission-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.bp-mission-desc {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.bp-mission-progress-container {
+    width: 200px;
+    margin: 0 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bp-mission-progress-text {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    text-align: right;
+}
+
+.bp-mission-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.bp-mission-bar-fill {
+    height: 100%;
+    background: var(--screen-accent, #00ffcc);
+}
+
+.bp-mission-reward {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 180px;
+    justify-content: flex-end;
+}
+
+.bp-mission-reward-val {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--screen-accent, #00ffcc);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.bp-mission-reward-val svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.bp-btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.bp-btn-primary {
+    background: var(--screen-accent, #00ffcc);
+    color: #000;
+}
+
+.bp-btn-primary:hover {
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+    transform: scale(1.03);
+}
+
+.bp-btn:disabled {
+    opacity: 0.45;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bp-close-hint {
+    position: absolute;
+    bottom: -32px;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 1px;
+}

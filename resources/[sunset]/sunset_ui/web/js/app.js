@@ -516,6 +516,18 @@ window.addEventListener('message', (event) => {
         case 'playerInteractionHide':
             if (window.PlayerInteraction) PlayerInteraction.hide();
             break;
+        case 'battlepassShow':
+            if (window.Battlepass) Battlepass.show(data || event.data.data);
+            break;
+        case 'battlepassHide':
+            if (window.Battlepass) Battlepass.hide();
+            break;
+        case 'inventoryTradeInvite':
+            if (window.Panels && Panels.showTradeInvite) Panels.showTradeInvite(data || event.data.data);
+            break;
+        case 'inventoryTradeInviteHide':
+            if (window.Panels && Panels.hideTradeInvite) Panels.hideTradeInvite();
+            break;
         case 'factionBrowseInline':
             if (window.FactionPanels) {
                 try {
@@ -862,6 +874,27 @@ document.addEventListener('keydown', (e) => {
 
 // Close character screens on ESC (not menu/chat)
 document.addEventListener('keydown', (e) => {
+    const tradeModal = $('#trade-invite-modal');
+    if (tradeModal && !tradeModal.classList.contains('hidden')) {
+        const k = (e.key || '').toLowerCase();
+        if (k === 'y') {
+            e.preventDefault();
+            $('#trade-invite-accept')?.click();
+            return;
+        } else if (k === 'n' || k === 'escape') {
+            e.preventDefault();
+            $('#trade-invite-decline')?.click();
+            return;
+        }
+    }
+
+    const passModal = $('#battlepass-modal');
+    if (passModal && !passModal.classList.contains('hidden') && e.key === 'Escape') {
+        e.preventDefault();
+        window.Battlepass?.close();
+        return;
+    }
+
     if (e.key !== 'Escape') return;
     if (['auth', 'loading', 'spawn'].includes(App.currentScreen)) return;
     const dealership = $('#dealership');
@@ -920,31 +953,58 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
         });
         window.Menu?.setTab('vehicle');
-    } else if (qa === 'inventory' || qa === 'inventory-trade' || qa === 'inventory-empty') {
+    } else if (qa === 'inventory' || qa === 'inventory-trade' || qa === 'trade' || qa === 'inventory-empty') {
         const isEmpty = qa === 'inventory-empty' || new URLSearchParams(window.location.search).get('nearby') === '0';
         window.Panels?.showInventory({
+            cash: 106209,
             weight: 15.2,
             maxWeight: 30,
             items: [
-                { id: 1, slot: 1, item: 'water', label: 'Bottled Water', count: 5, usable: true, icon: 'water_bottle' },
-                { id: 2, slot: 2, item: 'bread', label: 'Sandwich', count: 2, usable: true, icon: 'bread' },
+                { id: 1, slot: 1, item: 'water', label: 'Bottled Water', count: 6, usable: true, icon: 'water_bottle' },
+                { id: 2, slot: 2, item: 'bread', label: 'Sandwich', count: 3, usable: true, icon: 'bread' },
                 { id: 3, slot: 3, item: 'phone', label: 'Smartphone', count: 1, usable: false, icon: 'phone' },
                 { id: 4, slot: 8, item: 'weapon_pistol', label: 'Pistol', count: 1, usable: false, icon: 'weaponlicense' },
             ],
             nearbyPlayers: isEmpty ? [] : [
-                { id: 45, name: 'Alexandru Popa', distance: 1.4 },
-                { id: 12, name: 'Mihai Dobre', distance: 2.7 },
+                { id: 2, name: 'Horja', distance: 1.2 },
+                { id: 45, name: 'Alexandru Popa', distance: 2.4 },
             ],
         });
-        if (qa === 'inventory-trade') {
+        if (qa === 'inventory-trade' || qa === 'trade') {
             window.Panels?.showInventoryTrade({
                 active: true,
-                target: { id: 45, name: 'Alexandru Popa' },
-                myOffer: [{ id: 2, item: 'bread', label: 'Sandwich', count: 1, icon: 'bread' }],
-                theirOffer: [{ id: 11, item: 'water', label: 'Bottled Water', count: 2, icon: 'water_bottle' }],
+                target: { id: 2, name: 'Horja' },
+                myOffer: [{ id: 1, item: 'water', label: 'Bottled Water', count: 1, icon: 'water_bottle' }],
+                theirOffer: [{ id: 11, item: 'bread', label: 'Sandwich', count: 2, icon: 'bread' }],
                 myAccepted: false,
-                theirAccepted: true,
+                theirAccepted: false,
+                countdown: 0,
             });
+        }
+    } else if (qa === 'trade-invite') {
+        window.Panels?.showTradeInvite({
+            requesterId: 2,
+            requesterName: 'HORJA',
+            timeout: 30,
+        });
+    } else if (qa === 'interaction') {
+        window.PlayerInteraction?.show({
+            targetId: 2,
+            targetServerId: 2,
+            targetName: 'HORJA',
+            level: 1,
+            distance: 1.2,
+            actions: [
+                { id: 'give_cash', label: 'Give Cash', description: 'Hand money directly to this player.', requiresInput: true, inputType: 'number', inputPlaceholder: '$ amount' },
+                { id: 'trade', label: 'Trade Items', description: 'Request a secure real-time trade.' },
+                { id: 'add_contact', label: 'Add to Contacts', description: 'Save this player in your phone contacts.' },
+                { id: 'invite_faction', label: 'Invite to Faction', description: 'Invite an accepted applicant to your faction.' }
+            ]
+        });
+    } else if (qa === 'battlepass' || qa === 'missions') {
+        window.Battlepass?.show();
+        if (qa === 'missions') {
+            window.Battlepass?.setTab('daily');
         }
     } else if (qa === 'faction') {
         window.FactionPanels?.showDashboard({

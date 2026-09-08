@@ -8,6 +8,7 @@
     padding-left: clamp(42px, 7vw, 150px);
     color: #f5f1ea;
     font-family: var(--font-body, 'Rajdhani', sans-serif);
+    background: transparent !important;
 }
 
 .player-interaction.hidden { display: none !important; }
@@ -16,10 +17,9 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background:
-        linear-gradient(90deg, rgba(5, 4, 3, .72) 0%, rgba(5, 4, 3, .38) 34%, rgba(5, 4, 3, .08) 68%, transparent 100%),
-        linear-gradient(0deg, rgba(0, 0, 0, .38) 0%, transparent 48%);
-    backdrop-filter: blur(2px);
+    background: linear-gradient(90deg, rgba(5, 4, 3, .35) 0%, rgba(5, 4, 3, .12) 35%, transparent 70%);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     animation: player-shade-in .2s ease-out both;
 }
 
@@ -31,9 +31,10 @@
     flex-direction: column;
     border-top: 2px solid #ff8a00;
     border-bottom: 1px solid rgba(255, 138, 0, .44);
-    background: linear-gradient(135deg, rgba(17, 13, 10, .84), rgba(9, 8, 7, .66));
-    box-shadow: 0 24px 70px rgba(0, 0, 0, .36), inset 0 1px rgba(255, 255, 255, .035);
-    backdrop-filter: blur(18px) saturate(1.08);
+    background: linear-gradient(135deg, rgba(17, 13, 10, .92), rgba(9, 8, 7, .88));
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .4), inset 0 1px rgba(255, 255, 255, .035);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     animation: player-panel-in .24s cubic-bezier(.2, .8, .2, 1) both;
 }
 

@@ -161,6 +161,16 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
     if action == 'give_cash' then
         result, err = Sunset.AwaitCallback('sunset:interactionGiveCash', activeTarget, value)
         if result then notify(('You gave $%s to %s.'):format(result.amount, result.target), 'success') end
+    elseif action == 'trade' then
+        local target = activeTarget
+        closeMenu()
+        local res, tradeErr = Sunset.AwaitCallback('sunset:inventory:tradeRequest', { targetId = target })
+        if not res then
+            notify(tradeErr or 'Could not initiate trade.', 'error')
+        elseif res.message then
+            notify(res.message, res.kind or 'info')
+        end
+        return
     elseif action == 'add_friend' then
         result, err = Sunset.AwaitCallback('sunset:interactionAddFriend', activeTarget)
         if result then notify(('%s was saved to contacts (%s).'):format(result.name, result.phone), 'success') end

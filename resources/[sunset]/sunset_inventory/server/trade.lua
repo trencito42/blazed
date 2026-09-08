@@ -85,6 +85,8 @@ local function sendTradeState(trade)
                 theirOffer = offerArray(trade, other),
                 myAccepted = trade.accepted[source] == true,
                 theirAccepted = trade.accepted[other] == true,
+                countdown = trade.countdown or 0,
+                finalizing = trade.finalizing == true,
             })
         end
     end
@@ -92,6 +94,7 @@ end
 
 local function endTrade(trade, message, kind)
     if not trade then return end
+    trade.finalizing = false
     TradesByPlayer[trade.a] = nil
     TradesByPlayer[trade.b] = nil
     for _, source in ipairs({ trade.a, trade.b }) do
@@ -255,6 +258,8 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeOffer', function(sou
     local count = math.floor(tonumber(data.count) or tonumber(row.count) or 1)
     if count < 1 or count > (tonumber(row.count) or 0) then return nil, 'Invalid item amount.' end
     trade.offers[source][rowId] = itemView(row, count)
+    trade.finalizing = false
+    trade.countdown = 0
     trade.accepted[trade.a], trade.accepted[trade.b] = false, false
     sendTradeState(trade)
     return { message = 'Item added to your offer.', kind = 'info' }
@@ -264,6 +269,8 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeRemove', function(so
     local trade = TradesByPlayer[source]
     if not trade then return nil, 'No active trade.' end
     trade.offers[source][tonumber(type(data) == 'table' and data.rowId)] = nil
+    trade.finalizing = false
+    trade.countdown = 0
     trade.accepted[trade.a], trade.accepted[trade.b] = false, false
     sendTradeState(trade)
     return { message = 'Item removed from your offer.', kind = 'info' }
@@ -279,21 +286,58 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeConfirm', function(s
         sendTradeState(trade)
         return { message = 'Offer locked. Waiting for the other player.', kind = 'info' }
     end
-    trade.busy = true
-    local completed, completeErr = completeTrade(trade)
-    if not completed then
-        trade.busy = false
-        trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+
+    -- Both players have accepted! Initiate 5-second final review & decline countdown
+    if not trade.finalizing then
+        trade.finalizing = true
+        trade.countdown = 5
         sendTradeState(trade)
-        return nil, completeErr
+        CreateThread(function()
+            local currentTradeId = trade.id
+            for c = 4, 0, -1 do
+                Wait(1000)
+                if TradesByPlayer[trade.a] ~= trade or TradesByPlayer[trade.b] ~= trade or trade.id ~= currentTradeId then
+                    return
+                end
+                if not trade.finalizing or not (trade.accepted[trade.a] and trade.accepted[trade.b]) then
+                    return
+                end
+                trade.countdown = c
+                sendTradeState(trade)
+            end
+
+            -- 5 seconds completed without cancellation! Complete trade!
+            if TradesByPlayer[trade.a] ~= trade or TradesByPlayer[trade.b] ~= trade or trade.id ~= currentTradeId then
+                return
+            end
+            if not trade.finalizing or not (trade.accepted[trade.a] and trade.accepted[trade.b]) then
+                return
+            end
+
+            trade.busy = true
+            local completed, completeErr = completeTrade(trade)
+            if not completed then
+                trade.busy = false
+                trade.finalizing = false
+                trade.countdown = 0
+                trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+                sendTradeState(trade)
+                for _, src in ipairs({ trade.a, trade.b }) do
+                    TriggerClientEvent('sunset:client:notify', src, completeErr or 'Trade failed to process.', 'error')
+                end
+                return
+            end
+            endTrade(trade, 'Trade completed securely.', 'success')
+        end)
+        return { message = 'Both accepted! Finalizing in 5 seconds (Cancel anytime).', kind = 'info' }
     end
-    endTrade(trade, 'Trade completed securely.', 'success')
-    return { message = 'Trade completed securely.' }
+    return { message = 'Offer locked.' }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:inventory:tradeCancel', function(source)
     local trade = TradesByPlayer[source]
     if not trade then return nil, 'No active trade.' end
+    trade.finalizing = false
     endTrade(trade, ('Trade cancelled by %s.'):format(displayName(source)), 'info')
     return { message = 'Trade cancelled.', kind = 'info' }
 end)

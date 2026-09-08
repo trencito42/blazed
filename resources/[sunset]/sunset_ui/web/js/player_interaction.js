@@ -108,6 +108,7 @@
             target: { id: 42, name: 'ANDREI POPESCU', level: 18, faction: 'LSPD', detention: 'CUFFED', wanted: { level: 3, surrenderable: true } },
             actions: [
                 { id: 'give_cash', group: 'CIVILIAN', label: 'Give cash', description: 'Hand money directly to this player.', input: { type: 'number', label: 'Amount', min: 1, max: 50000, placeholder: '$ amount' } },
+                { id: 'trade', group: 'CIVILIAN', label: 'Trade items', description: 'Propose a secure item trade with this player.' },
                 { id: 'add_friend', group: 'CIVILIAN', label: 'Add to contacts', description: 'Save this player in your phone contacts.' },
                 { id: 'uncuff', group: 'POLICE', label: 'Remove cuffs', description: 'Release the player from restraints.' },
                 { id: 'escort', group: 'POLICE', label: 'Escort suspect', description: 'Attach or release the restrained player.' },

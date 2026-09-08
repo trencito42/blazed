@@ -660,6 +660,348 @@ button.premium-player-card {
     text-align: center;
 }
 
+/* Inventory Cash Badge */
+.premium-inventory-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.premium-cash-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 8px;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+}
+
+.premium-cash-badge__icon {
+    font-size: 14px;
+    font-weight: 900;
+    color: #22c55e;
+}
+
+.premium-cash-badge strong {
+    font-size: 13px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+
+/* Trade Countdown Alert */
+.premium-trade-confirm.is-countdown {
+    background: linear-gradient(135deg, #ffcc00, #ff8a00) !important;
+    color: #000 !important;
+    animation: tradeCountdownPulse 1s ease-in-out infinite;
+    font-weight: 900 !important;
+    letter-spacing: 1px;
+}
+
+@keyframes tradeCountdownPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 204, 0, 0.4); }
+    50% { transform: scale(1.025); box-shadow: 0 0 22px rgba(255, 204, 0, 0.8); }
+}
+
+/* Quantity Selection Modal */
+.premium-qty-modal {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 12px;
+    animation: qtyFadeIn .18s ease-out;
+}
+
+.premium-qty-modal.hidden { display: none !important; }
+
+@keyframes qtyFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.premium-qty-box {
+    width: 320px;
+    padding: 24px;
+    background: rgba(18, 18, 26, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: center;
+}
+
+.premium-qty-box h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--premium-accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.premium-qty-item {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.premium-qty-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.premium-qty-btn {
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.premium-qty-btn:hover {
+    background: var(--premium-accent);
+    color: #000;
+    transform: scale(1.05);
+}
+
+.premium-qty-input {
+    width: 90px;
+    height: 38px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.premium-qty-slider {
+    width: 100%;
+    accent-color: var(--premium-accent);
+    cursor: pointer;
+}
+
+.premium-qty-quick {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.premium-qty-quick button {
+    flex: 1;
+    padding: 7px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.premium-qty-quick button:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+.premium-qty-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.premium-qty-cancel,
+.premium-qty-confirm {
+    flex: 1;
+    padding: 11px;
+    border: 0;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.premium-qty-cancel {
+    background: transparent;
+    border: 1px solid var(--premium-danger);
+    color: var(--premium-danger);
+}
+
+.premium-qty-confirm {
+    background: var(--premium-accent);
+    color: #000;
+}
+
+.premium-qty-confirm:hover { box-shadow: 0 0 15px rgba(0, 255, 204, 0.4); }
+
+/* Trade Invitation Modal */
+.trade-invite-modal {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    z-index: 9999;
+    user-select: none;
+    animation: tradeInviteSlideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.trade-invite-modal.hidden { display: none !important; }
+
+@keyframes tradeInviteSlideIn {
+    from { opacity: 0; transform: translateX(80px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.trade-invite-box {
+    width: 360px;
+    background: rgba(14, 14, 22, 0.95);
+    border: 1px solid rgba(0, 255, 204, 0.35);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 204, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.trade-invite-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.trade-invite-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(0, 255, 204, 0.12);
+    border: 1px solid rgba(0, 255, 204, 0.3);
+    color: var(--premium-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.trade-invite-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.trade-invite-badge {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--premium-accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.trade-invite-content h4 {
+    margin: 2px 0 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.trade-invite-content p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.trade-invite-timer {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.trade-invite-timer-bar {
+    width: 100%;
+    height: 100%;
+    background: var(--premium-accent);
+    box-shadow: 0 0 8px var(--premium-accent);
+    transition: width linear;
+}
+
+.trade-invite-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.trade-invite-btn {
+    flex: 1;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.trade-invite-btn b {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    font-size: 10px;
+}
+
+.trade-invite-btn--accept {
+    background: var(--premium-accent);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.35);
+}
+
+.trade-invite-btn--accept:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 22px rgba(0, 255, 204, 0.55);
+}
+
+.trade-invite-btn--decline {
+    background: transparent;
+    border: 1px solid var(--premium-danger);
+    color: var(--premium-danger);
+}
+
+.trade-invite-btn--decline:hover {
+    background: rgba(255, 51, 102, 0.1);
+    transform: scale(1.03);
+}
+
 /* Vehicle menu — exact premium_vehicle_menu.html geometry and accent. */
 .menu-mgmt--vehicles {
     display: flex;
@@ -1054,7 +1396,9 @@ button.premium-player-card {
 }
 
 .player-interaction__shade {
-    background: radial-gradient(circle at center, transparent 10%, rgba(0, 0, 0, .36) 100%) !important;
+    background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, .25) 100%) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 
 /* Reference palette keeps yellow/red only for actual warnings and destructive actions. */

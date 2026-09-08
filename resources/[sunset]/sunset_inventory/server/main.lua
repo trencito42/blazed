@@ -51,7 +51,8 @@ local function inventoryView(items)
 end
 
 local function sendInventoryUpdate(source, items)
-    emitClient('sunset:client:inventoryUpdate', source, inventoryView(items), calcWeight(items))
+    local char = exports.sunset_core:GetCharacter(source)
+    emitClient('sunset:client:inventoryUpdate', source, inventoryView(items), calcWeight(items), (char and tonumber(char.cash)) or 0)
 end
 
 local function ensureStarterItems(characterId)
@@ -432,6 +433,7 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
     local inv = GetInventory(source)
+    local char = exports.sunset_core:GetCharacter(source)
     local nearbyPlayers = {}
     local sourcePed = GetPlayerPed(source)
     if sourcePed and sourcePed ~= 0 then
@@ -461,6 +463,7 @@ exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
         items = inventoryView(inv),
         weight = calcWeight(inv),
         maxWeight = Sunset.Config.MaxWeight,
+        cash = (char and tonumber(char.cash)) or 0,
         nearbyPlayers = nearbyPlayers,
     }
 end)

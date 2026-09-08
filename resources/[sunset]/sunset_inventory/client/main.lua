@@ -23,9 +23,14 @@ local function closeInventory()
     exports.sunset_ui:Send('inventoryHide', {})
 end
 
-RegisterNetEvent('sunset:client:inventoryUpdate', function(items, weight)
+RegisterNetEvent('sunset:client:inventoryUpdate', function(items, weight, cash)
     if inventoryOpen then
-        exports.sunset_ui:Send('inventoryUpdate', { items = items, weight = weight, maxWeight = Sunset.Config.MaxWeight })
+        local currentCash = cash
+        if not currentCash then
+            local char = exports.sunset_core:GetCharacter()
+            currentCash = (char and tonumber(char.cash)) or 0
+        end
+        exports.sunset_ui:Send('inventoryUpdate', { items = items, weight = weight, maxWeight = Sunset.Config.MaxWeight, cash = currentCash })
     end
 end)
 
@@ -61,6 +66,16 @@ AddEventHandler('sunset:nui:inventoryTradeRequest', function(data)
     inventoryAction('sunset:inventory:tradeRequest', data)
 end)
 
+AddEventHandler('sunset:nui:inventoryTradeAccept', function()
+    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+    inventoryAction('sunset:inventory:tradeAccept', {})
+end)
+
+AddEventHandler('sunset:nui:inventoryTradeDecline', function()
+    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+    inventoryAction('sunset:inventory:tradeDecline', {})
+end)
+
 AddEventHandler('sunset:nui:inventoryTradeOffer', function(data)
     inventoryAction('sunset:inventory:tradeOffer', data)
 end)
@@ -83,6 +98,14 @@ end)
 
 RegisterNetEvent('sunset:inventory:tradeState', function(data)
     tradeActive = data and data.active == true
+    if tradeActive and not inventoryOpen then
+        local invData, err = Sunset.AwaitCallback('sunset:getInventory')
+        if invData then
+            inventoryOpen = true
+            exports.sunset_ui:SetFocus(true, true)
+            exports.sunset_ui:Send('inventoryShow', invData)
+        end
+    end
     exports.sunset_ui:Send('inventoryTradeState', data or {})
 end)
 
@@ -90,18 +113,32 @@ RegisterNetEvent('sunset:inventory:tradeEnded', function(message, kind)
     tradeActive = false
     exports.sunset_ui:Send('inventoryTradeEnded', {})
     if message then exports.sunset_ui:Notify(message, kind or 'info') end
+    if inventoryOpen then
+        CreateThread(function()
+            Wait(100)
+            local invData = Sunset.AwaitCallback('sunset:getInventory')
+            if invData and inventoryOpen then exports.sunset_ui:Send('inventoryShow', invData) end
+        end)
+    end
 end)
 
 RegisterNetEvent('sunset:inventory:tradeInvite', function(requesterId, requesterName)
-    exports.sunset_ui:Notify(('%s (#%d) wants to trade. Use /accepttrade or /declinetrade within 30 seconds.'):format(
+    exports.sunset_ui:Send('inventoryTradeInvite', {
+        requesterId = tonumber(requesterId) or 0,
+        requesterName = requesterName or 'A nearby player',
+        timeout = 30
+    })
+    exports.sunset_ui:Notify(('%s (#%d) wants to trade. Press Y to accept or N to decline.'):format(
         requesterName or 'A nearby player', tonumber(requesterId) or 0), 'info', 10000)
 end)
 
 RegisterCommand('accepttrade', function()
+    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
     inventoryAction('sunset:inventory:tradeAccept', {})
 end, false)
 
 RegisterCommand('declinetrade', function()
+    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
     inventoryAction('sunset:inventory:tradeDecline', {})
 end, false)
 

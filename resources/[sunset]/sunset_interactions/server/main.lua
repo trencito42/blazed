@@ -66,6 +66,7 @@ exports.sunset_core:RegisterCallback('sunset:interactionContext', function(sourc
     addAction(actions, 'give_cash', 'CIVILIAN', 'Give cash', 'Hand money directly to this player.', {
         input = { type = 'number', label = 'Amount', min = 1, max = MAX_CASH_TRANSFER, placeholder = '$ amount' },
     })
+    addAction(actions, 'trade', 'CIVILIAN', 'Trade items', 'Propose a secure item trade with this player.')
     addAction(actions, 'add_friend', 'CIVILIAN', 'Add to contacts', 'Save this player in your phone contacts.')
 
     local isLeader = false

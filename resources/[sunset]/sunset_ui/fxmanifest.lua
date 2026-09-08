@@ -36,6 +36,7 @@ files {
     'web/css/mdc_tablet.css',
     'web/css/player_interaction.css',
     'web/css/atm.css',
+    'web/css/battlepass.css',
     'web/css/redesign.css',
     'web/js/*.js',
     'web/vendor/**/*',

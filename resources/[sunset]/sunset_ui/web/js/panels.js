@@ -67,10 +67,41 @@ const Panels = {
         });
         $('#inventory-drop-selected')?.addEventListener('click', () => {
             const row = this._inventorySelected;
-            if (row) post('inventoryDrop', { rowId: row.id, count: row.count });
+            if (!row) return;
+            const count = Number(row.count) || 1;
+            if (count > 1) {
+                this.openQuantityModal(row, 'drop', (chosen) => {
+                    post('inventoryDrop', { rowId: row.id, count: chosen });
+                });
+            } else {
+                post('inventoryDrop', { rowId: row.id, count: 1 });
+            }
         });
         $('#inventory-trade-confirm')?.addEventListener('click', () => post('inventoryTradeConfirm', {}));
         $('#inventory-trade-cancel')?.addEventListener('click', () => post('inventoryTradeCancel', {}));
+
+        const dropBtn = $('#inventory-drop-selected');
+        dropBtn?.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropBtn.classList.add('is-dragover');
+        });
+        dropBtn?.addEventListener('dragleave', () => dropBtn.classList.remove('is-dragover'));
+        dropBtn?.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropBtn.classList.remove('is-dragover');
+            const rowId = Number(event.dataTransfer?.getData('text/inventory-row') || 0);
+            const row = (this._inventoryItems || []).find((entry) => Number(entry.id) === rowId);
+            if (!row) return;
+            const count = Number(row.count) || 1;
+            if (count > 1) {
+                this.openQuantityModal(row, 'drop', (chosen) => {
+                    post('inventoryDrop', { rowId: row.id, count: chosen });
+                });
+            } else {
+                post('inventoryDrop', { rowId: row.id, count: 1 });
+            }
+        });
+
         const offerZone = $('#inventory-my-offer');
         offerZone?.addEventListener('dragover', (event) => {
             event.preventDefault();
@@ -82,7 +113,15 @@ const Panels = {
             offerZone.classList.remove('is-dragover');
             const rowId = Number(event.dataTransfer?.getData('text/inventory-row') || 0);
             const row = (this._inventoryItems || []).find((entry) => Number(entry.id) === rowId);
-            if (row) post('inventoryTradeOffer', { rowId: row.id, count: row.count });
+            if (!row) return;
+            const count = Number(row.count) || 1;
+            if (count > 1) {
+                this.openQuantityModal(row, 'offer', (chosen) => {
+                    post('inventoryTradeOffer', { rowId: row.id, count: chosen });
+                });
+            } else {
+                post('inventoryTradeOffer', { rowId: row.id, count: 1 });
+            }
         });
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
         $('#atm-close')?.addEventListener('click', () => post('atmClose'));
@@ -282,6 +321,11 @@ const Panels = {
         $('#inventory-weight').textContent = `${currentWeight.toFixed(1)} / ${maxWeight.toFixed(1)} KG`;
         const fill = $('#inventory-weight-fill');
         if (fill) fill.style.width = `${Math.min(100, Math.max(0, currentWeight / maxWeight * 100))}%`;
+
+        const cash = Number(data.cash) || 0;
+        const cashEl = $('#inventory-cash');
+        if (cashEl) cashEl.textContent = '$' + cash.toLocaleString();
+
         const nearbyList = $('#inventory-nearby-list');
         if (nearbyList) {
             nearbyList.innerHTML = '';
@@ -312,6 +356,105 @@ const Panels = {
         }
         document.body.classList.add('inventory-open');
         $('#inventory')?.classList.remove('hidden');
+    },
+
+    openQuantityModal(row, actionType, onConfirm) {
+        const modal = $('#inventory-qty-modal');
+        if (!modal) return onConfirm(row.count);
+        const max = Math.max(1, Number(row.count) || 1);
+        if (max === 1) return onConfirm(1);
+
+        $('#inventory-qty-title').textContent = actionType === 'drop' ? 'DROP AMOUNT' : 'OFFER AMOUNT';
+        $('#inventory-qty-item-name').textContent = `${row.label || row.item} (${max} Available)`;
+        const input = $('#inventory-qty-input');
+        const slider = $('#inventory-qty-slider');
+        input.min = 1; input.max = max; input.value = 1;
+        slider.min = 1; slider.max = max; slider.value = 1;
+
+        const updateVal = (val) => {
+            const v = Math.max(1, Math.min(max, Math.floor(Number(val) || 1)));
+            input.value = v;
+            slider.value = v;
+        };
+
+        input.oninput = () => updateVal(input.value);
+        slider.oninput = () => updateVal(slider.value);
+        $('#inventory-qty-minus').onclick = () => updateVal(Number(input.value) - 1);
+        $('#inventory-qty-plus').onclick = () => updateVal(Number(input.value) + 1);
+        $('#inventory-qty-quick-1').onclick = () => updateVal(1);
+        $('#inventory-qty-quick-half').onclick = () => updateVal(Math.max(1, Math.floor(max / 2)));
+        $('#inventory-qty-quick-all').onclick = () => updateVal(max);
+
+        $('#inventory-qty-cancel').onclick = () => {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+        $('#inventory-qty-confirm').onclick = () => {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            onConfirm(Number(input.value) || 1);
+        };
+
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                $('#inventory-qty-confirm')?.click();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                $('#inventory-qty-cancel')?.click();
+            }
+        };
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        input.focus();
+        input.select();
+    },
+
+    showTradeInvite(data = {}) {
+        const modal = $('#trade-invite-modal');
+        if (!modal) return;
+        const nameEl = $('#trade-invite-name');
+        if (nameEl) nameEl.textContent = `${data.requesterName || 'Nearby Player'} (ID #${data.requesterId || '?'})`;
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+
+        const bar = $('#trade-invite-timer-bar');
+        if (bar) {
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            void bar.offsetWidth;
+            const duration = (data.timeout || 30);
+            bar.style.transition = `width ${duration}s linear`;
+            bar.style.width = '0%';
+        }
+
+        if (this._tradeInviteTimer) clearTimeout(this._tradeInviteTimer);
+        this._tradeInviteTimer = setTimeout(() => {
+            this.hideTradeInvite();
+        }, (data.timeout || 30) * 1000);
+
+        $('#trade-invite-accept').onclick = () => {
+            this.hideTradeInvite();
+            post('inventoryTradeAccept');
+        };
+        $('#trade-invite-decline').onclick = () => {
+            this.hideTradeInvite();
+            post('inventoryTradeDecline');
+        };
+    },
+
+    hideTradeInvite() {
+        const modal = $('#trade-invite-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        if (this._tradeInviteTimer) {
+            clearTimeout(this._tradeInviteTimer);
+            this._tradeInviteTimer = null;
+        }
     },
 
     selectInventoryItem(row, cell) {
@@ -360,10 +503,18 @@ const Panels = {
         renderOffer('#inventory-their-offer', data.theirOffer, false);
         const confirm = $('#inventory-trade-confirm');
         if (confirm) {
-            confirm.disabled = data.myAccepted === true;
-            confirm.textContent = data.myAccepted
-                ? (data.theirAccepted ? 'PROCESSING...' : 'WAITING FOR PLAYER...')
-                : (data.theirAccepted ? 'ACCEPT THEIR OFFER' : 'ACCEPT TRADE');
+            confirm.classList.remove('is-countdown');
+            if (data.finalizing && Number(data.countdown) > 0) {
+                confirm.disabled = true;
+                confirm.classList.add('is-countdown');
+                confirm.textContent = `FINALIZING IN ${data.countdown}S...`;
+            } else if (data.myAccepted) {
+                confirm.disabled = true;
+                confirm.textContent = data.theirAccepted ? 'PROCESSING...' : 'WAITING FOR PLAYER...';
+            } else {
+                confirm.disabled = false;
+                confirm.textContent = data.theirAccepted ? 'ACCEPT THEIR OFFER' : 'ACCEPT TRADE';
+            }
         }
     },
 
