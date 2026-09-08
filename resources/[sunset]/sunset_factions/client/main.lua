@@ -623,6 +623,8 @@ CreateThread(function()
     end
 
     TriggerEvent('chat:addSuggestion', '/duty', 'Toggle faction duty shift')
+    TriggerEvent('chat:addSuggestion', '/fskins', 'Browse all available authentic real skins for your faction')
+    TriggerEvent('chat:addSuggestion', '/fskin', 'Equip a specific real faction skin', { { name = 'number or name', help = 'ex: 1, 2, swat, hway' } })
     TriggerEvent('chat:addSuggestion', '/faction', 'Open your faction dashboard, roster and weekly report')
     TriggerEvent('chat:addSuggestion', '/factions', 'Browse every server faction and application status')
     TriggerEvent('chat:addSuggestion', '/leavefaction', 'Leave your faction; keeps your civilian job')

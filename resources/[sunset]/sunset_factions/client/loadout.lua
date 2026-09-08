@@ -26,66 +26,76 @@ local function giveWeapon(ped, weapon, ammo)
     dutyWeapons[weapon] = true
 end
 
-local function setComponent(ped, slot, drawable, texture)
-    drawable = math.floor(tonumber(drawable) or 0)
-    texture = math.floor(tonumber(texture) or 0)
-    local maxDraw = GetNumberOfPedDrawableVariations(ped, slot) - 1
-    if maxDraw < 0 then return end
-    drawable = math.max(0, math.min(drawable, maxDraw))
-    local maxTex = GetNumberOfPedTextureVariations(ped, slot, drawable) - 1
-    if maxTex < 0 then maxTex = 0 end
-    texture = math.max(0, math.min(texture, maxTex))
-    SetPedComponentVariation(ped, slot, drawable, texture, 2)
+local function switchPedModel(modelInput)
+    if not modelInput then return false end
+    local hash = type(modelInput) == 'number' and modelInput or joaat(modelInput)
+    local currentPed = PlayerPedId()
+    if GetEntityModel(currentPed) == hash then
+        return true
+    end
+
+    if not IsModelInCdimage(hash) or not IsModelValid(hash) then
+        print(('[SunsetFactions] Invalid ped model: %s'):format(tostring(modelInput)))
+        return false
+    end
+
+    RequestModel(hash)
+    local timeout = GetGameTimer() + 6000
+    while not HasModelLoaded(hash) do
+        if GetGameTimer() > timeout then
+            print(('[SunsetFactions] Ped model loading timed out: %s'):format(tostring(modelInput)))
+            return false
+        end
+        Wait(10)
+    end
+
+    local oldPed = PlayerPedId()
+    local health = GetEntityHealth(oldPed)
+    local armour = GetPedArmour(oldPed)
+    local vehicle = GetVehiclePedIsIn(oldPed, false)
+    local seat = -1
+    if vehicle ~= 0 then
+        for i = -1, GetVehicleMaxNumberOfPassengers(vehicle) - 1 do
+            if GetPedInVehicleSeat(vehicle, i) == oldPed then
+                seat = i
+                break
+            end
+        end
+    end
+
+    SetPlayerModel(PlayerId(), hash)
+    SetModelAsNoLongerNeeded(hash)
+
+    local newPed = PlayerPedId()
+    SetPedDefaultComponentVariation(newPed)
+    SetEntityHealth(newPed, math.max(100, health))
+    SetPedArmour(newPed, armour)
+
+    if vehicle ~= 0 and DoesEntityExist(vehicle) then
+        SetPedIntoVehicle(newPed, vehicle, seat)
+    end
+
+    return true
 end
 
-local function applyDutyClothes(ped, clothes, gender)
-    if not clothes then return end
-
-    local top = clothes[11]
-    local topDrawable = top and top.drawable or 0
-    local topTexture = top and top.texture or 0
-
-    if clothes[4] then setComponent(ped, 4, clothes[4].drawable, clothes[4].texture) end
-    if clothes[6] then setComponent(ped, 6, clothes[6].drawable, clothes[6].texture) end
-    if clothes[8] then setComponent(ped, 8, clothes[8].drawable, clothes[8].texture) end
-
-    local torsoDrawable, torsoTexture
-    if GetResourceState('sunset_appearance') == 'started' then
-        torsoDrawable, torsoTexture = exports.sunset_appearance:ResolveTorso(ped, gender, topDrawable, topTexture)
-    end
-    if torsoDrawable == nil and clothes[3] then
-        torsoDrawable = clothes[3].drawable
-        torsoTexture = clothes[3].texture
-    end
-    if torsoDrawable ~= nil then
-        setComponent(ped, 3, torsoDrawable, torsoTexture or 0)
-    end
-
-    if top then setComponent(ped, 11, topDrawable, topTexture) end
-    -- Keep player face/hair — only clear mask/bag slots that break uniforms.
-    setComponent(ped, 1, 0, 0)
-    setComponent(ped, 5, 0, 0)
-    setComponent(ped, 9, 0, 0)
-    setComponent(ped, 10, 0, 0)
-    ClearPedProp(ped, 0)
-    ClearPedProp(ped, 1)
-end
-
-function ApplyFactionLoadout(factionId, grade)
+function ApplyFactionLoadout(factionId, grade, customSkin)
     local char = getChar()
     if not char then return end
     local faction = Sunset.Factions[factionId]
     local loadout = faction and faction.loadout
     if not loadout then return end
 
+    local gender = char.gender or 0
+    local targetSkin = customSkin or Sunset.ResolveFactionSkin(factionId, grade, gender)
+
+    if targetSkin then
+        switchPedModel(targetSkin)
+    end
+
     local ped = PlayerPedId()
     removeDutyWeapons(ped)
 
-    local gender = char.gender or 0
-    local clothes = Sunset.ResolveFactionOutfit(loadout, grade, gender)
-    applyDutyClothes(ped, clothes, gender)
-
-    if loadout.armor then
+    if loadout.armor and loadout.armor > 0 then
         SetPedArmour(ped, math.min(100, loadout.armor))
     end
 
@@ -106,8 +116,17 @@ function ClearFactionLoadout()
     local ped = PlayerPedId()
     removeDutyWeapons(ped)
     SetPedArmour(ped, 0)
+
+    local gender = (char and char.gender) or 0
+    local freemodeModel = (gender == 1) and `mp_f_freemode_01` or `mp_m_freemode_01`
+
+    if GetEntityModel(ped) ~= freemodeModel then
+        switchPedModel(freemodeModel)
+        ped = PlayerPedId()
+    end
+
     if char and char.appearance and GetResourceState('sunset_appearance') == 'started' then
-        exports.sunset_appearance:ApplyAppearance(ped, char.appearance, char.gender or 0)
+        exports.sunset_appearance:ApplyAppearance(ped, char.appearance, gender)
     end
 end
 
@@ -122,5 +141,86 @@ RegisterNetEvent('sunset:client:dutyState', function(state, factionId)
     end
 end)
 
+RegisterCommand('fskins', function()
+    local char = getChar()
+    if not char then return end
+    local fid = getFactionId(char)
+    if not fid or not exports.sunset_factions:IsOnDuty() then
+        return exports.sunset_ui:Notify('Trebuie să fii ON DUTY într-o facțiune pentru a schimba uniforma / skinul.', 'error')
+    end
+
+    local grade = (char.metadata and tonumber(char.metadata.faction_grade)) or 0
+    local gender = char.gender or 0
+    local options = Sunset.GetFactionSkinOptions(fid, grade, gender)
+
+    if not options or #options == 0 then
+        return exports.sunset_ui:Notify('Nu există skinuri alternative pentru gradul tău.', 'info')
+    end
+
+    TriggerEvent('chat:addMessage', {
+        color = { 59, 130, 246 },
+        multiline = true,
+        args = { 'Facțiune', ('^2Skinuri disponibile pentru %s (folosește ^3/fskin <număr>^2):'):format(Sunset.Factions[fid] and Sunset.Factions[fid].label or fid) }
+    })
+
+    for _, opt in ipairs(options) do
+        TriggerEvent('chat:addMessage', {
+            color = { 200, 200, 200 },
+            args = { 'Skin ' .. opt.index, ('%s ^7— ^3/fskin %d^7 (sau ^3/fskin %s^7)'):format(opt.label, opt.index, opt.key) }
+        })
+    end
+end, false)
+
+RegisterCommand('fskin', function(_, args)
+    local char = getChar()
+    if not char then return end
+    local fid = getFactionId(char)
+    if not fid or not exports.sunset_factions:IsOnDuty() then
+        return exports.sunset_ui:Notify('Trebuie să fii ON DUTY într-o facțiune pentru a schimba uniforma / skinul.', 'error')
+    end
+
+    local arg = args[1] and tostring(args[1]):lower()
+    if not arg then
+        ExecuteCommand('fskins')
+        return
+    end
+
+    local grade = (char.metadata and tonumber(char.metadata.faction_grade)) or 0
+    local gender = char.gender or 0
+    local options = Sunset.GetFactionSkinOptions(fid, grade, gender)
+
+    local chosen = nil
+    local num = tonumber(arg)
+    if num and options[num] then
+        chosen = options[num]
+    else
+        for _, opt in ipairs(options) do
+            if opt.key:lower() == arg or opt.label:lower():find(arg, 1, true) then
+                chosen = opt
+                break
+            end
+        end
+    end
+
+    if not chosen then
+        exports.sunset_ui:Notify('Skin negăsit. Tastează /fskins pentru lista completă.', 'error')
+        return
+    end
+
+    ApplyFactionLoadout(fid, grade, chosen.model)
+    exports.sunset_ui:Notify(('Uniformă / Skin echipat: %s'):format(chosen.label), 'success')
+end, false)
+
+CreateThread(function()
+    Wait(2000)
+    TriggerEvent('chat:addSuggestion', '/fskins', 'Afișează skinurile și uniformele disponibile pentru facțiunea ta')
+    TriggerEvent('chat:addSuggestion', '/fskin', 'Echipează o uniformă sau un skin de facțiune', {
+        { name = 'număr sau nume', help = 'ex: 1, 2, swat, hway, doctor' }
+    })
+end)
+
 exports('ApplyFactionLoadout', ApplyFactionLoadout)
 exports('ClearFactionLoadout', ClearFactionLoadout)
+exports('GetFactionSkinOptions', function(factionId, grade, gender)
+    return Sunset.GetFactionSkinOptions(factionId, grade, gender)
+end)

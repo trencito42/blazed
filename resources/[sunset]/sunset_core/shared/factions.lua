@@ -419,6 +419,8 @@ Sunset.FactionCommandCatalog = {
     { perm = 'review_license_tests', cmd = '/lssireview [report] [mistakes] [approved|improve] [notes]', desc = 'Rank 5+: grade instructor procedure (0.5 steps)' },
     { perm = 'invite', cmd = '/finvite [id]', desc = 'Leader: invite an accepted applicant nearby' },
     { perm = 'promote', cmd = '/fpromote [id] [grade]', desc = 'Promote a faction member' },
+    { cmd = '/fskins', desc = 'List available authentic skins/uniforms for your faction' },
+    { cmd = '/fskin [numar|nume]', desc = 'Switch to a specific authorized faction skin' },
 }
 
 Sunset.IllegalSellPrices = {

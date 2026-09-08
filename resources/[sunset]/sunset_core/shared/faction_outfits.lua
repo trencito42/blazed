@@ -217,3 +217,346 @@ function Sunset.ResolveFactionOutfit(loadout, grade, gender)
     end
     return (gender == 1 and loadout.female) or loadout.male
 end
+
+-- ====================================================================
+-- AUTHENTIC REAL GTA V PED SKINS FOR ALL FACTIONS
+-- ====================================================================
+Sunset.FactionSkins = {
+    police = {
+        label = 'LSPD',
+        defaultMale = 's_m_y_cop_01',
+        defaultFemale = 's_f_y_cop_01',
+        gradeMale = {
+            [0] = 's_m_y_cop_01',
+            [1] = 's_m_y_cop_01',
+            [2] = 's_m_y_cop_01',
+            [3] = 'csb_cop',
+            [4] = 'csb_cop',
+            [5] = 's_m_m_ciagoon_01',
+            [6] = 's_m_m_ciagoon_01',
+            [7] = 's_m_m_ciagoon_01',
+        },
+        gradeFemale = {
+            [0] = 's_f_y_cop_01',
+            [1] = 's_f_y_cop_01',
+            [2] = 's_f_y_cop_01',
+            [3] = 's_f_y_cop_01',
+            [4] = 's_f_y_cop_01',
+            [5] = 's_f_y_cop_01',
+            [6] = 's_f_y_cop_01',
+            [7] = 's_f_y_cop_01',
+        },
+        options = {
+            { key = 'cop', label = 'Ofițer LSPD Patrulă', male = 's_m_y_cop_01', female = 's_f_y_cop_01', minGrade = 0 },
+            { key = 'senior', label = 'Ofițer LSPD Senior / Sergent', male = 'csb_cop', female = 's_f_y_cop_01', minGrade = 2 },
+            { key = 'hway', label = 'Highway Patrol (Autostradă)', male = 's_m_y_hwaycop_01', female = 's_f_y_cop_01', minGrade = 1 },
+            { key = 'swat', label = 'SWAT / Intervenție Rapidă', male = 's_m_y_swat_01', female = 's_f_y_cop_01', minGrade = 2 },
+            { key = 'command', label = 'Conducere / Detectiv', male = 's_m_m_ciagoon_01', female = 's_f_y_cop_01', minGrade = 4 },
+        },
+    },
+    sheriff = {
+        label = 'San Andreas Sheriff',
+        defaultMale = 's_m_y_sheriff_01',
+        defaultFemale = 's_f_y_sheriff_01',
+        gradeMale = {
+            [0] = 's_m_y_sheriff_01',
+            [1] = 's_m_y_sheriff_01',
+            [2] = 's_m_y_sheriff_01',
+            [3] = 's_m_y_sheriff_01',
+            [4] = 's_m_y_hwaycop_01',
+            [5] = 's_m_y_hwaycop_01',
+            [6] = 's_m_y_sheriff_01',
+            [7] = 's_m_y_sheriff_01',
+        },
+        gradeFemale = {
+            [0] = 's_f_y_sheriff_01',
+            [1] = 's_f_y_sheriff_01',
+            [2] = 's_f_y_sheriff_01',
+            [3] = 's_f_y_sheriff_01',
+            [4] = 's_f_y_sheriff_01',
+            [5] = 's_f_y_sheriff_01',
+            [6] = 's_f_y_sheriff_01',
+            [7] = 's_f_y_sheriff_01',
+        },
+        options = {
+            { key = 'sheriff', label = 'Șerif Patrulă', male = 's_m_y_sheriff_01', female = 's_f_y_sheriff_01', minGrade = 0 },
+            { key = 'hway', label = 'Highway Patrol Sheriff', male = 's_m_y_hwaycop_01', female = 's_f_y_sheriff_01', minGrade = 1 },
+            { key = 'swat', label = 'Tactical Response / SWAT', male = 's_m_y_swat_01', female = 's_f_y_sheriff_01', minGrade = 2 },
+        },
+    },
+    fib = {
+        label = 'FIB',
+        defaultMale = 'mp_m_fibsec_01',
+        defaultFemale = 's_f_m_fembarber_01',
+        gradeMale = {
+            [0] = 'mp_m_fibsec_01',
+            [1] = 'mp_m_fibsec_01',
+            [2] = 'mp_m_fibsec_01',
+            [3] = 's_m_m_fiboffice_02',
+            [4] = 's_m_m_fiboffice_02',
+            [5] = 's_m_m_fiboffice_01',
+            [6] = 's_m_m_fiboffice_01',
+            [7] = 's_m_m_fiboffice_01',
+        },
+        gradeFemale = {
+            [0] = 's_f_m_fembarber_01',
+            [1] = 's_f_m_fembarber_01',
+            [2] = 's_f_m_fembarber_01',
+            [3] = 's_f_m_fembarber_01',
+            [4] = 's_f_m_fembarber_01',
+            [5] = 's_f_m_fembarber_01',
+            [6] = 's_f_m_fembarber_01',
+            [7] = 's_f_m_fembarber_01',
+        },
+        options = {
+            { key = 'tactical', label = 'Agent Operativ Tactic', male = 'mp_m_fibsec_01', female = 's_f_y_cop_01', minGrade = 0 },
+            { key = 'agent', label = 'Agent Special Costum', male = 's_m_m_fiboffice_02', female = 's_f_m_fembarber_01', minGrade = 1 },
+            { key = 'raid', label = 'Black Ops Raid Tactic', male = 's_m_y_blackops_01', female = 's_f_y_cop_01', minGrade = 3 },
+            { key = 'director', label = 'Director / Executive SAC', male = 's_m_m_fiboffice_01', female = 's_f_m_fembarber_01', minGrade = 4 },
+        },
+    },
+    medic = {
+        label = 'Pillbox EMS',
+        defaultMale = 's_m_m_paramedic_01',
+        defaultFemale = 's_f_y_scrubs_01',
+        gradeMale = {
+            [0] = 's_m_m_paramedic_01',
+            [1] = 's_m_m_paramedic_01',
+            [2] = 's_m_m_paramedic_01',
+            [3] = 's_m_m_paramedic_01',
+            [4] = 's_m_m_paramedic_01',
+            [5] = 's_m_m_doctor_01',
+            [6] = 's_m_m_doctor_01',
+            [7] = 's_m_m_doctor_01',
+        },
+        gradeFemale = {
+            [0] = 's_f_y_scrubs_01',
+            [1] = 's_f_y_scrubs_01',
+            [2] = 's_f_y_scrubs_01',
+            [3] = 's_f_y_scrubs_01',
+            [4] = 's_f_y_scrubs_01',
+            [5] = 's_f_y_scrubs_01',
+            [6] = 's_f_y_scrubs_01',
+            [7] = 's_f_y_scrubs_01',
+        },
+        options = {
+            { key = 'paramedic', label = 'Paramedic Ambulanță', male = 's_m_m_paramedic_01', female = 's_f_y_scrubs_01', minGrade = 0 },
+            { key = 'doctor', label = 'Medic / Chirurg Halat Alb', male = 's_m_m_doctor_01', female = 's_f_y_scrubs_01', minGrade = 3 },
+        },
+    },
+    lsfd = {
+        label = 'LS Fire Department',
+        defaultMale = 's_m_y_fireman_01',
+        defaultFemale = 's_m_y_fireman_01',
+        gradeMale = {
+            [0] = 's_m_y_fireman_01',
+            [1] = 's_m_y_fireman_01',
+            [2] = 's_m_y_fireman_01',
+            [3] = 's_m_y_fireman_01',
+            [4] = 's_m_y_fireman_01',
+            [5] = 's_m_y_fireman_01',
+            [6] = 's_m_y_fireman_01',
+            [7] = 's_m_y_fireman_01',
+        },
+        gradeFemale = {
+            [0] = 's_m_y_fireman_01',
+            [1] = 's_m_y_fireman_01',
+            [2] = 's_m_y_fireman_01',
+            [3] = 's_m_y_fireman_01',
+            [4] = 's_m_y_fireman_01',
+            [5] = 's_m_y_fireman_01',
+            [6] = 's_m_y_fireman_01',
+            [7] = 's_m_y_fireman_01',
+        },
+        options = {
+            { key = 'fireman', label = 'Pompier Bunker Gear', male = 's_m_y_fireman_01', female = 's_m_y_fireman_01', minGrade = 0 },
+            { key = 'paramedic', label = 'Paramedic / Prim Ajutor', male = 's_m_m_paramedic_01', female = 's_f_y_scrubs_01', minGrade = 2 },
+        },
+    },
+    mechanic = {
+        label = 'LS Customs',
+        defaultMale = 'mp_m_waremech_01',
+        defaultFemale = 'mp_m_waremech_01',
+        gradeMale = {
+            [0] = 'mp_m_waremech_01',
+            [1] = 'mp_m_waremech_01',
+            [2] = 'mp_m_waremech_01',
+            [3] = 'mp_m_waremech_01',
+            [4] = 's_m_y_xmech_01',
+            [5] = 's_m_y_xmech_01',
+            [6] = 's_m_y_xmech_01',
+            [7] = 's_m_y_xmech_01',
+        },
+        gradeFemale = {
+            [0] = 'mp_m_waremech_01',
+            [1] = 'mp_m_waremech_01',
+            [2] = 's_f_y_migrant_01',
+            [3] = 's_f_y_migrant_01',
+            [4] = 's_f_y_migrant_01',
+            [5] = 's_f_y_migrant_01',
+            [6] = 's_f_y_migrant_01',
+            [7] = 's_f_y_migrant_01',
+        },
+        options = {
+            { key = 'mechanic', label = 'Mecanic Salopetă Garaj', male = 'mp_m_waremech_01', female = 'mp_m_waremech_01', minGrade = 0 },
+            { key = 'tuner', label = 'Mecanic Tuner / Custom', male = 's_m_y_xmech_01', female = 's_f_y_migrant_01', minGrade = 1 },
+            { key = 'heavy', label = 'Mecanic Heavy / Tractări', male = 's_m_m_dockwork_01', female = 's_f_y_migrant_01', minGrade = 2 },
+        },
+    },
+    taxi = {
+        label = 'Downtown Cab Co.',
+        defaultMale = 'a_m_y_stlat_01',
+        defaultFemale = 'a_f_y_smartcaspat_01',
+        gradeMale = {
+            [0] = 'a_m_y_stlat_01',
+            [1] = 'a_m_y_stlat_01',
+            [2] = 'a_m_y_stlat_01',
+            [3] = 'a_m_y_smartcaspat_01',
+            [4] = 'a_m_y_smartcaspat_01',
+            [5] = 'a_m_y_smartcaspat_01',
+            [6] = 'ig_chengsr',
+            [7] = 'ig_chengsr',
+        },
+        gradeFemale = {
+            [0] = 'a_f_y_smartcaspat_01',
+            [1] = 'a_f_y_smartcaspat_01',
+            [2] = 'a_f_y_smartcaspat_01',
+            [3] = 'a_f_y_smartcaspat_01',
+            [4] = 'a_f_y_smartcaspat_01',
+            [5] = 'a_f_y_smartcaspat_01',
+            [6] = 'a_f_y_smartcaspat_01',
+            [7] = 'a_f_y_smartcaspat_01',
+        },
+        options = {
+            { key = 'driver', label = 'Șofer Taxi Clasic', male = 'a_m_y_stlat_01', female = 'a_f_y_smartcaspat_01', minGrade = 0 },
+            { key = 'executive', label = 'Șofer Executiv / Limuzină', male = 'a_m_y_smartcaspat_01', female = 'a_f_y_smartcaspat_01', minGrade = 2 },
+            { key = 'manager', label = 'Manager Flotă', male = 'ig_chengsr', female = 'a_f_y_smartcaspat_01', minGrade = 4 },
+        },
+    },
+    lssi = {
+        label = 'LSSI — License & Safety',
+        defaultMale = 's_m_m_highsec_02',
+        defaultFemale = 'a_f_y_business_02',
+        gradeMale = {
+            [0] = 's_m_m_highsec_02',
+            [1] = 's_m_m_highsec_02',
+            [2] = 's_m_m_highsec_02',
+            [3] = 's_m_m_highsec_02',
+            [4] = 'a_m_y_business_01',
+            [5] = 'a_m_y_business_01',
+            [6] = 'a_m_y_business_01',
+            [7] = 'a_m_y_business_01',
+        },
+        gradeFemale = {
+            [0] = 'a_f_y_business_02',
+            [1] = 'a_f_y_business_02',
+            [2] = 'a_f_y_business_02',
+            [3] = 'a_f_y_business_02',
+            [4] = 'a_f_y_business_02',
+            [5] = 'a_f_y_business_02',
+            [6] = 'a_f_y_business_02',
+            [7] = 'a_f_y_business_02',
+        },
+        options = {
+            { key = 'inspector', label = 'Instructor Rutier / Uniformă', male = 's_m_m_highsec_02', female = 'a_f_y_business_02', minGrade = 0 },
+            { key = 'examiner', label = 'Examinator Oficial Costum', male = 'a_m_y_business_01', female = 'a_f_y_business_02', minGrade = 2 },
+        },
+    },
+    sunset_cartel = {
+        label = 'Sunset Cartel',
+        defaultMale = 'g_m_y_mexgoon_01',
+        defaultFemale = 'g_f_y_vagos_01',
+        gradeMale = {
+            [0] = 'g_m_y_mexgoon_01',
+            [1] = 'g_m_y_mexgoon_01',
+            [2] = 'g_m_y_mexgoon_01',
+            [3] = 'g_m_y_mexgoon_02',
+            [4] = 'g_m_y_mexgoon_02',
+            [5] = 'g_m_m_mexgoon_01',
+            [6] = 'ig_ortega',
+            [7] = 'ig_ortega',
+        },
+        gradeFemale = {
+            [0] = 'g_f_y_vagos_01',
+            [1] = 'g_f_y_vagos_01',
+            [2] = 'g_f_y_vagos_01',
+            [3] = 'g_f_y_vagos_01',
+            [4] = 'g_f_y_vagos_01',
+            [5] = 'g_f_y_vagos_01',
+            [6] = 'g_f_y_vagos_01',
+            [7] = 'g_f_y_vagos_01',
+        },
+        options = {
+            { key = 'sicario', label = 'Sicario Cartel Tatuat', male = 'g_m_y_mexgoon_01', female = 'g_f_y_vagos_01', minGrade = 0 },
+            { key = 'enforcer', label = 'Soldat Cartel Tactic', male = 'g_m_y_mexgoon_02', female = 'g_f_y_vagos_01', minGrade = 2 },
+            { key = 'lieutenant', label = 'Locotenent Senior', male = 'g_m_m_mexgoon_01', female = 'g_f_y_vagos_01', minGrade = 3 },
+            { key = 'patron', label = 'Patrón / Lider Cartel', male = 'ig_ortega', female = 'g_f_y_vagos_01', minGrade = 5 },
+        },
+    },
+    night_syndicate = {
+        label = 'Night Syndicate',
+        defaultMale = 'g_m_y_armgoon_02',
+        defaultFemale = 'g_f_y_ballas_01',
+        gradeMale = {
+            [0] = 'g_m_y_armgoon_02',
+            [1] = 'g_m_y_armgoon_02',
+            [2] = 'g_m_y_armgoon_02',
+            [3] = 'g_m_m_armgoon_01',
+            [4] = 'g_m_m_armgoon_01',
+            [5] = 'g_m_y_korean_01',
+            [6] = 'g_m_y_korean_01',
+            [7] = 'g_m_y_korean_01',
+        },
+        gradeFemale = {
+            [0] = 'g_f_y_ballas_01',
+            [1] = 'g_f_y_ballas_01',
+            [2] = 'g_f_y_ballas_01',
+            [3] = 'g_f_y_ballas_01',
+            [4] = 'g_f_y_ballas_01',
+            [5] = 'g_f_y_ballas_01',
+            [6] = 'g_f_y_ballas_01',
+            [7] = 'g_f_y_ballas_01',
+        },
+        options = {
+            { key = 'runner', label = 'Street Enforcer Geacă Piele', male = 'g_m_y_armgoon_02', female = 'g_f_y_ballas_01', minGrade = 0 },
+            { key = 'captain', label = 'Căpitan Sindicat Mafiot', male = 'g_m_m_armgoon_01', female = 'g_f_y_ballas_01', minGrade = 2 },
+            { key = 'don', label = 'Don Sindicat / Boss', male = 'g_m_y_korean_01', female = 'g_f_y_ballas_01', minGrade = 4 },
+        },
+    },
+}
+
+function Sunset.ResolveFactionSkin(factionId, grade, gender)
+    local def = Sunset.FactionSkins[factionId]
+    if not def then return nil end
+    grade = tonumber(grade) or 0
+    gender = tonumber(gender) or 0
+    local isFemale = gender == 1
+    local gradeTable = isFemale and def.gradeFemale or def.gradeMale
+    local skin = gradeTable and gradeTable[grade]
+    if not skin then
+        skin = isFemale and def.defaultFemale or def.defaultMale
+    end
+    return skin
+end
+
+function Sunset.GetFactionSkinOptions(factionId, grade, gender)
+    local def = Sunset.FactionSkins[factionId]
+    if not def or not def.options then return {} end
+    grade = tonumber(grade) or 0
+    gender = tonumber(gender) or 0
+    local isFemale = gender == 1
+    local list = {}
+    for _, opt in ipairs(def.options) do
+        local minG = opt.minGrade or 0
+        if grade >= minG then
+            list[#list + 1] = {
+                index = #list + 1,
+                key = opt.key,
+                label = opt.label,
+                model = isFemale and opt.female or opt.male,
+                minGrade = minG,
+            }
+        end
+    end
+    return list
+end
