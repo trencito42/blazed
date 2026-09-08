@@ -497,6 +497,24 @@ registerServerCommand('dv', function(source)
     TriggerClientEvent('sunset:admin:deleteVehicle', source)
 end, false)
 
+-- /arepaircar /arepair /fixcar /fix [id]
+local function handleRepairCar(source, args, cmdName)
+    if source == 0 then return end
+    if not requirePerm(source, cmdName or 'arepaircar') then return end
+    local target = source
+    if args[1] then
+        target = resolveTarget(source, args[1]) or source
+    end
+    TriggerClientEvent('sunset:admin:repairVehicle', target)
+    notify(source, 'Sent vehicle repair to ID ' .. target, 'success')
+end
+
+registerServerCommand('arepaircar', function(source, args) handleRepairCar(source, args, 'arepaircar') end, false)
+registerServerCommand('arepair', function(source, args) handleRepairCar(source, args, 'arepair') end, false)
+registerServerCommand('fixcar', function(source, args) handleRepairCar(source, args, 'fixcar') end, false)
+registerServerCommand('fix', function(source, args) handleRepairCar(source, args, 'fix') end, false)
+
+
 -- /heal [id] — admin sau EMS/fire on duty
 registerServerCommand('heal', function(source, args)
     if source == 0 then return end

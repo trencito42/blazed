@@ -113,8 +113,9 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     ensureCreatorJobsRegistered()
 
     local creatorId = resolveCreatorJobId(jobId)
-    local isCreator = creatorId ~= nil
-    if not Sunset.CivilianJobs[jobId] and not isCreator then
+    local isCreator = creatorId ~= nil or (GetResourceState('sunset_jobcreator') == 'started' and exports.sunset_jobcreator:IsCreatorJob(jobId))
+    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[jobId]) and not isCreator then
+
         return nil, 'That is not a valid civilian job. Factions require a leader invitation.'
     end
 

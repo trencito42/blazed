@@ -61,6 +61,51 @@ RegisterNetEvent('sunset:admin:deleteVehicle', function()
     if veh ~= 0 then DeleteEntity(veh) end
 end)
 
+RegisterNetEvent('sunset:admin:repairVehicle', function()
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then
+        local coords = GetEntityCoords(ped)
+        veh = GetClosestVehicle(coords.x, coords.y, coords.z, 20.0, 0, 0)
+        if veh == 0 then
+            local closest, closestDist = 0, 20.0
+            for _, candidate in ipairs(GetGamePool('CVehicle')) do
+                local dist = #(coords - GetEntityCoords(candidate))
+                if dist < closestDist then
+                    closest = candidate
+                    closestDist = dist
+                end
+            end
+            veh = closest
+        end
+    end
+
+    if veh == 0 or not DoesEntityExist(veh) then
+        exports.sunset_ui:Notify('No vehicle found nearby', 'error')
+        return
+    end
+
+    SetVehicleFixed(veh)
+    SetVehicleDeformationFixed(veh)
+    SetVehicleEngineHealth(veh, 1000.0)
+    SetVehicleBodyHealth(veh, 1000.0)
+    SetVehicleDirtLevel(veh, 0.0)
+    SetVehiclePetrolTankHealth(veh, 1000.0)
+    SetVehicleUndriveable(veh, false)
+    SetVehicleEngineOn(veh, true, true, false)
+    if GetResourceState('sunset_vehicles') == 'started' then
+        pcall(function()
+            exports.sunset_vehicles:SetFuelLevel(veh, 100.0)
+            local plate = GetVehicleNumberPlateText(veh)
+            if plate then
+                TriggerServerEvent('sunset:vehicles:adminRepairDatabase', plate)
+            end
+        end)
+    end
+    exports.sunset_ui:Notify('Vehicle repaired!', 'success')
+end)
+
+
 RegisterNetEvent('sunset:admin:heal', function()
     local ped = PlayerPedId()
     SetEntityHealth(ped, GetEntityMaxHealth(ped))

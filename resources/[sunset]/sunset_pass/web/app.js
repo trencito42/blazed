@@ -21,8 +21,13 @@ function rewardArt(reward) {
     return `<img src="${src}" alt="" loading="eager" onerror="this.onerror=null;this.src='${ITEM_ICON_FALLBACK}'">`;
 }
 
+function missionIconArt(icon) {
+    const src = itemIconUrl(icon);
+    return `<img src="${src}" alt="" loading="eager" onerror="this.onerror=null;this.src='${ITEM_ICON_FALLBACK}'">`;
+}
+
 const state = {
-    tab: 'rewards',
+    tab: 'battlepass',
     data: null,
 };
 
@@ -34,207 +39,283 @@ function post(name, data) {
     }).then((res) => res.json()).catch(() => ({}));
 }
 
-function setTab(tab) {
-    state.tab = tab;
-    document.querySelectorAll('.pass-tab').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.dataset.tab === tab);
-    });
-    document.querySelectorAll('.pass-panel').forEach((panel) => {
-        panel.classList.toggle('is-active', panel.id === `tab-${tab}`);
-    });
-    post('passSetTab', { tab });
+function showNotify(msg) {
+    const el = document.getElementById('notify');
+    const msgEl = document.getElementById('notify-msg');
+    if (msgEl) msgEl.innerText = msg;
+    if (el) {
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+    }
 }
 
-function renderReward(reward, track) {
-    if (!reward) {
-        return '<div class="pass-empty">—</div>';
+function switchTab(tabId) {
+    let normalizedTab = tabId;
+    if (tabId === 'rewards') normalizedTab = 'battlepass';
+    if (tabId === 'missions') normalizedTab = 'daily';
+
+    state.tab = normalizedTab;
+
+    document.querySelectorAll('.nav-item').forEach((el) => {
+        el.classList.toggle('active', el.dataset.tab === normalizedTab);
+    });
+
+    document.querySelectorAll('.tab-section').forEach((el) => {
+        el.classList.toggle('active', el.id === `tab-${normalizedTab}`);
+    });
+
+    post('passSetTab', { tab: normalizedTab });
+}
+
+function updatePlayerStats(data) {
+    if (!data) return;
+
+    const lvlEl = document.getElementById('ui-lvl');
+    if (lvlEl) lvlEl.innerText = data.tier || 1;
+
+    const xpTextEl = document.getElementById('ui-xp-text');
+    const xpBarEl = document.getElementById('ui-xp-bar');
+    const tierXp = data.tierXp || 0;
+    const tierGoal = data.tierGoal || 500;
+
+    if (xpTextEl) xpTextEl.innerText = `${tierXp} / ${tierGoal} XP`;
+    if (xpBarEl) {
+        const pct = Math.min(100, Math.max(0, (tierXp / tierGoal) * 100));
+        xpBarEl.style.width = `${pct}%`;
     }
 
-    const classes = [
-        'pass-reward',
-        `pass-reward--${track}`,
-        reward.claimed ? 'is-claimed' : '',
-        reward.locked ? 'is-locked' : '',
-    ].filter(Boolean).join(' ');
+    const seasonTitle = document.getElementById('season-title');
+    if (seasonTitle && data.seasonLabel) seasonTitle.innerText = data.seasonLabel.toUpperCase();
 
-    const lock = reward.locked ? '<span class="pass-reward__lock">LOCK</span>' : '';
-
-    return `
-        <button type="button" class="${classes}" data-level="${reward.level}" data-track="${track}" ${reward.canClaim ? '' : 'disabled'}>
-            <span class="pass-reward__stamp">CLAIMED</span>
-            ${lock}
-            <span class="pass-reward__icon">${rewardArt(reward)}</span>
-            <span class="pass-reward__name">${reward.label || 'Reward'}</span>
-        </button>
-    `;
+    const premiumBox = document.getElementById('premium-box');
+    if (premiumBox) {
+        if (data.premium) {
+            premiumBox.innerHTML = `
+                <div style="text-align:center; color:var(--premium); font-weight:800; font-size:12px; letter-spacing:1px; padding:15px; background:rgba(184, 41, 255, 0.1); border:1px solid rgba(184, 41, 255, 0.3); border-radius:var(--radius-md);">
+                    ✔️ PREMIUM ACTIVAT
+                </div>`;
+        } else {
+            const costLabel = data.premiumCostLabel || `${data.premiumCost || 250} BP`;
+            premiumBox.innerHTML = `
+                <button class="btn-upgrade" id="btn-upgrade" onclick="buyPremium()">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M2.5 2v6h13V2zM2.5 13v6h13v-6z"></path><path d="M18.5 2l3 6-3 6"></path></svg>
+                    <span>Cumpără Premium (${costLabel})</span>
+                </button>`;
+        }
+    }
 }
 
-function renderTiers(data) {
-    const container = document.getElementById('pass-tiers');
-    const fill = document.getElementById('pass-track-fill');
-    if (!container || !data) return;
+async function buyPremium() {
+    const res = await post('passBuyPremium');
+    if (res?.state) {
+        showNotify('Premium Activat!');
+        renderAll(res.state);
+        return;
+    }
+    if (res?.error) {
+        showNotify(res.error);
+    }
+}
 
+async function claimBP(level, track) {
+    const res = await post('passClaim', { level: Number(level), track });
+    if (res?.state) {
+        showNotify(`Recompensă Nivel ${level} Colectată!`);
+        renderAll(res.state);
+    }
+}
+
+function renderBattlepass(data) {
+    const track = document.getElementById('bp-track');
+    if (!track || !data) return;
+
+    track.innerHTML = '';
     const tiers = data.tiers || [];
-    let fillPct = 0;
+    const currentTier = data.tier || 1;
+    const hasPremium = !!data.premium;
+
+    let fillWidth = 0;
     if (tiers.length > 1) {
-        const currentIdx = Math.max(0, (data.tier || 1) - 1);
-        fillPct = (currentIdx / (tiers.length - 1)) * 100;
+        const currentIdx = Math.max(0, currentTier - 1);
+        fillWidth = Math.min(100, (currentIdx / (tiers.length - 1)) * 100);
     }
 
-    container.innerHTML = tiers.map((tier) => {
-        const classes = [
-            'pass-tier-col',
-            tier.unlocked ? 'is-unlocked' : '',
-            tier.current ? 'is-current' : '',
-        ].filter(Boolean).join(' ');
+    track.innerHTML += `
+        <div class="bp-line-bg"></div>
+        <div class="bp-line-fill" style="width: ${fillWidth}%;"></div>
+    `;
 
-        return `
-            <article class="${classes}">
-                <div class="pass-slot pass-slot--free">${renderReward(tier.free, 'free')}</div>
-                <div class="pass-slot-label">Free</div>
-                <div class="pass-marker">${tier.level}</div>
-                <div class="pass-slot-label is-premium">Premium</div>
-                <div class="pass-slot pass-slot--premium">${renderReward(tier.premium, 'premium')}</div>
-            </article>
+    tiers.forEach((tier) => {
+        const isCompleted = currentTier > tier.level;
+        const isCurrent = currentTier === tier.level;
+
+        let classState = '';
+        if (isCompleted) classState = 'completed';
+        if (isCurrent) classState = 'current';
+
+        // Free Reward
+        let freeBtnHtml = '';
+        if (tier.free) {
+            if (tier.free.claimed) {
+                freeBtnHtml = `<button class="btn-claim claimed">Luat</button>`;
+            } else if (currentTier >= tier.level) {
+                freeBtnHtml = `<button class="btn-claim" onclick="claimBP(${tier.level}, 'free')">Revendică</button>`;
+            }
+        }
+
+        // Premium Reward
+        let premBtnHtml = '';
+        let premLockHtml = '';
+
+        if (tier.premium) {
+            if (!hasPremium) {
+                premLockHtml = `
+                    <div class="reward-locked-overlay">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span class="lock-text">LOCKED</span>
+                    </div>`;
+            } else {
+                if (tier.premium.claimed) {
+                    premBtnHtml = `<button class="btn-claim claimed">Luat</button>`;
+                } else if (currentTier >= tier.level) {
+                    premBtnHtml = `<button class="btn-claim btn-premium" onclick="claimBP(${tier.level}, 'premium')">Revendică</button>`;
+                }
+            }
+        }
+
+        const tierEl = document.createElement('div');
+        tierEl.className = `bp-tier ${classState}`;
+
+        tierEl.innerHTML = `
+            <!-- FREE REWARD (TOP) -->
+            <div class="reward-card">
+                <span class="reward-type-label">FREE</span>
+                <div class="reward-icon">${rewardArt(tier.free)}</div>
+                <div class="reward-name">${tier.free ? tier.free.label : '—'}</div>
+                ${freeBtnHtml}
+            </div>
+
+            <!-- LEVEL MARKER (MIDDLE) -->
+            <div class="bp-level-marker">${tier.level}</div>
+
+            <!-- PREMIUM REWARD (BOTTOM) -->
+            <div class="reward-card reward-premium">
+                <span class="reward-type-label label-premium">PREMIUM</span>
+                ${premLockHtml}
+                <div class="reward-icon">${rewardArt(tier.premium)}</div>
+                <div class="reward-name">${tier.premium ? tier.premium.label : '—'}</div>
+                ${premBtnHtml}
+            </div>
         `;
-    }).join('');
 
-    if (fill) fill.style.width = `${fillPct}%`;
-
-    const line = document.querySelector('.pass-track__line');
-    if (line && container) {
-        line.style.width = `${container.scrollWidth}px`;
-    }
-
-    container.querySelectorAll('.pass-reward__icon img').forEach((img) => {
-        img.addEventListener('error', () => {
-            if (!img.src.endsWith('backpack.webp')) img.src = ITEM_ICON_FALLBACK;
-        }, { once: true });
+        track.appendChild(tierEl);
     });
 
-    container.querySelectorAll('.pass-reward[data-level]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            if (btn.disabled || btn.classList.contains('is-claimed') || btn.classList.contains('is-locked')) return;
-            btn.disabled = true;
-            const res = await post('passClaim', {
-                level: Number(btn.dataset.level),
-                track: btn.dataset.track,
-            });
-            btn.disabled = false;
-            if (res?.state) renderAll(res.state);
-        });
-    });
-
-    const track = document.getElementById('pass-track');
-    if (track && data.tier > 2) {
-        track.scrollLeft = (data.tier - 2) * 176;
+    const currentEl = track.querySelector('.bp-tier.current');
+    if (currentEl) {
+        currentEl.scrollIntoView({ inline: 'center', behavior: 'smooth' });
     }
-}
-
-function missionIconSrc(icon) {
-    const key = ICON_ALIASES[icon] || icon || 'backpack';
-    return `${ITEM_ICON_ROOT}${key}.webp`;
 }
 
 function renderMissions(data) {
-    const container = document.getElementById('pass-missions');
-    if (!container || !data) return;
+    const dailyList = document.getElementById('daily-list');
+    const weeklyList = document.getElementById('weekly-list');
+    if (!dailyList || !weeklyList || !data) return;
 
-    container.innerHTML = (data.missions || []).map((mission) => {
-        const pct = mission.goal > 0 ? Math.min(100, (mission.progress / mission.goal) * 100) : 0;
-        const xpLabel = mission.completed ? 'DONE' : `+${mission.xp} XP`;
-        const iconSrc = missionIconSrc(mission.icon);
-        return `
-            <article class="pass-mission ${mission.completed ? 'is-complete' : ''}">
-                <div class="pass-mission__icon">
-                    <img src="${iconSrc}" alt="" loading="eager">
+    dailyList.innerHTML = '';
+    weeklyList.innerHTML = '';
+
+    const missions = data.missions || [];
+
+    missions.forEach((m) => {
+        const goal = m.goal || 1;
+        const progress = m.progress || 0;
+        const pct = Math.min(100, (progress / goal) * 100);
+        const isDone = m.completed || progress >= goal;
+
+        const isWeekly = m.type === 'weekly';
+
+        const cardHtml = `
+            <div class="mission-info">
+                <div class="mission-icon">
+                    ${missionIconArt(m.icon)}
                 </div>
-                <div class="pass-mission__body">
-                    <div class="pass-mission__row">
-                        <div class="pass-mission__title">${mission.title}</div>
-                        <div class="pass-mission__xp">${xpLabel}</div>
-                    </div>
-                    <div class="pass-mission__desc">${mission.description}</div>
-                    <div class="pass-mission__progress">
-                        <div class="pass-mission__bar">
-                            <div class="pass-mission__fill" style="width:${pct}%"></div>
-                        </div>
-                        <span class="pass-mission__count">${mission.progress} / ${mission.goal}</span>
-                    </div>
+                <div class="mission-details">
+                    <div class="mission-title">${m.title || m.id}</div>
+                    <div class="mission-desc">${m.description || ''}</div>
                 </div>
-            </article>
+            </div>
+            
+            <div class="mission-progress-container">
+                <div class="mission-progress-text">${progress} / ${goal}</div>
+                <div class="mission-bar-bg">
+                    <div class="mission-bar-fill" style="width: ${pct}%;"></div>
+                </div>
+            </div>
+            
+            <div class="mission-reward">
+                <span class="mission-reward-val">
+                    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    +${m.xp} XP
+                </span>
+                <button class="btn ${isDone ? '' : 'btn-primary'}" disabled>${isDone ? 'COLECTAT' : 'ÎN CURS'}</button>
+            </div>
         `;
-    }).join('');
 
-    container.querySelectorAll('.pass-mission__icon img').forEach((img) => {
-        img.addEventListener('error', () => {
-            if (!img.src.endsWith('backpack.webp')) img.src = ITEM_ICON_FALLBACK;
-        }, { once: true });
+        const el = document.createElement('div');
+        el.className = `mission-card ${isDone ? 'completed' : ''} ${isWeekly ? 'weekly' : ''}`;
+        el.innerHTML = cardHtml;
+
+        if (isWeekly) {
+            weeklyList.appendChild(el);
+        } else {
+            dailyList.appendChild(el);
+        }
     });
-}
 
-function renderHeader(data) {
-    document.getElementById('pass-season').textContent = data.seasonLabel || 'Season';
-    document.getElementById('pass-tier').textContent = `Lvl. ${data.tier || 1}`;
-    document.getElementById('pass-tier-xp').textContent = `${data.tierXp || 0} / ${data.tierGoal || 500} XP`;
-    const tierFill = document.getElementById('pass-tier-fill');
-    const tierPct = data.tierGoal > 0 ? ((data.tierXp || 0) / data.tierGoal) * 100 : 0;
-    if (tierFill) tierFill.style.width = `${tierPct}%`;
+    if (!dailyList.hasChildNodes()) {
+        dailyList.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:30px; font-size:12px;">Nu există misiuni zilnice active.</div>`;
+    }
 
-    const wallet = document.getElementById('pass-wallet-bp');
-    if (wallet) wallet.textContent = `${data.accountCoins || 0} BP`;
-
-    const premiumBtn = document.getElementById('pass-buy-premium');
-    if (!premiumBtn) return;
-    const costLabel = data.premiumCostLabel || `${data.premiumCost || 250} BP`;
-    if (data.premium) {
-        premiumBtn.textContent = 'Premium Active';
-        premiumBtn.classList.add('is-owned');
-        premiumBtn.disabled = true;
-    } else {
-        premiumBtn.textContent = `Upgrade Pass (${costLabel})`;
-        premiumBtn.classList.remove('is-owned');
-        premiumBtn.disabled = false;
-        premiumBtn.title = `You have ${data.accountCoins || 0} Blaze Points`;
+    if (!weeklyList.hasChildNodes()) {
+        weeklyList.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:30px; font-size:12px;">Nu există misiuni săptămânale active.</div>`;
     }
 }
 
 function renderAll(data) {
     state.data = data;
-    renderHeader(data);
-    renderTiers(data);
+    updatePlayerStats(data);
+    renderBattlepass(data);
     renderMissions(data);
 }
 
 function show(payload) {
-    document.getElementById('pass-root').classList.remove('hidden');
+    const wrapper = document.getElementById('bp-wrapper');
+    if (!wrapper) return;
+
+    wrapper.classList.remove('hidden');
+    setTimeout(() => wrapper.classList.add('visible'), 50);
+
     renderAll(payload.state || {});
-    setTab(payload.tab || 'rewards');
+    switchTab(payload.tab || 'battlepass');
 }
 
 function hide() {
-    document.getElementById('pass-root').classList.add('hidden');
+    const wrapper = document.getElementById('bp-wrapper');
+    if (!wrapper) return;
+
+    wrapper.classList.remove('visible');
+    setTimeout(() => wrapper.classList.add('hidden'), 200);
     state.data = null;
 }
 
-document.getElementById('pass-close')?.addEventListener('click', () => post('passClose'));
-document.getElementById('pass-buy-premium')?.addEventListener('click', async () => {
-    const btn = document.getElementById('pass-buy-premium');
-    if (!btn || btn.classList.contains('is-owned') || btn.disabled) return;
-    btn.disabled = true;
-    const res = await post('passBuyPremium');
-    btn.disabled = false;
-    if (res?.state) {
-        renderAll(res.state);
-        return;
-    }
-    if (res?.error) {
-        btn.title = res.error;
-    }
-});
-
-document.querySelectorAll('.pass-tab').forEach((btn) => {
-    btn.addEventListener('click', () => setTab(btn.dataset.tab));
+// Nav items click listener
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-item').forEach((el) => {
+        el.addEventListener('click', () => {
+            switchTab(el.dataset.tab);
+        });
+    });
 });
 
 window.addEventListener('keydown', (event) => {
@@ -254,37 +335,43 @@ window.addEventListener('message', (event) => {
             if (data?.state) renderAll(data.state);
             break;
         case 'passSetTab':
-            if (data?.tab) setTab(data.tab);
+            if (data?.tab) switchTab(data.tab);
             break;
         default:
             break;
     }
 });
 
+window.switchTab = switchTab;
+window.buyPremium = buyPremium;
+window.claimBP = claimBP;
+
+// Demo QA Mode
 if (new URLSearchParams(window.location.search).get('qa') === '1') {
-    const rewards = [
-        { type: 'cash', label: '$2,500 Cash', icon: 'cash', amount: 2500 },
-        { type: 'item', label: 'Water x5', icon: 'water_bottle', count: 5 },
-        { type: 'item', label: 'Bread x5', icon: 'bread', count: 5 },
-        { type: 'item', label: 'Bandage x3', icon: 'bandage', count: 3 },
-        { type: 'bank', label: '$7,500 Bank', icon: 'bank', amount: 7500 },
-        { type: 'premium_points', label: '10 Blaze Points', icon: 'coins', amount: 10 },
-    ];
+
     show({
-        tab: 'rewards',
+        tab: 'battlepass',
         state: {
-            seasonLabel: 'Season 01', tier: 2, tierXp: 350, tierGoal: 500,
-            premium: false, premiumCost: 250, accountCoins: 0,
-            tiers: rewards.map((reward, index) => ({
-                level: index + 1, unlocked: index < 2, current: index === 1,
-                free: { ...reward, level: index + 1, claimed: index < 2, canClaim: false },
-                premium: { ...reward, level: index + 1, claimed: false, locked: true, canClaim: false },
+            seasonLabel: 'Season 01',
+            tier: 4,
+            tierXp: 800,
+            tierGoal: 1000,
+            premium: false,
+            premiumCost: 250,
+            accountCoins: 100,
+            tiers: Array.from({ length: 10 }, (_, i) => ({
+                level: i + 1,
+                unlocked: i < 4,
+                current: i === 3,
+                free: { level: i + 1, type: 'cash', label: `$${(i + 1) * 1000}`, icon: 'cash', claimed: i < 2 },
+                premium: { level: i + 1, type: 'item', label: i % 3 === 0 ? 'VIP Vehicle' : `Crate Lvl ${i + 1}`, icon: i % 3 === 0 ? 'veh_engine' : 'backpack', claimed: false },
             })),
             missions: [
-                { title: 'Jewelry Run', description: 'Complete a luxury-store robbery and sell loot at the fence.', progress: 0, goal: 1, xp: 500, icon: 'golden_watch' },
-                { title: 'Angler', description: 'Catch 10 fish while on a fisherman shift.', progress: 7, goal: 10, xp: 400, icon: 'cooked_fish' },
-                { title: 'Dedicated Courier', description: 'Complete 5 courier deliveries.', progress: 2, goal: 5, xp: 600, icon: 'backpack' },
-                { title: 'Steady Earner', description: 'Receive 2 paydays.', progress: 1, goal: 2, xp: 350, icon: 'cash_stack' },
+                { id: '1', type: 'daily', title: 'Șofer Model', description: 'Condu un total de 15km fără a lovi vehiculul.', progress: 15, goal: 15, xp: 500, icon: 'veh_engine', completed: true },
+                { id: '2', type: 'daily', title: 'Harnic', description: 'Completează 3 ture la jobul de Livrator.', progress: 1, goal: 3, xp: 300, icon: 'backpack', completed: false },
+                { id: '3', type: 'daily', title: 'Timp cu Prietenii', description: 'Petrece 2 ore activ pe server.', progress: 120, goal: 120, xp: 400, icon: 'cash_stack', completed: true },
+                { id: '4', type: 'weekly', title: 'Magnat Local', description: 'Câștigă un total de $50,000.', progress: 32000, goal: 50000, xp: 2500, icon: 'bank_card', completed: false },
+                { id: '5', type: 'weekly', title: 'Infractor Căutat', description: 'Evadează cu succes din 3 jafuri auto.', progress: 3, goal: 3, xp: 3000, icon: 'golden_watch', completed: true },
             ],
         },
     });

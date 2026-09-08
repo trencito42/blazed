@@ -41,6 +41,7 @@ SunsetPass.Tiers = {
 SunsetPass.Missions = {
     {
         id = 'robbery_complete',
+        type = 'weekly',
         title = 'Jewelry Run',
         description = 'Complete a luxury-store robbery and sell loot at the fence.',
         goal = 1,
@@ -49,6 +50,7 @@ SunsetPass.Missions = {
     },
     {
         id = 'fish_catch',
+        type = 'daily',
         title = 'Angler',
         description = 'Catch 10 fish while on a fisherman shift.',
         goal = 10,
@@ -57,6 +59,7 @@ SunsetPass.Missions = {
     },
     {
         id = 'courier_deliveries',
+        type = 'daily',
         title = 'Dedicated Courier',
         description = 'Complete 5 courier deliveries.',
         goal = 5,
@@ -65,6 +68,7 @@ SunsetPass.Missions = {
     },
     {
         id = 'paydays',
+        type = 'daily',
         title = 'Steady Earner',
         description = 'Receive 2 paydays.',
         goal = 2,
@@ -72,3 +76,4 @@ SunsetPass.Missions = {
         icon = 'cash_stack',
     },
 }
+

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Battlepass</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+        :root {
+            /* Design System Colors */
+            --bg-base: rgba(13, 13, 20, 0.85); 
+            --bg-panel: rgba(255, 255, 255, 0.03);
+            --bg-hover: rgba(255, 255, 255, 0.08);
+            
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.5);
+            
+            --accent: #00ffcc; /* Cyan */
+            --warning: #ffcc00;
+            --danger: #ff3366;
+            --premium: #b829ff; /* Mov/Neon pentru VIP */
+            
+            --border: rgba(255, 255, 255, 0.1);
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        * { box-sizing: border-box; }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background: url('https://placehold.co/1920x1080/1a1a24/1a1a24?text=FiveM+World') no-repeat center center;
+            background-size: cover;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; user-select: none;
+        }
+
+        #bp-wrapper {
+            width: 1100px; height: 680px;
+            background: var(--bg-base);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            display: flex; flex-direction: row;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            opacity: 0; transform: scale(0.95);
+            transition: var(--transition);
+        }
+
+        #bp-wrapper.visible { opacity: 1; transform: scale(1); }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            padding: 30px 0;
+        }
+
+        .season-brand {
+            padding: 0 30px 25px 30px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .season-title { font-size: 22px; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);}
+        .season-subtitle { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; margin-top: 5px;}
+
+        /* Profil Player / Level */
+        .profile-section {
+            padding: 0 25px 25px 25px;
+            display: flex; flex-direction: column; gap: 10px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 15px;
+        }
+
+        .level-header { display: flex; justify-content: space-between; align-items: flex-end; }
+        .level-val { font-size: 32px; font-weight: 900; color: var(--text-main); line-height: 1; }
+        .level-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        
+        .xp-bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+        .xp-bar-fill { height: 100%; background: var(--accent); transition: width 0.5s ease; box-shadow: 0 0 10px var(--accent); }
+        .xp-text { font-size: 10px; font-weight: 600; color: var(--text-muted); text-align: right; }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 5px; padding: 0 15px; flex: 1; }
+
+        .nav-item {
+            padding: 12px 20px; border-radius: var(--radius-md); cursor: pointer;
+            font-size: 13px; font-weight: 700; color: var(--text-muted);
+            transition: var(--transition); display: flex; align-items: center; gap: 12px;
+        }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text-main); }
+        .nav-item.active { background: rgba(0, 255, 204, 0.1); color: var(--accent); }
+        
+        .nav-item svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+        .premium-btn-container { padding: 20px; }
+        .btn-upgrade {
+            width: 100%; padding: 15px; border: none; border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--premium), #7000ff); color: #fff;
+            font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 800; text-transform: uppercase;
+            cursor: pointer; transition: var(--transition); box-shadow: 0 0 20px rgba(184, 41, 255, 0.4);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-upgrade:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(184, 41, 255, 0.6); }
+
+        /* --- CONTENT AREA --- */
+        .content { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+
+        .tab-section { display: none; flex-direction: column; height: 100%; animation: fadeIn 0.3s ease; }
+        .tab-section.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header { padding: 40px 40px 20px 40px; }
+        .section-header h2 { margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; }
+        .section-header p { margin: 5px 0 0 0; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+        /* --- BATTLEPASS TRACK --- */
+        .bp-container {
+            flex: 1; display: flex; align-items: center; padding: 20px 40px 40px 40px;
+            overflow-x: auto; overflow-y: hidden; position: relative; scroll-behavior: smooth;
+        }
+        
+        .bp-container::-webkit-scrollbar { height: 6px; }
+        .bp-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; margin: 0 40px; }
+        .bp-container::-webkit-scrollbar-thumb { background: rgba(0, 255, 204, 0.3); border-radius: 3px; }
+        .bp-container::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        .bp-track-wrapper {
+            display: flex; gap: 20px; position: relative; min-height: 400px; align-items: center; padding-right: 40px;
+        }
+
+        /* Linia orizontala din spatele nivelelor */
+        .bp-line-bg { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--border); transform: translateY(-50%); z-index: 1; }
+        .bp-line-fill { position: absolute; top: 50%; left: 0; height: 4px; background: var(--accent); transform: translateY(-50%); z-index: 2; box-shadow: 0 0 10px var(--accent); transition: width 0.5s ease; }
+
+        .bp-tier {
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            height: 380px; width: 140px; z-index: 5; position: relative;
+        }
+
+        .bp-level-marker {
+            width: 40px; height: 40px; background: var(--bg-base); border: 2px solid var(--border);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 900; color: var(--text-muted); position: absolute; top: 50%; transform: translateY(-50%);
+            transition: var(--transition);
+        }
+        
+        .bp-tier.completed .bp-level-marker { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 15px rgba(0,255,204,0.3); }
+        .bp-tier.current .bp-level-marker { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 20px var(--accent); transform: translateY(-50%) scale(1.2); }
+
+        .reward-card {
+            background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-md);
+            width: 100%; height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 15px; gap: 10px; position: relative; transition: var(--transition);
+        }
+
+        .reward-premium { background: linear-gradient(180deg, rgba(184, 41, 255, 0.05) 0%, rgba(184, 41, 255, 0.15) 100%); border-color: rgba(184, 41, 255, 0.3); }
+        
+        .reward-icon { font-size: 36px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); }
+        .reward-name { font-size: 10px; font-weight: 800; text-align: center; color: var(--text-main); text-transform: uppercase; }
+        
+        .btn-claim {
+            padding: 6px 12px; border: none; border-radius: 4px; background: var(--accent); color: #000;
+            font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 800; text-transform: uppercase;
+            cursor: pointer; position: absolute; bottom: -12px; box-shadow: 0 4px 10px rgba(0,255,204,0.4);
+            transition: var(--transition);
+        }
+        .btn-claim:hover { transform: translateY(-2px) scale(1.05); }
+        .btn-claim.claimed { background: var(--bg-input); color: var(--text-muted); box-shadow: none; border: 1px solid var(--border); pointer-events: none; }
+
+        /* Lock overlay for premium */
+        .reward-locked-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); border-radius: var(--radius-md);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+        }
+        .reward-locked-overlay svg { width: 24px; height: 24px; stroke: var(--text-muted); stroke-width: 2; fill: none; margin-bottom: 5px;}
+        .lock-text { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+        .reward-type-label { font-size: 10px; font-weight: 800; color: var(--text-muted); position: absolute; top: -25px; letter-spacing: 1px; text-transform: uppercase; }
+        .label-premium { color: var(--premium); }
+
+        /* --- MISSIONS TAB --- */
+        .missions-list {
+            flex: 1; padding: 0 40px 40px 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
+        }
+        
+        .missions-list::-webkit-scrollbar { width: 4px; }
+        .missions-list::-webkit-scrollbar-track { background: transparent; }
+        .missions-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .mission-card {
+            background: var(--bg-panel); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+            border-radius: var(--radius-md); padding: 20px; display: flex; align-items: center; justify-content: space-between;
+            transition: var(--transition);
+        }
+        .mission-card:hover { background: var(--bg-hover); transform: translateX(5px); }
+        .mission-card.completed { border-left-color: var(--success); opacity: 0.7; }
+        .mission-card.weekly { border-left-color: var(--warning); }
+
+        .mission-info { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+        .mission-title { font-size: 15px; font-weight: 800; color: var(--text-main); text-transform: uppercase;}
+        .mission-desc { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+        .mission-progress-container { width: 200px; margin: 0 40px; display: flex; flex-direction: column; gap: 6px; }
+        .mission-progress-text { font-size: 11px; font-weight: 800; color: var(--text-main); text-align: right; }
+        .mission-bar-bg { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
+        .mission-bar-fill { height: 100%; background: var(--accent); }
+
+        .mission-reward {
+            display: flex; align-items: center; gap: 15px; width: 180px; justify-content: flex-end;
+        }
+        .mission-reward-val { font-size: 14px; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 5px; }
+        .mission-reward-val svg { width: 16px; height: 16px; stroke: currentColor; }
+
+        /* Buton Standard pt Misiuni */
+        .btn {
+            padding: 10px 20px; border: none; border-radius: var(--radius-md);
+            font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase;
+            cursor: pointer; transition: var(--transition);
+        }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-primary:hover { box-shadow: 0 0 15px rgba(0, 255, 204, 0.4); transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.5; background: var(--bg-input); color: var(--text-muted); cursor: not-allowed; box-shadow: none; border: 1px solid var(--border);}
+
+        /* Close Hint */
+        .close-hint { position: absolute; bottom: -35px; width: 100%; text-align: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+
+        /* Tooltip Notify */
+        #notify {
+            position: absolute; top: 30px; right: 30px; background: var(--accent); color: #000;
+            padding: 15px 25px; border-radius: var(--radius-md); font-size: 13px; font-weight: 800; text-transform: uppercase;
+            box-shadow: 0 10px 25px rgba(0,255,204,0.4); transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100; display: flex; align-items: center; gap: 10px;
+        }
+        #notify.show { transform: translateX(0); }
+        #notify svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 3; }
+    </style>
+</head>
+<body>
+
+    <!-- Notificare Sistem -->
+    <div id="notify">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="notify-msg">Recompensă Colectată!</span>
+    </div>
+
+    <div id="bp-wrapper">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="season-brand">
+                <div class="season-title">SEASON 1</div>
+                <div class="season-subtitle">NEON NIGHTS</div>
+            </div>
+
+            <div class="profile-section">
+                <div class="level-header">
+                    <span class="level-label">Nivel Curent</span>
+                    <span class="level-val" id="ui-lvl">12</span>
+                </div>
+                <div class="xp-bar-bg">
+                    <div class="xp-bar-fill" id="ui-xp-bar" style="width: 45%;"></div>
+                </div>
+                <div class="xp-text" id="ui-xp-text">450 / 1000 XP</div>
+            </div>
+
+            <div class="nav-menu">
+                <div class="nav-item active" onclick="switchTab('battlepass')">
+                    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Battlepass
+                </div>
+                <div class="nav-item" onclick="switchTab('daily')">
+                    <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    Misiuni Zilnice
+                </div>
+                <div class="nav-item" onclick="switchTab('weekly')">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Săptămânale
+                </div>
+            </div>
+
+            <div class="premium-btn-container" id="premium-box">
+                <button class="btn-upgrade" onclick="buyPremium()">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M2.5 2v6h13V2zM2.5 13v6h13v-6z"></path><path d="M18.5 2l3 6-3 6"></path></svg>
+                    Cumpără Premium
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content">
+            
+            <!-- TAB 1: BATTLEPASS -->
+            <div id="tab-battlepass" class="tab-section active">
+                <div class="section-header">
+                    <h2>Progres Battlepass</h2>
+                    <p>Fă misiuni pentru a câștiga XP și deblochează recompense unice.</p>
+                </div>
+                
+                <div class="bp-container">
+                    <div class="bp-track-wrapper" id="bp-track">
+                        <!-- Generat din JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: DAILY MISSIONS -->
+            <div id="tab-daily" class="tab-section">
+                <div class="section-header">
+                    <h2>Misiuni Zilnice</h2>
+                    <p>Se resetează în fiecare zi la ora 00:00.</p>
+                </div>
+                <div class="missions-list" id="daily-list">
+                    <!-- Generat din JS -->
+                </div>
+            </div>
+
+            <!-- TAB 3: WEEKLY MISSIONS -->
+            <div id="tab-weekly" class="tab-section">
+                <div class="section-header">
+                    <h2>Misiuni Săptămânale</h2>
+                    <p>Recompense majore de XP. Se resetează Duminică noaptea.</p>
+                </div>
+                <div class="missions-list" id="weekly-list">
+                    <!-- Generat din JS -->
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+    </div>
+
+    <script>
+        // --- DATA MOCK (Simulare Date Server) ---
+        let playerData = {
+            level: 4,
+            currentXP: 800,
+            maxXP: 1000,
+            hasPremium: false
+        };
+
+        // Generam 15 nivele de Battlepass pentru demo
+        const bpTiers = [];
+        for(let i=1; i<=15; i++) {
+            bpTiers.push({
+                level: i,
+                free: { name: `$${i * 1000}`, icon: '💵', claimed: i < 3 },
+                premium: { name: i%5===0 ? 'Vehicul VIP' : `Crate Lvl ${i}`, icon: i%5===0 ? '🏎️' : '📦', claimed: false }
+            });
+        }
+
+        const missions = [
+            { id: 1, type: 'daily', title: 'Șofer Model', desc: 'Condu un total de 15km fără a lovi vehiculul.', progress: 15, max: 15, reward: '500 XP', claimed: false },
+            { id: 2, type: 'daily', title: 'Harnic', desc: 'Completează 3 ture la jobul de Livrator.', progress: 1, max: 3, reward: '300 XP', claimed: false },
+            { id: 3, type: 'daily', title: 'Timp cu Prietenii', desc: 'Petrece 2 ore activ pe server.', progress: 120, max: 120, reward: '400 XP', claimed: true },
+            
+            { id: 4, type: 'weekly', title: 'Magnat Local', desc: 'Câștigă un total de $50,000.', progress: 32000, max: 50000, reward: '2500 XP', claimed: false },
+            { id: 5, type: 'weekly', title: 'Infractor Căutat', desc: 'Evadează cu succes din 3 jafuri auto.', progress: 3, max: 3, reward: '3000 XP', claimed: false }
+        ];
+
+        // --- UI FUNCTIONS ---
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function showNotify(msg) {
+            const el = document.getElementById('notify');
+            document.getElementById('notify-msg').innerText = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3000);
+        }
+
+        // Initialize / Update Player Stats
+        function updatePlayerStats() {
+            document.getElementById('ui-lvl').innerText = playerData.level;
+            document.getElementById('ui-xp-text').innerText = `${playerData.currentXP} / ${playerData.maxXP} XP`;
+            const pct = (playerData.currentXP / playerData.maxXP) * 100;
+            document.getElementById('ui-xp-bar').style.width = `${pct}%`;
+
+            if (playerData.hasPremium) {
+                document.getElementById('premium-box').innerHTML = `<div style="text-align:center; color:var(--premium); font-weight:800; font-size:12px; letter-spacing:1px;">✔️ PREMIUM ACTIVAT</div>`;
+            }
+        }
+
+        function buyPremium() {
+            // Simulăm achiziția
+            playerData.hasPremium = true;
+            updatePlayerStats();
+            renderBattlepass(); // Re-randăm ca să deblocăm lacătele de jos
+            showNotify('Premium Activat!');
+        }
+
+        // --- RENDER BATTLEPASS ---
+        function renderBattlepass() {
+            const track = document.getElementById('bp-track');
+            track.innerHTML = '';
+
+            // Linii de fundal
+            const fillWidth = Math.min(((playerData.level - 1) / (bpTiers.length - 1)) * 100, 100);
+            track.innerHTML += `
+                <div class="bp-line-bg"></div>
+                <div class="bp-line-fill" style="width: ${fillWidth}%;"></div>
+            `;
+
+            bpTiers.forEach(tier => {
+                const isCompleted = playerData.level > tier.level;
+                const isCurrent = playerData.level === tier.level;
+                
+                // Status Nivel (Marker)
+                let classState = '';
+                if (isCompleted) classState = 'completed';
+                if (isCurrent) classState = 'current';
+
+                // Butoane Claim (Free)
+                let freeBtnHtml = '';
+                if (tier.free.claimed) {
+                    freeBtnHtml = `<button class="btn-claim claimed">Luat</button>`;
+                } else if (playerData.level >= tier.level) {
+                    freeBtnHtml = `<button class="btn-claim" onclick="claimBP(${tier.level}, 'free')">Revendică</button>`;
+                } else {
+                    freeBtnHtml = `<button class="btn-claim" style="display:none;"></button>`; // Ascuns daca n-ai level
+                }
+
+                // Butoane Claim (Premium)
+                let premBtnHtml = '';
+                let premLockHtml = '';
+                
+                if (!playerData.hasPremium) {
+                    premLockHtml = `
+                        <div class="reward-locked-overlay">
+                            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <span class="lock-text">LOCKED</span>
+                        </div>`;
+                } else {
+                    if (tier.premium.claimed) {
+                        premBtnHtml = `<button class="btn-claim claimed">Luat</button>`;
+                    } else if (playerData.level >= tier.level) {
+                        premBtnHtml = `<button class="btn-claim" style="background: var(--premium); color: white;" onclick="claimBP(${tier.level}, 'premium')">Revendică</button>`;
+                    }
+                }
+
+                const tierEl = document.createElement('div');
+                tierEl.className = `bp-tier ${classState}`;
+                
+                tierEl.innerHTML = `
+                    <!-- FREE REWARD (TOP) -->
+                    <div class="reward-card">
+                        <span class="reward-type-label">FREE</span>
+                        <div class="reward-icon">${tier.free.icon}</div>
+                        <div class="reward-name">${tier.free.name}</div>
+                        ${freeBtnHtml}
+                    </div>
+
+                    <!-- LEVEL MARKER (MIDDLE) -->
+                    <div class="bp-level-marker">${tier.level}</div>
+
+                    <!-- PREMIUM REWARD (BOTTOM) -->
+                    <div class="reward-card reward-premium">
+                        <span class="reward-type-label label-premium">PREMIUM</span>
+                        ${premLockHtml}
+                        <div class="reward-icon">${tier.premium.icon}</div>
+                        <div class="reward-name">${tier.premium.name}</div>
+                        ${premBtnHtml}
+                    </div>
+                `;
+                
+                track.appendChild(tierEl);
+            });
+            
+            // Scroll automat pana la nivelul curent (UX bun)
+            setTimeout(() => {
+                const currentEl = document.querySelector('.bp-tier.current');
+                if(currentEl) currentEl.scrollIntoView({ inline: 'center', behavior: 'smooth' });
+            }, 500);
+        }
+
+        // --- RENDER MISSIONS ---
+        function renderMissions() {
+            const dailyList = document.getElementById('daily-list');
+            const weeklyList = document.getElementById('weekly-list');
+            dailyList.innerHTML = ''; weeklyList.innerHTML = '';
+
+            missions.forEach(m => {
+                const pct = (m.progress / m.max) * 100;
+                const isDone = m.progress >= m.max;
+                
+                let btnHtml = '';
+                if (m.claimed) {
+                    btnHtml = `<button class="btn" disabled>Colectat</button>`;
+                } else if (isDone) {
+                    btnHtml = `<button class="btn btn-primary" onclick="claimMission(${m.id})">Colectează</button>`;
+                } else {
+                    btnHtml = `<button class="btn" disabled>În Curs</button>`;
+                }
+
+                const cardHtml = `
+                    <div class="mission-info">
+                        <div class="mission-title">${m.title}</div>
+                        <div class="mission-desc">${m.desc}</div>
+                    </div>
+                    
+                    <div class="mission-progress-container">
+                        <div class="mission-progress-text">${m.progress} / ${m.max}</div>
+                        <div class="mission-bar-bg">
+                            <div class="mission-bar-fill" style="width: ${pct}%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mission-reward">
+                        <span class="mission-reward-val">
+                            <svg viewBox="0 0 24 24" style="color:var(--accent);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            ${m.reward}
+                        </span>
+                        ${btnHtml}
+                    </div>
+                `;
+
+                const el = document.createElement('div');
+                el.className = `mission-card ${isDone ? 'completed' : ''} ${m.type === 'weekly' ? 'weekly' : ''}`;
+                el.innerHTML = cardHtml;
+
+                if (m.type === 'daily') dailyList.appendChild(el);
+                else weeklyList.appendChild(el);
+            });
+        }
+
+        // --- LOGIC ACTIONS ---
+        function claimBP(level, type) {
+            const tier = bpTiers.find(t => t.level === level);
+            if(tier) {
+                tier[type].claimed = true;
+                showNotify(`Recompensă Nivel ${level} Colectată!`);
+                renderBattlepass(); // Refresh UI
+                // Aici faci fetch catre server sa ii dai itemul
+            }
+        }
+
+        function claimMission(id) {
+            const m = missions.find(x => x.id === id);
+            if(m) {
+                m.claimed = true;
+                
+                // Simulam adaugarea de XP (doar vizual in demo)
+                let xpGain = parseInt(m.reward.split(' ')[0]);
+                playerData.currentXP += xpGain;
+                if(playerData.currentXP >= playerData.maxXP) {
+                    playerData.level++;
+                    playerData.currentXP -= playerData.maxXP; // Reset cu surplus
+                }
+                
+                showNotify(`+ ${m.reward} Câștigat!`);
+                updatePlayerStats();
+                renderMissions();
+                renderBattlepass(); // In caz ca a facut level up
+            }
+        }
+
+        // --- INITIALIZARE ---
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('bp-wrapper').classList.add('visible');
+                updatePlayerStats();
+                renderBattlepass();
+                renderMissions();
+            }, 300);
+        };
+
+        // Integrare NUI standard
+        window.addEventListener('message', (event) => {
+            let data = event.data;
+            if (data.action === "openBP") {
+                document.getElementById('bp-wrapper').classList.add('visible');
+                // Aici incarci datele reale din Lua
+            }
+        });
+
+        document.onkeyup = function (data) {
+            if (data.which == 27) { 
+                document.getElementById('bp-wrapper').classList.remove('visible');
+                // fetch(`https://${GetParentResourceName()}/closeUI`, { method: 'POST' });
+            }
+        };
+    </script>
+</body>
+</html>

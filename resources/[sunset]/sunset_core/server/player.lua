@@ -254,20 +254,29 @@ end
 function Sunset.SetJob(source, job, grade)
     local char = Sunset.GetCharacter(source)
     if not char then return false end
-    if Sunset.Factions[job] then return false end
+    if Sunset.Factions and Sunset.Factions[job] then return false end
 
+    grade = tonumber(grade) or 0
+
+    local isCreatorJob = false
     if GetResourceState('sunset_jobcreator') == 'started' then
         pcall(function()
             exports.sunset_jobcreator:EnsureCivilianJobsRegistered()
         end)
+        pcall(function()
+            if exports.sunset_jobcreator:IsCreatorJob(job) then
+                isCreatorJob = true
+            end
+        end)
     end
 
-    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then
+    if not isCreatorJob and not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then
         return false
     end
 
-    grade = tonumber(grade) or 0
-    if not Sunset.CivilianJobs[job].grades[grade] then return false end
+    if not isCreatorJob and (not Sunset.CivilianJobs[job].grades or not Sunset.CivilianJobs[job].grades[grade]) then
+        return false
+    end
 
     char.job = job
     char.job_grade = grade
@@ -279,6 +288,7 @@ function Sunset.SetJob(source, job, grade)
     TriggerEvent('sunset:server:jobChanged', source, job, grade or 0)
     return true
 end
+
 
 function Sunset.SetFaction(source, factionId, grade)
     local char = Sunset.GetCharacter(source)

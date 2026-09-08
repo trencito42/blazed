@@ -629,17 +629,25 @@ local function normalizeVehicleStats(vehData)
     local fuel = tonumber(vehData.fuel)
     local engine = tonumber(vehData.engine)
     local body = tonumber(vehData.body)
+    local isDestroyed = vehData.destroyed == 1 or vehData.destroyed == true or vehData.destroyed == '1'
 
-    -- Missing values only (new purchase). Never heal a stored damaged car.
-    if fuel == nil then fuel = 100.0 end
-    if engine == nil then engine = 1000.0 end
-    if body == nil then body = 1000.0 end
+    if fuel == nil or fuel <= 0 then fuel = 100.0 end
+
+    if isDestroyed then
+        engine = 0.0
+        body = 0.0
+    else
+        if engine == nil or engine <= 100.0 then engine = 1000.0 end
+        if body == nil or body <= 100.0 then body = 1000.0 end
+    end
+
     fuel = math.max(0.0, math.min(100.0, fuel))
     engine = math.max(0.0, math.min(1000.0, engine))
     body = math.max(0.0, math.min(1000.0, body))
 
     return fuel, engine, body
 end
+
 
 local function hasParkedPosition(vehData)
     return vehData

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,52 +13,99 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="pass-root" class="hidden">
-        <div id="pass-container" class="pass-shell">
-            <header class="pass-header">
-                <div class="pass-header__left">
-                    <div class="pass-brand">
-                        <div class="pass-season" id="pass-season">Season 01</div>
-                        <h1 class="pass-title">Blaze Pass</h1>
-                        <p class="pass-subtitle" id="pass-subtitle">Season rewards and active missions</p>
-                    </div>
-                    <nav class="pass-tabs" aria-label="Pass sections">
-                        <button type="button" class="pass-tab is-active" data-tab="rewards">Rewards</button>
-                        <button type="button" class="pass-tab" data-tab="missions">Missions</button>
-                    </nav>
-                </div>
-                <div class="pass-header__right">
-                    <div class="pass-tier">
-                        <span class="pass-tier__label">Current Tier</span>
-                        <strong class="pass-tier__value" id="pass-tier">1</strong>
-                        <div class="pass-tier__bar">
-                            <div class="pass-tier__fill" id="pass-tier-fill"></div>
-                        </div>
-                        <span class="pass-tier__xp" id="pass-tier-xp">0 / 500 XP</span>
-                    </div>
-                    <div class="pass-wallet" id="pass-wallet">
-                        <span class="pass-wallet__label">Balance</span>
-                        <span class="pass-wallet__value" id="pass-wallet-bp">0 BP</span>
-                    </div>
-                    <button type="button" class="pass-btn pass-btn--premium" id="pass-buy-premium">Upgrade Pass</button>
-                    <button type="button" class="pass-btn pass-btn--close" id="pass-close" aria-label="Close">ESC</button>
-                </div>
-            </header>
 
-            <section id="tab-rewards" class="pass-panel is-active" aria-label="Rewards track">
-                <div class="pass-track" id="pass-track">
-                    <div class="pass-track__line">
-                        <div class="pass-track__fill" id="pass-track-fill"></div>
-                    </div>
-                    <div class="pass-tiers" id="pass-tiers"></div>
-                </div>
-            </section>
-
-            <section id="tab-missions" class="pass-panel" aria-label="Missions">
-                <div class="pass-missions" id="pass-missions"></div>
-            </section>
-        </div>
+    <!-- Notificare Sistem -->
+    <div id="notify">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="notify-msg">Recompensă Colectată!</span>
     </div>
+
+    <div id="bp-wrapper" class="hidden">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="season-brand">
+                <div class="season-title" id="season-title">SEASON 1</div>
+                <div class="season-subtitle" id="season-subtitle">BLAZE PASS</div>
+            </div>
+
+            <div class="profile-section">
+                <div class="level-header">
+                    <span class="level-label">Nivel Curent</span>
+                    <span class="level-val" id="ui-lvl">1</span>
+                </div>
+                <div class="xp-bar-bg">
+                    <div class="xp-bar-fill" id="ui-xp-bar" style="width: 0%;"></div>
+                </div>
+                <div class="xp-text" id="ui-xp-text">0 / 500 XP</div>
+            </div>
+
+            <div class="nav-menu">
+                <div class="nav-item active" data-tab="battlepass">
+                    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Battlepass
+                </div>
+                <div class="nav-item" data-tab="daily">
+                    <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    Misiuni Zilnice
+                </div>
+                <div class="nav-item" data-tab="weekly">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Săptămânale
+                </div>
+            </div>
+
+            <div class="premium-btn-container" id="premium-box">
+                <button class="btn-upgrade" id="btn-upgrade">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M2.5 2v6h13V2zM2.5 13v6h13v-6z"></path><path d="M18.5 2l3 6-3 6"></path></svg>
+                    <span id="btn-upgrade-text">Cumpără Premium</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content">
+            
+            <!-- TAB 1: BATTLEPASS -->
+            <div id="tab-battlepass" class="tab-section active">
+                <div class="section-header">
+                    <h2>Progres Battlepass</h2>
+                    <p>Fă misiuni pentru a câștiga XP și deblochează recompense unice.</p>
+                </div>
+                
+                <div class="bp-container" id="bp-container">
+                    <div class="bp-track-wrapper" id="bp-track">
+                        <!-- Generat din JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: DAILY MISSIONS -->
+            <div id="tab-daily" class="tab-section">
+                <div class="section-header">
+                    <h2>Misiuni Zilnice</h2>
+                    <p>Se resetează în fiecare zi la ora 00:00.</p>
+                </div>
+                <div class="missions-list" id="daily-list">
+                    <!-- Generat din JS -->
+                </div>
+            </div>
+
+            <!-- TAB 3: WEEKLY MISSIONS -->
+            <div id="tab-weekly" class="tab-section">
+                <div class="section-header">
+                    <h2>Misiuni Săptămânale</h2>
+                    <p>Recompense majore de XP. Se resetează Duminică noaptea.</p>
+                </div>
+                <div class="missions-list" id="weekly-list">
+                    <!-- Generat din JS -->
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

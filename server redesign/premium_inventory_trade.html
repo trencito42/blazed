@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Inventory System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+        :root {
+            --bg-base: rgba(13, 13, 20, 0.85); /* Fundal sticla */
+            --bg-panel: rgba(255, 255, 255, 0.03);
+            --bg-slot: rgba(0, 0, 0, 0.4);
+            --bg-slot-hover: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --accent: #00ffcc; /* Cyan */
+            --warning: #ffcc00;
+            --danger: #ff3366;
+            --border: rgba(255, 255, 255, 0.1);
+            --slot-size: 90px;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background: url('https://placehold.co/1920x1080/1a1a24/1a1a24?text=FiveM+Background') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #inventory-wrapper {
+            width: 1200px;
+            height: 700px;
+            background: var(--bg-base);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: row;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #inventory-wrapper.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .inv-left {
+            width: 65%;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+        }
+
+        .inv-right {
+            width: 35%;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header .weight-info {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .weight-bar {
+            width: 150px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .weight-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 45%;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .grid::-webkit-scrollbar { width: 4px; }
+        .grid::-webkit-scrollbar-track { background: transparent; }
+        .grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .slot {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: var(--bg-slot);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .slot.drag-over {
+            border-color: var(--accent);
+            background: rgba(0, 255, 204, 0.1);
+        }
+
+        .item {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+        }
+
+        .item:active { cursor: grabbing; }
+
+        .item-icon {
+            font-size: 32px; /* Folosim emoji pt demo, in FiveM pui img src */
+            margin-bottom: 5px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+        }
+
+        .item-name {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: center;
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-count {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--accent);
+            background: rgba(0, 255, 204, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .nearby-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .player-card {
+            background: var(--bg-panel);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .player-card:hover {
+            background: var(--bg-hover);
+            border-color: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+
+        .player-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .player-id {
+            font-size: 11px;
+            color: var(--accent);
+            font-weight: 800;
+        }
+
+        #trade-panel {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .trade-zone {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px dashed rgba(255,255,255,0.2);
+            overflow-y: auto;
+        }
+        
+        .trade-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(0, 255, 204, 0.05);
+        }
+
+        .trade-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            margin-top: 10px;
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 51, 102, 0.1);
+        }
+        
+        .close-hint {
+            position: absolute;
+            bottom: -30px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="inventory-wrapper">
+        
+        <!-- INVENTARUL JUCATORULUI -->
+        <div class="inv-left">
+            <div class="header">
+                <h1>Inventar</h1>
+                <div class="weight-info">
+                    <span>15.2 / 30.0 KG</span>
+                    <div class="weight-bar"><div class="weight-fill"></div></div>
+                </div>
+            </div>
+            
+            <div class="grid" id="main-inventory">
+                <!-- Sloturile sunt generate prin JS -->
+            </div>
+        </div>
+
+        <!-- PANOU CONTEXTUAL (Nearby / Trade) -->
+        <div class="inv-right">
+            
+            <!-- PANOU NEARBY -->
+            <div id="nearby-panel">
+                <div class="section-title">Jucători în apropiere</div>
+                <div class="nearby-list" id="nearby-list">
+                    <!-- Generat prin JS -->
+                </div>
+            </div>
+
+            <!-- PANOU TRADE -->
+            <div id="trade-panel">
+                <div class="section-title">Schimb cu <span id="trade-target" style="color: var(--accent);">Nume</span></div>
+                
+                <div class="trade-label">OFERTA TA (Trage iteme aici)</div>
+                <div class="trade-zone grid" id="trade-my-offer" style="grid-template-columns: repeat(3, 1fr);">
+                    <!-- Iteme oferite -->
+                </div>
+
+                <div class="trade-label">OFERTA LUI</div>
+                <div class="trade-zone grid" id="trade-their-offer" style="grid-template-columns: repeat(3, 1fr); opacity: 0.5; pointer-events: none;">
+                    <!-- Iteme primite -->
+                </div>
+
+                <button class="btn btn-primary">Acceptă Schimbul</button>
+                <button class="btn btn-danger" onclick="cancelTrade()">Anulează</button>
+            </div>
+
+        </div>
+        
+        <div class="close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+    </div>
+
+    <script>
+        const MAX_SLOTS = 30; // 5 rows x 6 cols
+        
+        // Date Simulate
+        let myItems = [
+            { slot: 0, id: 'water', name: 'Apă Plată', count: 5, icon: '💧' },
+            { slot: 1, id: 'bread', name: 'Sandwich', count: 2, icon: '🥪' },
+            { slot: 2, id: 'phone', name: 'iPhone 14', count: 1, icon: '📱' },
+            { slot: 7, id: 'pistol', name: 'Glock 19', count: 1, icon: '🔫' },
+            { slot: 8, id: 'ammo', name: 'Muniție 9mm', count: 45, icon: '🔋' },
+            { slot: 14, id: 'keys', name: 'Chei BMW', count: 1, icon: '🔑' }
+        ];
+
+        let tradeItems = []; // Iteme puse de mine in trade
+
+        const nearbyPlayers = [
+            { id: 45, name: 'Alexandru Popa' },
+            { id: 12, name: 'Mihai Dobre' },
+            { id: 89, name: 'Ionut Radu' }
+        ];
+
+        // --- RANDARE INVENTAR ---
+        function renderInventory() {
+            const grid = document.getElementById('main-inventory');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < MAX_SLOTS; i++) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'slot';
+                slotDiv.dataset.slot = i;
+                
+                // Evenimente de Drop pe Slot
+                slotDiv.addEventListener('dragover', handleDragOver);
+                slotDiv.addEventListener('dragleave', handleDragLeave);
+                slotDiv.addEventListener('drop', handleDropOnSlot);
+
+                const item = myItems.find(x => x.slot === i);
+                
+                if (item) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'item';
+                    itemDiv.draggable = true;
+                    itemDiv.dataset.slot = i;
+                    
+                    // Eveniment de Drag
+                    itemDiv.addEventListener('dragstart', handleDragStart);
+
+                    itemDiv.innerHTML = `
+                        <div class="item-count">x${item.count}</div>
+                        <div class="item-icon">${item.icon}</div>
+                        <div class="item-name">${item.name}</div>
+                    `;
+                    slotDiv.appendChild(itemDiv);
+                }
+
+                grid.appendChild(slotDiv);
+            }
+        }
+
+        // --- RANDARE NEARBY PLAYERS ---
+        function renderNearby() {
+            const list = document.getElementById('nearby-list');
+            list.innerHTML = '';
+
+            nearbyPlayers.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.onclick = () => startTrade(p);
+                card.innerHTML = `
+                    <div class="player-name">${p.name}</div>
+                    <div class="player-id">ID: ${p.id}</div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // --- SISTEM TRADE ---
+        function startTrade(player) {
+            document.getElementById('nearby-panel').style.display = 'none';
+            document.getElementById('trade-panel').style.display = 'flex';
+            document.getElementById('trade-target').innerText = player.name;
+            renderTradeZone();
+        }
+
+        function cancelTrade() {
+            // Returnam itemele din trade inapoi in inventar
+            tradeItems.forEach(tItem => {
+                myItems.push(tItem);
+            });
+            tradeItems = [];
+            
+            document.getElementById('trade-panel').style.display = 'none';
+            document.getElementById('nearby-panel').style.display = 'block';
+            
+            renderInventory();
+            renderTradeZone();
+        }
+
+        function renderTradeZone() {
+            const zone = document.getElementById('trade-my-offer');
+            zone.innerHTML = '';
+
+            // Evenimente pentru a primi drop in Trade Zone
+            zone.addEventListener('dragover', handleDragOver);
+            zone.addEventListener('dragleave', handleDragLeave);
+            zone.addEventListener('drop', handleDropOnTrade);
+
+            for(let i=0; i < 9; i++) { // 9 sloturi de trade
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'slot';
+                
+                if(tradeItems[i]) {
+                    const item = tradeItems[i];
+                    slotDiv.innerHTML = `
+                        <div class="item">
+                            <div class="item-count">x${item.count}</div>
+                            <div class="item-icon">${item.icon}</div>
+                        </div>
+                    `;
+                }
+                zone.appendChild(slotDiv);
+            }
+        }
+
+        // --- LOGICA DRAG AND DROP ---
+        let draggedFromSlot = null;
+
+        function handleDragStart(e) {
+            draggedFromSlot = parseInt(e.target.dataset.slot);
+            e.dataTransfer.setData('text/plain', draggedFromSlot);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Necesar pt a permite Drop
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        // Când dăm drumul itemului pe un alt SLOT din inventar
+        function handleDropOnSlot(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const targetSlot = parseInt(e.currentTarget.dataset.slot);
+            if(draggedFromSlot === null || draggedFromSlot === targetSlot) return;
+
+            // Logica de SWAP (Interschimbare)
+            let sourceItem = myItems.find(x => x.slot === draggedFromSlot);
+            let targetItem = myItems.find(x => x.slot === targetSlot);
+
+            if (sourceItem) sourceItem.slot = targetSlot;
+            if (targetItem) targetItem.slot = draggedFromSlot;
+
+            draggedFromSlot = null;
+            renderInventory(); // Refresh vizual
+        }
+
+        // Când dăm drumul itemului în zona de TRADE
+        function handleDropOnTrade(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if(draggedFromSlot === null) return;
+            
+            let itemIndex = myItems.findIndex(x => x.slot === draggedFromSlot);
+            if(itemIndex > -1) {
+                // Mutam itemul din myItems in tradeItems
+                let itemToMove = myItems.splice(itemIndex, 1)[0];
+                tradeItems.push(itemToMove);
+                
+                draggedFromSlot = null;
+                renderInventory();
+                renderTradeZone();
+            }
+        }
+
+        // --- INITIALIZARE (Pt Demo) ---
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('inventory-wrapper').classList.add('visible');
+                renderInventory();
+                renderNearby();
+                renderTradeZone();
+            }, 300);
+        };
+
+        // --- INTEGRARE FIVEM ---
+        window.addEventListener('message', (event) => {
+            let data = event.data;
+            if (data.action === "openInventory") {
+                // Aici poti suprascrie myItems cu data.items primit din lua
+                document.getElementById('inventory-wrapper').classList.add('visible');
+                renderInventory();
+            } else if (data.action === "closeInventory") {
+                document.getElementById('inventory-wrapper').classList.remove('visible');
+            }
+        });
+
+        // Apasare ESC inchide meniul
+        document.onkeyup = function (data) {
+            if (data.which == 27) { 
+                document.getElementById('inventory-wrapper').classList.remove('visible');
+                // Trimite POST inapoi catre Lua pentru a debloca NUI focus
+                // fetch(`https://${GetParentResourceName()}/closeUI`, { method: 'POST' });
+            }
+        };
+    </script>
+</body>
+</html>

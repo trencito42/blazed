@@ -476,6 +476,21 @@ exports.sunset_core:RegisterCallback('sunset:claimVehicleInsurance', function(so
     return { ok = true, claimCost = claimCost }
 end)
 
+RegisterNetEvent('sunset:vehicles:adminRepairDatabase', function(plate)
+    local src = source
+    local char = exports.sunset_core:GetCharacter(src)
+    if not char then return end
+    plate = normalizePlate(plate)
+    if plate == '' then return end
+
+    MySQL.update.await([[
+        UPDATE vehicles
+        SET destroyed = 0, engine = 1000.0, body = 1000.0, fuel = 100.0
+        WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?
+    ]], { plate, char.id })
+end)
+
+
 exports.sunset_core:RegisterCallback('sunset:renewVehicleInsurance', function(source, vehicleId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'Nu ești conectat cu un caracter' end

@@ -35,19 +35,20 @@ local function openPass(tab)
         return
     end
 
-    openTab = tab or 'rewards'
+    openTab = tab or 'battlepass'
     isOpen = true
     setFocus(true)
     send('passShow', { tab = openTab, state = data })
 end
 
 RegisterCommand('pass', function()
-    openPass('rewards')
+    openPass('battlepass')
 end, false)
 
 RegisterCommand('missions', function()
-    openPass('missions')
+    openPass('daily')
 end, false)
+
 
 RegisterNUICallback('passClose', function(_, cb)
     closePass()

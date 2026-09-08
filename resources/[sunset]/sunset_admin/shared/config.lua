@@ -53,4 +53,9 @@ SunsetAdmin.Commands = {
     ar = 1,
     cr = 1,
     reports = 1,
+    arepaircar = 2,
+    arepair = 2,
+    fixcar = 2,
+    fix = 2,
 }
+

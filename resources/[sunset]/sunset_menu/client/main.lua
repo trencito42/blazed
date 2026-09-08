@@ -357,15 +357,16 @@ AddEventHandler('sunset:nui:menuAction', function(data)
         end)
         return
     end
-    if data.action == 'pass' then
+    if data.action == 'pass' or data.action == 'missions' then
         closeMenu()
         CreateThread(function()
             Wait(150)
-            ExecuteCommand('pass')
+            ExecuteCommand(data.action)
         end)
         return
     end
 end)
+
 
 AddEventHandler('sunset:nui:menuVehicleAction', function(data)
     if not data or not data.action then return end
