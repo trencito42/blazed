@@ -225,7 +225,9 @@ function progressBar(label, duration) {
 }
 
 function formatMoney(amount) {
-    return '$' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (amount === undefined || amount === null || isNaN(Number(amount))) return '$0';
+    const n = Math.floor(Number(amount) || 0);
+    return '$' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 // NUI message handler

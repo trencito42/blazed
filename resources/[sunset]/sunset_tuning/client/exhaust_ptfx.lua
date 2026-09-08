@@ -64,17 +64,45 @@ local function ptfxColor(color)
 end
 
 --- Spawn PTFX on exhaust bone, pushed slightly out of the pipe (local -Y).
-local function onExhaustBone(veh, bone, scale, asset, effect, color, yPush)
+local function onExhaustBone(veh, bone, off, scale, asset, effect, color, yPush)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+
+    -- Normalize arguments to support both (veh, bone, off, ...) and (veh, bone, scale, ...)
+    if type(off) == 'number' then
+        yPush = color
+        color = effect
+        effect = asset
+        asset = scale
+        scale = off
+        off = nil
+    end
+
+    if not off and bone and bone ~= -1 then
+        local pos = GetWorldPositionOfEntityBone(veh, bone)
+        off = GetOffsetFromEntityGivenWorldCoords(veh, pos.x, pos.y, pos.z)
+    end
+
     UseParticleFxAssetNextCall(asset)
     if color then ptfxColor(color) end
-    -- The resource performs its own server-validated nearby sync. Keeping the
-    -- particle local prevents the origin player from seeing the same burst twice.
-    StartParticleFxNonLoopedOnEntityBone(
-        effect, veh,
-        0.0, yPush or -0.12, 0.0,
-        0.0, 0.0, 0.0,
-        bone, scale, false, false, false
-    )
+
+    local push = tonumber(yPush) or -0.12
+    scale = tonumber(scale) or 1.0
+
+    if off then
+        StartParticleFxNonLoopedOnEntity(
+            effect, veh,
+            off.x, off.y + push, off.z,
+            0.0, 0.0, 0.0,
+            scale, false, false, false
+        )
+    else
+        StartParticleFxNonLoopedOnEntity(
+            effect, veh,
+            0.0, -2.0 + push, 0.0,
+            0.0, 0.0, 0.0,
+            scale, false, false, false
+        )
+    end
 end
 
 -- GTA's stock backfire texture retains a baked orange core. This very short
@@ -101,8 +129,8 @@ end
 function EP.sparks(veh, scale, color)
     if not EP.ensureAssets() then return end
     scale = scale or 0.45
-    EP.eachExhaustBone(veh, function(bone, _, pos)
-        onExhaustBone(veh, bone, scale, 'core', 'ent_sht_metal', color, -0.16)
+    EP.eachExhaustBone(veh, function(bone, off, pos)
+        onExhaustBone(veh, bone, off, scale, 'core', 'ent_sht_metal', color, -0.16)
         EP.flashAtCoord(pos, color or DEFAULT_FLAME, scale * 0.35, 45)
     end)
 end
@@ -124,9 +152,9 @@ end
 function EP.backfire(veh, scale, color)
     if not EP.ensureAssets() then return end
     scale = scale or 1.0
-    EP.eachExhaustBone(veh, function(bone, _, pos)
-        onExhaustBone(veh, bone, scale * 0.82, 'core', 'veh_sm_car_small_backfire', color, -0.12)
-        onExhaustBone(veh, bone, scale, 'core', 'veh_backfire', color, -0.1)
+    EP.eachExhaustBone(veh, function(bone, off, pos)
+        onExhaustBone(veh, bone, off, scale * 0.82, 'core', 'veh_sm_car_small_backfire', color, -0.12)
+        onExhaustBone(veh, bone, off, scale, 'core', 'veh_backfire', color, -0.1)
         tintedFlamePulse(veh, bone, scale * 0.34, color or DEFAULT_FLAME, 55)
         EP.flashAtCoord(pos, color or DEFAULT_FLAME, scale * 0.65, 65)
     end)
@@ -136,8 +164,8 @@ function EP.flames(veh, scale, color)
     if not EP.ensureAssets() then return end
     scale = scale or 1.0
     color = color or DEFAULT_FLAME
-    EP.eachExhaustBone(veh, function(bone, _, pos)
-        onExhaustBone(veh, bone, scale * 1.18, 'core', 'veh_backfire', color, -0.16)
+    EP.eachExhaustBone(veh, function(bone, off, pos)
+        onExhaustBone(veh, bone, off, scale * 1.18, 'core', 'veh_backfire', color, -0.16)
         tintedFlamePulse(veh, bone, scale * 0.58, color, 85)
         EP.flashAtCoord(pos, color, scale * 0.8, 90)
     end)
@@ -146,8 +174,8 @@ end
 function EP.smoke(veh, scale)
     if not EP.ensureAssets() then return end
     scale = scale or 1.0
-    EP.eachExhaustBone(veh, function(bone)
-        onExhaustBone(veh, bone, scale, 'core', 'exp_grd_bzgas_smoke', nil, -0.14)
+    EP.eachExhaustBone(veh, function(bone, off)
+        onExhaustBone(veh, bone, off, scale, 'core', 'exp_grd_bzgas_smoke', nil, -0.14)
     end)
 end
 
@@ -178,10 +206,12 @@ local LIMITER_SOUNDS = {
 }
 
 local function playSoundLayer(veh, soundName)
-    if not veh or veh == 0 then return end
-    local sid = GetSoundId()
-    PlaySoundFromEntity(sid, soundName, veh, 0, false, 0)
-    SetTimeout(900, function() ReleaseSoundId(sid) end)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    pcall(function()
+        local sid = GetSoundId()
+        PlaySoundFromEntity(sid, soundName, veh, 'DLC_TUNER_CAR_MEET_SOUNDS', false, 0)
+        SetTimeout(900, function() ReleaseSoundId(sid) end)
+    end)
 end
 
 function EP.playBackfireSound(veh, profile)

@@ -163,40 +163,39 @@ CreateThread(function()
         local brake = GetControlNormal(0, 72)
         local speed = GetEntitySpeed(veh) * 3.6
         local now = GetGameTimer()
-        local rpmThreshold = (tonumber(tune.pop.rpmMax) or 88) / 100.0
-        local minOverrunRpm = 0.26
+        local rpmTarget = (tonumber(tune.pop.rpmMax) or 88) / 100.0
+        local triggerThreshold = math.max(0.48, math.min(0.72, rpmTarget * 0.80))
+        local minOverrunRpm = 0.24
 
-        local liftOff = lastThrottle > 0.35 and throttle < 0.22
-        local wasHighRpm = lastRpm >= math.max(0.52, rpmThreshold - 0.15)
-        local rpmFalling = (lastRpm - rpm) > 0.018
+        local liftOff = lastThrottle > 0.28 and throttle < 0.20
+        local wasHighRpm = lastRpm >= triggerThreshold
+        local rpmFalling = (lastRpm - rpm) > 0.015
 
         -- Pop & bang: arm overrun on lift-off, then pops while RPM spins down.
-        if tune.pop.enabled and liftOff and wasHighRpm and lastRpm >= rpmThreshold - 0.1 then
+        if tune.pop.enabled and liftOff and wasHighRpm then
             startOverrun(veh, rpm, now, tune)
             if now > popCooldown then
-                popCooldown = now + 105
-                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.18)
+                popCooldown = now + 90
+                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.25)
             end
         end
 
         if overrun.active then
-            if veh ~= overrun.veh or now > overrun.untilMs or rpm < minOverrunRpm or throttle > 0.42 or brake > 0.5 then
+            if veh ~= overrun.veh or now > overrun.untilMs or rpm < minOverrunRpm or throttle > 0.45 or brake > 0.6 then
                 clearOverrun()
-            elseif tune.pop.enabled and throttle < 0.28 and rpm > minOverrunRpm and now > popCooldown then
+            elseif tune.pop.enabled and throttle < 0.30 and rpm > minOverrunRpm and now > popCooldown then
                 local rpmRange = math.max(0.15, overrun.peakRpm - minOverrunRpm)
-                local rpmPos = (rpm - minOverrunRpm) / rpmRange
+                local rpmPos = math.max(0.0, math.min(1.0, (rpm - minOverrunRpm) / rpmRange))
                 local rpmDrop = math.max(0.0, lastRpm - rpm)
-                local chance = 0.10 + mult.popIntensity * 0.22
-                if rpmFalling then chance = chance + math.min(0.52, rpmDrop * 12.0) end
-                if rpmPos > 0.62 then chance = chance + 0.16 end
-                if tune.pop.secondBurst then chance = chance + 0.08 end
+                local chance = 0.25 + mult.popIntensity * 0.35
+                if rpmFalling then chance = chance + math.min(0.45, rpmDrop * 12.0) end
+                if rpmPos > 0.45 then chance = chance + 0.20 end
+                if tune.pop.secondBurst then chance = chance + 0.15 end
 
                 if math.random() < chance then
-                    -- Sharp individual reports high in the rev range, with
-                    -- progressively wider spacing as the engine spins down.
-                    local gap = 105 + math.floor((1.0 - rpmPos) * 145) + math.random(0, 38)
+                    local gap = 85 + math.floor((1.0 - rpmPos) * 120) + math.random(0, 32)
                     popCooldown = now + gap
-                    local strength = 0.82 + rpmPos * 0.48 + math.min(0.2, rpmDrop * 4.0)
+                    local strength = 0.85 + rpmPos * 0.50 + math.min(0.25, rpmDrop * 4.0)
                     burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, strength)
                 end
             end

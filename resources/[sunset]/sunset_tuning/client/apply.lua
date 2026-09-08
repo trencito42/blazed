@@ -83,6 +83,7 @@ local function restoreBaseHandling(veh)
     SetVehicleEngineTorqueMultiplier(veh, 1.0)
     ModifyVehicleTopSpeed(veh, 0.0)
     SetVehicleTurboPressure(veh, 0.0)
+    pcall(function() EnableVehicleExhaustPops(veh, false) end)
 end
 
 local function applyHardware(veh, tune)
@@ -137,6 +138,9 @@ function ApplyTune(veh, tune, persist)
         else
             SetVehicleTurboPressure(veh, 0.0)
         end
+
+        local popsOn = (tune.pop and tune.pop.enabled) or (tune.stage and tune.stage ~= 'stock' and tune.stage ~= 'civil')
+        pcall(function() EnableVehicleExhaustPops(veh, popsOn == true) end)
     end
 
     local plate = STC.plateOf(veh)
