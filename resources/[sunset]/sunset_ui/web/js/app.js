@@ -652,6 +652,12 @@ window.addEventListener('message', (event) => {
         case 'radarHide':
             if (window.RadarHud) RadarHud.hide();
             break;
+        case 'radarAlertShow':
+            if (window.RadarAlert) RadarAlert.show(data || event.data.data);
+            break;
+        case 'radarAlertHide':
+            if (window.RadarAlert) RadarAlert.hide();
+            break;
         case 'courierShow':
             if (window.Courier) Courier.show(data || event.data.data);
             break;

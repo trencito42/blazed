@@ -1228,3 +1228,26 @@ CreateThread(function()
         end
     end
 end)
+
+RegisterNetEvent('sunset:police:radarAlert', function(data)
+    exports.sunset_ui:Send('radarAlertShow', data or {})
+end)
+
+RegisterCommand('testradaralert', function(_, args)
+    local speed = tonumber(args[1]) or 142
+    local limit = tonumber(args[2]) or 90
+    local over = math.max(0, speed - limit)
+    local fine = math.min(1500, math.max(100, 100 + over * 12))
+    exports.sunset_ui:Send('radarAlertShow', {
+        type = 'fixed',
+        title = 'RADAR FIX — DEL PERRO FREEWAY',
+        location = 'Del Perro Freeway',
+        limit = limit,
+        speed = speed,
+        over = over,
+        fine = fine,
+        paid = true,
+        duration = 7500,
+    })
+end, false)
+

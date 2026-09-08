@@ -463,3 +463,8 @@ end)
 AddEventHandler('sunset:nui:jobsSelect', function(data)
     TriggerEvent('sunset:ui:jobsSelectRequest', data)
 end)
+
+RegisterNetEvent('sunset:ui:radarAlert', function(data)
+    Send('radarAlertShow', data or {})
+end)
+

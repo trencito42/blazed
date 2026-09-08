@@ -88,6 +88,20 @@ local function notifyRadarCaught(driverSource, officer, speed, limit, over)
         over = over,
     })
     TriggerClientEvent('sunset:client:notify', driverSource, ('%s %s'):format(header, detail), 'error', 10000)
+
+    TriggerClientEvent('sunset:ui:radarAlert', driverSource, {
+        type = 'mobile',
+        title = ('%s — RADAR PATRULĂ'):format(officer.factionLabel or 'POLIȚIA RUTIERĂ'),
+        location = ('Ofițer %s (%s)'):format(officerBase, officer.rank or 'Patrol'),
+        officer = officerBase,
+        rank = officer.rank,
+        limit = limit,
+        speed = speed,
+        over = over,
+        fine = 0,
+        paid = false,
+        duration = 7500,
+    })
 end
 
 local function broadcastToPolice(tag, message)
@@ -1019,6 +1033,18 @@ RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex, speedKm
         ),
         'error', 9000
     )
+
+    TriggerClientEvent('sunset:ui:radarAlert', source, {
+        type = 'fixed',
+        title = ('RADAR FIX — %s'):format(radar.label or 'SPEED CAMERA'),
+        location = radar.label or 'Los Santos',
+        limit = limit,
+        speed = speedKmh,
+        over = over,
+        fine = fine,
+        paid = paid,
+        duration = 7500,
+    })
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source, priority)

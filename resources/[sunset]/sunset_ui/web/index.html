@@ -308,6 +308,53 @@
         </div>
     </div>
 
+    <!-- RADAR SPEED CAUGHT ALERT (FISHING MINIGAME STYLE) -->
+    <div id="radar-alert-panel" class="radar-alert-shell hidden" aria-live="assertive">
+        <svg class="radar-alert-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path class="radar-alert-frame__path" vector-effect="non-scaling-stroke" d="M5 .5 L99.5 .5 L99.5 95 L95 99.5 L.5 99.5 L.5 5 Z" />
+        </svg>
+        <div class="radar-alert__body">
+            <div class="radar-alert__header">
+                <div class="radar-alert__icon-slot" id="radar-alert-icon-slot" aria-hidden="true">
+                    <svg class="radar-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </div>
+                <div class="radar-alert__title-wrap">
+                    <div class="radar-alert__title" id="radar-alert-title">RADAR FIX — SPEED CAMERA</div>
+                    <div class="radar-alert__meta" id="radar-alert-meta">LIMITĂ LEGALĂ: 90 KM/H</div>
+                </div>
+                <div class="radar-alert__badge" id="radar-alert-badge">+45 KM/H</div>
+            </div>
+            <div class="radar-alert__message" id="radar-alert-message">
+                <span class="radar-alert__speed-hero" id="radar-alert-speed">135 KM/H</span>
+                <span class="radar-alert__sub" id="radar-alert-sub">AMENDĂ: -$640 DIN CONT</span>
+            </div>
+            <div class="radar-alert__stats">
+                <div class="radar-alert__stat">
+                    <span class="radar-alert__stat-label">Viteză Radar</span>
+                    <span class="radar-alert__stat-value" id="radar-alert-stat-speed">135 km/h</span>
+                </div>
+                <div class="radar-alert__stat">
+                    <span class="radar-alert__stat-label">Limită Zonă</span>
+                    <span class="radar-alert__stat-value" id="radar-alert-stat-limit">90 km/h</span>
+                </div>
+                <div class="radar-alert__stat">
+                    <span class="radar-alert__stat-label">Depășire</span>
+                    <span class="radar-alert__stat-value is-danger" id="radar-alert-stat-over">+45 km/h</span>
+                </div>
+                <div class="radar-alert__stat">
+                    <span class="radar-alert__stat-label" id="radar-alert-stat-fine-label">Amendă Automată</span>
+                    <span class="radar-alert__stat-value is-fine" id="radar-alert-stat-fine">-$640</span>
+                </div>
+            </div>
+            <div class="radar-alert__progress">
+                <div class="radar-alert__progress-fill" id="radar-alert-progress"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- CHARACTER SCREENS -->
     <div id="app" class="app hidden">
         <img class="app-bg is-active" src="assets/bg.webp?v=5" data-entry-source="assets/bg.webp?v=5" decoding="async" alt="">

@@ -195,3 +195,267 @@
     #radar-panel, .radar-shell { bottom: 64px; }
     .radar__message { font-size: 18px; }
 }
+
+/* ==========================================================================
+   RADAR SPEED CAUGHT ALERT (FISHING MINIGAME STYLE)
+   ========================================================================== */
+
+#radar-alert-panel,
+.radar-alert-shell {
+    --ra-accent: #ff4757;
+    --ra-glow: rgba(255, 71, 87, 0.5);
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    z-index: 55;
+    width: min(720px, 94vw);
+    pointer-events: none;
+    color: var(--sunset-text, #f6f2e9);
+    font-family: var(--sunset-body, 'Rajdhani', sans-serif);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
+    transition: filter 0.2s ease, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
+    opacity: 0;
+    translate: 0 16px;
+    overflow: visible;
+}
+
+.radar-alert-frame {
+    display: none;
+}
+
+.radar-alert__body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: linear-gradient(180deg, rgba(22, 14, 14, 0.88) 0%, rgba(12, 8, 8, 0.92) 100%);
+    border: 1px solid rgba(255, 71, 87, 0.35);
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.radar-alert__body::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--ra-accent);
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 0 12px var(--ra-glow);
+    pointer-events: none;
+}
+
+#radar-alert-panel.is-visible,
+.radar-alert-shell.is-visible {
+    opacity: 1;
+    translate: 0 0;
+    animation: radar-alert-pulse 2s ease-in-out infinite;
+}
+
+#radar-alert-panel.hidden,
+.radar-alert-shell.hidden {
+    display: none !important;
+}
+
+.radar-alert__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.radar-alert__icon-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: rgba(255, 71, 87, 0.16);
+    border: 1px solid rgba(255, 71, 87, 0.45);
+    border-radius: 6px;
+    color: #ff6b81;
+    box-shadow: 0 0 10px rgba(255, 71, 87, 0.25);
+    flex-shrink: 0;
+}
+
+.radar-alert__icon {
+    width: 20px;
+    height: 20px;
+}
+
+.radar-alert__title-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.radar-alert__title {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #ff6b81;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 1), 0 0 10px rgba(255, 71, 87, 0.5);
+    line-height: 1.2;
+}
+
+.radar-alert__meta {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.78);
+    margin-top: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 1);
+}
+
+.radar-alert__badge {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(255, 71, 87, 0.22);
+    border: 1px solid #ff4757;
+    color: #ff6b81;
+    box-shadow: 0 0 10px rgba(255, 71, 87, 0.35);
+    white-space: nowrap;
+}
+
+.radar-alert__message {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+    margin: 2px 0;
+    text-align: center;
+}
+
+.radar-alert__speed-hero {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 32px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-shadow:
+        0 0 1px rgba(0, 0, 0, 0.95),
+        0 2px 10px rgba(255, 71, 87, 0.65),
+        2px 2px 0 rgba(0, 0, 0, 0.75);
+    line-height: 1;
+}
+
+.radar-alert__sub {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #ffa502;
+    background: rgba(255, 165, 2, 0.12);
+    border: 1px solid rgba(255, 165, 2, 0.35);
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.radar-alert__stats {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.radar-alert__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 90px;
+}
+
+.radar-alert__stat-label {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.radar-alert__stat-value {
+    font-family: var(--sunset-display, 'Chakra Petch', sans-serif);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+}
+
+.radar-alert__stat-value.is-danger {
+    color: #ff6b81;
+    text-shadow: 0 0 8px rgba(255, 71, 87, 0.5);
+}
+
+.radar-alert__stat-value.is-fine {
+    color: #ffa502;
+}
+
+.radar-alert__stat-value.is-paid {
+    color: #2ed573;
+}
+
+.radar-alert__progress {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+    overflow: hidden;
+}
+
+.radar-alert__progress-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff4757 0%, #ffa502 100%);
+    mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+    -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
+    transition: width 7.5s linear;
+}
+
+@keyframes radar-alert-pulse {
+    0%, 100% {
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
+            drop-shadow(0 8px 18px rgba(0, 0, 0, 0.7));
+    }
+    50% {
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
+            drop-shadow(0 0 16px rgba(255, 71, 87, 0.5));
+    }
+}
+
+@media (max-width: 720px) {
+    #radar-alert-panel,
+    .radar-alert-shell {
+        bottom: 64px;
+    }
+    .radar-alert__speed-hero {
+        font-size: 24px;
+    }
+    .radar-alert__stats {
+        gap: 12px;
+    }
+}
