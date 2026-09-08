@@ -55,8 +55,8 @@ body :where(button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h
     border: 1px solid var(--premium-border) !important;
     border-radius: var(--premium-radius) !important;
     box-shadow: var(--premium-shadow) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     transform: translate(-50%, -50%) !important;
     animation: premium-menu-in .3s var(--premium-ease) both;
 }
@@ -115,8 +115,8 @@ body :where(button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h
     border: 1px solid var(--premium-border) !important;
     border-radius: var(--premium-radius) !important;
     box-shadow: var(--premium-shadow) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 
 /* Remove black canvases around the actual glass panel. */
@@ -220,6 +220,10 @@ textarea {
     align-items: center;
     justify-content: center;
     padding: 34px;
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
 }
 
 .menu--solo-inventory.hidden {
@@ -236,8 +240,9 @@ textarea {
     border: 1px solid var(--premium-border);
     border-radius: var(--premium-radius);
     box-shadow: var(--premium-shadow);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
+    /* FiveM CEF paints the off-screen blur surface as an opaque black box. */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     opacity: 0;
     transform: scale(.95) translateY(12px);
     animation: premium-shell-in .3s var(--premium-ease) forwards;
@@ -322,9 +327,12 @@ textarea {
 .premium-inventory-grid {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-rows: max-content;
     align-content: start;
     gap: 10px;
+    flex: 1 1 0;
     min-height: 0;
+    max-height: none !important;
     padding-right: 8px;
     overflow-y: auto;
 }
@@ -338,6 +346,8 @@ textarea {
 
 .premium-slot {
     position: relative;
+    width: 100%;
+    height: auto;
     aspect-ratio: 1;
     min-width: 0;
     overflow: hidden;
@@ -838,8 +848,8 @@ button.premium-player-card {
     border: 1px solid var(--premium-border) !important;
     border-radius: var(--premium-radius) !important;
     box-shadow: var(--premium-shadow) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     transform: translate(-50%, -50%) !important;
     animation: premium-menu-in .3s var(--premium-ease) both;
 }

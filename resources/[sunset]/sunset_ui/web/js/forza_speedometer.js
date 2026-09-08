@@ -23,6 +23,8 @@
     const state = {
         targetSpeed: 0,
         currentSpeed: 0,
+        targetRpm: 0,
+        currentRpm: 0,
         targetFuel: 100,
         currentFuel: 100,
         targetHealth: 100,
@@ -93,11 +95,14 @@
         ctx.clearRect(0, 0, SIZE, SIZE);
 
         state.currentSpeed = lerp(state.currentSpeed, state.targetSpeed, 0.1);
+        state.currentRpm = lerp(state.currentRpm, state.targetRpm, 0.14);
         state.currentFuel = lerp(state.currentFuel, state.targetFuel, 0.05);
         state.currentHealth = lerp(state.currentHealth, state.targetHealth, 0.05);
 
         const speedPct = Math.min(state.currentSpeed / MAX_SPEED, 1);
-        const currentAngle = START_ANGLE + ARC_RANGE * speedPct;
+        const speedAngle = START_ANGLE + ARC_RANGE * speedPct;
+        const rpmPct = clamp(state.currentRpm, 0, 1, 0);
+        const rpmAngle = START_ANGLE + ARC_RANGE * rpmPct;
         const displaySpeed = Math.floor(state.currentSpeed);
 
         ctx.beginPath();
@@ -112,7 +117,6 @@
             const pct = i / tickCount;
             const angle = START_ANGLE + ARC_RANGE * pct;
             const isMajor = i % 10 === 0;
-            const isRedline = pct > 0.85;
             const length = isMajor ? 12 : 5;
             const innerRadius = RADIUS - length;
 
@@ -120,24 +124,24 @@
             ctx.moveTo(CX + Math.cos(angle) * innerRadius, CY + Math.sin(angle) * innerRadius);
             ctx.lineTo(CX + Math.cos(angle) * RADIUS, CY + Math.sin(angle) * RADIUS);
             ctx.lineWidth = isMajor ? 3 : 1.5;
-            if (angle <= currentAngle) {
-                ctx.strokeStyle = isRedline ? theme.redline : theme.white;
+            if (angle <= speedAngle) {
+                ctx.strokeStyle = theme.white;
                 if (isMajor) {
                     ctx.shadowBlur = 8;
-                    ctx.shadowColor = ctx.strokeStyle;
+                    ctx.shadowColor = theme.white;
                 }
             } else {
-                ctx.strokeStyle = isRedline ? 'rgba(255, 51, 102, 0.3)' : theme.tickBase;
+                ctx.strokeStyle = theme.tickBase;
             }
             ctx.stroke();
             ctx.shadowBlur = 0;
         }
 
-        if (speedPct > 0.01) {
+        if (rpmPct > 0.01) {
             ctx.beginPath();
-            ctx.arc(CX, CY, RADIUS + 15, START_ANGLE, currentAngle);
+            ctx.arc(CX, CY, RADIUS + 15, START_ANGLE, rpmAngle);
             ctx.lineWidth = 4;
-            ctx.strokeStyle = speedPct > 0.85 ? theme.redline : theme.white;
+            ctx.strokeStyle = rpmPct > 0.85 ? theme.redline : theme.white;
             ctx.lineCap = 'round';
             ctx.shadowBlur = 12;
             ctx.shadowColor = ctx.strokeStyle;
@@ -223,12 +227,15 @@
             if (!active) {
                 state.targetSpeed = 0;
                 state.currentSpeed = 0;
+                state.targetRpm = 0;
+                state.currentRpm = 0;
                 if (ctx) ctx.clearRect(0, 0, SIZE, SIZE);
             }
         },
         update(data = {}) {
             if (!running && !init()) return;
             state.targetSpeed = clamp(data.speed, 0, 999, 0);
+            state.targetRpm = clamp(data.rpm, 0, 1, 0);
             state.targetFuel = data.showFuel === false ? 0 : clamp(data.fuel, 0, 100, 100);
             state.targetHealth = clamp(Number(data.engine) / 10, 0, 100, 100);
             state.odo = clamp(data.odometer, 0, 9999999, 0);
