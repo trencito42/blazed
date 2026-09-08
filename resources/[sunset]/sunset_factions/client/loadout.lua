@@ -26,19 +26,11 @@ local function giveWeapon(ped, weapon, ammo)
     dutyWeapons[weapon] = true
 end
 
-local function isFreemodePed(ped)
-    ped = ped or PlayerPedId()
-    local model = GetEntityModel(ped)
-    return model == `mp_m_freemode_01` or model == `mp_f_freemode_01`
-end
-
-local function applyOutfitComponents(ped, outfit)
-    if not outfit then return end
-    for comp, piece in pairs(outfit) do
-        local compId = tonumber(comp)
-        if compId and piece then
-            SetPedComponentVariation(ped, compId, piece.drawable or 0, piece.texture or 0, 2)
-        end
+local function preloadPedModel(modelInput)
+    if not modelInput then return end
+    local hash = type(modelInput) == 'number' and modelInput or joaat(modelInput)
+    if IsModelInCdimage(hash) and IsModelValid(hash) and not HasModelLoaded(hash) then
+        RequestModel(hash)
     end
 end
 
@@ -104,25 +96,13 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
     if not loadout then return end
 
     local gender = char.gender or 0
-    local ped = PlayerPedId()
+    local targetSkin = customSkin or (Sunset.ResolveFactionSkin and Sunset.ResolveFactionSkin(factionId, grade, gender))
 
-    if customSkin then
-        switchPedModel(customSkin)
-        ped = PlayerPedId()
-    else
-        local freemode = isFreemodePed(ped)
-        local outfit = Sunset.ResolveFactionOutfit and Sunset.ResolveFactionOutfit(loadout, grade, gender)
-        if outfit and freemode then
-            applyOutfitComponents(ped, outfit)
-        else
-            local targetSkin = Sunset.ResolveFactionSkin and Sunset.ResolveFactionSkin(factionId, grade, gender)
-            if targetSkin then
-                switchPedModel(targetSkin)
-                ped = PlayerPedId()
-            end
-        end
+    if targetSkin then
+        switchPedModel(targetSkin)
     end
 
+    local ped = PlayerPedId()
     removeDutyWeapons(ped)
 
     if loadout.armor and loadout.armor > 0 then
@@ -140,6 +120,21 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
         end
     end
 end
+
+CreateThread(function()
+    Wait(2000)
+    -- Pre-warm common duty ped models to ensure zero-delay model switching
+    preloadPedModel(`mp_m_freemode_01`)
+    preloadPedModel(`mp_f_freemode_01`)
+    preloadPedModel(`s_m_y_cop_01`)
+    preloadPedModel(`s_f_y_cop_01`)
+    preloadPedModel(`csb_cop`)
+    preloadPedModel(`s_m_y_sheriff_01`)
+    preloadPedModel(`s_f_y_sheriff_01`)
+    preloadPedModel(`s_m_m_paramedic_01`)
+    preloadPedModel(`s_f_y_scrubs_01`)
+    preloadPedModel(`s_m_y_swat_01`)
+end)
 
 function ClearFactionLoadout()
     local char = getChar()
