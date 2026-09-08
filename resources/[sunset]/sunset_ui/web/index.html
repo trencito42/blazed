@@ -1628,14 +1628,60 @@
 
                     <!-- Contacts -->
                     <div class="phone-view phone-contacts" data-view="contacts">
-                        <div class="ios-nav">
-                            <button type="button" class="ios-nav__back" id="phone-back-contacts">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
-                                Home
-                            </button>
+                        <div class="ios-nav ios-nav--contacts">
+                            <div class="ios-nav__top-row">
+                                <button type="button" class="ios-nav__back" id="phone-back-contacts">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                    Home
+                                </button>
+                                <button type="button" class="phone-contacts__add-btn" id="phone-btn-add-contact" title="Add Contact">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                </button>
+                            </div>
                             <h1 class="ios-large-title">Contacts</h1>
+                            <div class="phone-search-bar">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                <input type="text" id="phone-contact-search" placeholder="Search contacts..." autocomplete="off">
+                            </div>
                         </div>
-                        <div class="phone-scroll" id="phone-contact-list"></div>
+
+                        <!-- Add Contact Sheet / Modal -->
+                        <div id="phone-add-contact-modal" class="phone-modal hidden">
+                            <div class="phone-modal__sheet">
+                                <div class="phone-modal__header">
+                                    <button type="button" class="phone-modal__btn phone-modal__btn--cancel" id="phone-contact-cancel">Cancel</button>
+                                    <h3>New Contact</h3>
+                                    <button type="button" class="phone-modal__btn phone-modal__btn--done" id="phone-contact-save">Done</button>
+                                </div>
+                                <div class="phone-modal__body">
+                                    <div class="phone-modal__avatar-preview" id="phone-new-avatar-preview">?</div>
+                                    <div class="phone-form-group">
+                                        <div class="phone-form-row">
+                                            <label for="phone-new-name">Name / Nickname</label>
+                                            <input type="text" id="phone-new-name" placeholder="Friend Name (Optional)" maxlength="48" autocomplete="off">
+                                        </div>
+                                        <div class="phone-form-row">
+                                            <label for="phone-new-phone">Phone Number</label>
+                                            <input type="text" id="phone-new-phone" placeholder="e.g. 555-0042 or 42" maxlength="32" autocomplete="off">
+                                        </div>
+                                    </div>
+                                    <p class="phone-form-hint">Tip: Enter their phone number (e.g. 555-0042) to save them to your contact book. You can chat and see when they're online!</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="phone-scroll" id="phone-contacts-container">
+                            <!-- My Card (Current Player) -->
+                            <div class="phone-my-card" id="phone-my-card">
+                                <div class="phone-my-card__avatar" id="phone-my-card-avatar">?</div>
+                                <div class="phone-my-card__info">
+                                    <div class="phone-my-card__title" id="phone-my-card-name">My Card</div>
+                                    <div class="phone-my-card__number" id="phone-my-card-phone">555-0000</div>
+                                </div>
+                            </div>
+
+                            <div id="phone-contact-list"></div>
+                        </div>
                     </div>
 
                     <!-- Bank -->

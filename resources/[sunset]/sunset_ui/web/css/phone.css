@@ -1152,3 +1152,413 @@
     padding: 8px 10px;
     font-size: 13px;
 }
+
+/* ── iOS Contacts & Friends System ── */
+.ios-nav--contacts {
+    padding: 0 16px 10px;
+}
+
+.ios-nav__top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.phone-contacts__add-btn {
+    background: #0a84ff;
+    color: #fff;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(10, 132, 255, 0.35);
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.phone-contacts__add-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.phone-contacts__add-btn:hover {
+    transform: scale(1.06);
+    background: #0071e3;
+}
+
+.phone-contacts__add-btn:active {
+    transform: scale(0.92);
+}
+
+.phone-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(118, 118, 128, 0.24);
+    border-radius: 10px;
+    padding: 6px 10px;
+    margin-top: 4px;
+}
+
+.phone-search-bar svg {
+    width: 16px;
+    height: 16px;
+    color: rgba(235, 235, 245, 0.6);
+    flex-shrink: 0;
+}
+
+.phone-search-bar input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    letter-spacing: -0.01em;
+}
+
+.phone-search-bar input::placeholder {
+    color: rgba(235, 235, 245, 0.6);
+}
+
+/* ── My Card ── */
+.phone-my-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 8px 16px 14px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    cursor: default;
+}
+
+.phone-my-card__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.phone-my-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.phone-my-card__title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phone-my-card__number {
+    display: inline-block;
+    font-size: 13px;
+    color: #30d158;
+    background: rgba(48, 209, 88, 0.12);
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-top: 3px;
+    font-weight: 500;
+    font-family: monospace;
+}
+
+/* ── Contact Rows ── */
+.phone-contact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    position: relative;
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+    transition: background-color 0.15s ease;
+}
+
+.phone-contact-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.phone-contact-row__main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    background: none;
+    border: none;
+    text-align: left;
+    color: #fff;
+    padding: 0;
+}
+
+.phone-contact-row__avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #64748b 0%, #334155 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.phone-contact-row__avatar.is-online {
+    background: linear-gradient(135deg, #30d158 0%, #10b981 100%);
+}
+
+.phone-contact-row__status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #000;
+    background: #6b7280;
+}
+
+.phone-contact-row__status-dot.is-online {
+    background: #30d158;
+    box-shadow: 0 0 6px #30d158;
+}
+
+.phone-contact-row__details {
+    flex: 1;
+    min-width: 0;
+}
+
+.phone-contact-row__name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phone-contact-row__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-top: 2px;
+    font-family: monospace;
+}
+
+.phone-contact-row__online-badge {
+    font-family: inherit;
+    font-size: 11px;
+    color: #30d158;
+    font-weight: 600;
+}
+
+.phone-contact-row__offline-badge {
+    font-family: inherit;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.phone-contact-row__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.phone-contact-act-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.phone-contact-act-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.phone-contact-act-btn--chat {
+    background: rgba(10, 132, 255, 0.2);
+    color: #0a84ff;
+}
+
+.phone-contact-act-btn--chat:hover {
+    background: #0a84ff;
+    color: #fff;
+    transform: scale(1.08);
+}
+
+.phone-contact-act-btn--del {
+    background: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+}
+
+.phone-contact-act-btn--del:hover {
+    background: #ff453a;
+    color: #fff;
+    transform: scale(1.08);
+}
+
+/* ── Add Contact Modal ── */
+.phone-modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    animation: phoneModalFadeIn 0.2s ease-out;
+}
+
+.phone-modal.hidden {
+    display: none !important;
+}
+
+.phone-modal__sheet {
+    background: #1c1c1e;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 16px 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: phoneSheetSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.phone-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.phone-modal__header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.phone-modal__btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.phone-modal__btn--cancel {
+    color: #ff453a;
+}
+
+.phone-modal__btn--done {
+    color: #0a84ff;
+    font-weight: 700;
+}
+
+.phone-modal__avatar-preview {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0a84ff, #5e5ce6);
+    color: #fff;
+    font-size: 26px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px auto 14px;
+    box-shadow: 0 4px 14px rgba(10, 132, 255, 0.35);
+}
+
+.phone-form-group {
+    background: #2c2c2e;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.phone-form-row {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+.phone-form-row:last-child {
+    border-bottom: none;
+}
+
+.phone-form-row label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 3px;
+    font-weight: 500;
+}
+
+.phone-form-row input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    outline: none;
+    letter-spacing: -0.01em;
+}
+
+.phone-form-row input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.phone-form-hint {
+    margin: 8px 4px 0;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.4;
+    text-align: center;
+}
+
+@keyframes phoneModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes phoneSheetSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+

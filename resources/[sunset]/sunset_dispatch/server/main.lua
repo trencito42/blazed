@@ -58,6 +58,10 @@ exports('GetActiveCalls', function(callType, opts)
     return ServiceCore.getActiveCalls(callType, opts)
 end)
 
+exports('IsProviderForType', function(source, callType)
+    return ServiceCore.isProviderForType(source, callType)
+end)
+
 exports('GetCallForResponder', function(characterId)
     for _, id in ipairs(GetPlayers()) do
         local src = tonumber(id)

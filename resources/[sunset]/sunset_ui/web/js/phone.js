@@ -50,6 +50,35 @@ const Phone = {
         $('#phone-chat-input')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.sendMessage();
         });
+
+        // Contacts UI event handlers
+        $('#phone-btn-add-contact')?.addEventListener('click', () => {
+            $('#phone-add-contact-modal')?.classList.remove('hidden');
+            const nameInput = $('#phone-new-name');
+            if (nameInput) {
+                nameInput.value = '';
+                nameInput.focus();
+            }
+            if ($('#phone-new-phone')) $('#phone-new-phone').value = '';
+            if ($('#phone-new-avatar-preview')) $('#phone-new-avatar-preview').textContent = '+';
+        });
+        $('#phone-contact-cancel')?.addEventListener('click', () => {
+            $('#phone-add-contact-modal')?.classList.add('hidden');
+        });
+        $('#phone-contact-save')?.addEventListener('click', () => {
+            this.submitNewContact();
+        });
+        $('#phone-new-name')?.addEventListener('input', (e) => {
+            const val = (e.target.value || '').trim();
+            const prev = $('#phone-new-avatar-preview');
+            if (prev) prev.textContent = val ? val.charAt(0).toUpperCase() : '+';
+        });
+        $('#phone-new-phone')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.submitNewContact();
+        });
+        $('#phone-contact-search')?.addEventListener('input', () => {
+            this.renderContacts();
+        });
     },
 
     setupKeys() {
@@ -336,45 +365,132 @@ const Phone = {
     renderContacts() {
         const list = $('#phone-contact-list');
         if (!list) return;
+
+        // Update My Card with current player's profile and phone number
+        const myCardName = $('#phone-my-card-name');
+        const myCardPhone = $('#phone-my-card-phone');
+        const myCardAvatar = $('#phone-my-card-avatar');
+        if (myCardName) myCardName.textContent = this.data?.myName || 'My Card';
+        if (myCardPhone) myCardPhone.textContent = this.data?.myPhoneNumber || '555-0000';
+        if (myCardAvatar) myCardAvatar.textContent = (this.data?.myName || '?').charAt(0).toUpperCase();
+
         list.innerHTML = '';
-        const contacts = this.data?.contacts || [];
+        const rawContacts = this.data?.contacts || [];
+        const query = ($('#phone-contact-search')?.value || '').trim().toLowerCase();
+
+        let contacts = rawContacts.slice();
+        if (query) {
+            contacts = contacts.filter((c) =>
+                (c.name || '').toLowerCase().includes(query) ||
+                (c.phone || '').toLowerCase().includes(query)
+            );
+        }
+
+        contacts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         if (!contacts.length) {
-            list.innerHTML = '<p class="phone-empty">No one else is online.<br>Players appear here when connected.</p>';
+            list.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.45); font-size: 14px; line-height: 1.6;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">👥</div>
+                    ${query
+                        ? 'No contacts match your search.'
+                        : 'No friends in your contacts yet.<br>Tap <strong style="color: #0a84ff;">+</strong> above to add friends by phone number.'}
+                </div>
+            `;
             return;
         }
 
-        const header = document.createElement('div');
-        header.className = 'phone-contacts__section';
-        header.textContent = 'Online';
-        list.appendChild(header);
-
         contacts.forEach((c) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'phone-contact';
+            const row = document.createElement('div');
+            row.className = 'phone-contact-row';
             const initial = (c.name || '?').charAt(0).toUpperCase();
-            btn.innerHTML = `
-                <div class="phone-thread__avatar">${this.escapeHtml(initial)}</div>
-                <div class="phone-thread__body">
-                    <div class="phone-thread__name">${this.escapeHtml(c.name)}</div>
-                    <div class="phone-contact__meta">${c.online !== false ? '● Online' : 'Offline'}</div>
-                </div>`;
-            btn.addEventListener('click', () => this.openChat({
-                name: c.name,
-                charId: c.characterId,
-                online: true,
-            }));
-            list.appendChild(btn);
+            const isOnline = c.online === true;
+
+            row.innerHTML = `
+                <button type="button" class="phone-contact-row__main">
+                    <div class="phone-contact-row__avatar ${isOnline ? 'is-online' : ''}">
+                        ${this.escapeHtml(initial)}
+                        <span class="phone-contact-row__status-dot ${isOnline ? 'is-online' : ''}"></span>
+                    </div>
+                    <div class="phone-contact-row__details">
+                        <div class="phone-contact-row__name">${this.escapeHtml(c.name)}</div>
+                        <div class="phone-contact-row__meta">
+                            <span>${this.escapeHtml(c.phone || '')}</span>
+                            <span>·</span>
+                            <span class="${isOnline ? 'phone-contact-row__online-badge' : 'phone-contact-row__offline-badge'}">
+                                ${isOnline ? '● Online' : '○ Offline'}
+                            </span>
+                        </div>
+                    </div>
+                </button>
+                <div class="phone-contact-row__actions">
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--chat" title="Send SMS">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </button>
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--del" title="Delete Contact">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
+                </div>
+            `;
+
+            row.querySelector('.phone-contact-row__main').addEventListener('click', () => {
+                this.openChat({
+                    name: c.name,
+                    charId: c.characterId,
+                    phone: c.phone,
+                    online: isOnline,
+                });
+            });
+
+            row.querySelector('.phone-contact-act-btn--chat').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openChat({
+                    name: c.name,
+                    charId: c.characterId,
+                    phone: c.phone,
+                    online: isOnline,
+                });
+            });
+
+            row.querySelector('.phone-contact-act-btn--del').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteContact(c.id, c.name);
+            });
+
+            list.appendChild(row);
         });
+    },
+
+    submitNewContact() {
+        const name = ($('#phone-new-name')?.value || '').trim();
+        const phone = ($('#phone-new-phone')?.value || '').trim();
+        if (!phone) {
+            notify('Please enter a phone number', 'error');
+            return;
+        }
+        post('phoneAddContact', { name, phone });
+        $('#phone-add-contact-modal')?.classList.add('hidden');
+        if ($('#phone-new-name')) $('#phone-new-name').value = '';
+        if ($('#phone-new-phone')) $('#phone-new-phone').value = '';
+    },
+
+    deleteContact(contactId, contactName) {
+        if (!contactId) return;
+        post('phoneDeleteContact', { contactId });
     },
 
     openChat(target) {
         this.chatTarget = target;
-        const online = this.isContactOnline(target.charId);
-        $('#phone-chat-title').textContent = target.name || 'Chat';
+        const online = target.online !== undefined ? target.online : this.isContactOnline(target.charId);
+        $('#phone-chat-title').textContent = target.name || target.phone || 'Chat';
         const sub = $('#phone-chat-subtitle');
-        if (sub) sub.textContent = online ? 'iMessage' : 'Offline — message queued';
+        if (sub) {
+            if (target.phone) {
+                sub.textContent = `${target.phone} · ${online ? 'Online' : 'Offline'}`;
+            } else {
+                sub.textContent = online ? 'iMessage' : 'Offline — message queued';
+            }
+        }
         this.renderChat(target);
         this.showView('chat');
     },
@@ -417,12 +533,13 @@ const Phone = {
     sendMessage() {
         const input = $('#phone-chat-input');
         const message = (input?.value || '').trim();
-        if (!message || !this.chatTarget?.charId) {
-            if (!this.chatTarget?.charId) notify('Invalid contact', 'error');
+        if (!message || (!this.chatTarget?.charId && !this.chatTarget?.phone)) {
+            if (!this.chatTarget?.charId && !this.chatTarget?.phone) notify('Invalid contact', 'error');
             return;
         }
         post('phoneSend', {
-            targetCharacterId: this.chatTarget.charId,
+            targetCharacterId: this.chatTarget.charId || 0,
+            phone: this.chatTarget.phone || null,
             message,
         });
         if (input) input.value = '';

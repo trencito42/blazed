@@ -170,19 +170,70 @@ RegisterNetEvent('sunset:death:call112', function()
     MurderWindow[src] = nil
 
     local ped = GetPlayerPed(src)
-    local coords = ped ~= 0 and GetEntityCoords(ped) or nil
-    if coords and GetResourceState('sunset_dispatch') == 'started' then
+    local coords = (ped and ped ~= 0) and GetEntityCoords(ped) or vector3(0, 0, 0)
+    local victimName = exports.sunset_core:GetPlayerDisplayName(src) or ('Player #' .. tostring(src))
+    local killerName = (killer and GetPlayerName(killer)) and exports.sunset_core:GetPlayerDisplayName(killer) or 'Unknown Attacker'
+
+    -- 1. Medic dispatch for downed victim
+    if GetResourceState('sunset_dispatch') == 'started' then
         pcall(function()
-            exports.sunset_dispatch:CreateServiceCall(src, 'medic', coords, { system = true, emergency = '112' }, '112 emergency - Assault Victim')
+            exports.sunset_dispatch:CreateServiceCall(src, 'medic', coords, {
+                system = true,
+                emergency = '112',
+                category = 'medical',
+                callerName = victimName,
+            }, ('112 Emergency — Assault victim %s requires immediate medical response'):format(victimName))
         end)
     end
 
+    -- 2. Report attacker for first-degree murder & alert police
     if killer and GetPlayerName(killer) then
         TriggerEvent('sunset:police:autoWanted', killer, 'murder', 'First-degree murder (Reported via 112)')
-        TriggerClientEvent('sunset:client:notify', killer, 'A 112 emergency call reported your assault! You are now wanted for murder.', 'error', 10000)
+        TriggerClientEvent('sunset:client:notify', killer, 'A 112 emergency call reported your crime! You are now WANTED ★5 for murder.', 'error', 12000)
+
+        -- Create police service call so it populates the Toughbook MDT 112 feed and blip on GPS
+        if GetResourceState('sunset_dispatch') == 'started' then
+            pcall(function()
+                local dispatchDesc = ('10-99 EMERGENCY — Homicide victim %s reported attacker %s!'):format(victimName, killerName)
+                local call = exports.sunset_dispatch:CreateServiceCall(src, 'police', coords, {
+                    system = true,
+                    emergency = '112',
+                    category = 'shots',
+                    street = 'Emergency 112 Scene',
+                    area = 'Los Santos',
+                    callerName = victimName,
+                    suspect = killerName,
+                    suspectId = killer,
+                }, dispatchDesc)
+
+                -- Broadcast audio chime, priority UI alert, and Toughbook MDT notification to all law enforcement
+                local payload = {
+                    callId = (type(call) == 'table' and call.id) or 0,
+                    callType = 'police',
+                    category = 'shots',
+                    street = '112 Assault Scene',
+                    area = 'Los Santos',
+                    caller = victimName,
+                    phone = '112-SOS',
+                    description = dispatchDesc,
+                    coords = { x = coords.x, y = coords.y, z = coords.z },
+                }
+
+                for _, id in ipairs(GetPlayers()) do
+                    local officerSrc = tonumber(id)
+                    local isCop = false
+                    pcall(function()
+                        isCop = exports.sunset_factions:IsOnDuty(officerSrc) and Sunset.FactionTypeMatches(exports.sunset_factions:GetPlayerFaction(officerSrc), 'law_enforcement')
+                    end)
+                    if isCop then
+                        TriggerClientEvent('sunset:dispatch:112CallAlert', officerSrc, payload)
+                    end
+                end
+            end)
+        end
     end
 
-    TriggerClientEvent('sunset:client:notify', src, '112 received — medic dispatched and attacker reported for murder.', 'success')
+    TriggerClientEvent('sunset:client:notify', src, '112 received — Medic & Police dispatched! Attacker reported for murder.', 'success', 8000)
 end)
 
 AddEventHandler('playerDropped', function()

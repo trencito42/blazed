@@ -161,7 +161,7 @@ end)
 AddEventHandler('sunset:nui:phoneSend', function(data)
     CreateThread(function()
         local callOk, sent, sendErr = pcall(function()
-            return Sunset.AwaitCallback('sunset:phoneSend', tonumber(data.targetCharacterId), data.message)
+            return Sunset.AwaitCallback('sunset:phoneSend', tonumber(data.targetCharacterId), data.message, data.phone)
         end)
         if not callOk then
             exports.sunset_ui:Notify(tostring(sent) or 'Could not send the message', 'error')
@@ -173,6 +173,34 @@ AddEventHandler('sunset:nui:phoneSend', function(data)
         end
         local refreshed = Sunset.AwaitCallback('sunset:getPhoneData') or {}
         exports.sunset_ui:Send('phoneUpdate', refreshed)
+    end)
+end)
+
+AddEventHandler('sunset:nui:phoneAddContact', function(data)
+    CreateThread(function()
+        data = data or {}
+        local res, err = Sunset.AwaitCallback('sunset:phoneAddContact', data.name, data.phone)
+        if res and res.ok then
+            exports.sunset_ui:Notify(('Contact "%s" added.'):format(res.contact and res.contact.name or 'friend'), 'success')
+            local refreshed = Sunset.AwaitCallback('sunset:getPhoneData') or {}
+            exports.sunset_ui:Send('phoneUpdate', refreshed)
+        else
+            exports.sunset_ui:Notify(err or 'Could not save contact.', 'error')
+        end
+    end)
+end)
+
+AddEventHandler('sunset:nui:phoneDeleteContact', function(data)
+    CreateThread(function()
+        data = data or {}
+        local res, err = Sunset.AwaitCallback('sunset:phoneDeleteContact', data.contactId)
+        if res and res.ok then
+            exports.sunset_ui:Notify('Contact deleted.', 'success')
+            local refreshed = Sunset.AwaitCallback('sunset:getPhoneData') or {}
+            exports.sunset_ui:Send('phoneUpdate', refreshed)
+        else
+            exports.sunset_ui:Notify(err or 'Could not delete contact.', 'error')
+        end
     end)
 end)
 
