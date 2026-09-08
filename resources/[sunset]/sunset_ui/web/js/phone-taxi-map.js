@@ -41,8 +41,24 @@ const TaxiPhoneMap = {
         });
     },
 
+    invalidate() {
+        if (this.map) {
+            requestAnimationFrame(() => {
+                if (this.map) this.map.invalidateSize();
+            });
+        }
+    },
+
     mount(container, options = {}) {
         if (!container || typeof L === 'undefined') return;
+        if (this.container === container && this.map) {
+            this.onPick = options.onPick || this.onPick;
+            if (options.player) this.setPlayer(options.player);
+            if (options.destination) this.setDestination(options.destination.x, options.destination.y);
+            this.invalidate();
+            return;
+        }
+
         this.destroy();
         this.container = container;
         this.onPick = options.onPick || null;

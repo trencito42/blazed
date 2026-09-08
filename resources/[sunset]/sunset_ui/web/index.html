@@ -850,23 +850,41 @@
                         </div>
 
                         <button type="button" class="mdc-nav-tab is-active" data-tab="calls">
-                            <span class="mdc-nav-tab-label"><span>🚨</span> 112 CALLS</span>
+                            <span class="mdc-nav-tab-label">
+                                <svg class="mdc-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="2" y1="2" x2="6" y2="6"/><line x1="22" y1="2" x2="18" y2="6"/></svg>
+                                112 CALLS
+                            </span>
                             <span class="mdc-badge-pill" id="mdc-calls-count">0</span>
                         </button>
                         <button type="button" class="mdc-nav-tab" data-tab="citizen">
-                            <span class="mdc-nav-tab-label"><span>👤</span> CITIZEN LOOKUP</span>
+                            <span class="mdc-nav-tab-label">
+                                <svg class="mdc-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                CITIZEN LOOKUP
+                            </span>
                         </button>
                         <button type="button" class="mdc-nav-tab" data-tab="vehicles">
-                            <span class="mdc-nav-tab-label"><span>🚔</span> VEHICLE DMV</span>
+                            <span class="mdc-nav-tab-label">
+                                <svg class="mdc-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="22" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                VEHICLE DMV
+                            </span>
                         </button>
                         <button type="button" class="mdc-nav-tab" data-tab="warrants">
-                            <span class="mdc-nav-tab-label"><span>📋</span> WARRANTS</span>
+                            <span class="mdc-nav-tab-label">
+                                <svg class="mdc-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                WARRANTS
+                            </span>
                         </button>
                         <button type="button" class="mdc-nav-tab" data-tab="units">
-                            <span class="mdc-nav-tab-label"><span>👥</span> ACTIVE UNITS</span>
+                            <span class="mdc-nav-tab-label">
+                                <svg class="mdc-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="2" y1="12" x2="4" y2="12"/></svg>
+                                ACTIVE UNITS
+                            </span>
                         </button>
                         <button type="button" class="mdc-nav-tab" data-tab="ref">
-                            <span class="mdc-nav-tab-label"><span>📜</span> 10-CODES / PENAL</span>
+                            <span class="mdc-nav-tab-label">
+                                <svg class="mdc-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                10-CODES / PENAL
+                            </span>
                         </button>
                     </div>
 
@@ -906,8 +924,24 @@
                             <div id="mdc-citizen-content" class="mdc-citizen-dossier hidden">
                                 <!-- Left Column: ID Card -->
                                 <div class="mdc-id-card">
-                                    <div class="mdc-id-card__avatar">👤</div>
+                                    <div class="mdc-id-card__seal-bar">
+                                        <span class="mdc-id-card__seal-state">STATE OF SAN ANDREAS</span>
+                                        <span class="mdc-id-card__seal-dept">DEPARTMENT OF JUSTICE · IDENTIFICATION</span>
+                                    </div>
+                                    <div class="mdc-id-card__photo-frame">
+                                        <div class="mdc-id-card__height-grid">
+                                            <span>6'3"</span>
+                                            <span>5'9"</span>
+                                            <span>5'3"</span>
+                                        </div>
+                                        <img id="mdc-cit-photo" class="mdc-id-photo-img hidden" alt="Citizen ID Photo">
+                                        <div id="mdc-cit-avatar-fallback" class="mdc-id-card__avatar">
+                                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                        </div>
+                                        <div class="mdc-id-card__watermark-stamp">DOJ OFFICIAL</div>
+                                    </div>
                                     <div class="mdc-id-card__name" id="mdc-cit-name">—</div>
+                                    <div class="mdc-id-card__doc-id" id="mdc-cit-doc-id">DOC ID: SA-0000</div>
                                     <div class="mdc-id-card__status">
                                         <span class="mdc-pill mdc-pill--clean" id="mdc-cit-wanted-pill">NO WARRANTS</span>
                                         <span class="mdc-pill mdc-pill--clean" id="mdc-cit-jail-pill">STATUS: FREE</span>
@@ -1584,6 +1618,12 @@
                                 </div>
                                 <span>Downtown Cab</span>
                             </button>
+                            <button type="button" class="phone-app-icon phone-app-icon--emergency" data-phone-app="emergency112">
+                                <div class="phone-app-icon__img phone-app-icon__img--emergency">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+                                </div>
+                                <span>112 SOS</span>
+                            </button>
                             <button type="button" class="phone-app-icon" data-phone-app="settings">
                                 <div class="phone-app-icon__img phone-app-icon__img--settings">
                                     <svg viewBox="0 0 24 24" fill="white"><path d="M19.4 13c0-.3 0-.7-.1-1l2-1.5-2-3.5-2.4 1c-.5-.4-1.1-.7-1.7-1l-.3-2.6H9.1l-.3 2.6c-.6.2-1.2.6-1.7 1l-2.4-1-2 3.5 2 1.5c0 .3-.1.7-.1 1s0 .7.1 1l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1l.3 2.6h5.8l.3-2.6c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
@@ -1679,6 +1719,18 @@
                                     <div class="phone-my-card__title" id="phone-my-card-name">My Card</div>
                                     <div class="phone-my-card__number" id="phone-my-card-phone">555-0000</div>
                                 </div>
+                            </div>
+
+                            <!-- Pinned 112 Emergency Card -->
+                            <div class="phone-emergency-card" id="phone-emergency-112-btn" title="Tap to call 112 Emergency Dispatch">
+                                <div class="phone-emergency-card__icon">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+                                </div>
+                                <div class="phone-emergency-card__info">
+                                    <div class="phone-emergency-card__title">112 Emergency Services</div>
+                                    <div class="phone-emergency-card__subtitle">Police · Ambulance · Fire Department</div>
+                                </div>
+                                <button type="button" class="phone-emergency-card__call-btn">SOS 112</button>
                             </div>
 
                             <div id="phone-contact-list"></div>

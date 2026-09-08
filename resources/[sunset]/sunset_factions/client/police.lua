@@ -769,9 +769,36 @@ AddEventHandler('sunset:nui:ticketIssue', function(data)
     else actionError(err, 'Citation was not issued. Check the target ID, violation and distance.') end
 end)
 
+local function getPlayerMugshot(targetServerId)
+    if not targetServerId then return nil end
+    local player = GetPlayerFromServerId(tonumber(targetServerId))
+    if not player or player == -1 then return nil end
+    local targetPed = GetPlayerPed(player)
+    if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then return nil end
+    local handle = RegisterPedheadshot(targetPed)
+    if not handle or handle == 0 then return nil end
+    local timeout = GetGameTimer() + 2500
+    while not IsPedheadshotReady(handle) or not IsPedheadshotValid(handle) do
+        if GetGameTimer() > timeout then
+            UnregisterPedheadshot(handle)
+            return nil
+        end
+        Wait(40)
+    end
+    local txd = GetPedheadshotTxdString(handle)
+    local url = ('https://nui-img/%s/%s'):format(txd, txd)
+    SetTimeout(60000, function()
+        pcall(function() UnregisterPedheadshot(handle) end)
+    end)
+    return url
+end
+
 AddEventHandler('sunset:ui:mdcSearchRequest', function(data)
     local query = data and (data.query or data.targetId or data.id)
     local result = Sunset.AwaitCallback('sunset:policeMdcLookup', query)
+    if result and result.found and result.serverId then
+        result.photoUrl = getPlayerMugshot(result.serverId)
+    end
     exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = result })
 end)
 

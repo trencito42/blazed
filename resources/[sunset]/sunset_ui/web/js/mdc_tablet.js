@@ -115,15 +115,15 @@
 
             // Update Header
             const badgeMap = {
-                police: '⭐',
-                sheriff: '🌟',
-                fib: '🦅',
+                police: '<svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+                sheriff: '<svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+                fib: '<svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
             };
             const dept = (this.officer.department || 'police').toLowerCase();
-            const badgeIcon = badgeMap[dept] || '⭐';
+            const badgeIcon = badgeMap[dept] || badgeMap.police;
 
             const deptBadge = $('#mdc-dept-badge');
-            if (deptBadge) deptBadge.textContent = badgeIcon;
+            if (deptBadge) deptBadge.innerHTML = badgeIcon;
 
             const deptTitle = $('#mdc-dept-title');
             if (deptTitle) deptTitle.textContent = this.officer.departmentLabel || 'Police Department';
@@ -218,7 +218,9 @@
             if (openCalls.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 48px 16px; color: #64748b;">
-                        <div style="font-size: 32px; margin-bottom: 8px;">📡</div>
+                        <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+                            <svg style="width: 36px; height: 36px; stroke: #475569;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+                        </div>
                         <div style="font-size: 15px; font-weight: 700; color: #94a3b8;">NO ACTIVE 112 DISPATCH CALLS</div>
                         <div style="font-size: 12px; margin-top: 4px;">Emergency frequency clear · Units on routine patrol</div>
                     </div>
@@ -246,34 +248,44 @@
                 return `
                     <div class="mdc-call-card ${cardModifier}" data-call-id="${call.id}">
                         <div class="mdc-call-card__header">
-                            <span class="${badgeClass}">🚨 ${call.category || '112 EMERGENCY'}</span>
+                            <span class="${badgeClass}">
+                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                ${call.category || '112 EMERGENCY'}
+                            </span>
                             <span class="mdc-call-time">CALL #${call.id} · ${call.status || 'OPEN'}</span>
                         </div>
                         <div class="mdc-call-location">
-                            <span>📍 ${call.street || 'Unknown Street'}, ${call.area || 'Los Santos'}</span>
+                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span>${call.street || 'Unknown Street'}, ${call.area || 'Los Santos'}</span>
                             <span style="font-size: 11px; color: #64748b; font-family: monospace;">(${coordsStr})</span>
                         </div>
                         <div class="mdc-call-caller">
-                            👤 Caller: <strong>${call.callerName || 'Anonymous'}</strong> · 📞 Phone: <strong>${call.callerPhone || 'N/A'}</strong>
+                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Caller: <strong>${call.callerName || 'Anonymous'}</strong> · 
+                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            Phone: <strong>${call.callerPhone || 'N/A'}</strong>
                         </div>
                         <div class="mdc-call-desc">
                             "${call.description || 'Citizen reported emergency'}"
                         </div>
                         <div class="mdc-call-actions">
                             <div class="mdc-call-responder">
-                                ${call.responderName ? `🚔 Assigned: ${call.responderName}` : '⚠️ Unassigned · Units available'}
+                                ${call.responderName ? `<svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="22" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Assigned: ${call.responderName}` : '⚠️ Unassigned · Units available'}
                             </div>
                             <div class="mdc-call-btn-group">
                                 <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-call-gps" data-x="${coords.x}" data-y="${coords.y}">
-                                    📍 SET GPS
+                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+                                    SET GPS
                                 </button>
                                 ${call.status === 'ASSIGNED' ? `
                                     <button type="button" class="mdc-btn mdc-btn--success mdc-btn--sm btn-call-clear" data-call-id="${call.id}">
-                                        ✓ CLEAR (10-98)
+                                        <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                        CLEAR (10-98)
                                     </button>
                                 ` : `
                                     <button type="button" class="mdc-btn mdc-btn--primary mdc-btn--sm btn-call-respond" data-call-id="${call.id}">
-                                        🚔 RESPOND (10-97)
+                                        <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        RESPOND (10-97)
                                     </button>
                                 `}
                             </div>
@@ -331,6 +343,34 @@
 
             $('#mdc-citizen-empty')?.classList.add('hidden');
             $('#mdc-citizen-content')?.classList.remove('hidden');
+
+            // Citizen ID Photo & Fallback
+            const photoImg = $('#mdc-cit-photo');
+            const photoFallback = $('#mdc-cit-avatar-fallback');
+            const docIdEl = $('#mdc-cit-doc-id');
+
+            if (docIdEl) {
+                const paddedId = String(citizen.id || 0).padStart(4, '0');
+                docIdEl.textContent = `DOC ID: SA-${paddedId}`;
+            }
+
+            if (citizen.photoUrl) {
+                if (photoImg) {
+                    photoImg.src = citizen.photoUrl;
+                    photoImg.classList.remove('hidden');
+                }
+                if (photoFallback) {
+                    photoFallback.classList.add('hidden');
+                }
+            } else {
+                if (photoImg) {
+                    photoImg.src = '';
+                    photoImg.classList.add('hidden');
+                }
+                if (photoFallback) {
+                    photoFallback.classList.remove('hidden');
+                }
+            }
 
             // Identity Profile
             $('#mdc-cit-name').textContent = citizen.name || 'Unknown';
@@ -484,7 +524,7 @@
             grid.innerHTML = vehicles.map((v) => {
                 return `
                     <div class="mdc-dmv-card ${v.bolo ? 'is-bolo' : ''}">
-                        ${v.bolo ? '<div class="mdc-bolo-banner">⚠️ BOLO STOLEN VEHICLE ⚠️</div>' : ''}
+                        ${v.bolo ? '<div class="mdc-bolo-banner">SUSPECT VEHICLE · ACTIVE BOLO BROADCAST</div>' : ''}
                         <div class="mdc-dmv-card__head">
                             <span class="mdc-plate-badge">${v.plate}</span>
                             <span class="mdc-veh-model">${v.model}</span>
@@ -499,10 +539,17 @@
                         </div>
                         <div style="display: flex; gap: 8px; margin-top: 4px;">
                             <button type="button" class="mdc-btn ${v.bolo ? 'mdc-btn--danger' : 'mdc-btn--warning'} mdc-btn--sm btn-toggle-veh-bolo" data-plate="${v.plate}">
-                                ${v.bolo ? '✕ CLEAR BOLO' : '⚠️ FLAG BOLO'}
+                                ${v.bolo ? `
+                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    CLEAR BOLO
+                                ` : `
+                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 22 22 22"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                    FLAG BOLO
+                                `}
                             </button>
                             <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-dossier-owner" data-owner="${v.ownerName}">
-                                👤 VIEW OWNER
+                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                VIEW OWNER
                             </button>
                         </div>
                     </div>
@@ -542,7 +589,9 @@
             if (this.wanted.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 48px 16px; color: #64748b;">
-                        <div style="font-size: 32px; margin-bottom: 8px;">⚖️</div>
+                        <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+                            <svg style="width: 36px; height: 36px; stroke: #475569;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        </div>
                         <div style="font-size: 15px; font-weight: 700; color: #94a3b8;">NO ACTIVE ARREST WARRANTS</div>
                         <div style="font-size: 12px; margin-top: 4px;">All suspects processed · Clean warrant docket</div>
                     </div>
@@ -568,10 +617,12 @@
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-locate-wanted" data-target-id="${row.id}">
-                                📍 LOCATE GPS
+                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+                                LOCATE GPS
                             </button>
                             <button type="button" class="mdc-btn mdc-btn--primary mdc-btn--sm btn-view-wanted-cit" data-name="${row.name}">
-                                👤 DOSSIER
+                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                DOSSIER
                             </button>
                         </div>
                     </div>

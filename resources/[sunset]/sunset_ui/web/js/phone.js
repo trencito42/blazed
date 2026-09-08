@@ -79,6 +79,12 @@ const Phone = {
         $('#phone-contact-search')?.addEventListener('input', () => {
             this.renderContacts();
         });
+
+        // 112 Emergency Dispatch Quick Call
+        $('#phone-emergency-112-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.trigger112Emergency();
+        });
     },
 
     setupKeys() {
@@ -213,6 +219,7 @@ const Phone = {
     },
 
     hide() {
+        if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
         const device = $('#phone-device');
         device?.classList.remove('is-open');
         setTimeout(() => device?.classList.add('hidden'), 400);
@@ -246,10 +253,21 @@ const Phone = {
     },
 
     close() {
+        if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+        post('phoneClose', {});
+    },
+
+    trigger112Emergency() {
+        if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+        post('phoneTrigger112', {});
         post('phoneClose', {});
     },
 
     openApp(app) {
+        if (app === 'emergency112') {
+            this.trigger112Emergency();
+            return;
+        }
         if (app === 'taxi') {
             this.showView('taxi');
             this.taxiData = this.taxiData || null;
@@ -261,6 +279,9 @@ const Phone = {
     },
 
     showView(name) {
+        if (this.screen === 'taxi' && name !== 'taxi') {
+            if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+        }
         this.screen = name;
         $$('.phone-view').forEach((v) => v.classList.toggle('is-active', v.dataset.view === name));
         const wp = $('#phone-wallpaper');
@@ -743,6 +764,8 @@ const Phone = {
 
         const d = this.taxiData;
         if (!d || !d.destinations) {
+            if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+            body.dataset.taxiView = 'empty';
             body.innerHTML = `<p class="phone-empty">${this.escapeHtml(d?.error || 'Loading cab app...')}</p>`;
             if (title) title.textContent = 'Downtown Cab';
             return;
@@ -752,9 +775,23 @@ const Phone = {
 
         const ride = d.activeRide;
         const isDriver = d.isDriver && d.onDuty;
+        const targetView = isDriver ? 'driver' : (ride ? 'ride' : 'passenger');
+
+        // Fast path: if already in passenger mode and just updating estimate or destinations, don't recreate DOM!
+        if (body.dataset.taxiView === 'passenger' && targetView === 'passenger') {
+            if (window.TaxiPhoneMap?.map) {
+                TaxiPhoneMap.update(d.playerPos, this.taxiDest);
+            }
+            if (this.taxiEstimate) this.setTaxiEstimate(this.taxiEstimate);
+            return;
+        }
+
+        body.dataset.taxiView = targetView;
+
         let html = '';
 
         if (isDriver) {
+            if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
             const stats = d.driverStats || {};
             html += `<div class="phone-taxi-card">
                 <div class="phone-taxi-card__label">Driver mode</div>
@@ -791,18 +828,40 @@ const Phone = {
                 }
             }
         } else if (ride) {
+            if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
             html += this.renderActiveRideCard(ride, false);
         } else {
             html += this.renderTaxiPassengerBooking(d);
         }
 
-        if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
         body.innerHTML = html;
         this.bindTaxiEvents(d, ride, isDriver);
-        if (!isDriver && !ride && this.taxiMode === 'map') {
+        if (!isDriver && !ride) {
             this.mountTaxiLeafletMap(d);
         }
         if (this.taxiEstimate) this.setTaxiEstimate(this.taxiEstimate);
+    },
+
+    updateTaxiPlacesList(d) {
+        const placesContainer = $('#phone-taxi-places');
+        if (!placesContainer) return;
+        const places = d?.destinations || [];
+        const q = (this.taxiSearch || '').toLowerCase().trim();
+        const filtered = places.filter((p) => !q || p.label.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q));
+
+        placesContainer.innerHTML = `
+            ${filtered.slice(0, 40).map((p) => `
+                <button type="button" class="phone-taxi-place" data-place-id="${p.id}">
+                    <span class="phone-taxi-place__name">${this.escapeHtml(p.label)}</span>
+                    <span class="phone-taxi-place__cat">${this.escapeHtml(p.category || '')}</span>
+                </button>`).join('')}
+            ${filtered.length > 40 ? `<p class="phone-taxi-hint">${filtered.length - 40} more — refine search</p>` : ''}
+            ${!filtered.length ? '<p class="phone-taxi-hint">No places found</p>' : ''}
+        `;
+
+        placesContainer.querySelectorAll('[data-place-id]').forEach((btn) => {
+            btn.addEventListener('click', () => post('taxiPickPlace', { destinationId: btn.dataset.placeId }));
+        });
     },
 
     renderActiveRideCard(ride, isDriver) {
@@ -888,9 +947,23 @@ const Phone = {
 
         $$('[data-taxi-mode]').forEach((btn) => {
             btn.addEventListener('click', () => {
-                if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
-                this.taxiMode = btn.dataset.taxiMode;
-                this.renderTaxi();
+                const newMode = btn.dataset.taxiMode;
+                if (this.taxiMode === newMode) return;
+                this.taxiMode = newMode;
+
+                $$('[data-taxi-mode]').forEach((b) => b.classList.toggle('is-active', b.dataset.taxiMode === newMode));
+                const mapPanel = $('[data-panel="map"]');
+                const listPanel = $('[data-panel="list"]');
+                if (mapPanel) mapPanel.classList.toggle('hidden', newMode !== 'map');
+                if (listPanel) listPanel.classList.toggle('hidden', newMode !== 'list');
+
+                if (newMode === 'map') {
+                    if (window.TaxiPhoneMap?.map) {
+                        TaxiPhoneMap.invalidate();
+                    } else {
+                        this.mountTaxiLeafletMap(d);
+                    }
+                }
             });
         });
 
@@ -898,12 +971,7 @@ const Phone = {
         if (search) {
             search.addEventListener('input', () => {
                 this.taxiSearch = search.value;
-                this.renderTaxi();
-                const s2 = $('#phone-taxi-search');
-                if (s2) {
-                    s2.focus();
-                    s2.setSelectionRange(s2.value.length, s2.value.length);
-                }
+                this.updateTaxiPlacesList(d);
             });
         }
 

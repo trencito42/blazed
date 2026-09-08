@@ -372,6 +372,38 @@
     gap: 10px;
 }
 
+.mdc-tab-icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, stroke 0.15s ease;
+}
+
+.mdc-nav-tab:hover .mdc-tab-icon {
+    transform: scale(1.08);
+    stroke: #38bdf8;
+}
+
+.mdc-nav-tab.is-active .mdc-tab-icon {
+    stroke: #60a5fa;
+}
+
+.theme--sheriff .mdc-nav-tab.is-active .mdc-tab-icon {
+    stroke: #facc15;
+}
+
+.theme--fib .mdc-nav-tab.is-active .mdc-tab-icon {
+    stroke: #38bdf8;
+}
+
+.mdc-btn-icon {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.2;
+    flex-shrink: 0;
+}
+
 .mdc-nav-tab:hover {
     background: rgba(255, 255, 255, 0.04);
     color: #e2e8f0;
@@ -690,18 +722,132 @@
     height: fit-content;
 }
 
-.mdc-id-card__avatar {
-    width: 80px;
-    height: 80px;
-    background: #1a2332;
+.mdc-id-card__seal-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mdc-id-card__seal-state {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.mdc-id-card__seal-dept {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+/* Photo Frame with Police Lineup Height Grid & Watermark */
+.mdc-id-card__photo-frame {
+    position: relative;
+    width: 140px;
+    height: 165px;
+    margin: 0 auto;
+    border-radius: 8px;
+    background: #0b0f17;
     border: 2px solid #334155;
-    border-radius: 50%;
-    margin: 0 auto 4px auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.mdc-id-card__height-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px 6px;
+    box-sizing: border-box;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.04) 0px,
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 1px,
+        transparent 18px
+    );
+    z-index: 1;
+}
+
+.mdc-id-card__height-grid span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.5);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    line-height: 1;
+}
+
+.mdc-id-photo-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    z-index: 2;
+    transition: opacity 0.2s ease;
+}
+
+.mdc-id-card__avatar {
+    position: relative;
+    z-index: 2;
+    width: 70px;
+    height: 70px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mdc-id-card__avatar svg {
+    width: 100%;
+    height: 100%;
+}
+
+.mdc-id-card__watermark-stamp {
+    position: absolute;
+    bottom: 8px;
+    right: -4px;
+    transform: rotate(-12deg);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: rgba(239, 68, 68, 0.55);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    padding: 1px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 3;
+    text-transform: uppercase;
+}
+
+.mdc-id-card__doc-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #38bdf8;
+    text-align: center;
+    letter-spacing: 0.08em;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin: 0 auto;
 }
 
 .mdc-id-card__name {
