@@ -987,31 +987,6 @@ RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex, speedKm
         ),
         'error', 9000
     )
-
-    if over >= 30 then
-        local driverName = exports.sunset_core:GetPlayerDisplayName(source)
-        local alertText = ('[RADAR FIX %s] %s [%s] (%s) surprins cu %d km/h (limită %d km/h, +%d km/h)!'):format(
-            radar.label, modelName or 'Vehicul', plate or 'N/A', driverName, speedKmh, limit, over
-        )
-
-        for _, id in ipairs(GetPlayers()) do
-            local officerSrc = tonumber(id)
-            if officerSrc and FactionCore.isOnDuty(officerSrc) and FactionCore.isLawEnforcementMember(officerSrc) then
-                policeChat(officerSrc, 'RADAR', alertText, 'police_alert')
-            end
-        end
-
-        if GetResourceState('sunset_dispatch') == 'started' then
-            pcall(function()
-                exports.sunset_dispatch:CreateServiceCall(
-                    source,
-                    'police',
-                    ('Radar Fix %s: %s [%s] viteză excesivă: %d km/h (+%d km/h)'):format(radar.label, modelName or 'Vehicul', plate or 'N/A', speedKmh, over),
-                    radar.coords
-                )
-            end)
-        end
-    end
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source, priority)
