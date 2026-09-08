@@ -23,7 +23,7 @@
     pointer-events: none;
 }
 
-.menu.hidden { display: none; }
+.menu.hidden { display: none !important; }
 .menu > * { pointer-events: auto; }
 
 .menu-wrap {
