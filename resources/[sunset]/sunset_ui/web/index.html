@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/panels.css?v=7">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-    <link rel="stylesheet" href="css/phone.css">
+    <link rel="stylesheet" href="css/phone.css?v=2">
     <link rel="stylesheet" href="css/fuel_pump.css">
     <link rel="stylesheet" href="css/theme.css?v=8">
     <link rel="stylesheet" href="css/fishing.css?v=4">
@@ -1637,12 +1637,6 @@
                                 </div>
                                 <span>Downtown Cab</span>
                             </button>
-                            <button type="button" class="phone-app-icon phone-app-icon--emergency" data-phone-app="emergency112">
-                                <div class="phone-app-icon__img phone-app-icon__img--emergency">
-                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
-                                </div>
-                                <span>112 SOS</span>
-                            </button>
                             <button type="button" class="phone-app-icon" data-phone-app="settings">
                                 <div class="phone-app-icon__img phone-app-icon__img--settings">
                                     <svg viewBox="0 0 24 24" fill="white"><path d="M19.4 13c0-.3 0-.7-.1-1l2-1.5-2-3.5-2.4 1c-.5-.4-1.1-.7-1.7-1l-.3-2.6H9.1l-.3 2.6c-.6.2-1.2.6-1.7 1l-2.4-1-2 3.5 2 1.5c0 .3-.1.7-.1 1s0 .7.1 1l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1l.3 2.6h5.8l.3-2.6c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
@@ -1654,27 +1648,45 @@
 
                     <!-- Messages -->
                     <div class="phone-view phone-threads" data-view="messages">
-                        <div class="ios-nav">
-                            <button type="button" class="ios-nav__back" id="phone-back-messages">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
-                                Home
-                            </button>
+                        <div class="ios-nav ios-nav--messages">
+                            <div class="ios-nav__top-row">
+                                <button type="button" class="ios-nav__back" id="phone-back-messages">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                    Home
+                                </button>
+                                <button type="button" class="phone-threads__compose-btn" id="phone-btn-new-msg" title="New Message">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
                             <h1 class="ios-large-title">Messages</h1>
+                            <div class="phone-search-bar phone-search-bar--threads">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                <input type="text" id="phone-thread-search" placeholder="Search" autocomplete="off">
+                            </div>
                         </div>
                         <div class="phone-scroll" id="phone-thread-list"></div>
                     </div>
 
                     <!-- Chat -->
                     <div class="phone-view phone-chat" data-view="chat">
-                        <div class="ios-nav ios-nav--blur">
+                        <div class="ios-nav ios-nav--chat ios-nav--blur">
                             <button type="button" class="ios-nav__back" id="phone-back-chat">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
                                 Messages
                             </button>
-                            <div class="ios-nav__center">
+                            <div class="ios-nav__center ios-nav__center--chat">
+                                <div class="phone-chat-nav-avatar" id="phone-chat-nav-avatar">?</div>
                                 <h3 id="phone-chat-title">Chat</h3>
-                                <div class="ios-nav__subtitle" id="phone-chat-subtitle"></div>
+                                <div class="ios-nav__subtitle" id="phone-chat-subtitle">iMessage</div>
                             </div>
+                            <button type="button" class="phone-chat-call-btn" id="phone-chat-call-btn" title="Call">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.053 15.053 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 3.9c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-.99-1.02z"/>
+                                </svg>
+                            </button>
                         </div>
                         <div class="phone-chat__messages" id="phone-chat-messages"></div>
                         <div class="phone-chat__compose">
@@ -1682,7 +1694,12 @@
                             <div class="phone-chat__input-wrap">
                                 <input type="text" id="phone-chat-input" placeholder="iMessage" maxlength="256" autocomplete="off">
                             </div>
-                            <button type="button" class="phone-chat__send" id="phone-chat-send">↑</button>
+                            <button type="button" class="phone-chat__send" id="phone-chat-send" title="Send">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                                    <polyline points="5 12 12 5 19 12"></polyline>
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
@@ -1699,9 +1716,9 @@
                                 </button>
                             </div>
                             <h1 class="ios-large-title">Contacts</h1>
-                            <div class="phone-search-bar">
+                            <div class="phone-search-bar phone-search-bar--contacts">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                                <input type="text" id="phone-contact-search" placeholder="Search contacts..." autocomplete="off">
+                                <input type="text" id="phone-contact-search" placeholder="Search" autocomplete="off">
                             </div>
                         </div>
 
@@ -1714,18 +1731,18 @@
                                     <button type="button" class="phone-modal__btn phone-modal__btn--done" id="phone-contact-save">Done</button>
                                 </div>
                                 <div class="phone-modal__body">
-                                    <div class="phone-modal__avatar-preview" id="phone-new-avatar-preview">?</div>
+                                    <div class="phone-modal__avatar-preview" id="phone-new-avatar-preview">+</div>
                                     <div class="phone-form-group">
                                         <div class="phone-form-row">
                                             <label for="phone-new-name">Name / Nickname</label>
-                                            <input type="text" id="phone-new-name" placeholder="Friend Name (Optional)" maxlength="48" autocomplete="off">
+                                            <input type="text" id="phone-new-name" placeholder="Contact Name" maxlength="48" autocomplete="off">
                                         </div>
                                         <div class="phone-form-row">
                                             <label for="phone-new-phone">Phone Number</label>
                                             <input type="text" id="phone-new-phone" placeholder="e.g. 555-0042 or 42" maxlength="32" autocomplete="off">
                                         </div>
                                     </div>
-                                    <p class="phone-form-hint">Tip: Enter their phone number (e.g. 555-0042) to save them to your contact book. You can chat and see when they're online!</p>
+                                    <p class="phone-form-hint">Tip: Enter their phone number to save them to your contact book. You can chat and see when they're online!</p>
                                 </div>
                             </div>
                         </div>
@@ -1736,20 +1753,12 @@
                                 <div class="phone-my-card__avatar" id="phone-my-card-avatar">?</div>
                                 <div class="phone-my-card__info">
                                     <div class="phone-my-card__title" id="phone-my-card-name">My Card</div>
-                                    <div class="phone-my-card__number" id="phone-my-card-phone">555-0000</div>
+                                    <div class="phone-my-card__sub">
+                                        <span class="phone-my-card__label">My Card</span>
+                                        <span class="phone-my-card__number" id="phone-my-card-phone">555-0000</span>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <!-- Pinned 112 Emergency Card -->
-                            <div class="phone-emergency-card" id="phone-emergency-112-btn" title="Tap to call 112 Emergency Dispatch">
-                                <div class="phone-emergency-card__icon">
-                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
-                                </div>
-                                <div class="phone-emergency-card__info">
-                                    <div class="phone-emergency-card__title">112 Emergency Services</div>
-                                    <div class="phone-emergency-card__subtitle">Police · Ambulance · Fire Department</div>
-                                </div>
-                                <button type="button" class="phone-emergency-card__call-btn">SOS 112</button>
+                                <span class="phone-my-card__chevron">›</span>
                             </div>
 
                             <div id="phone-contact-list"></div>

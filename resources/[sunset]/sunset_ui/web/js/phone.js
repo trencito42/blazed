@@ -50,6 +50,27 @@ const Phone = {
         $('#phone-chat-input')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.sendMessage();
         });
+        $('#phone-chat-input')?.addEventListener('input', (e) => {
+            const val = (e.target.value || '').trim();
+            const sendBtn = $('#phone-chat-send');
+            if (sendBtn) sendBtn.classList.toggle('has-text', val.length > 0);
+        });
+        $('#phone-chat-call-btn')?.addEventListener('click', () => {
+            const is112 = this.chatTarget?.isEmergency || this.chatTarget?.charId === -112 || String(this.chatTarget?.charId) === '-112' || this.chatTarget?.phone === '112';
+            if (is112) {
+                this.trigger112Emergency();
+            } else if (this.chatTarget?.phone) {
+                notify(`Calling ${this.chatTarget.name || this.chatTarget.phone}...`, 'info');
+            }
+        });
+
+        // Messages UI event handlers
+        $('#phone-btn-new-msg')?.addEventListener('click', () => {
+            this.showView('contacts');
+        });
+        $('#phone-thread-search')?.addEventListener('input', () => {
+            this.renderThreads();
+        });
 
         // Contacts UI event handlers
         $('#phone-btn-add-contact')?.addEventListener('click', () => {
@@ -79,11 +100,8 @@ const Phone = {
         $('#phone-contact-search')?.addEventListener('input', () => {
             this.renderContacts();
         });
-
-        // 112 Emergency Dispatch Quick Call
-        $('#phone-emergency-112-btn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.trigger112Emergency();
+        $('#phone-my-card')?.addEventListener('click', () => {
+            notify(`Your number: ${this.data?.myPhoneNumber || '555-0000'}`, 'info');
         });
     },
 
@@ -294,6 +312,24 @@ const Phone = {
         // wallpaper + dock already in HTML
     },
 
+    getIosAvatarGradient(name) {
+        const palettes = [
+            ['#0a84ff', '#007aff'],
+            ['#5e5ce6', '#4845d2'],
+            ['#bf5af2', '#9933cc'],
+            ['#ff375f', '#d70035'],
+            ['#ff9f0a', '#ea580c'],
+            ['#30d158', '#16a34a'],
+            ['#64d2ff', '#0284c7'],
+            ['#8e8e93', '#636366'],
+        ];
+        let hash = 0;
+        const str = String(name || '');
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        const idx = Math.abs(hash) % palettes.length;
+        return `linear-gradient(135deg, ${palettes[idx][0]} 0%, ${palettes[idx][1]} 100%)`;
+    },
+
     buildThreads() {
         const d = this.data || {};
         const myId = d.myCharacterId;
@@ -302,14 +338,18 @@ const Phone = {
         (d.messages || []).forEach((m) => {
             const isMine = m.sender_character_id === myId;
             const otherCharId = isMine ? m.receiver_character_id : m.sender_character_id;
-            const otherName = isMine ? (m.receiver_name || 'Player') : (m.sender_name || 'Player');
+            const is112 = otherCharId === -112 || String(otherCharId) === '-112';
+            let otherName = isMine ? (m.receiver_name || 'Player') : (m.sender_name || 'Player');
+            if (is112) otherName = '112 Urgențe';
+
             const key = String(otherCharId);
             const existing = threads.get(key) || {
                 charId: otherCharId,
                 name: otherName,
+                isEmergency: is112,
                 preview: '',
                 messages: [],
-                online: false,
+                online: is112,
             };
             if (!existing.preview) existing.preview = m.message;
             existing.messages.push(m);
@@ -323,6 +363,7 @@ const Phone = {
                 threads.set(key, {
                     charId: c.characterId,
                     name: c.name,
+                    isEmergency: false,
                     preview: 'No messages yet',
                     messages: [],
                     online: true,
@@ -350,25 +391,48 @@ const Phone = {
         const list = $('#phone-thread-list');
         if (!list) return;
         list.innerHTML = '';
-        const threads = this.buildThreads();
+        let threads = this.buildThreads();
+
+        const query = ($('#phone-thread-search')?.value || '').trim().toLowerCase();
+        if (query) {
+            threads = threads.filter((t) =>
+                (t.name || '').toLowerCase().includes(query) ||
+                (t.preview || '').toLowerCase().includes(query)
+            );
+        }
 
         if (!threads.length) {
-            list.innerHTML = '<p class="phone-empty">No conversations yet.<br>Open Contacts to message someone online.</p>';
+            list.innerHTML = `
+                <div class="phone-empty-state">
+                    <div class="phone-empty-state__icon">💬</div>
+                    <div class="phone-empty-state__title">No Messages</div>
+                    <p class="phone-empty-state__desc">
+                        ${query ? 'No conversations matched your search.' : 'Tap + in Contacts or message someone online to start a chat.'}
+                    </p>
+                </div>
+            `;
             return;
         }
 
         threads.forEach((t) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'phone-thread';
+            btn.className = `phone-thread ${t.isEmergency ? 'phone-thread--emergency' : ''}`;
             const initial = (t.name || '?').charAt(0).toUpperCase();
             const lastMsg = t.messages[0];
             const timeStr = lastMsg ? this.formatMsgTime(lastMsg.created_at) : '';
+            const avatarBg = t.isEmergency ? 'linear-gradient(135deg, #ff3b30 0%, #d70015 100%)' : this.getIosAvatarGradient(t.name);
+
             btn.innerHTML = `
-                <div class="phone-thread__avatar">${this.escapeHtml(initial)}</div>
+                <div class="phone-thread__avatar ${t.isEmergency ? 'phone-thread__avatar--emergency' : ''}" style="background: ${avatarBg};">
+                    ${t.isEmergency ? '🚨' : this.escapeHtml(initial)}
+                </div>
                 <div class="phone-thread__body">
                     <div class="phone-thread__row">
-                        <span class="phone-thread__name">${this.escapeHtml(t.name)}</span>
+                        <span class="phone-thread__name">
+                            ${this.escapeHtml(t.name)}
+                            ${t.isEmergency ? '<span class="phone-contact-badge phone-contact-badge--emergency">SOS</span>' : ''}
+                        </span>
                         ${timeStr ? `<span class="phone-thread__time">${this.escapeHtml(timeStr)}</span>` : ''}
                     </div>
                     <div class="phone-thread__preview">${this.escapeHtml(t.preview || '')}</div>
@@ -377,7 +441,8 @@ const Phone = {
             btn.addEventListener('click', () => this.openChat({
                 name: t.name,
                 charId: t.charId,
-                online: this.isContactOnline(t.charId),
+                isEmergency: t.isEmergency,
+                online: t.isEmergency ? true : this.isContactOnline(t.charId),
             }));
             list.appendChild(btn);
         });
@@ -399,6 +464,21 @@ const Phone = {
         const rawContacts = this.data?.contacts || [];
         const query = ($('#phone-contact-search')?.value || '').trim().toLowerCase();
 
+        // 112 Emergency contact matches search or shows by default
+        const emergencyMatches = !query ||
+            '112'.includes(query) ||
+            'urgente'.includes(query) ||
+            'urgențe'.includes(query) ||
+            'politie'.includes(query) ||
+            'poliție'.includes(query) ||
+            'medic'.includes(query) ||
+            'medici'.includes(query) ||
+            'salvare'.includes(query) ||
+            'sos'.includes(query) ||
+            'emergency'.includes(query) ||
+            'pompieri'.includes(query) ||
+            'dispecerat'.includes(query);
+
         let contacts = rawContacts.slice();
         if (query) {
             contacts = contacts.filter((c) =>
@@ -409,27 +489,81 @@ const Phone = {
 
         contacts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-        if (!contacts.length) {
+        if (!emergencyMatches && !contacts.length) {
             list.innerHTML = `
-                <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.45); font-size: 14px; line-height: 1.6;">
-                    <div style="font-size: 32px; margin-bottom: 8px;">👥</div>
-                    ${query
-                        ? 'No contacts match your search.'
-                        : 'No friends in your contacts yet.<br>Tap <strong style="color: #0a84ff;">+</strong> above to add friends by phone number.'}
+                <div class="phone-empty-state">
+                    <div class="phone-empty-state__icon">👥</div>
+                    <div class="phone-empty-state__title">No Results</div>
+                    <p class="phone-empty-state__desc">No contacts match "${this.escapeHtml(query)}"</p>
                 </div>
             `;
             return;
         }
 
+        // Render 112 Emergency Services as a normal contact at the top of the contacts list
+        if (emergencyMatches) {
+            const emRow = document.createElement('div');
+            emRow.className = 'phone-contact-row phone-contact-row--emergency';
+            emRow.innerHTML = `
+                <button type="button" class="phone-contact-row__main" title="Apel 112 Urgențe">
+                    <div class="phone-contact-row__avatar phone-contact-row__avatar--emergency">
+                        <svg viewBox="0 0 24 24" fill="white" class="phone-contact-row__sos-icon"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+                        <span class="phone-contact-row__status-dot is-online"></span>
+                    </div>
+                    <div class="phone-contact-row__details">
+                        <div class="phone-contact-row__name">
+                            112 Urgențe
+                            <span class="phone-contact-badge phone-contact-badge--emergency">SOS</span>
+                        </div>
+                        <div class="phone-contact-row__meta">
+                            <span class="phone-contact-num">112</span>
+                            <span>·</span>
+                            <span class="phone-contact-desc">Poliție · Salvare · Pompieri</span>
+                        </div>
+                    </div>
+                </button>
+                <div class="phone-contact-row__actions">
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--call" title="Apelează 112 Dispecerat">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.053 15.053 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 3.9c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-.99-1.02z"/></svg>
+                    </button>
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--chat" title="Trimite iMessage la 112">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </button>
+                </div>
+            `;
+
+            emRow.querySelector('.phone-contact-row__main').addEventListener('click', () => {
+                this.trigger112Emergency();
+            });
+            emRow.querySelector('.phone-contact-act-btn--call').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.trigger112Emergency();
+            });
+            emRow.querySelector('.phone-contact-act-btn--chat').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openChat({
+                    name: '112 Urgențe',
+                    charId: -112,
+                    phone: '112',
+                    isEmergency: true,
+                    online: true,
+                });
+            });
+
+            list.appendChild(emRow);
+        }
+
+        // Render regular contacts
         contacts.forEach((c) => {
             const row = document.createElement('div');
             row.className = 'phone-contact-row';
             const initial = (c.name || '?').charAt(0).toUpperCase();
             const isOnline = c.online === true;
+            const avatarBg = this.getIosAvatarGradient(c.name || 'P');
 
             row.innerHTML = `
                 <button type="button" class="phone-contact-row__main">
-                    <div class="phone-contact-row__avatar ${isOnline ? 'is-online' : ''}">
+                    <div class="phone-contact-row__avatar ${isOnline ? 'is-online' : ''}" style="background: ${avatarBg};">
                         ${this.escapeHtml(initial)}
                         <span class="phone-contact-row__status-dot ${isOnline ? 'is-online' : ''}"></span>
                     </div>
@@ -445,8 +579,11 @@ const Phone = {
                     </div>
                 </button>
                 <div class="phone-contact-row__actions">
-                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--chat" title="Send SMS">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--call" title="Call">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.053 15.053 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 3.9c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-.99-1.02z"/></svg>
+                    </button>
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--chat" title="Send iMessage">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                     </button>
                     <button type="button" class="phone-contact-act-btn phone-contact-act-btn--del" title="Delete Contact">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
@@ -461,6 +598,11 @@ const Phone = {
                     phone: c.phone,
                     online: isOnline,
                 });
+            });
+
+            row.querySelector('.phone-contact-act-btn--call').addEventListener('click', (e) => {
+                e.stopPropagation();
+                notify(`Calling ${c.name} (${c.phone})...`, 'info');
             });
 
             row.querySelector('.phone-contact-act-btn--chat').addEventListener('click', (e) => {
@@ -503,15 +645,41 @@ const Phone = {
     openChat(target) {
         this.chatTarget = target;
         const online = target.online !== undefined ? target.online : this.isContactOnline(target.charId);
-        $('#phone-chat-title').textContent = target.name || target.phone || 'Chat';
+        const is112 = target.isEmergency || target.charId === -112 || String(target.charId) === '-112' || target.phone === '112';
+
+        const titleEl = $('#phone-chat-title');
+        if (titleEl) titleEl.textContent = target.name || target.phone || 'Chat';
+
         const sub = $('#phone-chat-subtitle');
         if (sub) {
-            if (target.phone) {
-                sub.textContent = `${target.phone} · ${online ? 'Online' : 'Offline'}`;
+            if (is112) {
+                sub.textContent = 'iMessage · Dispecerat 112';
+            } else if (target.phone) {
+                sub.textContent = `${target.phone} · ${online ? 'iMessage' : 'Offline'}`;
             } else {
                 sub.textContent = online ? 'iMessage' : 'Offline — message queued';
             }
         }
+
+        const navAvatar = $('#phone-chat-nav-avatar');
+        if (navAvatar) {
+            if (is112) {
+                navAvatar.textContent = '🚨';
+                navAvatar.style.background = 'linear-gradient(135deg, #ff3b30 0%, #d70015 100%)';
+            } else {
+                navAvatar.textContent = (target.name || '?').charAt(0).toUpperCase();
+                navAvatar.style.background = this.getIosAvatarGradient(target.name);
+            }
+        }
+
+        const input = $('#phone-chat-input');
+        if (input) {
+            input.placeholder = is112 ? 'Mesaj către 112...' : 'iMessage';
+            input.value = '';
+        }
+        const sendBtn = $('#phone-chat-send');
+        if (sendBtn) sendBtn.classList.remove('has-text');
+
         this.renderChat(target);
         this.showView('chat');
     },
@@ -521,16 +689,33 @@ const Phone = {
         if (!wrap || !this.data) return;
         wrap.innerHTML = '';
         const myId = this.data.myCharacterId;
+        const is112 = target.isEmergency || target.charId === -112 || String(target.charId) === '-112' || target.phone === '112';
 
         const msgs = (this.data.messages || []).filter((m) => {
+            if (is112) {
+                return m.sender_character_id === -112 || m.receiver_character_id === -112;
+            }
             if (target.charId) {
                 return m.sender_character_id === target.charId || m.receiver_character_id === target.charId;
             }
             return false;
         }).reverse();
 
+        // Authentic iOS conversation header banner
+        const infoBanner = document.createElement('div');
+        infoBanner.className = 'phone-chat__info-banner';
+        infoBanner.innerHTML = is112
+            ? '<span>🚨 Dispecerat Național 112 · Serviciu Oficial</span>'
+            : '<span>iMessage cu ' + this.escapeHtml(target.name || 'Contact') + '</span>';
+        wrap.appendChild(infoBanner);
+
         if (!msgs.length) {
-            wrap.innerHTML = '<p class="phone-empty">Say hi 👋</p>';
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'phone-chat__empty';
+            emptyEl.innerHTML = is112
+                ? '<div class="phone-chat__empty-icon">🚨</div><p>Canal direct SMS cu Dispeceratul 112.<br>Scrieți locația și urgența sau folosiți butonul de apel.</p>'
+                : '<div class="phone-chat__empty-icon">👋</div><p>Say hi to ' + this.escapeHtml(target.name || 'them') + '</p>';
+            wrap.appendChild(emptyEl);
             return;
         }
 
@@ -543,7 +728,7 @@ const Phone = {
             bubble.textContent = m.message;
             const timeEl = document.createElement('span');
             timeEl.className = 'phone-bubble__time';
-            timeEl.textContent = this.formatMsgTime(m.created_at);
+            timeEl.textContent = (mine ? 'Delivered · ' : '') + this.formatMsgTime(m.created_at);
             row.appendChild(bubble);
             row.appendChild(timeEl);
             wrap.appendChild(row);
@@ -554,16 +739,27 @@ const Phone = {
     sendMessage() {
         const input = $('#phone-chat-input');
         const message = (input?.value || '').trim();
-        if (!message || (!this.chatTarget?.charId && !this.chatTarget?.phone)) {
-            if (!this.chatTarget?.charId && !this.chatTarget?.phone) notify('Invalid contact', 'error');
+        if (!message) return;
+
+        const is112 = this.chatTarget?.isEmergency || this.chatTarget?.charId === -112 || String(this.chatTarget?.charId) === '-112' || this.chatTarget?.phone === '112';
+
+        if (!is112 && !this.chatTarget?.charId && !this.chatTarget?.phone) {
+            notify('Invalid contact', 'error');
             return;
         }
+
         post('phoneSend', {
-            targetCharacterId: this.chatTarget.charId || 0,
-            phone: this.chatTarget.phone || null,
+            targetCharacterId: is112 ? -112 : (this.chatTarget.charId || 0),
+            phone: is112 ? '112' : (this.chatTarget.phone || null),
             message,
         });
-        if (input) input.value = '';
+
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        const sendBtn = $('#phone-chat-send');
+        if (sendBtn) sendBtn.classList.remove('has-text');
     },
 
     renderBank() {

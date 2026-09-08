@@ -281,6 +281,56 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
 
     message = tostring(message or ''):sub(1, 256)
     if not targetCharacterId or message == '' then return nil, 'Invalid recipient or message' end
+
+    -- Handle 112 Emergency dispatch messaging
+    if targetCharacterId == -112 or tostring(targetPhoneNumber) == '112' then
+        pcall(function()
+            MySQL.insert.await(
+                'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
+                { tonumber(char.id), -112, message }
+            )
+            local reply = 'Dispecerat 112: Mesajul tau a fost receptionat. Echipajele au fost alertate.'
+            MySQL.insert.await(
+                'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
+                { -112, tonumber(char.id), reply }
+            )
+        end)
+
+        local ped = GetPlayerPed(source)
+        local pCoords = (ped and ped ~= 0) and GetEntityCoords(ped) or vector3(0, 0, 0)
+        local streetHash, crossingHash = GetStreetNameAtCoord(pCoords.x, pCoords.y, pCoords.z)
+        local street = GetStreetNameFromHashKey(streetHash)
+        if crossingHash ~= 0 then
+            street = street .. ' / ' .. GetStreetNameFromHashKey(crossingHash)
+        end
+        local zone = GetNameOfZone(pCoords.x, pCoords.y, pCoords.z)
+        local area = GetLabelText(zone)
+        if area == 'NULL' or area == '' then area = zone end
+
+        pcall(function()
+            if exports.sunset_dispatch and exports.sunset_dispatch.CreateCall then
+                exports.sunset_dispatch:CreateCall({
+                    source = source,
+                    type = 'police',
+                    coords = pCoords,
+                    description = '112 SMS Apel: ' .. message,
+                    metadata = {
+                        emergency = '112',
+                        category = 'emergency',
+                        street = street,
+                        area = area,
+                        callerPhone = char.phone_number or '112-SMS',
+                        callerName = (char.firstname or '') .. ' ' .. (char.lastname or ''),
+                        timestamp = os.time(),
+                    },
+                })
+            end
+        end)
+
+        TriggerClientEvent('sunset:client:phoneMessage', source)
+        return true
+    end
+
     if targetCharacterId == tonumber(char.id) then return nil, 'Cannot message yourself' end
 
     local exists = MySQL.scalar.await('SELECT id FROM characters WHERE id = ?', { targetCharacterId })
