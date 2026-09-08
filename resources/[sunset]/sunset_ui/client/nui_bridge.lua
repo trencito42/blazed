@@ -39,6 +39,18 @@ forward('mdcToggleBolo')
 forward('mdcSetUnitStatus')
 forward('mdcSetCallStatus')
 forward('mdcSetWaypoint')
+forward('mdcRequestBackup')
+forward('mdcCancelBackup')
+forward('mdcSetWanted')
+forward('mdcClearWanted')
+forward('mdcSummon')
+forward('mdcFindWanted')
+forward('mdcUnjail')
+forward('mdcIssueCitation')
+forward('mdcStartRadar')
+forward('mdcStopRadar')
+forward('mdcSetUnitWaypoint')
+forward('mdcBookingGps')
 forward('submit112Call')
 forward('close112Modal')
 forward('ticketClose')
@@ -357,6 +369,54 @@ end)
 
 AddEventHandler('sunset:nui:mdcSetWaypoint', function(data)
     TriggerEvent('sunset:ui:mdcSetWaypoint', data)
+end)
+
+AddEventHandler('sunset:nui:mdcRequestBackup', function(data)
+    TriggerEvent('sunset:ui:mdcRequestBackup', data)
+end)
+
+AddEventHandler('sunset:nui:mdcCancelBackup', function(data)
+    TriggerEvent('sunset:ui:mdcCancelBackup', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSetWanted', function(data)
+    TriggerEvent('sunset:ui:mdcSetWanted', data)
+end)
+
+AddEventHandler('sunset:nui:mdcClearWanted', function(data)
+    TriggerEvent('sunset:ui:mdcClearWanted', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSummon', function(data)
+    TriggerEvent('sunset:ui:mdcSummon', data)
+end)
+
+AddEventHandler('sunset:nui:mdcFindWanted', function(data)
+    TriggerEvent('sunset:ui:mdcFindWanted', data)
+end)
+
+AddEventHandler('sunset:nui:mdcUnjail', function(data)
+    TriggerEvent('sunset:ui:mdcUnjail', data)
+end)
+
+AddEventHandler('sunset:nui:mdcIssueCitation', function(data)
+    TriggerEvent('sunset:ui:mdcIssueCitation', data)
+end)
+
+AddEventHandler('sunset:nui:mdcStartRadar', function(data)
+    TriggerEvent('sunset:ui:mdcStartRadar', data)
+end)
+
+AddEventHandler('sunset:nui:mdcStopRadar', function(data)
+    TriggerEvent('sunset:ui:mdcStopRadar', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSetUnitWaypoint', function(data)
+    TriggerEvent('sunset:ui:mdcSetUnitWaypoint', data)
+end)
+
+AddEventHandler('sunset:nui:mdcBookingGps', function(data)
+    TriggerEvent('sunset:ui:mdcBookingGps', data)
 end)
 
 AddEventHandler('sunset:nui:phoneTrigger112', function()

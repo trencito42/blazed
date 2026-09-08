@@ -935,7 +935,7 @@ exports.sunset_core:RegisterCallback('sunset:policeFixedRadars', function(source
     return list
 end)
 
-exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source)
+exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source, priority)
     if not FactionCore.hasPerm(source, 'backup') then
         return nil, FactionCore.accessError(source, 'backup', 'request police backup', 'law_enforcement')
     end
@@ -947,15 +947,29 @@ exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source)
     local factionId = char and FactionCore.getFactionOf(char)
     local pos = FactionCore.playerCoords(source)
     local name = exports.sunset_core:GetPlayerDisplayName(source)
+    priority = tostring(priority or 'code2'):lower()
+    local isPanic = priority == 'panic' or priority == '10-99'
+    local isCode3 = priority == 'code3' or isPanic
+
+    local alertLabel = isPanic and ('🚨 10-99 OFFICER DISTRESS (PANIC) — %s (#%d)'):format(name, source)
+        or (isCode3 and ('CODE 3 EMERGENCY BACKUP — %s (#%d)'):format(name, source)
+        or ('BACKUP (Code 2) requested by %s (#%d)'):format(name, source))
 
     local call, err = exports.sunset_dispatch:CreateServiceCall(
         source,
         'police_backup',
         pos,
-        { officerSource = source, officerName = name, factionId = factionId },
-        ('BACKUP requested by %s (#%d)'):format(name, source)
+        { officerSource = source, officerName = name, factionId = factionId, priority = priority, isPanic = isPanic },
+        alertLabel
     )
     if not call then return nil, err end
+
+    if isPanic then
+        broadcastToPolice('🚨 PANIC ALARM', ('OFFICER %s (#%d) ACTIVATED 10-99 PANIC BUTTON! ALL UNITS RESPOND CODE 3!'):format(name, source))
+    else
+        broadcastToPolice('BACKUP', ('%s (#%d) requested %s backup.'):format(name, source, isCode3 and 'CODE 3' or 'Code 2'))
+    end
+
     return call.id
 end)
 
@@ -972,6 +986,8 @@ exports.sunset_core:RegisterCallback('sunset:policeCancelBackup', function(sourc
 
     local ok, err = exports.sunset_dispatch:CancelCall(source, 'police_backup', call.id, 'Backup cancelled by officer')
     if not ok then return nil, err end
+    broadcastToPolice('BACKUP CANCELLED', ('Officer %s (#%d) cancelled their backup request.'):format(
+        exports.sunset_core:GetPlayerDisplayName(source), source))
     return true
 end)
 
@@ -1115,11 +1131,6 @@ local function findOnlineSourceByCharacterId(characterId)
     return nil
 end
 
-AddEventHandler('playerDropped', function()
-    local src = source
-    UnitStatuses[src] = nil
-end)
-
 exports.sunset_core:RegisterCallback('sunset:policeMdcData', function(source)
     if not FactionCore.hasPerm(source, 'mdc') then
         return nil, FactionCore.accessError(source, 'mdc', 'access the MDT', 'law_enforcement')
@@ -1175,6 +1186,8 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcData', function(source)
                     createdAt = c.createdAt or os.time(),
                     responderName = c.responderName,
                     isResponder = char and char.id == c.responderCharacterId,
+                    isPanic = meta.isPanic == true,
+                    priority = meta.priority or (c.callType == 'police_backup' and 'code3' or 'normal'),
                 }
             end
         end
@@ -1193,6 +1206,7 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcData', function(source)
             local _, uGrade = FactionCore.getFactionOf(uChar)
             local uGradeInfo = uFactionId and Sunset.GetFactionGrade and Sunset.GetFactionGrade(uFactionId, uGrade)
             local uShort = uFactionId == 'sheriff' and 'SASD' or (uFactionId == 'fib' and 'FIB' or 'LSPD')
+            local uPos = FactionCore.playerCoords(src)
             units[#units + 1] = {
                 id = src,
                 name = exports.sunset_core:GetPlayerDisplayName(src),
@@ -1201,6 +1215,7 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcData', function(source)
                 rank = (uGradeInfo and uGradeInfo.label) or 'Officer',
                 status = UnitStatuses[src] or '10-8',
                 isMe = src == source,
+                coords = uPos and { x = math.floor(uPos.x * 10) / 10, y = math.floor(uPos.y * 10) / 10, z = math.floor(uPos.z * 10) / 10 } or nil,
             }
         end
     end
@@ -1212,12 +1227,45 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcData', function(source)
     end
     table.sort(activeBolos, function(a, b) return (a.createdAt or 0) > (b.createdAt or 0) end)
 
+    -- Penal code reasons formatted
+    local penalReasons = {}
+    for code, row in pairs(Sunset.Police and Sunset.Police.reasons or {}) do
+        penalReasons[#penalReasons + 1] = {
+            code = code,
+            label = row.label,
+            stars = row.stars,
+            surrenderable = row.surrenderable ~= false,
+            jailMinutes = math.ceil(jailSecondsFor(row.stars, row.surrenderable ~= false, false) / 60),
+        }
+    end
+    table.sort(penalReasons, function(a, b) return a.stars < b.stars end)
+
+    -- Active backup status
+    local hasActiveBackup = false
+    local activeBackupId = nil
+    if GetResourceState('sunset_dispatch') == 'started' then
+        local bCall = exports.sunset_dispatch:GetPlayerActiveCall(source, 'police_backup')
+        if bCall then
+            hasActiveBackup = true
+            activeBackupId = bCall.id
+        end
+    end
+
+    -- Radar session status
+    local radarSession = RadarSessions[source]
+
     return {
         officer = officerInfo,
         calls = activeCalls,
         wanted = wanted,
         units = units,
         bolos = activeBolos,
+        reasons = penalReasons,
+        violations = (Sunset.Police and Sunset.Police.violations) or {},
+        hasActiveBackup = hasActiveBackup,
+        activeBackupId = activeBackupId,
+        radarActive = radarSession ~= nil,
+        radarLimit = radarSession and radarSession.limitKmh or 90,
     }
 end)
 
@@ -1570,8 +1618,8 @@ exports.sunset_core:RegisterCallback('sunset:policeIssueTicket', function(source
 
     local officerPos = FactionCore.playerCoords(source)
     local targetPos = FactionCore.playerCoords(targetId)
-    if FactionCore.distBetween(officerPos, targetPos) > 8.0 then
-        return nil, ('Move closer to player #%d: citations require you to be within 8m.'):format(targetId)
+    if FactionCore.distBetween(officerPos, targetPos) > 30.0 then
+        return nil, ('Move closer to player #%d: citations require you to be within 30m.'):format(targetId)
     end
 
     local officer = FactionCore.getChar(source)

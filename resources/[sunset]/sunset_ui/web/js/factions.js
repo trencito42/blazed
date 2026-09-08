@@ -212,8 +212,7 @@ const FactionPanels = {
                 warn.textContent = 'FW';
                 warn.title = 'Faction warning (3/3 max)';
                 warn.addEventListener('click', () => {
-                    const reason = window.prompt('Faction warning reason:', 'No reason given');
-                    if (reason === null) return;
+                    const reason = 'Faction disciplinary warning';
                     this.postAction('warn', { characterId: member.characterId, reason });
                 });
                 actions.append(warn);

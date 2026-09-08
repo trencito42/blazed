@@ -1,6 +1,6 @@
 /**
  * Police Toughbook MDT (Mobile Data Terminal) & 112 Automated Dispatcher
- * Modern, rugged, authentic law enforcement computer system.
+ * Modern, rugged, authentic law enforcement computer system with full interactive actions.
  */
 
 (function () {
@@ -22,9 +22,19 @@
         wanted: [],
         units: [],
         bolos: [],
+        reasons: [],
+        violations: [],
+        hasActiveBackup: false,
+        activeBackupId: null,
+        radarActive: false,
+        radarLimit: 90,
         clockInterval: null,
         current112Data: null,
         selected112Category: 'shots',
+        currentCitizen: null,
+        currentBoloTarget: null,
+        selectedChargeCode: null,
+        selectedViolationCode: null,
 
         init() {
             // Close button
@@ -64,9 +74,179 @@
                 }
             });
 
+            // Header: 10-99 Panic Button
+            $('#mdc-header-panic')?.addEventListener('click', () => {
+                post('mdcRequestBackup', { priority: 'panic' });
+            });
+
+            // Header: Backup Dropdown Toggle
+            $('#mdc-header-backup')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                $('#mdc-backup-menu')?.classList.toggle('hidden');
+            });
+
+            // Close backup dropdown on click outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.mdc-backup-dropdown-wrap')) {
+                    $('#mdc-backup-menu')?.classList.add('hidden');
+                }
+            });
+
+            // Header: Backup Options (Code 2, Code 3, Panic)
+            $$('.mdc-backup-opt:not(#mdc-backup-cancel-btn)').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const priority = btn.dataset.priority || 'code2';
+                    post('mdcRequestBackup', { priority });
+                    $('#mdc-backup-menu')?.classList.add('hidden');
+                });
+            });
+
+            // Header: Cancel Backup Option
+            $('#mdc-backup-cancel-btn')?.addEventListener('click', () => {
+                post('mdcCancelBackup');
+                $('#mdc-backup-menu')?.classList.add('hidden');
+            });
+
+            // Citizen Actions Toolbar
+            $('#mdc-act-wanted')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    this.openWantedModal(this.currentCitizen.serverId || this.currentCitizen.id, this.currentCitizen.name);
+                }
+            });
+
+            $('#mdc-act-ticket')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    this.openTicketModal(this.currentCitizen.serverId || this.currentCitizen.id, this.currentCitizen.name);
+                }
+            });
+
+            $('#mdc-act-so')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    const targetId = this.currentCitizen.serverId || this.currentCitizen.id;
+                    post('mdcSummon', { targetId });
+                }
+            });
+
+            $('#mdc-act-find')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    const targetId = this.currentCitizen.serverId || this.currentCitizen.id;
+                    post('mdcFindWanted', { targetId });
+                }
+            });
+
+            $('#mdc-act-clear')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    const targetId = this.currentCitizen.serverId || this.currentCitizen.id;
+                    post('mdcClearWanted', { targetId });
+                }
+            });
+
+            $('#mdc-act-unjail')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    const targetId = this.currentCitizen.serverId || this.currentCitizen.id;
+                    post('mdcUnjail', { targetId });
+                }
+            });
+
+            $('#mdc-act-bolo')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    if (this.currentCitizen.bolo) {
+                        post('mdcToggleBolo', { type: 'citizen', key: this.currentCitizen.name });
+                    } else {
+                        this.openBoloModal('citizen', this.currentCitizen.name, 'Suspect wanted in connection with felony investigation');
+                    }
+                }
+            });
+
+            // Speed Radar Controls
+            $$('.mdc-preset-chip').forEach((chip) => {
+                chip.addEventListener('click', () => {
+                    $$('.mdc-preset-chip').forEach((c) => c.classList.remove('is-active'));
+                    chip.classList.add('is-active');
+                    const limit = Number(chip.dataset.limit) || 90;
+                    const input = $('#mdc-radar-custom-input');
+                    if (input) input.value = limit;
+                    const display = $('#mdc-radar-limit-val');
+                    if (display) display.innerHTML = `${limit} <small>KM/H</small>`;
+                });
+            });
+
+            $('#mdc-btn-radar-start')?.addEventListener('click', () => {
+                const limit = Number($('#mdc-radar-custom-input')?.value) || 90;
+                post('mdcStartRadar', { limitKmh: limit });
+            });
+
+            $('#mdc-btn-radar-stop')?.addEventListener('click', () => {
+                post('mdcStopRadar');
+            });
+
+            $$('.btn-fixed-radar-gps').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const x = Number(btn.dataset.x);
+                    const y = Number(btn.dataset.y);
+                    if (x && y) post('mdcSetWaypoint', { x, y });
+                });
+            });
+
+            // Dialog Modals Close buttons
+            $$('.mdc-dialog-close, [data-close]').forEach((btn) => {
+                btn.addEventListener('click', () => this.closeDialogs());
+            });
+
+            $('#mdc-dialog-overlay')?.addEventListener('click', (e) => {
+                if (e.target === $('#mdc-dialog-overlay')) this.closeDialogs();
+            });
+
+            // BOLO Modal Preset Chips
+            $$('#mdc-bolo-chips .mdc-chip').forEach((chip) => {
+                chip.addEventListener('click', () => {
+                    $$('#mdc-bolo-chips .mdc-chip').forEach((c) => c.classList.remove('is-active'));
+                    chip.classList.add('is-active');
+                    const reason = chip.dataset.reason;
+                    const input = $('#mdc-bolo-custom-reason');
+                    if (input) input.value = reason;
+                });
+            });
+
+            // BOLO Modal Confirm
+            $('#mdc-bolo-confirm')?.addEventListener('click', () => {
+                if (!this.currentBoloTarget) return;
+                const reason = $('#mdc-bolo-custom-reason')?.value?.trim() || 'Active law enforcement BOLO broadcast';
+                post('mdcToggleBolo', {
+                    type: this.currentBoloTarget.type,
+                    key: this.currentBoloTarget.key,
+                    reason: reason,
+                });
+                this.closeDialogs();
+            });
+
+            // Wanted Modal Confirm
+            $('#mdc-wanted-confirm')?.addEventListener('click', () => {
+                if (!this.selectedChargeCode || !this.targetModalPlayerId) return;
+                post('mdcSetWanted', {
+                    targetId: this.targetModalPlayerId,
+                    reasonCode: this.selectedChargeCode,
+                });
+                this.closeDialogs();
+            });
+
+            // Ticket Modal Confirm
+            $('#mdc-ticket-confirm')?.addEventListener('click', () => {
+                if (!this.selectedViolationCode || !this.targetModalPlayerId) return;
+                const viol = this.violations.find((v) => v.code === this.selectedViolationCode);
+                if (!viol) return;
+                post('mdcIssueCitation', {
+                    targetId: this.targetModalPlayerId,
+                    amount: viol.amount,
+                    reason: viol.label,
+                    reasonCode: viol.code,
+                });
+                this.closeDialogs();
+            });
+
+            // 112 Dispatch Modal
             $('#dispatch-112-cancel')?.addEventListener('click', () => this.close112());
             $('#dispatch-112-submit')?.addEventListener('click', () => this.submit112());
-
             $('#dispatch-112-details')?.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -75,9 +255,7 @@
             });
 
             $('#dispatch-112-modal')?.addEventListener('click', (e) => {
-                if (e.target === $('#dispatch-112-modal')) {
-                    this.close112();
-                }
+                if (e.target === $('#dispatch-112-modal')) this.close112();
             });
 
             $$('.dispatch-cat-btn').forEach((btn) => {
@@ -91,7 +269,9 @@
             // Global ESC key to close
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
-                    if (!$('#dispatch-112-modal')?.classList.contains('hidden')) {
+                    if (!$('#mdc-dialog-overlay')?.classList.contains('hidden')) {
+                        this.closeDialogs();
+                    } else if (!$('#dispatch-112-modal')?.classList.contains('hidden')) {
                         this.close112();
                     } else if (!$('#mdc')?.classList.contains('hidden')) {
                         this.close();
@@ -114,6 +294,12 @@
             this.wanted = data.wanted || [];
             this.units = data.units || [];
             this.bolos = data.bolos || [];
+            this.reasons = data.reasons || [];
+            this.violations = data.violations || [];
+            this.hasActiveBackup = data.hasActiveBackup || false;
+            this.activeBackupId = data.activeBackupId || null;
+            this.radarActive = data.radarActive || false;
+            this.radarLimit = data.radarLimit || 90;
 
             // Apply Department Theme
             const tabletEl = $('#mdc-tablet-box');
@@ -125,7 +311,7 @@
                 else tabletEl.classList.add('theme--police');
             }
 
-            // Update Header
+            // Update Department Badge
             const badgeMap = {
                 police: '<svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
                 sheriff: '<svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
@@ -146,7 +332,7 @@
             const callsignTag = $('#mdc-callsign-tag');
             if (callsignTag) callsignTag.textContent = this.officer.callsign || 'PATROL-UNIT';
 
-            // Update Officer Sidebar Profile
+            // Update Officer Profile
             const offName = $('#mdc-officer-name');
             if (offName) offName.textContent = this.officer.name || 'Officer';
 
@@ -156,6 +342,12 @@
             const statusSelect = $('#mdc-status-selector');
             if (statusSelect) statusSelect.value = this.officer.status || '10-8';
 
+            // Update Backup State
+            this.updateBackupState();
+
+            // Update Radar State
+            this.updateRadarState();
+
             // Live Clock
             this.startClock();
 
@@ -164,7 +356,7 @@
             this.renderWanted();
             this.renderUnits();
 
-            // Default to 112 calls tab
+            // Default to calls tab
             this.setTab('calls');
 
             $('#mdc')?.classList.remove('hidden');
@@ -175,15 +367,65 @@
             if (data.wanted) this.wanted = data.wanted;
             if (data.units) this.units = data.units;
             if (data.bolos) this.bolos = data.bolos;
+            if (data.reasons) this.reasons = data.reasons;
+            if (data.violations) this.violations = data.violations;
+            if (typeof data.hasActiveBackup !== 'undefined') this.hasActiveBackup = data.hasActiveBackup;
+            if (data.activeBackupId) this.activeBackupId = data.activeBackupId;
+            if (typeof data.radarActive !== 'undefined') this.radarActive = data.radarActive;
+            if (data.radarLimit) this.radarLimit = data.radarLimit;
             if (data.officer) this.officer = data.officer;
 
+            this.updateBackupState();
+            this.updateRadarState();
             this.renderCalls();
             this.renderWanted();
             this.renderUnits();
         },
 
+        updateBackupState() {
+            const badge = $('#mdc-backup-badge');
+            const cancelBtn = $('#mdc-backup-cancel-btn');
+            if (badge) {
+                if (this.hasActiveBackup) badge.classList.remove('hidden');
+                else badge.classList.add('hidden');
+            }
+            if (cancelBtn) {
+                if (this.hasActiveBackup) cancelBtn.classList.remove('hidden');
+                else cancelBtn.classList.add('hidden');
+            }
+        },
+
+        updateRadarState() {
+            const indicator = $('#mdc-radar-indicator');
+            const stateText = $('#mdc-radar-state-text');
+            const startBtn = $('#mdc-btn-radar-start');
+            const stopBtn = $('#mdc-btn-radar-stop');
+            const limitVal = $('#mdc-radar-limit-val');
+
+            if (indicator) {
+                if (this.radarActive) indicator.classList.add('is-active');
+                else indicator.classList.remove('is-active');
+            }
+            if (stateText) {
+                stateText.textContent = this.radarActive ? 'RADAR ACTIVE & SCANNING' : 'RADAR INACTIVE';
+            }
+            if (startBtn && stopBtn) {
+                if (this.radarActive) {
+                    startBtn.classList.add('hidden');
+                    stopBtn.classList.remove('hidden');
+                } else {
+                    startBtn.classList.remove('hidden');
+                    stopBtn.classList.add('hidden');
+                }
+            }
+            if (limitVal) {
+                limitVal.innerHTML = `${this.radarLimit || 90} <small>KM/H</small>`;
+            }
+        },
+
         hide() {
             $('#mdc')?.classList.add('hidden');
+            this.closeDialogs();
             if (this.clockInterval) clearInterval(this.clockInterval);
             this.clockInterval = null;
         },
@@ -247,156 +489,111 @@
 
             const getCategoryStyle = (cat) => {
                 cat = String(cat || '').toLowerCase();
-                if (cat.includes('shot') || cat.includes('robbery') || cat.includes('assault')) return 'mdc-call-card--shots';
-                if (cat.includes('traffic') || cat.includes('accident')) return 'mdc-call-card--traffic';
-                if (cat.includes('theft') || cat.includes('stolen')) return 'mdc-call-card--theft';
-                if (cat.includes('medic')) return 'mdc-call-card--medical';
-                return '';
+                if (cat.includes('shot') || cat.includes('robbery') || cat.includes('assault') || cat.includes('distress') || cat.includes('panic')) return 'mdc-call-card--shots';
+                if (cat.includes('medical') || cat.includes('injury')) return 'mdc-call-card--medical';
+                if (cat.includes('fire') || cat.includes('explosion')) return 'mdc-call-card--fire';
+                return 'mdc-call-card--traffic';
             };
 
             container.innerHTML = openCalls.map((call) => {
-                const isShots = String(call.category || '').toLowerCase().includes('shot');
-                const badgeClass = isShots ? 'mdc-call-badge--shots' : 'mdc-call-badge';
-                const cardModifier = getCategoryStyle(call.category);
-
-                const coords = call.coords || { x: 0, y: 0 };
-                const coordsStr = `${Math.round(coords.x)}, ${Math.round(coords.y)}`;
-
+                const catClass = getCategoryStyle(call.category);
+                const isAssigned = call.status === 'ASSIGNED' || call.status === 'IN_PROGRESS';
                 return `
-                    <div class="mdc-call-card ${cardModifier}" data-call-id="${call.id}">
-                        <div class="mdc-call-card__header">
-                            <span class="${badgeClass}">
-                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                ${call.category || '112 EMERGENCY'}
+                    <div class="mdc-call-card ${catClass} ${call.isPanic ? 'mdc-call-card--panic' : ''}">
+                        <div class="mdc-call-card__head">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="mdc-call-id">#${call.id}</span>
+                                <span class="mdc-call-category">${call.category || 'Emergency'}</span>
+                                ${call.isPanic ? '<span class="mdc-pill mdc-pill--wanted" style="animation: mdcBlink 0.8s infinite;">🚨 10-99 PANIC</span>' : ''}
+                            </div>
+                            <span class="mdc-call-status ${isAssigned ? 'is-assigned' : 'is-pending'}">
+                                ${call.status || 'PENDING'}
                             </span>
-                            <span class="mdc-call-time">CALL #${call.id} · ${call.status || 'OPEN'}</span>
                         </div>
-                        <div class="mdc-call-location">
-                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                            <span>${call.street || 'Unknown Street'}, ${call.area || 'Los Santos'}</span>
-                            <span style="font-size: 11px; color: #64748b; font-family: monospace;">(${coordsStr})</span>
-                        </div>
-                        <div class="mdc-call-caller">
-                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Caller: <strong>${call.callerName || 'Anonymous'}</strong> · 
-                            <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            Phone: <strong>${call.callerPhone || 'N/A'}</strong>
-                        </div>
-                        <div class="mdc-call-desc">
-                            "${call.description || 'Citizen reported emergency'}"
+                        <div class="mdc-call-desc">${call.description || 'No details provided'}</div>
+                        <div class="mdc-call-meta">
+                            <span>📍 <strong>${call.street}</strong>, ${call.area}</span>
+                            <span>👤 Caller: <strong>${call.callerName}</strong> (${call.callerPhone})</span>
+                            ${call.responderName ? `<span>🚔 Unit: <strong>${call.responderName}</strong></span>` : ''}
                         </div>
                         <div class="mdc-call-actions">
-                            <div class="mdc-call-responder">
-                                ${call.responderName ? `<svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="22" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Assigned: ${call.responderName}` : '⚠️ Unassigned · Units available'}
-                            </div>
-                            <div class="mdc-call-btn-group">
-                                <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-call-gps" data-x="${coords.x}" data-y="${coords.y}">
-                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
-                                    SET GPS
+                            <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-call-waypoint" data-x="${call.coords.x}" data-y="${call.coords.y}">
+                                <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+                                SET GPS
+                            </button>
+                            ${!call.isResponder ? `
+                                <button type="button" class="mdc-btn mdc-btn--primary mdc-btn--sm btn-call-respond" data-call-id="${call.id}">
+                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    RESPOND (10-97)
                                 </button>
-                                ${call.status === 'ASSIGNED' ? `
-                                    <button type="button" class="mdc-btn mdc-btn--success mdc-btn--sm btn-call-clear" data-call-id="${call.id}">
-                                        <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                                        CLEAR (10-98)
-                                    </button>
-                                ` : `
-                                    <button type="button" class="mdc-btn mdc-btn--primary mdc-btn--sm btn-call-respond" data-call-id="${call.id}">
-                                        <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                        RESPOND (10-97)
-                                    </button>
-                                `}
-                            </div>
+                            ` : `
+                                <button type="button" class="mdc-btn mdc-btn--success mdc-btn--sm btn-call-clear" data-call-id="${call.id}">
+                                    <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                    COMPLETE (10-98)
+                                </button>
+                            `}
                         </div>
                     </div>
                 `;
             }).join('');
 
-            // Attach Call Actions
-            container.querySelectorAll('.btn-call-gps').forEach((btn) => {
+            // Attach event listeners
+            container.querySelectorAll('.btn-call-waypoint').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     const x = Number(btn.dataset.x);
                     const y = Number(btn.dataset.y);
-                    post('mdcSetWaypoint', { x, y });
+                    if (x && y) post('mdcSetWaypoint', { x, y });
                 });
             });
 
             container.querySelectorAll('.btn-call-respond').forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    const callId = Number(btn.dataset.callId);
-                    post('mdcSetCallStatus', { callId, action: 'respond' });
+                    const id = Number(btn.dataset.callId);
+                    post('mdcSetCallStatus', { callId: id, action: 'respond' });
                 });
             });
 
             container.querySelectorAll('.btn-call-clear').forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    const callId = Number(btn.dataset.callId);
-                    post('mdcSetCallStatus', { callId, action: 'clear' });
+                    const id = Number(btn.dataset.callId);
+                    post('mdcSetCallStatus', { callId: id, action: 'clear' });
                 });
             });
         },
 
         // ======================================================================
-        // TAB 2: CITIZEN LOOKUP (CAZIER, VEHICLES, LICENSES, FINES)
+        // TAB 2: CITIZEN LOOKUP & CRIMINAL DOSSIER
         // ======================================================================
         searchCitizen(query) {
             $('#mdc-citizen-loading')?.classList.remove('hidden');
-            $('#mdc-citizen-content')?.classList.add('hidden');
             $('#mdc-citizen-empty')?.classList.add('hidden');
+            $('#mdc-citizen-content')?.classList.add('hidden');
             post('mdcSearch', { query });
         },
 
         updateCitizen(citizen) {
             $('#mdc-citizen-loading')?.classList.add('hidden');
-
             if (!citizen || !citizen.found) {
-                const empty = $('#mdc-citizen-empty');
-                if (empty) {
-                    empty.textContent = citizen?.error || 'No citizen record found.';
-                    empty.classList.remove('hidden');
-                }
+                $('#mdc-citizen-empty')?.classList.remove('hidden');
                 $('#mdc-citizen-content')?.classList.add('hidden');
+                this.currentCitizen = null;
                 return;
             }
 
+            this.currentCitizen = citizen;
             $('#mdc-citizen-empty')?.classList.add('hidden');
             $('#mdc-citizen-content')?.classList.remove('hidden');
 
-            // Citizen ID Photo & Fallback
-            const photoImg = $('#mdc-cit-photo');
-            const photoFallback = $('#mdc-cit-avatar-fallback');
-            const docIdEl = $('#mdc-cit-doc-id');
-
-            if (docIdEl) {
-                const paddedId = String(citizen.id || 0).padStart(4, '0');
-                docIdEl.textContent = `DOC ID: SA-${paddedId}`;
-            }
-
-            if (citizen.photoUrl) {
-                if (photoImg) {
-                    photoImg.src = citizen.photoUrl;
-                    photoImg.classList.remove('hidden');
-                }
-                if (photoFallback) {
-                    photoFallback.classList.add('hidden');
-                }
-            } else {
-                if (photoImg) {
-                    photoImg.src = '';
-                    photoImg.classList.add('hidden');
-                }
-                if (photoFallback) {
-                    photoFallback.classList.remove('hidden');
-                }
-            }
-
-            // Identity Profile
+            // ID Details
             $('#mdc-cit-name').textContent = citizen.name || 'Unknown';
-            $('#mdc-cit-id').textContent = `#${citizen.id || 0}`;
-            $('#mdc-cit-server-id').textContent = citizen.serverId ? `SERVER ID #${citizen.serverId}` : 'OFFLINE';
-            $('#mdc-cit-dob').textContent = citizen.dob || 'Unknown';
-            $('#mdc-cit-gender').textContent = citizen.gender || 'Unknown';
+            $('#mdc-cit-doc-id').textContent = `DOC ID: SA-${String(citizen.id).padStart(4, '0')}`;
+            $('#mdc-cit-id').textContent = `#${citizen.id}`;
+            $('#mdc-cit-server-id').textContent = citizen.isOnline ? `ONLINE (#${citizen.serverId})` : 'OFFLINE';
+            $('#mdc-cit-server-id').style.color = citizen.isOnline ? '#10b981' : '#64748b';
+            $('#mdc-cit-dob').textContent = citizen.dob || '—';
+            $('#mdc-cit-gender').textContent = citizen.gender || '—';
             $('#mdc-cit-nat').textContent = citizen.nationality || 'San Andreas';
-            $('#mdc-cit-phone').textContent = citizen.phone || 'N/A';
+            $('#mdc-cit-phone').textContent = citizen.phone || '—';
             $('#mdc-cit-job').textContent = citizen.job || 'Unemployed';
 
             // Wanted Status Pill
@@ -435,7 +632,23 @@
                 }
             }
 
-            // Licenses Badges
+            // Update Action Buttons State
+            const boloBtn = $('#mdc-act-bolo');
+            if (boloBtn) {
+                boloBtn.textContent = citizen.bolo ? '🚨 CLEAR BOLO' : '🚨 FLAG BOLO';
+            }
+
+            const unjailBtn = $('#mdc-act-unjail');
+            if (unjailBtn) {
+                unjailBtn.style.opacity = citizen.jailed ? '1' : '0.5';
+            }
+
+            const clearBtn = $('#mdc-act-clear');
+            if (clearBtn) {
+                clearBtn.style.opacity = citizen.wanted ? '1' : '0.5';
+            }
+
+            // Licenses
             const licContainer = $('#mdc-cit-licenses');
             if (licContainer) {
                 const licenses = citizen.licenses || [];
@@ -448,7 +661,7 @@
                 }
             }
 
-            // Personal Vehicles List
+            // Personal Vehicles
             const vehContainer = $('#mdc-cit-vehicles');
             if (vehContainer) {
                 const vehicles = citizen.vehicles || [];
@@ -456,7 +669,7 @@
                     vehContainer.innerHTML = '<div style="color: #64748b; font-size: 12px;">No vehicles registered to this citizen.</div>';
                 } else {
                     vehContainer.innerHTML = vehicles.map((v) => `
-                        <div class="mdc-veh-row">
+                        <div class="mdc-veh-row btn-view-veh-plate" data-plate="${v.plate}" style="cursor: pointer;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span class="mdc-plate-badge">${v.plate}</span>
                                 <span class="mdc-veh-model">${v.model}</span>
@@ -467,10 +680,22 @@
                             </div>
                         </div>
                     `).join('');
+
+                    vehContainer.querySelectorAll('.btn-view-veh-plate').forEach((row) => {
+                        row.addEventListener('click', () => {
+                            const plate = row.dataset.plate;
+                            if (plate) {
+                                this.setTab('vehicles');
+                                const input = $('#mdc-input-veh');
+                                if (input) input.value = plate;
+                                this.searchVehicle(plate);
+                            }
+                        });
+                    });
                 }
             }
 
-            // Criminal Cazier History (Past jail sentences)
+            // Cazier History
             const cazierTable = $('#mdc-cit-cazier-body');
             if (cazierTable) {
                 const cazier = citizen.cazier || [];
@@ -488,11 +713,9 @@
                 }
             }
 
-            // Citations / Tickets History & Unpaid Fines
+            // Citations History
             const finesTotal = $('#mdc-cit-unpaid-fines');
-            if (finesTotal) {
-                finesTotal.textContent = `$${(citizen.unpaidFines || 0).toLocaleString()}`;
-            }
+            if (finesTotal) finesTotal.textContent = `$${(citizen.unpaidFines || 0).toLocaleString()}`;
 
             const ticketsTable = $('#mdc-cit-tickets-body');
             if (ticketsTable) {
@@ -555,7 +778,7 @@
                             <span>Fuel: ${v.fuel}%</span>
                         </div>
                         <div style="display: flex; gap: 8px; margin-top: 4px;">
-                            <button type="button" class="mdc-btn ${v.bolo ? 'mdc-btn--danger' : 'mdc-btn--warning'} mdc-btn--sm btn-toggle-veh-bolo" data-plate="${v.plate}">
+                            <button type="button" class="mdc-btn ${v.bolo ? 'mdc-btn--danger' : 'mdc-btn--warning'} mdc-btn--sm btn-toggle-veh-bolo" data-plate="${v.plate}" data-has-bolo="${v.bolo ? '1' : '0'}">
                                 ${v.bolo ? `
                                     <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                     CLEAR BOLO
@@ -573,13 +796,15 @@
                 `;
             }).join('');
 
-            // Attach BOLO Toggle and Owner Dossier buttons
+            // Attach In-UI BOLO Toggle (NO PROMPT EVER)
             grid.querySelectorAll('.btn-toggle-veh-bolo').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     const plate = btn.dataset.plate;
-                    const reason = prompt(`Enter reason for BOLO on plate ${plate}:`, 'Stolen vehicle reported by owner');
-                    if (reason !== null) {
-                        post('mdcToggleBolo', { type: 'vehicle', key: plate, reason: reason });
+                    const hasBolo = btn.dataset.hasBolo === '1';
+                    if (hasBolo) {
+                        post('mdcToggleBolo', { type: 'vehicle', key: plate });
+                    } else {
+                        this.openBoloModal('vehicle', plate, 'Stolen vehicle reported by owner');
                     }
                 });
             });
@@ -589,7 +814,8 @@
                     const owner = btn.dataset.owner;
                     if (owner && owner !== 'Unknown / Impounded') {
                         this.setTab('citizen');
-                        $('#mdc-input-citizen').value = owner;
+                        const input = $('#mdc-input-citizen');
+                        if (input) input.value = owner;
                         this.searchCitizen(owner);
                     }
                 });
@@ -641,6 +867,9 @@
                                 <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 DOSSIER
                             </button>
+                            <button type="button" class="mdc-btn mdc-btn--danger mdc-btn--sm btn-clear-wanted" data-target-id="${row.id}">
+                                ✕ CLEAR
+                            </button>
                         </div>
                     </div>
                 `;
@@ -649,11 +878,14 @@
             container.querySelectorAll('.btn-locate-wanted').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     const id = Number(btn.dataset.targetId);
-                    // Locate wanted via sunset:policeFindWanted
-                    fetch(`https://${GetParentResourceName()}/policeFindWanted`, {
-                        method: 'POST',
-                        body: JSON.stringify({ targetId: id }),
-                    }).catch(() => {});
+                    if (id) post('mdcFindWanted', { targetId: id });
+                });
+            });
+
+            container.querySelectorAll('.btn-clear-wanted').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const id = Number(btn.dataset.targetId);
+                    if (id) post('mdcClearWanted', { targetId: id });
                 });
             });
 
@@ -661,7 +893,8 @@
                 btn.addEventListener('click', () => {
                     const name = btn.dataset.name;
                     this.setTab('citizen');
-                    $('#mdc-input-citizen').value = name;
+                    const input = $('#mdc-input-citizen');
+                    if (input) input.value = name;
                     this.searchCitizen(name);
                 });
             });
@@ -681,8 +914,9 @@
 
             container.innerHTML = this.units.map((unit) => {
                 const statusClass = `status--${(unit.status || '10-8').toLowerCase()}`;
+                const hasCoords = unit.coords && unit.coords.x && unit.coords.y;
                 return `
-                    <div class="mdc-unit-card">
+                    <div class="mdc-unit-card" style="display: flex; align-items: center; justify-content: space-between;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">
                                 ${unit.name} ${unit.isMe ? '<span style="color: #38bdf8; font-size: 11px;">(YOU)</span>' : ''}
@@ -691,12 +925,157 @@
                                 ${unit.rank} · ${unit.shortDept || 'LSPD'}
                             </div>
                         </div>
-                        <span class="mdc-unit-status-tag ${statusClass}">
-                            ${unit.status || '10-8'}
-                        </span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            ${hasCoords && !unit.isMe ? `
+                                <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-unit-gps" data-x="${unit.coords.x}" data-y="${unit.coords.y}" data-name="${unit.name}">
+                                    📍 GPS
+                                </button>
+                            ` : ''}
+                            <span class="mdc-unit-status-tag ${statusClass}">
+                                ${unit.status || '10-8'}
+                            </span>
+                        </div>
                     </div>
                 `;
             }).join('');
+
+            container.querySelectorAll('.btn-unit-gps').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const x = Number(btn.dataset.x);
+                    const y = Number(btn.dataset.y);
+                    const name = btn.dataset.name;
+                    if (x && y) post('mdcSetUnitWaypoint', { x, y, name });
+                });
+            });
+        },
+
+        // ======================================================================
+        // IN-UI DIALOG MODALS (NO PROMPT EVER)
+        // ======================================================================
+        closeDialogs() {
+            $('#mdc-dialog-overlay')?.classList.add('hidden');
+            $$('.mdc-dialog-card').forEach((c) => c.classList.add('hidden'));
+            this.currentBoloTarget = null;
+            this.selectedChargeCode = null;
+            this.selectedViolationCode = null;
+            this.targetModalPlayerId = null;
+        },
+
+        openBoloModal(type, key, defaultReason = '') {
+            this.currentBoloTarget = { type, key };
+            const overlay = $('#mdc-dialog-overlay');
+            const card = $('#mdc-dialog-bolo');
+            const title = $('#mdc-bolo-title');
+            const targetLabel = $('#mdc-bolo-target-label');
+            const customInput = $('#mdc-bolo-custom-reason');
+
+            if (title) title.textContent = type === 'vehicle' ? `🚨 Flag Vehicle BOLO: ${key}` : `🚨 Flag Citizen BOLO: ${key}`;
+            if (targetLabel) targetLabel.textContent = `Target: ${key} (${type.toUpperCase()})`;
+            if (customInput) customInput.value = defaultReason || '';
+
+            $$('#mdc-bolo-chips .mdc-chip').forEach((c) => c.classList.remove('is-active'));
+
+            overlay?.classList.remove('hidden');
+            card?.classList.remove('hidden');
+        },
+
+        openWantedModal(targetId, targetName) {
+            this.targetModalPlayerId = targetId;
+            this.selectedChargeCode = null;
+
+            const overlay = $('#mdc-dialog-overlay');
+            const card = $('#mdc-dialog-wanted');
+            const label = $('#mdc-wanted-target-label');
+            const confirmBtn = $('#mdc-wanted-confirm');
+            const listContainer = $('#mdc-charges-list');
+
+            if (label) label.textContent = `Suspect: ${targetName} (#${targetId})`;
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            const charges = this.reasons.length > 0 ? this.reasons : [
+                { code: 'speeding', label: 'Speeding', stars: 1, jailMinutes: 4 },
+                { code: 'reckless', label: 'Reckless Driving', stars: 2, jailMinutes: 8 },
+                { code: 'assault', label: 'Assault', stars: 2, jailMinutes: 8 },
+                { code: 'robbery', label: 'Armed Robbery', stars: 5, jailMinutes: 25 },
+                { code: 'evading', label: 'Runner / Evading Police', stars: 5, jailMinutes: 25 },
+                { code: 'murder', label: 'Homicide / Murder', stars: 5, jailMinutes: 50 },
+            ];
+
+            if (listContainer) {
+                listContainer.innerHTML = charges.map((ch) => {
+                    const stars = '★'.repeat(Math.min(5, ch.stars || 1));
+                    return `
+                        <div class="mdc-select-item" data-code="${ch.code}">
+                            <div>
+                                <div style="font-weight: 700; color: #f8fafc;">${ch.label}</div>
+                                <div style="font-size: 11px; color: #94a3b8;">Sentence: ~${ch.jailMinutes || 5} min jail · ${ch.surrenderable !== false ? 'Surrender Allowed' : 'No Surrender'}</div>
+                            </div>
+                            <span style="font-size: 14px; font-weight: 800; color: #f59e0b;">${stars}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                listContainer.querySelectorAll('.mdc-select-item').forEach((item) => {
+                    item.addEventListener('click', () => {
+                        listContainer.querySelectorAll('.mdc-select-item').forEach((i) => i.classList.remove('is-selected'));
+                        item.classList.add('is-selected');
+                        this.selectedChargeCode = item.dataset.code;
+                        if (confirmBtn) confirmBtn.disabled = false;
+                    });
+                });
+            }
+
+            overlay?.classList.remove('hidden');
+            card?.classList.remove('hidden');
+        },
+
+        openTicketModal(targetId, targetName) {
+            this.targetModalPlayerId = targetId;
+            this.selectedViolationCode = null;
+
+            const overlay = $('#mdc-dialog-overlay');
+            const card = $('#mdc-dialog-ticket');
+            const label = $('#mdc-ticket-target-label');
+            const confirmBtn = $('#mdc-ticket-confirm');
+            const listContainer = $('#mdc-violations-list');
+
+            if (label) label.textContent = `Citizen: ${targetName} (#${targetId})`;
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            const violations = this.violations.length > 0 ? this.violations : [
+                { code: 'speeding', label: 'Exceeding Speed Limit', amount: 180 },
+                { code: 'redlight', label: 'Running Red Traffic Light', amount: 240 },
+                { code: 'reckless', label: 'Reckless Driving', amount: 420 },
+                { code: 'parking', label: 'Illegal Vehicle Parking', amount: 90 },
+                { code: 'noinsurance', label: 'Operating Without Insurance', amount: 600 },
+                { code: 'disturbance', label: 'Public Peace Disturbance', amount: 300 },
+            ];
+
+            if (listContainer) {
+                listContainer.innerHTML = violations.map((v) => {
+                    return `
+                        <div class="mdc-select-item" data-code="${v.code}">
+                            <div>
+                                <div style="font-weight: 700; color: #f8fafc;">${v.label}</div>
+                                <div style="font-size: 11px; color: #94a3b8;">Violation Code: ${v.code}</div>
+                            </div>
+                            <span style="font-size: 14px; font-weight: 800; color: #10b981;">$${(v.amount || 100).toLocaleString()}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                listContainer.querySelectorAll('.mdc-select-item').forEach((item) => {
+                    item.addEventListener('click', () => {
+                        listContainer.querySelectorAll('.mdc-select-item').forEach((i) => i.classList.remove('is-selected'));
+                        item.classList.add('is-selected');
+                        this.selectedViolationCode = item.dataset.code;
+                        if (confirmBtn) confirmBtn.disabled = false;
+                    });
+                });
+            }
+
+            overlay?.classList.remove('hidden');
+            card?.classList.remove('hidden');
         },
 
         // ======================================================================

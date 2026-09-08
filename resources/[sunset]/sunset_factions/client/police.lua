@@ -847,7 +847,170 @@ end)
 AddEventHandler('sunset:ui:mdcSetWaypoint', function(data)
     if data and data.x and data.y then
         SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
-        exports.sunset_ui:Notify('GPS route set to emergency call location.', 'success')
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        exports.sunset_ui:Notify('GPS route set to location.', 'success')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcSetUnitWaypoint', function(data)
+    if data and data.x and data.y then
+        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        exports.sunset_ui:Notify(('GPS route set to Unit %s.'):format(data.name or 'Officer'), 'success')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcBookingGps', function()
+    local point, distance = nearestBookingPoint(true)
+    if point then
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        exports.sunset_ui:Notify(('GPS set to %s (%.0fm).'):format(point.label, distance or 0.0), 'info', 8000)
+    else
+        exports.sunset_ui:Notify('No booking points found.', 'error')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcRequestBackup', function(data)
+    local priority = (data and data.priority) or 'code2'
+    local isPanic = priority == 'panic' or priority == '10-99'
+    local ok, err = Sunset.AwaitCallback('sunset:policeBackup', priority)
+    if ok then
+        if isPanic then
+            PlaySoundFrontend(-1, 'Bed', 'WastedSounds', true)
+            exports.sunset_ui:Notify('🚨 10-99 PANIC ALARM BROADCASTED! Code 3 distress active!', 'error', 10000)
+        else
+            PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+            exports.sunset_ui:Notify(('Backup request #%d sent (%s)'):format(ok, priority == 'code3' and 'CODE 3' or 'Code 2'), 'success')
+        end
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'Backup was not sent. Check duty and availability.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcCancelBackup', function()
+    local ok, err = Sunset.AwaitCallback('sunset:policeCancelBackup')
+    if ok then
+        PlaySoundFrontend(-1, 'CANCEL', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify('Backup request cancelled', 'success')
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'No active backup request to cancel.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcSetWanted', function(data)
+    if not data or not data.targetId or not data.reasonCode then return end
+    local ok, err = Sunset.AwaitCallback('sunset:policeSetWanted', tonumber(data.targetId), data.reasonCode)
+    if ok then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify(('Wanted charge added to #%d (%s)'):format(tonumber(data.targetId), data.reasonCode), 'success')
+        -- Refresh citizen dossier if open
+        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
+        if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'Could not add wanted charge.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcClearWanted', function(data)
+    if not data or not data.targetId then return end
+    local ok, err = Sunset.AwaitCallback('sunset:policeClearWanted', tonumber(data.targetId))
+    if ok then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify(('Cleared wanted for #%d'):format(tonumber(data.targetId)), 'success')
+        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
+        if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'Wanted status could not be cleared.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcSummon', function(data)
+    if not data or not data.targetId then return end
+    local ok, err = Sunset.AwaitCallback('sunset:policeSummon', tonumber(data.targetId))
+    if ok then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+    else
+        actionError(err, 'Stop order failed to send.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcFindWanted', function(data)
+    if not data or not data.targetId then return end
+    local result, err = Sunset.AwaitCallback('sunset:policeFindWanted', tonumber(data.targetId))
+    if result then
+        SetNewWaypoint(result.x + 0.0, result.y + 0.0)
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        exports.sunset_ui:Notify(('GPS set on %s (#%d) — ★%d %s'):format(result.name or 'Suspect', tonumber(data.targetId), result.level or 1, result.reason or ''), 'success', 10000)
+    else
+        actionError(err, 'Could not locate suspect.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcUnjail', function(data)
+    if not data or not data.targetId then return end
+    local ok, err = Sunset.AwaitCallback('sunset:policeUnjail', tonumber(data.targetId))
+    if ok then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify(('Released #%d from custody'):format(tonumber(data.targetId)), 'success')
+        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
+        if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'Prisoner could not be released.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcIssueCitation', function(data)
+    if not data or not data.targetId or not data.reasonCode then return end
+    local ok, err = Sunset.AwaitCallback('sunset:policeIssueTicket', tonumber(data.targetId), tonumber(data.amount) or 100, data.reason, data.reasonCode)
+    if ok then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify(('Citation #%d issued to #%d'):format(ok, tonumber(data.targetId)), 'success')
+        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
+        if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'Failed to issue citation.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcStartRadar', function(data)
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then
+        exports.sunset_ui:Notify('You must be inside an authorized patrol car to start mobile radar.', 'error')
+        return
+    end
+    local netId = NetworkGetNetworkIdFromEntity(veh)
+    local limit = tonumber(data and data.limitKmh) or 90
+    local res, err = Sunset.AwaitCallback('sunset:policeRadarStart', netId, limit)
+    if res then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify(('Mobile radar active (Limit: %d km/h).'):format(res.limitKmh), 'success')
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(err, 'Could not start mobile radar.')
+    end
+end)
+
+AddEventHandler('sunset:ui:mdcStopRadar', function()
+    local ok = Sunset.AwaitCallback('sunset:policeRadarStop')
+    if ok then
+        PlaySoundFrontend(-1, 'CANCEL', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify('Mobile radar deactivated.', 'info')
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
     end
 end)
 

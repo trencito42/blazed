@@ -339,8 +339,7 @@ const ClanPanels = {
                 warn.className = 'faction-btn is-warn';
                 warn.textContent = 'STRIKE';
                 warn.addEventListener('click', () => {
-                    const reason = window.prompt('Strike reason:', 'No reason given');
-                    if (reason === null) return;
+                    const reason = 'Clan disciplinary strike';
                     post('clanManage', { action: 'warn', targetId: member.serverId, reason });
                 });
                 actions.append(warn);
