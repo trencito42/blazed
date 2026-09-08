@@ -2,9 +2,22 @@ local menuOpen = false
 local activeTarget = nil
 local promptTarget = nil
 local promptPlayer = nil
+local contextRequestActive = false
 
 local function notify(message, kind, duration)
     exports.sunset_ui:Notify(message, kind or 'info', duration)
+end
+
+local function isChatOpen()
+    if GetResourceState('sunset_chat') ~= 'started' then return false end
+    local ok, open = pcall(function()
+        return exports.sunset_chat:IsChatOpen()
+    end)
+    return ok and open == true
+end
+
+local function inputIsBusy()
+    return isChatOpen() or IsNuiFocused() or IsPauseMenuActive()
 end
 
 local function closestPlayer(maxDistance)
@@ -64,20 +77,36 @@ end
 
 local function openMenu()
     if menuOpen then return closeMenu() end
-    if IsNuiFocused() or IsPauseMenuActive() then return end
+    if contextRequestActive or inputIsBusy() then return end
     local ped = PlayerPedId()
     if IsPedDeadOrDying(ped, true) then return notify('You cannot interact while downed.', 'error') end
 
     local targetId = closestPlayer(3.0)
     if not targetId then return notify('No player is close enough. Move within 3 metres and try again.', 'info') end
 
+    contextRequestActive = true
     local context, err = Sunset.AwaitCallback('sunset:interactionContext', targetId)
+    contextRequestActive = false
+    if inputIsBusy() then return end
     if not context then return notify(err or 'The interaction menu could not be opened.', 'error', 6000) end
+
+    local currentTarget = closestPlayer(3.0)
+    if currentTarget ~= targetId then
+        return notify('That player moved away before the interaction menu opened.', 'info')
+    end
     activeTarget = targetId
     menuOpen = true
     exports.sunset_ui:Send('playerInteractionShow', context)
     exports.sunset_ui:SetFocus(true, true)
 end
+
+
+AddEventHandler('sunset:client:chatFocusChanged', function(open)
+    if open == true then
+        contextRequestActive = false
+        if menuOpen then closeMenu() end
+    end
+end)
 
 RegisterCommand('interactplayer', openMenu, false)
 RegisterCommand('interact', openMenu, false)
@@ -185,7 +214,7 @@ end)
 
 CreateThread(function()
     while true do
-        if not menuOpen and not IsNuiFocused() and not IsPauseMenuActive()
+        if not menuOpen and not contextRequestActive and not inputIsBusy()
             and not IsPedDeadOrDying(PlayerPedId(), true) then
             promptTarget = closestPlayer(3.0)
             promptPlayer = playerFromServerId(promptTarget)

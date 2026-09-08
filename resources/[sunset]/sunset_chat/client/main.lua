@@ -10,6 +10,7 @@ exports('IsChatOpen', function() return chatOpen end)
 local function openChat()
     if chatOpen then return end
     chatOpen = true
+    TriggerEvent('sunset:client:chatFocusChanged', true)
     local myId = GetPlayerServerId(PlayerId())
     local myName = LocalPlayer.state.sunsetName or GetPlayerName(PlayerId()) or 'Player'
     exports.sunset_ui:SetFocus(true, true)
@@ -18,11 +19,15 @@ local function openChat()
         playerId = myId,
         playerName = myName,
     })
+    SetTimeout(75, function()
+        if chatOpen then exports.sunset_ui:SetFocus(true, true) end
+    end)
 end
 
 local function closeChat()
     if not chatOpen then return end
     chatOpen = false
+    TriggerEvent('sunset:client:chatFocusChanged', false)
     if exports.sunset_ui and exports.sunset_ui:IsOpen() then
         exports.sunset_ui:SetFocus(true, true)
     else
