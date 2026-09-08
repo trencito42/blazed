@@ -625,7 +625,7 @@ local function constructionTemplate()
         timeoutSec = 1800,
         salary = 160,
         ui = { title = 'Construction', key = 'E', icon = 'hardhat', bagLabel = 'Tasks' },
-        progression = { xpPerTask = 20, payPerTask = 85 },
+        progression = { xpPerTask = 20, payPerTask = 85, progressVar = 'tasks', progressTotalVar = 'total' },
         variables = { tasks = 0, total = 4 },
         party = { soloEnabled = true, partyEnabled = true, minPlayers = 1, maxPlayers = 4 },
         locations = {
@@ -639,7 +639,8 @@ local function constructionTemplate()
             { id = 'to_site', type = 'goto_zone', location = 'site', message = 'Go to the construction site', onSuccess = 'party_check' },
             { id = 'party_check', type = 'party_gate', minPlayers = 1, radius = 30.0, message = 'Waiting for crew...', onSuccess = 'briefing' },
             { id = 'briefing', type = 'talk_to_npc', npcVar = 'foreman', message = 'Press {key} to get assignment', onSuccess = 'get_materials' },
-            { id = 'get_materials', type = 'progress', location = 'material', durationMs = 5000, label = 'Loading materials...', message = 'Press {key} to load', onSuccess = 'place' },
+            { id = 'get_materials', type = 'progress', location = 'material', durationMs = 5000, scenario = 'WORLD_HUMAN_HAMMERING', label = 'Loading materials...', message = 'Press {key} to load — hold still', onSuccess = 'to_build' },
+            { id = 'to_build', type = 'goto_zone', location = 'build', message = 'Carry materials to the build zone', onSuccess = 'place' },
             { id = 'place', type = 'zone_interact', location = 'build', message = 'Press {key} to place materials', actions = { { type = 'increment', var = 'tasks', value = 1 } }, onSuccess = 'pay_task' },
             { id = 'pay_task', type = 'give_reward', onSuccess = 'check_tasks' },
             { id = 'check_tasks', type = 'branch', condition = { var = 'tasks', op = '<', valueRef = 'total' }, ifTrue = 'get_materials', ifFalse = 'cleanup_npc' },
@@ -823,5 +824,19 @@ function JCTemplates_Seed()
         truckerMeta.status = row.status
         JCStorage_Save('jc_tpl_route', truckerMeta, routeTemplate(), 'system-upgrade')
         print('[sunset_jobcreator] Refreshed jc_tpl_route template.')
+    end
+
+    local constructionMeta = {
+        label = 'Construction Worker (Creator)',
+        description = 'Work the construction site with foreman briefing and material placement.',
+        category = 'labor',
+        icon = 'hardhat',
+        status = 'published',
+    }
+    if JCStorage_Get('jc_tpl_construction') then
+        local row = JCStorage_Get('jc_tpl_construction')
+        constructionMeta.status = row.status
+        JCStorage_Save('jc_tpl_construction', constructionMeta, constructionTemplate(), 'system-upgrade')
+        print('[sunset_jobcreator] Refreshed jc_tpl_construction template.')
     end
 end

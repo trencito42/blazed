@@ -154,7 +154,8 @@ RegisterNetEvent('sunset:jobcreator:paid', function(data)
     local done = tonumber(data.done) or 0
     local total = tonumber(data.total) or 0
     local xp = tonumber(data.xp) or 0
-    local msg = ('Livrare completă! +$%d'):format(pay)
+    local label = data.bagLabel or 'Task'
+    local msg = ('%s complet! +$%d'):format(label, pay)
     if xp > 0 then msg = msg .. (' · +%d XP'):format(xp) end
     if total > 0 then msg = msg .. (' · %d/%d'):format(done, total) end
     exports.sunset_ui:Notify(msg, 'success', 7000)

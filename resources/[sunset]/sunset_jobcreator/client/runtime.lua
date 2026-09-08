@@ -156,6 +156,9 @@ local function syncHud(data, override)
             if stageType == 'skill_check' and skillActive then
                 return
             end
+            if stageType == 'progress' and progressActive then
+                return
+            end
             if progressActive or (skillActive and stageType ~= 'skill_check') then
                 state = 'waiting'
                 message = stage.label or 'Working...'
@@ -291,6 +294,11 @@ local function startProgressStage(data)
     progressActive = true
     local duration = tonumber(stage.durationMs) or 5000
     local key = (data.definition and data.definition.ui and data.definition.ui.key) or 'E'
+    local ped = PlayerPedId()
+    local scenario = stage.scenario or 'WORLD_HUMAN_HAMMERING'
+    CreateThread(function()
+        TaskStartScenarioInPlace(ped, scenario, 0, true)
+    end)
     fishingHud(data, {
         state = 'work',
         message = formatMessage(stage, key),
@@ -299,6 +307,7 @@ local function startProgressStage(data)
     SetTimeout(duration, function()
         if not progressActive then return end
         progressActive = false
+        ClearPedTasks(ped)
         sendClientAction(data.stageId, { success = true })
     end)
 end

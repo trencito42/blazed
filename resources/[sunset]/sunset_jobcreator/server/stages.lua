@@ -232,8 +232,12 @@ StageHandlers.give_reward = {
         TriggerClientEvent('sunset:jobcreator:paid', source, {
             pay = pay,
             xp = xp,
-            done = tonumber(session.variables.done) or 0,
-            total = tonumber(session.variables.total) or 0,
+            done = tonumber(session.variables[prog.progressVar or 'done'])
+                or tonumber(session.variables.tasks)
+                or tonumber(session.variables.done) or 0,
+            total = tonumber(session.variables[prog.progressTotalVar or 'total'])
+                or tonumber(session.variables.total) or 0,
+            bagLabel = (session.definition.ui and session.definition.ui.bagLabel) or 'Task',
         })
         return true, resolveNext(stage, true)
     end,
