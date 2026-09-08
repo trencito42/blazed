@@ -56,7 +56,11 @@ local function startAtFacility(facility)
     local licenseType = facility.license
     local theory, err = Sunset.AwaitCallback('sunset:license:startTheory', licenseType)
     if not theory then
-        return notify(err or 'Could not start theory exam.', 'error')
+        local fallback = licenseType == 'driver'
+            and 'Driving theory could not start. Check your balance and stand inside the Driving School marker.'
+            or ('%s theory requires an on-duty LSSI instructor beside you to authorize it first with /issuelicense.'):format(
+                facility.label or 'This license')
+        return notify(err or fallback, 'error')
     end
     activeTest = { licenseType = licenseType, phase = 'theory' }
     if theory.examFee and theory.examFee > 0 then
@@ -95,9 +99,12 @@ CreateThread(function()
                         end
                         local fee = cached and cached.fee or 0
                         local feeText = fee > 0 and (' — fee $%d'):format(fee) or ''
+                        local def = SunsetLicenses.Types and SunsetLicenses.Types[licenseType]
+                        local instructorText = def and def.instructorFaction
+                            and ' — requires LSSI authorization' or ''
                         BeginTextCommandDisplayHelp('STRING')
-                        AddTextComponentString(('Press ~INPUT_CONTEXT~ — %s exam%s'):format(
-                            facility.label or 'License', feeText))
+                        AddTextComponentString(('Press ~INPUT_CONTEXT~ — %s exam%s%s'):format(
+                            facility.label or 'License', feeText, instructorText))
                         EndTextCommandDisplayHelp(0, false, true, -1)
                         if IsControlJustReleased(0, 38) then
                             startAtFacility(facility)

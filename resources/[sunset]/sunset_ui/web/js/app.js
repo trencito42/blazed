@@ -8,7 +8,9 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 function post(action, data = {}) {
-    return fetch(`https://${GetParentResourceName()}/${action}`, {
+    const resource = typeof GetParentResourceName === 'function' ? GetParentResourceName() : '';
+    if (!resource) return Promise.resolve({ ok: true, qa: true, action, data });
+    return fetch(`https://${resource}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -391,6 +393,12 @@ window.addEventListener('message', (event) => {
         case 'inventoryHide':
             if (window.Panels) Panels.hideInventory();
             break;
+        case 'inventoryTradeState':
+            if (window.Panels) Panels.showInventoryTrade(data || event.data.data || {});
+            break;
+        case 'inventoryTradeEnded':
+            if (window.Panels) Panels.hideInventoryTrade();
+            break;
         case 'shopShow':
             if (window.Panels) Panels.showShop(data || event.data.data);
             break;
@@ -434,7 +442,9 @@ window.addEventListener('message', (event) => {
             if (window.MdcTablet) MdcTablet.open112(data || event.data.data);
             break;
         case 'dispatch112Hide':
-            if (window.MdcTablet) MdcTablet.close112();
+            // This message is already the Lua acknowledgement. Do not post a
+            // second close callback or NUI focus will be cleared repeatedly.
+            if (window.MdcTablet) MdcTablet.close112(false);
             break;
         case 'ticketShow':
             if (window.Panels) Panels.showTicket(data || event.data.data);
@@ -896,6 +906,69 @@ document.addEventListener('DOMContentLoaded', () => {
             avatar: 'assets/logo.png?v=3', jobId: 'fisherman', job: 'Fisherman',
             jobGradeLabel: 'Angler', jobSalary: 120, completedTasks: 17,
             careerEarnings: 28400, combinedSkillLevels: 4,
+        });
+    } else if (qa === 'vehicles') {
+        window.Menu?.show({
+            id: 2, cid: 14, name: 'Trencito', rank: 'PLAYER', level: 12,
+            soloMode: 'vehicle', initialTab: 'vehicle',
+            cash: 106209, bank: 5316, premium: 0, playtime: '39H 41M',
+            health: 100, armor: 0, hunger: 82, thirst: 74, stress: 6,
+            vehicles: [
+                { id: 1, plate: 'B77XOD', model: 'elegy', fuel: 85, engine: 950, body: 910, stored: 1, garage: 'Central', odometer: 12504.3 },
+                { id: 2, plate: 'RO10AMG', model: 'baller', fuel: 32, engine: 450, body: 670, stored: 0, inWorld: true, isCurrentVehicle: true, odometer: 8231.8 },
+                { id: 3, plate: 'DR1FT', model: 'sultan', fuel: 62, engine: 820, body: 740, stored: 0, parked_x: 100, parked_y: 100, odometer: 3412.1 },
+            ],
+        });
+        window.Menu?.setTab('vehicle');
+    } else if (qa === 'inventory' || qa === 'inventory-trade') {
+        window.Panels?.showInventory({
+            weight: 15.2,
+            maxWeight: 30,
+            items: [
+                { id: 1, slot: 1, item: 'water', label: 'Bottled Water', count: 5, usable: true, icon: 'water_bottle' },
+                { id: 2, slot: 2, item: 'bread', label: 'Sandwich', count: 2, usable: true, icon: 'bread' },
+                { id: 3, slot: 3, item: 'phone', label: 'Smartphone', count: 1, usable: false, icon: 'phone' },
+                { id: 4, slot: 8, item: 'weapon_pistol', label: 'Pistol', count: 1, usable: false, icon: 'weaponlicense' },
+            ],
+            nearbyPlayers: [
+                { id: 45, name: 'Alexandru Popa', distance: 1.4 },
+                { id: 12, name: 'Mihai Dobre', distance: 2.7 },
+            ],
+        });
+        if (qa === 'inventory-trade') {
+            window.Panels?.showInventoryTrade({
+                active: true,
+                target: { id: 45, name: 'Alexandru Popa' },
+                myOffer: [{ id: 2, item: 'bread', label: 'Sandwich', count: 1, icon: 'bread' }],
+                theirOffer: [{ id: 11, item: 'water', label: 'Bottled Water', count: 2, icon: 'water_bottle' }],
+                myAccepted: false,
+                theirAccepted: true,
+            });
+        }
+    } else if (qa === 'faction') {
+        window.FactionPanels?.showDashboard({
+            faction: { id: 'police', label: 'Los Santos Police Department', description: 'Law enforcement and public safety.', type: 'law' },
+            grade: 5,
+            gradeLabel: 'Captain',
+            duty: true,
+            salary: 650,
+            memberCount: 12,
+            motd: 'Serve and protect.',
+            report: { current: 8, required: 15 },
+            members: [
+                { id: 1, name: 'Trencito', grade: 6, gradeLabel: 'Chief', online: true, duty: true },
+                { id: 2, name: 'Alexandru Popa', grade: 2, gradeLabel: 'Officer', online: true, duty: false },
+            ],
+            commands: [{ cmd: '/f [message]', desc: 'Faction radio' }, { cmd: '/mdc', desc: 'Open the department computer' }],
+            canManage: true,
+        });
+    } else if (qa === 'vehiclehud') {
+        showApp(true);
+        $('#hud')?.classList.remove('hidden');
+        if (typeof Hud !== 'undefined') Hud.update({
+            inVehicle: true, speed: 141, rpm: 0.72, fuel: 63, engine: 870,
+            odometer: 12504.3, engineOn: true, locked: false, seatbelt: true,
+            vehicleClass: 7, showFuel: true, showOdometer: true,
         });
     } else if (qa === 'jobs') {
         window.Panels?.showJobsPanel({

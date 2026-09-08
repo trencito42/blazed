@@ -16,6 +16,7 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/trade.lua',
 }
 
 client_scripts {
@@ -27,4 +28,5 @@ client_scripts {
 server_exports {
     'GetInventory', 'AddItem', 'RemoveItem', 'HasItem', 'UseItem',
     'SetItemMetadata', 'GetGasCanLiters', 'CountItem', 'TakeAllItems',
+    'TryAddItem', 'RemoveItemById', 'ReloadInventory',
 }

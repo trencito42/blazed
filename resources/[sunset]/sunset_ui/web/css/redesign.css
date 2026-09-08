@@ -1,0 +1,1029 @@
+/*
+ * Production design system derived from server redesign/*.html.
+ * Loaded last: one visual contract for every gameplay NUI surface.
+ */
+:root {
+    --premium-bg: rgba(13, 13, 20, 0.85);
+    --premium-bg-strong: rgba(10, 9, 10, 0.91);
+    --premium-panel: rgba(255, 255, 255, 0.03);
+    --premium-slot: rgba(0, 0, 0, 0.4);
+    --premium-hover: rgba(255, 255, 255, 0.08);
+    --premium-text: #fff;
+    --premium-muted: rgba(255, 255, 255, 0.5);
+    --premium-accent: #00ffcc;
+    --premium-accent-soft: rgba(0, 255, 204, 0.12);
+    --premium-warning: #ffcc00;
+    --premium-danger: #ff4f68;
+    --premium-success: #49e69d;
+    --premium-border: rgba(255, 255, 255, 0.1);
+    --premium-radius: 12px;
+    --premium-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    --premium-ease: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+    --sunset-font-body: 'Montserrat', sans-serif;
+    --sunset-font-display: 'Montserrat', sans-serif;
+    --font-body: 'Montserrat', sans-serif;
+    --font-display: 'Montserrat', sans-serif;
+    --sunset-orange: #00ffcc;
+    --sunset-amber: #00ffcc;
+    --sunset-hot: #00ffcc;
+    --sunset-line: rgba(0, 255, 204, .3);
+    --screen-accent: #00ffcc;
+    --screen-accent-dim: rgba(0, 255, 204, .2);
+    --screen-accent-glow: 0 0 10px rgba(0, 255, 204, .55);
+    --screen-secondary: #00ffcc;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+}
+
+body :where(button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h6, strong, b, em, label, li, small) {
+    font-family: 'Montserrat', sans-serif !important;
+}
+
+/* M uses the same centered 1200x700 glass chassis as the inventory reference. */
+#menu .menu-wrap {
+    top: 50% !important;
+    bottom: auto !important;
+    box-sizing: border-box;
+    width: min(1200px, calc(100vw - 80px)) !important;
+    height: min(700px, calc(100vh - 100px)) !important;
+    max-height: none !important;
+    padding: 20px !important;
+    overflow: hidden;
+    background: var(--premium-bg) !important;
+    border: 1px solid var(--premium-border) !important;
+    border-radius: var(--premium-radius) !important;
+    box-shadow: var(--premium-shadow) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px) !important;
+    transform: translate(-50%, -50%) !important;
+    animation: premium-menu-in .3s var(--premium-ease) both;
+}
+
+#menu .menu-profile,
+#menu .menu-panel-view {
+    background: rgba(0,0,0,.2) !important;
+    border-color: var(--premium-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+#menu .menu-profile {
+    border-top-color: var(--premium-border) !important;
+    background-image: none !important;
+}
+
+#menu .menu-tab.is-active,
+#menu .menu-profile-level-up,
+#menu .menu-job-btn {
+    color: #000 !important;
+    background: var(--premium-accent) !important;
+    border-color: var(--premium-accent) !important;
+}
+
+#menu .menu-keycap,
+#menu .menu-brand > div span,
+#menu .menu-section-title,
+#menu .menu-mgmt__head h3,
+#menu .menu-profile__id {
+    color: var(--premium-accent) !important;
+}
+
+/* Shared glass shell used by all full menus and dialogs. */
+#menu .tech-panel,
+.overlay-panel__box,
+.jobs-menu__shell,
+.dealership__panel,
+.fleet-garage__panel,
+.sb-panel,
+.faction-panel__shell,
+.clan-panel__shell,
+.job-creator-shell,
+.license-quiz__card,
+.license-test__card,
+.fuel-pump__panel,
+.courier-panel__inner,
+.fishing-panel__inner,
+.player-interaction__panel,
+.atm-shell,
+.mdc-shell {
+    color: var(--premium-text) !important;
+    background: var(--premium-bg) !important;
+    border: 1px solid var(--premium-border) !important;
+    border-radius: var(--premium-radius) !important;
+    box-shadow: var(--premium-shadow) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px) !important;
+}
+
+/* Remove black canvases around the actual glass panel. */
+#menu,
+.menu--solo,
+.overlay-panel,
+.jobs-menu,
+.dealership,
+.fleet-garage,
+.scoreboard,
+.dispatch-modal-overlay,
+#inventory {
+    background: transparent !important;
+}
+
+/* Reusable cards and controls from the vehicle/inventory references. */
+.menu-action,
+.menu-vcard,
+.menu-job-card,
+.menu-job-side__box,
+.menu-stats-grid article,
+.jobs-menu__card,
+.shop-card,
+.garage-item,
+.house-row,
+.service-call,
+.skill-card,
+.faction-card,
+.faction-stat,
+.faction-roster-item,
+.clan-card,
+.clan-stat,
+.clan-member,
+.mdc-result,
+.ticket-row,
+.dealership-card {
+    background: var(--premium-panel) !important;
+    border-color: var(--premium-border) !important;
+    border-radius: 8px !important;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease !important;
+}
+
+.menu-action:hover,
+.menu-vcard:hover,
+.jobs-menu__card:hover,
+.shop-card:hover,
+.garage-item:hover,
+.house-row:hover,
+.faction-card:hover,
+.clan-card:hover,
+.dealership-card:hover {
+    background: var(--premium-hover) !important;
+    border-color: rgba(0, 255, 204, .44) !important;
+}
+
+.jobs-menu__card.is-current,
+.house-row.is-selected,
+.dealership-card.is-active {
+    background: var(--premium-accent-soft) !important;
+    border-color: rgba(0, 255, 204, .44) !important;
+    box-shadow: inset 3px 0 0 var(--premium-accent) !important;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.overlay-panel input,
+.overlay-panel select,
+.overlay-panel textarea,
+.dealership input,
+.dealership select,
+.house-owner-tools input,
+.house-owner-tools select,
+.house-owner-tools textarea,
+.job-creator-shell input,
+.job-creator-shell select,
+.job-creator-shell textarea {
+    color: var(--premium-text) !important;
+    background: rgba(0, 0, 0, .34) !important;
+    border: 1px solid var(--premium-border) !important;
+    border-radius: 6px !important;
+}
+
+.overlay-panel input:focus,
+.overlay-panel select:focus,
+.overlay-panel textarea:focus,
+.dealership input:focus,
+.dealership select:focus {
+    border-color: var(--premium-accent) !important;
+    box-shadow: 0 0 0 3px var(--premium-accent-soft) !important;
+    outline: none !important;
+}
+
+/* Inventory — exact split-shell proportions from premium_inventory_trade.html. */
+.menu--solo-inventory {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 34px;
+}
+
+.menu--solo-inventory.hidden {
+    display: none !important;
+}
+
+.premium-inventory-shell {
+    position: relative;
+    display: flex;
+    width: min(1200px, calc(100vw - 80px));
+    height: min(700px, calc(100vh - 100px));
+    color: var(--premium-text);
+    background: var(--premium-bg);
+    border: 1px solid var(--premium-border);
+    border-radius: var(--premium-radius);
+    box-shadow: var(--premium-shadow);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    opacity: 0;
+    transform: scale(.95) translateY(12px);
+    animation: premium-shell-in .3s var(--premium-ease) forwards;
+}
+
+@keyframes premium-shell-in {
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes premium-menu-in {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)) scale(.95); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.premium-inventory-main {
+    box-sizing: border-box;
+    display: flex;
+    flex: 0 0 65%;
+    flex-direction: column;
+    min-width: 0;
+    padding: 30px;
+    border-right: 1px solid var(--premium-border);
+}
+
+.premium-inventory-side {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    padding: 30px;
+    background: rgba(0, 0, 0, .2);
+    border-radius: 0 var(--premium-radius) var(--premium-radius) 0;
+}
+
+.premium-inventory-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 25px;
+}
+
+.premium-inventory-header h1,
+.premium-side-heading h2 {
+    margin: 0;
+    color: var(--premium-text);
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.premium-inventory-header h1 { font-size: 24px; }
+.premium-side-heading h2 { font-size: 16px; }
+
+.premium-weight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--premium-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.premium-weight__track {
+    width: 150px;
+    height: 6px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, .1);
+    border-radius: 3px;
+}
+
+.premium-weight__track i {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--premium-accent);
+    box-shadow: 0 0 12px rgba(0, 255, 204, .38);
+    transition: width .3s ease;
+}
+
+.premium-inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-content: start;
+    gap: 10px;
+    min-height: 0;
+    padding-right: 8px;
+    overflow-y: auto;
+}
+
+.premium-inventory-grid::-webkit-scrollbar,
+.premium-nearby-list::-webkit-scrollbar { width: 4px; }
+.premium-inventory-grid::-webkit-scrollbar-track,
+.premium-nearby-list::-webkit-scrollbar-track { background: transparent; }
+.premium-inventory-grid::-webkit-scrollbar-thumb,
+.premium-nearby-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 10px; }
+
+.premium-slot {
+    position: relative;
+    aspect-ratio: 1;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--premium-slot);
+    border: 1px solid rgba(255,255,255,.05);
+    border-radius: 8px;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.premium-slot.has-item:hover {
+    background: var(--premium-hover);
+    border-color: rgba(0, 255, 204, .45);
+    transform: translateY(-2px);
+}
+
+.premium-slot.is-selected {
+    background: rgba(0,255,204,.05);
+    border-color: rgba(0,255,204,.3);
+}
+
+.premium-slot.is-selected::before {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+    background: var(--premium-accent);
+    content: '';
+}
+
+.premium-slot__number {
+    position: absolute;
+    bottom: 5px;
+    left: 7px;
+    color: rgba(255,255,255,.18);
+    font-size: 8px;
+    font-weight: 800;
+    pointer-events: none;
+}
+
+.premium-item {
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    cursor: default;
+}
+
+button.premium-item { cursor: pointer; }
+
+.premium-item__icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.5));
+}
+
+.premium-item__icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.premium-item__details {
+    display: flex;
+    width: 95%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.premium-item__details strong {
+    width: 100%;
+    overflow: hidden;
+    color: var(--premium-text);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.premium-item__details span {
+    color: var(--premium-muted);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: .7px;
+}
+
+.premium-item__count {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 2px 6px;
+    color: var(--premium-accent);
+    background: var(--premium-accent-soft);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.premium-nearby-list {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+#inventory-nearby-panel {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+#inventory-nearby-panel.hidden { display: none !important; }
+
+.premium-player-card,
+.premium-nearby-empty {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 15px;
+    background: var(--premium-panel);
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+button.premium-player-card {
+    width: 100%;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.premium-player-card:hover {
+    background: var(--premium-hover);
+    border-color: var(--premium-border);
+    transform: translateX(5px);
+}
+
+.premium-player-card div,
+.premium-nearby-empty { flex-direction: column; align-items: flex-start; }
+.premium-player-card strong,
+.premium-nearby-empty strong { color: var(--premium-text); font-size: 12px; }
+.premium-player-card span,
+.premium-nearby-empty span { color: var(--premium-muted); font-size: 9px; }
+.premium-player-card b { color: var(--premium-accent); font-size: 11px; }
+
+.premium-item-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 100px 100px;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--premium-border);
+}
+
+.premium-item-actions > span {
+    overflow: hidden;
+    color: var(--premium-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.premium-item-actions button,
+.premium-trade-confirm,
+.premium-trade-cancel {
+    padding: 11px;
+    color: #000;
+    background: var(--premium-accent);
+    border: 0;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+.premium-item-actions button.is-danger,
+.premium-trade-cancel {
+    color: var(--premium-danger);
+    background: transparent;
+    border: 1px solid var(--premium-danger);
+}
+
+.premium-item-actions button:disabled,
+.premium-trade-confirm:disabled { opacity: .35; cursor: default; }
+
+.premium-trade-panel {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.premium-trade-panel.hidden { display: none !important; }
+.premium-trade-panel .premium-side-heading { color: var(--premium-muted); font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+.premium-trade-panel .premium-side-heading strong { color: var(--premium-accent); }
+
+.premium-trade-label {
+    margin: 16px 0 8px;
+    color: var(--premium-muted);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.premium-trade-zone {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    min-height: 132px;
+    padding: 10px;
+    background: rgba(0,0,0,.3);
+    border: 1px dashed rgba(255,255,255,.2);
+    border-radius: 8px;
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.premium-trade-zone.is-dragover { background: rgba(0,255,204,.05); border-color: var(--premium-accent); }
+.premium-trade-zone.is-readonly { opacity: .55; }
+
+.premium-trade-slot {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    aspect-ratio: 1;
+    place-items: center;
+    background: var(--premium-slot);
+    border: 1px solid rgba(255,255,255,.05);
+    border-radius: 6px;
+}
+
+.premium-trade-slot.is-removable { cursor: pointer; }
+.premium-trade-slot.is-removable:hover { border-color: var(--premium-danger); }
+.premium-trade-slot__icon { width: 32px; height: 32px; }
+.premium-trade-slot__icon img { width: 100%; height: 100%; object-fit: contain; }
+.premium-trade-slot b { position: absolute; top: 3px; right: 4px; color: var(--premium-accent); font-size: 8px; }
+.premium-trade-confirm { width: 100%; margin-top: 14px; padding: 15px; }
+.premium-trade-cancel { width: 100%; margin-top: 8px; padding: 13px; }
+
+.premium-close-hint {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    width: 100%;
+    color: rgba(255,255,255,.4);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+/* Vehicle menu — exact premium_vehicle_menu.html geometry and accent. */
+.menu-mgmt--vehicles {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#menu.menu--solo-vehicle .menu-wrap {
+    top: 50% !important;
+    bottom: auto !important;
+    width: min(850px, calc(100vw - 80px)) !important;
+    height: min(550px, calc(100vh - 100px)) !important;
+    max-height: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    display: block !important;
+    gap: 0 !important;
+}
+
+#menu.menu--solo-vehicle .menu-brand,
+#menu.menu--solo-vehicle .menu-tabs,
+#menu.menu--solo-vehicle .menu-profile,
+#menu.menu--solo-vehicle .menu-statusbar,
+#menu.menu--solo-vehicle .menu-level-alert {
+    display: none !important;
+}
+
+#menu.menu--solo-vehicle .menu-panels,
+#menu.menu--solo-vehicle .menu-panel-view[data-panel="vehicle"],
+#menu.menu--solo-vehicle .menu-mgmt--vehicles {
+    box-sizing: border-box;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    clip-path: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+#menu.menu--solo-vehicle .menu-mgmt--vehicles { position: relative; }
+
+#menu.menu--solo-vehicle .menu-mgmt--vehicles::after {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    width: 100%;
+    color: rgba(255, 255, 255, .4);
+    content: 'PRESS ESC OR V TO CLOSE';
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.menu-vehicle-grid {
+    grid-template-columns: 40% 60% !important;
+    width: min(850px, 100%) !important;
+    height: min(550px, 100%) !important;
+    min-height: 0 !important;
+    background: var(--premium-bg) !important;
+    border: 1px solid var(--premium-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,.5) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    backdrop-filter: blur(15px) !important;
+    animation: premium-vehicle-in .4s cubic-bezier(.175,.885,.32,1.275) both;
+}
+
+@keyframes premium-vehicle-in {
+    from { opacity: 0; transform: scale(.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.premium-vmenu__item.is-selected {
+    background: rgba(0,255,204,.05) !important;
+    border-color: rgba(0,255,204,.3) !important;
+}
+
+.premium-vmenu__item.is-selected::before { background: var(--premium-accent) !important; }
+.premium-vmenu__plate,
+.premium-vmenu__insurance-info strong { color: var(--premium-accent) !important; background-color: rgba(0,255,204,.1) !important; }
+.premium-vmenu__stats .menu-vcard__vital i b { background: var(--premium-accent) !important; }
+.premium-vmenu__btn--primary { color: #000 !important; background: var(--premium-accent) !important; }
+.premium-vmenu__btn--primary:hover { box-shadow: 0 0 15px rgba(0,255,204,.3) !important; }
+
+/* Vehicle ECU state belongs to the detail language, not to the old orange HUD. */
+.premium-vmenu__detail .menu-vcard__ecu-strip {
+    padding: 11px 13px !important;
+    background: var(--premium-panel) !important;
+    border: 1px solid var(--premium-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-strip:not(.menu-vcard__ecu-strip--stock) {
+    background: rgba(0, 255, 204, .045) !important;
+    border-color: rgba(0, 255, 204, .24) !important;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-pill {
+    color: var(--premium-accent) !important;
+    background: rgba(0, 255, 204, .1) !important;
+    border: 1px solid rgba(0, 255, 204, .18) !important;
+    border-radius: 4px !important;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-strip--stock .menu-vcard__ecu-pill {
+    color: var(--premium-muted) !important;
+    background: rgba(255, 255, 255, .05) !important;
+    border-color: var(--premium-border) !important;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-summary {
+    color: rgba(255, 255, 255, .72) !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-dyno,
+.premium-vmenu__detail .menu-vcard__ecu-chip {
+    color: var(--premium-accent) !important;
+    background: rgba(0, 255, 204, .08) !important;
+    border: 1px solid rgba(0, 255, 204, .14) !important;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-toggle {
+    color: var(--premium-muted) !important;
+    background: rgba(255, 255, 255, .03) !important;
+    border-color: var(--premium-border) !important;
+}
+
+.premium-vmenu__detail .menu-vcard__ecu-toggle:hover,
+.premium-vmenu__detail .menu-vcard__ecu-toggle.is-open {
+    color: var(--premium-accent) !important;
+    background: rgba(0, 255, 204, .08) !important;
+    border-color: rgba(0, 255, 204, .3) !important;
+}
+
+/* The supplied references use rounded glass rectangles, never legacy cut corners. */
+.premium-inventory-shell,
+.menu-vehicle-grid,
+.jobs-menu__shell,
+.overlay-panel__box,
+.dealership__panel,
+.fleet-garage__panel,
+.sb-panel,
+.player-interaction__panel,
+.menu--solo-faction .menu-wrap,
+.menu--solo-clan .menu-wrap,
+.menu--solo-faction .tech-panel,
+.menu--solo-clan .tech-panel {
+    clip-path: none !important;
+}
+
+/* Standalone menus follow the references: the close affordance sits below the shell. */
+.jobs-menu__shell,
+.menu--solo-faction .menu-wrap,
+.menu--solo-clan .menu-wrap {
+    position: relative;
+    overflow: visible !important;
+}
+
+.jobs-menu__close,
+.menu--solo-faction .menu-close-btn,
+.menu--solo-clan .menu-close-btn {
+    display: none !important;
+}
+
+.jobs-menu__shell::after,
+.menu--solo-faction .menu-wrap::after,
+.menu--solo-clan .menu-wrap::after {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    width: 100%;
+    color: rgba(255, 255, 255, .4);
+    content: 'PRESS ESC TO CLOSE';
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    pointer-events: none;
+    text-align: center;
+}
+
+/* Remaining gameplay surfaces use the same reference shell, never an opaque canvas. */
+.mdc-overlay,
+.player-interaction,
+.org-panel,
+#jobcenter,
+#crafting,
+#documents,
+#servicecalls,
+#skills,
+#ticket,
+#help,
+#properties,
+#garage,
+#emotes {
+    background: transparent !important;
+}
+
+.menu--solo-faction .menu-wrap,
+.menu--solo-clan .menu-wrap {
+    box-sizing: border-box;
+    top: 50% !important;
+    bottom: auto !important;
+    left: 50% !important;
+    width: min(1200px, calc(100vw - 80px)) !important;
+    height: min(700px, calc(100vh - 100px)) !important;
+    max-height: none !important;
+    padding: 20px !important;
+    overflow: hidden;
+    background: var(--premium-bg) !important;
+    border: 1px solid var(--premium-border) !important;
+    border-radius: var(--premium-radius) !important;
+    box-shadow: var(--premium-shadow) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px) !important;
+    transform: translate(-50%, -50%) !important;
+    animation: premium-menu-in .3s var(--premium-ease) both;
+}
+
+.menu--solo-faction .tech-panel,
+.menu--solo-clan .tech-panel,
+.mdc-tablet,
+.mdc-screen {
+    background: transparent !important;
+    border-color: var(--premium-border) !important;
+    box-shadow: none !important;
+}
+
+/* Remove the remaining terminal-era treatment from M and organisation screens. */
+#menu:not(.menu--solo-vehicle):not(.menu--solo-faction):not(.menu--solo-clan) .tech-panel,
+#menu:not(.menu--solo-vehicle):not(.menu--solo-faction):not(.menu--solo-clan) .menu-panel-view {
+    clip-path: none !important;
+    background-image: none !important;
+}
+
+#menu .menu-tab {
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: rgba(255, 255, 255, .03) !important;
+}
+
+#menu .menu-tab:hover {
+    color: var(--premium-text) !important;
+    background: var(--premium-hover) !important;
+    border-color: var(--premium-border) !important;
+}
+
+#menu .menu-tab.is-active {
+    color: #000 !important;
+    background: var(--premium-accent) !important;
+    border-color: var(--premium-accent) !important;
+    box-shadow: 0 0 16px rgba(0, 255, 204, .18) !important;
+}
+
+#menu .menu-profile::before,
+#menu .menu-panel-view::before,
+#menu .menu-panel-view::after,
+.menu--solo-faction .org-shell::before,
+.menu--solo-faction .org-shell::after,
+.menu--solo-clan .org-shell::before,
+.menu--solo-clan .org-shell::after {
+    display: none !important;
+}
+
+.menu--solo-faction .org-shell,
+.menu--solo-clan .org-shell,
+.menu--solo-faction .org-main,
+.menu--solo-clan .org-main,
+.menu--solo-faction .faction-dashboard,
+.menu--solo-clan .clan-dashboard,
+.menu--solo-faction .faction-directory-shell,
+.menu--solo-clan .clan-directory-shell {
+    clip-path: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+.menu--solo-faction :is(.faction-tab, .faction-btn, .faction-rank-save),
+.menu--solo-clan :is(.clan-tab, .faction-btn) {
+    clip-path: none !important;
+    border-radius: 6px !important;
+}
+
+.menu--solo-faction :is(.faction-tab.is-active, .faction-btn:not(.is-danger), .faction-rank-save),
+.menu--solo-clan :is(.clan-tab.is-active, .faction-btn:not(.is-danger)) {
+    color: #000 !important;
+    background: var(--premium-accent) !important;
+    border-color: var(--premium-accent) !important;
+}
+
+.menu--solo-faction :is(.faction-section-label, .panel-kicker, .org-rail__label, .faction-detail__type),
+.menu--solo-clan :is(.clan-section-label, .panel-kicker, .org-rail__label, .clan-detail__type) {
+    color: var(--premium-accent) !important;
+}
+
+.menu--solo-faction .faction-card--motd p,
+.menu--solo-clan .faction-card--motd p {
+    color: rgba(255, 255, 255, .82) !important;
+}
+
+.org-rail,
+.org-stat-strip,
+.org-intel-grid,
+.faction-card,
+.faction-stat,
+.faction-roster-item,
+.faction-directory-card,
+.faction-detail,
+.faction-detail__block,
+.faction-detail__stat,
+.clan-card,
+.clan-stat,
+.clan-member,
+.clan-directory-card,
+.clan-detail,
+.clan-detail__block,
+.clan-detail__stat,
+.mdc-card,
+.mdc-panel,
+.mdc-dialog,
+.mdc-dialog-card,
+.mdc-result,
+.mdc-dmv-card {
+    background: var(--premium-panel) !important;
+    border-color: var(--premium-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+.jobs-menu__eyebrow,
+.dealership__eyebrow,
+.player-interaction__eyebrow,
+.org-rail__label,
+.faction-card > span,
+.clan-card > span,
+.mdc-eyebrow,
+.mdc-section-label,
+.panel-subtitle,
+.overlay-panel__box > h2,
+.jobs-menu__shell h2,
+.dealership__panel h2 {
+    color: var(--premium-accent) !important;
+}
+
+.jobs-menu__button--primary,
+.dealership button:not(.danger),
+.panel-primary,
+.faction-tab.is-active,
+.clan-tab.is-active,
+.mdc-btn--primary {
+    color: #000 !important;
+    background: var(--premium-accent) !important;
+    border-color: var(--premium-accent) !important;
+}
+
+.jobs-menu__button,
+.jobs-menu__close,
+.dealership button,
+.panel-close,
+.player-interaction button,
+.faction-tab,
+.clan-tab,
+.mdc-button,
+.mdc-btn {
+    border-radius: 6px !important;
+    transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease !important;
+}
+
+.jobs-menu__shell,
+.dealership__panel,
+.fleet-garage__panel,
+.overlay-panel__box,
+.player-interaction__panel {
+    background-image: none !important;
+}
+
+.player-interaction__shade {
+    background: radial-gradient(circle at center, transparent 10%, rgba(0, 0, 0, .36) 100%) !important;
+}
+
+/* Reference palette keeps yellow/red only for actual warnings and destructive actions. */
+.danger,
+button.danger,
+.jobs-menu__button--danger { color: var(--premium-danger) !important; }
+
+.is-warning,
+.warning { color: var(--premium-warning) !important; }
+
+@media (max-width: 1100px), (max-height: 760px) {
+    .premium-inventory-shell { width: min(1040px, calc(100vw - 48px)); height: min(620px, calc(100vh - 70px)); }
+    .premium-inventory-main, .premium-inventory-side { padding: 22px; }
+    .premium-inventory-grid { gap: 8px; }
+    .premium-item__icon { width: 36px; height: 36px; }
+}
+
+@media (max-width: 820px) {
+    .premium-inventory-main { flex-basis: 70%; }
+    .premium-inventory-side { padding: 18px; }
+    .premium-inventory-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .premium-weight__track { width: 90px; }
+}

@@ -1220,9 +1220,9 @@
             }, 60);
         },
 
-        close112() {
+        close112(notifyClient = true) {
             $('#dispatch-112-modal')?.classList.add('hidden');
-            post('close112Modal');
+            if (notifyClient) post('close112Modal');
         },
 
         submit112() {

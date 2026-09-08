@@ -277,8 +277,9 @@ const Phone = {
 
     trigger112Emergency() {
         if (window.TaxiPhoneMap) TaxiPhoneMap.destroy();
+        // Lua closes the phone before opening 112. A second close races the
+        // new modal and can steal its cursor after it is already visible.
         post('phoneTrigger112', {});
-        post('phoneClose', {});
     },
 
     openApp(app) {

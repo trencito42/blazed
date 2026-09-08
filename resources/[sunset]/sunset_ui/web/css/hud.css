@@ -990,14 +990,28 @@
 
 .hud-bottom-right {
     position: absolute;
-    right: 30px;
-    bottom: 30px;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 10px;
 }
 .hud-bottom-right.hidden { display:none; }
+.speedo-panel.speedo-panel--forza {
+    width: 450px;
+    height: 450px;
+    min-width: 0;
+    padding: 0;
+    gap: 0;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,.7));
+}
+.forza-speedo-canvas {
+    display: block;
+    width: 450px;
+    height: 450px;
+    background: transparent;
+}
 .speedo-panel {
     display: flex;
     flex-direction: column;
@@ -1122,8 +1136,8 @@
 @media(max-width:1280px) {
     .hud-tr { top:18px; right:18px; }
     .hud-bl { left:14px; bottom:calc(20vh + 28px); }
-    .hud-bottom-right { right:22px; bottom:22px; }
-    .speedo-panel { min-width:235px; padding:13px 20px; }
+    .hud-bottom-right { right:0; bottom:0; }
+    .speedo-panel:not(.speedo-panel--forza) { min-width:235px; padding:13px 20px; }
     .speed-val { font-size:46px; }
     .street-name { font-size:19px; }
 }

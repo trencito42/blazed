@@ -18,9 +18,9 @@
             return false;
         };
     </script>
-    <link rel="stylesheet" href="css/fonts.css?v=2">
+    <link rel="stylesheet" href="css/fonts.css?v=3">
     <link rel="stylesheet" href="css/style.css?v=8">
-    <link rel="stylesheet" href="css/hud.css?v=7">
+    <link rel="stylesheet" href="css/hud.css?v=8">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=18">
     <link rel="stylesheet" href="css/menu.css?v=9">
@@ -45,6 +45,7 @@
     <link rel="stylesheet" href="css/mdc_tablet.css?v=12">
     <link rel="stylesheet" href="css/player_interaction.css?v=1">
     <link rel="stylesheet" href="css/atm.css?v=1">
+    <link rel="stylesheet" href="css/redesign.css?v=4">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -574,26 +575,8 @@
         </div>
 
         <div class="hud-bottom-right hud-boot hud-boot--speed hidden" id="hud-speedo" data-hud-panel="speedo">
-            <div class="speedo-panel">
-                <div class="speed-row">
-                    <div class="speed-val-container">
-                        <strong class="speed-val" id="hud-speed">0</strong>
-                        <span class="speed-unit">KM/H</span>
-                    </div>
-                    <strong class="speed-gear" id="hud-gear">N</strong>
-                </div>
-                <div class="rpm-track"><div class="rpm-fill" id="hud-rpm"></div></div>
-                <div class="speed-odo"><span>ODO</span> <strong id="hud-odometer">0</strong> <span>km</span></div>
-                <div class="veh-status-row">
-                    <div class="veh-mini-stat" id="hud-engine-stat" title="Engine condition">
-                        <svg class="veh-mini-icon veh-mini-icon--engine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 11h3l2-3h6l2 3h3v7H4v-7z"/><path d="M18 13h3v4"/><path d="M8 18v2M16 18v2"/><circle cx="9" cy="14.5" r="1.2"/></svg>
-                        <div class="veh-mini-bar-track"><div class="veh-mini-bar-fill fill-engine" id="hud-engine"></div></div>
-                    </div>
-                    <div class="veh-mini-stat" id="hud-fuel-stat" title="Fuel level">
-                        <svg class="veh-mini-icon veh-mini-icon--fuel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="4" y="6" width="12" height="16" rx="2"/><path d="M4 10h12"/><path d="M16 10l4-2v4c0 2-2 4-4 4"/></svg>
-                        <div class="veh-mini-bar-track"><div class="veh-mini-bar-fill fill-fuel" id="hud-fuel"></div></div>
-                    </div>
-                </div>
+            <div class="speedo-panel speedo-panel--forza">
+                <canvas id="forza-speedo-canvas" class="forza-speedo-canvas" width="450" height="450" aria-label="Vehicle speedometer"></canvas>
             </div>
         </div>
 
@@ -738,7 +721,7 @@
                 </section>
 
                 <section class="menu-panel-view tech-panel" data-panel="vehicle">
-                    <div class="menu-mgmt"><div class="menu-mgmt__head"><h3>VEHICLE DIAGNOSTIC LINK_</h3><p>Owned vehicles, live condition and garage controls.</p></div><div class="menu-vehicle-grid" id="menu-vehicle-grid"></div><p class="menu-terminal-line">&gt; ECU CONNECTION ESTABLISHED. VEHICLE DATA IS SERVER AUTHORITATIVE.</p></div>
+                    <div class="menu-mgmt menu-mgmt--vehicles"><div class="menu-vehicle-grid" id="menu-vehicle-grid"></div></div>
                 </section>
                 <section class="menu-panel-view tech-panel accent-orange" data-panel="job">
                     <div class="menu-mgmt"><div class="menu-mgmt__head"><h3>EMPLOYMENT_</h3><p>Civilian work and faction membership are independent and can be active simultaneously.</p></div><div class="menu-job-layout"><div class="menu-job-card" id="menu-job-card"></div><div class="menu-job-side" id="menu-job-side"></div></div></div>
@@ -808,27 +791,37 @@
 
     <!-- AUTH moved to #screen-auth (cinematic) -->
 
-    <!-- INVENTORY (I) — bottom glass layout matching player menu -->
+    <!-- INVENTORY (I) — premium_inventory_trade.html production port -->
     <div id="inventory" class="menu menu--solo menu--solo-inventory hidden">
-        <div class="menu-wrap menu-wrap--solo">
-            <header class="menu-brand">
-                <div>INVENTORY <span>STORAGE</span></div>
-                <button type="button" class="menu-close-btn" id="inventory-close"><span class="menu-keycap">I</span> CLOSE</button>
-            </header>
-            <main class="menu-panels menu-panels--solo">
-                <section class="menu-panel-view tech-panel accent-orange is-active">
-                    <div class="menu-mgmt">
-                        <div class="menu-mgmt__head menu-mgmt__head--inventory">
-                            <div>
-                                <h3>CHARACTER STORAGE_</h3>
-                                <p>Items and equipment on your person.</p>
-                            </div>
-                            <span class="panel-counter" id="inventory-weight"></span>
-                        </div>
-                        <ul class="menu-inventory-list" id="inventory-list"></ul>
-                    </div>
-                </section>
-            </main>
+        <div class="premium-inventory-shell">
+            <section class="premium-inventory-main">
+                <header class="premium-inventory-header">
+                    <h1>INVENTORY</h1>
+                    <div class="premium-weight"><span id="inventory-weight">0.0 / 30 KG</span><div class="premium-weight__track"><i id="inventory-weight-fill"></i></div></div>
+                </header>
+                <div class="premium-inventory-grid" id="inventory-list"></div>
+                <div class="premium-item-actions">
+                    <span id="inventory-selected-label">SELECT AN ITEM</span>
+                    <button type="button" id="inventory-use-selected" disabled>USE</button>
+                    <button type="button" class="is-danger" id="inventory-drop-selected" disabled>DROP</button>
+                </div>
+            </section>
+            <aside class="premium-inventory-side">
+                <div id="inventory-nearby-panel">
+                    <div class="premium-side-heading"><h2>NEARBY PLAYERS</h2></div>
+                    <div class="premium-nearby-list" id="inventory-nearby-list"></div>
+                </div>
+                <div class="premium-trade-panel hidden" id="inventory-trade-panel">
+                    <div class="premium-side-heading">TRADE WITH <strong id="inventory-trade-target">PLAYER</strong></div>
+                    <span class="premium-trade-label">YOUR OFFER — DRAG ITEMS HERE</span>
+                    <div class="premium-trade-zone" id="inventory-my-offer"></div>
+                    <span class="premium-trade-label">THEIR OFFER</span>
+                    <div class="premium-trade-zone is-readonly" id="inventory-their-offer"></div>
+                    <button type="button" class="premium-trade-confirm" id="inventory-trade-confirm">ACCEPT TRADE</button>
+                    <button type="button" class="premium-trade-cancel" id="inventory-trade-cancel">CANCEL</button>
+                </div>
+            </aside>
+            <div class="premium-close-hint">PRESS ESC OR I TO CLOSE</div>
         </div>
     </div>
 
@@ -2604,21 +2597,21 @@
         </aside>
     </div>
 
-    <script src="js/clans.js?v=11"></script>
-    <script src="js/app.js?v=13"></script>
+    <script src="js/app.js?v=17"></script>
     <script src="js/characters.js"></script>
-    <script src="js/hud.js?v=6"></script>
+    <script src="js/forza_speedometer.js?v=1"></script>
+    <script src="js/hud.js?v=7"></script>
     <script src="js/hud_editor.js"></script>
     <script src="js/player_identity.js?v=3"></script>
     <script src="js/scoreboard.js?v=2"></script>
     <script src="js/chat_settings.js"></script>
     <script src="js/chat.js?v=20"></script>
     <script src="js/properties-ui.js?v=3"></script>
-    <script src="js/menu.js?v=6"></script>
+    <script src="js/menu.js?v=7"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
-    <script src="js/phone.js?v=3"></script>
-    <script src="js/panels.js?v=7"></script>
+    <script src="js/phone.js?v=4"></script>
+    <script src="js/panels.js?v=9"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=3"></script>
     <script src="js/auth_email.js?v=1"></script>
@@ -2635,7 +2628,7 @@
     <script src="js/job_creator.js?v=10"></script>
     <script src="js/factions.js?v=7"></script>
     <script src="js/clans.js?v=12"></script>
-    <script src="js/mdc_tablet.js?v=12"></script>
+    <script src="js/mdc_tablet.js?v=13"></script>
     <script src="js/player_interaction.js?v=1"></script>
     <script src="js/atm.js?v=1"></script>
 </body>

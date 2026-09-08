@@ -140,11 +140,18 @@ local function togglePhone()
 end
 
 RegisterCommand('phone', togglePhone, false)
+exports('IsPhoneOpen', function()
+    return phoneOpen == true
+end)
 
 CreateThread(function()
     while true do
         if phoneOpen and IsPauseMenuActive() then
             closePhone()
+        elseif phoneOpen and not IsNuiFocused() then
+            -- A late close acknowledgement from another NUI modal must not
+            -- leave the visible phone without its cursor or keyboard focus.
+            exports.sunset_ui:SetFocus(true, true, false)
         end
         Wait(phoneOpen and 50 or 250)
     end

@@ -149,6 +149,7 @@ function AddItem(source, item, count, slot, metadata)
 end
 
 function RemoveItem(source, item, count)
+    if type(IsInventoryTradeLocked) == 'function' and IsInventoryTradeLocked(source) then return false end
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return false end
     count = math.floor(count or 1)
@@ -174,6 +175,7 @@ end
 -- Remove one exact persisted row. This is required for metadata-bearing items:
 -- removing only by item name can consume a different instance than the one shown.
 function RemoveItemById(source, rowId, item, count)
+    if type(IsInventoryTradeLocked) == 'function' and IsInventoryTradeLocked(source) then return false end
     local char = exports.sunset_core:GetCharacter(source)
     rowId = tonumber(rowId)
     count = math.floor(tonumber(count) or 1)
@@ -318,6 +320,9 @@ function TakeAllItems(source, item)
 end
 
 function UseItem(source, item)
+    if type(IsInventoryTradeLocked) == 'function' and IsInventoryTradeLocked(source) then
+        return false, 'Cancel or complete your active trade before using items.'
+    end
     if type(item) ~= 'string' or item == '' then
         return false, 'The selected inventory item is invalid. Close and reopen the inventory.'
     end
@@ -427,7 +432,37 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
     local inv = GetInventory(source)
-    return { items = inventoryView(inv), weight = calcWeight(inv), maxWeight = Sunset.Config.MaxWeight }
+    local nearbyPlayers = {}
+    local sourcePed = GetPlayerPed(source)
+    if sourcePed and sourcePed ~= 0 then
+        local origin = GetEntityCoords(sourcePed)
+        for _, playerId in ipairs(GetPlayers()) do
+            local target = tonumber(playerId)
+            if target and target ~= source then
+                local targetPed = GetPlayerPed(target)
+                if targetPed and targetPed ~= 0 then
+                    local distance = #(origin - GetEntityCoords(targetPed))
+                    if distance <= 3.0 then
+                        local targetChar = exports.sunset_core:GetCharacter(target)
+                        if targetChar then
+                            nearbyPlayers[#nearbyPlayers + 1] = {
+                                id = target,
+                                name = targetChar.name or targetChar.firstname or GetPlayerName(target),
+                                distance = math.floor(distance * 10 + 0.5) / 10,
+                            }
+                        end
+                    end
+                end
+            end
+        end
+    end
+    table.sort(nearbyPlayers, function(a, b) return a.distance < b.distance end)
+    return {
+        items = inventoryView(inv),
+        weight = calcWeight(inv),
+        maxWeight = Sunset.Config.MaxWeight,
+        nearbyPlayers = nearbyPlayers,
+    }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:useItem', function(source, item)

@@ -271,14 +271,14 @@ end
 
 local function chargeExamFee(source, licenseType)
     local fee = resolveExamFee(licenseType)
-    if fee <= 0 then return true, 0 end
+    if fee <= 0 then return true, 0, nil end
     if exports.sunset_core:RemoveMoney(source, 'cash', fee, 'license_exam') then
-        return true, fee
+        return true, fee, 'cash'
     end
     if exports.sunset_core:RemoveMoney(source, 'bank', fee, 'license_exam') then
-        return true, fee
+        return true, fee, 'bank'
     end
-    return false, fee
+    return false, fee, nil
 end
 
 local function canStartTest(source, licenseType)
@@ -355,7 +355,7 @@ exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(sour
     local theory = SunsetLicenses.Theory[licenseType]
     if not theory then return nil, 'No theory exam configured for this license.' end
     local fee = resolveExamFee(licenseType)
-    local paid, charged = chargeExamFee(source, licenseType)
+    local paid, charged, chargedAccount = chargeExamFee(source, licenseType)
     if not paid then
         return nil, ('Exam fee is $%d. You need enough cash or bank balance.'):format(fee)
     end
@@ -379,6 +379,9 @@ exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(sour
         if not reportId then
             TestSessions[source] = nil
             AuthorizedTests[source] = nil
+            if charged > 0 and chargedAccount then
+                exports.sunset_core:AddMoney(source, chargedAccount, charged, 'license_exam_refund')
+            end
             return nil, 'The supervised exam audit record could not be created. No test started; contact staff.'
         end
     end

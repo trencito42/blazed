@@ -14,5 +14,16 @@ dependencies {
     'sunset_phone',
 }
 
-client_script 'client/main.lua'
+shared_scripts {
+    '@sunset_core/shared/config.lua',
+    '@sunset_core/shared/profile.lua',
+    '@sunset_core/shared/factions.lua',
+    '@sunset_core/shared/police.lua',
+}
+
+client_scripts {
+    '@sunset_core/client/callbacks.lua',
+    'client/main.lua',
+}
+
 server_script 'server/main.lua'

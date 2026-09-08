@@ -61,6 +61,29 @@ const Panels = {
         });
 
         $('#inventory-close')?.addEventListener('click', () => post('inventoryClose'));
+        $('#inventory-use-selected')?.addEventListener('click', () => {
+            const row = this._inventorySelected;
+            if (row?.usable) post('inventoryUse', { item: row.item });
+        });
+        $('#inventory-drop-selected')?.addEventListener('click', () => {
+            const row = this._inventorySelected;
+            if (row) post('inventoryDrop', { rowId: row.id, count: row.count });
+        });
+        $('#inventory-trade-confirm')?.addEventListener('click', () => post('inventoryTradeConfirm', {}));
+        $('#inventory-trade-cancel')?.addEventListener('click', () => post('inventoryTradeCancel', {}));
+        const offerZone = $('#inventory-my-offer');
+        offerZone?.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            offerZone.classList.add('is-dragover');
+        });
+        offerZone?.addEventListener('dragleave', () => offerZone.classList.remove('is-dragover'));
+        offerZone?.addEventListener('drop', (event) => {
+            event.preventDefault();
+            offerZone.classList.remove('is-dragover');
+            const rowId = Number(event.dataTransfer?.getData('text/inventory-row') || 0);
+            const row = (this._inventoryItems || []).find((entry) => Number(entry.id) === rowId);
+            if (row) post('inventoryTradeOffer', { rowId: row.id, count: row.count });
+        });
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
         $('#atm-close')?.addEventListener('click', () => post('atmClose'));
         $('#mdc-close')?.addEventListener('click', () => post('mdcClose'));
@@ -108,7 +131,7 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage'];
+            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#clothing'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -128,6 +151,12 @@ const Panels = {
                         '#faction-directory': 'factionPanelsClose',
                         '#garage': 'garageClose',
                         '#fleet-garage': 'fleetGarageClose',
+                        '#documents': 'documentsClose',
+                        '#jobcenter': 'jobCenterClose',
+                        '#emotes': 'emotesClose',
+                        '#crafting': 'craftingClose',
+                        '#dealership': 'dealershipClose',
+                        '#clothing': 'clothingClose',
                     };
                     post(map[sel]);
                     e.preventDefault();
@@ -187,6 +216,7 @@ const Panels = {
         if (!list) return;
         list.innerHTML = '';
         const items = data.items || [];
+        this._inventoryItems = items;
         const bySlot = new Map(items.map((row, index) => [Math.max(1, Number(row.slot) || index + 1), row]));
         const slotCount = Math.max(30, ...Array.from(bySlot.keys()), 0);
         for (let slot = 1; slot <= slotCount; slot += 1) {
@@ -218,13 +248,19 @@ const Panels = {
                 const value = Math.max(0, Number(row.metadata.value) || 0);
                 label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
             }
-            const item = document.createElement(row.usable ? 'button' : 'div');
+            const item = document.createElement('button');
             item.className = 'premium-item';
-            if (row.usable) {
-                item.type = 'button';
-                item.title = `Use ${label}`;
-                item.addEventListener('click', () => post('inventoryUse', { item: def }));
-            }
+            item.type = 'button';
+            item.title = row.usable ? `Select ${label}; double-click to use` : `Select ${label}`;
+            item.draggable = true;
+            item.addEventListener('click', () => this.selectInventoryItem(row, cell));
+            item.addEventListener('dblclick', () => {
+                if (row.usable) post('inventoryUse', { item: def });
+            });
+            item.addEventListener('dragstart', (event) => {
+                event.dataTransfer?.setData('text/inventory-row', String(row.id));
+                if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+            });
             item.appendChild(createItemArtwork(row, 'premium-item__icon'));
             const details = document.createElement('div');
             details.className = 'premium-item__details';
@@ -257,8 +293,10 @@ const Panels = {
                 nearbyList.appendChild(empty);
             } else {
                 nearby.forEach((player) => {
-                    const card = document.createElement('div');
+                    const card = document.createElement('button');
                     card.className = 'premium-player-card';
+                    card.type = 'button';
+                    card.addEventListener('click', () => post('inventoryTradeRequest', { targetId: player.id }));
                     const copy = document.createElement('div');
                     const name = document.createElement('strong');
                     name.textContent = player.name || `Player #${player.id}`;
@@ -276,9 +314,69 @@ const Panels = {
         $('#inventory')?.classList.remove('hidden');
     },
 
+    selectInventoryItem(row, cell) {
+        this._inventorySelected = row || null;
+        $$('.premium-slot.is-selected').forEach((slot) => slot.classList.remove('is-selected'));
+        cell?.classList.add('is-selected');
+        const label = $('#inventory-selected-label');
+        if (label) label.textContent = row ? `${row.label || row.item}  x${Number(row.count) || 0}` : 'SELECT AN ITEM';
+        const use = $('#inventory-use-selected');
+        const drop = $('#inventory-drop-selected');
+        if (use) use.disabled = !row?.usable;
+        if (drop) drop.disabled = !row;
+    },
+
+    showInventoryTrade(data = {}) {
+        this._inventoryTrade = data.active ? data : null;
+        $('#inventory-nearby-panel')?.classList.toggle('hidden', data.active === true);
+        $('#inventory-trade-panel')?.classList.toggle('hidden', data.active !== true);
+        if (!data.active) return;
+        const target = $('#inventory-trade-target');
+        if (target) target.textContent = data.target?.name || `PLAYER #${data.target?.id || '?'}`;
+        const renderOffer = (selector, rows, removable) => {
+            const zone = $(selector);
+            if (!zone) return;
+            zone.innerHTML = '';
+            const offer = Array.isArray(rows) ? rows : [];
+            for (let i = 0; i < 9; i += 1) {
+                const slot = document.createElement('div');
+                slot.className = 'premium-trade-slot';
+                const row = offer[i];
+                if (row) {
+                    slot.appendChild(createItemArtwork(row, 'premium-trade-slot__icon'));
+                    const count = document.createElement('b');
+                    count.textContent = `x${Number(row.count) || 0}`;
+                    slot.appendChild(count);
+                    slot.title = row.label || row.item;
+                    if (removable) {
+                        slot.classList.add('is-removable');
+                        slot.addEventListener('click', () => post('inventoryTradeRemove', { rowId: row.id }));
+                    }
+                }
+                zone.appendChild(slot);
+            }
+        };
+        renderOffer('#inventory-my-offer', data.myOffer, true);
+        renderOffer('#inventory-their-offer', data.theirOffer, false);
+        const confirm = $('#inventory-trade-confirm');
+        if (confirm) {
+            confirm.disabled = data.myAccepted === true;
+            confirm.textContent = data.myAccepted
+                ? (data.theirAccepted ? 'PROCESSING...' : 'WAITING FOR PLAYER...')
+                : (data.theirAccepted ? 'ACCEPT THEIR OFFER' : 'ACCEPT TRADE');
+        }
+    },
+
+    hideInventoryTrade() {
+        this._inventoryTrade = null;
+        $('#inventory-trade-panel')?.classList.add('hidden');
+        $('#inventory-nearby-panel')?.classList.remove('hidden');
+    },
+
     hideInventory() {
         $('#inventory')?.classList.add('hidden');
         document.body.classList.remove('inventory-open');
+        this.selectInventoryItem(null, null);
     },
 
     _shopCategoryLabels: {
