@@ -17,8 +17,9 @@
     position: fixed;
     inset: 0;
     z-index: 95;
-    pointer-events: none;
-    background: transparent;
+    pointer-events: auto !important;
+    cursor: default !important;
+    background: rgba(0, 0, 0, 0.001);
 }
 
 .fleet-garage__panel {
@@ -131,7 +132,7 @@
     font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    cursor: pointer;
+    cursor: pointer !important;
     white-space: nowrap;
 }
 
@@ -159,7 +160,7 @@
     color: rgba(246, 242, 233, .55);
     letter-spacing: .14em;
     font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
-    cursor: pointer;
+    cursor: pointer !important;
 }
 
 .fleet-garage__leave:hover { color: #fff; }

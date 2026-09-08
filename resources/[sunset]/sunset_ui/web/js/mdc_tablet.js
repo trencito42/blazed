@@ -64,9 +64,21 @@
                 }
             });
 
-            // 112 Automated Dispatcher Modal bindings
             $('#dispatch-112-cancel')?.addEventListener('click', () => this.close112());
             $('#dispatch-112-submit')?.addEventListener('click', () => this.submit112());
+
+            $('#dispatch-112-details')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.submit112();
+                }
+            });
+
+            $('#dispatch-112-modal')?.addEventListener('click', (e) => {
+                if (e.target === $('#dispatch-112-modal')) {
+                    this.close112();
+                }
+            });
 
             $$('.dispatch-cat-btn').forEach((btn) => {
                 btn.addEventListener('click', () => {
@@ -699,6 +711,9 @@
             this.selected112Category = 'shots';
 
             $('#dispatch-112-modal')?.classList.remove('hidden');
+            setTimeout(() => {
+                $('#dispatch-112-details')?.focus();
+            }, 60);
         },
 
         close112() {

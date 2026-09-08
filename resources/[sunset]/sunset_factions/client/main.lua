@@ -148,6 +148,7 @@ local function openFleetGarage(factionId, depot)
     pendingFleetDepot = depot
     pendingFleetId = factionId
     TriggerEvent('sunset:world:uiModalOpen')
+    exports.sunset_ui:SetFocus(true, true)
     exports.sunset_ui:Send('fleetGarageShow', {
         label = depot.label or 'Fleet Garage',
         factionId = factionId,
@@ -584,6 +585,7 @@ end)
 AddEventHandler('sunset:nui:fleetGarageClose', function()
     pendingFleetDepot = nil
     pendingFleetId = nil
+    exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('fleetGarageHide', {})
 end)
 

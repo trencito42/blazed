@@ -137,6 +137,11 @@ const Panels = {
         });
         $('#garage-close')?.addEventListener('click', () => post('garageClose'));
         $('#fleet-garage-close')?.addEventListener('click', () => post('fleetGarageClose'));
+        $('#fleet-garage')?.addEventListener('click', (e) => {
+            if (e.target === $('#fleet-garage')) {
+                post('fleetGarageClose');
+            }
+        });
         $('#properties-close')?.addEventListener('click', () => post('propertiesClose'));
         $('#emotes-close')?.addEventListener('click', () => post('emotesClose'));
         $('#clothing-close')?.addEventListener('click', () => post('clothingClose'));

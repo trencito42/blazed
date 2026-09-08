@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=18">
     <link rel="stylesheet" href="css/menu.css?v=9">
-    <link rel="stylesheet" href="css/panels.css?v=6">
+    <link rel="stylesheet" href="css/panels.css?v=7">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css">
@@ -27,8 +27,8 @@
     <link rel="stylesheet" href="css/org-panels.css?v=4">
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
-    <link rel="stylesheet" href="css/gameplay_glass.css?v=4">
-    <link rel="stylesheet" href="css/mdc_tablet.css?v=1">
+    <link rel="stylesheet" href="css/gameplay_glass.css?v=5">
+    <link rel="stylesheet" href="css/mdc_tablet.css?v=2">
     <link rel="stylesheet" href="css/player_interaction.css?v=1">
 </head>
 <body>
@@ -1082,50 +1082,68 @@
         </div>
     </div>
 
-    <!-- 112 AUTOMATED EMERGENCY DISPATCHER MODAL -->
+    <!-- 112 AUTOMATED EMERGENCY DISPATCHER — SUNSET JOB / FISHING SHELL STYLE AT BOTTOM -->
     <div id="dispatch-112-modal" class="dispatch-modal-overlay hidden">
-        <div class="dispatch-modal">
-            <div class="dispatch-modal__header">
-                <div class="dispatch-modal__icon">🚨</div>
-                <div>
-                    <h2>911 / 112 Emergency Dispatch</h2>
-                    <span>Automated Emergency Routing System</span>
+        <div class="dispatch-shell">
+            <div class="dispatch-shell__body">
+                <div class="dispatch__header">
+                    <div class="dispatch__icon-slot">
+                        <svg class="dispatch__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square">
+                            <path d="M12 2L1 21h22L12 2z"></path>
+                            <path d="M12 9v4"></path>
+                            <circle cx="12" cy="17" r="1"></circle>
+                        </svg>
+                    </div>
+                    <div class="dispatch__title-wrap">
+                        <div class="dispatch__title">911 / 112 Emergency Dispatch</div>
+                        <div class="dispatch__subtitle">Automated Emergency Routing System</div>
+                    </div>
+                    <div class="dispatch__loc-badge">
+                        <span class="dispatch__loc-pin">📍</span>
+                        <span id="dispatch-112-location">Calculating GPS coordinates...</span>
+                    </div>
                 </div>
-            </div>
-            <div class="dispatch-modal__loc">
-                <span>📍 Location:</span>
-                <strong id="dispatch-112-location">Calculating GPS coordinates...</strong>
-            </div>
-            <div style="font-size: 12px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">
-                Select Emergency Category:
-            </div>
-            <div class="dispatch-categories">
-                <button type="button" class="dispatch-cat-btn is-active" data-category="shots">
-                    <span>💥</span> Shots Fired / Armed
-                </button>
-                <button type="button" class="dispatch-cat-btn" data-category="robbery">
-                    <span>💰</span> Robbery in Progress
-                </button>
-                <button type="button" class="dispatch-cat-btn" data-category="theft">
-                    <span>🚗</span> Stolen Vehicle / Carjacking
-                </button>
-                <button type="button" class="dispatch-cat-btn" data-category="assault">
-                    <span>🥊</span> Violent Assault / Fight
-                </button>
-                <button type="button" class="dispatch-cat-btn" data-category="traffic">
-                    <span>⚠️</span> Serious Traffic Accident
-                </button>
-                <button type="button" class="dispatch-cat-btn" data-category="suspicious">
-                    <span>👁️</span> Suspicious Activity
-                </button>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-                <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Incident Details & Suspect Description:</label>
-                <textarea id="dispatch-112-details" class="dispatch-details-input" placeholder="Briefly describe what happened, suspect appearance, weapons, vehicle color/model, direction fled..."></textarea>
-            </div>
-            <div class="dispatch-actions">
-                <button type="button" class="mdc-btn mdc-btn--outline" id="dispatch-112-cancel">✕ HANG UP / CANCEL</button>
-                <button type="button" class="mdc-btn mdc-btn--danger" id="dispatch-112-submit">🚨 TRANSMIT 112 CALL</button>
+
+                <div class="dispatch__categories-title">Select Emergency Category</div>
+                <div class="dispatch-categories">
+                    <button type="button" class="dispatch-cat-btn is-active" data-category="shots">
+                        <span class="dispatch-cat-emoji">💥</span>
+                        <span>Shots Fired / Armed</span>
+                    </button>
+                    <button type="button" class="dispatch-cat-btn" data-category="robbery">
+                        <span class="dispatch-cat-emoji">💰</span>
+                        <span>Robbery in Progress</span>
+                    </button>
+                    <button type="button" class="dispatch-cat-btn" data-category="theft">
+                        <span class="dispatch-cat-emoji">🚗</span>
+                        <span>Stolen Vehicle</span>
+                    </button>
+                    <button type="button" class="dispatch-cat-btn" data-category="assault">
+                        <span class="dispatch-cat-emoji">🥊</span>
+                        <span>Violent Assault</span>
+                    </button>
+                    <button type="button" class="dispatch-cat-btn" data-category="traffic">
+                        <span class="dispatch-cat-emoji">⚠️</span>
+                        <span>Traffic Accident</span>
+                    </button>
+                    <button type="button" class="dispatch-cat-btn" data-category="suspicious">
+                        <span class="dispatch-cat-emoji">👁️</span>
+                        <span>Suspicious Activity</span>
+                    </button>
+                </div>
+
+                <div class="dispatch__input-wrap">
+                    <input type="text" id="dispatch-112-details" class="dispatch-details-input" placeholder="Briefly describe incident, suspect appearance, vehicle, direction... (optional)" maxlength="200" autocomplete="off">
+                </div>
+
+                <div class="dispatch-actions">
+                    <button type="button" class="dispatch-btn dispatch-btn--cancel" id="dispatch-112-cancel">
+                        <span class="dispatch__key">ESC</span> Hang Up
+                    </button>
+                    <button type="button" class="dispatch-btn dispatch-btn--submit" id="dispatch-112-submit">
+                        <span class="dispatch__key">ENTER</span> Transmit 112 Call
+                    </button>
+                </div>
             </div>
         </div>
     </div>
