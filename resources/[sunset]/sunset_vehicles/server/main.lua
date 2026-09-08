@@ -10,6 +10,7 @@ end
 
 local StoreRate = {}
 local StateSyncRate = {}
+local ParkRate = {}
 
 local function normalizePlate(plate)
     return type(plate) == 'string' and plate:gsub('%s+', ''):upper() or ''
@@ -101,6 +102,17 @@ local function findDrivenVehicle(source, plate)
             if #(playerCoords - coords) <= 12.0 and GetPedInVehicleSeat(vehicle, -1) == ped then
                 return vehicle
             end
+        end
+    end
+    return nil
+end
+
+local function findVehicleEntityByPlate(plate)
+    plate = normalizePlate(plate)
+    if plate == '' then return nil end
+    for _, vehicle in ipairs(GetAllVehicles()) do
+        if DoesEntityExist(vehicle) and normalizePlate(GetVehicleNumberPlateText(vehicle)) == plate then
+            return vehicle
         end
     end
     return nil
@@ -221,7 +233,7 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
     if plate == '' or #plate > 8 or type(props) ~= 'table' then return nil, 'Invalid vehicle data' end
 
     local owned = MySQL.single.await(
-        'SELECT id, props FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?',
+        'SELECT id, props, fuel, engine, body FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND character_id = ?',
         { plate, char.id }
     )
     if not owned then return nil, 'This vehicle is not owned by your character' end
@@ -237,22 +249,44 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
 
     local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
     if vehicle == 0 or not DoesEntityExist(vehicle)
-        or normalizePlate(GetVehicleNumberPlateText(vehicle)) ~= plate
-        or GetPedInVehicleSeat(vehicle, -1) ~= GetPlayerPed(source) then
-        vehicle = findDrivenVehicle(source, plate)
+        or normalizePlate(GetVehicleNumberPlateText(vehicle)) ~= plate then
+        vehicle = findVehicleEntityByPlate(plate)
     end
-    if not vehicle then return nil, 'You must be driving this owned vehicle' end
 
-    fuelLevel = math.max(0, math.min(100, tonumber(fuelLevel) or 0))
-    local engine = math.max(-4000, math.min(1000, GetVehicleEngineHealth(vehicle)))
-    local body = math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
+    local playerPed = GetPlayerPed(source)
+    if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+        local driver = GetPedInVehicleSeat(vehicle, -1)
+        if driver ~= 0 and driver ~= playerPed then
+            return nil, 'Vehiculul este condus în acest moment de altcineva'
+        end
+    end
+
+    local engine = (vehicle and vehicle ~= 0 and DoesEntityExist(vehicle))
+        and math.max(-4000, math.min(1000, GetVehicleEngineHealth(vehicle)))
+        or (tonumber(owned.engine) or 1000.0)
+
+    local body = (vehicle and vehicle ~= 0 and DoesEntityExist(vehicle))
+        and math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
+        or (tonumber(owned.body) or 1000.0)
+
+    if fuelLevel == nil or tonumber(fuelLevel) == nil then
+        fuelLevel = tonumber(owned.fuel) or 100.0
+    else
+        fuelLevel = math.max(0, math.min(100, tonumber(fuelLevel) or 100.0))
+    end
 
     local px, py, pz, ph = nil, nil, nil, nil
-    if type(parked) == 'table' then
+    if type(parked) == 'table' and parked.x then
         px = tonumber(parked.x)
         py = tonumber(parked.y)
         pz = tonumber(parked.z)
         ph = tonumber(parked.h) or tonumber(parked.w)
+    elseif vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+        local coords = GetEntityCoords(vehicle)
+        px = coords.x
+        py = coords.y
+        pz = coords.z
+        ph = GetEntityHeading(vehicle)
     end
 
     local changed = MySQL.update.await([[
@@ -270,9 +304,10 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         char.id,
     })
     if not changed or changed < 1 then return nil, 'Vehicle could not be stored' end
-    if DoesEntityExist(vehicle) then
+    if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
         DeleteEntity(vehicle)
     end
+    TriggerClientEvent('sunset:client:cleanupOwnedVehicles', -1, { { plate = plate } })
     return true
 end
 
@@ -338,6 +373,7 @@ end)
 AddEventHandler('playerDropped', function()
     StoreRate[source] = nil
     StateSyncRate[source] = nil
+    ParkRate[source] = nil
 end)
 
 local function isNearGasStation(playerCoords, maxDist)
@@ -537,28 +573,57 @@ exports.sunset_core:RegisterCallback('sunset:takeVehicleKeys', function(source, 
     return true
 end)
 
-exports.sunset_core:RegisterCallback('sunset:parkOwnedVehicle', function(source, plate)
+exports.sunset_core:RegisterCallback('sunset:parkOwnedVehicle', function(source, netId, plate, reportedProps, reportedFuel)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
-    plate = plateKey(plate)
-    local row = MySQL.single.await('SELECT id FROM vehicles WHERE character_id = ? AND REPLACE(plate, " ", "") = ?', { char.id, plate })
+    local now = GetGameTimer()
+    if now - (ParkRate[source] or 0) < 1500 then return nil, 'Please wait before parking again' end
+    ParkRate[source] = now
+
+    plate = normalizePlate(plate)
+    if plate == '' then return nil, 'Invalid vehicle plate' end
+    local row = MySQL.single.await(
+        'SELECT id, props, fuel FROM vehicles WHERE character_id = ? AND REPLACE(UPPER(plate), " ", "") = ?',
+        { char.id, plate }
+    )
     if not row then return nil, 'This is not your vehicle' end
 
     local ped = GetPlayerPed(source)
-    local vehicle = ped ~= 0 and GetVehiclePedIsIn(ped, false) or 0
+    local vehicle = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+    if vehicle == 0 or not DoesEntityExist(vehicle) then
+        vehicle = ped ~= 0 and GetVehiclePedIsIn(ped, false) or 0
+    end
     if vehicle == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then
         return nil, 'Sit in the driver seat of your vehicle to park it.'
     end
-    if plateKey(GetVehicleNumberPlateText(vehicle)) ~= plate then
+    if normalizePlate(GetVehicleNumberPlateText(vehicle)) ~= plate then
         return nil, 'The vehicle you are driving does not match this ownership record.'
     end
+
     local pos = GetEntityCoords(vehicle)
     local heading = GetEntityHeading(vehicle)
-    MySQL.update.await(
-        'UPDATE vehicles SET stored = 0, parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ? WHERE id = ?',
-        { pos.x, pos.y, pos.z, heading, row.id }
-    )
-    return true
+    local props = decodeProps(row.props)
+    if type(reportedProps) == 'table' then
+        local previousOdometer = math.max(0, tonumber(props.odometer) or 0)
+        local requestedOdometer = math.max(previousOdometer, tonumber(reportedProps.odometer) or previousOdometer)
+        props.odometer = math.min(requestedOdometer, previousOdometer + 8.0)
+    end
+    local encodedProps = json.encode(props)
+    if #encodedProps > 32768 then return nil, 'Vehicle data is too large' end
+
+    -- Parking cannot repair or refuel a vehicle; those have separate paid,
+    -- server-authoritative paths.
+    local previousFuel = math.max(0, math.min(100, tonumber(row.fuel) or 100))
+    local fuelValue = math.max(0, math.min(previousFuel + 0.5, tonumber(reportedFuel) or previousFuel))
+    local engine = math.max(-4000, math.min(1000, GetVehicleEngineHealth(vehicle)))
+    local body = math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
+    local changed = MySQL.update.await([[
+        UPDATE vehicles SET stored = 0, props = ?, fuel = ?, engine = ?, body = ?,
+            parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?
+        WHERE id = ? AND character_id = ?
+    ]], { encodedProps, fuelValue, engine, body, pos.x, pos.y, pos.z, heading, row.id, char.id })
+    if not changed or changed < 1 then return nil, 'The parking position could not be saved' end
+    return { ok = true, x = pos.x, y = pos.y, z = pos.z, heading = heading }
 end)
 
 local function notifyPlayer(source, message, kind)

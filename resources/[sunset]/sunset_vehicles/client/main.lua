@@ -793,6 +793,7 @@ RegisterCommand('garage', openGaragePanel, false)
 
 TriggerEvent('chat:addSuggestion', '/v', 'Personal vehicle garage')
 TriggerEvent('chat:addSuggestion', '/garage', 'Personal vehicle garage')
+TriggerEvent('chat:addSuggestion', '/park', 'Save your personal vehicle at its current position')
 
 AddEventHandler('sunset:nui:garageSpawn', function(data)
     CreateThread(function()
@@ -833,16 +834,26 @@ RegisterCommand('takekeys', function(_, args)
     end)
 end, false)
 
-RegisterCommand('park', function()
+local function parkCurrentVehicle(closeMenuAfter)
     CreateThread(function()
         local veh = getVeh()
         if veh == 0 or not isDriver() then return notify('Sit in the driver seat of your vehicle to park it', 'error') end
-        if spawnedOwnedVehicle ~= veh then return notify('You can only park your personal vehicle', 'error') end
-        local ok, err = Sunset.AwaitCallback('sunset:parkOwnedVehicle', plateOf(veh))
-        if ok then notify('Vehicle parked here — it will spawn at this spot', 'success')
+        local result, err = Sunset.AwaitCallback('sunset:parkOwnedVehicle', VehToNet(veh), plateOf(veh),
+            buildStoreProps(veh), readFuelPercent(veh))
+        if result then
+            notify('Vehicle parked here — GPS and future spawns will use this position', 'success')
+            if closeMenuAfter then TriggerEvent('sunset:nui:menuClose') end
         else notify(err or 'Could not park', 'error') end
     end)
+end
+
+RegisterCommand('park', function()
+    parkCurrentVehicle(false)
 end, false)
+
+AddEventHandler('sunset:vehicle:parkCurrent', function()
+    parkCurrentVehicle(true)
+end)
 
 CreateThread(function()
     while true do
@@ -888,18 +899,14 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         local vehEngine = vehData.engine or 1000.0
         local vehBody = vehData.body or 1000.0
 
-        if not entity then
-            notify('Vehicle is not currently in the world', 'error')
-            return
-        end
+        if entity and DoesEntityExist(entity) then
+            local ped = PlayerPedId()
+            local driver = GetPedInVehicleSeat(entity, -1)
+            if driver ~= 0 and driver ~= ped then
+                notify('Vehiculul este condus în acest moment de altcineva', 'error')
+                return
+            end
 
-        local ped = PlayerPedId()
-        if GetPedInVehicleSeat(entity, -1) ~= ped then
-            notify('You must be driving this vehicle to store it', 'error')
-            return
-        end
-
-        if entity then
             props = buildStoreProps(entity)
             vehFuel = readFuelPercent(entity)
             vehEngine = GetVehicleEngineHealth(entity)
@@ -907,16 +914,19 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         end
 
         local plate = normalizePlate(vehData.plate)
-        local parked = captureParkedPosition(entity)
-        local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(entity), plate, props,
+        local parked = entity and captureParkedPosition(entity) or nil
+        local netId = (entity and entity ~= 0 and DoesEntityExist(entity)) and VehToNet(entity) or 0
+        local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', netId, plate, props,
             vehFuel, vehData.garage or 'legion', parked)
         if not ok then
             notify(err or 'Vehicle could not be stored', 'error')
             return
         end
-        deleteVehicleEntity(entity)
+        if entity and DoesEntityExist(entity) then
+            deleteVehicleEntity(entity)
+        end
         if spawnedOwnedVehicle == entity then spawnedOwnedVehicle = nil end
-        notify('Vehicle stored in garage', 'success')
+        notify('Vehiculul a fost garat cu succes', 'success')
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('garageHide', {})
     end)
@@ -954,36 +964,76 @@ AddEventHandler('sunset:nui:garageClose', function()
     exports.sunset_ui:Send('garageHide', {})
 end)
 
+local function resolveVehicleToStore()
+    local ped = PlayerPedId()
+    if IsPedInAnyVehicle(ped, false) then
+        return GetVehiclePedIsIn(ped, false)
+    end
+    if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
+        local pCoords = GetEntityCoords(ped)
+        local vCoords = GetEntityCoords(spawnedOwnedVehicle)
+        if #(pCoords - vCoords) <= 30.0 then
+            return spawnedOwnedVehicle
+        end
+    end
+    local coords = GetEntityCoords(ped)
+    local closest = GetClosestVehicle(coords.x, coords.y, coords.z, 15.0, 0, 71)
+    if closest ~= 0 and DoesEntityExist(closest) then
+        return closest
+    end
+    if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
+        return spawnedOwnedVehicle
+    end
+    return 0
+end
+
 RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
     CreateThread(function()
-        local veh = getVeh()
-        if veh == 0 or not isDriver() then return notify('You must be driving your vehicle', 'error') end
+        local veh = resolveVehicleToStore()
+        if veh == 0 or not DoesEntityExist(veh) then
+            return notify('Niciun vehicul în apropiere pentru garare', 'error')
+        end
+        local ped = PlayerPedId()
+        local driver = GetPedInVehicleSeat(veh, -1)
+        if driver ~= 0 and driver ~= ped then
+            return notify('Vehiculul este condus în acest moment de altcineva', 'error')
+        end
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
         local parked = captureParkedPosition(veh)
+        local vehFuel = readFuelPercent(veh)
+        local props = buildStoreProps(veh)
         local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(veh), plate,
-            buildStoreProps(veh), fuel, garageId, parked)
+            props, vehFuel, garageId or 'legion', parked)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
         if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
-        notify('Vehicle stored', 'success')
+        notify('Vehiculul a fost garat cu succes', 'success')
     end)
 end)
 
 AddEventHandler('sunset:world:garageStore', function(garageId)
     CreateThread(function()
-        local veh = getVeh()
-        if veh == 0 or not isDriver() then
-            notify('You must be driving your vehicle to store it', 'error')
+        local veh = resolveVehicleToStore()
+        if veh == 0 or not DoesEntityExist(veh) then
+            notify('Niciun vehicul în apropiere pentru garare. Folosește /v pentru meniul garajului.', 'info')
+            return
+        end
+        local ped = PlayerPedId()
+        local driver = GetPedInVehicleSeat(veh, -1)
+        if driver ~= 0 and driver ~= ped then
+            notify('Vehiculul este condus în acest moment de altcineva', 'error')
             return
         end
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
         local parked = captureParkedPosition(veh)
+        local vehFuel = readFuelPercent(veh)
+        local props = buildStoreProps(veh)
         local ok, err = Sunset.AwaitCallback('sunset:storeOwnedVehicle', VehToNet(veh), plate,
-            buildStoreProps(veh), fuel, garageId, parked)
+            props, vehFuel, garageId or 'legion', parked)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
         if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
-        notify('Vehicle stored', 'success')
+        notify('Vehiculul a fost garat cu succes', 'success')
     end)
 end)
 
