@@ -38,7 +38,6 @@ Sunset.Dispatch.ServiceTypes = {
         label = 'Officer Backup',
         factionTypes = { 'law_enforcement', 'ems', 'fire_rescue' },
         providerFactions = { 'police', 'medic', 'lsfd' },
-        broadcastOnly = true,
     },
     police = {
         label = '112 Police Emergency',

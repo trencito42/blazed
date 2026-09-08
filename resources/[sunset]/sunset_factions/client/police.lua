@@ -372,17 +372,28 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local lastDriveWarn = 0
     while true do
         if radarActive and radarVehicle ~= 0 and DoesEntityExist(radarVehicle) then
-            local spd = GetEntitySpeed(radarVehicle)
-            if spd < 1.0 then
-                drawRadarZoneMarkers(radarVehicle, Sunset.Police and Sunset.Police.radar)
-                Wait(0)
-            else
-                Wait(250)
+            SetVehicleHandbrake(radarVehicle, true)
+            FreezeEntityPosition(radarVehicle, true)
+            DisableControlAction(0, 71, true) -- Accelerate (W)
+            DisableControlAction(0, 72, true) -- Brake / Reverse (S)
+            DisableControlAction(0, 59, true) -- Steer Left / Right (A / D)
+            DisableControlAction(0, 60, true) -- Steer Up / Down
+
+            if IsDisabledControlJustPressed(0, 71) or IsDisabledControlJustPressed(0, 72) then
+                local now = GetGameTimer()
+                if now - lastDriveWarn > 3500 then
+                    lastDriveWarn = now
+                    exports.sunset_ui:Notify('Radar activat — oprește radarul (/stopradar sau STOP din MDC) pentru a conduce.', 'warning', 4000)
+                end
             end
+
+            drawRadarZoneMarkers(radarVehicle, Sunset.Police and Sunset.Police.radar)
+            Wait(0)
         else
-            Wait(400)
+            Wait(300)
         end
     end
 end)
@@ -703,15 +714,16 @@ local function tryStartRadar(requestedLimit)
     radarVehicle = vehicle
     radarLimitKmh = result.limitKmh
     lastRadarLock = 0
-    FreezeEntityPosition(vehicle, false)
-    SetVehicleHandbrake(vehicle, false)
+    BringVehicleToHalt(vehicle, 0.0, 1, false)
+    SetVehicleHandbrake(vehicle, true)
+    FreezeEntityPosition(vehicle, true)
     radarHits = {}
     pushRadarUi({
         state = 'scan',
         title = 'Mobile Radar',
         message = 'Scanning traffic…',
     })
-    radarFeedback(('Mobile radar active: %d km/h.'):format(radarLimitKmh), 'success')
+    radarFeedback(('Mobile radar active: %d km/h — vehicul ancorat. Oprește radarul (/stopradar sau din MDC) pentru a conduce.'):format(radarLimitKmh), 'success')
 end
 
 RegisterNetEvent('sunset:police:tryStartRadar', function(limit)
@@ -921,12 +933,15 @@ AddEventHandler('sunset:ui:mdcSetWanted', function(data)
 end)
 
 AddEventHandler('sunset:ui:mdcClearWanted', function(data)
-    if not data or not data.targetId then return end
-    local ok, err = Sunset.AwaitCallback('sunset:policeClearWanted', tonumber(data.targetId))
+    if not data or (not data.targetId and not data.characterId) then return end
+    local target = tonumber(data.targetId)
+    local charId = tonumber(data.characterId)
+    local ok, err = Sunset.AwaitCallback('sunset:policeClearWanted', target, charId)
     if ok then
         PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-        exports.sunset_ui:Notify(('Cleared wanted for #%d'):format(tonumber(data.targetId)), 'success')
-        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
+        exports.sunset_ui:Notify('Wanted status cleared successfully.', 'success')
+        local lookupKey = tostring(charId or target)
+        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', lookupKey)
         if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
         local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
         if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end

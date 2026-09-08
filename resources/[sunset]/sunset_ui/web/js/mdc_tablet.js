@@ -142,8 +142,9 @@
 
             $('#mdc-act-clear')?.addEventListener('click', () => {
                 if (this.currentCitizen) {
-                    const targetId = this.currentCitizen.serverId || this.currentCitizen.id;
-                    post('mdcClearWanted', { targetId });
+                    const targetId = this.currentCitizen.serverId || null;
+                    const characterId = this.currentCitizen.id || null;
+                    post('mdcClearWanted', { targetId, characterId });
                 }
             });
 
@@ -959,7 +960,7 @@
                                 <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 DOSSIER
                             </button>
-                            <button type="button" class="mdc-btn mdc-btn--danger mdc-btn--sm btn-clear-wanted" data-target-id="${row.id}">
+                            <button type="button" class="mdc-btn mdc-btn--danger mdc-btn--sm btn-clear-wanted" data-target-id="${row.id || ''}" data-character-id="${row.characterId || ''}">
                                 ✕ CLEAR
                             </button>
                         </div>
@@ -976,8 +977,11 @@
 
             container.querySelectorAll('.btn-clear-wanted').forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    const id = Number(btn.dataset.targetId);
-                    if (id) post('mdcClearWanted', { targetId: id });
+                    const targetId = Number(btn.dataset.targetId) || null;
+                    const characterId = Number(btn.dataset.characterId) || null;
+                    if (targetId || characterId) {
+                        post('mdcClearWanted', { targetId, characterId });
+                    }
                 });
             });
 

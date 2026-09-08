@@ -24,8 +24,19 @@ exports('CreateCall', wrapCreateCall)
 exports('CreateServiceCall', wrapCreateCall)
 
 exports('AcceptCall', function(sourceOrCallId, callTypeOrSource, callIdMaybe)
-    if callIdMaybe then
+    if callIdMaybe ~= nil then
         return ServiceCore.acceptCall(sourceOrCallId, callTypeOrSource, callIdMaybe)
+    end
+    local s1 = tonumber(sourceOrCallId)
+    local s2 = tonumber(callTypeOrSource)
+    if s1 and s2 then
+        local call = ServiceCore.getCallById(s2) or ServiceCore.getCallById(s1)
+        if call then
+            local realCallId = (ServiceCore.getCallById(s2) and s2) or s1
+            local realSource = (realCallId == s2 and s1) or s2
+            return ServiceCore.acceptCall(realSource, call.callType, realCallId)
+        end
+        return ServiceCore.acceptCall(s1, 'police', s2)
     end
     return ServiceCore.acceptCall(callTypeOrSource, sourceOrCallId, callIdMaybe)
 end)

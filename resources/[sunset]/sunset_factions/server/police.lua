@@ -469,7 +469,8 @@ local function buildWantedListRows()
         local surrenderable = tonumber(row.surrenderable) ~= 0
         if onlineState then surrenderable = onlineState.surrenderable ~= false end
         list[#list + 1] = {
-            id = src,
+            id = src or row.character_id,
+            serverId = src,
             characterId = row.character_id,
             name = ('%s %s'):format(row.firstname or '', row.lastname or ''):gsub('^%s+', ''):gsub('%s+$', ''),
             level = row.level,
@@ -553,21 +554,52 @@ exports.sunset_core:RegisterCallback('sunset:policeSetWanted', function(source, 
     return true
 end)
 
-exports.sunset_core:RegisterCallback('sunset:policeClearWanted', function(source, targetId)
+exports.sunset_core:RegisterCallback('sunset:policeClearWanted', function(source, targetId, characterId)
     if not FactionCore.hasPerm(source, 'clear_wanted') and not FactionCore.hasPerm(source, 'wanted') then
         return nil, FactionCore.accessError(source, 'clear_wanted', 'clear wanted status', 'law_enforcement')
     end
 
     targetId = tonumber(targetId)
-    if not targetId or not GetPlayerName(targetId) then
-        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    characterId = tonumber(characterId)
+
+    local targetCharId = nil
+    local onlineSrc = nil
+
+    -- 1. If targetId corresponds to an active online player
+    if targetId and targetId > 0 and targetId <= 256 and GetPlayerName(targetId) then
+        onlineSrc = targetId
+        targetCharId = charId(targetId)
     end
-    if not WantedOnline[targetId] then
-        return nil, 'That player has no active wanted status.'
+
+    -- 2. Fallback to characterId or targetId treated as characterId
+    if not targetCharId then
+        targetCharId = characterId or targetId
+        if targetCharId then
+            onlineSrc = findOnlineSourceByCharacterId(targetCharId)
+        end
     end
-    clearWanted(targetId, charId(source))
-    notify(targetId, 'Your wanted status has been cleared', 'success')
-    notify(source, ('Cleared wanted for #%d'):format(targetId), 'success')
+
+    if not targetCharId then
+        return nil, 'Invalid suspect identifier specified.'
+    end
+
+    local officerCharId = charId(source)
+    if targetCharId then
+        Police.deleteWantedFromDb(targetCharId, officerCharId)
+    end
+
+    if onlineSrc and WantedOnline[onlineSrc] then
+        clearWanted(onlineSrc, officerCharId)
+        notify(onlineSrc, 'Your wanted status has been cleared by law enforcement', 'success')
+    elseif onlineSrc then
+        syncWantedBag(onlineSrc, nil)
+        syncWantedClient(onlineSrc, 0, '')
+    end
+
+    local officerName = exports.sunset_core:GetPlayerDisplayName(source)
+    local targetName = (onlineSrc and exports.sunset_core:GetPlayerDisplayName(onlineSrc)) or ('Citizen #' .. tostring(targetCharId))
+    broadcastToPolice('WANTED CLEARED', ('Officer %s cleared wanted status for %s.'):format(officerName, targetName))
+    notify(source, ('Cleared wanted for %s'):format(targetName), 'success')
     return true
 end)
 
@@ -1772,7 +1804,9 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcSetCallStatus', function(s
 
     if action == 'respond' then
         if GetResourceState('sunset_dispatch') == 'started' then
-            local res, err = exports.sunset_dispatch:AcceptCall(source, 'police', callId)
+            local targetCall = exports.sunset_dispatch:GetCall(callId)
+            local callType = (targetCall and targetCall.callType) or 'police'
+            local res, err = exports.sunset_dispatch:AcceptCall(source, callType, callId)
             if not res then return { error = err or 'Could not attach to call' } end
             UnitStatuses[source] = '10-97'
             return { ok = true, status = 'ASSIGNED' }

@@ -341,34 +341,62 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
 end
 
 function ServiceCore.acceptCall(source, callType, callId)
-    callType = Sunset.Dispatch.NormalizeServiceType(callType)
     callId = tonumber(callId)
+    local existingCall = callId and Calls[callId]
+    if existingCall then
+        callType = existingCall.callType
+    else
+        callType = Sunset.Dispatch.NormalizeServiceType(callType)
+    end
     if not callType or not callId then return nil, 'Usage: /accept [type] [id]' end
     local cfg = Sunset.Dispatch.ServiceTypes[callType]
-    if cfg and cfg.broadcastOnly then
+    if cfg and cfg.broadcastOnly and callType ~= 'police_backup' then
         return nil, 'This call type cannot be accepted'
     end
     if not ServiceCore.isProviderForType(source, callType) then
-        return nil, 'You must be on duty as a ' .. (Sunset.Dispatch.ServiceTypes[callType].label or callType) .. ' provider'
+        return nil, 'You must be on duty as a ' .. ((cfg and cfg.label) or callType) .. ' provider'
     end
     if not checkRateLimit(source, 'acceptMs') then return nil, 'Please wait before accepting another call' end
-    if ProviderActive[source] then return nil, 'Finish your current call first' end
 
     local char = getChar(source)
     if not char then return nil, 'No character' end
+
+    if ProviderActive[source] and ProviderActive[source] ~= callId then
+        if callType == 'police_backup' or (existingCall and existingCall.metadata and existingCall.metadata.isPanic) then
+            ProviderActive[source] = nil
+        else
+            return nil, 'Finish your current call first'
+        end
+    end
+
     if AcceptLocks[callId] then return nil, 'Call is being assigned' end
     AcceptLocks[callId] = true
 
     local ok, result, err = pcall(function()
-        local affected = MySQL.update.await([[
-            UPDATE service_calls
-            SET status = 'ASSIGNED', responder_character_id = ?
-            WHERE id = ? AND call_type = ? AND status = 'OPEN'
-        ]], { char.id, callId, callType })
-        if affected ~= 1 then return nil, 'Call no longer available' end
-
         local call = Calls[callId]
-        if not call or call.callType ~= callType then return nil, 'Call not found' end
+        if not call then return nil, 'Call not found' end
+
+        if call.status == Sunset.Dispatch.States.ASSIGNED and call.responderCharacterId == char.id then
+            emitClient('sunset:dispatch:waypoint', source, call.coords)
+            notify(source, ('Call #%d GPS route updated'):format(callId), 'success')
+            return serializeCall(call, source)
+        end
+
+        local isBackup = call.callType == 'police_backup'
+        if not isBackup and call.status ~= Sunset.Dispatch.States.OPEN then
+            return nil, 'Call no longer available'
+        end
+
+        if call.status == Sunset.Dispatch.States.OPEN then
+            local affected = MySQL.update.await([[
+                UPDATE service_calls
+                SET status = 'ASSIGNED', responder_character_id = ?
+                WHERE id = ? AND status = 'OPEN'
+            ]], { char.id, callId })
+            if affected < 1 and not isBackup then
+                return nil, 'Call no longer available'
+            end
+        end
 
         call.status = Sunset.Dispatch.States.ASSIGNED
         call.responderCharacterId = char.id
@@ -378,15 +406,15 @@ function ServiceCore.acceptCall(source, callType, callId)
 
         local payload = serializeCall(call, source)
         local callerSrc = call.callerSource or findSourceByCharacterId(call.callerCharacterId)
-        if callerSrc then
+        if callerSrc and callerSrc ~= source then
             notify(callerSrc, ('%s accepted your request'):format(call.responderName), 'success')
             emitClient('sunset:dispatch:callAccepted', callerSrc, payload)
         end
         emitClient('sunset:dispatch:waypoint', source, call.coords)
-        notify(source, ('Call #%d accepted — GPS set'):format(callId), 'success')
-        broadcastProviders(callType, 'sunset:dispatch:callTaken', { id = callId })
-        broadcastProviders(callType, 'sunset:dispatch:callUpdated', payload)
-        TriggerEvent('sunset:dispatch:callAccepted', callId, callType, source, callerSrc)
+        notify(source, ('Call #%d accepted (10-97 En Route) — GPS set'):format(callId), 'success')
+        broadcastProviders(call.callType, 'sunset:dispatch:callTaken', { id = callId })
+        broadcastProviders(call.callType, 'sunset:dispatch:callUpdated', payload)
+        TriggerEvent('sunset:dispatch:callAccepted', callId, call.callType, source, callerSrc)
         return payload
     end)
 
