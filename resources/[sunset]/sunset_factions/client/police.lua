@@ -1124,3 +1124,89 @@ AddEventHandler('onResourceStop', function(res)
     radarActive = false
     radarVehicle = 0
 end)
+
+-- ====================================================================
+-- FIXED SPEED CAMERAS (RADARE FIXE)
+-- ====================================================================
+local fixedRadarBlips = {}
+local clientRadarCooldowns = {}
+
+local function isEmergencyExempt(ped, veh)
+    if exports.sunset_factions and exports.sunset_factions:IsOnDuty() then
+        local char = exports.sunset_core and exports.sunset_core:GetCharacter()
+        local factionId = char and char.metadata and char.metadata.faction
+        local faction = factionId and Sunset.Factions and Sunset.Factions[factionId]
+        if faction and (faction.type == 'legal' or faction.factionType == 'law_enforcement' or faction.factionType == 'ems' or faction.factionType == 'fire_rescue') then
+            return true
+        end
+    end
+    if GetVehicleClass(veh) == 18 or IsVehicleSirenOn(veh) then
+        return true
+    end
+    return false
+end
+
+CreateThread(function()
+    Wait(3000)
+    for idx, radar in ipairs(Sunset.Police and Sunset.Police.fixedRadars or {}) do
+        local blip = AddBlipForCoord(radar.coords.x, radar.coords.y, radar.coords.z)
+        SetBlipSprite(blip, 184)
+        SetBlipColour(blip, 5)
+        SetBlipScale(blip, 0.65)
+        SetBlipAsShortRange(blip, true)
+        BeginTextCommandSetBlipName('STRING')
+        local limit = radar.limitKmh or math.floor((radar.limitMph or 50) * 1.60934)
+        AddTextComponentSubstringPlayerName(('Radar Fix [%d km/h]'):format(limit))
+        EndTextCommandSetBlipName(blip)
+        fixedRadarBlips[idx] = blip
+    end
+end)
+
+CreateThread(function()
+    while true do
+        local ped = PlayerPedId()
+        local veh = GetVehiclePedIsIn(ped, false)
+        if veh ~= 0 and DoesEntityExist(veh) and GetPedInVehicleSeat(veh, -1) == ped then
+            local pCoords = GetEntityCoords(veh)
+            local speedKmh = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
+            local radars = Sunset.Police and Sunset.Police.fixedRadars or {}
+            local now = GetGameTimer()
+
+            for idx, radar in ipairs(radars) do
+                local dist = #(pCoords - radar.coords)
+                local rad = radar.radius or 25.0
+                if dist <= rad then
+                    local limit = radar.limitKmh or math.floor((radar.limitMph or 50) * 1.60934)
+                    if speedKmh > limit then
+                        local lastTrigger = clientRadarCooldowns[idx] or 0
+                        if (now - lastTrigger) >= 15000 then
+                            clientRadarCooldowns[idx] = now
+
+                            if isEmergencyExempt(ped, veh) then
+                                exports.sunset_ui:Notify(('RADAR FIX: Vehicul de intervenție autorizat (%d km/h — exceptat de la amendă).'):format(speedKmh), 'info', 4000)
+                            else
+                                CreateThread(function()
+                                    PlaySoundFrontend(-1, 'Camera_Shoot', 'Phone_SoundSet_Default', true)
+                                    local start = GetGameTimer()
+                                    while GetGameTimer() - start < 100 do
+                                        DrawRect(0.5, 0.5, 1.0, 1.0, 255, 255, 255, 220)
+                                        Wait(0)
+                                    end
+                                end)
+
+                                local plate = GetVehicleNumberPlateText(veh)
+                                local modelHash = GetEntityModel(veh)
+                                local modelName = GetDisplayNameFromVehicleModel(modelHash) or 'Vehicul'
+
+                                TriggerServerEvent('sunset:police:fixedRadarTrigger', idx, speedKmh, plate, modelName)
+                            end
+                        end
+                    end
+                end
+            end
+            Wait(300)
+        else
+            Wait(1200)
+        end
+    end
+end)

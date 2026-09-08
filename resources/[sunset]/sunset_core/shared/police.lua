@@ -80,10 +80,12 @@ Sunset.Police = {
     },
 
     fixedRadars = {
-        { label = 'Legion Square East', coords = vector3(215.4, -1024.8, 29.3), limitMph = 45, radius = 22.0 },
-        { label = 'Del Perro Freeway', coords = vector3(-1470.2, -499.5, 32.8), limitMph = 65, radius = 28.0 },
-        { label = 'Route 68 Sandy', coords = vector3(1956.4, 3842.1, 32.2), limitMph = 55, radius = 25.0 },
-        { label = 'Palomino Ave', coords = vector3(-517.8, -610.2, 30.4), limitMph = 40, radius = 20.0 },
+        { label = 'Legion Square East', coords = vector3(215.4, -1024.8, 29.3), limitKmh = 70, limitMph = 45, radius = 25.0 },
+        { label = 'Del Perro Freeway', coords = vector3(-1470.2, -499.5, 32.8), limitKmh = 120, limitMph = 65, radius = 35.0 },
+        { label = 'Route 68 Sandy', coords = vector3(1956.4, 3842.1, 32.2), limitKmh = 90, limitMph = 55, radius = 30.0 },
+        { label = 'Palomino Ave', coords = vector3(-517.8, -610.2, 30.4), limitKmh = 60, limitMph = 40, radius = 25.0 },
+        { label = 'Great Ocean Highway', coords = vector3(-2825.2, 2352.1, 14.2), limitKmh = 130, limitMph = 80, radius = 40.0 },
+        { label = 'Olympic Freeway', coords = vector3(734.2, -1375.4, 26.2), limitKmh = 110, limitMph = 70, radius = 35.0 },
     },
 }
 

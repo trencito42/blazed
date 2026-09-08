@@ -925,6 +925,7 @@ exports.sunset_core:RegisterCallback('sunset:policeFixedRadars', function(source
     for _, row in ipairs(Sunset.Police.fixedRadars or {}) do
         list[#list + 1] = {
             label = row.label,
+            limitKmh = row.limitKmh or math.floor((row.limitMph or 50) * 1.60934),
             limitMph = row.limitMph,
             x = row.coords.x,
             y = row.coords.y,
@@ -933,6 +934,84 @@ exports.sunset_core:RegisterCallback('sunset:policeFixedRadars', function(source
         }
     end
     return list
+end)
+
+local fixedRadarCooldowns = {}
+
+RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex, speedKmh, plate, modelName)
+    local source = source
+    local char = FactionCore.getChar(source)
+    if not char then return end
+
+    local radar = Sunset.Police and Sunset.Police.fixedRadars and Sunset.Police.fixedRadars[radarIndex]
+    if not radar then return end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return end
+    local playerPos = GetEntityCoords(ped)
+    local dist = #(playerPos - radar.coords)
+    if dist > (radar.radius + 20.0) then return end
+
+    local cooldownKey = ('%s_%s'):format(source, radarIndex)
+    local now = os.time()
+    if fixedRadarCooldowns[cooldownKey] and (now - fixedRadarCooldowns[cooldownKey]) < 12 then
+        return
+    end
+    fixedRadarCooldowns[cooldownKey] = now
+
+    -- Exempt on-duty emergency services (Police, Sheriff, FIB, EMS, Fire)
+    if FactionCore.isOnDuty(source) then
+        local factionId = FactionCore.getFactionOf(char)
+        local faction = Sunset.Factions[factionId]
+        if faction and (faction.type == 'legal' or faction.factionType == 'law_enforcement' or faction.factionType == 'ems' or faction.factionType == 'fire_rescue') then
+            return -- On-duty emergency service exempt from fixed speed cameras!
+        end
+    end
+
+    local limit = radar.limitKmh or math.floor((radar.limitMph or 50) * 1.60934)
+    speedKmh = tonumber(speedKmh) or 0
+    if speedKmh <= limit then return end
+
+    local over = speedKmh - limit
+    local fine = math.min(1500, math.max(100, 100 + over * 12))
+
+    local paid = exports.sunset_core:RemoveMoney(source, 'bank', fine, 'radar_fine')
+    if not paid then
+        paid = exports.sunset_core:RemoveMoney(source, 'cash', fine, 'radar_fine')
+    end
+
+    local payNote = paid and ('-$%d din cont'):format(fine) or ('neachitat ($%d)'):format(fine)
+    TriggerClientEvent('sunset:client:notify', source,
+        ('📷 [RADAR FIX — %s] Ai fost surprins conducând cu %d km/h (Limită: %d km/h, +%d km/h). Amendă automată: %s.'):format(
+            radar.label, speedKmh, limit, over, payNote
+        ),
+        'error', 9000
+    )
+
+    if over >= 30 then
+        local driverName = exports.sunset_core:GetPlayerDisplayName(source)
+        local alertText = ('[RADAR FIX %s] %s [%s] (%s) surprins cu %d km/h (limită %d km/h, +%d km/h)!'):format(
+            radar.label, modelName or 'Vehicul', plate or 'N/A', driverName, speedKmh, limit, over
+        )
+
+        for _, id in ipairs(GetPlayers()) do
+            local officerSrc = tonumber(id)
+            if officerSrc and FactionCore.isOnDuty(officerSrc) and FactionCore.isLawEnforcementMember(officerSrc) then
+                policeChat(officerSrc, 'RADAR', alertText, 'police_alert')
+            end
+        end
+
+        if GetResourceState('sunset_dispatch') == 'started' then
+            pcall(function()
+                exports.sunset_dispatch:CreateServiceCall(
+                    source,
+                    'police',
+                    ('Radar Fix %s: %s [%s] viteză excesivă: %d km/h (+%d km/h)'):format(radar.label, modelName or 'Vehicul', plate or 'N/A', speedKmh, over),
+                    radar.coords
+                )
+            end)
+        end
+    end
 end)
 
 exports.sunset_core:RegisterCallback('sunset:policeBackup', function(source, priority)
