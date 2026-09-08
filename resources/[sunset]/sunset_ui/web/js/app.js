@@ -489,6 +489,15 @@ window.addEventListener('message', (event) => {
             if (window.FactionPanels) FactionPanels.hide();
             document.body.classList.remove('faction-panels-open');
             break;
+        case 'playerInteractionShow':
+            if (window.PlayerInteraction) PlayerInteraction.show(data || event.data.data);
+            break;
+        case 'playerInteractionUpdate':
+            if (window.PlayerInteraction) PlayerInteraction.update(data || event.data.data);
+            break;
+        case 'playerInteractionHide':
+            if (window.PlayerInteraction) PlayerInteraction.hide();
+            break;
         case 'factionBrowseInline':
             if (window.FactionPanels) {
                 try {

@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=4">
     <link rel="stylesheet" href="css/mdc_tablet.css?v=1">
+    <link rel="stylesheet" href="css/player_interaction.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -1841,6 +1842,26 @@
         </div>
     </div>
 
+    <!-- NEARBY PLAYER INTERACTION -->
+    <div id="player-interaction" class="player-interaction hidden" aria-hidden="true">
+        <div class="player-interaction__shade"></div>
+        <section class="player-interaction__panel" role="dialog" aria-modal="true" aria-labelledby="player-interaction-name">
+            <header class="player-interaction__header">
+                <div>
+                    <span class="player-interaction__eyebrow">NEARBY PLAYER</span>
+                    <h2 id="player-interaction-name">PLAYER</h2>
+                    <div class="player-interaction__meta" id="player-interaction-meta"></div>
+                </div>
+                <button type="button" class="player-interaction__close" id="player-interaction-close"><b>ESC</b><span>CLOSE</span></button>
+            </header>
+            <div class="player-interaction__body" id="player-interaction-groups"></div>
+            <footer class="player-interaction__footer">
+                <span>Actions appear according to your faction, rank, duty and the target state.</span>
+                <b>G</b>
+            </footer>
+        </section>
+    </div>
+
     <!-- CRAFTING -->
     <div id="crafting" class="overlay-panel hidden">
         <div class="overlay-panel__box overlay-panel__box--wide">
@@ -1910,5 +1931,6 @@
     <script src="js/job_creator.js?v=9"></script>
     <script src="js/factions.js?v=6"></script>
     <script src="js/mdc_tablet.js?v=1"></script>
+    <script src="js/player_interaction.js?v=1"></script>
 </body>
 </html>

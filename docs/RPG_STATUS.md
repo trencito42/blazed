@@ -1,7 +1,16 @@
 # SunsetMP RPG Status (Canonical)
 
-**Last updated:** 2026-09-05
+**Last updated:** 2026-09-08
 **Code baseline:** runtime commit `e1836d3`, deployed to Coolify on 2026-09-05
+
+## 2026-09-08 — Context interaction and consolidation start (not deployed)
+
+- Added a nearby-player interaction menu on `G` / `/interact`, with actions selected from the caller's faction, duty state and permissions instead of exposing every command to every player.
+- Added server-authoritative distance, identity, permission and amount checks for money transfer, contacts, faction, police, emergency-service, taxi, mechanic and instructor actions.
+- Removed a dead phone event that attempted to publish the client character back to the server.
+- Hardened citizen dispatch reports: server position is authoritative, categories are allowlisted and user-controlled text is length-bounded.
+- Hardened client-assisted murder reporting with live entity, death-state and distance validation before opening a report window.
+- Added the new resource to the production configuration template. A server restart/deploy is still required before it is available in game.
 
 ## Post-Cursor hardening pass (2026-09-05, not deployed)
 

@@ -3,6 +3,7 @@
 ## General
 | Command | Description |
 |---------|-------------|
+| `G` or `/interact` | Open contextual actions for the nearest player (up to 3 metres) |
 | `/faction` | Member dashboard: roster, leaders, rank, duty, MOTD and weekly report |
 | `/factions` | Public directory of factions, leaders and recruitment status |
 | `/duty` | Toggle on/off shift |

@@ -111,6 +111,8 @@ forward('appearanceRotate')
 forward('appearanceGender')
 forward('licenseQuizClose')
 forward('licenseQuizSubmit')
+forward('playerInteractionClose')
+forward('playerInteractionAction')
 
 RegisterNUICallback('licenseQuizAnswer', function(data, cb)
     data = type(data) == 'table' and data or {}

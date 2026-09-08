@@ -34,6 +34,7 @@ files {
     'web/css/theme.css',
     'web/css/gameplay_glass.css',
     'web/css/mdc_tablet.css',
+    'web/css/player_interaction.css',
     'web/js/*.js',
     'web/vendor/**/*',
     'web/assets/**/*',

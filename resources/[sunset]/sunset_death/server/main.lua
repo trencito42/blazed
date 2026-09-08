@@ -145,6 +145,13 @@ RegisterNetEvent('sunset:death:playerKilled', function(victimId)
     local killer = source
     victimId = tonumber(victimId)
     if not victimId or victimId == killer or not GetPlayerName(victimId) then return end
+
+    local killerPed = GetPlayerPed(killer)
+    local victimPed = GetPlayerPed(victimId)
+    if not killerPed or killerPed == 0 or not victimPed or victimPed == 0 then return end
+    if GetEntityHealth(victimPed) > 0 then return end
+    if #(GetEntityCoords(killerPed) - GetEntityCoords(victimPed)) > 500.0 then return end
+
     if isOnDutyPolice(killer) then return end
     if MurderWindow[victimId] then return end
 

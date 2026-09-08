@@ -82,11 +82,6 @@ local function openPhone()
             Wait(200)
         end
 
-        local char = exports.sunset_core:GetCharacter()
-        if char then
-            TriggerServerEvent('sunset:server:setCharacter', char)
-        end
-
         local data, err = Sunset.AwaitCallback('sunset:getPhoneData')
         if not data then
             phoneOpening = false

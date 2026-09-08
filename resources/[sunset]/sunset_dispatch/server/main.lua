@@ -143,21 +143,32 @@ exports.sunset_core:RegisterCallback('sunset:dispatch:call112', function(source,
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character loaded' end
 
-    category = tostring(category or 'emergency')
+    category = tostring(category or 'emergency'):lower()
+    local allowedCategories = {
+        emergency = true,
+        medical = true,
+        fire = true,
+        shots = true,
+        robbery = true,
+        theft = true,
+        assault = true,
+        traffic = true,
+        suspicious = true,
+    }
+    if not allowedCategories[category] then category = 'emergency' end
+
     description = tostring(description or ''):gsub('^%s*(.-)%s*$', '%1')
     if description == '' then description = 'Citizen reported 112 emergency' end
+    description = description:sub(1, 300)
 
     local ped = GetPlayerPed(source)
     local pCoords = (ped and ped ~= 0) and GetEntityCoords(ped) or vector3(0, 0, 0)
-    if type(coords) == 'table' and tonumber(coords.x) then
-        pCoords = vector3(tonumber(coords.x), tonumber(coords.y), tonumber(coords.z))
-    end
 
     local metadata = {
         emergency = '112',
         category = category,
-        street = street or 'Unknown street',
-        area = area or 'Los Santos',
+        street = tostring(street or 'Unknown street'):sub(1, 80),
+        area = tostring(area or 'Los Santos'):sub(1, 80),
         callerPhone = char.phone_number or 'Hidden',
         callerName = (char.firstname or '') .. ' ' .. (char.lastname or ''),
         timestamp = os.time(),
@@ -192,4 +203,3 @@ exports.sunset_core:RegisterCallback('sunset:dispatch:call112', function(source,
 end)
 
 print('[sunset_dispatch] exports and callbacks ready')
-

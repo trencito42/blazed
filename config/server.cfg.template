@@ -63,6 +63,7 @@ ensure sunset_properties
 ensure sunset_emotes
 ensure sunset_clothing
 ensure sunset_phone
+ensure sunset_interactions
 ensure sunset_taxi
 ensure sunset_fire
 ensure sunset_documents
