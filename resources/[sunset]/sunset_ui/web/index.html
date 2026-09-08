@@ -2602,24 +2602,25 @@
         </div>
     </div>
 
-    <!-- NEARBY PLAYER INTERACTION -->
+    <!-- NEARBY PLAYER INTERACTION (1:1 from player_interaction_menu.html) -->
     <div id="player-interaction" class="player-interaction hidden" aria-hidden="true">
         <div class="player-interaction__shade"></div>
-        <section class="player-interaction__panel" role="dialog" aria-modal="true" aria-labelledby="player-interaction-name">
-            <header class="player-interaction__header">
-                <div>
-                    <span class="player-interaction__eyebrow">NEARBY PLAYER</span>
-                    <h2 id="player-interaction-name">PLAYER</h2>
-                    <div class="player-interaction__meta" id="player-interaction-meta"></div>
+        <div class="interact-box" id="player-interaction-box">
+            <div class="target-header">
+                <button type="button" class="btn-close" id="player-interaction-close" title="Close (ESC)">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="target-avatar">
+                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </div>
-                <button type="button" class="player-interaction__close" id="player-interaction-close"><b>ESC</b><span>CLOSE</span></button>
-            </header>
-            <div class="player-interaction__body" id="player-interaction-groups"></div>
-            <footer class="player-interaction__footer">
-                <span>Actions appear according to your faction, rank, duty and the target state.</span>
-                <b>G</b>
-            </footer>
-        </section>
+                <div class="target-info">
+                    <div class="target-name" id="player-interaction-name">PLAYER</div>
+                    <div class="target-id">Jucător ID: <span id="player-interaction-id">?</span> <span id="player-interaction-badge" class="target-badge hidden"></span></div>
+                </div>
+            </div>
+
+            <div class="action-container" id="player-interaction-groups"></div>
+        </div>
     </div>
 
     <!-- CRAFTING -->

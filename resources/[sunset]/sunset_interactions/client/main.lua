@@ -50,21 +50,42 @@ local function drawPlayerPrompt(player)
     local ped = player and GetPlayerPed(player) or 0
     if ped == 0 or not DoesEntityExist(ped) then return end
 
-    local coords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.42)
-    local visible, screenX, screenY = World3dToScreen2d(coords.x, coords.y, coords.z)
+    local headCoords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
+    if headCoords.x == 0.0 and headCoords.y == 0.0 and headCoords.z == 0.0 then
+        headCoords = GetEntityCoords(ped) + vector3(0.0, 0.0, 0.85)
+    else
+        headCoords = headCoords + vector3(0.0, 0.0, 0.40)
+    end
+
+    local visible, screenX, screenY = World3dToScreen2d(headCoords.x, headCoords.y, headCoords.z)
     if not visible then return end
 
+    local camCoords = GetGameplayCamCoords()
+    local dist = #(camCoords - headCoords)
+    local fov = (1.0 / GetGameplayCamFov()) * 100.0
+    local scale = (1.0 / dist) * fov * 0.55
+    if scale < 0.22 then scale = 0.22 end
+    if scale > 0.32 then scale = 0.32 end
+
+    local boxW = 0.088 * (scale / 0.28)
+    local boxH = 0.028 * (scale / 0.28)
+
+    -- Dark glass badge background (matches --pi-bg-base: rgba(13, 13, 20, 0.94))
+    DrawRect(screenX, screenY + 0.0125, boxW, boxH, 13, 13, 20, 225)
+
+    -- Cyan accent bottom border (matches --pi-accent: #00ffcc)
+    DrawRect(screenX, screenY + 0.0125 + (boxH / 2) - 0.001, boxW, 0.0022, 0, 255, 204, 255)
+
+    -- Crisp text: [G] INTERACTION
     SetTextFont(4)
-    SetTextScale(0.0, 0.31)
+    SetTextScale(0.0, scale)
     SetTextCentre(true)
-    SetTextColour(255, 255, 255, 245)
-    SetTextDropshadow(2, 0, 0, 0, 235)
+    SetTextColour(255, 255, 255, 255)
+    SetTextDropshadow(2, 0, 0, 0, 255)
     SetTextOutline()
     BeginTextCommandDisplayText('STRING')
-    AddTextComponentSubstringPlayerName('~o~[G]~s~  INTERACT')
+    AddTextComponentSubstringPlayerName('~HUD_COLOUR_NET_PLAYER1~[G]~s~  INTERACTION')
     EndTextCommandDisplayText(screenX, screenY)
-
-    DrawRect(screenX, screenY + 0.019, 0.052, 0.0015, 255, 138, 0, 210)
 end
 
 local function closeMenu()
@@ -223,36 +244,51 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local lastScan = 0
     while true do
-        if not menuOpen and not contextRequestActive and not inputIsBusy()
-            and not IsPedDeadOrDying(PlayerPedId(), true) then
-            promptTarget = closestPlayer(3.0)
-            promptPlayer = playerFromServerId(promptTarget)
-        else
-            promptTarget = nil
-            promptPlayer = nil
-        end
-        Wait(200)
-    end
-end)
+        local sleep = 250
+        local me = PlayerPedId()
 
-CreateThread(function()
-    while true do
-        if promptTarget and not menuOpen then
-            local player = promptPlayer
-            local ped = player and GetPlayerPed(player) or 0
-            if ped ~= 0 and #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(ped)) <= 3.15
-                and HasEntityClearLosToEntity(PlayerPedId(), ped, 17) then
-                drawPlayerPrompt(player)
-                Wait(0)
+        if not menuOpen and not contextRequestActive and not inputIsBusy()
+            and not IsPedDeadOrDying(me, true) then
+
+            local myCoords = GetEntityCoords(me)
+            local currentPed = promptPlayer and GetPlayerPed(promptPlayer) or 0
+
+            -- 1. If we already have a locked player, update and draw every frame (0ms) so it never lags behind
+            if currentPed ~= 0 and DoesEntityExist(currentPed) then
+                local targetCoords = GetEntityCoords(currentPed)
+                local dist = #(myCoords - targetCoords)
+                if dist <= 3.35 and HasEntityClearLosToEntity(me, currentPed, 17) then
+                    drawPlayerPrompt(promptPlayer)
+                    sleep = 0
+                else
+                    promptTarget = nil
+                    promptPlayer = nil
+                end
             else
                 promptTarget = nil
                 promptPlayer = nil
-                Wait(100)
+            end
+
+            -- 2. Periodically scan for the closest player if none locked or check timeout
+            local now = GetGameTimer()
+            if not promptPlayer or (now - lastScan > 200) then
+                lastScan = now
+                local targetId, dist = closestPlayer(3.2)
+                if targetId then
+                    promptTarget = targetId
+                    promptPlayer = playerFromServerId(targetId)
+                    if promptPlayer then sleep = 0 end
+                end
             end
         else
-            Wait(150)
+            promptTarget = nil
+            promptPlayer = nil
+            sleep = 350
         end
+
+        Wait(sleep)
     end
 end)
 

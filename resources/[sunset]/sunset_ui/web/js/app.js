@@ -989,16 +989,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else if (qa === 'interaction') {
         window.PlayerInteraction?.show({
-            targetId: 2,
-            targetServerId: 2,
-            targetName: 'HORJA',
-            level: 1,
-            distance: 1.2,
+            target: {
+                id: 45,
+                name: 'Mihai Dobre',
+                level: 12,
+                faction: 'Civilian',
+            },
             actions: [
-                { id: 'give_cash', label: 'Give Cash', description: 'Hand money directly to this player.', requiresInput: true, inputType: 'number', inputPlaceholder: '$ amount' },
-                { id: 'trade', label: 'Trade Items', description: 'Request a secure real-time trade.' },
-                { id: 'add_contact', label: 'Add to Contacts', description: 'Save this player in your phone contacts.' },
-                { id: 'invite_faction', label: 'Invite to Faction', description: 'Invite an accepted applicant to your faction.' }
+                { id: 'trade', group: 'CIVILIAN', label: 'Propune Schimb (Trade)' },
+                { id: 'give_cash', group: 'CIVILIAN', label: 'Oferă Bani Cash', input: { type: 'number', placeholder: '$ Sumă', min: 1, max: 50000 } },
+                { id: 'show_id', group: 'CIVILIAN', label: 'Arată Buletinul' },
+                { id: 'add_contact', group: 'CIVILIAN', label: 'Adaugă la Contacte' },
+                { id: 'faction_invite', group: 'FACTION', label: 'Invită în Facțiune' },
+                { id: 'cuff', group: 'POLICE', label: 'Cuff Suspect', danger: true },
+                { id: 'frisk', group: 'POLICE', label: 'Search Player' },
             ]
         });
     } else if (qa === 'battlepass' || qa === 'missions') {
