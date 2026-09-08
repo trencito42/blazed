@@ -5,6 +5,14 @@ local lastToggleAt = 0
 local PHONE_MODEL = `prop_amb_phone`
 local TOGGLE_COOLDOWN_MS = 450
 
+local function isChatOpen()
+    if GetResourceState('sunset_chat') ~= 'started' then return false end
+    local ok, open = pcall(function()
+        return exports.sunset_chat:IsChatOpen()
+    end)
+    return ok and open == true
+end
+
 local function playPhoneSound(name)
     if name == 'open' then
         PlaySoundFrontend(-1, 'Pin_Good', 'Phone_SoundSet_Michael', true)
@@ -73,19 +81,23 @@ end
 
 local function openPhone()
     if phoneOpen or phoneOpening then return end
+    if IsNuiFocused() or isChatOpen() then
+        return exports.sunset_ui:Notify('Close the current menu or chat before opening the phone.', 'info', 3500)
+    end
     phoneOpening = true
 
     CreateThread(function()
-        if IsNuiFocused() then
-            exports.sunset_ui:Send('menuHide', {})
-            exports.sunset_ui:SetFocus(false, false, false)
-            Wait(200)
-        end
-
         local data, err = Sunset.AwaitCallback('sunset:getPhoneData')
         if not data then
             phoneOpening = false
             exports.sunset_ui:Notify(err or 'Could not load phone data', 'error')
+            return
+        end
+
+        -- Another UI may have opened while phone data was loading. Never steal
+        -- its focus after the asynchronous callback completes.
+        if IsNuiFocused() or isChatOpen() then
+            phoneOpening = false
             return
         end
 
@@ -138,12 +150,16 @@ CreateThread(function()
     end
 end)
 
--- P opens/closes phone. Lua owns the binding so it still works while NUI focus is on.
+-- P closes its own phone while focused, but never opens over chat or another NUI.
+-- Without this guard, typing the letter P in chat is seen as pause-control 199
+-- and the phone steals the chat cursor/focus.
 CreateThread(function()
     while true do
         DisableControlAction(0, 199, true) -- INPUT_FRONTEND_PAUSE (P)
         if IsDisabledControlJustReleased(0, 199) and not IsPauseMenuActive() then
-            togglePhone()
+            if phoneOpen or (not IsNuiFocused() and not isChatOpen()) then
+                togglePhone()
+            end
         end
         Wait(0)
     end
