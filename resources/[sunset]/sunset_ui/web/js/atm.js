@@ -255,7 +255,7 @@
 
             // Custom amount input direct change
             $('#atm-custom-amount-input')?.addEventListener('input', (e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 7);
+                const val = e.target.value.replace(/\D/g, '').slice(0, 12);
                 this.customAmount = val;
                 e.target.value = val ? Number(val).toLocaleString('en-US') : '';
             });
@@ -487,7 +487,7 @@
                     this.openCustomAmount('withdraw');
                 }
 
-                if (this.customAmount.length < 7) {
+                if (this.customAmount.length < 12) {
                     this.customAmount += key;
                     const input = $('#atm-custom-amount-input');
                     if (input) {
