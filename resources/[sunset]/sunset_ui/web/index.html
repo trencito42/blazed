@@ -188,8 +188,14 @@
                     <button type="button" class="jc-btn danger" id="jc-delete">Șterge</button>
                     <details class="jc-advanced-actions">
                         <summary>Export / Import</summary>
-                        <button type="button" class="jc-btn ghost" id="jc-export">Export</button>
-                        <button type="button" class="jc-btn ghost" id="jc-import">Import</button>
+                        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                            <button type="button" class="jc-btn ghost" id="jc-export">Export JSON</button>
+                            <button type="button" class="jc-btn ghost" id="jc-import-toggle">Import JSON</button>
+                        </div>
+                        <div id="jc-import-box" class="hidden" style="margin-top:10px;">
+                            <textarea id="jc-import-text" placeholder="Lipește conținutul JSON exportat aici..." style="width:100%; min-height:80px; box-sizing:border-box; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:8px; font-family:monospace; font-size:12px; resize:vertical;"></textarea>
+                            <button type="button" class="jc-btn" id="jc-import" style="margin-top:6px;">Încarcă Job</button>
+                        </div>
                     </details>
                 </div>
                 <div class="jc-status" id="jc-status"></div>
@@ -2524,7 +2530,7 @@
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=3"></script>
-    <script src="js/panels.js?v=6"></script>
+    <script src="js/panels.js?v=7"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=3"></script>
     <script src="js/auth_email.js?v=1"></script>
@@ -2538,7 +2544,7 @@
     <script src="js/radar.js"></script>
     <script src="js/courier.js"></script>
     <script src="js/job_shift.js?v=3"></script>
-    <script src="js/job_creator.js?v=9"></script>
+    <script src="js/job_creator.js?v=10"></script>
     <script src="js/factions.js?v=7"></script>
     <script src="js/clans.js?v=12"></script>
     <script src="js/mdc_tablet.js?v=10"></script>

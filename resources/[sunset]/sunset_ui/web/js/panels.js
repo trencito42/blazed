@@ -1120,9 +1120,26 @@ const Panels = {
         });
         $('#dealership-admin-delete').onclick = () => {
             const model = $('#dealer-model').value;
-            if (model && window.confirm(`Remove ${model} from the dealership catalog?`)) {
-                post('dealershipAdminDelete', { model });
+            if (!model) return;
+            const btn = $('#dealership-admin-delete');
+            if (btn) {
+                if (!btn.dataset.confirming) {
+                    btn.dataset.confirming = 'true';
+                    const origText = btn.textContent;
+                    btn.textContent = `Confirmi ștergerea ${model}?`;
+                    btn.style.color = '#ef4444';
+                    btn.style.borderColor = '#ef4444';
+                    setTimeout(() => {
+                        btn.dataset.confirming = '';
+                        btn.textContent = origText;
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                    }, 3500);
+                    return;
+                }
+                btn.dataset.confirming = '';
             }
+            post('dealershipAdminDelete', { model });
         };
         this._renderDealership();
         $('#dealership')?.classList.remove('hidden');

@@ -120,6 +120,9 @@ const JobCreator = {
         document.getElementById('jc-place')?.addEventListener('click', () => this.place());
         document.getElementById('jc-delete')?.addEventListener('click', () => this.delete());
         document.getElementById('jc-export')?.addEventListener('click', () => this.exportJob());
+        document.getElementById('jc-import-toggle')?.addEventListener('click', () => {
+            document.getElementById('jc-import-box')?.classList.toggle('hidden');
+        });
         document.getElementById('jc-import')?.addEventListener('click', () => this.importJob());
         this._panel?.querySelectorAll('.jc-tab').forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -476,8 +479,13 @@ const JobCreator = {
         if (value && !known.has(value)) {
             opts.push(`<option value="${this._esc(value)}" selected>${this._esc(value)} (custom)</option>`);
         }
-        opts.push(`<option value="__new__" ${!value ? '' : ''}>+ Variabilă nouă...</option>`);
-        return `<div class="jc-field"><label>${extra || 'Variabilă'}</label><select id="${id}">${opts.join('')}</select></div>`;
+        opts.push(`<option value="__new__">+ Variabilă nouă...</option>`);
+        return `
+            <div class="jc-field">
+                <label>${extra || 'Variabilă'}</label>
+                <select id="${id}">${opts.join('')}</select>
+                <input type="text" id="${id}-custom" class="hidden" placeholder="Nume variabilă (ex: done, target)" style="margin-top:4px">
+            </div>`;
     },
 
     _stageSelect(id, value, label, allowEnd = true) {
@@ -766,6 +774,7 @@ const JobCreator = {
         bindCustom('#jc-s-prop', '#jc-s-prop-custom');
         bindCustom('#jc-s-item', '#jc-s-item-custom');
         bindCustom('#jc-s-locationField', '#jc-s-locationField-custom');
+        ['jc-s-locationVar', 'jc-s-storeAs', 'jc-s-branchVar', 'jc-s-branchValRef', 'jc-s-var', 'jc-s-resetVar', 'jc-s-actionVar', 'jc-s-propVar', 'jc-s-vehicleVar', 'jc-s-npcVar', 'jc-f-progress-var', 'jc-f-progress-total'].forEach((id) => bindCustom(`#${id}`, `#${id}-custom`));
 
         mount.querySelector('#jc-s-type')?.addEventListener('change', () => {
             this._collectStagesFromDom();
@@ -888,7 +897,8 @@ const JobCreator = {
         const sel = document.getElementById(id);
         if (!sel) return undefined;
         if (sel.value === '__new__') {
-            const name = prompt('Nume variabilă nouă (ex: done, target):');
+            const customInp = document.getElementById(`${id}-custom`);
+            const name = (customInp?.value || '').trim();
             if (name) {
                 this._def().variables = this._def().variables || {};
                 this._def().variables[name] = 0;
@@ -1085,15 +1095,18 @@ const JobCreator = {
                 <div class="jc-loc-grid">${locCards}</div>
                 <h4 class="jc-section-title">Liste destinații (pool)</h4>
                 <div class="jc-pool-grid">${poolBlocks}</div>
-                <button type="button" class="jc-btn ghost" id="jc-new-pool">+ Listă nouă</button>
+                <div class="jc-new-pool-row" style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+                    <input type="text" id="jc-new-pool-name" placeholder="Nume listă (ex: deliveries, routes)" style="max-width:240px;">
+                    <button type="button" class="jc-btn ghost" id="jc-new-pool">+ Adaugă listă</button>
+                </div>
                 <p class="jc-hint">În pași, la „Alege destinație random”, alegi lista de aici.</p>`;
 
             mount.querySelectorAll('.jc-loc-del').forEach((btn) => {
                 btn.addEventListener('click', () => { delete def.locations[btn.dataset.key]; this.renderEditor(); });
             });
             mount.querySelector('#jc-new-pool')?.addEventListener('click', () => {
-                const name = prompt('Nume listă (ex: deliveries, routes):', 'deliveries');
-                if (!name) return;
+                const nameInput = mount.querySelector('#jc-new-pool-name');
+                const name = (nameInput?.value || '').trim() || 'deliveries';
                 def.pools = def.pools || {};
                 if (!def.pools[name]) def.pools[name] = [];
                 this.renderEditor();
@@ -1301,7 +1314,22 @@ const JobCreator = {
     async place() { await this._post('jobCreatorPlace'); },
 
     async delete() {
-        if (!this._selectedId || !confirm('Ștergi jobul?')) return;
+        if (!this._selectedId) return;
+        const btn = document.getElementById('jc-delete');
+        if (btn) {
+            if (!btn.dataset.confirming) {
+                btn.dataset.confirming = 'true';
+                const origText = btn.textContent;
+                btn.textContent = 'Confirmi ștergerea?';
+                setTimeout(() => {
+                    btn.dataset.confirming = '';
+                    btn.textContent = origText;
+                }, 3500);
+                return;
+            }
+            btn.dataset.confirming = '';
+            btn.textContent = 'Șterge';
+        }
         const res = await this._post('jobCreatorDelete', { id: this._selectedId });
         if (res.ok) { this._selectedId = null; this._draft = null; this.renderList(); this.renderEditor(); }
     },
@@ -1316,13 +1344,26 @@ const JobCreator = {
     },
 
     async importJob() {
-        const text = prompt('JSON export:');
-        if (!text) return;
+        const textarea = document.getElementById('jc-import-text');
+        const text = (textarea?.value || '').trim();
+        if (!text) {
+            this.setStatus('Lipește JSON-ul în căsuță mai întâi.');
+            return;
+        }
         try {
             const res = await this._post('jobCreatorImport', { payload: JSON.parse(text) });
-            if (res.ok && res.job) { this._selectedId = res.job.id; this._draft = res.job; this.renderList(); this.renderEditor(); }
-            this.setStatus(res.ok ? 'Importat.' : res.error);
-        } catch (_) { this.setStatus('JSON invalid.'); }
+            if (res.ok && res.job) {
+                this._selectedId = res.job.id;
+                this._draft = res.job;
+                this.renderList();
+                this.renderEditor();
+                if (textarea) textarea.value = '';
+                document.getElementById('jc-import-box')?.classList.add('hidden');
+            }
+            this.setStatus(res.ok ? 'Importat.' : (res.error || 'Eroare la import.'));
+        } catch (_) {
+            this.setStatus('JSON invalid.');
+        }
     },
 
     onPlacement(point) {
