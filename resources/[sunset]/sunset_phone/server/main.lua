@@ -267,7 +267,7 @@ exports.sunset_core:RegisterCallback('sunset:phoneDeleteContact', function(sourc
     return { ok = true }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, targetCharacterId, message, targetPhoneNumber)
+exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, targetCharacterId, message, targetPhoneNumber, location)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
 
@@ -284,51 +284,40 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
 
     -- Handle 112 Emergency dispatch messaging
     if targetCharacterId == -112 or tostring(targetPhoneNumber) == '112' then
-        pcall(function()
-            MySQL.insert.await(
-                'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
-                { tonumber(char.id), -112, message }
-            )
-            local reply = 'Dispecerat 112: Mesajul tau a fost receptionat. Echipajele au fost alertate.'
-            MySQL.insert.await(
-                'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
-                { -112, tonumber(char.id), reply }
-            )
-        end)
+        location = type(location) == 'table' and location or {}
+        local street = tostring(location.street or 'Unknown street'):sub(1, 80)
+        local area = tostring(location.area or 'Los Santos'):sub(1, 80)
 
-        local ped = GetPlayerPed(source)
-        local pCoords = (ped and ped ~= 0) and GetEntityCoords(ped) or vector3(0, 0, 0)
-        local streetHash, crossingHash = GetStreetNameAtCoord(pCoords.x, pCoords.y, pCoords.z)
-        local street = GetStreetNameFromHashKey(streetHash)
-        if crossingHash ~= 0 then
-            street = street .. ' / ' .. GetStreetNameFromHashKey(crossingHash)
+        local dispatchOk, dispatchResult, dispatchErr = pcall(function()
+            return exports.sunset_dispatch:Create112Call(source, 'emergency', message, street, area)
+        end)
+        if not dispatchOk then
+            print(('[sunset_phone] 112 SMS dispatch error for character %s: %s'):format(char.id, tostring(dispatchResult)))
+            return nil, 'Dispeceratul 112 este momentan indisponibil. Mesajul nu a fost trimis; incearca din nou.'
         end
-        local zone = GetNameOfZone(pCoords.x, pCoords.y, pCoords.z)
-        local area = GetLabelText(zone)
-        if area == 'NULL' or area == '' then area = zone end
+        if not dispatchResult or not dispatchResult.ok then
+            return nil, dispatchErr or 'Apelul 112 nu a putut fi inregistrat. Incearca din nou.'
+        end
 
-        pcall(function()
-            if exports.sunset_dispatch and exports.sunset_dispatch.CreateCall then
-                exports.sunset_dispatch:CreateCall({
-                    source = source,
-                    type = 'police',
-                    coords = pCoords,
-                    description = '112 SMS Apel: ' .. message,
-                    metadata = {
-                        emergency = '112',
-                        category = 'emergency',
-                        street = street,
-                        area = area,
-                        callerPhone = char.phone_number or '112-SMS',
-                        callerName = (char.firstname or '') .. ' ' .. (char.lastname or ''),
-                        timestamp = os.time(),
-                    },
-                })
-            end
+        -- Character id 0 is reserved for system messages. The columns are
+        -- UNSIGNED, so the former -112 sentinel could never be persisted.
+        local reply = 'Dispecerat 112: Mesaj receptionat. Apel #' .. tostring(dispatchResult.callId) .. ' a fost transmis echipajelor.'
+        local historyOk, historyErr = pcall(function()
+            MySQL.insert.await(
+                'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
+                { tonumber(char.id), 0, message }
+            )
+            MySQL.insert.await(
+                'INSERT INTO phone_messages (sender_character_id, receiver_character_id, message) VALUES (?, ?, ?)',
+                { 0, tonumber(char.id), reply }
+            )
         end)
+        if not historyOk then
+            print(('[sunset_phone] 112 SMS history error for character %s: %s'):format(char.id, tostring(historyErr)))
+        end
 
         TriggerClientEvent('sunset:client:phoneMessage', source)
-        return true
+        return { ok = true, emergency = true, callId = dispatchResult.callId }
     end
 
     if targetCharacterId == tonumber(char.id) then return nil, 'Cannot message yourself' end

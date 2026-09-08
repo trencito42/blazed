@@ -171,8 +171,24 @@ end)
 
 AddEventHandler('sunset:nui:phoneSend', function(data)
     CreateThread(function()
+        data = data or {}
+        local location = nil
+        if tonumber(data.targetCharacterId) == -112 or tostring(data.phone) == '112' then
+            local coords = GetEntityCoords(PlayerPedId())
+            local streetHash, crossingHash = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
+            local street = GetStreetNameFromHashKey(streetHash)
+            if crossingHash and crossingHash ~= 0 then
+                local crossing = GetStreetNameFromHashKey(crossingHash)
+                if crossing and crossing ~= '' then street = street .. ' / ' .. crossing end
+            end
+            local zone = GetNameOfZone(coords.x, coords.y, coords.z)
+            local area = GetLabelText(zone)
+            if not area or area == '' or area == 'NULL' then area = zone end
+            location = { street = street, area = area }
+        end
+
         local callOk, sent, sendErr = pcall(function()
-            return Sunset.AwaitCallback('sunset:phoneSend', tonumber(data.targetCharacterId), data.message, data.phone)
+            return Sunset.AwaitCallback('sunset:phoneSend', tonumber(data.targetCharacterId), data.message, data.phone, location)
         end)
         if not callOk then
             exports.sunset_ui:Notify(tostring(sent) or 'Could not send the message', 'error')

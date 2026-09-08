@@ -35,6 +35,7 @@ server_scripts {
 
 server_exports {
     'CreateCall',
+    'Create112Call',
     'CreateServiceCall',
     'AcceptCall',
     'CancelCall',

@@ -139,7 +139,7 @@ exports('IsProviderForType', function(source, callType)
     return ServiceCore.isProviderForType(source, callType)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:dispatch:call112', function(source, category, description, street, area, coords)
+local function create112Call(source, category, description, street, area)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character loaded' end
 
@@ -200,6 +200,14 @@ exports.sunset_core:RegisterCallback('sunset:dispatch:call112', function(source,
     end
 
     return { ok = true, callId = call.id, street = metadata.street, area = metadata.area }
+end
+
+-- Keep every 112 entry point on the same authoritative path. Phone SMS uses
+-- this export, while the citizen form uses the callback below.
+exports('Create112Call', create112Call)
+
+exports.sunset_core:RegisterCallback('sunset:dispatch:call112', function(source, category, description, street, area)
+    return create112Call(source, category, description, street, area)
 end)
 
 print('[sunset_dispatch] exports and callbacks ready')

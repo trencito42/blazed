@@ -338,7 +338,7 @@ const Phone = {
         (d.messages || []).forEach((m) => {
             const isMine = m.sender_character_id === myId;
             const otherCharId = isMine ? m.receiver_character_id : m.sender_character_id;
-            const is112 = otherCharId === -112 || String(otherCharId) === '-112';
+            const is112 = otherCharId === 0 || otherCharId === -112 || String(otherCharId) === '-112';
             let otherName = isMine ? (m.receiver_name || 'Player') : (m.sender_name || 'Player');
             if (is112) otherName = '112 Urgențe';
 
@@ -693,7 +693,7 @@ const Phone = {
 
         const msgs = (this.data.messages || []).filter((m) => {
             if (is112) {
-                return m.sender_character_id === -112 || m.receiver_character_id === -112;
+                return m.sender_character_id === 0 || m.receiver_character_id === 0 || m.sender_character_id === -112 || m.receiver_character_id === -112;
             }
             if (target.charId) {
                 return m.sender_character_id === target.charId || m.receiver_character_id === target.charId;
