@@ -193,7 +193,14 @@ exports('GrantLicense', GrantLicense)
 function RevokeLicense(source, licenseType)
     licenseType = tostring(licenseType or '')
     local cid = charId(source)
-    if not cid then return false, 'Character not loaded.' end
+    if not cid then
+        -- Attempt fallback if source passed is already a character ID
+        local num = tonumber(source)
+        if num and num > 0 then
+            return RevokeLicenseByCharacterId(num, licenseType)
+        end
+        return false, 'Character not loaded.'
+    end
     MySQL.update.await(
         'DELETE FROM character_licenses WHERE character_id = ? AND license_type = ?',
         { cid, licenseType }
@@ -203,6 +210,27 @@ function RevokeLicense(source, licenseType)
     return true
 end
 exports('RevokeLicense', RevokeLicense)
+
+function RevokeLicenseByCharacterId(cid, licenseType)
+    cid = tonumber(cid)
+    if not cid or cid <= 0 then return false, 'Invalid character ID' end
+    licenseType = tostring(licenseType or '')
+    MySQL.update.await(
+        'DELETE FROM character_licenses WHERE character_id = ? AND license_type = ?',
+        { cid, licenseType }
+    )
+    -- If player is currently online, clear cache & trigger refresh
+    for src, cache in pairs(ServerLicenseCache) do
+        local c = exports.sunset_core:GetCharacter(src)
+        if c and tonumber(c.id) == cid then
+            ServerLicenseCache[src] = nil
+            TriggerClientEvent('sunset:licenses:refresh', src)
+            break
+        end
+    end
+    return true
+end
+exports('RevokeLicenseByCharacterId', RevokeLicenseByCharacterId)
 
 function GetLicenses(source)
     local cid = charId(source)

@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="css/auth_loading.css?v=9">
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=5">
-    <link rel="stylesheet" href="css/mdc_tablet.css?v=10">
+    <link rel="stylesheet" href="css/mdc_tablet.css?v=11">
     <link rel="stylesheet" href="css/player_interaction.css?v=1">
     <link rel="stylesheet" href="css/atm.css?v=1">
 </head>
@@ -1333,6 +1333,9 @@
                                             <button type="button" class="mdc-action-btn mdc-action-btn--warning" id="mdc-act-ticket">
                                                 📋 ISSUE CITATION (/ticket)
                                             </button>
+                                            <button type="button" class="mdc-action-btn mdc-action-btn--license" id="mdc-act-license">
+                                                🚫 SUSPENDĂ PERMIS
+                                            </button>
                                             <button type="button" class="mdc-action-btn mdc-action-btn--primary" id="mdc-act-so">
                                                 📢 STOP ORDER (/so)
                                             </button>
@@ -1608,6 +1611,40 @@
                 <div class="mdc-dialog-actions">
                     <button type="button" class="mdc-btn mdc-btn--outline" data-close="ticket">CANCEL</button>
                     <button type="button" class="mdc-btn mdc-btn--primary" id="mdc-ticket-confirm" disabled>ISSUE CITATION</button>
+                </div>
+            </div>
+
+            <!-- Modal 4: Suspend License Modal -->
+            <div class="mdc-dialog-card hidden" id="mdc-dialog-license">
+                <div class="mdc-dialog-head">
+                    <h3>🚫 Suspendă Permis (Conducere / Armă)</h3>
+                    <button type="button" class="mdc-dialog-close" data-close="license">✕</button>
+                </div>
+                <div class="mdc-dialog-body">
+                    <p id="mdc-license-target-label" style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">Cetățean: Target</p>
+                    
+                    <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Tip Permis:</label>
+                    <div class="mdc-reason-chips" id="mdc-license-type-chips">
+                        <button type="button" class="mdc-chip is-active" data-lic="driver">🚗 Permis Conducere</button>
+                        <button type="button" class="mdc-chip" data-lic="weapon">🔫 Permis Armă</button>
+                    </div>
+
+                    <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 12px; display: block;">Motiv Suspendare (Presetări Legale):</label>
+                    <div class="mdc-reason-chips" id="mdc-license-reason-chips">
+                        <button type="button" class="mdc-chip" data-reason="Viteză excesivă (+50 km/h peste limită)">⚡ Viteză excesivă (+50 km/h)</button>
+                        <button type="button" class="mdc-chip" data-reason="Conducere agresivă pe contrasens">⚠️ Conducere pe contrasens</button>
+                        <button type="button" class="mdc-chip" data-reason="Conducere sub influența alcoolului / substanțelor">🍺 Alcool / Substanțe</button>
+                        <button type="button" class="mdc-chip" data-reason="Neoprire la semnalele poliției / Evadare">🚨 Refuz oprire / Evadare</button>
+                        <button type="button" class="mdc-chip" data-reason="Participare la curse ilegale de stradă">🏁 Curse ilegale</button>
+                        <button type="button" class="mdc-chip" data-reason="Accident grav cu fugă de la fața locului">💥 Accident cu fugă</button>
+                    </div>
+
+                    <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 10px; display: block;">Motiv Personalizat / Mențiuni PV:</label>
+                    <input type="text" id="mdc-license-custom-reason" class="mdc-dialog-input" placeholder="Introduceți motivul legal de suspendare...">
+                </div>
+                <div class="mdc-dialog-actions">
+                    <button type="button" class="mdc-btn mdc-btn--outline" data-close="license">ANULEAZĂ</button>
+                    <button type="button" class="mdc-btn mdc-btn--danger" id="mdc-license-confirm">CONFIRMĂ SUSPENDAREA</button>
                 </div>
             </div>
         </div>
@@ -2547,7 +2584,7 @@
     <script src="js/job_creator.js?v=10"></script>
     <script src="js/factions.js?v=7"></script>
     <script src="js/clans.js?v=12"></script>
-    <script src="js/mdc_tablet.js?v=10"></script>
+    <script src="js/mdc_tablet.js?v=11"></script>
     <script src="js/player_interaction.js?v=1"></script>
     <script src="js/atm.js?v=1"></script>
 </body>

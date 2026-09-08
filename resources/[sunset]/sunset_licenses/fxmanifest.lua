@@ -40,6 +40,7 @@ exports {
     'IsInLicenseTest',
     'GrantLicense',
     'RevokeLicense',
+    'RevokeLicenseByCharacterId',
     'GetLicenses',
 }
 
@@ -58,6 +59,7 @@ server_exports {
     'IsInLicenseTest',
     'GrantLicense',
     'RevokeLicense',
+    'RevokeLicenseByCharacterId',
     'GetLicenses',
     'GetLicenseRows',
     'AssessInstructorPromotion',

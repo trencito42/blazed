@@ -1552,7 +1552,7 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcVehicleLookup', function(s
 
     local pattern = '%' .. query:upper() .. '%'
     local rows = MySQL.query.await([[
-        SELECT v.id, v.character_id, v.plate, v.model, v.fuel, v.stored, v.garage,
+        SELECT v.id, v.character_id, v.plate, v.model, v.fuel, v.stored, v.garage, v.props,
                c.firstname, c.lastname, c.phone_number, c.metadata
         FROM vehicles v
         LEFT JOIN characters c ON v.character_id = c.id
@@ -1566,6 +1566,15 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcVehicleLookup', function(s
         local bolo = Bolos[plateClean]
         local meta = type(row.metadata) == 'table' and row.metadata or (type(row.metadata) == 'string' and json.decode(row.metadata) or {})
         local ownerPhone = row.phone_number or meta.phone or ('555-%04d'):format(row.character_id or 0)
+
+        local tuningInfo = nil
+        if GetResourceState('sunset_tuning') == 'started' then
+            local ok, tRes = pcall(function()
+                return exports.sunset_tuning:GetVehicleTuningInfo(row.props)
+            end)
+            if ok and tRes then tuningInfo = tRes end
+        end
+
         results[#results + 1] = {
             id = row.id,
             plate = plateClean,
@@ -1580,10 +1589,142 @@ exports.sunset_core:RegisterCallback('sunset:policeMdcVehicleLookup', function(s
             boloReason = bolo and bolo.reason or nil,
             boloDate = bolo and bolo.date or nil,
             boloOfficer = bolo and bolo.officer or nil,
+            tuningInfo = tuningInfo,
         }
     end
     return { results = results }
 end)
+
+function Police.suspendLicense(source, targetId, licenseType, reason)
+    if not FactionCore.hasPerm(source, 'ticket')
+        and not FactionCore.hasPerm(source, 'confiscate')
+        and not FactionCore.hasPerm(source, 'arrest')
+        and not FactionCore.hasPerm(source, 'mdc') then
+        return nil, FactionCore.accessError(source, 'ticket', 'suspend a license', 'law_enforcement')
+    end
+
+    licenseType = tostring(licenseType or 'driver'):lower()
+    if licenseType ~= 'driver' and licenseType ~= 'weapon' then
+        licenseType = 'driver'
+    end
+
+    reason = tostring(reason or ''):gsub('^%s*(.-)%s*$', '%1')
+    if reason == '' then
+        reason = 'Viteză excesivă (+50 km/h) / Conducere periculoasă pe contrasens'
+    end
+
+    local targetNum = tonumber(targetId)
+    if not targetNum or targetNum <= 0 then
+        return nil, 'ID-ul cetățeanului este invalid.'
+    end
+
+    local targetChar = nil
+    local onlineSrc = nil
+
+    -- 1. Check if targetNum is an active server ID
+    if targetNum <= 256 and GetPlayerName(targetNum) then
+        local c = FactionCore.getChar(targetNum)
+        if c then
+            targetChar = c
+            onlineSrc = targetNum
+        end
+    end
+
+    -- 2. If not active server ID, try character ID from database
+    if not targetChar then
+        local row = MySQL.single.await('SELECT id, firstname, lastname FROM characters WHERE id = ?', { targetNum })
+        if row then
+            targetChar = row
+            onlineSrc = findOnlineSourceByCharacterId(row.id)
+        end
+    end
+
+    if not targetChar then
+        return nil, ('Nu a fost găsit niciun cetățean cu ID-ul %s.'):format(tostring(targetId))
+    end
+
+    local cid = targetChar.id
+    local targetName = ('%s %s'):format(targetChar.firstname or '', targetChar.lastname or ''):gsub('^%s*(.-)%s*$', '%1')
+    if targetName == '' then targetName = ('Cetățean #%d'):format(cid) end
+
+    -- Check if target has the license in database
+    local existing = MySQL.single.await('SELECT id FROM character_licenses WHERE character_id = ? AND license_type = ?', { cid, licenseType })
+    if not existing then
+        local licLabel = licenseType == 'driver' and 'de conducere' or 'de armă'
+        return nil, ('%s nu deține un permis %s activ.'):format(targetName, licLabel)
+    end
+
+    -- Revoke license
+    local ok = false
+    if exports.sunset_licenses and exports.sunset_licenses.RevokeLicenseByCharacterId then
+        ok = exports.sunset_licenses:RevokeLicenseByCharacterId(cid, licenseType)
+    else
+        MySQL.update.await('DELETE FROM character_licenses WHERE character_id = ? AND license_type = ?', { cid, licenseType })
+        ok = true
+    end
+
+    local officerName = exports.sunset_core:GetPlayerDisplayName(source)
+    local licLabelRo = licenseType == 'driver' and 'conducere' or 'armă'
+
+    -- If suspect is online: refresh client cache and notify
+    if onlineSrc then
+        TriggerClientEvent('sunset:licenses:refresh', onlineSrc)
+        TriggerClientEvent('sunset:client:notify', onlineSrc,
+            ('🚨 PERMIS SUSPENDAT: Permisul tău de %s a fost confiscat de către Poliție!\nMotiv: %s\nOfițer: %s'):format(licLabelRo, reason, officerName),
+            'error', 12000)
+    end
+
+    -- Broadcast to police channels
+    broadcastToPolice('TRAFFIC', ('Ofițerul %s (#%d) a suspendat permisul de %s al cetățeanului %s (#%d). Motiv: %s'):format(
+        officerName, source, licLabelRo, targetName, cid, reason))
+
+    notify(source, ('Ai suspendat cu succes permisul de %s al lui %s (#%d).'):format(licLabelRo, targetName, cid), 'success', 8000)
+
+    return {
+        success = true,
+        targetId = cid,
+        targetName = targetName,
+        licenseType = licenseType,
+        reason = reason,
+    }
+end
+
+exports.sunset_core:RegisterCallback('sunset:policeMdcSuspendLicense', function(source, targetId, licenseType, reason)
+    local res, err = Police.suspendLicense(source, targetId, licenseType, reason)
+    if not res then return { error = err } end
+    return { ok = true, data = res }
+end)
+
+RegisterCommand('suspendlicense', function(source, args)
+    if source == 0 then return end
+    local target = tonumber(args[1])
+    if not target then
+        return notify(source, 'Sintaxă: /suspendlicense [id] [driver|weapon] [motiv]', 'error')
+    end
+    local licType = args[2] and tostring(args[2]):lower() or 'driver'
+    local reasonParts = {}
+    local startIdx = 3
+    if licType ~= 'driver' and licType ~= 'weapon' then
+        table.insert(reasonParts, args[2])
+        licType = 'driver'
+        startIdx = 3
+    end
+    for i = startIdx, #args do
+        table.insert(reasonParts, args[i])
+    end
+    local reason = table.concat(reasonParts, ' ')
+    if reason == '' then reason = 'Viteză excesivă (+50 km/h) / Conducere pe contrasens' end
+
+    local res, err = Police.suspendLicense(source, target, licType, reason)
+    if not res and err then
+        notify(source, err, 'error')
+    end
+end, false)
+
+RegisterCommand('confiscatelicense', function(source, args)
+    if source == 0 then return end
+    ExecuteCommand(('suspendlicense %s'):format(table.concat(args, ' ')))
+end, false)
 
 exports.sunset_core:RegisterCallback('sunset:policeMdcToggleBolo', function(source, targetType, targetKey, reason, notes)
     if not FactionCore.hasPerm(source, 'mdc') then

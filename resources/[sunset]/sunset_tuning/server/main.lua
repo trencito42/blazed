@@ -304,3 +304,54 @@ AddEventHandler('playerDropped', function()
     DynoSessions[source] = nil
     FxRate[source] = nil
 end)
+
+exports('GetVehicleTuningInfo', function(rawProps)
+    local decoded = decodeProps(rawProps)
+    local ecu = decoded and decoded.ecu or nil
+    local cosmetics = decoded and decoded.cosmetics or nil
+    local info = SunsetTuning.BuildVehicleInfo(ecu)
+
+    local mods = {}
+    if decoded.modEngine and decoded.modEngine >= 0 then
+        mods[#mods + 1] = ('Motor: Nivel %d/4'):format(decoded.modEngine + 1)
+    end
+    if decoded.modBrakes and decoded.modBrakes >= 0 then
+        mods[#mods + 1] = ('Frâne: Nivel %d/3'):format(decoded.modBrakes + 1)
+    end
+    if decoded.modTransmission and decoded.modTransmission >= 0 then
+        mods[#mods + 1] = ('Transmisie: Nivel %d/3'):format(decoded.modTransmission + 1)
+    end
+    if decoded.modSuspension and decoded.modSuspension >= 0 then
+        mods[#mods + 1] = ('Suspensie: Nivel %d/4'):format(decoded.modSuspension + 1)
+    end
+    if decoded.modTurbo and (decoded.modTurbo == 1 or decoded.modTurbo == true) then
+        mods[#mods + 1] = 'Turbină instalată'
+    end
+    if decoded.windowTint and decoded.windowTint > 0 then
+        local tints = { [1] = 'Pure Black (Ilegal)', [2] = 'Dark Smoke', [3] = 'Light Smoke', [4] = 'Stock', [5] = 'Limo (Ilegal)', [6] = 'Green' }
+        mods[#mods + 1] = ('Folii geamuri: %s'):format(tints[decoded.windowTint] or ('Nivel ' .. decoded.windowTint))
+    end
+    if cosmetics and cosmetics.plateText and cosmetics.plateText ~= '' then
+        mods[#mods + 1] = ('Plăcuță custom: %s'):format(cosmetics.plateText)
+    end
+
+    local isTuned = info.tuned
+    if not isTuned and (#mods > 0) then
+        for _, m in ipairs(mods) do
+            if m:find('Turbină') or m:find('Motor') or m:find('Ilegal') then
+                isTuned = true
+                break
+            end
+        end
+    end
+
+    return {
+        tuned = isTuned,
+        stock = not isTuned,
+        summary = info.summary,
+        chips = info.chips or {},
+        lines = info.lines or {},
+        hardwareMods = mods,
+    }
+end)
+

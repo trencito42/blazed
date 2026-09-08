@@ -50,4 +50,5 @@ exports {
     'OpenTuningPanel',
     'OpenLsCustomsMenu',
     'FormatVehicleInfo',
+    'GetVehicleTuningInfo',
 }

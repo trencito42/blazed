@@ -47,6 +47,7 @@ forward('mdcSummon')
 forward('mdcFindWanted')
 forward('mdcUnjail')
 forward('mdcIssueCitation')
+forward('mdcSuspendLicense')
 forward('mdcStartRadar')
 forward('mdcStopRadar')
 forward('mdcSetUnitWaypoint')
@@ -401,6 +402,10 @@ end)
 
 AddEventHandler('sunset:nui:mdcIssueCitation', function(data)
     TriggerEvent('sunset:ui:mdcIssueCitation', data)
+end)
+
+AddEventHandler('sunset:nui:mdcSuspendLicense', function(data)
+    TriggerEvent('sunset:ui:mdcSuspendLicense', data)
 end)
 
 AddEventHandler('sunset:nui:mdcStartRadar', function(data)

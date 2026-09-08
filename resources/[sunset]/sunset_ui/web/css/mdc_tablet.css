@@ -2048,3 +2048,148 @@
     border-color: #3b82f6;
     box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
 }
+
+/* Suspend License Action Button */
+.mdc-action-btn--license {
+    background: rgba(220, 38, 38, 0.18);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.mdc-action-btn--license:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+
+/* Vehicle Tuning & Technical Inspection Box (DMV) */
+.mdc-dmv-tuning-box {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #1e293b;
+    background: #080c12;
+}
+
+.mdc-dmv-tuning-box.is-tuned {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.mdc-dmv-tuning-box.is-stock {
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.03);
+}
+
+.mdc-tuning-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.mdc-tuning-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.mdc-tuning-badge.is-tuned {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.mdc-tuning-badge.is-stock {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.mdc-tuning-toggle-btn {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mdc-tuning-toggle-btn:hover {
+    background: #1e293b;
+    color: #f8fafc;
+    border-color: #64748b;
+}
+
+.mdc-tuning-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.mdc-chip-tune {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    letter-spacing: 0.04em;
+}
+
+.mdc-tuning-details {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(51, 65, 85, 0.7);
+}
+
+.mdc-tuning-details.hidden {
+    display: none !important;
+}
+
+.mdc-tuning-summary {
+    font-size: 11px;
+    font-weight: 700;
+    color: #cbd5e1;
+    margin-bottom: 6px;
+}
+
+.mdc-tuning-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 10px;
+}
+
+.mdc-tune-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #94a3b8;
+    padding: 2px 0;
+}
+
+.mdc-tune-line strong {
+    color: #f8fafc;
+    font-weight: 700;
+}
+
+.mdc-tune-line.mdc-tune-mod {
+    color: #38bdf8;
+    grid-column: span 2;
+}
+
+.mdc-tune-line.mdc-tune-mod strong {
+    color: #7dd3fc;
+}

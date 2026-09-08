@@ -120,6 +120,12 @@
                 }
             });
 
+            $('#mdc-act-license')?.addEventListener('click', () => {
+                if (this.currentCitizen) {
+                    this.openLicenseModal(this.currentCitizen.serverId || this.currentCitizen.id, this.currentCitizen.name);
+                }
+            });
+
             $('#mdc-act-so')?.addEventListener('click', () => {
                 if (this.currentCitizen) {
                     const targetId = this.currentCitizen.serverId || this.currentCitizen.id;
@@ -240,6 +246,37 @@
                     amount: viol.amount,
                     reason: viol.label,
                     reasonCode: viol.code,
+                });
+                this.closeDialogs();
+            });
+
+            // License Modal Chips & Confirm
+            $$('#mdc-license-type-chips .mdc-chip').forEach((chip) => {
+                chip.addEventListener('click', () => {
+                    $$('#mdc-license-type-chips .mdc-chip').forEach((c) => c.classList.remove('is-active'));
+                    chip.classList.add('is-active');
+                    this.selectedLicenseType = chip.dataset.lic || 'driver';
+                });
+            });
+
+            $$('#mdc-license-reason-chips .mdc-chip').forEach((chip) => {
+                chip.addEventListener('click', () => {
+                    $$('#mdc-license-reason-chips .mdc-chip').forEach((c) => c.classList.remove('is-active'));
+                    chip.classList.add('is-active');
+                    const reason = chip.dataset.reason;
+                    const input = $('#mdc-license-custom-reason');
+                    if (input) input.value = reason;
+                });
+            });
+
+            $('#mdc-license-confirm')?.addEventListener('click', () => {
+                if (!this.targetModalPlayerId) return;
+                const reason = $('#mdc-license-custom-reason')?.value?.trim() || 'Viteză excesivă (+50 km/h) / Conducere pe contrasens';
+                const licType = this.selectedLicenseType || 'driver';
+                post('mdcSuspendLicense', {
+                    targetId: this.targetModalPlayerId,
+                    licenseType: licType,
+                    reason: reason,
                 });
                 this.closeDialogs();
             });
@@ -762,6 +799,48 @@
             grid.classList.remove('hidden');
 
             grid.innerHTML = vehicles.map((v) => {
+                const tune = v.tuningInfo;
+                let tuningHtml = '';
+                if (tune && tune.tuned) {
+                    const chips = (tune.chips || []).slice(0, 6).map((c) => `<span class="mdc-chip-tune">${c}</span>`).join('');
+                    const lines = (tune.lines || []).slice(0, 8).map((l) => `<div class="mdc-tune-line"><span>${l.label}:</span><strong>${l.value}</strong></div>`).join('');
+                    const mods = (tune.hardwareMods || []).map((m) => `<div class="mdc-tune-line mdc-tune-mod"><span>🔧 Mod:</span><strong>${m}</strong></div>`).join('');
+                    tuningHtml = `
+                        <div class="mdc-dmv-tuning-box is-tuned">
+                            <div class="mdc-tuning-header">
+                                <span class="mdc-tuning-badge is-tuned">⚡ VEHICUL MODIFICAT / STAGE TUNE</span>
+                                <button type="button" class="mdc-tuning-toggle-btn" data-plate="${v.plate}">Fișă RAR ▼</button>
+                            </div>
+                            <div class="mdc-tuning-chips">${chips}</div>
+                            <div class="mdc-tuning-details hidden" id="tune-details-${v.plate}">
+                                <div class="mdc-tuning-summary">${tune.summary || 'Modificări ECU / Motor'}</div>
+                                <div class="mdc-tuning-grid">
+                                    ${lines}
+                                    ${mods}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (tune) {
+                    const mods = (tune.hardwareMods || []).map((m) => `<div class="mdc-tune-line mdc-tune-mod"><span>🔧 Mod:</span><strong>${m}</strong></div>`).join('');
+                    tuningHtml = `
+                        <div class="mdc-dmv-tuning-box is-stock">
+                            <div class="mdc-tuning-header">
+                                <span class="mdc-tuning-badge is-stock">✓ FACTORY STOCK (OMOLOGAT RAR)</span>
+                            </div>
+                            ${mods ? `<div class="mdc-tuning-grid" style="margin-top: 4px;">${mods}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    tuningHtml = `
+                        <div class="mdc-dmv-tuning-box is-stock">
+                            <div class="mdc-tuning-header">
+                                <span class="mdc-tuning-badge is-stock">✓ FACTORY STOCK (OMOLOGAT RAR)</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="mdc-dmv-card ${v.bolo ? 'is-bolo' : ''}">
                         ${v.bolo ? '<div class="mdc-bolo-banner">SUSPECT VEHICLE · ACTIVE BOLO BROADCAST</div>' : ''}
@@ -777,7 +856,8 @@
                             <span>Status: ${v.stored ? 'Stored in Garage' : 'Impounded / On Street'}</span>
                             <span>Fuel: ${v.fuel}%</span>
                         </div>
-                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        ${tuningHtml}
+                        <div style="display: flex; gap: 8px; margin-top: 6px;">
                             <button type="button" class="mdc-btn ${v.bolo ? 'mdc-btn--danger' : 'mdc-btn--warning'} mdc-btn--sm btn-toggle-veh-bolo" data-plate="${v.plate}" data-has-bolo="${v.bolo ? '1' : '0'}">
                                 ${v.bolo ? `
                                     <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -795,6 +875,18 @@
                     </div>
                 `;
             }).join('');
+
+            // Toggle Tuning Details
+            grid.querySelectorAll('.mdc-tuning-toggle-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const plate = btn.dataset.plate;
+                    const details = $(`#tune-details-${plate}`);
+                    if (details) {
+                        const isHidden = details.classList.toggle('hidden');
+                        btn.textContent = isHidden ? 'Fișă RAR ▼' : 'Închide ▲';
+                    }
+                });
+            });
 
             // Attach In-UI BOLO Toggle (NO PROMPT EVER)
             grid.querySelectorAll('.btn-toggle-veh-bolo').forEach((btn) => {
@@ -1073,6 +1165,29 @@
                     });
                 });
             }
+
+            overlay?.classList.remove('hidden');
+            card?.classList.remove('hidden');
+        },
+
+        openLicenseModal(targetId, targetName) {
+            this.targetModalPlayerId = targetId;
+            this.selectedLicenseType = 'driver';
+
+            const overlay = $('#mdc-dialog-overlay');
+            const card = $('#mdc-dialog-license');
+            const label = $('#mdc-license-target-label');
+            const customInput = $('#mdc-license-custom-reason');
+
+            if (label) label.textContent = `Cetățean: ${targetName} (#${targetId})`;
+            if (customInput) customInput.value = '';
+
+            // Reset chips
+            $$('#mdc-license-type-chips .mdc-chip').forEach((c, idx) => {
+                if (idx === 0) c.classList.add('is-active');
+                else c.classList.remove('is-active');
+            });
+            $$('#mdc-license-reason-chips .mdc-chip').forEach((c) => c.classList.remove('is-active'));
 
             overlay?.classList.remove('hidden');
             card?.classList.remove('hidden');

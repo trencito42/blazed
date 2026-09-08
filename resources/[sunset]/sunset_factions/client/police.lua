@@ -984,6 +984,21 @@ AddEventHandler('sunset:ui:mdcIssueCitation', function(data)
     end
 end)
 
+AddEventHandler('sunset:ui:mdcSuspendLicense', function(data)
+    if not data or not data.targetId then return end
+    local res, err = Sunset.AwaitCallback('sunset:policeMdcSuspendLicense', tonumber(data.targetId), data.licenseType or 'driver', data.reason)
+    if res and res.ok then
+        PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+        exports.sunset_ui:Notify(('Permis suspendat cu succes pentru #%d (%s)'):format(tonumber(data.targetId), data.licenseType or 'driver'), 'success')
+        local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
+        if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
+        local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
+        if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
+    else
+        actionError(res and res.error or err, 'Nu s-a putut suspenda permisul.')
+    end
+end)
+
 AddEventHandler('sunset:ui:mdcStartRadar', function(data)
     local ped = PlayerPedId()
     local veh = GetVehiclePedIsIn(ped, false)
@@ -1067,6 +1082,8 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)', { { name = 'id', help = 'optional target ID' } })
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
+    TriggerEvent('chat:addSuggestion', '/suspendlicense', 'Suspendă permisul de conducere sau de armă (PD)', { { name = 'id' }, { name = 'driver|weapon', help = 'opțional, default driver' }, { name = 'motiv' } })
+    TriggerEvent('chat:addSuggestion', '/confiscatelicense', 'Alias pentru /suspendlicense', { { name = 'id' }, { name = 'driver|weapon' }, { name = 'motiv' } })
     TriggerEvent('chat:addSuggestion', '/startradar', 'Lock an LSPD patrol vehicle and monitor speed', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/setradar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/radar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
