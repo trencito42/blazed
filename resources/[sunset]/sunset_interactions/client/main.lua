@@ -1,5 +1,7 @@
 local menuOpen = false
 local activeTarget = nil
+local promptTarget = nil
+local promptPlayer = nil
 
 local function notify(message, kind, duration)
     exports.sunset_ui:Notify(message, kind or 'info', duration)
@@ -21,6 +23,35 @@ local function closestPlayer(maxDistance)
         end
     end
     return closest, distance
+end
+
+local function playerFromServerId(serverId)
+    if not serverId then return nil end
+    for _, player in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(player) == serverId then return player end
+    end
+    return nil
+end
+
+local function drawPlayerPrompt(player)
+    local ped = player and GetPlayerPed(player) or 0
+    if ped == 0 or not DoesEntityExist(ped) then return end
+
+    local coords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.42)
+    local visible, screenX, screenY = World3dToScreen2d(coords.x, coords.y, coords.z)
+    if not visible then return end
+
+    SetTextFont(4)
+    SetTextScale(0.0, 0.31)
+    SetTextCentre(true)
+    SetTextColour(255, 255, 255, 245)
+    SetTextDropshadow(2, 0, 0, 0, 235)
+    SetTextOutline()
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName('~o~[G]~s~  INTERACT')
+    EndTextCommandDisplayText(screenX, screenY)
+
+    DrawRect(screenX, screenY + 0.019, 0.052, 0.0015, 255, 138, 0, 210)
 end
 
 local function closeMenu()
@@ -148,6 +179,40 @@ CreateThread(function()
             Wait(350)
         else
             Wait(750)
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if not menuOpen and not IsNuiFocused() and not IsPauseMenuActive()
+            and not IsPedDeadOrDying(PlayerPedId(), true) then
+            promptTarget = closestPlayer(3.0)
+            promptPlayer = playerFromServerId(promptTarget)
+        else
+            promptTarget = nil
+            promptPlayer = nil
+        end
+        Wait(200)
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if promptTarget and not menuOpen then
+            local player = promptPlayer
+            local ped = player and GetPlayerPed(player) or 0
+            if ped ~= 0 and #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(ped)) <= 3.15
+                and HasEntityClearLosToEntity(PlayerPedId(), ped, 17) then
+                drawPlayerPrompt(player)
+                Wait(0)
+            else
+                promptTarget = nil
+                promptPlayer = nil
+                Wait(100)
+            end
+        else
+            Wait(150)
         end
     end
 end)

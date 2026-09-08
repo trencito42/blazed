@@ -5,7 +5,7 @@
 
 ## 2026-09-08 — Context interaction and consolidation start (not deployed)
 
-- Added a nearby-player interaction menu on `G` / `/interact`, with actions selected from the caller's faction, duty state and permissions instead of exposing every command to every player.
+- Added a nearby-player interaction menu on `G` / `/interact`, with a lightweight `[G] INTERACT` world prompt attached to the closest visible player and actions selected from the caller's faction, duty state and permissions instead of exposing every command to every player.
 - Added server-authoritative distance, identity, permission and amount checks for money transfer, contacts, faction, police, emergency-service, taxi, mechanic and instructor actions.
 - Removed a dead phone event that attempted to publish the client character back to the server.
 - Hardened citizen dispatch reports: server position is authoritative, categories are allowlisted and user-controlled text is length-bounded.
