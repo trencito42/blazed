@@ -76,7 +76,7 @@ local function buildShiftMessage()
     if isBagFull() then
         return buildFullBagMessage()
     end
-    return 'Blue marker: E or /fish · /sellfish marks the buyer'
+    return 'Esti in zona de pescuit! Apasa E sau /fish · /sellfish vinde pestele'
 end
 
 local function showFishingState(state, extra)
@@ -198,19 +198,15 @@ end
 local function applyShiftBlips(data)
     local cfg = Sunset.GetJobConfig('fisherman')
     JC.clearBlips()
-    for i, spot in ipairs(cfg.spots or {}) do
-        JC.addBlip(spot.coords, spot.blip or { sprite = 68, color = 3 }, 'Fishing Spot ' .. i)
-    end
-    JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, cfg.sellPoint.label or 'Fish Buyer')
+    -- NU adauga blip-uri pentru fishing spots (zona libera de 50m, fara marker)
+    -- Blip-ul de sell point apare doar cand geanta e plina
     JC.sessionData = data or JC.sessionData or {}
     JC.hideObjective()
     if isBagFull() then
+        JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, cfg.sellPoint.label or 'Fish Buyer')
         JC.setWaypoint(cfg.sellPoint.coords)
         showFishingFull()
     else
-        if cfg.spots and cfg.spots[1] then
-            JC.setWaypoint(cfg.spots[1].coords)
-        end
         local atSpot = atFishingSpot()
         if atSpot then
             refreshSpotUi()
@@ -244,18 +240,23 @@ local function attemptSell()
         JC.sessionData.carried = 0
         JC.sessionData.pendingValue = 0
     end
-    local spotIdx = nearestSpotIndex()
-    local spot = cfg.spots and cfg.spots[spotIdx]
-    if spot then JC.setWaypoint(spot.coords) end
+    JC.clearBlips()  -- sterge blip-ul de sell dupa ce ai vandut
     if atFishingSpot() then
         refreshSpotUi()
     else
         showFishingShift()
     end
-    JC.notify('Shift still active — stand in a blue marker and press E to fish.', 'info', 7000)
+    JC.notify('Tura continua — mergi la pontoon Paleto Bay si apasa E sa pescuiesti.', 'info', 7000)
 end
 
 local function startFisherman()
+    -- Verifica daca jucatorul are jobul de fisherman
+    local jobId = JC.getCharacterJob()
+    if jobId ~= 'fisherman' then
+        JC.notify('Trebuie sa fii angajat Pescar. Vorbeste cu Billy Ray.', 'error', 6000)
+        return
+    end
+
     local data, err = Sunset.AwaitCallback('sunset:jobs:fisherman:start')
     if not data then
         JC.notify(err or 'Could not start fishing', 'error')
@@ -267,7 +268,7 @@ local function startFisherman()
     end
     applyShiftBlips(data)
     local carried, capacity = bagCounts()
-    JC.notify(('Fishing bag: %d/%d. Stand in a blue marker and press E or /fish.'):format(
+    JC.notify(('Tura inceput! Bag: %d/%d. Mergi la pontoon Paleto Bay si apasa E sau /fish.'):format(
         carried, capacity), 'info', 9000)
 end
 
@@ -385,9 +386,12 @@ local function attemptFish()
     if result then
         applyBagState(result.carried, result.capacity, result.pendingValue)
         if isBagFull() then
+            -- Adauga blip sell point cand geanta se umple
+            JC.clearBlips()
+            JC.addBlip(cfg.sellPoint.coords, cfg.sellPoint.blip, cfg.sellPoint.label or 'Fish Buyer')
             JC.setWaypoint(cfg.sellPoint.coords)
             showFishingFull()
-            JC.notify(('Bag full (%d/%d). Go to Fish Buyer or /sellfish.'):format(
+            JC.notify(('Geanta plina (%d/%d). Vinde pestele la 24/7 sau /sellfish.'):format(
                 result.carried or 0, result.capacity or 2), 'success', 9000)
         else
             refreshSpotUi()
@@ -499,5 +503,10 @@ end
 
 -- Event triggerabil din alte resurse (ex. sunset_fishingshop NPC)
 AddEventHandler('sunset:client:startFishermanShift', function()
+    local jobId = JC.getCharacterJob()
+    if jobId ~= 'fisherman' then
+        exports.sunset_ui:Notify('Trebuie sa fii angajat Pescar. Vorbeste cu Billy Ray.', 'error', 5000)
+        return
+    end
     CreateThread(startFisherman)
 end)

@@ -95,11 +95,10 @@ Sunset.JobsConfig = {
 
     fisherman = {
         label = 'Fisherman',
-        help = 'Fish at marked spots, then sell your catch at the pier.',
+        help = 'Fish in the Paleto Bay area near Billy Ray, then sell your catch at any 24/7 store.',
+        -- Zona unica de 50m in jurul pontoon-ului Billy Ray; fara blip (nu vrem marker pe harta)
         spots = {
-            { coords = vector3(-1850.32, -1248.03, 8.62), heading = 138.26, blip = { sprite = 68, color = 3, scale = 0.75 } },
-            { coords = vector3(1300.88, 4225.45, 33.91), blip = { sprite = 68, color = 3, scale = 0.75 } },
-            { coords = vector3(-1598.22, 5200.45, 4.31), blip = { sprite = 68, color = 3, scale = 0.75 } },
+            { coords = vector3(-1593.23, 5207.74, 3.31) },
         },
         sellPoint = {
             coords = vector3(-1845.22, -1195.45, 14.30),
@@ -109,12 +108,10 @@ Sunset.JobsConfig = {
         biteDelayMinMs = 2500,
         biteDelayMaxMs = 6500,
         reactionWindowMs = 1500,
-        -- Interaction is intentionally tight: the player must be inside the
-        -- visible pier marker, not on nearby stairs or another deck level.
-        catchRadius = 1.6,
-        catchZTolerance = 0.75,
-        markerSize = 2.0,
-        markerDrawRadius = 45.0,
+        catchRadius    = 50.0,   -- zona de 50m in jurul lui Billy Ray
+        catchZTolerance = 8.0,   -- toleranta verticala mare (pontoon, dig, mal)
+        markerSize     = 0,      -- fara marker vizibil
+        markerDrawRadius = 0,    -- nu desena nimic
         sellRadius = 5.0,
         catchPayMin = 28,
         catchPayMax = 85,
