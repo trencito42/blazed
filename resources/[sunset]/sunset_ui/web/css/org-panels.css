@@ -286,88 +286,8 @@
     font: 700 13px/1 var(--os-title);
 }
 
-/* Property browser — game shell */
-.house-browser.org-property-shell {
-    width: min(980px, 92vw);
-    max-height: 76vh;
-    padding: 0;
-    overflow: hidden;
-    border-top: 2px solid rgba(255, 119, 0, 0.45);
-    background: linear-gradient(180deg, rgba(12, 10, 10, 0.55), rgba(6, 6, 7, 0.62));
-}
+/* Property browser moved to css/premium-properties.css */
 
-.house-browser__head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.house-browser__head .panel-kicker {
-    display: block;
-    margin-bottom: 4px;
-}
-
-.house-browser__head h2 {
-    margin: 0;
-    font: 700 22px/1 var(--os-title);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.house-browser__head p {
-    margin: 4px 0 0;
-    color: rgba(255, 255, 255, 0.55);
-    font-size: 12px;
-}
-
-.house-browser__close {
-    padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(0, 0, 0, 0.35);
-    color: rgba(255, 255, 255, 0.8);
-    font: 700 10px/1 var(--os-title);
-    letter-spacing: 0.1em;
-    cursor: pointer;
-}
-
-.house-browser__close:hover {
-    border-color: rgba(255, 119, 0, 0.45);
-    color: #fff;
-}
-
-#properties-list.org-property-list {
-    max-height: 56vh;
-    padding: 10px 16px 14px;
-    gap: 6px;
-}
-
-.org-property-list .house-row {
-    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
-    padding: 12px 16px;
-}
-
-.org-property-list .house-row__side > b {
-    padding: 4px 8px;
-    border: 1px solid rgba(255, 145, 31, 0.35);
-    background: rgba(255, 119, 0, 0.08);
-}
-
-.house-owner-tools {
-    margin-top: 10px;
-    padding: 10px;
-    border: 1px solid rgba(255, 119, 0, 0.2);
-    background: rgba(0, 0, 0, 0.28);
-}
-
-.house-owner-tools__title {
-    margin-bottom: 8px;
-    color: var(--os-accent-bright);
-    font: 700 10px/1 var(--os-title);
-    letter-spacing: 0.14em;
-}
 
 @media (max-width: 900px) {
     .org-shell {
