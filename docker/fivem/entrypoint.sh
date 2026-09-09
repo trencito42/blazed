@@ -64,4 +64,12 @@ echo "[sunsetmp] resources merged"
 
 export NO_DEFAULT_CONFIG=1
 export NO_LICENSE_KEY=1
+
+if [ -n "${TXADMIN_ENABLE}" ] && [ "${TXADMIN_ENABLE}" != "0" ]; then
+  mkdir -p /txData
+  echo "[sunsetmp] txAdmin enabled — web UI on port 40120"
+  echo "[sunsetmp] server.cfg path: /config/server.cfg"
+  exec /sbin/tini -- /usr/bin/entrypoint +set onesync on +set onesync_population false
+fi
+
 exec /sbin/tini -- /usr/bin/entrypoint +set onesync on +set onesync_population false +exec /config/server.cfg

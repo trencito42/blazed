@@ -64,7 +64,7 @@ COPY entrypoint.sh /usr/local/bin/sunset-entrypoint.sh
 RUN chmod +x /usr/local/bin/sunset-entrypoint.sh
 
 WORKDIR /config
-EXPOSE 30120
+EXPOSE 30120 40120
 
 CMD [""]
 
