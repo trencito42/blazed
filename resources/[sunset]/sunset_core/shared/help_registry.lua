@@ -259,7 +259,7 @@ for _, name in ipairs({
     'f', 'r', 'd', 'gov', 'm', 'megaphone', 'calls', 'servicecalls', 'cancel',
     'c', 'cwarn', 'cw', 'clan', 'clans', 'group', 'acceptclan', 'declineclan',
     'help', 'pass', 'missions', 'stats', 'inventory', 'accepttrade', 'declinetrade', 'phone', 'emotes', 'interact', 'interactplayer',
-    'jobs', 'work', 'skills', 'fish', 'sw', 'stopwork', 'testangajare',
+    'jobs', 'work', 'skills', 'fish', 'sw', 'stopwork',
     'firestart', 'firecalls', 'respawn', 'sethome', 'renthouse', 'unrent',
     'stabilize', 'heal', 'revive', 'rob', 'duty', 'fw', 'v', 'garage',
     'lssireviews', 'lssireview', 'lssireport', 'lssiperformance',

@@ -125,20 +125,6 @@ RegisterCommand('jobs', function()
     openJobsPanel()
 end, false)
 
--- DEBUG: test hire direct fara NUI
-RegisterCommand('testangajare', function(_, args)
-    CreateThread(function()
-        local jobId = (args and args[1]) or 'fisherman'
-        print('[testangajare] incep test pentru job: ' .. tostring(jobId))
-        local ok, err = Sunset.AwaitCallback('sunset:hireJob', jobId)
-        print('[testangajare] ok=' .. tostring(ok) .. ' err=' .. tostring(err))
-        if ok then
-            exports.sunset_ui:Notify('TEST SUCCES: angajat ca ' .. jobId, 'success', 8000)
-        else
-            exports.sunset_ui:Notify('TEST FAIL: ' .. tostring(err or 'nil'), 'error', 8000)
-        end
-    end)
-end, false)
 
 RegisterCommand('work', function(_, args)
     local sub = args[1] and string.lower(args[1])
