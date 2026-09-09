@@ -67,19 +67,19 @@ const PropertyUI = {
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 <span>PROPERTY MANAGEMENT</span>
             </div>
-            <span class="house-owner-tools__sub">Configure residence settings, rentals and interior</span>
+            <span class="house-owner-tools__sub">Configure residence settings, rental rates, interior style and view tenants</span>
         `;
         tools.appendChild(head);
 
         const grid = document.createElement('div');
         grid.className = 'house-owner-tools__grid';
 
-        // 1. Description Card
+        // 1. Visitor Note Card
         const descCard = document.createElement('div');
         descCard.className = 'owner-panel-card';
         descCard.innerHTML = `
             <div class="owner-panel-card__label">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 <span>VISITOR NOTE / NAME</span>
             </div>
         `;
@@ -118,15 +118,35 @@ const PropertyUI = {
         rentCard.innerHTML = `
             <div class="owner-panel-card__label">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8"/></svg>
-                <span>RENTAL PRICE / PAYDAY</span>
+                <span>RENTAL &amp; CAPACITY</span>
             </div>
         `;
+        const rentFieldsRow = document.createElement('div');
+        rentFieldsRow.className = 'owner-fields-columns';
+
+        const rentCol = document.createElement('div');
+        rentCol.className = 'owner-subfield';
+        rentCol.innerHTML = '<span class="owner-subfield__title">Rent ($/payday)</span>';
         const rentInput = document.createElement('input');
         rentInput.type = 'number';
         rentInput.className = 'owner-field-input';
         rentInput.min = meta.rentMin || 50;
         rentInput.max = meta.rentMax || 5000;
         rentInput.value = String(p.rentPrice || meta.rentMin || 50);
+        rentCol.appendChild(rentInput);
+
+        const slotsCol = document.createElement('div');
+        slotsCol.className = 'owner-subfield';
+        slotsCol.innerHTML = '<span class="owner-subfield__title">Max Tenants</span>';
+        const slotsInput = document.createElement('input');
+        slotsInput.type = 'number';
+        slotsInput.className = 'owner-field-input';
+        slotsInput.min = meta.maxRentersMin || 1;
+        slotsInput.max = meta.maxRentersMax || 10;
+        slotsInput.value = String(p.maxRenters || 1);
+        slotsCol.appendChild(slotsInput);
+
+        rentFieldsRow.append(rentCol, slotsCol);
 
         const rentActions = document.createElement('div');
         rentActions.className = 'owner-actions-row';
@@ -142,39 +162,8 @@ const PropertyUI = {
             rentToggleIcon
         );
         rentOn.addEventListener('click', () => this.dispatch(p.id, 'rent_on', { price: Number(rentInput.value) }));
-        const rentOff = this.createButton(
-            'Disable Rent',
-            'rent_off',
-            p.id,
-            {},
-            false,
-            '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
-            p.rentEnabled ? 'is-danger-glass' : ''
-        );
-        rentActions.append(rentOn, rentOff);
-
-        const rentHint = document.createElement('div');
-        rentHint.className = 'owner-field-hint';
-        rentHint.textContent = `Valid range: $${rentInput.min} – $${rentInput.max} per payday`;
-        rentCard.append(rentInput, rentActions, rentHint);
-        grid.appendChild(rentCard);
-
-        // 3. Max Renters Card
-        const slotsCard = document.createElement('div');
-        slotsCard.className = 'owner-panel-card';
-        slotsCard.innerHTML = `
-            <div class="owner-panel-card__label">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span>TENANT CAPACITY</span>
-            </div>
-        `;
-        const slotsInput = document.createElement('input');
-        slotsInput.type = 'number';
-        slotsInput.className = 'owner-field-input';
-        slotsInput.min = meta.maxRentersMin || 1;
-        slotsInput.max = meta.maxRentersMax || 10;
-        slotsInput.value = String(p.maxRenters || 1);
-        const slotsBtn = this.createButton(
+        
+        const saveSlots = this.createButton(
             'Save Capacity',
             'max_renters',
             p.id,
@@ -182,14 +171,30 @@ const PropertyUI = {
             false,
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
         );
-        slotsBtn.addEventListener('click', () => this.dispatch(p.id, 'max_renters', { count: Number(slotsInput.value) }));
-        const slotsHint = document.createElement('div');
-        slotsHint.className = 'owner-field-hint';
-        slotsHint.textContent = `Allowed tenants: ${slotsInput.min} – ${slotsInput.max}`;
-        slotsCard.append(slotsInput, slotsBtn, slotsHint);
-        grid.appendChild(slotsCard);
+        saveSlots.addEventListener('click', () => this.dispatch(p.id, 'max_renters', { count: Number(slotsInput.value) }));
 
-        // 4. Interior Selector Card
+        rentActions.append(rentOn, saveSlots);
+
+        if (p.rentEnabled) {
+            const rentOff = this.createButton(
+                'Disable Rent',
+                'rent_off',
+                p.id,
+                {},
+                false,
+                '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+                'is-danger-glass'
+            );
+            rentActions.appendChild(rentOff);
+        }
+
+        const rentHint = document.createElement('div');
+        rentHint.className = 'owner-field-hint';
+        rentHint.textContent = `Rent: $${rentInput.min}–$${rentInput.max}/payday · Slots: ${slotsInput.min}–${slotsInput.max}`;
+        rentCard.append(rentFieldsRow, rentActions, rentHint);
+        grid.appendChild(rentCard);
+
+        // 3. Interior Selector Card
         const interiorCard = document.createElement('div');
         interiorCard.className = 'owner-panel-card';
         interiorCard.innerHTML = `
@@ -216,12 +221,15 @@ const PropertyUI = {
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>'
         );
         interiorBtn.addEventListener('click', () => this.dispatch(p.id, 'interior', { key: interiorSelect.value }));
-        interiorCard.append(interiorSelect, interiorBtn);
+        const interiorHint = document.createElement('div');
+        interiorHint.className = 'owner-field-hint';
+        interiorHint.textContent = 'Switch layout and decor instantly';
+        interiorCard.append(interiorSelect, interiorBtn, interiorHint);
         grid.appendChild(interiorCard);
 
         tools.appendChild(grid);
 
-        // 5. Active Renters Roster
+        // 4. Active Renters Roster
         const rentersSection = document.createElement('div');
         rentersSection.className = 'house-owner-tools__renters-section';
         rentersSection.innerHTML = `
@@ -229,13 +237,14 @@ const PropertyUI = {
                 <div class="renters-section-title">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     <span>ACTIVE TENANTS ROSTER</span>
+                    <span class="renters-count-chip">${p.renterCount || 0} / ${p.maxRenters || 1}</span>
                 </div>
             </div>
         `;
         const rentersHeadRight = document.createElement('div');
         rentersHeadRight.className = 'renters-head-actions';
         const loadRenters = this.createButton(
-            'Refresh Tenants',
+            'Refresh List',
             'renters_refresh',
             p.id,
             {},
@@ -258,7 +267,7 @@ const PropertyUI = {
         container._rentersList = rentersList;
         container._propertyId = p.id;
 
-        // 6. Liquidation / Sell Section
+        // 5. Liquidation / Sell Section
         const sellRefund = Math.floor((Number(p.price) || 0) * ((meta.sellRefundPercent || 70) / 100));
         const sellCard = document.createElement('div');
         sellCard.className = 'house-owner-tools__sell-card';
@@ -268,7 +277,7 @@ const PropertyUI = {
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>LIQUIDATE PROPERTY</span>
                 </div>
-                <span class="sell-card-desc">Sell residence back to the state for a 70% refund (${this.money(sellRefund)}). All tenants will be evicted immediately.</span>
+                <span class="sell-card-desc">Sell residence back to the state for a 70% refund (${this.money(sellRefund)}). All active tenants will be immediately evicted.</span>
             </div>
         `;
         const sellBtn = document.createElement('button');
@@ -316,6 +325,10 @@ const PropertyUI = {
         li.dataset.owned = String(Boolean(p.owned));
         li.dataset.rent = String(Boolean(p.rentEnabled || p.rented));
         li.dataset.name = String(p.label || '').toLowerCase();
+
+        // Main horizontal bar of the card
+        const mainBar = document.createElement('div');
+        mainBar.className = 'house-row__main';
 
         // Main info section (left)
         const details = document.createElement('div');
@@ -539,14 +552,16 @@ const PropertyUI = {
                 }
                 toggle.classList.add('is-active');
                 toggle.querySelector('span').textContent = 'Close Tools';
-                details.appendChild(this.createOwnerTools(p, details));
+                const tools = this.createOwnerTools(p, li);
+                li.appendChild(tools);
                 post('propertyRenters', { propertyId: p.id });
             });
             actions.appendChild(toggle);
         }
 
         side.appendChild(actions);
-        li.append(details, side);
+        mainBar.append(details, side);
+        li.appendChild(mainBar);
         return li;
     },
 
@@ -642,8 +657,8 @@ const PropertyUI = {
 
     updateRenters(propertyId, renters) {
         document.querySelectorAll('.house-owner-tools__renter-list').forEach((list) => {
-            const host = list.closest('.house-row__details');
-            if (!host || Number(host.closest('.house-row')?.dataset.propertyId) !== Number(propertyId)) return;
+            const host = list.closest('.house-row');
+            if (!host || Number(host.dataset.propertyId) !== Number(propertyId)) return;
             list.replaceChildren();
             if (!(renters || []).length) {
                 list.innerHTML = `

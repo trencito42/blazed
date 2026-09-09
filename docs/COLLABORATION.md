@@ -194,7 +194,7 @@ cd /data/coolify/services/b0n1oc2fcrzbgdco838ezm1i
 
 ### Restart rapid o resursă (fără deploy complet)
 
-În consola server / txAdmin / F8 admin:
+În consola server / F8 admin:
 
 ```
 restart sunset_ui
@@ -251,7 +251,7 @@ DOCUMENTAȚIE EXTRA: docs/COMMANDS.md, docs/JOBS.md, docs/JOB_CREATOR_ARCHITECTU
 
 ## 8. Primul admin în joc
 
-După ce intri pe server, în consola server (txAdmin):
+După ce intri pe server, reload resursă din consola Docker:
 
 ```
 sunset_setowner 1
@@ -278,7 +278,7 @@ sunset_setowner 1
 - **Repo:** https://github.com/trencito42/blazed
 - **Acces GitHub:** Stefan te adaugă ca collaborator (Settings → Collaborators) ca să poți push
 - **SSH VPS:** cheie + root authorized_keys — cere lui Stefan
-- **Parole .env / txAdmin:** private, doar între voi
+- **Parole .env:** private, doar între voi
 
 ---
 
