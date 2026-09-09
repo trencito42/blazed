@@ -147,12 +147,18 @@ local function cachedHasLicense(source, licenseType)
 end
 
 local meleeHashes = {}
-for weaponName in pairs(SunsetLicenses.MeleeWeapons or {}) do meleeHashes[GetHashKey(weaponName)] = true end
+SunsetLicenses.MeleeWeaponHashes = meleeHashes
+for weaponName in pairs(SunsetLicenses.MeleeWeapons or {}) do
+    local hash = SunsetLicenses.normalizeWeaponHash(GetHashKey(weaponName))
+    meleeHashes[hash] = true
+    if hash < 0 then
+        meleeHashes[hash + 4294967296] = true
+    end
+end
 
 local function isMeleeWeaponHash(weaponHash)
-    weaponHash = tonumber(weaponHash) or 0
-    if weaponHash == 0 then return true end
-    return meleeHashes[weaponHash] == true
+    if SunsetLicenses.isMeleeWeaponHash(weaponHash) then return true end
+    return meleeHashes[SunsetLicenses.normalizeWeaponHash(weaponHash)] == true
 end
 
 local function isLawEnforcementOnDuty(source)
@@ -167,8 +173,8 @@ end
 
 local function canDealWeaponDamage(source)
     if IsInLicenseTest(source) then return true end
-    if cachedHasLicense(source, 'weapon') then return true end
     if isLawEnforcementOnDuty(source) then return true end
+    if HasLicense(source, 'weapon') == true then return true end
     return false
 end
 

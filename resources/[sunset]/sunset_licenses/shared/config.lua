@@ -117,6 +117,22 @@ SunsetLicenses.MeleeWeapons = {
     GADGET_PARACHUTE = true,
 }
 
+-- weaponDamageEvent may send unsigned joaat; normalize before hash comparisons.
+function SunsetLicenses.normalizeWeaponHash(hash)
+    hash = tonumber(hash) or 0
+    if hash > 2147483647 then
+        hash = hash - 4294967296
+    end
+    return hash
+end
+
+function SunsetLicenses.isMeleeWeaponHash(weaponHash)
+    weaponHash = SunsetLicenses.normalizeWeaponHash(weaponHash)
+    if weaponHash == 0 then return true end
+    return SunsetLicenses.MeleeWeaponHashes
+        and SunsetLicenses.MeleeWeaponHashes[weaponHash] == true
+end
+
 function SunsetLicenses.isFirearmWeapon(weaponName)
     if not weaponName or weaponName == '' then return false end
     weaponName = string.upper(weaponName)
