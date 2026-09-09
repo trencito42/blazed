@@ -1,5 +1,5 @@
 # Push to GitHub and sync [sunset] into the live FiveM volume — no Docker restart.
-# After sync, run in txAdmin console: refresh  |  ensure sunset_ui
+# After sync, reload resource via docker exec (see COLLABORATION.md)
 $ErrorActionPreference = 'Stop'
 $Key = Join-Path $env:USERPROFILE '.ssh\sshxodo'
 $HostAddr = 'root@193.33.167.216'

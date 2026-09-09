@@ -24,7 +24,7 @@
 | **IP public** | `193.33.167.216` |
 | **Port joc** | `30120` (TCP + UDP) |
 | **Conectare în GTA** | `F8` → `connect 193.33.167.216:30120` |
-| **txAdmin** (setup/admin web) | `http://193.33.167.216:40120` (dacă e deschis) |
+| **Consolă server** | `docker exec` pe container FiveM (vezi secțiunea deploy) |
 | **Panel deploy** | **Coolify** pe același VPS (Stefan are acces) |
 
 ### Unde stă codul pe VPS (important pentru SSH)
@@ -76,7 +76,7 @@ docker logs -f b0n1oc2fcrzbgdco838ezm1i-fivem-1
 # Restart doar container FiveM
 docker restart b0n1oc2fcrzbgdco838ezm1i-fivem-1
 
-# Consolă în container (txAdmin / comenzi server)
+# Consolă în container FiveM (comenzi server)
 docker exec -it b0n1oc2fcrzbgdco838ezm1i-fivem-1 bash
 ```
 
@@ -137,18 +137,13 @@ După modificări CSS/JS, mărește versiunea în `index.html`, ex.:
 <script src="js/panels.js?v=10"></script>
 ```
 
-Apoi în consola txAdmin (fără restart container):
+Apoi `push-live-vps.ps1` + reload resursă (fără restart container):
 
+```bash
+docker exec -it b0n1oc2fcrzbgdco838ezm1i-fivem-1 sh -c 'printf "ensure sunset_ui\n" > /proc/1/fd/0'
 ```
-refresh
-ensure sunset_ui
-```
 
-Pentru logică Lua (nu doar NUI): `restart sunset_inventory` etc. — tot din txAdmin, fără `docker compose restart`.
-
-**txAdmin:** `http://193.33.167.216:40120` — consolă + restart resurse fără rebuild Docker.
-
-După modificări UI/Lua: `.\scripts\push-live-vps.ps1`, apoi în txAdmin console:
+Deploy complet (`remote-deploy.ps1`) doar pentru Docker / SQL / dependențe noi.
 
 ---
 
