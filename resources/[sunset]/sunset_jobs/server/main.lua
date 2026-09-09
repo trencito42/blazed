@@ -41,34 +41,41 @@ local function buildJobCenterJobs(center)
         jobs[#jobs + 1] = job
     end
 
-    add({
-        id = 'unemployed',
-        label = 'Unemployed',
-        description = 'Leave your current civilian job.',
-    })
-
+    -- Published creator jobs first
     if GetResourceState('sunset_jobcreator') == 'started' then
         for _, j in ipairs(exports.sunset_jobcreator:GetPublishedForHire()) do
-            add(j)
+            if j.id ~= 'unemployed' then add(j) end
         end
     end
 
+    -- All civilian jobs (type == 'civilian') from global config, excluding unemployed/criminal
+    for jobId, def in pairs(Sunset.CivilianJobs or {}) do
+        if jobId ~= 'unemployed' and (def.type == 'civilian' or not def.type) and not seen[jobId] then
+            if not isLegacyMigrated(jobId) then
+                add({
+                    id = jobId,
+                    label = def.label or jobId,
+                    description = def.description or '',
+                    salary = def.grades and def.grades[0] and def.grades[0].salary,
+                    npcCoords = def.npcCoords,
+                })
+            end
+        end
+    end
+
+    -- Any extra jobs explicitly listed in the center's jobs array
     for _, j in ipairs(center.jobs or {}) do
-        if j.id == 'unemployed' or seen[j.id] or isLegacyMigrated(j.id) then
-            goto continue
-        end
+        if j.id == 'unemployed' or seen[j.id] or isLegacyMigrated(j.id) then goto continue end
         local def = Sunset.CivilianJobs[j.id]
-        if not def and not (GetResourceState('sunset_jobcreator') == 'started'
-            and exports.sunset_jobcreator:IsCreatorJob(j.id)) then
-            goto continue
+        if def and def.type == 'civilian' then
+            add({
+                id = j.id,
+                label = j.label or def.label or j.id,
+                description = def.description or '',
+                salary = def.grades and def.grades[0] and def.grades[0].salary,
+                npcCoords = def.npcCoords,
+            })
         end
-        add({
-            id = j.id,
-            label = j.label or (def and def.label) or j.id,
-            description = def and def.description or '',
-            salary = def and def.grades and def.grades[0] and def.grades[0].salary,
-            npcCoords = def and def.npcCoords,
-        })
         ::continue::
     end
 

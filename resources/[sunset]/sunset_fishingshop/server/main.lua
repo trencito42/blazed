@@ -108,10 +108,19 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(sou
         local amount = math.max(1, math.min(math.floor(tonumber(entry.amount) or 1), inInv))
         if amount <= 0 then return nil, ('Nu ai destui %s.'):format(FISH_LABELS[fishItem] or fishItem) end
         local value = math.floor((FISH_PRICES[fishItem].min + FISH_PRICES[fishItem].max) / 2)
-        local earned = value * amount
+        -- Remove one at a time to handle fish split across multiple inventory rows
+        local actuallyRemoved = 0
+        for _ = 1, amount do
+            if exports.sunset_inventory:RemoveItem(source, fishItem, 1) then
+                actuallyRemoved = actuallyRemoved + 1
+            else
+                break
+            end
+        end
+        if actuallyRemoved == 0 then return nil, ('Nu ai %s in inventar.'):format(FISH_LABELS[fishItem] or fishItem) end
+        local earned = value * actuallyRemoved
         total = total + earned
-        exports.sunset_inventory:RemoveItem(source, fishItem, amount)
-        sold[#sold + 1] = ('%dx %s = $%d'):format(amount, FISH_LABELS[fishItem] or fishItem, earned)
+        sold[#sold + 1] = ('%dx %s = $%d'):format(actuallyRemoved, FISH_LABELS[fishItem] or fishItem, earned)
     end
     if total == 0 then return nil, 'Nimic vandut.' end
     exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_247')
@@ -127,11 +136,16 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellFish247', function(
         local count = exports.sunset_inventory:CountItem(source, fishItem) or 0
         if count > 0 then
             local value  = math.random(priceRange.min, priceRange.max)
-            local earned = value * count
-            total = total + earned
-            local name = fishItem:gsub('fish_', ''):gsub('^%l', string.upper)
-            sold[#sold + 1] = ('%dx %s = $%d'):format(count, name, earned)
-            exports.sunset_inventory:RemoveItem(source, fishItem, count)
+            local removed = 0
+            for _ = 1, count do
+                if exports.sunset_inventory:RemoveItem(source, fishItem, 1) then removed = removed + 1 else break end
+            end
+            if removed > 0 then
+                local earned = value * removed
+                total = total + earned
+                local name = fishItem:gsub('fish_', ''):gsub('^%l', string.upper)
+                sold[#sold + 1] = ('%dx %s = $%d'):format(removed, name, earned)
+            end
         end
     end
 
