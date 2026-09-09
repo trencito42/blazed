@@ -66,12 +66,29 @@ export NO_DEFAULT_CONFIG=1
 export NO_LICENSE_KEY=1
 
 if [ -n "${TXADMIN_ENABLE}" ] && [ "${TXADMIN_ENABLE}" != "0" ]; then
-  mkdir -p /txData
-  if [ -f /txData/default/config.json ]; then
-    if ! node -e "JSON.parse(require('fs').readFileSync('/txData/default/config.json','utf8'))" 2>/dev/null; then
-      echo "[sunsetmp] corrupt txAdmin config — backing up and resetting"
-      mv /txData/default/config.json "/txData/default/config.json.bak.$(date +%s)" 2>/dev/null || true
-    fi
+  TXADMIN_CONFIG="/txData/default/config.json"
+  mkdir -p /txData/default
+  write_default_txadmin_config() {
+    cat > "$TXADMIN_CONFIG" <<'EOF'
+{
+  "version": 2,
+  "general": {
+    "serverName": "blaze.mp"
+  },
+  "server": {
+    "dataPath": "/config",
+    "cfgPath": "/config/server.cfg"
+  }
+}
+EOF
+  }
+  if [ ! -f "$TXADMIN_CONFIG" ]; then
+    echo "[sunsetmp] seeding txAdmin config.json"
+    write_default_txadmin_config
+  elif ! node -e "JSON.parse(require('fs').readFileSync('/txData/default/config.json','utf8'))" 2>/dev/null; then
+    echo "[sunsetmp] corrupt txAdmin config — backup + reseed"
+    mv "$TXADMIN_CONFIG" "/txData/default/config.json.bak.$(date +%s)" 2>/dev/null || true
+    write_default_txadmin_config
   fi
   echo "[sunsetmp] txAdmin enabled — web UI on port 40120"
   echo "[sunsetmp] server.cfg path: /config/server.cfg"

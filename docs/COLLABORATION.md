@@ -146,7 +146,13 @@ ensure sunset_ui
 
 Pentru logică Lua (nu doar NUI): `restart sunset_inventory` etc. — tot din txAdmin, fără `docker compose restart`.
 
-Deploy complet (`./deploy.sh` / `remote-deploy.ps1`) doar când schimbi Docker, SQL migrations noi, sau dependențe.
+**Notă:** txAdmin e dezactivat pe producție (`TXADMIN_ENABLE=0`) până la deploy cu entrypoint reparat — altfel serverul intra în crash loop. Fără txAdmin, după `push-live-vps.ps1` poți reîncărca o resursă cu:
+
+```bash
+docker exec -it b0n1oc2fcrzbgdco838ezm1i-fivem-1 sh -c 'printf "ensure sunset_ui\n" > /proc/1/fd/0'
+```
+
+Deploy complet (`./deploy.sh` / `remote-deploy.ps1`) când schimbi Docker, SQL migrations noi, sau dependențe.
 
 ---
 
