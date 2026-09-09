@@ -151,8 +151,8 @@
 .house-owner-tools__input,
 .house-owner-tools__select,
 .house-owner-tools__textarea,
-.chat-input {
-    background: var(--gameplay-glass-control) !important;
+#chat .chat-input {
+    background: rgba(0, 0, 0, 0.6) !important;
 }
 
 /* HUD-style notifications stay text-only (no glass plate). */

@@ -1,4 +1,10 @@
 /* Premium chat — server redesign/premium_chatui.html */
+:root {
+    --chat-bg-active: linear-gradient(180deg, #14141c 0%, #0a0a0f 100%);
+    --chat-bg-input: rgba(0, 0, 0, 0.6);
+    --chat-bg-panel: #19191e;
+}
+
 #chat {
     top: 40px;
     left: 40px;
@@ -11,13 +17,16 @@
 #chat-app {
     display: flex;
     flex-direction: column;
+    width: 100%;
     border-radius: 12px;
-    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    background: transparent;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, padding 0.3s ease;
 }
 
-/* CEF-safe glass: solid rgba panel — no backdrop-filter (breaks FiveM NUI render) */
+/* Open (T): premium panel — no backdrop-filter (CEF breaks blur) */
 #chat-app.is-active {
-    background: rgba(10, 10, 15, 0.92);
+    background-color: #0e0e14;
+    background: var(--chat-bg-active);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     padding: 15px;
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -246,7 +255,7 @@
     position: absolute;
     bottom: calc(100% + 10px);
     left: 0;
-    background: rgba(25, 25, 30, 0.95);
+    background: var(--chat-bg-panel);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
@@ -304,7 +313,7 @@
 
 #chat .chat-input {
     flex: 1;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--chat-bg-input);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #fff;
     padding: 12px 15px;
@@ -332,7 +341,7 @@
     top: 55px;
     left: calc(100% + 20px);
     width: 280px;
-    background: rgba(25, 25, 30, 0.97);
+    background: var(--chat-bg-panel);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 20px;
@@ -541,4 +550,22 @@
         left: 0;
         top: calc(100% + 12px);
     }
+}
+
+/* CEF guard — must win over gameplay_glass / theme (premium-chat loads last) */
+#chat.chat-open #chat-app.is-active {
+    background-color: #0e0e14 !important;
+    background-image: var(--chat-bg-active) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    padding: 15px !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px !important;
+}
+
+#chat .chat-input {
+    background: var(--chat-bg-input) !important;
+    clip-path: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
