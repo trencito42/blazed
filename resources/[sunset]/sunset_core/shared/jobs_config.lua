@@ -100,11 +100,6 @@ Sunset.JobsConfig = {
         spots = {
             { coords = vector3(-1593.23, 5207.74, 3.31) },
         },
-        sellPoint = {
-            coords = vector3(-1845.22, -1195.45, 14.30),
-            label = 'Fish Buyer — Del Perro Pier',
-            blip = { sprite = 280, color = 46, scale = 0.8 },
-        },
         biteDelayMinMs = 2500,
         biteDelayMaxMs = 6500,
         reactionWindowMs = 1500,

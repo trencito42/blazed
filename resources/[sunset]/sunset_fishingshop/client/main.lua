@@ -247,21 +247,21 @@ end)
 AddEventHandler('sunset:nui:fishingShopBuy', function(data)
     local cart = data and data.cart
     if not cart or #cart == 0 then return end
-    local ok, result = Sunset.AwaitCallback('sunset:fishingshop:buyCart', cart)
+    local ok, err = Sunset.AwaitCallback('sunset:fishingshop:buyCart', cart)
     if ok then
-        exports.sunset_ui:Notify(('Achizitie reusita! -$%d'):format(result and result.total or 0), 'success', 5000)
+        exports.sunset_ui:Notify(('Achizitie reusita! -$%d'):format(ok.total or 0), 'success', 5000)
     else
-        exports.sunset_ui:Notify(tostring(result or 'Cumparare esecuata.'), 'error')
+        exports.sunset_ui:Notify(tostring(err or 'Cumparare esecuata.'), 'error')
     end
 end)
 
 AddEventHandler('sunset:nui:fishingShopSell', function(data)
     local cart = data and data.cart
     if not cart or #cart == 0 then return end
-    local ok, result = Sunset.AwaitCallback('sunset:fishingshop:sellCart', cart)
+    local ok, err = Sunset.AwaitCallback('sunset:fishingshop:sellCart', cart)
     if ok then
-        exports.sunset_ui:Notify(tostring(result or 'Peste vandut!'), 'success', 5000)
+        exports.sunset_ui:Notify(tostring(ok), 'success', 5000)
     else
-        exports.sunset_ui:Notify(tostring(result or 'Vanzare esecuata.'), 'error')
+        exports.sunset_ui:Notify(tostring(err or 'Vanzare esecuata.'), 'error')
     end
 end)

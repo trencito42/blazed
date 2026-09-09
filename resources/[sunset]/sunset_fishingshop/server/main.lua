@@ -82,7 +82,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:buyCart', function(sour
         total = total + price * amount
     end
 
-    local ok = exports.sunset_core:RemoveMoney(source, total)
+    local ok = exports.sunset_core:RemoveMoney(source, 'cash', total, 'bait_shop')
     if not ok then
         return nil, ('Nu ai destui bani. Necesar: $%d'):format(total)
     end
@@ -114,7 +114,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(sou
         sold[#sold + 1] = ('%dx %s = $%d'):format(amount, FISH_LABELS[fishItem] or fishItem, earned)
     end
     if total == 0 then return nil, 'Nimic vandut.' end
-    exports.sunset_core:AddMoney(source, total)
+    exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_247')
     return ('Vandut! +$%d (%s)'):format(total, table.concat(sold, ', '))
 end)
 
@@ -139,7 +139,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellFish247', function(
         return nil, 'Nu ai niciun peste in inventar.'
     end
 
-    exports.sunset_core:AddMoney(source, total)
+    exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_legacy')
     return ('Ai vandut pestele! +$%d cash (%s)'):format(total, table.concat(sold, ', '))
 end)
 
@@ -179,7 +179,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:upgradeRod', function(s
         return nil, ('Ai nevoie de Fisherman nivel %d. (nivel actual: %d)'):format(upgrade.minLevel, fishLevel)
     end
 
-    local ok = exports.sunset_core:RemoveMoney(source, upgrade.cost)
+    local ok = exports.sunset_core:RemoveMoney(source, 'cash', upgrade.cost, 'rod_upgrade')
     if not ok then
         return nil, ('Nu ai destui bani. Cost upgrade: $%d'):format(upgrade.cost)
     end
