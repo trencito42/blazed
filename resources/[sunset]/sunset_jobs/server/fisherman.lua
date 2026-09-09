@@ -1,5 +1,38 @@
 local SellLocks = {}
 
+-- ── Bait & rod helpers ───────────────────────────────────────
+local ROD_TIERS = {
+    { item = 'fishing_rod_5', valueMult = 1.75, delayReduction = 2000, windowBonus = 600 },
+    { item = 'fishing_rod_4', valueMult = 1.50, delayReduction = 1500, windowBonus = 400 },
+    { item = 'fishing_rod_3', valueMult = 1.30, delayReduction = 1000, windowBonus = 200 },
+    { item = 'fishing_rod_2', valueMult = 1.15, delayReduction = 500,  windowBonus = 0   },
+    { item = 'fishing_rod_1', valueMult = 1.05, delayReduction = 0,    windowBonus = 0   },
+}
+local BAIT_ORDER = {
+    { item = 'bait_premium', mult = 1.45 },
+    { item = 'bait_lure',    mult = 1.25 },
+    { item = 'bait_worm',    mult = 1.10 },
+}
+
+local function getEquippedRod(source)
+    for _, rod in ipairs(ROD_TIERS) do
+        if (exports.sunset_inventory:CountItem(source, rod.item) or 0) > 0 then
+            return rod
+        end
+    end
+    return { valueMult = 1.0, delayReduction = 0, windowBonus = 0 }
+end
+
+local function consumeBestBait(source)
+    for _, bait in ipairs(BAIT_ORDER) do
+        if (exports.sunset_inventory:CountItem(source, bait.item) or 0) > 0 then
+            exports.sunset_inventory:RemoveItem(source, bait.item, 1)
+            return bait.mult, bait.item
+        end
+    end
+    return 1.0, nil
+end
+
 local function fishLevelAndCapacity(source, cfg)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return 1, cfg.carryBase or 2 end
@@ -108,17 +141,28 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     local challenge = session.data.fishingChallenge
     if challenge and now <= challenge.expiresAt then return nil, 'Your line is already cast' end
 
-    local delay = math.random(cfg.biteDelayMinMs or 2500, cfg.biteDelayMaxMs or 6500)
-    local window = cfg.reactionWindowMs or 1400
+    -- Rod bonuses (checked from inventory, highest tier wins)
+    local rod = getEquippedRod(source)
+    -- Bait: consume one on cast, apply value multiplier
+    local baitMult, baitItem = consumeBestBait(source)
+
+    local delay = math.max(800,
+        math.random(cfg.biteDelayMinMs or 2500, cfg.biteDelayMaxMs or 6500) - rod.delayReduction)
+    local window = (cfg.reactionWindowMs or 1400) + rod.windowBonus
     local token = ('%d-%d-%d'):format(source, session.id, math.random(100000, 999999))
     session.data.fishingChallenge = {
-        token = token,
-        spotIndex = spotIndex,
-        biteAt = now + delay,
-        expiresAt = now + delay + window,
+        token        = token,
+        spotIndex    = spotIndex,
+        biteAt       = now + delay,
+        expiresAt    = now + delay + window,
+        rodValueMult = rod.valueMult,
+        baitMult     = baitMult,
     }
     if session.state == 'STARTING' then SunsetJobs_SetState(source, 'ACTIVE') end
-    return { token = token, delayMs = delay, windowMs = window }
+    local castInfo = { token = token, delayMs = delay, windowMs = window }
+    if baitItem then castInfo.baitUsed = baitItem end
+    if rod.item then castInfo.rodTier = rod.item end
+    return castInfo
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(source, spotIndex, token)
@@ -142,7 +186,10 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     if now < challenge.biteAt then return nil, 'Too early — the fish escaped' end
     if now > challenge.expiresAt then return nil, 'Too late — the fish escaped' end
 
-    local value = math.random(cfg.catchPayMin or 30, cfg.catchPayMax or 100)
+    local rodValueMult = challenge.rodValueMult or 1.0
+    local baitMult     = challenge.baitMult     or 1.0
+    local baseValue    = math.random(cfg.catchPayMin or 30, cfg.catchPayMax or 100)
+    local value        = math.floor(baseValue * rodValueMult * baitMult)
     local level, capacity = fishLevelAndCapacity(source, cfg)
     local fishItem = cfg.fishItem or 'fresh_fish'
     local carried = exports.sunset_inventory:CountItem(source, fishItem) or 0

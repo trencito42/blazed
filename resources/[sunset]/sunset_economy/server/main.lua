@@ -135,6 +135,22 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     end
     if not shopItem then return nil, 'Item not sold here' end
 
+    -- Optional fisherman-skill gate (minFishLevel on shop item)
+    if shopItem.minFishLevel then
+        local char = exports.sunset_core:GetCharacter(source)
+        local fishLevel = 1
+        if char then
+            fishLevel = tonumber(MySQL.scalar.await(
+                'SELECT level FROM job_progress WHERE character_id = ? AND job_id = ?',
+                { char.id, 'fisherman' }
+            )) or 1
+        end
+        if fishLevel < shopItem.minFishLevel then
+            return nil, ('Requires Fisherman level %d (your level: %d). Fish more to level up!'):format(
+                shopItem.minFishLevel, fishLevel)
+        end
+    end
+
     local total = shopItem.price * amount
     local chargedAccount = 'cash'
     if not exports.sunset_core:RemoveMoney(source, 'cash', total, 'shop') then
