@@ -137,7 +137,16 @@ După modificări CSS/JS, mărește versiunea în `index.html`, ex.:
 <script src="js/panels.js?v=10"></script>
 ```
 
-Apoi `restart sunset_ui` pe server (sau deploy complet).
+Apoi în consola txAdmin (fără restart container):
+
+```
+refresh
+ensure sunset_ui
+```
+
+Pentru logică Lua (nu doar NUI): `restart sunset_inventory` etc. — tot din txAdmin, fără `docker compose restart`.
+
+Deploy complet (`./deploy.sh` / `remote-deploy.ps1`) doar când schimbi Docker, SQL migrations noi, sau dependențe.
 
 ---
 

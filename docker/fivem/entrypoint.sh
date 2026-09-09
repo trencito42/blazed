@@ -67,6 +67,12 @@ export NO_LICENSE_KEY=1
 
 if [ -n "${TXADMIN_ENABLE}" ] && [ "${TXADMIN_ENABLE}" != "0" ]; then
   mkdir -p /txData
+  if [ -f /txData/default/config.json ]; then
+    if ! node -e "JSON.parse(require('fs').readFileSync('/txData/default/config.json','utf8'))" 2>/dev/null; then
+      echo "[sunsetmp] corrupt txAdmin config — backing up and resetting"
+      mv /txData/default/config.json "/txData/default/config.json.bak.$(date +%s)" 2>/dev/null || true
+    fi
+  fi
   echo "[sunsetmp] txAdmin enabled — web UI on port 40120"
   echo "[sunsetmp] server.cfg path: /config/server.cfg"
   exec /sbin/tini -- /usr/bin/entrypoint +set onesync on +set onesync_population false

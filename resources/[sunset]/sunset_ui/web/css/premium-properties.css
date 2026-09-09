@@ -103,13 +103,15 @@
 #properties .house-search-box {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    height: 36px;
+    box-sizing: border-box;
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    padding: 9px 14px;
+    padding: 0 12px;
     color: rgba(255, 255, 255, 0.5);
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 #properties .house-search-box:focus-within {
@@ -120,14 +122,25 @@
 }
 
 #properties .house-search-box input {
-    background: transparent;
-    border: none;
-    outline: none;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     color: #fff;
     font-family: 'Montserrat', sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    width: 170px;
+    width: 150px;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border-radius: 0 !important;
+}
+
+#properties .house-search-box input:focus {
+    border: none !important;
+    box-shadow: none !important;
 }
 
 #properties .house-search-box input::placeholder {
@@ -138,7 +151,10 @@
 #properties .house-browser__close {
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 8px !important;
+    height: 36px !important;
+    box-sizing: border-box !important;
     background: rgba(255, 255, 255, 0.04) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 8px !important;
@@ -147,9 +163,10 @@
     font-size: 11px !important;
     font-weight: 800 !important;
     letter-spacing: 1.5px !important;
-    padding: 9px 15px !important;
+    padding: 0 12px !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
+    flex-shrink: 0;
 }
 
 #properties .house-browser__close:hover {
