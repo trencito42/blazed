@@ -138,11 +138,12 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#clothing'];
+            const panels = ['#fishing-shop', '#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#clothing'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
                     const map = {
+                        '#fishing-shop': 'fishingShopClose',
                         '#shop': 'shopClose',
                         '#mdc': 'mdcClose',
                         '#ticket': 'ticketClose',
@@ -1817,6 +1818,234 @@ const Panels = {
         if (!btn) return;
         btn.disabled = isSaving;
         btn.textContent = isSaving ? 'SAVING...' : 'CONFIRM & PLAY';
+    },
+
+    // ── Fishing Shop (buy bait / sell fish) ─────────────────────
+    _fishingShopData: null,
+    _fishingShopCart: [],
+    _fishingShopMode: 'buy',
+    _fishingShopQtyCallback: null,
+    _fishingShopQtyInited: false,
+
+    showFishingShop(data) {
+        this.init();
+        this._fishingShopData = data;
+        this._fishingShopCart = [];
+        this._fishingShopMode = data.mode || 'buy';
+        const isSell = this._fishingShopMode === 'sell';
+
+        const titleEl = $('#fishing-shop-title');
+        if (titleEl) titleEl.textContent = data.title || (isSell ? 'VINDE PESTE' : 'FISHING SHOP');
+        const sideTitle = $('#fishing-shop-side-title');
+        if (sideTitle) sideTitle.textContent = isSell ? 'VANZARE' : 'CART';
+        const confirmBtn = $('#fishing-shop-confirm');
+        if (confirmBtn) confirmBtn.textContent = isSell ? 'VINDE TOT' : 'PURCHASE';
+
+        const cashEl = $('#fishing-shop-cash');
+        if (cashEl) cashEl.textContent = (data.cash || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        const grid = $('#fishing-shop-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        (data.items || []).forEach((row) => {
+            const slot = document.createElement('div');
+            slot.className = 'premium-slot has-item fishing-shop-slot';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'premium-item';
+
+            btn.appendChild(createItemArtwork(row, 'premium-item__icon'));
+
+            const details = document.createElement('div');
+            details.className = 'premium-item__details';
+            const nameEl = document.createElement('strong');
+            nameEl.textContent = row.label || row.item || '?';
+            details.appendChild(nameEl);
+            if (isSell) {
+                const countEl = document.createElement('span');
+                countEl.textContent = `×${row.count}`;
+                details.appendChild(countEl);
+            }
+            btn.appendChild(details);
+            slot.appendChild(btn);
+
+            const badge = document.createElement('div');
+            badge.className = 'premium-item__count';
+            if (isSell) {
+                badge.style.color = '#4ade80';
+                badge.style.background = 'rgba(34,197,94,.12)';
+                badge.textContent = `$${row.unitValue}`;
+            } else {
+                badge.textContent = `$${row.price}`;
+            }
+            slot.appendChild(badge);
+
+            btn.addEventListener('click', () => {
+                this._fishingShopOpenQty(row, isSell ? (row.count || 1) : 500);
+            });
+
+            grid.appendChild(slot);
+        });
+
+        this._fishingShopRenderCart();
+        if (confirmBtn) confirmBtn.onclick = () => this._fishingShopConfirm();
+        this._fishingShopInitQtyModal();
+        $('#fishing-shop')?.classList.remove('hidden');
+    },
+
+    hideFishingShop() {
+        $('#fishing-shop')?.classList.add('hidden');
+        $('#fishing-shop-qty-modal')?.classList.add('hidden');
+        this._fishingShopCart = [];
+        this._fishingShopData = null;
+    },
+
+    _fishingShopInitQtyModal() {
+        if (this._fishingShopQtyInited) return;
+        this._fishingShopQtyInited = true;
+
+        const modal = () => $('#fishing-shop-qty-modal');
+        const input = () => $('#fishing-shop-qty-input');
+        const slider = () => $('#fishing-shop-qty-slider');
+
+        const sync = (val) => {
+            const v = Math.max(1, Math.min(parseInt(val) || 1, parseInt(slider()?.max) || 999));
+            const i = input(); if (i) i.value = v;
+            const s = slider(); if (s) s.value = v;
+        };
+
+        $('#fishing-shop-qty-minus')?.addEventListener('click', () => sync((parseInt(input()?.value) || 1) - 1));
+        $('#fishing-shop-qty-plus')?.addEventListener('click', () => sync((parseInt(input()?.value) || 1) + 1));
+        $('#fishing-shop-qty-input')?.addEventListener('input', (e) => sync(e.target.value));
+        $('#fishing-shop-qty-slider')?.addEventListener('input', (e) => sync(e.target.value));
+        $('#fishing-shop-qty-quick-1')?.addEventListener('click', () => sync(1));
+        $('#fishing-shop-qty-quick-10')?.addEventListener('click', () => sync(10));
+        $('#fishing-shop-qty-quick-50')?.addEventListener('click', () => sync(50));
+        $('#fishing-shop-qty-quick-max')?.addEventListener('click', () => sync(parseInt(slider()?.max) || 999));
+
+        $('#fishing-shop-qty-cancel')?.addEventListener('click', () => {
+            modal()?.classList.add('hidden');
+            modal()?.setAttribute('aria-hidden', 'true');
+            this._fishingShopQtyCallback = null;
+        });
+
+        $('#fishing-shop-qty-confirm')?.addEventListener('click', () => {
+            const qty = parseInt(input()?.value) || 1;
+            if (this._fishingShopQtyCallback) {
+                this._fishingShopQtyCallback(qty);
+                this._fishingShopQtyCallback = null;
+            }
+            modal()?.classList.add('hidden');
+            modal()?.setAttribute('aria-hidden', 'true');
+        });
+    },
+
+    _fishingShopOpenQty(row, maxQty) {
+        const modal = $('#fishing-shop-qty-modal');
+        const input = $('#fishing-shop-qty-input');
+        const slider = $('#fishing-shop-qty-slider');
+        const isSell = this._fishingShopMode === 'sell';
+
+        const title = $('#fishing-shop-qty-title');
+        if (title) title.textContent = isSell ? 'SELECT AMOUNT TO SELL' : 'SELECT AMOUNT';
+        const itemName = $('#fishing-shop-qty-item-name');
+        if (itemName) itemName.textContent = row.label || row.item;
+        const confirmBtn = $('#fishing-shop-qty-confirm');
+        if (confirmBtn) confirmBtn.textContent = isSell ? 'ADD TO SELL LIST' : 'ADD TO CART';
+
+        const max = Math.max(1, maxQty);
+        if (input) { input.max = max; input.value = 1; }
+        if (slider) { slider.max = max; slider.value = 1; }
+
+        modal?.classList.remove('hidden');
+        modal?.setAttribute('aria-hidden', 'false');
+
+        this._fishingShopQtyCallback = (qty) => this._fishingShopAddToCart(row, qty);
+    },
+
+    _fishingShopAddToCart(row, qty) {
+        const isSell = this._fishingShopMode === 'sell';
+        const price = isSell ? (row.unitValue || 0) : (row.price || 0);
+        const maxQty = isSell ? (row.count || 1) : 500;
+        const existing = this._fishingShopCart.find((e) => e.item === row.item);
+        if (existing) {
+            existing.amount = Math.min(maxQty, existing.amount + qty);
+        } else {
+            this._fishingShopCart.push({
+                item: row.item,
+                label: row.label || row.item,
+                price,
+                amount: Math.min(maxQty, qty),
+                max: maxQty,
+            });
+        }
+        this._fishingShopRenderCart();
+    },
+
+    _fishingShopRenderCart() {
+        const list = $('#fishing-shop-cart');
+        const subtotalEl = $('#fishing-shop-subtotal');
+        const confirmBtn = $('#fishing-shop-confirm');
+        const isSell = this._fishingShopMode === 'sell';
+        if (!list) return;
+        list.innerHTML = '';
+
+        let total = 0;
+        this._fishingShopCart.forEach((entry, idx) => {
+            total += entry.price * entry.amount;
+            const item = document.createElement('div');
+            item.className = 'fishing-shop-cart-item';
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'fishing-shop-cart-item__name';
+            nameDiv.textContent = entry.label;
+            item.appendChild(nameDiv);
+
+            const qtyDiv = document.createElement('div');
+            qtyDiv.className = 'fishing-shop-cart-item__qty';
+            qtyDiv.textContent = `×${entry.amount}`;
+            item.appendChild(qtyDiv);
+
+            const priceDiv = document.createElement('div');
+            priceDiv.className = 'fishing-shop-cart-item__price';
+            if (isSell) {
+                priceDiv.style.color = '#4ade80';
+            }
+            priceDiv.textContent = `$${(entry.price * entry.amount).toLocaleString()}`;
+            item.appendChild(priceDiv);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'fishing-shop-cart-item__remove';
+            removeBtn.setAttribute('aria-label', `Remove ${entry.label}`);
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', () => {
+                this._fishingShopCart.splice(idx, 1);
+                this._fishingShopRenderCart();
+            });
+            item.appendChild(removeBtn);
+            list.appendChild(item);
+        });
+
+        if (subtotalEl) subtotalEl.textContent = `$${total.toLocaleString()}`;
+        if (confirmBtn) confirmBtn.disabled = this._fishingShopCart.length === 0;
+
+        if (this._fishingShopCart.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'fishing-shop-cart-empty';
+            empty.textContent = isSell ? 'Selecteaza pestii de vandut' : 'Click pe item ca sa adaugi in cos';
+            list.appendChild(empty);
+        }
+    },
+
+    _fishingShopConfirm() {
+        if (this._fishingShopCart.length === 0) return;
+        const isSell = this._fishingShopMode === 'sell';
+        post(isSell ? 'fishingShopSell' : 'fishingShopBuy', { cart: this._fishingShopCart });
+        this.hideFishingShop();
+        post('fishingShopClose', {});
     },
 };
 

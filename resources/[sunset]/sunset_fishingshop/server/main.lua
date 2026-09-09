@@ -12,6 +12,27 @@ local FISH_PRICES = {
     fish_legendary = { min = 650, max = 1200 },
 }
 
+local FISH_LABELS = {
+    fresh_fish     = 'Fresh Fish',
+    fish_common    = 'Common Fish',
+    fish_uncommon  = 'Uncommon Fish',
+    fish_rare      = 'Rare Fish',
+    fish_epic      = 'Epic Fish',
+    fish_legendary = 'Legendary Fish',
+}
+
+local BAIT_SHOP_ITEMS = {
+    { item = 'bait_worm',    label = 'Worm Bait',    price = 50,  description = '60% catch chance', icon = 'bait_worm'    },
+    { item = 'bait_lure',    label = 'Lure Bait',    price = 120, description = '75% catch chance', icon = 'bait_lure'    },
+    { item = 'bait_premium', label = 'Premium Bait', price = 250, description = '90% catch chance', icon = 'bait_premium' },
+}
+
+local function getCharCash(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return 0 end
+    return tonumber(char.cash) or tonumber(char.money) or 0
+end
+
 local ROD_UPGRADES = {
     { requires = nil,             gives = 'fishing_rod_1', cost = 200,  minLevel = 1 },
     { requires = 'fishing_rod_1', gives = 'fishing_rod_2', cost = 500,  minLevel = 2 },
@@ -20,7 +41,84 @@ local ROD_UPGRADES = {
     { requires = 'fishing_rod_4', gives = 'fishing_rod_5', cost = 5000, minLevel = 5 },
 }
 
--- ── Vinde tot pestele la 24/7 ────────────────────────────────
+-- ── Fetch bait shop items (pentru fishing shop UI) ───────────
+exports.sunset_core:RegisterCallback('sunset:fishingshop:getBaitShop', function(source)
+    return { items = BAIT_SHOP_ITEMS, cash = getCharCash(source) }
+end)
+
+-- ── Fetch fish inventory (pentru sell UI) ─────────────────────
+exports.sunset_core:RegisterCallback('sunset:fishingshop:getFishInventory', function(source)
+    local items = {}
+    for fishItem, priceRange in pairs(FISH_PRICES) do
+        local count = exports.sunset_inventory:CountItem(source, fishItem) or 0
+        if count > 0 then
+            local midValue = math.floor((priceRange.min + priceRange.max) / 2)
+            items[#items + 1] = {
+                item       = fishItem,
+                label      = FISH_LABELS[fishItem] or fishItem,
+                icon       = fishItem,
+                count      = count,
+                unitValue  = midValue,
+                totalValue = midValue * count,
+            }
+        end
+    end
+    return { items = items, cash = getCharCash(source) }
+end)
+
+-- ── Cumpara momeala din cos (fishing shop UI) ─────────────────
+exports.sunset_core:RegisterCallback('sunset:fishingshop:buyCart', function(source, cart)
+    if not cart or type(cart) ~= 'table' or #cart == 0 then
+        return nil, 'Cos gol.'
+    end
+    local priceMap = {}
+    for _, b in ipairs(BAIT_SHOP_ITEMS) do priceMap[b.item] = b.price end
+
+    local total = 0
+    for _, entry in ipairs(cart) do
+        local price = priceMap[entry.item]
+        if not price then return nil, 'Item invalid: ' .. tostring(entry.item) end
+        local amount = math.max(1, math.min(math.floor(tonumber(entry.amount) or 1), 500))
+        total = total + price * amount
+    end
+
+    local ok = exports.sunset_core:RemoveMoney(source, total)
+    if not ok then
+        return nil, ('Nu ai destui bani. Necesar: $%d'):format(total)
+    end
+
+    for _, entry in ipairs(cart) do
+        local amount = math.max(1, math.min(math.floor(tonumber(entry.amount) or 1), 500))
+        exports.sunset_inventory:AddItem(source, entry.item, amount)
+    end
+    return { total = total }
+end)
+
+-- ── Vinde peste selectat din cos (fishing shop UI) ────────────
+exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(source, cart)
+    if not cart or type(cart) ~= 'table' or #cart == 0 then
+        return nil, 'Cos de vanzare gol.'
+    end
+    local total = 0
+    local sold  = {}
+    for _, entry in ipairs(cart) do
+        local fishItem = entry.item
+        if not FISH_PRICES[fishItem] then return nil, 'Item invalid: ' .. tostring(fishItem) end
+        local inInv = exports.sunset_inventory:CountItem(source, fishItem) or 0
+        local amount = math.max(1, math.min(math.floor(tonumber(entry.amount) or 1), inInv))
+        if amount <= 0 then return nil, ('Nu ai destui %s.'):format(FISH_LABELS[fishItem] or fishItem) end
+        local value = math.floor((FISH_PRICES[fishItem].min + FISH_PRICES[fishItem].max) / 2)
+        local earned = value * amount
+        total = total + earned
+        exports.sunset_inventory:RemoveItem(source, fishItem, amount)
+        sold[#sold + 1] = ('%dx %s = $%d'):format(amount, FISH_LABELS[fishItem] or fishItem, earned)
+    end
+    if total == 0 then return nil, 'Nimic vandut.' end
+    exports.sunset_core:AddMoney(source, total)
+    return ('Vandut! +$%d (%s)'):format(total, table.concat(sold, ', '))
+end)
+
+-- ── Vinde tot pestele la 24/7 (legacy — pastrat pentru compatibilitate) ──
 exports.sunset_core:RegisterCallback('sunset:fishingshop:sellFish247', function(source)
     local total = 0
     local sold  = {}

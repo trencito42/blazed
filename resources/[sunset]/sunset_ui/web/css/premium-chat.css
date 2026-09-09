@@ -567,10 +567,8 @@
     }
 }
 
-/* CEF guard — transparent feed; chrome only on input row (premium-chat loads last) */
+/* CEF guard — transparent feed when closed; messages area always transparent */
 #chat #chat-app,
-#chat #chat-app.is-active,
-#chat.chat-open #chat-app.is-active,
 #chat .chat-messages {
     background: transparent !important;
     background-image: none !important;
@@ -579,6 +577,32 @@
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
+}
+
+/* Active (T open): semi-transparent BG, rounded shell, no layout shift */
+#chat #chat-app.is-active {
+    background: rgba(8, 8, 14, 0.78) !important;
+    border-radius: 12px !important;
+    padding: 10px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* Remove fade mask when open — timestamps at top always visible */
+#chat-app.is-active .chat-messages {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+}
+
+/* Prevent display:none jump on input-wrapper — keep in flow with max-height 0 */
+#chat .chat-input-wrapper.hidden {
+    display: flex !important;
+    max-height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 #chat .chat-header {

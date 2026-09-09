@@ -26,6 +26,9 @@ local nearSell       = false
 local menuOpen       = false
 local inCooldown     = false
 
+-- Export so other resources (fisherman.lua) can check if shop is blocking input
+exports('IsMenuOpen', function() return menuOpen end)
+
 -- ── Spawn NPC ────────────────────────────────────────────────
 CreateThread(function()
     local hash = GetHashKey('a_m_m_hillbilly_01')
@@ -112,6 +115,7 @@ CreateThread(function()
                             { id = 'get_fisherman_job',   label = 'Devino Pescar',   group = 'CIVILIAN' },
                             { id = 'start_fishing_shift', label = 'Incepe Tura',     group = 'FISHING'  },
                             { id = 'upgrade_fishing_rod', label = 'Upgrade Undita',  group = 'FISHING'  },
+                            { id = 'buy_bait',            label = 'Cumpara Momeala', group = 'FISHING'  },
                         },
                     })
                 elseif nearSell then
@@ -136,6 +140,8 @@ end)
 -- ── NUI events ────────────────────────────────────────────────
 AddEventHandler('sunset:nui:playerInteractionClose', function()
     menuOpen = false
+    exports.sunset_ui:Send('playerInteractionHide', {})
+    exports.sunset_ui:SetFocus(false, false)
 end)
 
 AddEventHandler('sunset:nui:playerInteractionAction', function(data)
@@ -172,12 +178,68 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
 
     elseif data.action == 'sell_fish_247' then
         inCooldown = true
-        local ok, msg = Sunset.AwaitCallback('sunset:fishingshop:sellFish247')
-        if ok then
-            exports.sunset_ui:Notify(msg or 'Peste vandut!', 'success', 6000)
+        local invData, err = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
+        if invData then
+            if not invData.items or #invData.items == 0 then
+                exports.sunset_ui:Notify('Nu ai niciun peste in inventar.', 'info')
+            else
+                exports.sunset_ui:Send('fishingShopShow', {
+                    mode  = 'sell',
+                    title = '24/7 — VINDE PESTE',
+                    cash  = invData.cash,
+                    items = invData.items,
+                })
+                exports.sunset_ui:SetFocus(true, true)
+            end
         else
-            exports.sunset_ui:Notify(msg or 'Nu ai peste de vandut.', 'error')
+            exports.sunset_ui:Notify(err or 'Eroare la incarcare inventar.', 'error')
+        end
+        SetTimeout(2000, function() inCooldown = false end)
+
+    elseif data.action == 'buy_bait' then
+        inCooldown = true
+        local shopData, err = Sunset.AwaitCallback('sunset:fishingshop:getBaitShop')
+        if shopData then
+            exports.sunset_ui:Send('fishingShopShow', {
+                mode  = 'buy',
+                title = 'FISHING SUPPLY',
+                cash  = shopData.cash,
+                items = shopData.items,
+            })
+            exports.sunset_ui:SetFocus(true, true)
+        else
+            exports.sunset_ui:Notify(err or 'Nu s-a putut deschide magazinul.', 'error')
         end
         SetTimeout(2000, function() inCooldown = false end)
     end
+end)
+
+-- ── NUI callbacks (buy / sell via fishing shop UI) ────────────
+RegisterNUICallback('fishingShopClose', function(data, cb)
+    exports.sunset_ui:SetFocus(false, false)
+    cb('ok')
+end)
+
+RegisterNUICallback('fishingShopBuy', function(data, cb)
+    local cart = data and data.cart
+    if not cart or #cart == 0 then cb('ok') return end
+    local ok, result = Sunset.AwaitCallback('sunset:fishingshop:buyCart', cart)
+    if ok then
+        exports.sunset_ui:Notify(('Achizitie reusita! -$%d'):format(result and result.total or 0), 'success', 5000)
+    else
+        exports.sunset_ui:Notify(result or 'Cumparare esecuata.', 'error')
+    end
+    cb('ok')
+end)
+
+RegisterNUICallback('fishingShopSell', function(data, cb)
+    local cart = data and data.cart
+    if not cart or #cart == 0 then cb('ok') return end
+    local ok, result = Sunset.AwaitCallback('sunset:fishingshop:sellCart', cart)
+    if ok then
+        exports.sunset_ui:Notify(result or 'Peste vandut!', 'success', 5000)
+    else
+        exports.sunset_ui:Notify(result or 'Vanzare esecuata.', 'error')
+    end
+    cb('ok')
 end)

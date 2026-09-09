@@ -900,6 +900,58 @@
         </div>
     </div>
 
+    <!-- FISHING SHOP (buy bait / sell fish) — premium inventory layout -->
+    <div id="fishing-shop" class="menu menu--solo menu--solo-inventory hidden">
+        <div class="premium-inventory-shell">
+            <section class="premium-inventory-main">
+                <header class="premium-inventory-header">
+                    <h1 id="fishing-shop-title">FISHING SHOP</h1>
+                    <div class="premium-inventory-stats">
+                        <div class="premium-cash-badge" title="Wallet Cash">
+                            <span class="premium-cash-badge__icon">$</span>
+                            <strong id="fishing-shop-cash">0</strong>
+                        </div>
+                    </div>
+                </header>
+                <div class="premium-inventory-grid" id="fishing-shop-grid"></div>
+            </section>
+            <aside class="premium-inventory-side">
+                <div class="premium-side-heading"><h2 id="fishing-shop-side-title">CART</h2></div>
+                <div class="premium-nearby-list fishing-shop-cart-list" id="fishing-shop-cart"></div>
+                <div class="fishing-shop-footer">
+                    <div class="fishing-shop-subtotal-row">
+                        <span class="fishing-shop-subtotal-label">SUBTOTAL</span>
+                        <strong class="fishing-shop-subtotal-value" id="fishing-shop-subtotal">$0</strong>
+                    </div>
+                    <button type="button" class="fishing-shop-confirm-btn" id="fishing-shop-confirm" disabled>PURCHASE</button>
+                </div>
+            </aside>
+            <div class="premium-qty-modal hidden" id="fishing-shop-qty-modal" aria-hidden="true">
+                <div class="premium-qty-box">
+                    <h3 id="fishing-shop-qty-title">SELECT AMOUNT</h3>
+                    <p class="premium-qty-item" id="fishing-shop-qty-item-name">Item</p>
+                    <div class="premium-qty-controls">
+                        <button type="button" class="premium-qty-btn" id="fishing-shop-qty-minus">-</button>
+                        <input type="number" id="fishing-shop-qty-input" min="1" max="999" value="1" class="premium-qty-input">
+                        <button type="button" class="premium-qty-btn" id="fishing-shop-qty-plus">+</button>
+                    </div>
+                    <input type="range" id="fishing-shop-qty-slider" min="1" max="999" value="1" class="premium-qty-slider">
+                    <div class="premium-qty-quick">
+                        <button type="button" id="fishing-shop-qty-quick-1">1</button>
+                        <button type="button" id="fishing-shop-qty-quick-10">10</button>
+                        <button type="button" id="fishing-shop-qty-quick-50">50</button>
+                        <button type="button" id="fishing-shop-qty-quick-max">MAX</button>
+                    </div>
+                    <div class="premium-qty-actions">
+                        <button type="button" class="premium-qty-cancel" id="fishing-shop-qty-cancel">CANCEL</button>
+                        <button type="button" class="premium-qty-confirm" id="fishing-shop-qty-confirm">ADD TO CART</button>
+                    </div>
+                </div>
+            </div>
+            <div class="premium-close-hint">PRESS ESC TO CLOSE</div>
+        </div>
+    </div>
+
     <!-- FLEECA BANK 24/7 ATM KIOSK — AUTHENTIC REAL-WORLD BANCOMAT -->
     <div id="atm-modal" class="atm-modal-overlay hidden" aria-hidden="true">
         <div class="atm-kiosk">

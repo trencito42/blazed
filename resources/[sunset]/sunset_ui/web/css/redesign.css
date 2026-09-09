@@ -498,6 +498,131 @@ button.premium-item:active { opacity: .85; }
     flex-direction: column;
 }
 
+/* ── Fishing Shop cart ──────────────────────────────────────── */
+.fishing-shop-cart-list {
+    padding-right: 4px;
+}
+
+.fishing-shop-cart-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.fishing-shop-cart-item__name {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--premium-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fishing-shop-cart-item__qty {
+    font-size: 11px;
+    color: var(--premium-muted);
+    flex-shrink: 0;
+}
+
+.fishing-shop-cart-item__price {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--premium-accent);
+    flex-shrink: 0;
+}
+
+.fishing-shop-cart-item__remove {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border: none;
+    background: rgba(239, 68, 68, .15);
+    color: #f87171;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s ease;
+}
+
+.fishing-shop-cart-item__remove:hover {
+    background: rgba(239, 68, 68, .3);
+}
+
+.fishing-shop-cart-empty {
+    color: var(--premium-muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    padding: 20px 0;
+}
+
+.fishing-shop-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--premium-border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fishing-shop-subtotal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fishing-shop-subtotal-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--premium-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.fishing-shop-subtotal-value {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--premium-accent);
+}
+
+.fishing-shop-confirm-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--premium-accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity .2s ease, transform .1s ease;
+}
+
+.fishing-shop-confirm-btn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+.fishing-shop-confirm-btn:not(:disabled):hover {
+    opacity: .85;
+}
+
+.fishing-shop-confirm-btn:not(:disabled):active {
+    transform: scale(.97);
+}
+
 #inventory-nearby-panel.hidden { display: none !important; }
 
 .premium-player-card {

@@ -408,6 +408,12 @@ window.addEventListener('message', (event) => {
         case 'shopHide':
             if (window.Panels) Panels.hideShop();
             break;
+        case 'fishingShopShow':
+            if (window.Panels) Panels.showFishingShop(data || event.data.data);
+            break;
+        case 'fishingShopHide':
+            if (window.Panels) Panels.hideFishingShop();
+            break;
         case 'atmShow':
             if (window.AtmMachine) AtmMachine.open(data || event.data.data || {});
             else if (window.Panels) Panels.showAtm(data || event.data.data);

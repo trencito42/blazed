@@ -25,6 +25,12 @@ local function contextJustPressed()
     return IsControlJustPressed(0, 38) or IsDisabledControlJustPressed(0, 38)
 end
 
+local function isShopMenuOpen()
+    if GetResourceState('sunset_fishingshop') ~= 'started' then return false end
+    local ok, result = pcall(function() return exports.sunset_fishingshop:IsMenuOpen() end)
+    return ok and result == true
+end
+
 local function isFishermanShift()
     return JC.jobId == 'fisherman' and JC.state and JC.state ~= 'IDLE'
 end
@@ -282,7 +288,7 @@ CreateThread(function()
                 local atSpot = atFishingSpot()
                 if atSpot then
                     EnableControlAction(0, 38, true)
-                    if contextJustPressed() then
+                    if not isShopMenuOpen() and contextJustPressed() then
                         CreateThread(attemptFish)
                     end
                     Wait(0)
