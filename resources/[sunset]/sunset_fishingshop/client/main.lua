@@ -4,7 +4,7 @@
 --  Opreste G la NPC si la zona 24/7 pentru a vinde peste
 -- ============================================================
 
-local NPC_COORDS     = vector4(-1593.23, 5207.74, 4.31, 25.49)
+local NPC_COORDS     = vector4(-1593.23, 5207.74, 3.31, 25.49)
 local NPC_DIST       = 3.5
 local SELL_COORDS    = vector3(25.74, -1347.32, 29.50)
 local SELL_DIST      = 3.0

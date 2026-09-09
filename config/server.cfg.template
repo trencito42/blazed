@@ -76,6 +76,7 @@ ensure sunset_dealership
 ensure sunset_scoreboard
 ensure sunset_menu
 ensure sunset_help
+ensure sunset_jobs
 ensure sunset_carjack
 ensure sunset_fishingshop
 
