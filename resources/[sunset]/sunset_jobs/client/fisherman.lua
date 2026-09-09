@@ -293,7 +293,7 @@ local function attemptFish()
     end
 
     fishing = true
-    alignPlayerAtSpot(spot)
+    -- Nu mai facem teleport la spot — zona libera de 50m, jucatorul ramane unde e
 
     local cast, err = Sunset.AwaitCallback('sunset:jobs:fisherman:cast', spotIdx)
     if not cast then

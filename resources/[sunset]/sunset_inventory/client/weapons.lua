@@ -41,20 +41,12 @@ local function inWeaponTest()
 end
 
 local function hasWeaponLicense()
+    -- Daca jucatorul e on-duty intr-o factiune, are clearance pentru arme
+    -- (armele de factiune sunt date/luate de sunset_factions/client/loadout.lua)
     if GetResourceState('sunset_factions') == 'started' then
         local ok, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
         if ok and onDuty == true then
-            local char = Sunset.Character
-            if not char then
-                pcall(function() char = exports.sunset_core:GetCharacter() end)
-            end
-            if char then
-                local factionId = (Sunset.GetCharacterFaction and select(1, Sunset.GetCharacterFaction(char)))
-                    or tonumber(char.faction_id) or tonumber(char.faction)
-                if Sunset.FactionTypeMatches and Sunset.FactionTypeMatches(factionId, 'law_enforcement') then
-                    return true
-                end
-            end
+            return true
         end
     end
     if GetResourceState('sunset_licenses') ~= 'started' then return true end
