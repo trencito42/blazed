@@ -43,6 +43,7 @@ const ClanPanels = {
 
         // Directory Modal Close
         $('#clan-directory-modal-close')?.addEventListener('click', () => this.closeDirectoryModal());
+        $('#clan-directory-close')?.addEventListener('click', () => post('clanPanelsClose'));
         $('#clan-directory-modal')?.addEventListener('click', (e) => {
             if (e.target?.id === 'clan-directory-modal') this.closeDirectoryModal();
         });

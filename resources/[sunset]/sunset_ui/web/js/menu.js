@@ -45,14 +45,6 @@ const Menu = {
             ChatSettings.init();
             ChatSettings.syncControls();
         }
-        const activePanel = $(`.menu-panel-view[data-panel="${tab}"]`);
-        const profile = $('.menu-profile');
-        [activePanel, profile].forEach((panel) => {
-            if (!panel) return;
-            panel.classList.remove('glitch-effect');
-            void panel.offsetWidth;
-            panel.classList.add('glitch-effect');
-        });
     },
 
     formatXp(n) {

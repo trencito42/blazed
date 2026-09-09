@@ -42,6 +42,7 @@ const FactionPanels = {
         $('#faction-manage-kick')?.addEventListener('click', () => this.manageSelected('kick', 'online'));
 
         $('#faction-directory-modal-close')?.addEventListener('click', () => this.closeDirectoryModal());
+        $('#faction-directory-close')?.addEventListener('click', () => post('factionPanelsClose'));
         $('#faction-dir-modal-btn')?.addEventListener('click', () => this.applyFaction());
         $('#faction-directory-modal')?.addEventListener('click', (e) => {
             if (e.target?.id === 'faction-directory-modal') this.closeDirectoryModal();

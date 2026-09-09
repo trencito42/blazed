@@ -22,7 +22,7 @@
     --pm-radius-xl: 16px;
     --pm-radius-lg: 12px;
     --pm-radius-md: 8px;
-    background: rgba(0, 0, 0, 0.55) !important;
+    background: transparent !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -560,6 +560,9 @@
     font-size: 10px;
     font-weight: 600;
     color: var(--pm-muted) !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
 }
 
 #menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile__id span {
@@ -735,6 +738,171 @@
         overflow-x: auto;
         justify-content: flex-start;
     }
+}
+
+/* Secondary tabs — property, job, config, statistics */
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-mgmt__head h3,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__title {
+    margin: 0 0 8px;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: var(--pm-muted) !important;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-mgmt__head p,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__lead {
+    margin: 0 0 18px;
+    color: var(--pm-muted) !important;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-property-summary,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-placeholder__row,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__section,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid article,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-job-card,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-job-side__box {
+    background: var(--pm-panel) !important;
+    border: 1px solid var(--pm-border) !important;
+    border-radius: var(--pm-radius-md) !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-property-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-placeholder__row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-placeholder__row span {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pm-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-placeholder__row strong {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-property-list,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .panel-list {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-property-list .house-row,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .panel-list li {
+    background: var(--pm-panel) !important;
+    border: 1px solid var(--pm-border) !important;
+    border-radius: var(--pm-radius-md) !important;
+    padding: 14px 16px !important;
+    color: var(--pm-muted);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config {
+    gap: 18px;
+    max-width: none;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__section {
+    padding: 18px 20px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__section h4 {
+    margin: 0 0 12px;
+    color: var(--pm-accent) !important;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__section p,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__hint {
+    color: var(--pm-muted) !important;
+    font-size: 12px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config-row {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr) 64px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: var(--pm-muted);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config-row strong {
+    color: #fff;
+    font-size: 12px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid article {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid article span {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pm-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid article strong {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid article small {
+    color: var(--pm-muted);
+    font-size: 11px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-job-btn,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-buylevel {
+    background: rgba(0, 255, 204, 0.1) !important;
+    border: 1px solid rgba(0, 255, 204, 0.35) !important;
+    color: var(--pm-accent) !important;
+    border-radius: var(--pm-radius-md) !important;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-panel-view.glitch-effect,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile.glitch-effect {
+    animation: none !important;
 }
 
 /* Must beat the display:flex rules above — .hidden alone loses on specificity */

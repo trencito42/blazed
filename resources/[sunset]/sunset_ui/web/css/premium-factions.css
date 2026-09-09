@@ -38,6 +38,7 @@
 .premium-factions-dir:not(.hidden),
 .premium-clans-dir:not(.hidden) {
     pointer-events: auto;
+    background: rgba(0, 0, 0, 0.55);
 }
 
 /* Base Wrapper Transitions */
@@ -76,8 +77,9 @@
 /* Directory Wrappers (1150x720) — NO blur to prevent CEF black box */
 .premium-factions-dir__wrapper,
 .premium-clans-dir__wrapper {
-    width: min(1160px, 96vw);
-    height: min(730px, 88vh);
+    width: min(1160px, calc(100vw - 48px));
+    height: min(730px, calc(100vh - 96px));
+    max-width: calc(100vw - 48px);
     background: var(--pf-bg-base);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-lg);
@@ -781,17 +783,51 @@
 
 /* Close Hint */
 .premium-faction__close-hint,
-.premium-clan__close-hint {
+.premium-clan__close-hint,
+.premium-factions-dir__close-hint,
+.premium-clans-dir__close-hint {
     position: absolute;
-    bottom: -32px;
-    left: 0;
-    width: 100%;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: calc(100% - 48px);
     text-align: center;
     font-size: 11px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.55);
     letter-spacing: 1px;
     pointer-events: none;
+    z-index: 5;
+}
+
+.premium-factions-dir__panel-close,
+.premium-clans-dir__panel-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--pf-border);
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--pf-text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--pf-transition);
+}
+
+.premium-factions-dir__panel-close:hover,
+.premium-clans-dir__panel-close:hover {
+    color: #fff;
+    border-color: rgba(0, 255, 204, 0.45);
+    background: rgba(0, 255, 204, 0.12);
 }
 
 /* Empty / Fallback Notices */
@@ -810,7 +846,10 @@
 .premium-factions-dir__grid,
 .premium-clans-dir__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+    grid-auto-rows: max-content;
+    align-content: start;
+    justify-content: start;
     gap: 20px;
     overflow-y: auto;
     padding-right: 10px;
@@ -821,6 +860,9 @@
 
 .premium-factions-dir__card,
 .premium-clans-dir__card {
+    align-self: start;
+    height: auto;
+    min-height: 0;
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-md);

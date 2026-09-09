@@ -47,9 +47,9 @@
     <link rel="stylesheet" href="css/atm.css?v=1">
     <link rel="stylesheet" href="css/battlepass.css?v=2">
     <link rel="stylesheet" href="css/redesign.css?v=10">
-    <link rel="stylesheet" href="css/premium-factions.css?v=1">
+    <link rel="stylesheet" href="css/premium-factions.css?v=2">
     <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
-    <link rel="stylesheet" href="css/premium-menu.css?v=4">
+    <link rel="stylesheet" href="css/premium-menu.css?v=5">
     <link rel="stylesheet" href="css/premium-auth.css?v=1">
 </head>
 <body>
@@ -733,7 +733,7 @@
             </aside>
 
             <main class="menu-panels">
-                <section class="menu-panel-view tech-panel accent-orange is-active" data-panel="player">
+                <section class="menu-panel-view tech-panel is-active" data-panel="player">
                     <h3 class="menu-section-title">Character Vitals</h3>
                     <div class="menu-vitals">
                         <div class="menu-vital menu-vital--health">
@@ -774,7 +774,7 @@
                 <section class="menu-panel-view tech-panel" data-panel="vehicle">
                     <div class="menu-mgmt menu-mgmt--vehicles"><div class="menu-vehicle-grid" id="menu-vehicle-grid"></div></div>
                 </section>
-                <section class="menu-panel-view tech-panel accent-orange" data-panel="job">
+                <section class="menu-panel-view tech-panel" data-panel="job">
                     <div class="menu-mgmt"><div class="menu-mgmt__head"><h3>EMPLOYMENT_</h3><p>Civilian work and faction membership are independent and can be active simultaneously.</p></div><div class="menu-job-layout"><div class="menu-job-card" id="menu-job-card"></div><div class="menu-job-side" id="menu-job-side"></div></div></div>
                 </section>
                 <section class="menu-panel-view tech-panel" data-panel="statistics">
@@ -782,7 +782,7 @@
                         <article><span>LEVEL</span><strong id="menu-stats-level">1</strong><small id="menu-stats-xp">0 / 4 RP</small></article><article><span>TOTAL PLAYTIME</span><strong id="menu-stats-playtime">0H 0M</strong><small>Across all sessions</small></article><article><span>CURRENT SESSION</span><strong id="menu-stats-session">0H 0M</strong><small>Active time this login</small></article><article><span>CHARACTER CREATED</span><strong id="menu-stats-created">—</strong><small id="menu-stats-lastlogin">Last login —</small></article><article><span>PAYDAYS</span><strong id="menu-stats-paydays">0</strong><small>Each payday awards 1 RP</small></article><article><span>JOB TASKS</span><strong id="menu-stats-tasks">0</strong><small>Completed objectives</small></article><article><span>CAREER EARNINGS</span><strong id="menu-stats-earned">$0</strong><small>Tracked job rewards</small></article><article><span>SKILL LEVELS</span><strong id="menu-stats-skills">0</strong><small>Combined career levels</small></article><article><span>ASSETS</span><strong id="menu-stats-assets">0 vehicles · 0 properties</strong><small id="menu-stats-home">Home: None</small></article>
                     </div><button type="button" class="menu-action menu-stats-buylevel" data-action="buy_level" id="menu-buy-level">BUY NEXT LEVEL</button></div>
                 </section>
-                <section class="menu-panel-view tech-panel accent-orange" data-panel="property">
+                <section class="menu-panel-view tech-panel" data-panel="property">
                     <div class="menu-mgmt">
                         <div class="menu-mgmt__head">
                             <h3>REAL ESTATE_</h3>
@@ -2047,6 +2047,7 @@
     <!-- FACTION DIRECTORY (/factions) -->
     <div id="faction-directory" class="premium-factions-dir hidden" aria-hidden="true">
         <div class="premium-factions-dir__wrapper">
+            <button type="button" class="premium-factions-dir__panel-close" id="faction-directory-close" aria-label="Close"><span>ESC</span> ✕</button>
             <aside class="premium-factions-dir__sidebar">
                 <div class="premium-factions-dir__brand">
                     <h1>Server <span>Factions</span></h1>
@@ -2108,7 +2109,7 @@
                 </button>
             </aside>
             <div id="faction-directory-toast" class="premium-factions-dir__toast"></div>
-            <div class="premium-faction__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+            <div class="premium-factions-dir__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
         </div>
     </div>
 
@@ -2355,6 +2356,7 @@
     <!-- CLAN DIRECTORY (/clans) -->
     <div id="clan-directory" class="premium-clans-dir hidden" aria-hidden="true">
         <div class="premium-clans-dir__wrapper">
+            <button type="button" class="premium-clans-dir__panel-close" id="clan-directory-close" aria-label="Close"><span>ESC</span> ✕</button>
             <aside class="premium-clans-dir__sidebar">
                 <div class="premium-clans-dir__brand">
                     <h1>Server <span>Clans</span></h1>
@@ -2397,7 +2399,7 @@
                 </div>
             </aside>
             <div id="clan-directory-toast" class="premium-clans-dir__toast"></div>
-            <div class="premium-clan__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+            <div class="premium-clans-dir__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
         </div>
     </div>
 
@@ -2986,7 +2988,7 @@
     <script src="js/chat_settings.js"></script>
     <script src="js/chat.js?v=20"></script>
     <script src="js/properties-ui.js?v=3"></script>
-    <script src="js/menu.js?v=10"></script>
+    <script src="js/menu.js?v=11"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=5"></script>
@@ -3005,8 +3007,8 @@
     <script src="js/courier.js"></script>
     <script src="js/job_shift.js?v=3"></script>
     <script src="js/job_creator.js?v=10"></script>
-    <script src="js/factions.js?v=8"></script>
-    <script src="js/clans.js?v=12"></script>
+    <script src="js/factions.js?v=9"></script>
+    <script src="js/clans.js?v=13"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
     <script src="js/player_interaction.js?v=1"></script>
     <script src="js/atm.js?v=1"></script>
