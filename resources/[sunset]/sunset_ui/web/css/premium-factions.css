@@ -1,0 +1,973 @@
+/* ═══ PREMIUM FACTION UI — dashboard + directory (1:1 mockup) ═══ */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+.premium-faction,
+.premium-factions-dir {
+    --pf-bg-base: rgba(13, 13, 20, 0.92);
+    --pf-bg-panel: rgba(255, 255, 255, 0.03);
+    --pf-bg-hover: rgba(255, 255, 255, 0.08);
+    --pf-bg-input: rgba(0, 0, 0, 0.4);
+    --pf-text-main: #ffffff;
+    --pf-text-muted: rgba(255, 255, 255, 0.5);
+    --pf-accent: #00ffcc;
+    --pf-warning: #ffcc00;
+    --pf-danger: #ff3366;
+    --pf-success: #32d74b;
+    --pf-border: rgba(255, 255, 255, 0.1);
+    --pf-radius-lg: 12px;
+    --pf-radius-md: 8px;
+    --pf-transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    pointer-events: none;
+}
+
+.premium-faction:not(.hidden),
+.premium-factions-dir:not(.hidden) {
+    pointer-events: auto;
+}
+
+.premium-faction__wrapper,
+.premium-factions-dir__wrapper {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: var(--pf-transition);
+}
+
+.premium-faction:not(.hidden) .premium-faction__wrapper,
+.premium-factions-dir:not(.hidden) .premium-factions-dir__wrapper {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.premium-faction__wrapper {
+    width: min(950px, 94vw);
+    height: min(600px, 86vh);
+    background: var(--pf-bg-base);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-lg);
+    display: flex;
+    flex-direction: row;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-factions-dir__wrapper {
+    width: min(1150px, 96vw);
+    height: min(720px, 88vh);
+    background: var(--pf-bg-base);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-lg);
+    display: flex;
+    flex-direction: row;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.7);
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-faction__sidebar,
+.premium-factions-dir__sidebar {
+    width: 260px;
+    border-right: 1px solid var(--pf-border);
+    display: flex;
+    flex-direction: column;
+    padding: 30px 0;
+    flex-shrink: 0;
+}
+
+.premium-factions-dir__sidebar {
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.premium-faction__brand,
+.premium-factions-dir__brand {
+    padding: 0 30px 25px 30px;
+    border-bottom: 1px solid var(--pf-border);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.premium-factions-dir__brand {
+    margin-bottom: 20px;
+    display: block;
+}
+
+.premium-faction__brand-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(0, 255, 204, 0.1);
+    border: 1px solid rgba(0, 255, 204, 0.3);
+    border-radius: var(--pf-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pf-accent);
+    flex-shrink: 0;
+}
+
+.premium-faction__brand-icon svg,
+.premium-factions-dir__nav-item svg,
+.premium-faction__nav-item svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.premium-faction__brand-text h1,
+.premium-factions-dir__brand h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--pf-text-main);
+    letter-spacing: 1px;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__brand h1 span { color: var(--pf-accent); }
+
+.premium-faction__brand-text span,
+.premium-factions-dir__brand p {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--pf-text-muted);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__brand p { margin: 5px 0 0 0; }
+
+.premium-faction__nav,
+.premium-factions-dir__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 0 15px;
+    flex: 1;
+}
+
+.premium-faction__nav-item,
+.premium-factions-dir__nav-item {
+    padding: 12px 20px;
+    border-radius: var(--pf-radius-md);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--pf-text-muted);
+    transition: var(--pf-transition);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__nav-item { padding: 14px 20px; }
+
+.premium-faction__nav-item:hover,
+.premium-factions-dir__nav-item:hover {
+    background: var(--pf-bg-hover);
+    color: var(--pf-text-main);
+}
+
+.premium-faction__nav-item.is-active {
+    background: rgba(0, 255, 204, 0.1);
+    color: var(--pf-accent);
+}
+
+.premium-factions-dir__nav-item.is-active {
+    background: rgba(0, 255, 204, 0.1);
+    color: var(--pf-accent);
+    border-left: 3px solid var(--pf-accent);
+    border-radius: 0 var(--pf-radius-md) var(--pf-radius-md) 0;
+}
+
+.premium-faction__content,
+.premium-factions-dir__content {
+    flex: 1;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.premium-faction__tab,
+.premium-factions-dir__grid-wrap {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    animation: pfFadeIn 0.3s ease;
+}
+
+.premium-faction__tab.is-active,
+.premium-factions-dir__grid-wrap.is-active {
+    display: flex;
+}
+
+@keyframes pfFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.premium-faction__header { margin-bottom: 30px; }
+.premium-faction__header h2,
+.premium-factions-dir__header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--pf-text-main);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__header h2 { font-size: 26px; }
+
+.premium-faction__header p,
+.premium-factions-dir__header p {
+    margin: 5px 0 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pf-text-muted);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__header p { font-size: 13px; }
+
+.premium-faction__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.premium-faction__stat {
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    padding: 20px;
+    border-radius: var(--pf-radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.premium-faction__stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pf-text-muted);
+    text-transform: uppercase;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__stat-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--pf-text-main);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__stat-value span { color: var(--pf-accent); }
+.premium-faction__stat-value.is-duty { color: var(--pf-success); }
+.premium-faction__stat-value.is-off { color: var(--pf-text-muted); }
+
+.premium-faction__motd {
+    background: rgba(0, 255, 204, 0.05);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    padding: 25px;
+    border-radius: var(--pf-radius-md);
+    margin-bottom: 20px;
+}
+
+.premium-faction__motd-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--pf-accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__motd-text {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.6;
+    color: var(--pf-text-main);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__extras {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+    min-height: 0;
+}
+
+.premium-faction__card {
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    padding: 18px;
+    min-height: 0;
+}
+
+.premium-faction__card > span {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--pf-accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__card p,
+.premium-faction__card small {
+    margin: 0;
+    font-size: 13px;
+    color: var(--pf-text-main);
+    line-height: 1.5;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__card small {
+    display: block;
+    margin-top: 8px;
+    color: var(--pf-text-muted);
+    font-size: 11px;
+}
+
+.premium-faction__report-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.premium-faction__report-bar b {
+    display: block;
+    height: 100%;
+    background: var(--pf-accent);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+}
+
+.premium-faction__commands {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.premium-faction__commands ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.premium-faction__commands li {
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--pf-text-main);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__commands code {
+    color: var(--pf-accent);
+    font-weight: 700;
+}
+
+.premium-faction__roster {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 10px;
+}
+
+.premium-faction__roster::-webkit-scrollbar,
+.premium-factions-dir__grid::-webkit-scrollbar,
+.premium-factions-dir__modal-roster::-webkit-scrollbar {
+    width: 4px;
+}
+
+.premium-faction__roster::-webkit-scrollbar-thumb,
+.premium-factions-dir__grid::-webkit-scrollbar-thumb,
+.premium-factions-dir__modal-roster::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.premium-faction__roster-item {
+    background: var(--pf-bg-panel);
+    border: 1px solid transparent;
+    padding: 15px 20px;
+    border-radius: var(--pf-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: var(--pf-transition);
+}
+
+.premium-faction__roster-item:hover {
+    background: var(--pf-bg-hover);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.premium-faction__roster-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 0;
+    flex: 1;
+}
+
+.premium-faction__status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.premium-faction__status-dot.is-online {
+    background: var(--pf-accent);
+    box-shadow: 0 0 8px var(--pf-accent);
+}
+
+.premium-faction__status-dot.is-offline { background: var(--pf-text-muted); }
+
+.premium-faction__member-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--pf-text-main);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__member-rank {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pf-text-muted);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__member-id {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pf-accent);
+    background: rgba(0, 255, 204, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__member-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+.premium-faction__manage-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    overflow-y: auto;
+    padding-right: 8px;
+    flex: 1;
+    min-height: 0;
+    align-content: start;
+}
+
+.premium-faction__panel {
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    padding: 25px;
+    border-radius: var(--pf-radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.premium-faction__panel-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--pf-text-main);
+    text-transform: uppercase;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.premium-faction__form-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pf-text-muted);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-faction__form-control {
+    background: var(--pf-bg-input);
+    border: 1px solid var(--pf-border);
+    color: var(--pf-text-main);
+    padding: 12px 15px;
+    border-radius: var(--pf-radius-md);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    transition: var(--pf-transition);
+    width: 100%;
+}
+
+.premium-faction__form-control:focus { border-color: var(--pf-accent); }
+
+.premium-faction__btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.premium-faction__btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 12px;
+    border: none;
+    border-radius: var(--pf-radius-md);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--pf-transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.premium-faction__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.premium-faction__btn--primary { background: var(--pf-accent); color: #000; }
+.premium-faction__btn--primary:hover:not(:disabled) { box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); transform: translateY(-2px); }
+.premium-faction__btn--secondary { background: var(--pf-bg-input); color: var(--pf-text-main); border: 1px solid var(--pf-border); }
+.premium-faction__btn--danger { background: transparent; color: var(--pf-danger); border: 1px solid var(--pf-danger); }
+.premium-faction__btn--warn { background: rgba(255, 204, 0, 0.12); color: var(--pf-warning); border: 1px solid rgba(255, 204, 0, 0.35); }
+.premium-faction__btn--muted { background: var(--pf-bg-input); color: var(--pf-text-muted); border: 1px solid var(--pf-border); font-size: 10px; padding: 8px; }
+
+.premium-faction__rank-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.premium-faction__rank-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.premium-faction__rank-field span {
+    font-size: 10px;
+    color: var(--pf-text-muted);
+    font-weight: 700;
+}
+
+.premium-faction__close-hint {
+    position: absolute;
+    bottom: -32px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 1px;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    pointer-events: none;
+}
+
+.premium-faction__empty,
+.premium-factions-dir__empty {
+    color: var(--pf-text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 20px;
+    text-align: center;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+/* Directory grid */
+.premium-factions-dir__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    overflow-y: auto;
+    padding-right: 10px;
+    padding-bottom: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.premium-factions-dir__card {
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: var(--pf-transition);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    font-family: inherit;
+    color: inherit;
+}
+
+.premium-factions-dir__card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(0, 255, 204, 0.3);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
+
+.premium-factions-dir__card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--pf-card-accent, var(--pf-accent));
+    opacity: 0;
+    transition: var(--pf-transition);
+}
+
+.premium-factions-dir__card:hover::before { opacity: 1; }
+
+.premium-factions-dir__card-head {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.premium-factions-dir__card-icon {
+    width: 45px;
+    height: 45px;
+    background: var(--pf-bg-input);
+    border-radius: var(--pf-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pf-text-muted);
+    transition: var(--pf-transition);
+}
+
+.premium-factions-dir__card:hover .premium-factions-dir__card-icon {
+    color: var(--pf-accent);
+    background: rgba(0, 255, 204, 0.1);
+}
+
+.premium-factions-dir__card-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.premium-factions-dir__card-name {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--pf-text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.premium-factions-dir__card-type {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pf-text-muted);
+}
+
+.premium-factions-dir__card-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.premium-factions-dir__stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.premium-factions-dir__stat-row span { color: var(--pf-text-muted); }
+.premium-factions-dir__stat-row b { color: var(--pf-text-main); }
+.premium-factions-dir__stat-row b.highlight { color: var(--pf-accent); }
+
+.premium-factions-dir__recruit {
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: var(--pf-bg-input);
+    width: fit-content;
+}
+
+.premium-factions-dir__recruit.is-open { color: var(--pf-success); }
+.premium-factions-dir__recruit.is-closed { color: var(--pf-danger); }
+
+.premium-factions-dir__recruit .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.premium-factions-dir__recruit.is-open .dot {
+    background: var(--pf-success);
+    box-shadow: 0 0 8px var(--pf-success);
+}
+
+.premium-factions-dir__recruit.is-closed .dot { background: var(--pf-danger); }
+
+/* Slide modal */
+.premium-factions-dir__modal {
+    position: absolute;
+    top: 0;
+    right: -480px;
+    width: min(450px, 92%);
+    height: 100%;
+    background: rgba(15, 15, 23, 0.95);
+    backdrop-filter: blur(15px);
+    border-left: 1px solid var(--pf-border);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+    transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    padding: 40px;
+    overflow: hidden;
+}
+
+.premium-factions-dir__modal.is-open { right: 0; }
+
+.premium-factions-dir__modal-close {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    width: 32px;
+    height: 32px;
+    background: var(--pf-bg-input);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--pf-text-muted);
+    transition: var(--pf-transition);
+    border: none;
+}
+
+.premium-factions-dir__modal-close:hover {
+    background: var(--pf-danger);
+    color: white;
+    transform: rotate(90deg);
+}
+
+.premium-factions-dir__modal-banner {
+    width: 100%;
+    height: 100px;
+    background: rgba(0, 255, 204, 0.1);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    border-radius: var(--pf-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    color: var(--pf-accent);
+}
+
+.premium-factions-dir__modal-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--pf-text-main);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__modal-desc {
+    font-size: 13px;
+    color: var(--pf-text-muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-weight: 500;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__req-box {
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.premium-factions-dir__req-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--pf-accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__req-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.premium-factions-dir__req-list li {
+    font-size: 12px;
+    color: var(--pf-text-main);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__req-list li::before {
+    content: '•';
+    color: var(--pf-accent);
+    font-size: 16px;
+}
+
+.premium-factions-dir__modal-motd {
+    background: rgba(0, 255, 204, 0.05);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    border-radius: var(--pf-radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--pf-text-main);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__modal-roster {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    min-height: 0;
+}
+
+.premium-factions-dir__modal-member {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--pf-bg-panel);
+    border-radius: var(--pf-radius-md);
+    font-size: 12px;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__modal-member strong { color: var(--pf-text-main); }
+.premium-factions-dir__modal-member span { color: var(--pf-text-muted); }
+
+.premium-factions-dir__toast {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--pf-accent);
+    color: #000;
+    padding: 15px 25px;
+    border-radius: var(--pf-radius-md);
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    box-shadow: 0 10px 25px rgba(0, 255, 204, 0.4);
+    transform: translateX(150%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.premium-factions-dir__toast.is-show { transform: translateX(0); }
+
+@media (max-width: 900px) {
+    .premium-faction__wrapper,
+    .premium-factions-dir__wrapper {
+        flex-direction: column;
+        height: min(90vh, 720px);
+    }
+    .premium-faction__sidebar,
+    .premium-factions-dir__sidebar {
+        width: 100%;
+        padding: 16px 0;
+        border-right: none;
+        border-bottom: 1px solid var(--pf-border);
+    }
+    .premium-faction__nav,
+    .premium-factions-dir__nav {
+        flex-direction: row;
+        overflow-x: auto;
+        flex: unset;
+    }
+    .premium-faction__stats { grid-template-columns: 1fr; }
+    .premium-faction__extras { grid-template-columns: 1fr; }
+    .premium-faction__manage-grid { grid-template-columns: 1fr; }
+}

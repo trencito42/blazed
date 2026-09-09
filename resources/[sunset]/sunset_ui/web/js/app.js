@@ -540,6 +540,15 @@ window.addEventListener('message', (event) => {
                 }
             }
             break;
+        case 'factionDirectoryDetail':
+            if (window.FactionPanels) {
+                try {
+                    FactionPanels.showDirectoryDetail(data || event.data.data);
+                } catch (err) {
+                    console.error('[FactionPanels] showDirectoryDetail failed', err);
+                }
+            }
+            break;
         case 'clanPanelShow':
             if (window.ClanPanels) {
                 try {

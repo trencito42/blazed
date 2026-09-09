@@ -20,6 +20,7 @@ const JobIcons = {
         briefcase: '<path d="M4 8h16v11H4z"/><path d="M9 8V6h6v2"/><path d="M4 12h16"/>',
         car: '<path d="M4 17h16M6 11l2-5h8l2 5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>',
         wrench: '<path d="M14 4l6 6-8 8H8v-4l8-8z"/><path d="M6 18l-2 2"/>',
+        jail: '<path d="M4 4h16v16H4z"/><path d="M8 4v16"/><path d="M16 4v16"/><path d="M4 10h16"/><path d="M4 14h16"/>',
     },
 
     normalize(key) {

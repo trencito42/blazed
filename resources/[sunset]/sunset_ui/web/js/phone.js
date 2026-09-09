@@ -34,9 +34,11 @@ const Phone = {
             e.preventDefault();
             this.showView('messages');
         });
-        $('#phone-back-bank')?.addEventListener('click', (e) => {
+        $('#phone-bank-transfer-open')?.addEventListener('click', () => this.openBankTransfer());
+        $('#phone-bank-transfer-close')?.addEventListener('click', () => this.closeBankTransfer());
+        $('#phone-bank-transfer-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
-            this.goHome();
+            this.submitBankTransfer();
         });
         $('#phone-back-settings')?.addEventListener('click', (e) => {
             e.preventDefault();
@@ -245,7 +247,7 @@ const Phone = {
     },
 
     update(payload) {
-        this.data = payload || this.data;
+        this.data = { ...(this.data || {}), ...(payload || {}) };
         this.renderThreads();
         this.renderContacts();
         this.renderBank();
@@ -765,9 +767,107 @@ const Phone = {
 
     renderBank() {
         const d = this.data || {};
-        $('#phone-bank-total').textContent = this.formatMoney((d.cash || 0) + (d.bank || 0));
-        $('#phone-bank-cash').textContent = this.formatMoney(d.cash);
         $('#phone-bank-bank').textContent = this.formatMoney(d.bank);
+        $('#phone-bank-cash').textContent = this.formatMoney(d.cash);
+        this.renderBankTransactions(d.transactions || []);
+    },
+
+    bankReasonLabel(reason) {
+        const map = {
+            payday: 'Salariu Facțiune',
+            shop: 'Achiziție Magazin',
+            shop_refund: 'Rambursare Magazin',
+            atm_deposit: 'Depunere ATM',
+            atm_withdraw: 'Retragere ATM',
+            bank_transfer_out: 'Transfer Bancar',
+            bank_transfer_in: 'Transfer Primit',
+            buy_level: 'Cumpărare Level',
+        };
+        const key = String(reason || '').toLowerCase();
+        return map[key] || reason || 'Tranzacție';
+    },
+
+    formatTxDate(raw) {
+        if (!raw) return '—';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return String(raw);
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const isYesterday = d.toDateString() === yesterday.toDateString();
+        const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (sameDay) return `Astăzi, ${time}`;
+        if (isYesterday) return `Ieri, ${time}`;
+        return d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + `, ${time}`;
+    },
+
+    renderBankTransactions(transactions) {
+        const list = $('#phone-bank-tx-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const iconIn = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>';
+        const iconOut = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
+
+        (transactions || []).slice(0, 30).forEach((tx) => {
+            const isIncome = tx.direction === 'in';
+            const el = document.createElement('div');
+            el.className = 'phone-fleeca__tx-item';
+            el.innerHTML = `
+                <div class="phone-fleeca__tx-info">
+                    <div class="phone-fleeca__tx-icon ${isIncome ? 'is-in' : 'is-out'}">${isIncome ? iconIn : iconOut}</div>
+                    <div class="phone-fleeca__tx-details">
+                        <div class="phone-fleeca__tx-title">${this.escapeHtml(this.bankReasonLabel(tx.reason))}</div>
+                        <div class="phone-fleeca__tx-date">${this.escapeHtml(this.formatTxDate(tx.created_at))}</div>
+                    </div>
+                </div>
+                <div class="phone-fleeca__tx-amount ${isIncome ? 'is-in' : 'is-out'}">${isIncome ? '+' : '-'}${this.formatMoney(tx.amount)}</div>
+            `;
+            list.appendChild(el);
+        });
+
+        if (!list.children.length) {
+            list.innerHTML = '<p class="phone-fleeca__tx-empty">Nicio tranzacție înregistrată încă.</p>';
+        }
+    },
+
+    openBankTransfer() {
+        $('#phone-bank-transfer-modal')?.classList.add('is-open');
+    },
+
+    closeBankTransfer() {
+        $('#phone-bank-transfer-modal')?.classList.remove('is-open');
+        const form = $('#phone-bank-transfer-form');
+        if (form) form.reset();
+    },
+
+    showBankNotify(msg, isError = false) {
+        const el = $('#phone-bank-notify');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.toggle('is-error', isError);
+        el.classList.add('is-show');
+        setTimeout(() => el.classList.remove('is-show'), 3000);
+    },
+
+    submitBankTransfer() {
+        const targetId = Number($('#phone-bank-target-id')?.value);
+        const amount = Number($('#phone-bank-amount')?.value);
+        if (!targetId || targetId < 1) {
+            this.showBankNotify('ID jucător invalid!', true);
+            return;
+        }
+        if (!amount || amount < 1) {
+            this.showBankNotify('Sumă invalidă!', true);
+            return;
+        }
+        if (amount > Number(this.data?.bank || 0)) {
+            this.showBankNotify('Fonduri insuficiente!', true);
+            return;
+        }
+        post('phoneBankTransfer', { targetId, amount });
+        this.closeBankTransfer();
     },
 
     renderSettings() {

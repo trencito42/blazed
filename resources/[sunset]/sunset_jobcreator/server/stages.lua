@@ -136,6 +136,7 @@ StageHandlers.goto_zone = {
 }
 
 StageHandlers.zone_interact = {
+    enter = function() return true, nil end,
     interact = function(source, session, stage)
         local loc = SunsetJobCreator.StageLocation(session.definition, stage, session.variables)
         if not inZone(source, loc) then
@@ -371,6 +372,7 @@ local function inJobVehicle(source, session, vehicleVar)
 end
 
 StageHandlers.enter_vehicle = {
+    enter = function() return true, nil end,
     interact = function(source, session, stage)
         if inJobVehicle(source, session, stage.vehicleVar) then
             return true, resolveNext(stage, true)
@@ -385,6 +387,7 @@ StageHandlers.enter_vehicle = {
 }
 
 StageHandlers.require_vehicle = {
+    enter = function() return true, nil end,
     interact = function(source, session, stage)
         if inJobVehicle(source, session, stage.vehicleVar) then
             return true, resolveNext(stage, true)
@@ -394,6 +397,7 @@ StageHandlers.require_vehicle = {
 }
 
 StageHandlers.return_vehicle = {
+    enter = function() return true, nil end,
     interact = function(source, session, stage)
         local loc = SunsetJobCreator.StageLocation(session.definition, stage, session.variables)
         if not inZone(source, loc) then
@@ -407,6 +411,7 @@ StageHandlers.return_vehicle = {
 }
 
 StageHandlers.talk_to_npc = {
+    enter = function() return true, nil end,
     interact = function(source, session, stage)
         local npcVar = stage.npcVar or 'npc'
         local loc = session.variables[npcVar]
@@ -449,7 +454,7 @@ function JCStages_Enter(source, session, stage)
     if handler.enter then
         return handler.enter(source, session, stage)
     end
-    return true, stage.onSuccess
+    return true, nil
 end
 
 function JCStages_Interact(source, session, stage)

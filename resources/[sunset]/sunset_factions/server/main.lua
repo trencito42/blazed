@@ -752,9 +752,18 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         kickMembers = isLeader or memberManagePerm(source, 'uninvite'),
     }
     local grades = FactionLabels.listForFaction(factionId)
+    local societyBalance = nil
+    if faction.society then
+        pcall(function()
+            local row = MySQL.single.await('SELECT balance FROM societies WHERE name = ? LIMIT 1', { faction.society })
+            societyBalance = row and tonumber(row.balance) or 0
+        end)
+    end
     return {
         id = factionId,
         label = faction.label,
+        type = faction.type,
+        factionType = faction.factionType,
         description = faction.description,
         grade = grade,
         gradeLabel = FactionLabels.get(factionId, grade),
@@ -766,6 +775,7 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         commands = Sunset.GetFactionCommandsForGrade(factionId, grade, isLeader),
         motd = motd,
         depot = faction.depot and faction.depot.label or 'No fleet garage',
+        societyBalance = societyBalance,
         report = { current = tonumber(activity and activity.total) or 0, target = faction.weeklyReportTarget or 0 },
         members = roster,
         viewerCharacterId = char.id,
@@ -834,6 +844,61 @@ exports.sunset_core:RegisterCallback('sunset:factionDirectory', function(source)
         return a.label < b.label
     end)
     return result
+end)
+
+exports.sunset_core:RegisterCallback('sunset:factionDirectoryDetail', function(source, factionId)
+    if not getChar(source) then return nil, 'Your character is not loaded.' end
+    factionId = tostring(factionId or '')
+    local faction = Sunset.Factions[factionId]
+    if not faction then return nil, 'Faction not found' end
+
+    local motd = ''
+    pcall(function()
+        local row = MySQL.single.await('SELECT message FROM faction_motd WHERE faction_id = ?', { factionId })
+        motd = row and tostring(row.message or '') or ''
+    end)
+
+    local leaders = {}
+    for _, row in ipairs(MySQL.query.await([[
+        SELECT fl.character_id, c.firstname, c.lastname
+        FROM faction_leaders fl
+        LEFT JOIN characters c ON c.id = fl.character_id
+        WHERE fl.faction_id = ?
+        ORDER BY fl.assigned_at ASC
+    ]], { factionId }) or {}) do
+        leaders[#leaders + 1] = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('%s+$', '')
+    end
+
+    local roster = factionRoster(factionId)
+    local members = {}
+    local onlineCount = 0
+    for _, m in ipairs(roster or {}) do
+        if m.online then onlineCount = onlineCount + 1 end
+        members[#members + 1] = {
+            name = m.name,
+            rank = m.gradeLabel,
+            online = m.online,
+            onDuty = m.onDuty,
+            leader = m.leader,
+            serverId = m.serverId,
+        }
+    end
+
+    return {
+        id = factionId,
+        label = faction.label,
+        type = faction.type,
+        factionType = faction.factionType,
+        description = faction.description,
+        applicationsOpen = faction.applicationsOpen == true,
+        applicationLabel = faction.type == 'illegal' and 'Invite only'
+            or (faction.applicationsOpen and 'Applications open — Discord / website' or 'Applications closed'),
+        motd = motd,
+        leaders = leaders,
+        members = members,
+        online = onlineCount,
+        total = #members,
+    }
 end)
 
 AddEventHandler('playerDropped', function()

@@ -349,6 +349,22 @@
     transition: width 0.3s ease;
 }
 
+/* jail sentence */
+.fishing-shell.state-jail {
+    --f-accent: #ff554f;
+}
+.fishing-shell.state-jail .fishing__title,
+.fishing-shell.state-jail .fishing__icon { color: #ff6b63; }
+.fishing-shell.state-jail .fishing__message {
+    color: #ffe8e6;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.fishing-shell.state-jail .fishing__progress { display: block; }
+.fishing-shell.state-jail .fishing__progress-fill {
+    background: linear-gradient(90deg, #ff554f, #ff8a66);
+}
+
 @keyframes fishingShake {
     0% { transform: translateX(-50%) translate(1px, 1px) rotate(0deg); }
     10% { transform: translateX(-50%) translate(-1px, -2px) rotate(-1deg); }

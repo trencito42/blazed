@@ -1,4 +1,12 @@
 local Downed = {}
+local LastPvPAttacker = {}
+
+AddEventHandler('sunset:death:recordAttacker', function(victimSrc, attackerSrc)
+    victimSrc = tonumber(victimSrc)
+    attackerSrc = tonumber(attackerSrc)
+    if not victimSrc or not attackerSrc or victimSrc == attackerSrc then return end
+    LastPvPAttacker[victimSrc] = { attacker = attackerSrc, at = os.time() }
+end)
 
 local function bleedoutDuration()
     return math.max(30, tonumber(Sunset.Death and Sunset.Death.bleedoutSeconds) or 300)
@@ -97,6 +105,26 @@ RegisterNetEvent('sunset:server:playerDied', function()
     local now = os.time()
     Downed[source] = { startedAt = now, releaseAt = now + bleedoutDuration(), stabilized = false }
     TriggerEvent('sunset:death:playerDowned', source)
+
+    local pending = LastPvPAttacker[source]
+    LastPvPAttacker[source] = nil
+    if pending and pending.attacker and (now - (pending.at or 0)) <= 15 then
+        local killer = pending.attacker
+        if killer ~= source and GetPlayerName(killer) and not isOnDutyPolice(killer) then
+            if not MurderWindow[source] then
+                MurderWindow[source] = { killerId = killer, expires = now + 60 }
+                TriggerClientEvent('sunset:client:notify', source,
+                    'You were attacked! You have 60 seconds to use /112 to call emergency services and report your attacker.',
+                    'error', 10000)
+                SetTimeout(61000, function()
+                    local row = MurderWindow[source]
+                    if row and row.killerId == killer then
+                        MurderWindow[source] = nil
+                    end
+                end)
+            end
+        end
+    end
 end)
 
 RegisterNetEvent('sunset:death:enteredDowned', function()
@@ -246,6 +274,7 @@ end)
 AddEventHandler('playerDropped', function()
     Downed[source] = nil
     MurderWindow[source] = nil
+    LastPvPAttacker[source] = nil
 end)
 
 exports.sunset_core:RegisterCallback('sunset:revivePlayer', function(source, targetId)

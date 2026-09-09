@@ -173,3 +173,35 @@ exports.sunset_core:RegisterCallback('sunset:atmTransfer', function(source, acti
     end
     return { cash = char.cash, bank = char.bank }
 end)
+
+exports.sunset_core:RegisterCallback('sunset:phoneBankTransfer', function(source, targetId, amount)
+    targetId = tonumber(targetId)
+    amount = math.floor(tonumber(amount) or 0)
+    if not targetId or targetId < 1 then return nil, 'Invalid player ID' end
+    if amount < 1 then return nil, 'Invalid amount' end
+    if targetId == source then return nil, 'You cannot transfer to yourself' end
+
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character loaded' end
+
+    local targetChar = exports.sunset_core:GetCharacter(targetId)
+    if not targetChar then return nil, 'Player not found or offline' end
+
+    if not exports.sunset_core:RemoveMoney(source, 'bank', amount, 'bank_transfer_out') then
+        return nil, 'Not enough bank balance'
+    end
+
+    exports.sunset_core:AddMoney(targetId, 'bank', amount, 'bank_transfer_in')
+    TriggerClientEvent('sunset:client:notify', targetId,
+        ('Received $%s bank transfer from %s.'):format(amount, exports.sunset_core:GetPlayerDisplayName(source) or 'someone'),
+        'success', 6000)
+
+    exports.sunset_core:RefreshMoney(source)
+    char = exports.sunset_core:GetCharacter(source)
+    local history = exports.sunset_core:GetMoneyHistory(char.id, 30)
+    return {
+        cash = char.cash,
+        bank = char.bank,
+        transactions = history,
+    }
+end)

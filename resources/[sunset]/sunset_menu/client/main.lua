@@ -430,6 +430,9 @@ AddEventHandler('sunset:nui:menuJobAction', function(data)
         elseif data.action == 'quit_civilian' then
             local ok, err = Sunset.AwaitCallback('sunset:quitCivilianJob')
             if ok then
+                if Sunset.JobClient and Sunset.JobClient.clearWorkHud then
+                    Sunset.JobClient.clearWorkHud()
+                end
                 cachedExtrasAt = 0
                 closeMenu()
             else

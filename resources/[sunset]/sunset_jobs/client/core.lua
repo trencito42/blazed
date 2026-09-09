@@ -310,6 +310,20 @@ function JobClient.monitorVehicles()
     end)
 end
 
+function JobClient.clearWorkHud()
+    JobClient.hideObjective()
+    exports.sunset_ui:Send('fishingHide', {})
+    exports.sunset_ui:Send('jobShiftHide', {})
+    exports.sunset_ui:Send('jobSkillHide', {})
+    if GetResourceState('sunset_jobcreator') == 'started' then
+        pcall(function()
+            if exports.sunset_jobcreator:IsSessionActive() then
+                exports.sunset_jobcreator:CancelWork()
+            end
+        end)
+    end
+end
+
 function JobClient.cleanup(options)
     options = options or {}
     JobClient.deleteVehicles(options.keepTruck == true)
@@ -318,6 +332,7 @@ function JobClient.cleanup(options)
     JobClient.jobId = nil
     JobClient.sessionData = nil
     JobClient.threadActive = false
+    JobClient.clearWorkHud()
 end
 
 function JobClient.getWorkLocation(jobId)
@@ -435,6 +450,10 @@ end)
 
 RegisterNetEvent('sunset:client:updateCharacter', function(char)
     Sunset.Character = char
+end)
+
+RegisterNetEvent('sunset:jobs:forceClearHud', function()
+    JobClient.clearWorkHud()
 end)
 
 AddEventHandler('onResourceStop', function(resource)

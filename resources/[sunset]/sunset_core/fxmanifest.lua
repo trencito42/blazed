@@ -30,6 +30,7 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/command_feedback.lua',
     'server/main.lua',
+    'server/money_log.lua',
     'server/player.lua',
     'server/callbacks.lua',
 }
@@ -52,6 +53,8 @@ server_exports {
     'GetPlayerBaseName',
     'RegisterCallback',
     'SaveCharacter',
+    'GetMoneyHistory',
+    'LogMoneyTransaction',
     'AddMoney',
     'RefreshMoney',
     'RemoveMoney',

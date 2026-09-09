@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=18">
     <link rel="stylesheet" href="css/menu.css?v=10">
+    <link rel="stylesheet" href="css/premium-menu.css?v=1">
     <link rel="stylesheet" href="css/panels.css?v=8">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
@@ -47,7 +48,8 @@
     <link rel="stylesheet" href="css/atm.css?v=1">
     <link rel="stylesheet" href="css/battlepass.css?v=2">
     <link rel="stylesheet" href="css/redesign.css?v=10">
-    <link rel="stylesheet" href="css/interactions.css?v=1">
+    <link rel="stylesheet" href="css/premium-factions.css?v=1">
+    <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -704,6 +706,7 @@
                         <h2 class="menu-profile__name" id="menu-name">—</h2>
                         <span class="menu-profile__id" id="menu-id">ID: 0</span>
                     </div>
+                    <div id="menu-job-label" class="menu-profile__job">Unemployed</div>
                     <div class="menu-profile__sub"><span id="menu-cid">CID: —</span><span id="menu-rank">PLAYER</span></div>
                     <div class="menu-xp">
                         <div class="menu-xp__row"><span id="menu-level">LEVEL 1</span><span id="menu-xp-text">0 / 4 RP</span></div>
@@ -1890,133 +1893,204 @@
         </div>
     </div>
 
-    <!-- FACTIONS -->
-    <div id="faction-panel" class="menu menu--solo menu--solo-faction org-panel hidden">
-        <div class="menu-wrap menu-wrap--solo">
-            <header class="menu-brand">
-                <div id="faction-panel-title">FACTION <span>CONTROL</span></div>
-                <button type="button" class="menu-close-btn" data-faction-close><span class="menu-keycap">ESC</span> CLOSE</button>
-            </header>
-            <main class="menu-panels menu-panels--solo">
-                <section class="menu-panel-view tech-panel accent-orange is-active faction-dashboard org-shell">
-                    <nav class="org-rail faction-tabs" id="faction-tabs" aria-label="Faction sections">
-                        <span class="org-rail__label">DEPT</span>
-                        <button type="button" class="faction-tab is-active" data-faction-tab="overview">STATUS</button>
-                        <button type="button" class="faction-tab" data-faction-tab="roster">CREW</button>
-                        <button type="button" class="faction-tab faction-tab--manage hidden" data-faction-tab="manage">COMMAND</button>
-                        <button type="button" class="faction-tab" data-faction-tab="browse">LISTING</button>
-                    </nav>
-                    <div class="org-main">
-                    <div class="faction-tab-panel is-active" data-faction-panel="overview">
-                        <div class="org-stat-strip faction-stats">
-                            <div class="faction-stat"><span>RANK</span><strong id="faction-rank">—</strong></div>
-                            <div class="faction-stat"><span>SHIFT</span><strong id="faction-duty">—</strong></div>
-                            <div class="faction-stat"><span>PAY RATE</span><strong id="faction-salary">—</strong></div>
-                            <div class="faction-stat"><span>CREW SIZE</span><strong id="faction-member-count">0</strong></div>
+    <!-- FACTION DASHBOARD (/faction) -->
+    <div id="faction-panel" class="premium-faction hidden">
+        <div class="premium-faction__wrapper">
+            <aside class="premium-faction__sidebar">
+                <div class="premium-faction__brand">
+                    <div class="premium-faction__brand-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <div class="premium-faction__brand-text">
+                        <h1 id="faction-panel-title">FACȚIUNE</h1>
+                        <span id="faction-panel-type">Organizație</span>
+                    </div>
+                </div>
+                <nav class="premium-faction__nav" id="faction-tabs" aria-label="Faction sections">
+                    <button type="button" class="premium-faction__nav-item is-active" data-faction-tab="overview">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Dashboard
+                    </button>
+                    <button type="button" class="premium-faction__nav-item" data-faction-tab="roster">
+                        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Lista Membri
+                    </button>
+                    <button type="button" class="premium-faction__nav-item faction-tab--manage hidden" data-faction-tab="manage">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Administrare
+                    </button>
+                </nav>
+            </aside>
+            <div class="premium-faction__content">
+                <div class="premium-faction__tab is-active" data-faction-panel="overview">
+                    <div class="premium-faction__header">
+                        <h2>Panou General</h2>
+                        <p>Informații și statistici despre facțiunea ta.</p>
+                    </div>
+                    <div class="premium-faction__stats">
+                        <div class="premium-faction__stat">
+                            <span class="premium-faction__stat-label">Gradul Tău</span>
+                            <span class="premium-faction__stat-value" id="faction-rank">—</span>
                         </div>
-                        <div class="org-intel-grid">
-                            <div class="faction-cards">
-                                <article class="faction-card faction-card--motd"><span>MOTD</span><p id="faction-motd">No MOTD posted. Leaders use <strong>/fmotd</strong>.</p></article>
-                                <article class="faction-card"><span>UNIT INTEL</span><p id="faction-description">—</p><small id="faction-depot">—</small></article>
+                        <div class="premium-faction__stat">
+                            <span class="premium-faction__stat-label">Membri Online</span>
+                            <span class="premium-faction__stat-value"><span id="faction-online-count">0</span> / <span id="faction-member-count" style="color:var(--pf-text-muted);font-size:16px;">0</span></span>
+                        </div>
+                        <div class="premium-faction__stat" id="faction-bank-card">
+                            <span class="premium-faction__stat-label">Seif Facțiune</span>
+                            <span class="premium-faction__stat-value" id="faction-society-bank" style="color:var(--pf-success);">$0</span>
+                        </div>
+                    </div>
+                    <div class="premium-faction__motd">
+                        <div class="premium-faction__motd-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            MESAJUL ZILEI (MOTD)
+                        </div>
+                        <div class="premium-faction__motd-text" id="faction-motd">No MOTD posted. Leaders use /fmotd.</div>
+                    </div>
+                    <div class="premium-faction__extras">
+                        <article class="premium-faction__card">
+                            <span>UNIT INTEL</span>
+                            <p id="faction-description">—</p>
+                            <small id="faction-depot">—</small>
+                        </article>
+                        <article class="premium-faction__card">
+                            <span>WEEKLY OBJECTIVE</span>
+                            <p><strong id="faction-report-value">0 / 0</strong></p>
+                            <div class="premium-faction__report-bar"><b id="faction-report-bar" style="width:0%"></b></div>
+                            <small>Shift: <span id="faction-duty">OFF SHIFT</span> · Pay: <span id="faction-salary">$0/HR</span></small>
+                        </article>
+                    </div>
+                    <div class="premium-faction__commands">
+                        <span class="premium-faction__stat-label">ACTIVE COMMANDS</span>
+                        <ul id="faction-commands"></ul>
+                    </div>
+                </div>
+                <div class="premium-faction__tab" data-faction-panel="roster">
+                    <div class="premium-faction__header">
+                        <h2>Lista Membri</h2>
+                        <p id="faction-roster-meta">Toți membrii activi din departament.</p>
+                    </div>
+                    <div id="faction-roster" class="premium-faction__roster"></div>
+                </div>
+                <div class="premium-faction__tab" data-faction-panel="manage">
+                    <div class="premium-faction__header">
+                        <h2>Administrare</h2>
+                        <p>Panou rezervat conducerii. Acțiunile sunt ireversibile.</p>
+                    </div>
+                    <div class="premium-faction__manage-grid">
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Gestionează Membru</div>
+                            <div class="premium-faction__form-group">
+                                <label class="premium-faction__form-label">Selectează Membru din listă</label>
+                                <select class="premium-faction__form-control" id="faction-manage-select"></select>
                             </div>
-                            <article class="faction-card"><span>WEEKLY OBJECTIVE</span><div class="faction-report"><strong id="faction-report-value">0 / 0</strong><i><b id="faction-report-bar"></b></i></div></article>
+                            <div class="premium-faction__btn-group">
+                                <button type="button" class="premium-faction__btn premium-faction__btn--primary" id="faction-manage-promote">Promovează</button>
+                                <button type="button" class="premium-faction__btn premium-faction__btn--secondary" id="faction-manage-demote">Retrogradează</button>
+                            </div>
+                            <button type="button" class="premium-faction__btn premium-faction__btn--danger" id="faction-manage-kick" style="margin-top:8px;">Concediază (Kick)</button>
                         </div>
-                        <div class="org-command-deck faction-commands" id="faction-commands-wrap">
-                            <span class="faction-section-label">ACTIVE COMMANDS</span>
-                            <ul id="faction-commands" class="faction-command-list"></ul>
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Setări Facțiune</div>
+                            <form class="premium-faction__form-group" data-faction-action="motd">
+                                <label class="premium-faction__form-label">Actualizează MOTD</label>
+                                <textarea class="premium-faction__form-control" name="message" rows="3" maxlength="512" placeholder="Scrie noul mesaj..."></textarea>
+                                <button type="submit" class="premium-faction__btn premium-faction__btn--primary">Salvează Mesaj</button>
+                            </form>
                         </div>
-                    </div>
-                    <div class="faction-tab-panel" data-faction-panel="roster">
-                        <div class="org-roster-head">
-                            <span class="faction-section-label">CREW ROSTER</span>
-                            <span class="org-roster-meta" id="faction-roster-meta">—</span>
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Recrutare</div>
+                            <form data-faction-action="invite">
+                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invite online player by F10 server ID.</p>
+                                <input class="premium-faction__form-control" type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
+                                <button type="submit" class="premium-faction__btn premium-faction__btn--primary" style="margin-top:10px;">Trimite Invitație</button>
+                            </form>
                         </div>
-                        <div id="faction-roster" class="faction-roster"></div>
-                    </div>
-                    <div class="faction-tab-panel" data-faction-panel="manage">
-                        <p class="org-hint">Leadership tools — target online players by <span class="menu-keycap">F10</span> server ID.</p>
-                        <div class="org-manage-sections">
-                            <section class="org-section">
-                                <div class="org-section__head"><span>RECRUITMENT</span><i></i></div>
-                                <div class="faction-manage-grid">
-                                    <form class="faction-manage-form" data-faction-action="invite">
-                                        <strong>Recruit player</strong>
-                                        <p>Invite an online player into your department.</p>
-                                        <input type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
-                                        <button type="submit">SEND INVITE</button>
-                                    </form>
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Disciplină</div>
+                            <form data-faction-action="warn">
+                                <div class="premium-faction__btn-group" style="flex-direction:column;">
+                                    <input class="premium-faction__form-control" type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                    <input class="premium-faction__form-control" type="text" name="reason" maxlength="256" placeholder="Motiv">
+                                    <button type="submit" class="premium-faction__btn premium-faction__btn--warn">Faction Warning (FW)</button>
                                 </div>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>COMMS</span><i></i></div>
-                                <div class="faction-manage-grid">
-                                    <form class="faction-manage-form" data-faction-action="motd">
-                                        <strong>MOTD</strong>
-                                        <p>Faction message of the day — members see it on connect and via <strong>/fmotd</strong>.</p>
-                                        <textarea name="message" rows="3" maxlength="512" placeholder="Faction MOTD..." required></textarea>
-                                        <button type="submit">SAVE MOTD</button>
-                                    </form>
-                                </div>
-                            </section>
-                            <section class="org-section">
-                                <div class="org-section__head"><span>DISCIPLINE</span><i></i></div>
-                                <div class="faction-manage-grid">
-                                    <form class="faction-manage-form" data-faction-action="warn">
-                                        <strong>Faction warning</strong>
-                                        <p>Recorded on roster — max 3 strikes.</p>
-                                        <div class="faction-manage-row">
-                                            <input type="number" name="targetId" min="1" placeholder="Server ID" required>
-                                            <input type="text" name="reason" maxlength="256" placeholder="Reason">
-                                        </div>
-                                        <button type="submit" class="is-danger">ISSUE STRIKE</button>
-                                    </form>
-                                </div>
-                            </section>
-                            <section class="org-section" id="faction-rank-editor">
-                                <div class="org-section__head"><span>RANK STRUCTURE</span><i></i></div>
-                                <div class="faction-manage-form">
-                                    <strong>Custom rank titles</strong>
-                                    <p>Leader only — rename grades for your roster.</p>
-                                    <form id="faction-rank-names-form" class="faction-rank-names-form"></form>
-                                    <button type="button" class="faction-rank-save" id="faction-rank-save">SAVE RANKS</button>
-                                </div>
-                            </section>
+                            </form>
+                        </div>
+                        <div class="premium-faction__panel hidden" id="faction-rank-editor">
+                            <div class="premium-faction__panel-title">Rank Structure</div>
+                            <form id="faction-rank-names-form" class="premium-faction__rank-form"></form>
+                            <button type="button" class="premium-faction__btn premium-faction__btn--primary" id="faction-rank-save" style="margin-top:10px;">Salvează Grade</button>
                         </div>
                     </div>
-                    <div class="faction-tab-panel" data-faction-panel="browse">
-                        <p class="org-hint">Select a department for intel. Recruits get invited in-game after approval.</p>
-                        <div class="faction-directory-layout" id="faction-browse-layout">
-                            <div id="faction-browse-list" class="faction-directory-list"></div>
-                            <aside id="faction-browse-detail" class="faction-detail hidden" aria-live="polite">
-                                <button type="button" class="faction-detail__back" data-faction-detail-back>← BACK</button>
-                                <div class="faction-detail__body"></div>
-                            </aside>
-                        </div>
-                    </div>
-                    </div>
-                </section>
-            </main>
+                </div>
+            </div>
+            <div class="premium-faction__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
         </div>
     </div>
 
-    <div id="faction-directory" class="menu menu--solo menu--solo-faction hidden" aria-hidden="true">
-        <div class="menu-wrap menu-wrap--solo menu-wrap--faction-dir">
-            <header class="menu-brand">
-                <div>SERVER <span>FACTIONS</span></div>
-                <button type="button" class="menu-close-btn" data-faction-close><span class="menu-keycap">ESC</span> CLOSE</button>
-            </header>
-            <main class="menu-panels menu-panels--solo">
-                <section class="menu-panel-view tech-panel accent-orange is-active faction-directory-shell">
-                    <p class="faction-directory-intro">Click a faction for details. Applications are on Discord/website — leaders invite in-game after acceptance.</p>
-                    <div class="faction-directory-layout">
-                        <div id="faction-directory-list" class="faction-directory-list"></div>
-                        <aside id="faction-directory-detail" class="faction-detail hidden" aria-live="polite">
-                            <button type="button" class="faction-detail__back" data-faction-detail-back>← Back to list</button>
-                            <div class="faction-detail__body"></div>
-                        </aside>
+    <!-- FACTION DIRECTORY (/factions) -->
+    <div id="faction-directory" class="premium-factions-dir hidden" aria-hidden="true">
+        <div class="premium-factions-dir__wrapper">
+            <aside class="premium-factions-dir__sidebar">
+                <div class="premium-factions-dir__brand">
+                    <h1>Server <span>Factions</span></h1>
+                    <p>Lista oficială a organizațiilor</p>
+                </div>
+                <nav class="premium-factions-dir__nav" id="faction-dir-filters">
+                    <button type="button" class="premium-factions-dir__nav-item is-active" data-faction-filter="all">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Toate Facțiunile
+                    </button>
+                    <button type="button" class="premium-factions-dir__nav-item" data-faction-filter="legal">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Departamente Legale
+                    </button>
+                    <button type="button" class="premium-factions-dir__nav-item" data-faction-filter="illegal">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                        Mafii / Gang-uri
+                    </button>
+                    <button type="button" class="premium-factions-dir__nav-item" data-faction-filter="service">
+                        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                        Servicii / Afaceri
+                    </button>
+                </nav>
+            </aside>
+            <div class="premium-factions-dir__content">
+                <div class="premium-factions-dir__grid-wrap is-active">
+                    <div class="premium-factions-dir__header">
+                        <h2 id="faction-dir-title">Toate Facțiunile</h2>
+                        <p>Alege o organizație pentru a vedea detaliile sau pentru a aplica.</p>
                     </div>
-                </section>
-            </main>
+                    <div class="premium-factions-dir__grid" id="faction-directory-list"></div>
+                </div>
+            </div>
+            <aside class="premium-factions-dir__modal" id="faction-directory-modal">
+                <button type="button" class="premium-factions-dir__modal-close" id="faction-directory-modal-close" aria-label="Close">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="premium-factions-dir__modal-banner" id="faction-dir-modal-icon"></div>
+                <h2 class="premium-factions-dir__modal-title" id="faction-dir-modal-title">—</h2>
+                <div class="premium-factions-dir__modal-desc" id="faction-dir-modal-desc">—</div>
+                <div class="premium-factions-dir__req-box">
+                    <div class="premium-factions-dir__req-title">Conducere</div>
+                    <ul class="premium-factions-dir__req-list" id="faction-dir-modal-leaders"></ul>
+                </div>
+                <div class="premium-factions-dir__req-box">
+                    <div class="premium-factions-dir__req-title">MOTD Public</div>
+                    <div class="premium-factions-dir__modal-motd" id="faction-dir-modal-motd">—</div>
+                </div>
+                <div class="premium-factions-dir__req-box" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+                    <div class="premium-factions-dir__req-title">Lista Membri</div>
+                    <div class="premium-factions-dir__modal-roster" id="faction-dir-modal-roster"></div>
+                </div>
+                <div class="premium-factions-dir__req-box">
+                    <div class="premium-factions-dir__req-title">Recrutare</div>
+                    <ul class="premium-factions-dir__req-list" id="faction-dir-modal-recruit"></ul>
+                </div>
+            </aside>
+            <div id="faction-directory-toast" class="premium-factions-dir__toast"></div>
+            <div class="premium-faction__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
         </div>
     </div>
 
@@ -2434,24 +2508,61 @@
                         </div>
                     </div>
 
-                    <!-- Bank -->
+                    <!-- Bank (Fleeca) -->
                     <div class="phone-view" data-view="bank">
-                        <div class="ios-nav ios-nav--light">
-                            <button type="button" class="ios-nav__back" id="phone-back-bank" style="color:#007aff">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
-                                Home
-                            </button>
-                            <h1 class="ios-large-title">Wallet</h1>
-                        </div>
-                        <div class="phone-scroll phone-bank">
-                            <div class="phone-bank-card">
-                                <div class="phone-bank-card__label">Apple Cash & Blaze Bank</div>
-                                <div class="phone-bank-card__amount" id="phone-bank-total">$0</div>
-                                <div class="phone-bank-card__label">Available Balance</div>
+                        <div class="phone-fleeca">
+                            <div class="phone-fleeca__notify" id="phone-bank-notify"></div>
+                            <div class="phone-fleeca__header">
+                                <div class="phone-fleeca__brand">Fleeca<span>Bank</span></div>
+                                <div class="phone-fleeca__profile">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </div>
                             </div>
-                            <div class="phone-bank-group">
-                                <div class="phone-bank-row"><span>Cash</span><strong id="phone-bank-cash">$0</strong></div>
-                                <div class="phone-bank-row"><span>Bank Account</span><strong id="phone-bank-bank">$0</strong></div>
+                            <div class="phone-fleeca__card">
+                                <div class="phone-fleeca__card-label">Cont Curent</div>
+                                <div class="phone-fleeca__card-balance" id="phone-bank-bank">$0</div>
+                                <div class="phone-fleeca__card-footer">
+                                    <span>Cont Activ</span>
+                                    <span class="phone-fleeca__card-logo">FLEECA</span>
+                                </div>
+                            </div>
+                            <div class="phone-fleeca__cash">
+                                <span class="phone-fleeca__cash-label">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+                                    Bani Gheață (Cash)
+                                </span>
+                                <span class="phone-fleeca__cash-val" id="phone-bank-cash">$0</span>
+                            </div>
+                            <div class="phone-fleeca__actions">
+                                <button type="button" class="phone-fleeca__action-btn" id="phone-bank-transfer-open">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                    <span class="phone-fleeca__action-text">Transfer Bancar</span>
+                                </button>
+                            </div>
+                            <div class="phone-fleeca__history">
+                                <div class="phone-fleeca__history-title">Istoric Tranzacții</div>
+                                <div class="phone-fleeca__tx-list" id="phone-bank-tx-list"></div>
+                            </div>
+                            <div class="phone-fleeca__modal" id="phone-bank-transfer-modal">
+                                <div class="phone-fleeca__modal-content">
+                                    <div class="phone-fleeca__modal-header">
+                                        <div class="phone-fleeca__modal-title">Trimite Bani</div>
+                                        <button type="button" class="phone-fleeca__modal-close" id="phone-bank-transfer-close">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </div>
+                                    <form id="phone-bank-transfer-form">
+                                        <div class="phone-fleeca__form-group">
+                                            <label class="phone-fleeca__form-label">ID Jucător (Destinatar)</label>
+                                            <input type="number" class="phone-fleeca__form-input" id="phone-bank-target-id" placeholder="Ex: 12" required min="1">
+                                        </div>
+                                        <div class="phone-fleeca__form-group">
+                                            <label class="phone-fleeca__form-label">Sumă de transferat ($)</label>
+                                            <input type="number" class="phone-fleeca__form-input" id="phone-bank-amount" placeholder="0" required min="1">
+                                        </div>
+                                        <button type="submit" class="phone-fleeca__submit">Trimite Banii</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2740,10 +2851,10 @@
     <script src="js/chat_settings.js"></script>
     <script src="js/chat.js?v=20"></script>
     <script src="js/properties-ui.js?v=3"></script>
-    <script src="js/menu.js?v=7"></script>
+    <script src="js/menu.js?v=8"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
-    <script src="js/phone.js?v=4"></script>
+    <script src="js/phone.js?v=5"></script>
     <script src="js/panels.js?v=11"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=3"></script>
@@ -2752,14 +2863,14 @@
     <script src="js/spawn.js?v=4"></script>
     <script src="js/fuel_pump.js"></script>
     <script src="js/job_icons.js?v=1"></script>
-    <script src="js/fishing.js?v=5"></script>
+    <script src="js/fishing.js?v=6"></script>
     <script src="js/license_test.js?v=7"></script>
     <script src="js/license_quiz.js?v=3"></script>
     <script src="js/radar.js"></script>
     <script src="js/courier.js"></script>
     <script src="js/job_shift.js?v=3"></script>
     <script src="js/job_creator.js?v=10"></script>
-    <script src="js/factions.js?v=7"></script>
+    <script src="js/factions.js?v=8"></script>
     <script src="js/clans.js?v=12"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
     <script src="js/player_interaction.js?v=1"></script>

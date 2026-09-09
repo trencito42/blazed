@@ -70,6 +70,7 @@ const Fishing = {
     },
 
     _resolveState(data = {}) {
+        if (data.state === 'jail') return 'jail';
         const c = Math.max(0, Number(data.carried) || 0);
         const cap = Math.max(1, Number(data.capacity) || 2);
         let state = data.state || 'idle';
@@ -148,6 +149,20 @@ const Fishing = {
                 this._progress.style.transition = `width ${ms}ms linear`;
                 this._progress.style.width = '100%';
             }
+        } else if (state === 'jail') {
+            if (this._bag) this._bag.classList.add('hidden');
+            this._applyState(
+                'state-jail',
+                data.title || 'Prison',
+                data.message || 'Serving sentence'
+            );
+            const total = Math.max(1, Number(data.totalSec) || 1);
+            const rem = Math.max(0, Number(data.remainingSec) || 0);
+            const pct = Math.max(0, Math.min(100, (rem / total) * 100));
+            if (this._progress) {
+                this._progress.style.transition = 'width 0.35s linear';
+                this._progress.style.width = `${pct}%`;
+            }
         } else {
             this._applyState(
                 'state-idle',
@@ -180,6 +195,10 @@ const Fishing = {
         }
         if (data.state === 'bite') {
             this.startBite(data.windowMs || 1500, data);
+            return;
+        }
+        if (data.state === 'jail') {
+            this.show({ ...data, state: 'jail' });
             return;
         }
         if (data.state === 'work') {

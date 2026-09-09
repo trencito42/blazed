@@ -180,6 +180,7 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
         myPhoneNumber = myPhone,
         cash = char.cash or 0,
         bank = char.bank or 0,
+        transactions = exports.sunset_core:GetMoneyHistory(myCharId, 30),
         messages = messages,
         contacts = contacts,
         onlineByChar = onlineByChar,

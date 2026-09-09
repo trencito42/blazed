@@ -40,3 +40,24 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
+RegisterNetEvent('sunset:combat:resyncPed', function(netId, health, armor)
+    netId = tonumber(netId)
+    health = tonumber(health) or 200
+    armor = tonumber(armor) or 0
+    if not netId or netId == 0 then return end
+    local ent = NetworkGetEntityFromNetworkId(netId)
+    if not ent or ent == 0 or not DoesEntityExist(ent) then return end
+    local localPed = PlayerPedId()
+    if ent == localPed and (IsPedDeadOrDying(ent, true) or GetEntityHealth(ent) <= 0) then
+        local coords = GetEntityCoords(ent)
+        NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, GetEntityHeading(ent), true, false)
+        ent = PlayerPedId()
+    elseif IsPedDeadOrDying(ent, true) or GetEntityHealth(ent) <= 0 then
+        ResurrectPed(ent)
+    end
+    SetEntityHealth(ent, math.max(101, health))
+    SetPedArmour(ent, math.max(0, armor))
+    ClearPedBloodDamage(ent)
+    ClearPedTasksImmediately(ent)
+end)

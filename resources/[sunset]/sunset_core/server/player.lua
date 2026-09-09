@@ -200,6 +200,7 @@ function Sunset.AddMoney(source, account, amount, reason)
     if not changed or changed < 1 then return false end
     char[field] = (tonumber(char[field]) or 0) + amount
 
+    Sunset.LogMoneyTransaction(char.id, field, 'in', amount, reason, char[field])
     TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
@@ -240,6 +241,7 @@ function Sunset.RemoveMoney(source, account, amount, reason)
     if not changed or changed < 1 then return false end
     char[field] = (tonumber(char[field]) or 0) - amount
 
+    Sunset.LogMoneyTransaction(char.id, field, 'out', amount, reason, char[field])
     TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true

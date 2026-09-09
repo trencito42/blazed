@@ -478,6 +478,17 @@ AddEventHandler('sunset:nui:factionBrowse', function()
     exports.sunset_ui:Send('factionBrowseInline', { factions = data })
 end)
 
+AddEventHandler('sunset:nui:factionDirectoryDetail', function(data)
+    local factionId = data and data.factionId
+    if not factionId then return end
+    local detail, err = Sunset.AwaitCallback('sunset:factionDirectoryDetail', factionId)
+    if not detail then
+        exports.sunset_ui:Send('factionDirectoryDetail', { error = err })
+        return exports.sunset_ui:Notify(err or 'Could not load faction details.', 'error')
+    end
+    exports.sunset_ui:Send('factionDirectoryDetail', detail)
+end)
+
 AddEventHandler('sunset:nui:factionManage', function(data)
     data = data or {}
     local action = data.action

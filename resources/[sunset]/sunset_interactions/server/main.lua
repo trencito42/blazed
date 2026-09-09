@@ -67,7 +67,7 @@ exports.sunset_core:RegisterCallback('sunset:interactionContext', function(sourc
         input = { type = 'number', label = 'Amount', min = 1, max = MAX_CASH_TRANSFER, placeholder = '$ amount' },
     })
     addAction(actions, 'trade', 'CIVILIAN', 'Trade items', 'Propose a secure item trade with this player.')
-    addAction(actions, 'add_friend', 'CIVILIAN', 'Add to contacts', 'Save this player in your phone contacts.')
+    addAction(actions, 'add_contact', 'CIVILIAN', 'Adaugă la Contacte', 'Salvează jucătorul în agenda telefonului.')
 
     local isLeader = false
     local leaderOk, leaderResult = pcall(function()
@@ -209,17 +209,27 @@ exports.sunset_core:RegisterCallback('sunset:interactionAddFriend', function(sou
         pair.targetChar.phone_number = phone
         MySQL.update.await('UPDATE characters SET phone_number = ? WHERE id = ?', { phone, pair.targetChar.id })
     end
+
     local name = ('%s %s'):format(pair.targetChar.firstname or '', pair.targetChar.lastname or ''):gsub('^%s*(.-)%s*$', '%1')
     if name == '' then name = GetPlayerName(pair.targetId) or ('Player ' .. pair.targetId) end
+    if #name > 48 then name = name:sub(1, 48) end
 
-    local ok = MySQL.update.await([[
-        INSERT INTO phone_contacts (character_id, contact_name, phone_number, contact_character_id)
-        VALUES (?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE contact_name = VALUES(contact_name), contact_character_id = VALUES(contact_character_id)
-    ]], { pair.sourceChar.id, name:sub(1, 48), phone, pair.targetChar.id })
-    if ok == nil then return nil, 'The contact could not be saved. Try again.' end
+    local ok, dbErr = pcall(function()
+        return MySQL.insert.await([[
+            INSERT INTO phone_contacts (character_id, contact_name, phone_number, contact_character_id)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                contact_name = VALUES(contact_name),
+                contact_character_id = VALUES(contact_character_id)
+        ]], { tonumber(pair.sourceChar.id), name, phone, tonumber(pair.targetChar.id) })
+    end)
 
-    notify(pair.targetId, ('%s added you to their phone contacts.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 5000)
+    if not ok then
+        print(('[sunset_interactions] add contact failed: %s'):format(tostring(dbErr)))
+        return nil, 'Contactul nu a putut fi salvat. Încearcă din nou.'
+    end
+
+    notify(pair.targetId, ('%s te-a adăugat în contacte.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 5000)
     return { name = name, phone = phone }
 end)
 

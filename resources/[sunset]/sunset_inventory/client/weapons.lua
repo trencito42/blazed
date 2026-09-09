@@ -41,6 +41,21 @@ local function inWeaponTest()
 end
 
 local function hasWeaponLicense()
+    if GetResourceState('sunset_factions') == 'started' then
+        local ok, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
+        if ok and onDuty == true then
+            local char = Sunset.Character
+            if not char then
+                pcall(function() char = exports.sunset_core:GetCharacter() end)
+            end
+            if char then
+                local factionId = select(1, Sunset.GetCharacterFaction(char))
+                if Sunset.FactionTypeMatches and Sunset.FactionTypeMatches(factionId, 'law_enforcement') then
+                    return true
+                end
+            end
+        end
+    end
     if GetResourceState('sunset_licenses') ~= 'started' then return true end
     local ok, licensed = pcall(function()
         return exports.sunset_licenses:HasLicense('weapon')

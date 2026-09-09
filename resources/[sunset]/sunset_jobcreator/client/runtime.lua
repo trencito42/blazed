@@ -103,6 +103,20 @@ local function formatMessage(stage, key)
     return msg:gsub('{key}', key or 'E')
 end
 
+local function inJobVehicle(data)
+    local stage = data and data.stage
+    local vars = data and data.variables or {}
+    if not stage then return false end
+    local vehicleVar = stage.vehicleVar or 'vehicle'
+    local netId = vars[vehicleVar]
+    if not netId then return false end
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if not veh or veh == 0 then return false end
+    local ent = NetworkGetEntityFromNetworkId(netId)
+    return ent and ent ~= 0 and ent == veh
+end
+
 local function jobProgress(vars, data)
     local prog = (data and data.definition and data.definition.progression) or {}
     local totalVar = prog.progressTotalVar or 'total'
@@ -483,7 +497,8 @@ CreateThread(function()
                     and math.abs(pos.z - loc.z) <= zTol
             end
 
-            if AUTO_ZONE_STAGES[stageType] and near then
+            if (AUTO_ZONE_STAGES[stageType] and near)
+                or (stageType == 'enter_vehicle' and inJobVehicle(payload)) then
                 local now = GetGameTimer()
                 if now - lastGotoAdvance >= 1500 then
                     lastGotoAdvance = now

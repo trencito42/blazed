@@ -1,6 +1,7 @@
 local jailed = false
 local lastJailUi = 0
 local jailReleaseAt = 0
+local jailSentenceTotal = 0
 local radarActive = false
 local lastRadarLock = 0
 local radarVehicle = 0
@@ -31,6 +32,23 @@ local function drawRadarZoneText(x, y, z, lines, scale, r, g, b)
         EndTextCommandDisplayText(0.0, (i - 1) * 0.018)
     end
     ClearDrawOrigin()
+end
+
+local function showJailHud(remainingSec)
+    remainingSec = math.max(0, tonumber(remainingSec) or 0)
+    local totalSec = math.max(remainingSec, tonumber(jailSentenceTotal) or remainingSec, 60)
+    exports.sunset_ui:Send('fishingShow', {
+        state = 'jail',
+        title = 'Sentință închisoare',
+        message = ('Timp rămas: %d:%02d'):format(math.floor(remainingSec / 60), remainingSec % 60),
+        icon = 'jail',
+        remainingSec = remainingSec,
+        totalSec = totalSec,
+    })
+end
+
+local function hideJailHud()
+    exports.sunset_ui:Send('fishingHide', {})
 end
 
 local function drawRadarZoneMarkers(vehicle, cfg)
@@ -291,7 +309,10 @@ RegisterNetEvent('sunset:police:jail', function(payload)
 
     jailed = true
     jailReleaseAt = releaseAt
+    jailSentenceTotal = math.max(60, minutes * 60)
     local coords = payload.coords
+
+    TriggerEvent('sunset:jobs:forceClearHud')
 
     local ped = PlayerPedId()
     pcall(function() exports.sunset_death:ClearDead() end)
@@ -316,17 +337,14 @@ RegisterNetEvent('sunset:police:jail', function(payload)
     end
 
     exports.sunset_ui:Notify(('Sentenced — %d minutes remaining'):format(minutes), 'error', 8000)
-    TriggerEvent('sunset:ui:jobObjective', {
-        title = 'Prison sentence',
-        subtitle = ('%d minutes remaining'):format(minutes),
-        progress = 0,
-    })
+    showJailHud(math.max(0, releaseAt - GetCloudTimeAsInt()))
 end)
 
 RegisterNetEvent('sunset:police:release', function()
     jailed = false
     jailReleaseAt = 0
-    TriggerEvent('sunset:ui:jobObjective', { hide = true })
+    jailSentenceTotal = 0
+    hideJailHud()
     local release = Sunset.Police and Sunset.Police.releaseCoords
     local ped = PlayerPedId()
     if release then
@@ -345,16 +363,13 @@ CreateThread(function()
             if GetGameTimer() - lastJailUi > 1000 then
                 lastJailUi = GetGameTimer()
                 local remaining = math.max(0, jailReleaseAt - GetCloudTimeAsInt())
-                TriggerEvent('sunset:ui:jobObjective', {
-                    title = 'Prison sentence',
-                    subtitle = ('%d:%02d remaining'):format(math.floor(remaining / 60), remaining % 60),
-                    progress = 0,
-                })
+                showJailHud(remaining)
             end
             if GetCloudTimeAsInt() >= jailReleaseAt then
                 jailed = false
                 jailReleaseAt = 0
-                TriggerEvent('sunset:ui:jobObjective', { hide = true })
+                jailSentenceTotal = 0
+                hideJailHud()
                 TriggerServerEvent('sunset:server:jailComplete')
                 local release = Sunset.Police and Sunset.Police.releaseCoords
                 local ped = PlayerPedId()

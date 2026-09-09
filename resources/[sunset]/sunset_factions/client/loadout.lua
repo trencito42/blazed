@@ -1,5 +1,8 @@
 local dutyWeapons = {}
 
+local FREEMODE_MALE = `mp_m_freemode_01`
+local FREEMODE_FEMALE = `mp_f_freemode_01`
+
 local function getChar()
     return exports.sunset_core:GetCharacter()
 end
@@ -31,6 +34,41 @@ local function preloadPedModel(modelInput)
     local hash = type(modelInput) == 'number' and modelInput or joaat(modelInput)
     if IsModelInCdimage(hash) and IsModelValid(hash) and not HasModelLoaded(hash) then
         RequestModel(hash)
+    end
+end
+
+local function freemodeModelFor(gender)
+    return (gender == 1) and FREEMODE_FEMALE or FREEMODE_MALE
+end
+
+local function restoreScreenIfFaded()
+    if IsScreenFadedOut() then
+        DoScreenFadeIn(0)
+    end
+end
+
+local function applyOutfitComponents(ped, outfit)
+    if not outfit or not ped then return end
+    for slot, comp in pairs(outfit) do
+        local componentId = tonumber(slot)
+        if componentId and comp and comp.drawable ~= nil then
+            local drawable = comp.drawable
+            local texture = comp.texture or 0
+            local maxDraw = GetNumberOfPedDrawableVariations(ped, componentId) - 1
+            if maxDraw >= 0 then
+                drawable = math.max(0, math.min(drawable, maxDraw))
+                local maxTex = GetNumberOfPedTextureVariations(ped, componentId, drawable) - 1
+                if maxTex < 0 then maxTex = 0 end
+                texture = math.max(0, math.min(texture, maxTex))
+                SetPedComponentVariation(ped, componentId, drawable, texture, 2)
+            end
+        end
+    end
+end
+
+local function applySavedAppearance(ped, char, gender)
+    if char and char.appearance and GetResourceState('sunset_appearance') == 'started' then
+        exports.sunset_appearance:ApplyAppearance(ped, char.appearance, gender)
     end
 end
 
@@ -85,6 +123,7 @@ local function switchPedModel(modelInput)
         SetPedIntoVehicle(newPed, vehicle, seat)
     end
 
+    restoreScreenIfFaded()
     return true
 end
 
@@ -96,13 +135,31 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
     if not loadout then return end
 
     local gender = char.gender or 0
-    local targetSkin = customSkin or (Sunset.ResolveFactionSkin and Sunset.ResolveFactionSkin(factionId, grade, gender))
+    local ped = PlayerPedId()
 
-    if targetSkin then
-        switchPedModel(targetSkin)
+    if customSkin then
+        switchPedModel(customSkin)
+        ped = PlayerPedId()
+    else
+        local outfit = Sunset.ResolveFactionOutfit and Sunset.ResolveFactionOutfit(loadout, grade, gender)
+        if outfit then
+            local freemodeModel = freemodeModelFor(gender)
+            if GetEntityModel(ped) ~= freemodeModel then
+                switchPedModel(freemodeModel)
+                ped = PlayerPedId()
+                applySavedAppearance(ped, char, gender)
+            end
+            applyOutfitComponents(ped, outfit)
+        elseif Sunset.ResolveFactionSkin then
+            local targetSkin = Sunset.ResolveFactionSkin(factionId, grade, gender)
+            if targetSkin then
+                switchPedModel(targetSkin)
+                ped = PlayerPedId()
+            end
+        end
     end
 
-    local ped = PlayerPedId()
+    ped = PlayerPedId()
     removeDutyWeapons(ped)
 
     if loadout.armor and loadout.armor > 0 then
@@ -123,17 +180,20 @@ end
 
 CreateThread(function()
     Wait(2000)
-    -- Pre-warm common duty ped models to ensure zero-delay model switching
-    preloadPedModel(`mp_m_freemode_01`)
-    preloadPedModel(`mp_f_freemode_01`)
-    preloadPedModel(`s_m_y_cop_01`)
-    preloadPedModel(`s_f_y_cop_01`)
-    preloadPedModel(`csb_cop`)
-    preloadPedModel(`s_m_y_sheriff_01`)
-    preloadPedModel(`s_f_y_sheriff_01`)
-    preloadPedModel(`s_m_m_paramedic_01`)
-    preloadPedModel(`s_f_y_scrubs_01`)
-    preloadPedModel(`s_m_y_swat_01`)
+    preloadPedModel(FREEMODE_MALE)
+    preloadPedModel(FREEMODE_FEMALE)
+    if Sunset.FactionSkins then
+        for _, def in pairs(Sunset.FactionSkins) do
+            preloadPedModel(def.defaultMale)
+            preloadPedModel(def.defaultFemale)
+            if def.options then
+                for _, opt in ipairs(def.options) do
+                    preloadPedModel(opt.male)
+                    preloadPedModel(opt.female)
+                end
+            end
+        end
+    end
 end)
 
 function ClearFactionLoadout()
@@ -143,16 +203,15 @@ function ClearFactionLoadout()
     SetPedArmour(ped, 0)
 
     local gender = (char and char.gender) or 0
-    local freemodeModel = (gender == 1) and `mp_f_freemode_01` or `mp_m_freemode_01`
+    local freemodeModel = freemodeModelFor(gender)
 
     if GetEntityModel(ped) ~= freemodeModel then
         switchPedModel(freemodeModel)
         ped = PlayerPedId()
     end
 
-    if char and char.appearance and GetResourceState('sunset_appearance') == 'started' then
-        exports.sunset_appearance:ApplyAppearance(ped, char.appearance, gender)
-    end
+    applySavedAppearance(ped, char, gender)
+    restoreScreenIfFaded()
 end
 
 RegisterNetEvent('sunset:client:dutyState', function(state, factionId)

@@ -238,6 +238,19 @@ AddEventHandler('sunset:nui:phoneDeleteContact', function(data)
     end)
 end)
 
+AddEventHandler('sunset:nui:phoneBankTransfer', function(data)
+    CreateThread(function()
+        data = data or {}
+        local res, err = Sunset.AwaitCallback('sunset:phoneBankTransfer', tonumber(data.targetId), tonumber(data.amount))
+        if res then
+            exports.sunset_ui:Notify(('Transfer of $%s sent successfully.'):format(tonumber(data.amount) or 0), 'success')
+            exports.sunset_ui:Send('phoneUpdate', res)
+        else
+            exports.sunset_ui:Notify(err or 'Transfer failed.', 'error')
+        end
+    end)
+end)
+
 RegisterNetEvent('sunset:client:phoneMessage', function()
     if not phoneOpen then return end
     CreateThread(function()

@@ -57,7 +57,7 @@ function JCEngine_ClientAction(source, data)
             end
             return JCEngine_Advance(source, stage.onSuccess)
         end
-        return JCEngine_Advance(source, stage.onFailure or stage.onSuccess)
+        return JCEngine_Advance(source, stage.onFailure or 'fail')
     end
 
     return nil, 'Unknown client action.'

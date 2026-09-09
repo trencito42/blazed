@@ -148,16 +148,61 @@ end
 
 local meleeHashes = {}
 for weaponName in pairs(SunsetLicenses.MeleeWeapons or {}) do meleeHashes[GetHashKey(weaponName)] = true end
+
+local function isMeleeWeaponHash(weaponHash)
+    weaponHash = tonumber(weaponHash) or 0
+    if weaponHash == 0 then return true end
+    return meleeHashes[weaponHash] == true
+end
+
+local function isLawEnforcementOnDuty(source)
+    if GetResourceState('sunset_factions') ~= 'started' then return false end
+    if exports.sunset_factions:IsOnDuty(source) ~= true then return false end
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return false end
+    local factionId = select(1, Sunset.GetCharacterFaction(char))
+    return Sunset.FactionTypeMatches
+        and Sunset.FactionTypeMatches(factionId, 'law_enforcement') == true
+end
+
+local function canDealWeaponDamage(source)
+    if IsInLicenseTest(source) then return true end
+    if cachedHasLicense(source, 'weapon') then return true end
+    if isLawEnforcementOnDuty(source) then return true end
+    return false
+end
+
+local function resyncVictimTo(source, data)
+    local netId = tonumber(data.hitGlobalId)
+    if not netId or netId == 0 then return end
+    local victim = NetworkGetEntityFromNetworkId(netId)
+    if not victim or victim == 0 then return end
+    TriggerClientEvent('sunset:combat:resyncPed', source, netId, GetEntityHealth(victim), GetPedArmour(victim))
+end
+
 AddEventHandler('weaponDamageEvent', function(sender, data)
     if type(data) ~= 'table' then return end
     local weaponHash = tonumber(data.weaponType)
-    if not weaponHash or weaponHash == 0 or meleeHashes[weaponHash] then return end
-    if cachedHasLicense(sender, 'weapon') then return end
-    CancelEvent()
-    local now = os.time()
-    if now - (LastWeaponWarning[sender] or 0) >= 5 then
-        LastWeaponWarning[sender] = now
-        notify(sender, 'Firearm damage blocked: you need a valid Firearm License.', 'error')
+    if isMeleeWeaponHash(weaponHash) then return end
+    if not canDealWeaponDamage(sender) then
+        CancelEvent()
+        resyncVictimTo(sender, data)
+        local now = os.time()
+        if now - (LastWeaponWarning[sender] or 0) >= 5 then
+            LastWeaponWarning[sender] = now
+            notify(sender, 'Firearm damage blocked: you need a valid Firearm License.', 'error')
+        end
+        return
+    end
+    local victimNet = tonumber(data.hitGlobalId)
+    if victimNet and victimNet ~= 0 then
+        local victimEnt = NetworkGetEntityFromNetworkId(victimNet)
+        if victimEnt and victimEnt ~= 0 then
+            local victimSrc = NetworkGetEntityOwner(victimEnt)
+            if victimSrc and victimSrc > 0 and victimSrc ~= sender then
+                TriggerEvent('sunset:death:recordAttacker', victimSrc, sender)
+            end
+        end
     end
 end)
 

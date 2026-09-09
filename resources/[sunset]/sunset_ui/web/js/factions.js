@@ -1,25 +1,32 @@
+const FACTION_ICONS = {
+    legal: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+    illegal: '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+    service: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>',
+};
+
+const FACTION_FILTER_TITLES = {
+    all: 'Toate Facțiunile',
+    legal: 'Departamente Legale',
+    illegal: 'Mafii / Gang-uri',
+    service: 'Servicii / Afaceri',
+};
+
 const FactionPanels = {
     dashboard: null,
     directory: [],
+    dirFilter: 'all',
+    dirModalOpen: false,
 
     init() {
         if (this.ready) return;
         this.ready = true;
 
-        document.querySelectorAll('[data-faction-close]').forEach((button) => {
-            button.addEventListener('click', () => post('factionPanelsClose'));
-        });
-
         document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.dataset.factionTab;
-                this.setTab(tabId);
-                if (tabId === 'browse') this.requestBrowse();
-            });
+            tab.addEventListener('click', () => this.setTab(tab.dataset.factionTab));
         });
 
-        document.querySelector('[data-faction-detail-back]')?.addEventListener('click', () => {
-            this.closeDirectoryDetail();
+        document.querySelectorAll('[data-faction-filter]').forEach((btn) => {
+            btn.addEventListener('click', () => this.setDirectoryFilter(btn.dataset.factionFilter));
         });
 
         document.querySelectorAll('[data-faction-action]').forEach((form) => {
@@ -29,18 +36,27 @@ const FactionPanels = {
             });
         });
 
-        document.getElementById('faction-rank-save')?.addEventListener('click', () => {
-            this.saveRankNames();
+        $('#faction-rank-save')?.addEventListener('click', () => this.saveRankNames());
+        $('#faction-manage-promote')?.addEventListener('click', () => this.manageSelected('rankDelta', 1));
+        $('#faction-manage-demote')?.addEventListener('click', () => this.manageSelected('rankDelta', -1));
+        $('#faction-manage-kick')?.addEventListener('click', () => this.manageSelected('kick', 'online'));
+
+        $('#faction-directory-modal-close')?.addEventListener('click', () => this.closeDirectoryModal());
+        $('#faction-directory-modal')?.addEventListener('click', (e) => {
+            if (e.target?.id === 'faction-directory-modal') this.closeDirectoryModal();
         });
 
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             const panelOpen = !$('#faction-panel')?.classList.contains('hidden');
             const dirOpen = !$('#faction-directory')?.classList.contains('hidden');
-            if (panelOpen || dirOpen) {
-                event.preventDefault();
-                post('factionPanelsClose');
+            if (!panelOpen && !dirOpen) return;
+            event.preventDefault();
+            if (dirOpen && this.dirModalOpen) {
+                this.closeDirectoryModal();
+                return;
             }
+            post('factionPanelsClose');
         });
     },
 
@@ -52,7 +68,7 @@ const FactionPanels = {
         $('#faction-panel')?.classList.add('hidden');
         $('#faction-directory')?.classList.add('hidden');
         this.setBodyOpen(false);
-        this.closeDirectoryDetail();
+        this.closeDirectoryModal();
     },
 
     setTab(tabId) {
@@ -62,6 +78,31 @@ const FactionPanels = {
         document.querySelectorAll('[data-faction-panel]').forEach((panel) => {
             panel.classList.toggle('is-active', panel.dataset.factionPanel === tabId);
         });
+    },
+
+    formatMoney(amount) {
+        return `$${Number(amount || 0).toLocaleString('en-US')}`;
+    },
+
+    factionCategory(faction) {
+        if (faction?.type === 'illegal') return 'illegal';
+        const ft = String(faction?.factionType || '');
+        if (['transport', 'mechanic', 'education'].includes(ft)) return 'service';
+        if (['law_enforcement', 'ems', 'fire_rescue'].includes(ft)) return 'legal';
+        return faction?.type === 'legal' ? 'legal' : 'service';
+    },
+
+    factionTypeLabel(faction) {
+        const map = {
+            law_enforcement: 'Departament Public',
+            ems: 'Serviciu Medical',
+            fire_rescue: 'Pompieri / Salvare',
+            transport: 'Transport',
+            mechanic: 'Mecanici / Tuning',
+            education: 'Educație / Licențe',
+            criminal_org: 'Organizație Criminală',
+        };
+        return map[faction?.factionType] || String(faction?.factionType || 'Organizație').replaceAll('_', ' ');
     },
 
     renderCommands(commands) {
@@ -74,7 +115,7 @@ const FactionPanels = {
             list.appendChild(li);
         });
         if (!list.children.length) {
-            list.innerHTML = '<li class="faction-empty">No special commands for your rank.</li>';
+            list.innerHTML = '<li class="premium-faction__empty">No special commands for your rank.</li>';
         }
     },
 
@@ -87,20 +128,22 @@ const FactionPanels = {
         form.innerHTML = '';
         (grades || []).forEach((row) => {
             const field = document.createElement('label');
-            field.className = 'faction-rank-field';
+            field.className = 'premium-faction__rank-field';
             field.innerHTML = `
                 <span>Grade ${row.grade}</span>
-                <input type="text" data-grade="${row.grade}" maxlength="64" value="${this.escape(row.label || '')}" placeholder="${this.escape(row.defaultLabel || '')}">
+                <input class="premium-faction__form-control" type="text" data-grade="${row.grade}" maxlength="64" value="${this.escape(row.label || '')}" placeholder="${this.escape(row.defaultLabel || '')}">
             `;
             form.appendChild(field);
         });
     },
 
     updateManageForms(perms, data) {
-        document.querySelector('.faction-tab--manage')?.classList.toggle('hidden', !(
+        const manageTab = document.querySelector('[data-faction-tab="manage"]');
+        const showManage = Boolean(
             perms.invite || perms.motd || perms.warn || perms.renameRanks
             || perms.rankMembers || perms.kickMembers
-        ));
+        );
+        manageTab?.classList.toggle('hidden', !showManage);
 
         document.querySelectorAll('[data-faction-action]').forEach((form) => {
             const action = form.dataset.factionAction;
@@ -109,12 +152,47 @@ const FactionPanels = {
             else if (action === 'motd') allowed = perms.motd;
             else if (action === 'warn') allowed = perms.warn;
             else allowed = true;
-            form.classList.toggle('hidden', !allowed);
+            form.closest('.premium-faction__panel')?.classList.toggle('hidden', !allowed);
         });
 
         const motdForm = document.querySelector('[data-faction-action="motd"]');
         const motdInput = motdForm?.querySelector('[name="message"]');
         if (motdInput && data?.motd) motdInput.value = data.motd;
+
+        const promoteBtn = $('#faction-manage-promote');
+        const demoteBtn = $('#faction-manage-demote');
+        const kickBtn = $('#faction-manage-kick');
+        const memberPanel = promoteBtn?.closest('.premium-faction__panel');
+        if (memberPanel) memberPanel.classList.toggle('hidden', !(perms.rankMembers || perms.kickMembers));
+        if (promoteBtn) promoteBtn.disabled = !perms.rankMembers;
+        if (demoteBtn) demoteBtn.disabled = !perms.rankMembers;
+        if (kickBtn) kickBtn.disabled = !perms.kickMembers;
+    },
+
+    populateManageSelect(members, viewerCharacterId) {
+        const select = $('#faction-manage-select');
+        if (!select) return;
+        select.innerHTML = '<option value="" disabled selected>Alege un membru...</option>';
+        (members || []).forEach((member) => {
+            if (Number(member.characterId) === Number(viewerCharacterId)) return;
+            const opt = document.createElement('option');
+            opt.value = String(member.characterId);
+            opt.textContent = `${member.name} (${member.gradeLabel || 'Member'})`;
+            select.appendChild(opt);
+        });
+    },
+
+    manageSelected(action, payload) {
+        const select = $('#faction-manage-select');
+        const characterId = Number(select?.value);
+        if (!characterId) {
+            return notify('Te rog selectează un membru mai întâi!', 'error');
+        }
+        if (action === 'rankDelta') {
+            this.postAction('rankDelta', { characterId, delta: payload });
+        } else if (action === 'kick') {
+            this.postAction('kick', { characterId, mode: payload });
+        }
     },
 
     renderRoster(members, permissions, viewerCharacterId) {
@@ -129,36 +207,35 @@ const FactionPanels = {
 
         (members || []).forEach((member) => {
             const row = document.createElement('article');
-            row.className = `faction-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}`;
-            const identity = document.createElement('div');
-            identity.className = 'faction-member__identity';
-            const name = document.createElement('strong');
-            name.textContent = member.name || `CID ${member.characterId || '?'}`;
-            const rank = document.createElement('span');
-            rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${member.warns ? ` · ${member.warns}/3 FW` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
-            identity.append(name, rank);
+            row.className = 'premium-faction__roster-item';
 
-            const state = document.createElement('div');
-            state.className = 'faction-member__state';
-            const badge = document.createElement('span');
-            badge.className = 'org-member-badge';
-            if (member.leader) {
-                badge.classList.add('is-leader');
-                badge.textContent = 'LEADER';
-            } else if (member.onDuty) {
-                badge.classList.add('is-duty');
-                badge.textContent = 'ON SHIFT';
-            } else if (member.online) {
-                badge.classList.add('is-online');
-                badge.textContent = 'ONLINE';
-            } else {
-                badge.classList.add('is-offline');
-                badge.textContent = 'OFFLINE';
-            }
-            state.appendChild(badge);
+            const info = document.createElement('div');
+            info.className = 'premium-faction__roster-info';
+
+            const dot = document.createElement('div');
+            dot.className = `premium-faction__status-dot ${member.online ? 'is-online' : 'is-offline'}`;
+            dot.title = member.online ? 'Online' : 'Offline';
+
+            const text = document.createElement('div');
+            const name = document.createElement('div');
+            name.className = 'premium-faction__member-name';
+            name.textContent = member.name || `CID ${member.characterId || '?'}`;
+            const rank = document.createElement('div');
+            rank.className = 'premium-faction__member-rank';
+            const extras = [];
+            if (member.leader) extras.push('LEADER');
+            if (member.onDuty) extras.push('ON SHIFT');
+            if (member.warns) extras.push(`${member.warns}/3 FW`);
+            rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${extras.length ? ` · ${extras.join(' · ')}` : ''}`;
+            text.append(name, rank);
+            info.append(dot, text);
+
+            const idBadge = document.createElement('div');
+            idBadge.className = 'premium-faction__member-id';
+            idBadge.textContent = member.serverId ? `ID: ${member.serverId}` : `CID: ${member.characterId}`;
 
             const actions = document.createElement('div');
-            actions.className = 'faction-member__actions';
+            actions.className = 'premium-faction__member-actions';
             const isSelf = Number(member.characterId) === viewerId;
             const manageable = !isSelf && !member.leader && (canRank || canKick || canWarn);
             const lowerRank = Number(member.grade) < viewerGrade || Boolean(this.dashboard?.permissions?.leader);
@@ -166,111 +243,99 @@ const FactionPanels = {
             if (manageable && canRank && lowerRank) {
                 const up = document.createElement('button');
                 up.type = 'button';
-                up.className = 'faction-btn';
+                up.className = 'premium-faction__btn premium-faction__btn--secondary';
                 up.textContent = '▲';
-                up.title = 'Rank up';
                 up.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: 1 }));
                 const down = document.createElement('button');
                 down.type = 'button';
-                down.className = 'faction-btn';
+                down.className = 'premium-faction__btn premium-faction__btn--secondary';
                 down.textContent = '▼';
-                down.title = 'Rank down';
                 down.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: -1 }));
                 actions.append(up, down);
             }
             if (manageable && canKick && lowerRank) {
-                const kickFp = document.createElement('button');
-                kickFp.type = 'button';
-                kickFp.className = 'faction-btn is-danger';
-                kickFp.textContent = 'Kick +FP';
-                kickFp.title = 'Remove online member with faction punishment record';
-                kickFp.disabled = !member.online;
-                kickFp.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'with_fp' }));
-
                 const kick = document.createElement('button');
                 kick.type = 'button';
-                kick.className = 'faction-btn is-warn';
+                kick.className = 'premium-faction__btn premium-faction__btn--danger';
                 kick.textContent = 'Kick';
-                kick.title = 'Remove online member';
                 kick.disabled = !member.online;
                 kick.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'online' }));
-
-                const kickOff = document.createElement('button');
-                kickOff.type = 'button';
-                kickOff.className = 'faction-btn is-muted';
-                kickOff.textContent = 'Kick offline';
-                kickOff.title = 'Remove member from roster while offline';
-                kickOff.disabled = member.online;
-                kickOff.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'offline' }));
-
-                actions.append(kickFp, kick, kickOff);
+                actions.append(kick);
             }
             if (manageable && canWarn && lowerRank && member.online) {
                 const warn = document.createElement('button');
                 warn.type = 'button';
-                warn.className = 'faction-btn is-warn';
+                warn.className = 'premium-faction__btn premium-faction__btn--warn';
                 warn.textContent = 'FW';
-                warn.title = 'Faction warning (3/3 max)';
-                warn.addEventListener('click', () => {
-                    const reason = 'Faction disciplinary warning';
-                    this.postAction('warn', { characterId: member.characterId, reason });
-                });
+                warn.addEventListener('click', () => this.postAction('warn', { characterId: member.characterId, reason: 'Faction disciplinary warning' }));
                 actions.append(warn);
             }
 
-            row.append(identity, state, actions);
+            row.append(info, idBadge);
+            if (actions.children.length) row.appendChild(actions);
             roster.appendChild(row);
         });
-        if (!members?.length) roster.innerHTML = '<p class="faction-empty">No roster entries found.</p>';
+
+        if (!members?.length) {
+            roster.innerHTML = '<p class="premium-faction__empty">No roster entries found.</p>';
+        }
     },
 
     showDashboard(data = {}) {
         this.init();
-        $('#faction-directory')?.classList.add('hidden');
         this.dashboard = data;
+        $('#faction-directory')?.classList.add('hidden');
+
         const members = Array.isArray(data.members) ? data.members : [];
         const report = data.report || {};
         const perms = data.permissions || {};
         const current = Math.max(0, Number(report.current) || 0);
         const target = Math.max(0, Number(report.target) || 0);
         const percent = target > 0 ? Math.min(100, (current / target) * 100) : 100;
+        const online = members.filter((m) => m.online).length;
 
         const title = $('#faction-panel-title');
-        if (title) {
-            const label = data.label || 'Faction';
-            title.innerHTML = `${this.escape(label)} <span>CONTROL</span>`;
-        }
+        if (title) title.textContent = data.label || 'Facțiune';
+        const typeEl = $('#faction-panel-type');
+        if (typeEl) typeEl.textContent = this.factionTypeLabel(data);
 
         $('#faction-rank').textContent = `${data.gradeLabel || 'Member'}${data.leader ? ' · COMMAND' : ''}`;
-        $('#faction-duty').textContent = data.onDuty ? 'ON SHIFT' : 'OFF SHIFT';
-        $('#faction-duty').classList.toggle('is-active', Boolean(data.onDuty));
-        $('#faction-salary').textContent = `$${Number(data.salary || 0).toLocaleString()}/HR`;
+        $('#faction-online-count').textContent = String(online);
         $('#faction-member-count').textContent = String(members.length);
+
+        const dutyEl = $('#faction-duty');
+        if (dutyEl) {
+            dutyEl.textContent = data.onDuty ? 'ON SHIFT' : 'OFF SHIFT';
+            dutyEl.className = data.onDuty ? 'is-duty' : 'is-off';
+        }
+        $('#faction-salary').textContent = `$${Number(data.salary || 0).toLocaleString()}/HR`;
         $('#faction-motd').textContent = data.motd || 'No MOTD posted. Leaders use /fmotd.';
         $('#faction-description').textContent = data.description || 'No department intel on file.';
         $('#faction-depot').textContent = `Motor pool: ${data.depot || 'Not configured'}`;
         $('#faction-report-value').textContent = target > 0 ? `${current} / ${target} ops` : `${current} ops logged`;
-        $('#faction-report-bar').style.width = `${percent}%`;
+        const reportBar = $('#faction-report-bar');
+        if (reportBar) reportBar.style.width = `${percent}%`;
+
+        const bankCard = $('#faction-bank-card');
+        const bankVal = $('#faction-society-bank');
+        if (data.societyBalance !== undefined && data.societyBalance !== null) {
+            bankCard?.classList.remove('hidden');
+            if (bankVal) bankVal.textContent = this.formatMoney(data.societyBalance);
+        } else {
+            bankCard?.classList.add('hidden');
+        }
 
         const rosterMeta = $('#faction-roster-meta');
         if (rosterMeta) {
-            const online = members.filter((m) => m.online).length;
             const onDuty = members.filter((m) => m.onDuty).length;
-            rosterMeta.textContent = `${online} online · ${onDuty} on shift`;
+            rosterMeta.textContent = `${online} online · ${onDuty} on shift · ${members.length} total`;
         }
-
-        const toolbar = $('#faction-roster-toolbar');
-        toolbar?.classList.add('hidden');
 
         this.renderRoster(members, perms, data.viewerCharacterId);
         this.renderCommands(data.commands);
         this.renderRankEditor(data.grades, perms.renameRanks);
         this.updateManageForms(perms, data);
-
-        document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
-            tab.classList.remove('hidden');
-        });
-        this._browseLoaded = Boolean(this.directory?.length);
+        this.populateManageSelect(members, data.viewerCharacterId);
 
         this.setTab('overview');
         $('#faction-panel')?.classList.remove('hidden');
@@ -280,132 +345,147 @@ const FactionPanels = {
     showDirectory(payload = {}) {
         this.init();
         this.directory = Array.isArray(payload.factions) ? payload.factions : [];
-        this.closeDirectoryDetail();
-        this.renderDirectoryCards($('#faction-browse-list'));
+        this.dirFilter = 'all';
+        this.closeDirectoryModal();
 
-        const panel = $('#faction-panel');
-        const panelWasHidden = panel?.classList.contains('hidden');
-        if (panelWasHidden && !this.dashboard) {
-            document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
-                tab.classList.toggle('hidden', tab.dataset.factionTab !== 'browse');
-            });
-            const title = $('#faction-panel-title');
-            if (title) title.innerHTML = 'SERVER <span>FACTIONS</span>';
-        } else {
-            document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
-                tab.classList.remove('hidden');
+        $('#faction-panel')?.classList.add('hidden');
+        $('#faction-directory')?.classList.remove('hidden');
+        this.setDirectoryFilter('all', false);
+        this.setBodyOpen(true);
+    },
+
+    setDirectoryFilter(filter, updateNav = true) {
+        this.dirFilter = filter || 'all';
+        if (updateNav) {
+            document.querySelectorAll('[data-faction-filter]').forEach((btn) => {
+                btn.classList.toggle('is-active', btn.dataset.factionFilter === this.dirFilter);
             });
         }
-
-        panel?.classList.remove('hidden');
-        $('#faction-directory')?.classList.add('hidden');
-        this.setTab('browse');
-        this.setBodyOpen(true);
-        this._browseLoaded = true;
+        const title = $('#faction-dir-title');
+        if (title) title.textContent = FACTION_FILTER_TITLES[this.dirFilter] || FACTION_FILTER_TITLES.all;
+        this.renderDirectoryCards();
     },
 
-    requestBrowse() {
-        if (this._browseLoading) return;
-        const list = $('#faction-browse-list');
-        if (!list) return;
-        if (this._browseLoaded && this.directory?.length) return;
-        this._browseLoading = true;
-        list.innerHTML = '<p class="faction-empty">Loading factions...</p>';
-        post('factionBrowse');
-    },
-
-    showBrowseInline(payload = {}) {
-        this._browseLoading = false;
-        this._browseLoaded = true;
-        this.directory = Array.isArray(payload.factions) ? payload.factions : [];
-        this.closeDirectoryDetail();
-        this.renderDirectoryCards($('#faction-browse-list'));
-        this.setTab('browse');
-    },
-
-    renderDirectoryCards(listEl) {
-        const list = listEl || $('#faction-browse-list');
+    renderDirectoryCards() {
+        const list = $('#faction-directory-list');
         if (!list) return;
         list.innerHTML = '';
 
-        this.directory.forEach((faction) => {
+        const filtered = this.directory.filter((faction) => {
+            if (this.dirFilter === 'all') return true;
+            return this.factionCategory(faction) === this.dirFilter;
+        });
+
+        filtered.forEach((faction) => {
+            const cat = this.factionCategory(faction);
             const card = document.createElement('button');
             card.type = 'button';
-            card.className = `org-directory-row faction-directory-card faction-directory-card--${faction.type === 'illegal' ? 'illegal' : 'legal'}`;
+            card.className = 'premium-factions-dir__card';
             card.dataset.factionId = faction.id || '';
+
             const marker = Array.isArray(faction.marker) ? faction.marker : null;
             if (marker && marker.length >= 3) {
-                card.style.setProperty('--faction-accent', `rgb(${marker[0]}, ${marker[1]}, ${marker[2]})`);
+                card.style.setProperty('--pf-card-accent', `rgb(${marker[0]}, ${marker[1]}, ${marker[2]})`);
             }
 
-            const main = document.createElement('div');
-            main.className = 'org-directory-row__main';
-            const name = document.createElement('strong');
-            name.textContent = faction.label || faction.id;
-            const category = document.createElement('span');
-            category.textContent = String(faction.factionType || faction.type || 'organization').replaceAll('_', ' ');
-            const description = document.createElement('p');
-            description.textContent = faction.description || 'No public intel.';
-            main.append(name, category, description);
-
-            const stats = document.createElement('div');
-            stats.className = 'org-directory-row__stats';
-            const status = document.createElement('em');
-            status.className = faction.applicationsOpen ? 'is-open' : 'is-closed';
-            status.textContent = faction.applicationsOpen ? 'RECRUITING' : 'CLOSED';
-            const online = document.createElement('b');
             const leaders = Array.isArray(faction.leaders) && faction.leaders.length ? faction.leaders[0] : 'Vacant';
-            online.textContent = `${faction.online || 0}/${faction.total || 0}`;
-            const leader = document.createElement('em');
-            leader.textContent = leaders;
-            stats.append(status, online, leader);
+            const recruitClass = faction.applicationsOpen ? 'is-open' : 'is-closed';
+            const recruitLabel = faction.applicationsOpen ? 'Recrutări Deschise' : 'Recrutări Închise';
 
-            card.append(main, stats);
-            card.addEventListener('click', () => this.openDirectoryDetail(faction, card));
+            card.innerHTML = `
+                <div class="premium-factions-dir__card-head">
+                    <div class="premium-factions-dir__card-icon">${FACTION_ICONS[cat] || FACTION_ICONS.service}</div>
+                    <div>
+                        <div class="premium-factions-dir__card-name">${this.escape(faction.label || faction.id)}</div>
+                        <div class="premium-factions-dir__card-type">${this.escape(this.factionTypeLabel(faction))}</div>
+                    </div>
+                </div>
+                <div class="premium-factions-dir__card-stats">
+                    <div class="premium-factions-dir__stat-row"><span>Lider:</span><b>${this.escape(leaders)}</b></div>
+                    <div class="premium-factions-dir__stat-row"><span>Membri:</span><b><span class="highlight">${Number(faction.online) || 0}</span> / ${Number(faction.total) || 0}</b></div>
+                </div>
+                <div class="premium-factions-dir__recruit ${recruitClass}"><div class="dot"></div>${recruitLabel}</div>
+            `;
+
+            card.addEventListener('click', () => this.openDirectoryModal(faction));
             list.appendChild(card);
         });
 
-        if (!list.children.length) list.innerHTML = '<p class="faction-empty">No factions are configured.</p>';
+        if (!list.children.length) {
+            list.innerHTML = '<p class="premium-factions-dir__empty">No factions in this category.</p>';
+        }
     },
 
-    closeDirectoryDetail() {
-        $('#faction-browse-detail')?.classList.add('hidden');
-        $('#faction-browse-layout')?.classList.remove('is-detail-open', 'has-detail');
-        document.querySelectorAll('.faction-directory-card.is-selected').forEach((el) => {
-            el.classList.remove('is-selected');
-        });
+    openDirectoryModal(faction) {
+        const modal = $('#faction-directory-modal');
+        if (!modal || !faction) return;
+        this.dirModalOpen = true;
+        modal.classList.add('is-open');
+
+        const cat = this.factionCategory(faction);
+        const icon = $('#faction-dir-modal-icon');
+        if (icon) icon.innerHTML = FACTION_ICONS[cat] || FACTION_ICONS.service;
+        $('#faction-dir-modal-title').textContent = faction.label || faction.id;
+        $('#faction-dir-modal-desc').textContent = faction.description || 'No public intel.';
+        $('#faction-dir-modal-motd').textContent = 'Se încarcă...';
+        $('#faction-dir-modal-leaders').innerHTML = '<li>Se încarcă...</li>';
+        $('#faction-dir-modal-roster').innerHTML = '<p class="premium-factions-dir__empty">Se încarcă...</p>';
+        $('#faction-dir-modal-recruit').innerHTML = `<li>${this.escape(faction.applicationLabel || '—')}</li>`;
+
+        post('factionDirectoryDetail', { factionId: faction.id });
     },
 
-    openDirectoryDetail(faction, cardEl) {
-        const layout = $('#faction-browse-layout');
-        const detail = $('#faction-browse-detail');
-        const body = detail?.querySelector('.faction-detail__body');
-        if (!layout || !detail || !body) return;
+    showDirectoryDetail(detail = {}) {
+        if (detail.error) {
+            $('#faction-dir-modal-motd').textContent = detail.error;
+            return;
+        }
 
-        document.querySelectorAll('.faction-directory-card.is-selected').forEach((el) => {
-            el.classList.remove('is-selected');
-        });
-        cardEl?.classList.add('is-selected');
+        $('#faction-dir-modal-motd').textContent = detail.motd || 'Niciun MOTD publicat.';
+        const leaders = $('#faction-dir-modal-leaders');
+        if (leaders) {
+            leaders.innerHTML = '';
+            const list = Array.isArray(detail.leaders) && detail.leaders.length ? detail.leaders : ['Vacant'];
+            list.forEach((name) => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                leaders.appendChild(li);
+            });
+        }
 
-        const leaders = Array.isArray(faction.leaders) && faction.leaders.length ? faction.leaders.join(', ') : 'Vacant';
-        const typeLabel = String(faction.factionType || faction.type || 'organization').replaceAll('_', ' ').toUpperCase();
+        const roster = $('#faction-dir-modal-roster');
+        if (roster) {
+            roster.innerHTML = '';
+            (detail.members || []).forEach((m) => {
+                const row = document.createElement('div');
+                row.className = 'premium-factions-dir__modal-member';
+                row.innerHTML = `<strong>${this.escape(m.name)}</strong><span>${this.escape(m.rank || '')}${m.online ? ' · ONLINE' : ''}${m.leader ? ' · LEADER' : ''}</span>`;
+                roster.appendChild(row);
+            });
+            if (!roster.children.length) {
+                roster.innerHTML = '<p class="premium-factions-dir__empty">Niciun membru înregistrat.</p>';
+            }
+        }
 
-        body.innerHTML = `
-            <h3>${this.escape(faction.label || faction.id)}</h3>
-            <div class="faction-detail__type">${this.escape(typeLabel)}</div>
-            <span class="faction-detail__status${faction.applicationsOpen ? ' is-open' : ''}">${this.escape(faction.applicationLabel || 'Applications closed')}</span>
-            <div class="faction-detail__stats">
-                <div class="faction-detail__stat"><strong>${Number(faction.online) || 0}</strong><span>Online</span></div>
-                <div class="faction-detail__stat"><strong>${Number(faction.total) || 0}</strong><span>Members</span></div>
-                <div class="faction-detail__stat"><strong>${Number(faction.onDuty) || 0}</strong><span>On duty</span></div>
-            </div>
-            <div class="faction-detail__block"><span>Unit intel</span><p>${this.escape(faction.description || 'No public intel.')}</p></div>
-            <div class="faction-detail__block"><span>Command</span><p>${this.escape(leaders)}</p></div>
-            <div class="faction-detail__block"><span>Recruitment</span><p>${faction.type === 'illegal' ? 'Invite only — contact leadership in character.' : (faction.applicationsOpen ? 'Recruiting — get invited in-game after approval.' : 'Not recruiting — leadership invites only.')}</p></div>
-        `;
+        const recruit = $('#faction-dir-modal-recruit');
+        if (recruit) {
+            recruit.innerHTML = '';
+            const li = document.createElement('li');
+            li.textContent = detail.type === 'illegal'
+                ? 'Invite only — contact leadership in character.'
+                : (detail.applicationsOpen ? 'Recruiting — apply on Discord/site, leaders invite in-game.' : 'Not recruiting — leadership invites only.');
+            recruit.appendChild(li);
+        }
+    },
 
-        layout.classList.add('has-detail', 'is-detail-open');
-        detail.classList.remove('hidden');
+    closeDirectoryModal() {
+        this.dirModalOpen = false;
+        $('#faction-directory-modal')?.classList.remove('is-open');
+    },
+
+    showBrowseInline(payload = {}) {
+        this.directory = Array.isArray(payload.factions) ? payload.factions : [];
+        this.showDirectory({ factions: this.directory });
     },
 
     postAction(action, payload) {

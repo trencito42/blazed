@@ -91,6 +91,10 @@ local function quitCivilianJob(source, reason)
     if SunsetJobs_ClearSession then
         SunsetJobs_ClearSession(source, 'CANCELLED', reason or 'Civilian job resigned')
     end
+    if GetResourceState('sunset_jobcreator') == 'started' then
+        pcall(function() exports.sunset_jobcreator:CancelJob(source) end)
+    end
+    TriggerClientEvent('sunset:jobs:forceClearHud', source)
     if not exports.sunset_core:SetJob(source, 'unemployed', 0) then
         return nil, 'Could not clear your civilian job — try again after ending your current shift.'
     end
@@ -133,6 +137,10 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
         if SunsetJobs_ClearSession then
             SunsetJobs_ClearSession(source, 'CANCELLED', 'Changed civilian job')
         end
+        if GetResourceState('sunset_jobcreator') == 'started' then
+            pcall(function() exports.sunset_jobcreator:CancelJob(source) end)
+        end
+        TriggerClientEvent('sunset:jobs:forceClearHud', source)
         local current = Sunset.CivilianJobs[currentJob]
         exports.sunset_core:CommandReply(source,
             ('Left %s.'):format(current and current.label or currentJob), 'info')

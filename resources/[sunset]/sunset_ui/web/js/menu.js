@@ -471,6 +471,10 @@ const Menu = {
 
         $('#menu-name').textContent = (data.name || '—').toUpperCase();
         $('#menu-id').textContent = `ID: ${Number(data.id) || 0}`;
+        const jobLabel = $('#menu-job-label');
+        if (jobLabel) {
+            jobLabel.textContent = data.factionLabel || data.job || 'Unemployed';
+        }
         const cidEl = $('#menu-cid');
         if (cidEl) cidEl.textContent = data.cid ? ('CID: ' + data.cid) : 'CID: —';
         $('#menu-rank').textContent = data.rank || 'PLAYER';
