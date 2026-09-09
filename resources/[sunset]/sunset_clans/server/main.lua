@@ -618,10 +618,10 @@ local function handleClanManage(source, payload)
             invitedBy = source,
         }
         notify(targetId, ('Clan invite from %s [%s]. Use /acceptclan or /declineclan.'):format(row.name, row.tag), 'info', 12000)
-        audit(row.clan_id, cid, 'invite', { targetCharacterId = targetCid, targetId = targetId })
+        safeAudit(row.clan_id, cid, 'invite', { targetCharacterId = targetCid, targetId = targetId })
         safeBroadcast(row.clan_id, source,
             ('invited %s to join the clan.'):format(exports.sunset_core:GetPlayerDisplayName(targetId)))
-        return dashboardPayload(source, row, cid)
+        return clanManageDashboard(source, cid)
     end
 
     if action == 'kick' then
@@ -647,8 +647,8 @@ local function handleClanManage(source, payload)
         MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { row.clan_id, targetCid })
         ClanDisplay.sync(targetId)
         notify(targetId, ('You were removed from %s.'):format(row.name), 'warning')
-        audit(row.clan_id, cid, 'kick', { targetCharacterId = targetCid })
-        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+        safeAudit(row.clan_id, cid, 'kick', { targetCharacterId = targetCid })
+        return clanManageDashboard(source, cid)
     end
 
     local function resolveTarget(payload)
@@ -694,13 +694,13 @@ local function handleClanManage(source, payload)
         local labels = clanRankLabels(row)
         notify(targetId, ('Your clan rank is now %s (rank %d).'):format(
             SunsetClans.getRankLabel(labels, nextRank), nextRank), 'info')
-        audit(row.clan_id, cid, action, { targetCharacterId = targetCid, rank = nextRank })
+        safeAudit(row.clan_id, cid, action, { targetCharacterId = targetCid, rank = nextRank })
         local verb = action == 'rankUp' and 'promoted' or 'demoted'
         safeBroadcast(row.clan_id, source,
             ('%s %s to %s (rank %d).'):format(
                 verb, playerName(targetCid), SunsetClans.getRankLabel(labels, nextRank), nextRank))
         syncClanMembers(row.clan_id)
-        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+        return clanManageDashboard(source, cid)
     end
 
     if action == 'warn' then
@@ -725,19 +725,19 @@ local function handleClanManage(source, payload)
             })
             ClanDisplay.sync(targetId)
             notify(targetId, ('Clan warning 3/3 — removed from %s: %s'):format(row.name, reason), 'error', 10000)
-            audit(row.clan_id, cid, 'warn_kick', { targetCharacterId = targetCid, reason = reason })
+            safeAudit(row.clan_id, cid, 'warn_kick', { targetCharacterId = targetCid, reason = reason })
         else
             MySQL.update.await('UPDATE clan_members SET warns = ? WHERE clan_id = ? AND character_id = ?', {
                 nextWarns, row.clan_id, targetCid,
             })
             notify(targetId, ('Clan warning %d/3: %s'):format(nextWarns, reason), 'warning', 8000)
-            audit(row.clan_id, cid, 'warn', { targetCharacterId = targetCid, reason = reason, warns = nextWarns })
+            safeAudit(row.clan_id, cid, 'warn', { targetCharacterId = targetCid, reason = reason, warns = nextWarns })
             safeBroadcast(row.clan_id, source,
                 ('issued a clan warning (%d/3) to %s: %s'):format(nextWarns, playerName(targetCid), reason))
         end
         notify(source, ('Warning issued (%d/3): %s'):format(math.min(nextWarns, SunsetClans.MaxWarns), reason), 'success')
         syncClanMembers(row.clan_id)
-        return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+        return clanManageDashboard(source, cid)
     end
 
     if action == 'rankLabels' then
@@ -765,7 +765,7 @@ local function handleClanManage(source, payload)
         if isLeader(row, cid) then
             return nil, 'Leaders must dissolve the clan or transfer leadership before leaving.'
         end
-        audit(row.clan_id, cid, 'leave', {})
+        safeAudit(row.clan_id, cid, 'leave', {})
         safeBroadcast(row.clan_id, source, 'left the clan.')
         MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { row.clan_id, cid })
         ClanDisplay.sync(source)
@@ -775,7 +775,7 @@ local function handleClanManage(source, payload)
     if action == 'dissolve' then
         if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can dissolve the clan.' end
         local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { row.clan_id }) or {}
-        audit(row.clan_id, cid, 'dissolve', {})
+        safeAudit(row.clan_id, cid, 'dissolve', {})
         safeBroadcast(row.clan_id, source, 'dissolved the clan.')
         MySQL.update.await('DELETE FROM clans WHERE id = ?', { row.clan_id })
         for _, member in ipairs(members) do
@@ -838,9 +838,9 @@ local function acceptInvite(source)
     MySQL.update.await('DELETE FROM clan_invites WHERE clan_id = ? AND character_id = ?', { invite.clan_id, cid })
     PendingInvites[source] = nil
     ClanDisplay.sync(source)
-    audit(invite.clan_id, cid, 'join', {})
+    safeAudit(invite.clan_id, cid, 'join', {})
     safeBroadcast(invite.clan_id, source, 'joined the clan.')
-    return dashboardPayload(source, ClanDisplay.getMembership(cid), cid)
+    return clanManageDashboard(source, cid)
 end
 
 exports.sunset_core:RegisterCallback('sunset:clanAcceptInvite', function(source)

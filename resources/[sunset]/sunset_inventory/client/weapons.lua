@@ -49,7 +49,8 @@ local function hasWeaponLicense()
                 pcall(function() char = exports.sunset_core:GetCharacter() end)
             end
             if char then
-                local factionId = select(1, Sunset.GetCharacterFaction(char))
+                local factionId = (Sunset.GetCharacterFaction and select(1, Sunset.GetCharacterFaction(char)))
+                    or tonumber(char.faction_id) or tonumber(char.faction)
                 if Sunset.FactionTypeMatches and Sunset.FactionTypeMatches(factionId, 'law_enforcement') then
                     return true
                 end
