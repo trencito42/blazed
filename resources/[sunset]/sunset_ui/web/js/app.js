@@ -231,6 +231,7 @@ window.addEventListener('message', (event) => {
             showApp(true);
             showHud(false);
             App.data = data || {};
+            if (screen !== 'menu' && window.Menu) Menu.hide();
             if (screen === 'auth') {
                 showScreen('auth');
                 if (window.Panels) Panels.showAuth(data || {});

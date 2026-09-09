@@ -727,3 +727,9 @@
         justify-content: flex-start;
     }
 }
+
+/* Must beat the display:flex rules above — .hidden alone loses on specificity */
+#menu.menu.hidden:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) {
+    display: none !important;
+    pointer-events: none !important;
+}
