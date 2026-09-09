@@ -39,7 +39,7 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: #070504 url('../assets/bg.webp?v=5') center / cover no-repeat;
+    background: #070504 url('../assets/bg.webp?v=6') center / cover no-repeat;
     opacity: 1;
     filter: blur(0);
     transform: scale(1);
@@ -239,10 +239,10 @@ body.fuel-pump-open #job-objective {
 
 .panel-logo {
     display: block;
-    width: 160px;
-    max-width: min(160px, 42vw);
+    width: 120px;
+    max-width: min(120px, 36vw);
     height: auto;
-    max-height: 66px;
+    max-height: 120px;
     object-fit: contain;
     margin-bottom: 24px;
 }

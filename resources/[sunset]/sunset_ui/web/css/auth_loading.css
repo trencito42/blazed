@@ -86,10 +86,10 @@
 
 .auth-brand__logo {
     display: block;
-    width: 200px;
-    max-width: min(200px, 62vw);
+    width: 140px;
+    max-width: min(140px, 48vw);
     height: auto;
-    max-height: 82px;
+    max-height: 140px;
     object-fit: contain;
     object-position: center;
     margin: 0 auto 16px;

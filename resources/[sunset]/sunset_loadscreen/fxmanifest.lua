@@ -4,7 +4,7 @@ game 'gta5'
 name 'sunset_loadscreen'
 author 'SunsetMP'
 description 'Custom loading screen'
-version '1.3.0'
+version '1.3.1'
 
 loadscreen 'index.html'
 loadscreen_manual_shutdown 'yes'
@@ -18,5 +18,5 @@ files {
     'assets/bg.png',
     'assets/bg.webp',
     'assets/bg_login.png',
-    'assets/logo.png',
+    'assets/logoblaze.svg',
 }

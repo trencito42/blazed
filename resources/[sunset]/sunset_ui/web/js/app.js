@@ -18,11 +18,11 @@ function post(action, data = {}) {
 }
 
 const ENTRY_BACKGROUNDS = {
-    auth: 'assets/bg_login.webp?v=5',
-    handoff: 'assets/bg.webp?v=5',
-    loading: 'assets/bg.webp?v=5',
-    spawn: 'assets/bg.webp?v=5',
-    default: 'assets/bg.webp?v=5',
+    auth: 'assets/bg_login.webp?v=6',
+    handoff: 'assets/bg.webp?v=6',
+    loading: 'assets/bg.webp?v=6',
+    spawn: 'assets/bg.webp?v=6',
+    default: 'assets/bg.webp?v=6',
 };
 let entryBackgroundRequest = 0;
 
@@ -85,17 +85,7 @@ function preloadEntryBackgrounds() {
 
 function setBrandLogo(img) {
     if (!img) return;
-    const candidates = ['assets/logo.png?v=4', 'assets/logo.webp?v=4'];
-    let index = 0;
-    const tryNext = () => {
-        if (index >= candidates.length) return;
-        img.onerror = () => {
-            index += 1;
-            tryNext();
-        };
-        img.src = candidates[index];
-    };
-    tryNext();
+    img.src = 'assets/logoblaze.svg?v=1';
 }
 
 function showScreen(name) {
@@ -934,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cash: 106209, bank: 5316, premium: 0, playtime: '39H 41M',
             lastLogin: 'TODAY', health: 100, armor: 0, hunger: 82, thirst: 74,
             stress: 6, vehicleCount: 1, propertyCount: 0, homeLabel: 'None',
-            avatar: 'assets/logo.png?v=3', jobId: 'fisherman', job: 'Fisherman',
+            avatar: 'assets/logoblaze.svg?v=1', jobId: 'fisherman', job: 'Fisherman',
             jobGradeLabel: 'Angler', jobSalary: 120, completedTasks: 17,
             careerEarnings: 28400, combinedSkillLevels: 4,
         });
