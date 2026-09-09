@@ -496,3 +496,8 @@ Sunset.Jobs.EnsureFishermanShift = function()
     if not isFishermanShift() then return end
     applyShiftBlips(JC.sessionData)
 end
+
+-- Event triggerabil din alte resurse (ex. sunset_fishingshop NPC)
+AddEventHandler('sunset:client:startFishermanShift', function()
+    CreateThread(startFisherman)
+end)

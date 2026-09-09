@@ -91,8 +91,9 @@ CreateThread(function()
                     exports.sunset_ui:Send('playerInteractionShow', {
                         target  = { name = 'Billy Ray', id = '' },
                         actions = {
-                            { id = 'get_fisherman_job',  label = 'Devino Pescar',     group = 'CIVILIAN' },
-                            { id = 'upgrade_fishing_rod', label = 'Upgrade Undita',   group = 'FISHING'  },
+                            { id = 'get_fisherman_job',   label = 'Devino Pescar',   group = 'CIVILIAN' },
+                            { id = 'start_fishing_shift', label = 'Incepe Tura',     group = 'FISHING'  },
+                            { id = 'upgrade_fishing_rod', label = 'Upgrade Undita',  group = 'FISHING'  },
                         },
                     })
                 elseif nearSell then
@@ -129,10 +130,16 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         inCooldown = true
         local ok, err = Sunset.AwaitCallback('sunset:hireJob', 'fisherman')
         if ok then
-            exports.sunset_ui:Notify('Esti acum Pescar! Du-te la pontoon si foloseste /fish.', 'success', 8000)
+            exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
         else
             exports.sunset_ui:Notify(err or 'Nu a functionat angajarea.', 'error')
         end
+        SetTimeout(2000, function() inCooldown = false end)
+
+    elseif data.action == 'start_fishing_shift' then
+        inCooldown = true
+        -- Triggeruieste event-ul din sunset_jobs/client/fisherman.lua
+        TriggerEvent('sunset:client:startFishermanShift')
         SetTimeout(2000, function() inCooldown = false end)
 
     elseif data.action == 'upgrade_fishing_rod' then
