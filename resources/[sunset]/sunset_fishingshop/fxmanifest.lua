@@ -8,3 +8,4 @@ version '1.0.0'
 shared_scripts { '../../[sunset]/sunset_core/shared/utils.lua' }
 
 client_scripts { 'client/main.lua' }
+server_scripts { '@oxmysql/lib/MySQL.lua', 'server/main.lua' }

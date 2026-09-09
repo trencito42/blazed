@@ -20,17 +20,23 @@ Sunset.Items = {
     sealed_pouch = { label = 'Sealed Pouch', weight = 0.15, usable = true, stress = -15, category = 'supplies', icon = 'filled_evidence_bag' },
     shiv = { label = 'Shiv', weight = 0.3, usable = false, weapon = 'WEAPON_SWITCHBLADE', category = 'tools', icon = 'weapon_trigger' },
     gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxLiters = 20, category = 'tools', icon = 'jerry_can' },
-    fresh_fish = { label = 'Fresh Fish', weight = 1.0, usable = false, category = 'food', icon = 'cooked_fish' },
-    -- Fishing bait (consumabile la fiecare aruncare)
-    bait_worm    = { label = 'Worm Bait',     weight = 0.05, usable = false, category = 'fishing', icon = 'bread' },
-    bait_lure    = { label = 'Artificial Lure', weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
-    bait_premium = { label = 'Premium Bait',  weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
-    -- Undite (tradeable, bonusuri la valoare si timing, deblochiate dupa nivel fisherman)
-    fishing_rod_1 = { label = 'Fishing Rod Mk1', weight = 1.5, usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_2 = { label = 'Fishing Rod Mk2', weight = 1.5, usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_3 = { label = 'Fishing Rod Mk3', weight = 1.5, usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_4 = { label = 'Fishing Rod Mk4', weight = 1.5, usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_5 = { label = 'Fishing Rod Mk5', weight = 1.5, usable = false, category = 'fishing', icon = 'fishing_rod' },
+    fresh_fish    = { label = 'Fresh Fish',      weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    -- Typed fish (caught with new rarity system)
+    fish_common   = { label = 'Common Fish',     weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_uncommon = { label = 'Uncommon Fish',   weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_rare     = { label = 'Rare Fish',        weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_epic     = { label = 'Epic Fish',        weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_legendary = { label = 'Legendary Fish', weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    -- Fishing bait (consumabil la fiecare aruncare)
+    bait_worm    = { label = 'Worm Bait',         weight = 0.05, usable = false, category = 'fishing', icon = 'bread' },
+    bait_lure    = { label = 'Artificial Lure',   weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
+    bait_premium = { label = 'Premium Bait',      weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
+    -- Undita (upgrade sequential prin NPC, tradeable)
+    fishing_rod_1 = { label = 'Fishing Rod Mk1', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
+    fishing_rod_2 = { label = 'Fishing Rod Mk2', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
+    fishing_rod_3 = { label = 'Fishing Rod Mk3', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
+    fishing_rod_4 = { label = 'Fishing Rod Mk4', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
+    fishing_rod_5 = { label = 'Fishing Rod Mk5', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
     ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false, category = 'ammo', icon = 'pistol_ammo' },
     stolen_silver_watch = { label = 'Stolen Silver Watch', weight = 0.4, usable = false, category = 'misc', icon = 'backpack' },
     stolen_luxury_watch = { label = 'Stolen Luxury Watch', weight = 0.45, usable = false, category = 'misc', icon = 'backpack' },
@@ -47,17 +53,13 @@ Sunset.Shops = {
     fishing_supply = {
         label = 'Fishing Supply',
         coords = vector3(-1602.11, 5203.87, 4.31),
+        markerSize = 1.2,
         items = {
             -- Bait (disponibil tuturor pescarilor)
-            { item = 'bait_worm',     price = 15,   desc = '+10% valoare peste' },
-            { item = 'bait_lure',     price = 40,   desc = '+25% valoare peste' },
-            { item = 'bait_premium',  price = 90,   desc = '+45% valoare peste' },
-            -- Undite (deblocate dupa nivel fisherman, tradeable)
-            { item = 'fishing_rod_1', price = 200,  minFishLevel = 1,  desc = 'Undita de baza (+5% valoare, in inventar)' },
-            { item = 'fishing_rod_2', price = 500,  minFishLevel = 2,  desc = '+15% valoare, bite mai rapid' },
-            { item = 'fishing_rod_3', price = 1200, minFishLevel = 3,  desc = '+30% valoare, bite mult mai rapid' },
-            { item = 'fishing_rod_4', price = 2500, minFishLevel = 4,  desc = '+50% valoare, window mai larg' },
-            { item = 'fishing_rod_5', price = 5000, minFishLevel = 5,  desc = '+75% valoare, cel mai bun echipament' },
+            { item = 'bait_worm',    price = 15,  desc = 'Worm — sansa medie prindere' },
+            { item = 'bait_lure',    price = 40,  desc = 'Lure — sansa buna prindere' },
+            { item = 'bait_premium', price = 90,  desc = 'Premium — sansa maxima prindere' },
+            -- Unditele NU se cumpara din shop; se upgradeaza la NPC-ul Billy Ray
         },
     },
     twentyfour7 = {

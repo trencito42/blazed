@@ -73,13 +73,14 @@ local function drawPropertyLabel(prop, distance)
     ClearDrawOrigin()
 end
 
-local function drawMarkerAt(coords, r, g, b)
+local function drawMarkerAt(coords, r, g, b, size)
+    size = size or 1.9
     DrawMarker(
         1,
         coords.x, coords.y, coords.z - 0.98,
         0.0, 0.0, 0.0,
         0.0, 0.0, 0.0,
-        1.9, 1.9, 0.85,
+        size, size, 0.85,
         r, g, b, 185,
         false, false, 2, false, nil, nil, false
     )
@@ -97,7 +98,7 @@ local function addBlip(coords, preset, label, shortRange)
     return blip
 end
 
-local function registerZone(id, coords, radius, hint, markerColor, onInteract)
+local function registerZone(id, coords, radius, hint, markerColor, onInteract, markerSize)
     return {
         id = id,
         coords = coords,
@@ -105,6 +106,7 @@ local function registerZone(id, coords, radius, hint, markerColor, onInteract)
         hint = hint,
         markerColor = markerColor or { 255, 140, 0 },
         onInteract = onInteract,
+        markerSize = markerSize,
     }
 end
 
@@ -115,10 +117,10 @@ CreateThread(function()
 
     for id, shop in pairs(Sunset.Shops or {}) do
         addBlip(shop.coords, presets.shop or {}, shop.label, false)
-        zones[#zones + 1] = registerZone('shop:' .. id, shop.coords, 2.5,
+        zones[#zones + 1] = registerZone('shop:' .. id, shop.coords, shop.zoneRadius or 2.5,
             '[E] ' .. shop.label, { 46, 204, 113 }, function()
                 TriggerEvent('sunset:world:openShop', id, shop)
-            end)
+            end, shop.markerSize)
     end
 
     for i, atm in ipairs(Sunset.ATMs or {}) do
@@ -270,7 +272,7 @@ CreateThread(function()
         for _, zone in ipairs(zones) do
             if #(coords - zone.coords) < MARKER_DRAW_DIST then
                 anyNearby = true
-                drawMarkerAt(zone.coords, zone.markerColor[1], zone.markerColor[2], zone.markerColor[3])
+                drawMarkerAt(zone.coords, zone.markerColor[1], zone.markerColor[2], zone.markerColor[3], zone.markerSize)
             end
         end
 

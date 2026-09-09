@@ -307,6 +307,21 @@ local function attemptFish()
         return JC.notify(err or 'Could not cast', notifyType, 8000)
     end
 
+    -- Avertizare fara momeala
+    if (cast.baitTier or 0) == 0 then
+        JC.notify('No bait! Catch chance is low. Buy bait from Fishing Supply.', 'warning', 5000)
+    end
+
+    -- Animatie scurta de aruncare
+    local castDict = 'amb@world_human_stand_fishing@idle_a'
+    RequestAnimDict(castDict)
+    local dictTimer = GetGameTimer() + 3000
+    while not HasAnimDictLoaded(castDict) and GetGameTimer() < dictTimer do Wait(50) end
+    if HasAnimDictLoaded(castDict) then
+        TaskPlayAnim(PlayerPedId(), castDict, 'idle_a', 3.0, -3.0, 900, 0, 0, false, false, false)
+        Wait(800)
+    end
+
     equipRod()
     JC.playAnim('amb@world_human_stand_fishing@idle_a', 'idle_c', -1)
     showFishingState('waiting')
@@ -345,8 +360,9 @@ local function attemptFish()
             result, reelErr = Sunset.AwaitCallback('sunset:jobs:fisherman:reel', spotIdx, token)
             if result then
                 applyBagState(result.carried, result.capacity, result.pendingValue)
+                local fishLabel = (result.fishItem or 'fish'):gsub('fish_', ''):gsub('^%l', string.upper)
                 showFishingState('success', {
-                    message = ('You caught a fish worth $%s!'):format(result.value or 0),
+                    message = ('%s caught! $%s'):format(fishLabel, result.value or 0),
                     value = result.value,
                     carried = result.carried,
                     capacity = result.capacity,
@@ -375,8 +391,9 @@ local function attemptFish()
                 result.carried or 0, result.capacity or 2), 'success', 9000)
         else
             refreshSpotUi()
-            JC.notify(('Fresh Fish worth $%s added (%d/%d). Bag value: $%s. Press E to cast again.'):format(
-                result.value or 0, result.carried or 0, result.capacity or 2,
+            local fishLabel2 = ((result.fishItem or 'fish'):gsub('fish_', ''):gsub('^%l', string.upper))
+            JC.notify(('%s worth $%s (%d/%d). Bag: $%s. Press E to cast again.'):format(
+                fishLabel2, result.value or 0, result.carried or 0, result.capacity or 2,
                 result.pendingValue or result.value or 0), 'success', 7000)
         end
     else
