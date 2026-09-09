@@ -1,9 +1,30 @@
 const PropertyUI = {
     meta: null,
     sellPending: {},
+    activeFilter: 'all',
+    searchQuery: '',
+    _controlsBound: false,
 
     setMeta(meta) {
         this.meta = meta || null;
+    },
+
+    escape(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    },
+
+    cleanText(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/\[\/?b\]/gi, '')
+            .replace(/\[\/?i\]/gi, '')
+            .replace(/\[\/?u\]/gi, '')
+            .replace(/~[a-z0-9]~/gi, '')
+            .trim();
     },
 
     money(value) {
@@ -54,7 +75,7 @@ const PropertyUI = {
         descInput.className = 'house-owner-tools__textarea';
         descInput.maxLength = 160;
         descInput.placeholder = 'House description shown to visitors (max 160 chars)';
-        descInput.value = p.description || '';
+        descInput.value = this.cleanText(p.description || '');
         const descActions = document.createElement('div');
         descActions.className = 'house-owner-tools__inline-actions';
         const saveDesc = document.createElement('button');
@@ -81,6 +102,7 @@ const PropertyUI = {
         rentOn.addEventListener('click', () => this.dispatch(p.id, 'rent_on', { price: Number(rentInput.value) }));
         rentActions.append(rentOn, this.createButton('Disable rent', 'rent_off', p.id, {}));
         const rentHint = document.createElement('small');
+        rentHint.style.color = 'rgba(255, 255, 255, 0.45)';
         rentHint.textContent = `Rent per payday: $${rentInput.min}–$${rentInput.max}`;
         rentRow.append(rentInput, rentActions, rentHint);
         tools.appendChild(rentRow);
@@ -157,24 +179,52 @@ const PropertyUI = {
 
     createRow(p, selectedId) {
         const li = document.createElement('li');
-        li.className = `house-row${Number(selectedId) === Number(p.id) ? ' is-selected' : ''}`;
+        const isSelected = Number(selectedId) === Number(p.id);
+        const statusClass = p.owned ? 'is-owned' : (p.rented ? 'is-rented' : (p.owner_character_id ? 'is-occupied' : (p.forSale ? 'is-for-sale' : '')));
+
+        li.className = `house-row${isSelected ? ' is-selected' : ''} ${statusClass}`;
         li.dataset.propertyId = String(p.id);
+        li.dataset.forSale = String(Boolean(!p.owner_character_id && p.forSale));
+        li.dataset.owned = String(Boolean(p.owned));
+        li.dataset.rent = String(Boolean(p.rentEnabled || p.rented));
+        li.dataset.name = String(p.label || '').toLowerCase();
 
         const details = document.createElement('div');
         details.className = 'house-row__details';
-        const name = document.createElement('strong');
-        name.textContent = `#${p.id} ${p.label || 'Residence'}`;
-        const meta = document.createElement('span');
-        meta.textContent = `LVL ${p.minimumLevel || 1} · ${p.interior || 'standard'} · ${p.locked ? 'LOCKED' : 'OPEN'}${p.ownerName ? ` · ${p.ownerName}` : ''}`;
-        const rental = document.createElement('small');
+
+        // Title Wrap (#ID + Label)
+        const titleWrap = document.createElement('div');
+        titleWrap.className = 'house-row__title-wrap';
+        titleWrap.innerHTML = `
+            <span class="prop-chip prop-chip--lvl">#${p.id}</span>
+            <strong>${this.escape(p.label || 'Residence')}</strong>
+        `;
+        details.appendChild(titleWrap);
+
+        // Meta Chips (Level, Interior, Locked/Open, Owner)
+        const chipsWrap = document.createElement('div');
+        chipsWrap.className = 'house-row__chips';
+        const levelChip = `<span class="prop-chip prop-chip--lvl">LVL ${p.minimumLevel || 1}</span>`;
+        const interiorChip = `<span class="prop-chip prop-chip--interior">${this.escape(p.interior || 'Standard')}</span>`;
+        const lockChip = `<span class="prop-chip prop-chip--${p.locked ? 'locked' : 'open'}">${p.locked ? '🔒 LOCKED' : '🔓 OPEN'}</span>`;
+        const ownerChip = p.ownerName ? `<span class="prop-chip prop-chip--owner">👤 ${this.escape(p.ownerName)}</span>` : '';
+        chipsWrap.innerHTML = `${levelChip}${interiorChip}${lockChip}${ownerChip}`;
+        details.appendChild(chipsWrap);
+
+        // Rental / Sale Info
+        const rental = document.createElement('div');
+        rental.className = 'house-row__rental-info';
         rental.textContent = p.owner_character_id
-            ? `Renters ${p.renterCount || 0}/${p.maxRenters || 1}`
-            : (p.forSale ? `For sale · requires level ${p.minimumLevel || 1}` : 'Not listed for sale');
-        details.append(name, meta, rental);
-        if (p.description) {
-            const description = document.createElement('small');
+            ? `Renters ${p.renterCount || 0}/${p.maxRenters || 1} · ${p.rentEnabled ? `Rent: ${this.money(p.rentPrice)}/payday` : 'Rent not active'}`
+            : (p.forSale ? `For sale · Requires character level ${p.minimumLevel || 1}` : 'Not listed for sale');
+        details.appendChild(rental);
+
+        // Description Quote (clean BBCode)
+        const cleanDescription = this.cleanText(p.description);
+        if (cleanDescription) {
+            const description = document.createElement('div');
             description.className = 'house-row__description';
-            description.textContent = `“${p.description}”`;
+            description.textContent = `“${cleanDescription}”`;
             details.appendChild(description);
         }
 
@@ -233,15 +283,70 @@ const PropertyUI = {
         return li;
     },
 
+    applyFilters() {
+        const query = (this.searchQuery || '').toLowerCase().trim();
+        const filter = this.activeFilter || 'all';
+        const rows = document.querySelectorAll('#properties-list .house-row');
+        let visibleCount = 0;
+
+        rows.forEach((row) => {
+            const name = row.dataset.name || '';
+            const id = row.dataset.propertyId || '';
+            const forSale = row.dataset.forSale === 'true';
+            const owned = row.dataset.owned === 'true';
+            const rent = row.dataset.rent === 'true';
+
+            const matchesQuery = !query || name.includes(query) || id.includes(query);
+            let matchesFilter = true;
+
+            if (filter === 'for-sale') matchesFilter = forSale;
+            else if (filter === 'owned') matchesFilter = owned;
+            else if (filter === 'rent') matchesFilter = rent;
+
+            const show = matchesQuery && matchesFilter;
+            row.classList.toggle('is-filtered-out', !show);
+            if (show) visibleCount++;
+        });
+
+        const empty = document.querySelector('#properties-list .house-empty');
+        if (empty) empty.style.display = visibleCount === 0 ? 'block' : 'none';
+    },
+
+    setupControls() {
+        if (this._controlsBound) return;
+        this._controlsBound = true;
+
+        const searchInput = document.getElementById('properties-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchQuery = e.target.value;
+                this.applyFilters();
+            });
+        }
+
+        const filterBtns = document.querySelectorAll('.house-filter-btn');
+        filterBtns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach((b) => b.classList.remove('is-active'));
+                btn.classList.add('is-active');
+                this.activeFilter = btn.dataset.filter || 'all';
+                this.applyFilters();
+            });
+        });
+    },
+
     renderList(container, data) {
         if (!container) return;
         container.innerHTML = '';
         this.setMeta(data.meta);
+        this.setupControls();
+
         const properties = data.properties || [];
         properties.forEach((p) => container.appendChild(this.createRow(p, data.selectedId)));
         if (!properties.length) {
             container.innerHTML = '<li class="house-empty">No houses have been created yet. An administrator can use /acreatehouse.</li>';
         }
+        this.applyFilters();
     },
 
     updateRenters(propertyId, renters) {

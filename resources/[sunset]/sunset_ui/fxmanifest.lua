@@ -44,6 +44,7 @@ files {
     'web/css/fleeca-bank.css',
     'web/css/premium-menu.css',
     'web/css/premium-auth.css',
+    'web/css/premium-properties.css',
     'web/js/*.js',
     'web/vendor/**/*',
     'web/assets/**/*',

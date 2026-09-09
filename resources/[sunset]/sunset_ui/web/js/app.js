@@ -1086,5 +1086,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'trucker', label: 'Trucker', salary: 150, description: 'Haul cargo across San Andreas.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
             ],
         });
+    } else if (qa === 'properties' || qa === 'house' || qa === 'residences') {
+        window.Panels?.showProperties({
+            meta: {
+                rentMin: 50,
+                rentMax: 5000,
+                maxRentersMin: 1,
+                maxRentersMax: 10,
+                sellRefundPercent: 70,
+                interiors: [
+                    { id: 'motel', label: 'Motel Suite' },
+                    { id: 'standard', label: 'Standard House' },
+                    { id: 'luxury', label: 'Luxury Penthouse' },
+                ],
+            },
+            selectedId: 6,
+            properties: [
+                { id: 6, label: "Giovanni's Pizzeria", minimumLevel: 1, interior: 'motel', locked: true, forSale: true, price: 1, description: "[b]Cozy pizzeria suite[/b] with kitchen and private back office.", owner_character_id: null },
+                { id: 7, label: "Didion Dr", minimumLevel: 3, interior: 'standard', locked: true, forSale: true, price: 1, description: "Spacious suburban home in Vinewood hills.", owner_character_id: null },
+                { id: 8, label: "Milton Rd", minimumLevel: 3, interior: 'standard', locked: true, forSale: true, price: 1, description: "Modern residence with private driveway and garage.", owner_character_id: null },
+                { id: 9, label: "Milton Rd 2", minimumLevel: 3, interior: 'standard', locked: true, forSale: true, price: 1, description: "Adjacent property with expansive patio.", owner_character_id: null },
+                { id: 1, label: "LSIA Motel Room", minimumLevel: 1, interior: 'motel', locked: true, forSale: true, price: 32000, description: "Airport transit suite, great for starters.", owner_character_id: null },
+                { id: 2, label: "Vespucci Studio", minimumLevel: 1, interior: 'standard', locked: false, owned: true, access: true, price: 90000, description: "Beachfront apartment with direct ocean views.", owner_character_id: 14, ownerName: "Trencito Blaze" },
+                { id: 3, label: "Vinewood Luxury Penthouse", minimumLevel: 5, interior: 'luxury', locked: true, forSale: false, rentEnabled: true, rentPrice: 450, renterCount: 2, maxRenters: 4, price: 450000, description: "High-end penthouse overlooking the city.", owner_character_id: 99, ownerName: "Mayor Sterling" },
+            ],
+        });
     }
 });
