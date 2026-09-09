@@ -20,11 +20,11 @@
     </script>
     <link rel="stylesheet" href="css/fonts.css?v=3">
     <link rel="stylesheet" href="css/style.css?v=8">
-    <link rel="stylesheet" href="css/hud.css?v=8">
+    <link rel="stylesheet" href="css/hud.css?v=11">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=18">
-    <link rel="stylesheet" href="css/menu.css?v=9">
-    <link rel="stylesheet" href="css/panels.css?v=7">
+    <link rel="stylesheet" href="css/menu.css?v=10">
+    <link rel="stylesheet" href="css/panels.css?v=8">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css?v=2">
@@ -43,10 +43,11 @@
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=5">
     <link rel="stylesheet" href="css/mdc_tablet.css?v=12">
-    <link rel="stylesheet" href="css/player_interaction.css?v=2">
+    <link rel="stylesheet" href="css/player_interaction.css?v=3">
     <link rel="stylesheet" href="css/atm.css?v=1">
-    <link rel="stylesheet" href="css/battlepass.css?v=1">
-    <link rel="stylesheet" href="css/redesign.css?v=7">
+    <link rel="stylesheet" href="css/battlepass.css?v=2">
+    <link rel="stylesheet" href="css/redesign.css?v=10">
+    <link rel="stylesheet" href="css/interactions.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -62,14 +63,17 @@
                     <span class="trade-invite-badge">TRADE REQUEST</span>
                     <h4 id="trade-invite-name">Player Name (ID 2)</h4>
                     <p>wants to initiate an item trade with you.</p>
+                    <p class="trade-invite-hint">Hold <b>Y</b> to accept · Hold <b>N</b> to decline</p>
                 </div>
             </div>
             <div class="trade-invite-timer"><div class="trade-invite-timer-bar" id="trade-invite-timer-bar"></div></div>
             <div class="trade-invite-actions">
                 <button type="button" class="trade-invite-btn trade-invite-btn--accept" id="trade-invite-accept">
+                    <span class="trade-invite-btn__hold" id="trade-invite-accept-hold"></span>
                     <b>Y</b> ACCEPT
                 </button>
                 <button type="button" class="trade-invite-btn trade-invite-btn--decline" id="trade-invite-decline">
+                    <span class="trade-invite-btn__hold" id="trade-invite-decline-hold"></span>
                     <b>N</b> DECLINE
                 </button>
             </div>
@@ -561,23 +565,8 @@
                     <span id="hud-time">00:00</span>
                 </div>
                 <div class="money-display">
-                    <div class="money-row money-row--cash">
-                        <svg class="money-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
-                            <rect x="2" y="6" width="20" height="12" rx="1"/>
-                            <circle cx="12" cy="12" r="2.5"/>
-                            <path d="M6 10v4M18 10v4"/>
-                        </svg>
-                        <strong class="money-cash" id="hud-cash">$0</strong>
-                    </div>
-                    <div class="money-row money-row--bank">
-                        <svg class="money-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
-                            <path d="M3 10l9-6 9 6"/>
-                            <path d="M5 10v8h14v-8"/>
-                            <path d="M9 18v-5h6v5"/>
-                            <path d="M3 18h18"/>
-                        </svg>
-                        <span class="money-bank" id="hud-bank">$0</span>
-                    </div>
+                    <strong class="money-cash" id="hud-cash">$0</strong>
+                    <span class="money-bank" id="hud-bank">$0</span>
                 </div>
             </div>
             <div class="status-bars-container">
@@ -855,7 +844,7 @@
                 </div>
                 <div class="premium-trade-panel hidden" id="inventory-trade-panel">
                     <div class="premium-side-heading">TRADE WITH <strong id="inventory-trade-target">PLAYER</strong></div>
-                    <span class="premium-trade-label">YOUR OFFER — DRAG ITEMS HERE</span>
+                    <span class="premium-trade-label">YOUR OFFER — DRAG HERE OR PRESS OFFER</span>
                     <div class="premium-trade-zone" id="inventory-my-offer"></div>
                     <span class="premium-trade-label">THEIR OFFER</span>
                     <div class="premium-trade-zone is-readonly" id="inventory-their-offer"></div>
@@ -2755,7 +2744,7 @@
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=4"></script>
-    <script src="js/panels.js?v=9"></script>
+    <script src="js/panels.js?v=10"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=3"></script>
     <script src="js/auth_email.js?v=1"></script>

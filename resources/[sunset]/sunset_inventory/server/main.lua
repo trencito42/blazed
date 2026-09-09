@@ -482,6 +482,42 @@ exports.sunset_core:RegisterCallback('sunset:inventoryHasItem', function(source,
     return HasItem(source, item, 1)
 end)
 
+exports.sunset_core:RegisterCallback('sunset:inventory:moveSlot', function(source, data)
+    if type(IsInventoryTradeLocked) == 'function' and IsInventoryTradeLocked(source) then
+        return nil, 'Cannot rearrange inventory during an active trade.'
+    end
+    local fromSlot = tonumber(type(data) == 'table' and data.fromSlot)
+    local toSlot = tonumber(type(data) == 'table' and data.toSlot)
+    if not fromSlot or not toSlot or fromSlot < 1 or toSlot < 1 or fromSlot == toSlot then
+        return nil, 'Invalid inventory slot.'
+    end
+    if fromSlot > Sunset.Config.MaxSlots or toSlot > Sunset.Config.MaxSlots then
+        return nil, 'Invalid inventory slot.'
+    end
+
+    local inv = GetInventory(source)
+    local fromRow
+    local toRow
+    for _, row in ipairs(inv) do
+        if tonumber(row.slot) == fromSlot then fromRow = row end
+        if tonumber(row.slot) == toSlot then toRow = row end
+    end
+    if not fromRow then return nil, 'That inventory slot is empty.' end
+
+    if toRow then
+        fromRow.slot = toSlot
+        toRow.slot = fromSlot
+        MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { toSlot, fromRow.id })
+        MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { fromSlot, toRow.id })
+    else
+        fromRow.slot = toSlot
+        MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { toSlot, fromRow.id })
+    end
+
+    sendInventoryUpdate(source, inv)
+    return true
+end)
+
 AddEventHandler('sunset:server:characterSelected', function(source, charId)
     local char = exports.sunset_core:GetCharacter(source)
     charId = tonumber(charId) or (char and tonumber(char.id))

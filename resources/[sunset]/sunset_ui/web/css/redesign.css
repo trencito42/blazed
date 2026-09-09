@@ -335,6 +335,7 @@ textarea {
     max-height: none !important;
     padding-right: 8px;
     overflow-y: auto;
+    isolation: isolate;
 }
 
 .premium-inventory-grid::-webkit-scrollbar,
@@ -346,25 +347,25 @@ textarea {
 
 .premium-slot {
     position: relative;
+    z-index: 1;
     width: 100%;
     height: auto;
     aspect-ratio: 1;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
     background: var(--premium-slot);
     border: 1px solid rgba(255,255,255,.05);
     border-radius: 8px;
-    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
 .premium-slot.has-item:hover {
     background: var(--premium-hover);
     border-color: rgba(0, 255, 204, .45);
-    transform: scale(1.03);
 }
 
 .premium-slot.has-item:active {
-    transform: scale(0.97);
+    opacity: .92;
 }
 
 .premium-slot.is-selected {
@@ -407,12 +408,12 @@ textarea {
     background: transparent;
     border: 0;
     cursor: default;
-    transition: transform .15s ease;
+    transition: opacity .15s ease;
 }
 
 button.premium-item { cursor: pointer; }
-button.premium-item:hover { transform: scale(1.025); }
-button.premium-item:active { transform: scale(0.96); }
+button.premium-item:hover { opacity: .95; }
+button.premium-item:active { opacity: .85; }
 
 .premium-item__icon {
     display: grid;
@@ -525,11 +526,10 @@ button.premium-player-card {
 .premium-player-card:hover {
     background: var(--premium-hover);
     border-color: var(--premium-border);
-    transform: scale(1.025);
 }
 
 .premium-player-card:active {
-    transform: scale(0.96);
+    opacity: .9;
 }
 
 .premium-player-card div { flex-direction: column; align-items: flex-start; }
@@ -571,19 +571,19 @@ button.premium-player-card {
     font-weight: 800;
     letter-spacing: 1px;
     cursor: pointer;
-    transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+    transition: background .15s ease, box-shadow .15s ease, border-color .15s ease;
 }
 
 .premium-item-actions button:hover:not(:disabled),
 .premium-trade-confirm:hover:not(:disabled),
 .premium-trade-cancel:hover:not(:disabled) {
-    transform: scale(1.025);
+    box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.35);
 }
 
 .premium-item-actions button:active:not(:disabled),
 .premium-trade-confirm:active:not(:disabled),
 .premium-trade-cancel:active:not(:disabled) {
-    transform: scale(0.96);
+    opacity: .9;
 }
 
 .premium-item-actions button.is-danger,
@@ -601,6 +601,7 @@ button.premium-player-card {
     min-height: 0;
     flex: 1;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .premium-trade-panel.hidden { display: none !important; }
@@ -616,32 +617,80 @@ button.premium-player-card {
 
 .premium-trade-zone {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 7px;
-    min-height: 132px;
+    box-sizing: border-box;
+    grid-template-columns: repeat(3, 52px);
+    grid-auto-rows: 52px;
+    gap: 6px;
+    justify-content: center;
+    align-content: start;
+    width: 100%;
     padding: 10px;
     background: rgba(0,0,0,.3);
     border: 1px dashed rgba(255,255,255,.2);
     border-radius: 8px;
+    overflow: hidden;
     transition: background .2s ease, border-color .2s ease;
 }
 
-.premium-trade-zone.is-dragover { background: rgba(0,255,204,.05); border-color: var(--premium-accent); }
-.premium-trade-zone.is-readonly { opacity: .55; }
+.premium-trade-zone.is-dragover {
+    background: rgba(0,255,204,.08);
+    border-color: var(--premium-accent);
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 204, .25);
+}
+
+.premium-trade-zone.is-readonly { opacity: .55; pointer-events: none; }
 
 .premium-trade-slot {
     position: relative;
     display: grid;
-    min-width: 0;
-    aspect-ratio: 1;
+    width: 52px;
+    height: 52px;
     place-items: center;
     background: var(--premium-slot);
     border: 1px solid rgba(255,255,255,.05);
     border-radius: 6px;
+    pointer-events: none;
 }
 
-.premium-trade-slot.is-removable { cursor: pointer; }
+.premium-trade-slot.is-removable {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 .premium-trade-slot.is-removable:hover { border-color: var(--premium-danger); }
+
+.premium-slot.is-drop-target {
+    border-color: rgba(0, 255, 204, .55);
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 204, .35);
+}
+
+.premium-item.is-dragging { opacity: .35; }
+
+.premium-drag-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 99999;
+    display: grid;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    pointer-events: none;
+    background: rgba(0, 0, 0, .75);
+    border: 1px solid var(--premium-accent);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+
+.premium-drag-ghost__icon { width: 36px; height: 36px; }
+.premium-drag-ghost__icon img { width: 100%; height: 100%; object-fit: contain; }
+
+body.inventory-dragging { cursor: grabbing; }
+body.inventory-dragging .premium-item { cursor: grabbing; }
+
+.premium-item-actions button.is-dragover {
+    box-shadow: 0 0 0 2px var(--premium-accent);
+}
 .premium-trade-slot__icon { width: 32px; height: 32px; }
 .premium-trade-slot__icon img { width: 100%; height: 100%; object-fit: contain; }
 .premium-trade-slot b { position: absolute; top: 3px; right: 4px; color: var(--premium-accent); font-size: 8px; }
@@ -779,7 +828,7 @@ button.premium-player-card {
 .premium-qty-btn:hover {
     background: var(--premium-accent);
     color: #000;
-    transform: scale(1.05);
+    box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.35);
 }
 
 .premium-qty-input {
@@ -933,6 +982,16 @@ button.premium-player-card {
     color: rgba(255, 255, 255, 0.6);
 }
 
+.trade-invite-hint {
+    margin-top: 6px !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 10px !important;
+}
+
+.trade-invite-hint b {
+    color: var(--premium-accent);
+}
+
 .trade-invite-timer {
     width: 100%;
     height: 4px;
@@ -956,6 +1015,7 @@ button.premium-player-card {
 }
 
 .trade-invite-btn {
+    position: relative;
     flex: 1;
     padding: 10px 14px;
     border: 0;
@@ -969,7 +1029,31 @@ button.premium-player-card {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    overflow: hidden;
+}
+
+.trade-invite-btn__hold {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    pointer-events: none;
+    opacity: 0.35;
+    transition: width 0.05s linear;
+}
+
+.trade-invite-btn--accept .trade-invite-btn__hold {
+    background: #000;
+}
+
+.trade-invite-btn--decline .trade-invite-btn__hold {
+    background: var(--premium-danger);
+}
+
+.trade-invite-btn.is-holding {
+    opacity: .92;
 }
 
 .trade-invite-btn b {
@@ -987,7 +1071,6 @@ button.premium-player-card {
 }
 
 .trade-invite-btn--accept:hover {
-    transform: scale(1.03);
     box-shadow: 0 0 22px rgba(0, 255, 204, 0.55);
 }
 
@@ -999,7 +1082,6 @@ button.premium-player-card {
 
 .trade-invite-btn--decline:hover {
     background: rgba(255, 51, 102, 0.1);
-    transform: scale(1.03);
 }
 
 /* Vehicle menu — exact premium_vehicle_menu.html geometry and accent. */

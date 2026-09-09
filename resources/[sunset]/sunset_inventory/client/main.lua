@@ -1,5 +1,24 @@
 local inventoryOpen = false
 local tradeActive = false
+local tradeInviteActive = false
+local TRADE_HOLD_MS = 750
+local tradeHoldAcceptStart = nil
+local tradeHoldDeclineStart = nil
+
+local function hideTradeInviteUi()
+    tradeInviteActive = false
+    tradeHoldAcceptStart = nil
+    tradeHoldDeclineStart = nil
+    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+end
+
+local function sendTradeHold(key, progress, release)
+    exports.sunset_ui:Send('inventoryTradeInviteHold', {
+        key = key,
+        progress = progress or 0,
+        release = release == true,
+    })
+end
 
 local function openInventory()
     local data, err = Sunset.AwaitCallback('sunset:getInventory')
@@ -67,12 +86,12 @@ AddEventHandler('sunset:nui:inventoryTradeRequest', function(data)
 end)
 
 AddEventHandler('sunset:nui:inventoryTradeAccept', function()
-    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+    hideTradeInviteUi()
     inventoryAction('sunset:inventory:tradeAccept', {})
 end)
 
 AddEventHandler('sunset:nui:inventoryTradeDecline', function()
-    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+    hideTradeInviteUi()
     inventoryAction('sunset:inventory:tradeDecline', {})
 end)
 
@@ -94,6 +113,10 @@ end)
 
 AddEventHandler('sunset:nui:inventoryDrop', function(data)
     inventoryAction('sunset:inventory:drop', data)
+end)
+
+AddEventHandler('sunset:nui:inventoryMoveSlot', function(data)
+    inventoryAction('sunset:inventory:moveSlot', data)
 end)
 
 RegisterNetEvent('sunset:inventory:tradeState', function(data)
@@ -123,24 +146,95 @@ RegisterNetEvent('sunset:inventory:tradeEnded', function(message, kind)
 end)
 
 RegisterNetEvent('sunset:inventory:tradeInvite', function(requesterId, requesterName)
+    tradeInviteActive = true
+    tradeHoldAcceptStart = nil
+    tradeHoldDeclineStart = nil
     exports.sunset_ui:Send('inventoryTradeInvite', {
         requesterId = tonumber(requesterId) or 0,
         requesterName = requesterName or 'A nearby player',
-        timeout = 30
+        timeout = 30,
+        holdMs = TRADE_HOLD_MS,
     })
-    exports.sunset_ui:Notify(('%s (#%d) wants to trade. Press Y to accept or N to decline.'):format(
+    exports.sunset_ui:Notify(('%s (#%d) wants to trade. Hold Y to accept or N to decline.'):format(
         requesterName or 'A nearby player', tonumber(requesterId) or 0), 'info', 10000)
 end)
 
 RegisterCommand('accepttrade', function()
-    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+    if not tradeInviteActive then return end
+    hideTradeInviteUi()
     inventoryAction('sunset:inventory:tradeAccept', {})
 end, false)
 
 RegisterCommand('declinetrade', function()
-    exports.sunset_ui:Send('inventoryTradeInviteHide', {})
+    if not tradeInviteActive then return end
+    hideTradeInviteUi()
     inventoryAction('sunset:inventory:tradeDecline', {})
 end, false)
+
+local function tradeHoldPress(kind)
+    if not tradeInviteActive then return end
+    if kind == 'accept' then
+        tradeHoldDeclineStart = nil
+        sendTradeHold('decline', 0, true)
+        if not tradeHoldAcceptStart then
+            tradeHoldAcceptStart = GetGameTimer()
+            sendTradeHold('accept', 0)
+        end
+    else
+        tradeHoldAcceptStart = nil
+        sendTradeHold('accept', 0, true)
+        if not tradeHoldDeclineStart then
+            tradeHoldDeclineStart = GetGameTimer()
+            sendTradeHold('decline', 0)
+        end
+    end
+end
+
+local function tradeHoldRelease(kind)
+    if kind == 'accept' then
+        tradeHoldAcceptStart = nil
+        sendTradeHold('accept', 0, true)
+    else
+        tradeHoldDeclineStart = nil
+        sendTradeHold('decline', 0, true)
+    end
+end
+
+RegisterCommand('+sunset_trade_accept', function() tradeHoldPress('accept') end, false)
+RegisterCommand('-sunset_trade_accept', function() tradeHoldRelease('accept') end, false)
+RegisterKeyMapping('+sunset_trade_accept', 'Hold Y to accept trade invite', 'keyboard', 'Y')
+
+RegisterCommand('+sunset_trade_decline', function() tradeHoldPress('decline') end, false)
+RegisterCommand('-sunset_trade_decline', function() tradeHoldRelease('decline') end, false)
+RegisterKeyMapping('+sunset_trade_decline', 'Hold N to decline trade invite', 'keyboard', 'N')
+
+CreateThread(function()
+    while true do
+        if tradeInviteActive then
+            local now = GetGameTimer()
+            if tradeHoldAcceptStart then
+                local elapsed = now - tradeHoldAcceptStart
+                local progress = math.min(100, (elapsed / TRADE_HOLD_MS) * 100)
+                sendTradeHold('accept', progress)
+                if elapsed >= TRADE_HOLD_MS then
+                    hideTradeInviteUi()
+                    inventoryAction('sunset:inventory:tradeAccept', {})
+                end
+            elseif tradeHoldDeclineStart then
+                local elapsed = now - tradeHoldDeclineStart
+                local progress = math.min(100, (elapsed / TRADE_HOLD_MS) * 100)
+                sendTradeHold('decline', progress)
+                if elapsed >= TRADE_HOLD_MS then
+                    hideTradeInviteUi()
+                    inventoryAction('sunset:inventory:tradeDecline', {})
+                end
+            end
+            Wait(16)
+        else
+            Wait(250)
+        end
+    end
+end)
 
 RegisterCommand('inventory', function()
     if inventoryOpen then

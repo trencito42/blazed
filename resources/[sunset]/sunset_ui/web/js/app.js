@@ -528,6 +528,9 @@ window.addEventListener('message', (event) => {
         case 'inventoryTradeInviteHide':
             if (window.Panels && Panels.hideTradeInvite) Panels.hideTradeInvite();
             break;
+        case 'inventoryTradeInviteHold':
+            if (window.Panels && Panels.setTradeInviteHold) Panels.setTradeInviteHold(data || event.data.data);
+            break;
         case 'factionBrowseInline':
             if (window.FactionPanels) {
                 try {
@@ -874,20 +877,6 @@ document.addEventListener('keydown', (e) => {
 
 // Close character screens on ESC (not menu/chat)
 document.addEventListener('keydown', (e) => {
-    const tradeModal = $('#trade-invite-modal');
-    if (tradeModal && !tradeModal.classList.contains('hidden')) {
-        const k = (e.key || '').toLowerCase();
-        if (k === 'y') {
-            e.preventDefault();
-            $('#trade-invite-accept')?.click();
-            return;
-        } else if (k === 'n' || k === 'escape') {
-            e.preventDefault();
-            $('#trade-invite-decline')?.click();
-            return;
-        }
-    }
-
     const passModal = $('#battlepass-modal');
     if (passModal && !passModal.classList.contains('hidden') && e.key === 'Escape') {
         e.preventDefault();

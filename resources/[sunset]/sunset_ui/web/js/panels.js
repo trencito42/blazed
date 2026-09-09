@@ -68,61 +68,13 @@ const Panels = {
         $('#inventory-drop-selected')?.addEventListener('click', () => {
             const row = this._inventorySelected;
             if (!row) return;
-            const count = Number(row.count) || 1;
-            if (count > 1) {
-                this.openQuantityModal(row, 'drop', (chosen) => {
-                    post('inventoryDrop', { rowId: row.id, count: chosen });
-                });
-            } else {
-                post('inventoryDrop', { rowId: row.id, count: 1 });
-            }
+            if (this._inventoryTrade) this._offerInventoryRow(row);
+            else this._dropInventoryRow(row);
         });
         $('#inventory-trade-confirm')?.addEventListener('click', () => post('inventoryTradeConfirm', {}));
         $('#inventory-trade-cancel')?.addEventListener('click', () => post('inventoryTradeCancel', {}));
 
-        const dropBtn = $('#inventory-drop-selected');
-        dropBtn?.addEventListener('dragover', (event) => {
-            event.preventDefault();
-            dropBtn.classList.add('is-dragover');
-        });
-        dropBtn?.addEventListener('dragleave', () => dropBtn.classList.remove('is-dragover'));
-        dropBtn?.addEventListener('drop', (event) => {
-            event.preventDefault();
-            dropBtn.classList.remove('is-dragover');
-            const rowId = Number(event.dataTransfer?.getData('text/inventory-row') || 0);
-            const row = (this._inventoryItems || []).find((entry) => Number(entry.id) === rowId);
-            if (!row) return;
-            const count = Number(row.count) || 1;
-            if (count > 1) {
-                this.openQuantityModal(row, 'drop', (chosen) => {
-                    post('inventoryDrop', { rowId: row.id, count: chosen });
-                });
-            } else {
-                post('inventoryDrop', { rowId: row.id, count: 1 });
-            }
-        });
-
-        const offerZone = $('#inventory-my-offer');
-        offerZone?.addEventListener('dragover', (event) => {
-            event.preventDefault();
-            offerZone.classList.add('is-dragover');
-        });
-        offerZone?.addEventListener('dragleave', () => offerZone.classList.remove('is-dragover'));
-        offerZone?.addEventListener('drop', (event) => {
-            event.preventDefault();
-            offerZone.classList.remove('is-dragover');
-            const rowId = Number(event.dataTransfer?.getData('text/inventory-row') || 0);
-            const row = (this._inventoryItems || []).find((entry) => Number(entry.id) === rowId);
-            if (!row) return;
-            const count = Number(row.count) || 1;
-            if (count > 1) {
-                this.openQuantityModal(row, 'offer', (chosen) => {
-                    post('inventoryTradeOffer', { rowId: row.id, count: chosen });
-                });
-            } else {
-                post('inventoryTradeOffer', { rowId: row.id, count: 1 });
-            }
-        });
+        this._bindInventoryPointerDrag();
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
         $('#atm-close')?.addEventListener('click', () => post('atmClose'));
         $('#mdc-close')?.addEventListener('click', () => post('mdcClose'));
@@ -291,14 +243,14 @@ const Panels = {
             item.className = 'premium-item';
             item.type = 'button';
             item.title = row.usable ? `Select ${label}; double-click to use` : `Select ${label}`;
-            item.draggable = true;
+            item.draggable = false;
             item.addEventListener('click', () => this.selectInventoryItem(row, cell));
             item.addEventListener('dblclick', () => {
-                if (row.usable) post('inventoryUse', { item: def });
+                if (this._inventoryTrade) this._offerInventoryRow(row);
+                else if (row.usable) post('inventoryUse', { item: def });
             });
-            item.addEventListener('dragstart', (event) => {
-                event.dataTransfer?.setData('text/inventory-row', String(row.id));
-                if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+            item.addEventListener('pointerdown', (event) => {
+                this._startInventoryPointerDrag(row, cell, item, event);
             });
             item.appendChild(createItemArtwork(row, 'premium-item__icon'));
             const details = document.createElement('div');
@@ -356,6 +308,115 @@ const Panels = {
         }
         document.body.classList.add('inventory-open');
         $('#inventory')?.classList.remove('hidden');
+    },
+
+    _dropInventoryRow(row, count) {
+        const max = Number(row.count) || 1;
+        const doDrop = (chosen) => post('inventoryDrop', { rowId: row.id, count: chosen });
+        if (!count && max > 1) this.openQuantityModal(row, 'drop', doDrop);
+        else doDrop(count || 1);
+    },
+
+    _offerInventoryRow(row, count) {
+        if (!this._inventoryTrade) return;
+        const max = Number(row.count) || 1;
+        const doOffer = (chosen) => post('inventoryTradeOffer', { rowId: row.id, count: chosen });
+        if (!count && max > 1) this.openQuantityModal(row, 'offer', doOffer);
+        else doOffer(count || 1);
+    },
+
+    _bindInventoryPointerDrag() {
+        if (this._pointerDragBound) return;
+        this._pointerDragBound = true;
+        const DRAG_THRESHOLD = 6;
+
+        const clearHover = () => {
+            $('#inventory-my-offer')?.classList.remove('is-dragover');
+            $('#inventory-drop-selected')?.classList.remove('is-dragover');
+            $$('.premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+        };
+
+        const endDrag = (x, y) => {
+            const state = this._pointerDrag;
+            if (!state) return;
+            document.body.classList.remove('inventory-dragging');
+            state.ghost?.remove();
+            state.itemEl?.classList.remove('is-dragging');
+            clearHover();
+
+            if (state.moved) {
+                const el = document.elementFromPoint(x, y);
+                const offerZone = el?.closest('#inventory-my-offer');
+                const dropBtn = el?.closest('#inventory-drop-selected');
+                const slot = el?.closest('.premium-slot');
+
+                if (offerZone && this._inventoryTrade) {
+                    this._offerInventoryRow(state.row);
+                } else if (dropBtn) {
+                    if (this._inventoryTrade) this._offerInventoryRow(state.row);
+                    else this._dropInventoryRow(state.row);
+                } else if (slot && !this._inventoryTrade) {
+                    const toSlot = Number(slot.dataset.slot) || 0;
+                    const fromSlot = Number(state.row.slot) || Number(state.cell?.dataset.slot) || 0;
+                    if (toSlot && fromSlot && toSlot !== fromSlot) {
+                        post('inventoryMoveSlot', { fromSlot, toSlot });
+                    }
+                }
+            }
+
+            this._pointerDrag = null;
+        };
+
+        document.addEventListener('pointermove', (e) => {
+            const state = this._pointerDrag;
+            if (!state) return;
+            const dx = e.clientX - state.startX;
+            const dy = e.clientY - state.startY;
+            if (!state.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+
+            if (!state.moved) {
+                state.moved = true;
+                document.body.classList.add('inventory-dragging');
+                const ghost = document.createElement('div');
+                ghost.className = 'premium-drag-ghost';
+                ghost.appendChild(createItemArtwork(state.row, 'premium-drag-ghost__icon'));
+                document.body.appendChild(ghost);
+                state.ghost = ghost;
+                state.itemEl?.classList.add('is-dragging');
+            }
+
+            e.preventDefault();
+            if (state.ghost) {
+                state.ghost.style.transform = `translate(${e.clientX + 8}px, ${e.clientY + 8}px)`;
+            }
+
+            clearHover();
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el?.closest('#inventory-my-offer') && this._inventoryTrade) {
+                $('#inventory-my-offer')?.classList.add('is-dragover');
+            } else if (el?.closest('#inventory-drop-selected')) {
+                $('#inventory-drop-selected')?.classList.add('is-dragover');
+            } else {
+                const slot = el?.closest('.premium-slot');
+                if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
+            }
+        }, { passive: false });
+
+        document.addEventListener('pointerup', (e) => endDrag(e.clientX, e.clientY));
+        document.addEventListener('pointercancel', (e) => endDrag(e.clientX, e.clientY));
+    },
+
+    _startInventoryPointerDrag(row, cell, itemEl, event) {
+        if (event.button !== 0) return;
+        this._pointerDrag = {
+            row,
+            cell,
+            itemEl,
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+            ghost: null,
+        };
     },
 
     openQuantityModal(row, actionType, onConfirm) {
@@ -419,6 +480,8 @@ const Panels = {
 
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
+        this.setTradeInviteHold({ key: 'accept', progress: 0, release: true });
+        this.setTradeInviteHold({ key: 'decline', progress: 0, release: true });
 
         const bar = $('#trade-invite-timer-bar');
         if (bar) {
@@ -432,17 +495,32 @@ const Panels = {
 
         if (this._tradeInviteTimer) clearTimeout(this._tradeInviteTimer);
         this._tradeInviteTimer = setTimeout(() => {
+            post('inventoryTradeDecline');
             this.hideTradeInvite();
         }, (data.timeout || 30) * 1000);
 
         $('#trade-invite-accept').onclick = () => {
-            this.hideTradeInvite();
             post('inventoryTradeAccept');
+            this.hideTradeInvite();
         };
         $('#trade-invite-decline').onclick = () => {
-            this.hideTradeInvite();
             post('inventoryTradeDecline');
+            this.hideTradeInvite();
         };
+    },
+
+    setTradeInviteHold(data = {}) {
+        const key = data.key === 'decline' ? 'decline' : 'accept';
+        const btn = $(`#trade-invite-${key}`);
+        const fill = $(`#trade-invite-${key}-hold`);
+        if (!btn || !fill) return;
+        const progress = Math.max(0, Math.min(100, Number(data.progress) || 0));
+        fill.style.width = `${progress}%`;
+        btn.classList.toggle('is-holding', !data.release && progress > 0 && progress < 100);
+        if (data.release || progress >= 100) {
+            fill.style.width = '0%';
+            btn.classList.remove('is-holding');
+        }
     },
 
     hideTradeInvite() {
@@ -474,6 +552,11 @@ const Panels = {
         $('#inventory-nearby-panel')?.classList.toggle('hidden', data.active === true);
         $('#inventory-trade-panel')?.classList.toggle('hidden', data.active !== true);
         if (!data.active) return;
+        const dropBtn = $('#inventory-drop-selected');
+        if (dropBtn) {
+            dropBtn.textContent = 'OFFER';
+            dropBtn.classList.remove('is-danger');
+        }
         const target = $('#inventory-trade-target');
         if (target) target.textContent = data.target?.name || `PLAYER #${data.target?.id || '?'}`;
         const renderOffer = (selector, rows, removable) => {
@@ -481,7 +564,7 @@ const Panels = {
             if (!zone) return;
             zone.innerHTML = '';
             const offer = Array.isArray(rows) ? rows : [];
-            for (let i = 0; i < 9; i += 1) {
+            for (let i = 0; i < 6; i += 1) {
                 const slot = document.createElement('div');
                 slot.className = 'premium-trade-slot';
                 const row = offer[i];
@@ -522,6 +605,11 @@ const Panels = {
         this._inventoryTrade = null;
         $('#inventory-trade-panel')?.classList.add('hidden');
         $('#inventory-nearby-panel')?.classList.remove('hidden');
+        const dropBtn = $('#inventory-drop-selected');
+        if (dropBtn) {
+            dropBtn.textContent = 'DROP';
+            dropBtn.classList.add('is-danger');
+        }
     },
 
     hideInventory() {

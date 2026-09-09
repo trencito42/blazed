@@ -1,0 +1,103 @@
+/* CEF-safe hover feedback — glow + z-index instead of scale inside grids/lists */
+
+:root {
+    --ui-hover-ring-teal: 0 0 0 1px rgba(0, 255, 204, 0.42);
+    --ui-hover-ring-orange: 0 0 0 1px rgba(255, 140, 0, 0.45);
+    --ui-hover-elevate: 0 8px 22px rgba(0, 0, 0, 0.38);
+    --ui-hover-elevate-soft: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.premium-inventory-grid,
+.premium-nearby-list,
+.shop-grid,
+.shop-list,
+.menu-action-grid,
+.bp-rewards-track,
+.bp-nav,
+.dealership__list {
+    isolation: isolate;
+}
+
+.premium-slot,
+.shop-card,
+.menu-action,
+.premium-player-card,
+.bp-nav-item,
+.bp-mission-card,
+.dealership-card,
+.player-interaction__action {
+    position: relative;
+    z-index: 1;
+}
+
+.premium-slot:hover,
+.premium-slot.is-selected,
+.premium-slot.is-drop-target,
+.shop-card:hover,
+.menu-action:hover,
+.premium-player-card:hover,
+.bp-nav-item:hover,
+.bp-mission-card:hover,
+.dealership-card:hover {
+    z-index: 6;
+}
+
+/* Prevent scale/translate hover from clipping in tiled layouts */
+.premium-slot.has-item:hover,
+.premium-slot.has-item:active,
+button.premium-item:hover,
+button.premium-item:active,
+.premium-player-card:hover,
+.premium-player-card:active,
+.premium-item-actions button:hover:not(:disabled),
+.premium-item-actions button:active:not(:disabled),
+.premium-item-actions button.is-dragover,
+.premium-trade-confirm:hover:not(:disabled),
+.premium-trade-confirm:active:not(:disabled),
+.premium-trade-cancel:hover:not(:disabled),
+.premium-trade-cancel:active:not(:disabled),
+.premium-qty-btn:hover,
+.trade-invite-btn--accept:hover,
+.trade-invite-btn--decline:hover,
+.menu-action:hover,
+.menu-action:active,
+.premium-vmenu__btn:hover,
+.bp-nav-item:hover,
+.bp-btn-claim:hover,
+.bp-btn-upgrade:hover,
+.bp-btn-primary:hover,
+.bp-mission-card:hover,
+.act-submit:hover,
+.btn--primary:hover,
+.btn--primary:active,
+.btn--ghost:active,
+.btn:active {
+    transform: none !important;
+}
+
+.premium-slot.has-item:hover,
+.premium-slot.is-selected,
+.premium-slot.is-drop-target {
+    box-shadow: var(--ui-hover-ring-teal), var(--ui-hover-elevate-soft);
+}
+
+.premium-player-card:hover {
+    box-shadow: var(--ui-hover-ring-teal), var(--ui-hover-elevate-soft);
+}
+
+.shop-card:hover {
+    box-shadow: var(--ui-hover-ring-orange), var(--ui-hover-elevate-soft);
+}
+
+.menu-action:hover {
+    box-shadow: var(--ui-hover-ring-orange), var(--ui-hover-elevate-soft);
+}
+
+.premium-item-actions button:hover:not(:disabled),
+.premium-trade-confirm:hover:not(:disabled) {
+    box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.35), 0 4px 14px rgba(0, 255, 204, 0.18);
+}
+
+.premium-item-actions button.is-dragover {
+    box-shadow: 0 0 0 2px var(--premium-accent, #00ffcc), var(--ui-hover-elevate-soft) !important;
+}
