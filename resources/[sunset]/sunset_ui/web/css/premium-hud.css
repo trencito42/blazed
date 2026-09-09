@@ -356,23 +356,22 @@
 
 .location-panel {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
     margin-left: 0;
     pointer-events: none;
 }
 
-.location-line {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: nowrap;
-    gap: 12px;
-    max-width: min(520px, 46vw);
-}
-
 .location-compass {
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 44px;
+    padding: 0 12px 0 0;
+    margin-left: 0;
+    border-left: 4px solid var(--hud-accent);
+    padding-left: 12px;
     color: var(--hud-accent);
     font-size: 30px;
     font-style: italic;
@@ -384,14 +383,13 @@
         0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
-.location-sep {
-    flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 28px;
-    font-style: italic;
-    font-weight: 300;
-    line-height: 1;
-    user-select: none;
+.location-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-width: 0;
+    max-width: min(480px, 44vw);
 }
 
 .loc-street {
@@ -469,9 +467,6 @@
 
     .location-compass {
         font-size: 24px;
-    }
-
-    .location-sep {
-        font-size: 22px;
+        min-width: 40px;
     }
 }
