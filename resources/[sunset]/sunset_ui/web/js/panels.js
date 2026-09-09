@@ -24,13 +24,26 @@ function createItemArtwork(row, className) {
     return wrap;
 }
 
+function switchTab(tab) {
+    if (window.Panels && typeof window.Panels.setAuthTab === 'function') {
+        window.Panels.setAuthTab(tab);
+    }
+}
+window.switchTab = switchTab;
+
 const Panels = {
     init() {
         if (this._ready) return;
         this._ready = true;
 
-        $('#auth-tab-login')?.addEventListener('click', () => this.setAuthTab('login'));
-        $('#auth-tab-register')?.addEventListener('click', () => this.setAuthTab('register'));
+        const handleLoginTab = () => this.setAuthTab('login');
+        const handleRegisterTab = () => this.setAuthTab('register');
+
+        $('#auth-tab-login')?.addEventListener('click', handleLoginTab);
+        $('#btn-login')?.addEventListener('click', handleLoginTab);
+        $('#auth-tab-register')?.addEventListener('click', handleRegisterTab);
+        $('#btn-register')?.addEventListener('click', handleRegisterTab);
+
         $('#auth-login-btn')?.addEventListener('click', () => {
             if (window.AuthLoading) AuthLoading.beginSubmit();
             post('authLogin', {
@@ -52,7 +65,8 @@ const Panels = {
         const submitAuth = (event) => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
-            const registerOpen = $('#auth-register') && !$('#auth-register').classList.contains('hidden');
+            const regEl = $('#auth-form-register') || $('#form-register');
+            const registerOpen = regEl && !regEl.classList.contains('hidden') && (regEl.classList.contains('is-active') || regEl.classList.contains('active'));
             if (registerOpen) $('#auth-register-btn')?.click();
             else $('#auth-login-btn')?.click();
         };
@@ -175,11 +189,23 @@ const Panels = {
     },
 
     setAuthTab(tab) {
-        $$('.auth-tab').forEach((el) => el.classList.toggle('is-active', el.dataset.tab === tab));
-        $('#auth-form-login')?.classList.toggle('is-active', tab === 'login');
-        $('#auth-form-login')?.classList.toggle('hidden', tab !== 'login');
-        $('#auth-form-register')?.classList.toggle('is-active', tab === 'register');
-        $('#auth-form-register')?.classList.toggle('hidden', tab !== 'register');
+        $$('.auth-tab, .tab-btn').forEach((el) => {
+            const match = el.dataset.tab === tab || el.id === `auth-tab-${tab}` || el.id === `btn-${tab}`;
+            el.classList.toggle('is-active', match);
+            el.classList.toggle('active', match);
+        });
+        const loginForm = $('#auth-form-login') || $('#form-login');
+        const regForm = $('#auth-form-register') || $('#form-register');
+        if (loginForm) {
+            loginForm.classList.toggle('is-active', tab === 'login');
+            loginForm.classList.toggle('active', tab === 'login');
+            loginForm.classList.toggle('hidden', tab !== 'login');
+        }
+        if (regForm) {
+            regForm.classList.toggle('is-active', tab === 'register');
+            regForm.classList.toggle('active', tab === 'register');
+            regForm.classList.toggle('hidden', tab !== 'register');
+        }
     },
 
     showAuth(data = {}) {
@@ -1765,3 +1791,10 @@ const Panels = {
 };
 
 window.Panels = Panels;
+
+document.addEventListener('DOMContentLoaded', () => {
+    Panels.init();
+    if (window.AuthAccounts && typeof window.AuthAccounts.bind === 'function') {
+        window.AuthAccounts.bind();
+    }
+});

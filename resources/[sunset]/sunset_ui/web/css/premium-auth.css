@@ -108,7 +108,8 @@
     background: transparent !important;
 }
 
-#screen-auth .auth-tab.is-active {
+#screen-auth .auth-tab.is-active,
+#screen-auth .auth-tab.active {
     color: #00ffcc !important;
     border-bottom-color: #00ffcc !important;
     background: transparent !important;
@@ -119,11 +120,24 @@
 }
 
 #screen-auth .auth-form {
+    display: none !important;
+    flex-direction: column !important;
     gap: 20px !important;
+    animation: authFormFadeIn 0.4s ease;
+}
+
+#screen-auth .auth-form.is-active,
+#screen-auth .auth-form.active {
+    display: flex !important;
 }
 
 #screen-auth .auth-form.hidden {
     display: none !important;
+}
+
+@keyframes authFormFadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 #screen-auth .field,

@@ -504,11 +504,11 @@
                     <p class="auth-subtitle auth-brand__desc">Enter the city. Your story starts here.</p>
                 </header>
                 <div class="auth-tabs">
-                    <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">Login</button>
-                    <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">Register</button>
+                    <button type="button" class="auth-tab is-active active" id="auth-tab-login" data-tab="login" onclick="switchTab('login')">Login</button>
+                    <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register" onclick="switchTab('register')">Register</button>
                 </div>
                 <div id="auth-login-stack" class="auth-login-stack">
-                    <div id="auth-form-login" class="auth-form is-active">
+                    <div id="auth-form-login" class="auth-form is-active active">
                         <label class="field input-group"><span class="input-label">Username</span><input type="text" class="form-input" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
                         <label class="field input-group"><span class="input-label">Password</span><input type="password" class="form-input" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
                         <label class="auth-remember checkbox-group">

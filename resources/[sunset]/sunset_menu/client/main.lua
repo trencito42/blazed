@@ -204,9 +204,11 @@ local function openMenu(initialTab, opts)
         end
         return
     end
+    local char = exports.sunset_core and exports.sunset_core:GetCharacter()
+    if not char then return end
+
     local ok, data = pcall(buildMenuData, true)
     if not ok or not data then
-        exports.sunset_ui:Notify('Could not open menu', 'error')
         return
     end
     if initialTab then
@@ -247,6 +249,7 @@ AddEventHandler('sunset:menu:openVehicle', openVehicleMenu)
 exports('OpenVehicle', openVehicleMenu)
 
 local function toggleMenu(initialTab)
+    if not exports.sunset_core or not exports.sunset_core:GetCharacter() then return end
     if IsPauseMenuActive() and not menuOpen then return end
     if menuOpen then
         if initialTab and not menuSoloMode then
