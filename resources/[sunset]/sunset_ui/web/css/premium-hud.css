@@ -366,12 +366,10 @@
 
 .location-line {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
     width: 100%;
-    border-left: 3px solid var(--hud-accent);
-    padding-left: 10px;
 }
 
 .location-compass {
@@ -387,14 +385,14 @@
         0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
-/* Thin rule — not a | character */
+/* Divider between cardinal (N) and street — not a | character */
 .location-sep {
     flex-shrink: 0;
-    align-self: center;
-    width: 1px;
-    height: 22px;
-    background: rgba(255, 255, 255, 0.28);
-    box-shadow: 0 0 6px rgba(0, 255, 204, 0.15);
+    width: 2px;
+    height: 24px;
+    border-radius: 1px;
+    background: linear-gradient(180deg, rgba(0, 255, 204, 0.15), var(--hud-accent) 45%, rgba(0, 255, 204, 0.15));
+    box-shadow: 0 0 8px rgba(0, 255, 204, 0.35);
 }
 
 .loc-street {
@@ -420,7 +418,7 @@
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-top: 0;
-    padding-left: 13px;
+    padding-left: 0;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
     display: flex;
     align-items: center;
