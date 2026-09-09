@@ -99,8 +99,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    border-right: 4px solid var(--hud-accent);
-    padding-right: 15px;
+    padding-right: 0;
 }
 
 .time-display {
@@ -357,21 +356,23 @@
 
 .location-panel {
     display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     margin-left: 0;
     pointer-events: none;
 }
 
-.location-compass {
+.location-line {
     display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    min-width: 44px;
-    padding: 0 12px 0 0;
-    margin-left: 0;
-    border-left: 4px solid var(--hud-accent);
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: 12px;
+    max-width: min(520px, 46vw);
+}
+
+.location-compass {
+    flex-shrink: 0;
     color: var(--hud-accent);
     font-size: 30px;
     font-style: italic;
@@ -383,12 +384,14 @@
         0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
-.location-body {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    padding-left: 2px;
+.location-sep {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 28px;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1;
+    user-select: none;
 }
 
 .loc-street {
@@ -400,6 +403,9 @@
     line-height: 1;
     text-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .loc-zone {
@@ -463,6 +469,9 @@
 
     .location-compass {
         font-size: 24px;
-        min-width: 44px;
+    }
+
+    .location-sep {
+        font-size: 22px;
     }
 }

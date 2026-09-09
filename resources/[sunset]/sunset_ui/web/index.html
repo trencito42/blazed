@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="css/fonts.css?v=3">
     <link rel="stylesheet" href="css/style.css?v=9">
     <link rel="stylesheet" href="css/hud.css?v=11">
-    <link rel="stylesheet" href="css/premium-hud.css?v=3">
+    <link rel="stylesheet" href="css/premium-hud.css?v=4">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=18">
     <link rel="stylesheet" href="css/premium-chat.css?v=7">
@@ -544,13 +544,14 @@
                 </div>
             </div>
             <div class="premium-unskew location-panel">
-                <div class="location-compass" id="hud-heading" aria-label="Compass heading">N</div>
-                <div class="location-body">
-                    <div class="loc-street" id="hud-street">—</div>
-                    <div class="loc-zone" id="hud-zone">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        <span id="hud-zone-text">LOS SANTOS</span>
-                    </div>
+                <div class="location-line">
+                    <span class="location-compass" id="hud-heading" aria-label="Compass heading">N</span>
+                    <span class="location-sep" aria-hidden="true">|</span>
+                    <span class="loc-street" id="hud-street">—</span>
+                </div>
+                <div class="loc-zone" id="hud-zone">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span id="hud-zone-text">LOS SANTOS</span>
                 </div>
             </div>
         </div>
