@@ -78,6 +78,7 @@ ensure sunset_scoreboard
 ensure sunset_chat
 ensure sunset_menu
 ensure sunset_help
+ensure sunset_carjack
 
 add_ace group.admin command allow
 add_ace group.admin command.quit deny

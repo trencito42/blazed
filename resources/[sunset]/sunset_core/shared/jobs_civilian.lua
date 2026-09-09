@@ -37,4 +37,10 @@ Sunset.CivilianJobs = {
         description = 'Respond to /service mechanic calls and repair vehicles.',
         grades = { [0] = { label = 'Apprentice', salary = 170, perms = {} } },
     },
+    lockpicking = {
+        label = 'Lockpicking',
+        type = 'criminal',
+        description = 'Skill for breaking into vehicles. Improves success rate when using a lockpick.',
+        grades = { [0] = { label = 'Novice', salary = 0, perms = {} } },
+    },
 }
