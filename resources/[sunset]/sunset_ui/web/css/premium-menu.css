@@ -478,6 +478,7 @@
     font-weight: 800;
     letter-spacing: 0.5px;
     color: #fff !important;
+    text-transform: uppercase;
 }
 
 #menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-action__copy span {
@@ -506,6 +507,190 @@
 }
 
 #menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-statusbar {
+    display: none !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-close-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-avatar,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-id-card__photo {
+    width: 70px;
+    height: 70px;
+    border-radius: var(--pm-radius-md);
+    border: 2px solid var(--pm-border);
+    background: var(--pm-panel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--pm-muted);
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile__id {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--pm-muted) !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile__id span {
+    color: #fff;
+    font-weight: 800;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-card {
+    background: var(--pm-panel) !important;
+    border: 1px solid var(--pm-border) !important;
+    border-radius: var(--pm-radius-md) !important;
+    padding: 15px !important;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-card:hover {
+    background: var(--pm-hover) !important;
+    transform: translateX(5px);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--pm-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-card--cash .menu-eco-icon {
+    background: rgba(50, 215, 75, 0.1);
+    color: var(--pm-success);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-card--bank .menu-eco-icon {
+    background: rgba(0, 255, 204, 0.1);
+    color: var(--pm-accent);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-card--coin .menu-eco-icon {
+    background: rgba(255, 204, 0, 0.1);
+    color: var(--pm-warning);
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-card--time .menu-eco-icon {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pm-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: #fff !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-val.is-good {
+    color: var(--pm-success) !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-eco-val.is-accent {
+    color: var(--pm-warning) !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-profile-level-up {
+    width: 100%;
+    margin-top: -8px;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-action {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-action svg {
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-mgmt__head h3 {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase;
+    color: var(--pm-muted) !important;
+    margin: 0 0 8px !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-mgmt__head p,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-config__lead {
+    color: var(--pm-muted) !important;
+    font-size: 13px !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-stats-grid article,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-job-card,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-job-side__box,
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-vcard {
+    background: var(--pm-panel) !important;
+    border: 1px solid var(--pm-border) !important;
+    border-radius: var(--pm-radius-md) !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-info-list {
+    display: none !important;
+}
+
+#menu.menu:not(.menu--solo-vehicle):not(.menu--solo-inventory):not(.menu--solo-faction):not(.menu--solo-clan) .menu-id-card {
     display: none !important;
 }
 

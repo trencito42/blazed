@@ -49,7 +49,8 @@
     <link rel="stylesheet" href="css/redesign.css?v=10">
     <link rel="stylesheet" href="css/premium-factions.css?v=1">
     <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
-    <link rel="stylesheet" href="css/premium-menu.css?v=2">
+    <link rel="stylesheet" href="css/premium-menu.css?v=3">
+    <link rel="stylesheet" href="css/premium-auth.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -495,46 +496,43 @@
         </section>
 
         <section id="screen-auth" class="screen screen--auth hidden">
-            <div class="auth-vignette"></div>
-            <div class="auth-scanlines"></div>
+            <div class="auth-overlay"></div>
             <div id="auth-panel" class="auth-panel">
-                <div class="auth-brand">
-                    <img class="auth-brand__logo" src="assets/logoblaze.svg?v=1" width="140" height="140" alt="blaze.mp">
-                    <div class="auth-brand__eyebrow">Welcome to Los Santos</div>
-                    <p class="auth-brand__desc">Enter the city. Your story starts here.</p>
-                </div>
+                <header class="auth-header auth-brand">
+                    <img class="auth-logo auth-brand__logo" src="assets/logoblaze.svg?v=1" width="70" height="70" alt="blaze.mp">
+                    <div class="auth-title auth-brand__eyebrow">Welcome to Los Santos</div>
+                    <p class="auth-subtitle auth-brand__desc">Enter the city. Your story starts here.</p>
+                </header>
                 <div class="auth-tabs">
                     <button type="button" class="auth-tab is-active" id="auth-tab-login" data-tab="login">Login</button>
                     <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">Register</button>
                 </div>
-                <div id="auth-account-chooser" class="auth-chooser hidden">
-                    <p class="auth-chooser__title">Choose account</p>
-                    <div id="auth-account-list" class="auth-account-list"></div>
-                    <button type="button" class="auth-chooser__other" id="auth-use-other-account">Use another account</button>
-                </div>
                 <div id="auth-login-stack" class="auth-login-stack">
-                    <button type="button" class="auth-chooser__back hidden" id="auth-back-to-accounts">← Saved accounts</button>
                     <div id="auth-form-login" class="auth-form is-active">
-                        <label class="field"><span>Username</span><input type="text" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
-                        <label class="field"><span>Password</span><input type="password" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
-                        <label class="auth-remember">
+                        <label class="field input-group"><span class="input-label">Username</span><input type="text" class="form-input" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
+                        <label class="field input-group"><span class="input-label">Password</span><input type="password" class="form-input" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
+                        <label class="auth-remember checkbox-group">
                             <input type="checkbox" id="auth-remember-quick" checked>
-                            <span>Save this account for quick login</span>
+                            <span class="checkbox-custom" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            <span class="checkbox-label">Save this account for quick login</span>
                         </label>
-                        <button type="button" class="btn btn--primary" id="auth-login-btn">Enter City</button>
+                        <button type="button" class="btn btn--primary btn-main" id="auth-login-btn">Enter City</button>
                     </div>
                     <div id="auth-form-register" class="auth-form hidden">
-                        <label class="field"><span>Choose Username</span><input type="text" id="auth-reg-user" maxlength="20" spellcheck="false" autocomplete="username"></label>
-                        <label class="field"><span>Email</span><input type="email" id="auth-reg-email" maxlength="254" spellcheck="false" autocomplete="email" placeholder="you@example.com"></label>
-                        <label class="field"><span>Password</span><input type="password" id="auth-reg-pass" maxlength="64" autocomplete="new-password"></label>
-                        <label class="field"><span>Confirm Password</span><input type="password" id="auth-reg-pass2" maxlength="64" autocomplete="new-password"></label>
-                        <label class="auth-remember">
+                        <label class="field input-group"><span class="input-label">New Username</span><input type="text" class="form-input" id="auth-reg-user" maxlength="20" spellcheck="false" autocomplete="username"></label>
+                        <label class="field input-group"><span class="input-label">Email Address</span><input type="email" class="form-input" id="auth-reg-email" maxlength="254" spellcheck="false" autocomplete="email" placeholder="you@example.com"></label>
+                        <label class="field input-group"><span class="input-label">Password</span><input type="password" class="form-input" id="auth-reg-pass" maxlength="64" autocomplete="new-password"></label>
+                        <label class="field input-group"><span class="input-label">Confirm Password</span><input type="password" class="form-input" id="auth-reg-pass2" maxlength="64" autocomplete="new-password"></label>
+                        <label class="auth-remember checkbox-group">
                             <input type="checkbox" id="auth-reg-remember-quick" checked>
-                            <span>Save this account for quick login</span>
+                            <span class="checkbox-custom" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            <span class="checkbox-label">Save this account for quick login</span>
                         </label>
-                        <button type="button" class="btn btn--primary" id="auth-register-btn">Create Account</button>
+                        <button type="button" class="btn btn--primary btn-main" id="auth-register-btn">Create Account</button>
                     </div>
                 </div>
+                <div class="auth-divider"><span>Saved Identities — Select to Enter</span></div>
+                <div id="auth-account-list" class="auth-identities-list auth-account-list"></div>
                 <div class="auth-footer">blaze.mp — FiveM Roleplay</div>
             </div>
             <div id="auth-email-modal" class="auth-email-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-email-title">
@@ -691,44 +689,52 @@
                     <button type="button" class="menu-tab" data-tab="property">PROPERTY</button>
                     <button type="button" class="menu-tab" data-tab="settings">CONFIG</button>
                 </nav>
-                <button type="button" class="menu-close-btn" id="menu-close-btn"><span class="menu-keycap">ESC</span> CLOSE MENU</button>
+                <button type="button" class="menu-close-btn" id="menu-close-btn" aria-label="Close menu"><span class="menu-keycap">ESC</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
 
             <div class="menu-body">
             <aside class="menu-profile tech-panel" aria-label="Character summary">
-                <div class="menu-id-card" aria-label="State ID">
-                    <div class="menu-id-card__photo" id="menu-avatar" aria-hidden="true"></div>
-                    <div class="menu-id-card__labels">
-                        <span>LOS SANTOS ID</span>
-                        <small>BLAZE STATE</small>
-                    </div>
-                </div>
-                <div>
-                    <div class="menu-profile__name-row">
+                <div class="menu-profile-card">
+                    <div class="menu-avatar" id="menu-avatar" aria-hidden="true"></div>
+                    <div class="menu-profile-info">
                         <h2 class="menu-profile__name" id="menu-name">—</h2>
-                        <span class="menu-profile__id" id="menu-id">ID: 0</span>
+                        <div id="menu-job-label" class="menu-profile__job">Unemployed</div>
+                        <div class="menu-profile__id">State ID: <span id="menu-id">0</span></div>
+                        <span id="menu-cid" class="hidden" aria-hidden="true"></span>
+                        <span id="menu-rank" class="hidden" aria-hidden="true"></span>
                     </div>
-                    <div id="menu-job-label" class="menu-profile__job">Unemployed</div>
-                    <div class="menu-profile__sub"><span id="menu-cid">CID: —</span><span id="menu-rank">PLAYER</span></div>
-                    <div class="menu-xp">
-                        <div class="menu-xp__row"><span id="menu-level">LEVEL 1</span><span id="menu-xp-text">0 / 4 RP</span></div>
-                        <div class="menu-xp__track"><div class="menu-xp__fill" id="menu-xp-bar"></div></div>
-                    </div>
-                    <button type="button" class="menu-profile-level-up" id="menu-profile-buy-level" data-action="buy_level">BUY NEXT LEVEL<small>RP AND MONEY REQUIRED</small></button>
                 </div>
 
-                <ul class="menu-info-list">
-                    <li><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><div><span>CASH</span><strong class="is-good" id="menu-cash">$0</strong></div></li>
-                    <li><svg viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3"/></svg><div><span>BANK</span><strong id="menu-bank">$0</strong></div></li>
-                    <li><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><div><span>BLAZE POINTS</span><strong class="is-accent" id="menu-premium">0</strong></div></li>
-                    <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><span>PLAYTIME</span><strong id="menu-playtime">0H 0M</strong></div></li>
-                    <li><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><div><span>LAST LOGIN</span><strong id="menu-lastlogin">—</strong></div></li>
-                </ul>
+                <div class="menu-xp">
+                    <div class="menu-xp__row"><span id="menu-level">Nivel 1</span><span id="menu-xp-text">0 / 4 RP</span></div>
+                    <div class="menu-xp__track"><div class="menu-xp__fill" id="menu-xp-bar"></div></div>
+                </div>
+                <button type="button" class="menu-profile-level-up" id="menu-profile-buy-level" data-action="buy_level">BUY NEXT LEVEL<small>RP AND MONEY REQUIRED</small></button>
+
+                <div class="menu-eco-grid">
+                    <div class="menu-eco-card menu-eco-card--cash">
+                        <div class="menu-eco-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg></div>
+                        <div class="menu-eco-details"><span class="menu-eco-label">Cash Wallet</span><strong class="menu-eco-val is-good" id="menu-cash">$0</strong></div>
+                    </div>
+                    <div class="menu-eco-card menu-eco-card--bank">
+                        <div class="menu-eco-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+                        <div class="menu-eco-details"><span class="menu-eco-label">Bank Account</span><strong class="menu-eco-val" id="menu-bank">$0</strong></div>
+                    </div>
+                    <div class="menu-eco-card menu-eco-card--coin">
+                        <div class="menu-eco-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                        <div class="menu-eco-details"><span class="menu-eco-label">Blaze Points</span><strong class="menu-eco-val is-accent" id="menu-premium">0</strong></div>
+                    </div>
+                    <div class="menu-eco-card menu-eco-card--time">
+                        <div class="menu-eco-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+                        <div class="menu-eco-details"><span class="menu-eco-label">Playtime</span><strong class="menu-eco-val" id="menu-playtime">0H 0M</strong></div>
+                    </div>
+                </div>
+                <span id="menu-lastlogin" class="hidden" aria-hidden="true"></span>
             </aside>
 
             <main class="menu-panels">
                 <section class="menu-panel-view tech-panel accent-orange is-active" data-panel="player">
-                    <h3 class="menu-section-title">CHARACTER VITALS</h3>
+                    <h3 class="menu-section-title">Character Vitals</h3>
                     <div class="menu-vitals">
                         <div class="menu-vital menu-vital--health">
                             <div class="menu-vital__head"><span>Health</span><strong id="menu-health-pct">100%</strong></div>
@@ -752,16 +758,16 @@
                         </div>
                     </div>
 
-                    <h3 class="menu-section-title">QUICK ACTIONS</h3>
+                    <h3 class="menu-section-title">Quick Actions</h3>
                     <div class="menu-actions">
-                        <button type="button" class="menu-action" data-action="inventory"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><span class="menu-action__copy"><strong>INVENTORY</strong><span>ITEMS &amp; STORAGE</span></span></button>
-                        <button type="button" class="menu-action" data-action="animations"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="12" y1="16" x2="6" y2="22"/><line x1="12" y1="16" x2="18" y2="22"/><line x1="6" y1="10" x2="18" y2="10"/></svg><span class="menu-action__copy"><strong>ANIMATIONS</strong><span>EMOTES &amp; WALKS</span></span></button>
-                        <button type="button" class="menu-action" data-action="phone"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="menu-action__copy"><strong>SMARTPHONE</strong><span>CALLS &amp; APPS</span></span></button>
-                        <button type="button" class="menu-action" data-action="documents"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="menu-action__copy"><strong>DOCUMENTS</strong><span>INVOICES &amp; ID</span></span></button>
-                        <button type="button" class="menu-action" data-action="licenses"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="14" y2="16"/></svg><span class="menu-action__copy"><strong>LICENSES</strong><span>DRIVING &amp; WEAPONS</span></span></button>
-                        <button type="button" class="menu-action" data-action="pass"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="menu-action__copy"><strong>BATTLEPASS</strong><span>REWARDS &amp; TIERS</span></span></button>
-                        <button type="button" class="menu-action" data-action="missions"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="menu-action__copy"><strong>MISSIONS</strong><span>DAILY &amp; WEEKLY</span></span></button>
-                        <button type="button" class="menu-action" data-action="statistics"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="menu-action__copy"><strong>STATISTICS</strong><span>SKILLS &amp; PROGRESS</span></span></button>
+                        <button type="button" class="menu-action" data-action="inventory"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><span class="menu-action__copy"><strong>Inventory</strong><span>Manage items &amp; storage</span></span></button>
+                        <button type="button" class="menu-action" data-action="animations"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="menu-action__copy"><strong>Animations</strong><span>Emotes &amp; walk styles</span></span></button>
+                        <button type="button" class="menu-action" data-action="phone"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="menu-action__copy"><strong>Smartphone</strong><span>Calls, messages &amp; apps</span></span></button>
+                        <button type="button" class="menu-action" data-action="documents"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="menu-action__copy"><strong>Documents</strong><span>Show ID &amp; invoices</span></span></button>
+                        <button type="button" class="menu-action" data-action="licenses"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="menu-action__copy"><strong>Licenses</strong><span>Driving &amp; weapon permits</span></span></button>
+                        <button type="button" class="menu-action" data-action="pass"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="menu-action__copy"><strong>Battlepass</strong><span>Rewards &amp; tiers progression</span></span></button>
+                        <button type="button" class="menu-action" data-action="missions"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="menu-action__copy"><strong>Missions</strong><span>Daily &amp; weekly tasks</span></span></button>
+                        <button type="button" class="menu-action" data-action="statistics"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="menu-action__copy"><strong>Statistics</strong><span>Skills &amp; personal progress</span></span></button>
                     </div>
                 </section>
 
@@ -2860,13 +2866,13 @@
     <script src="js/chat_settings.js"></script>
     <script src="js/chat.js?v=20"></script>
     <script src="js/properties-ui.js?v=3"></script>
-    <script src="js/menu.js?v=9"></script>
+    <script src="js/menu.js?v=10"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=5"></script>
     <script src="js/panels.js?v=11"></script>
     <script src="js/overlays.js?v=2"></script>
-    <script src="js/auth_accounts.js?v=3"></script>
+    <script src="js/auth_accounts.js?v=4"></script>
     <script src="js/auth_email.js?v=1"></script>
     <script src="js/auth_loading.js?v=4"></script>
     <script src="js/spawn.js?v=4"></script>

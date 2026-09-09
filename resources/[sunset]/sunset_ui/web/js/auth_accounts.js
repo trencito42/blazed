@@ -37,13 +37,11 @@ const AuthAccounts = {
         return box ? box.checked === true : this.quickLogin === true;
     },
 
-    setMode(mode) {
+    setMode() {
         this.mode = 'form';
         const hasAccounts = this.accounts.length > 0;
         $('#auth-panel')?.classList.toggle('has-saved-accounts', hasAccounts);
-        $('#auth-account-chooser')?.classList.toggle('hidden', !hasAccounts);
         $('#auth-login-stack')?.classList.remove('hidden');
-        $('#auth-back-to-accounts')?.classList.add('hidden');
         $('#screen-auth .auth-tabs')?.classList.remove('hidden');
     },
 
@@ -52,32 +50,33 @@ const AuthAccounts = {
         if (!list) return;
         list.innerHTML = '';
 
+        if (this.accounts.length === 0) {
+            list.innerHTML = '<div class="auth-identities-empty">No saved accounts yet.</div>';
+            this.setMode();
+            return;
+        }
+
         this.accounts.forEach((acc) => {
             const username = String(acc.username || '').trim();
             if (!username) return;
 
             const card = document.createElement('div');
-            card.className = 'auth-account-card';
+            card.className = 'auth-id-card auth-account-card';
 
             const pick = document.createElement('button');
             pick.type = 'button';
-            pick.className = 'auth-account-card__pick';
+            pick.className = 'auth-id-card__main auth-account-card__pick';
             const avatar = typeof acc.avatar === 'string' && acc.avatar.startsWith('data:image/')
                 ? `<img src="${this.escape(acc.avatar)}" alt="">`
                 : `<span>${this.escape(this.initials(acc.characterName || username))}</span>`;
-            const identity = String(acc.characterName || username).trim();
             const level = Number(acc.level) >= 1 ? Math.floor(Number(acc.level)) : '—';
             const availableMoney = Number(acc.cash) + Number(acc.bank);
             const totalMoney = Number.isFinite(availableMoney) ? availableMoney : acc.cash;
             pick.innerHTML = `
-                <span class="auth-account-card__avatar">${avatar}</span>
-                <span class="auth-account-card__body">
-                    <span class="auth-account-card__account">${this.escape(username)}</span>
-                    <strong class="auth-account-card__name">${this.escape(identity)}</strong>
-                    <span class="auth-account-card__stats">
-                        <span class="auth-account-card__level">LVL ${this.escape(level)}</span>
-                        <span class="auth-account-card__money">FUNDS ${this.escape(this.money(totalMoney))}</span>
-                    </span>
+                <span class="auth-id-avatar auth-account-card__avatar">${avatar}</span>
+                <span class="auth-id-info auth-account-card__body">
+                    <span class="auth-id-name auth-account-card__account">${this.escape(username)}</span>
+                    <span class="auth-id-stats auth-account-card__stats">LVL ${this.escape(level)} <span class="auth-account-card__money">FUNDS ${this.escape(this.money(totalMoney))}</span></span>
                 </span>
             `;
             pick.addEventListener('click', () => {
@@ -86,9 +85,9 @@ const AuthAccounts = {
 
             const remove = document.createElement('button');
             remove.type = 'button';
-            remove.className = 'auth-account-card__remove';
+            remove.className = 'auth-id-delete auth-account-card__remove';
             remove.setAttribute('aria-label', `Remove ${username}`);
-            remove.textContent = '×';
+            remove.innerHTML = '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             remove.addEventListener('click', (event) => {
                 event.stopPropagation();
                 post('authRemoveAccount', { username });
@@ -98,14 +97,14 @@ const AuthAccounts = {
             list.appendChild(card);
         });
 
-        this.setMode('form');
+        this.setMode();
     },
 
     init(data = {}) {
         this.accounts = Array.isArray(data.accounts) ? data.accounts : [];
         this.quickLogin = data.quickLogin === true;
         this.syncRememberCheckboxes();
-        this.setMode('form');
+        this.setMode();
         this.render();
     },
 
@@ -115,14 +114,11 @@ const AuthAccounts = {
             this.quickLogin = data.quickLogin;
             this.syncRememberCheckboxes();
         }
-        if (this.accounts.length === 0) {
-            this.setMode('form');
-        }
         this.render();
     },
 
     showForm(data = {}) {
-        this.setMode('form');
+        this.setMode();
         this.fillForm(data);
         Panels?.setAuthTab?.('login');
     },
@@ -193,24 +189,6 @@ const AuthAccounts = {
     bind() {
         if (this._ready) return;
         this._ready = true;
-
-        const chooser = $('#auth-account-chooser');
-        const stack = $('#auth-login-stack');
-        if (chooser && stack) stack.after(chooser);
-        const chooserTitle = chooser?.querySelector('.auth-chooser__title');
-        if (chooserTitle) chooserTitle.textContent = 'Saved identities — select to enter';
-
-        $('#auth-use-other-account')?.addEventListener('click', () => {
-            this.setMode('form');
-            Panels?.setAuthTab?.('login');
-            $('#auth-login-user')?.focus({ preventScroll: true });
-        });
-
-        $('#auth-back-to-accounts')?.addEventListener('click', () => {
-            if (this.accounts.length > 0) {
-                this.setMode('chooser');
-            }
-        });
 
         const onRememberChange = (event) => {
             const enabled = Boolean(event.target?.checked);

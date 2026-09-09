@@ -469,7 +469,7 @@ const Menu = {
         this.init();
 
         $('#menu-name').textContent = (data.name || '—').toUpperCase();
-        $('#menu-id').textContent = `ID: ${Number(data.id) || 0}`;
+        $('#menu-id').textContent = String(Number(data.id) || 0);
         const jobLabel = $('#menu-job-label');
         if (jobLabel) {
             jobLabel.textContent = data.factionLabel || data.job || 'Unemployed';
@@ -501,7 +501,7 @@ const Menu = {
         const xpMax = data.respectRequired || 4;
         const level = data.level || 1;
         $('#menu-xp-text').textContent = `${this.formatXp(xp)} / ${this.formatXp(xpMax)} RP`;
-        $('#menu-level').textContent = `LEVEL ${level}`;
+        $('#menu-level').textContent = `Nivel ${level}`;
         const xpBar = $('#menu-xp-bar');
         if (xpBar) xpBar.style.width = `${Math.min(100, (xp / xpMax) * 100)}%`;
 

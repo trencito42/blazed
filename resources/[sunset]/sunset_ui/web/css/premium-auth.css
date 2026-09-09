@@ -1,0 +1,475 @@
+/* Premium auth — 1:1 with login-register.html (loads after auth_loading.css) */
+
+#screen-auth.screen--auth {
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#screen-auth .auth-vignette,
+#screen-auth .auth-scanlines {
+    display: none !important;
+}
+
+#screen-auth .auth-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#screen-auth .auth-panel {
+    position: relative;
+    z-index: 10;
+    width: min(480px, 92vw) !important;
+    max-width: 480px !important;
+    padding: 45px 50px !important;
+    background: rgba(10, 10, 15, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 16px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    clip-path: none !important;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    animation: premiumAuthPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both !important;
+}
+
+@keyframes premiumAuthPopIn {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+#screen-auth .auth-header,
+#screen-auth .auth-brand {
+    text-align: center;
+    margin-bottom: 35px !important;
+}
+
+#screen-auth .auth-logo,
+#screen-auth .auth-brand__logo {
+    display: block;
+    width: 70px !important;
+    height: 70px !important;
+    max-width: 70px !important;
+    max-height: 70px !important;
+    margin: 0 auto 15px !important;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+}
+
+#screen-auth .auth-title,
+#screen-auth .auth-brand__eyebrow {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: #00ffcc !important;
+    text-transform: uppercase;
+    letter-spacing: 3px !important;
+    margin-bottom: 8px !important;
+}
+
+#screen-auth .auth-subtitle,
+#screen-auth .auth-brand__desc {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    margin-top: 0 !important;
+    line-height: 1.45;
+}
+
+#screen-auth .auth-tabs {
+    display: flex !important;
+    gap: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-bottom: 25px !important;
+}
+
+#screen-auth .auth-tab {
+    flex: 1;
+    background: none !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    padding: 15px 0 !important;
+    margin-bottom: -1px;
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 2px !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: none !important;
+}
+
+#screen-auth .auth-tab:hover {
+    color: #fff !important;
+    background: transparent !important;
+}
+
+#screen-auth .auth-tab.is-active {
+    color: #00ffcc !important;
+    border-bottom-color: #00ffcc !important;
+    background: transparent !important;
+}
+
+#screen-auth .auth-login-stack {
+    gap: 0 !important;
+}
+
+#screen-auth .auth-form {
+    gap: 20px !important;
+}
+
+#screen-auth .auth-form.hidden {
+    display: none !important;
+}
+
+#screen-auth .field,
+#screen-auth .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#screen-auth .field span,
+#screen-auth .input-label {
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    text-transform: uppercase;
+    letter-spacing: 1.5px !important;
+    font-family: 'Montserrat', sans-serif !important;
+}
+
+#screen-auth .field input,
+#screen-auth .form-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: none !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 0 !important;
+    color: #fff !important;
+    padding: 14px 15px !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#screen-auth .field input:focus,
+#screen-auth .form-input:focus {
+    border-bottom-color: #00ffcc !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    box-shadow: none !important;
+}
+
+#screen-auth .auth-remember,
+#screen-auth .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+    cursor: pointer;
+    user-select: none;
+}
+
+#screen-auth .auth-remember input,
+#screen-auth .checkbox-group input {
+    display: none;
+}
+
+#screen-auth .checkbox-custom {
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+#screen-auth .auth-remember input:checked + .checkbox-custom,
+#screen-auth .checkbox-group input:checked + .checkbox-custom {
+    background: #00ffcc;
+    border-color: #00ffcc;
+}
+
+#screen-auth .checkbox-custom svg {
+    width: 10px;
+    height: 10px;
+    stroke: #000;
+    stroke-width: 3;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#screen-auth .auth-remember input:checked + .checkbox-custom svg,
+#screen-auth .checkbox-group input:checked + .checkbox-custom svg {
+    opacity: 1;
+}
+
+#screen-auth .checkbox-label,
+#screen-auth .auth-remember > span:last-child {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#screen-auth .btn--primary,
+#screen-auth .btn-main {
+    width: 100%;
+    background: #00ffcc !important;
+    color: #000 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase;
+    letter-spacing: 2px !important;
+    cursor: pointer;
+    margin-top: 10px !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    clip-path: none !important;
+}
+
+#screen-auth .btn--primary::after {
+    display: none !important;
+}
+
+#screen-auth .btn--primary:hover,
+#screen-auth .btn-main:hover {
+    box-shadow: 0 0 25px rgba(0, 255, 204, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+#screen-auth .auth-divider {
+    position: relative;
+    text-align: center;
+    margin: 35px 0 25px;
+}
+
+#screen-auth .auth-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+#screen-auth .auth-divider span {
+    position: relative;
+    z-index: 2;
+    background: rgba(10, 10, 15, 0.95);
+    padding: 0 15px;
+    font-size: 9px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+#screen-auth .auth-identities-list,
+#screen-auth .auth-account-list {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 10px !important;
+    max-height: 160px !important;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+#screen-auth .auth-identities-list::-webkit-scrollbar,
+#screen-auth .auth-account-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+#screen-auth .auth-identities-list::-webkit-scrollbar-thumb,
+#screen-auth .auth-account-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+#screen-auth .auth-id-card,
+#screen-auth .auth-account-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+}
+
+#screen-auth .auth-id-card:hover,
+#screen-auth .auth-account-card:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(0, 255, 204, 0.3) !important;
+    transform: translateX(5px);
+}
+
+#screen-auth .auth-id-card__main,
+#screen-auth .auth-account-card__pick {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+#screen-auth .auth-id-avatar,
+#screen-auth .auth-account-card__avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 6px !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    background-size: cover !important;
+    background-position: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 800;
+    color: #00ffcc;
+}
+
+#screen-auth .auth-id-avatar img,
+#screen-auth .auth-account-card__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#screen-auth .auth-id-info,
+#screen-auth .auth-account-card__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+#screen-auth .auth-id-name,
+#screen-auth .auth-account-card__account {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: #fff !important;
+    letter-spacing: 0 !important;
+}
+
+#screen-auth .auth-account-card__name {
+    display: none !important;
+}
+
+#screen-auth .auth-id-stats,
+#screen-auth .auth-account-card__stats {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    display: flex;
+    gap: 10px;
+    letter-spacing: 0 !important;
+}
+
+#screen-auth .auth-id-stats span,
+#screen-auth .auth-account-card__money {
+    color: #00ffcc !important;
+}
+
+#screen-auth .auth-id-delete,
+#screen-auth .auth-account-card__remove {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.4) !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 0 !important;
+    padding: 0 !important;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+#screen-auth .auth-id-delete:hover,
+#screen-auth .auth-account-card__remove:hover {
+    background: #ff3366 !important;
+    color: #fff !important;
+}
+
+#screen-auth .auth-id-delete svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+#screen-auth .auth-footer {
+    margin-top: 30px !important;
+    text-align: center;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    text-transform: uppercase;
+    letter-spacing: 2px !important;
+}
+
+#screen-auth .auth-account-chooser,
+#screen-auth .auth-chooser__other,
+#screen-auth .auth-chooser__back,
+#screen-auth .auth-chooser__title {
+    display: none !important;
+}
+
+#screen-auth .auth-panel.has-saved-accounts {
+    width: min(480px, 92vw) !important;
+}
+
+#screen-auth .auth-panel.has-saved-accounts .auth-tabs,
+#screen-auth .auth-panel.has-saved-accounts .auth-login-stack {
+    width: 100%;
+    margin: 0;
+}
+
+#screen-auth .auth-identities-empty {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 10px;
+}
+
+@media (max-width: 520px) {
+    #screen-auth .auth-panel {
+        padding: 36px 24px !important;
+    }
+}
