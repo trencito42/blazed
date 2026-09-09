@@ -191,19 +191,21 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
 
     if data.action == 'get_fisherman_job' then
         inCooldown = true
-        local ok, err = Sunset.AwaitCallback('sunset:hireJob', 'fisherman')
-        if ok then
-            exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
-        else
-            local errMsg = err or 'Nu a functionat angajarea.'
-            -- User already has fisherman job — show info instead of error
-            if errMsg:find('already work') or errMsg:find('You already work') then
-                exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
+        CreateThread(function()
+            local ok, err = Sunset.AwaitCallback('sunset:hireJob', 'fisherman')
+            if ok then
+                exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
             else
-                exports.sunset_ui:Notify(errMsg, 'error')
+                local errMsg = err or 'Nu a functionat angajarea.'
+                -- User already has fisherman job — show info instead of error
+                if errMsg:find('already work') or errMsg:find('You already work') then
+                    exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
+                else
+                    exports.sunset_ui:Notify(errMsg, 'error')
+                end
             end
-        end
-        SetTimeout(2000, function() inCooldown = false end)
+            SetTimeout(2000, function() inCooldown = false end)
+        end)
 
     elseif data.action == 'start_fishing_shift' then
         inCooldown = true
@@ -212,34 +214,38 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
 
     elseif data.action == 'upgrade_fishing_rod' then
         inCooldown = true
-        local ok, msg = Sunset.AwaitCallback('sunset:fishingshop:upgradeRod')
-        if ok then
-            exports.sunset_ui:Notify(msg or 'Undita upgradata!', 'success', 6000)
-        else
-            exports.sunset_ui:Notify(msg or 'Nu s-a putut face upgrade.', 'error')
-        end
-        SetTimeout(2000, function() inCooldown = false end)
+        CreateThread(function()
+            local ok, msg = Sunset.AwaitCallback('sunset:fishingshop:upgradeRod')
+            if ok then
+                exports.sunset_ui:Notify(msg or 'Undita upgradata!', 'success', 6000)
+            else
+                exports.sunset_ui:Notify(msg or 'Nu s-a putut face upgrade.', 'error')
+            end
+            SetTimeout(2000, function() inCooldown = false end)
+        end)
 
     elseif data.action == 'sell_fish_247' then
         inCooldown = true
-        local invData, err = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
-        if invData then
-            if not invData.items or #invData.items == 0 then
-                exports.sunset_ui:Notify('Nu ai niciun peste in inventar.', 'info')
+        CreateThread(function()
+            local invData, err = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
+            if invData then
+                if not invData.items or #invData.items == 0 then
+                    exports.sunset_ui:Notify('Nu ai niciun peste in inventar.', 'info')
+                else
+                    exports.sunset_ui:Send('fishingShopShow', {
+                        mode  = 'sell',
+                        title = '24/7 — VINDE PESTE',
+                        cash  = invData.cash,
+                        items = invData.items,
+                    })
+                    exports.sunset_ui:SetFocus(true, true)
+                    shopOpen = true
+                end
             else
-                exports.sunset_ui:Send('fishingShopShow', {
-                    mode  = 'sell',
-                    title = '24/7 — VINDE PESTE',
-                    cash  = invData.cash,
-                    items = invData.items,
-                })
-                exports.sunset_ui:SetFocus(true, true)
-                shopOpen = true
+                exports.sunset_ui:Notify(err or 'Eroare la incarcare inventar.', 'error')
             end
-        else
-            exports.sunset_ui:Notify(err or 'Eroare la incarcare inventar.', 'error')
-        end
-        SetTimeout(2000, function() inCooldown = false end)
+            SetTimeout(2000, function() inCooldown = false end)
+        end)
     end
 end)
 
