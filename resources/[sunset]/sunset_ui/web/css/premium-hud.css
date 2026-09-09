@@ -17,8 +17,9 @@
 /* ── Top right ── */
 /* Beat legacy hud.css .hud-bl minimap offsets — premium uses symmetric 40px margins */
 .hud .hud-bl.premium-hud-bl {
-    left: 40px;
-    bottom: calc(20vh + 44px);
+    left: 40px !important;
+    right: auto !important;
+    bottom: calc(22vh + 72px) !important;
     align-items: flex-start;
 }
 
@@ -225,9 +226,9 @@
 
 /* ── Bottom left ── */
 .hud-bl.premium-hud-bl {
-    left: 40px;
-    right: auto;
-    bottom: calc(20vh + 44px);
+    left: 40px !important;
+    right: auto !important;
+    bottom: calc(22vh + 72px) !important;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -446,9 +447,10 @@
         right: 18px;
     }
 
+    .hud .hud-bl.premium-hud-bl,
     .hud-bl.premium-hud-bl {
-        left: 40px;
-        bottom: calc(20vh + 40px);
+        left: 40px !important;
+        bottom: calc(22vh + 68px) !important;
     }
 
     .time-display {
