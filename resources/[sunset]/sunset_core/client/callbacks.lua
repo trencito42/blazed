@@ -27,7 +27,11 @@ RegisterNetEvent('sunset:client:callbackResponse', function(requestId, result, e
     local cb = PendingCallbacks[requestId]
     if cb then
         PendingCallbacks[requestId] = nil
-        cb(result, err)
+        if type(result) == 'table' and result.__cb then
+            cb(result.result, result.err)
+        else
+            cb(result, err)
+        end
     end
 end)
 

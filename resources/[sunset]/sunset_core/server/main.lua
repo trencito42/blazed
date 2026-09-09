@@ -39,11 +39,11 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
     rate.count = rate.count + 1
     if rate.count > 30 then
         print(('^3[blaze.mp]^7 Callback flood blocked from %s'):format(source))
-        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, 'Too many requests — wait a moment')
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, { __cb = true, result = nil, err = 'Too many requests — wait a moment' })
         return
     end
     if not Callbacks[name] then
-        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil, 'Callback not found: ' .. name)
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, { __cb = true, result = nil, err = 'Callback not found: ' .. name })
         return
     end
 
@@ -54,12 +54,19 @@ RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
 
     if not ok then
         print(('^1[blaze.mp]^7 Callback error (%s): %s'):format(name, tostring(packed)))
-        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, nil,
-            ('Server error while processing %s. Try once more; if it repeats, report this action to staff.'):format(name))
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, {
+            __cb = true,
+            result = nil,
+            err = ('Server error while processing %s. Try once more; if it repeats, report this action to staff.'):format(name)
+        })
         return
     end
 
-    TriggerClientEvent('sunset:client:callbackResponse', source, requestId, packed.result, packed.err)
+    TriggerClientEvent('sunset:client:callbackResponse', source, requestId, {
+        __cb = true,
+        result = packed.result,
+        err = packed.err
+    })
 end)
 
 -- ═══ SESSION ═══

@@ -8,6 +8,7 @@ description 'Context-aware nearby player interaction menu'
 version '1.0.0'
 
 dependencies {
+    'oxmysql',
     'sunset_core',
     'sunset_ui',
     'sunset_factions',
@@ -26,4 +27,7 @@ client_scripts {
     'client/main.lua',
 }
 
-server_script 'server/main.lua'
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server/main.lua',
+}

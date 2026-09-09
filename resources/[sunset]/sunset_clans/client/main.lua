@@ -154,5 +154,10 @@ AddEventHandler('sunset:nui:clanManage', function(data)
         end
     end
 
-    exports.sunset_ui:Notify(err or ('Clan action failed (%s).'):format(tostring(action or 'unknown')), 'error', 8000)
+    if err and tostring(err) ~= '' then
+        exports.sunset_ui:Notify(tostring(err), 'error', 8000)
+    else
+        exports.sunset_ui:Notify(('Clan action failed (%s).'):format(tostring(action or 'unknown')), 'error', 8000)
+    end
+    print(('[sunset_clans] clanManage failed (%s): %s'):format(tostring(action or 'unknown'), tostring(err or 'nil')))
 end)
