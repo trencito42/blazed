@@ -34,6 +34,7 @@ local function openVehicleMenu(veh)
             { id = 'lockpick_vehicle', label = 'Forteaza usa (Lockpick)', group = 'CIVILIAN' },
         },
     })
+    exports.sunset_ui:SetFocus(true, true)
     menuOpen = 'vehicle'
 end
 
@@ -44,11 +45,13 @@ local function openNpcMenu(idx)
             { id = 'sell_stolen_car', label = 'Vinde masina', group = 'CIVILIAN' },
         },
     })
+    exports.sunset_ui:SetFocus(true, true)
     menuOpen = 'npc'
 end
 
 local function closeMenu()
     exports.sunset_ui:Send('playerInteractionHide', {})
+    exports.sunset_ui:SetFocus(false, false)
     menuOpen = nil
 end
 
