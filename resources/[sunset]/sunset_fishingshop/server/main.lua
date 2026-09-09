@@ -53,7 +53,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:upgradeRod', function(s
     local fishLevel = tonumber(MySQL.scalar.await(
         'SELECT level FROM job_progress WHERE character_id = ? AND job_id = ?',
         { char.id, 'fisherman' }
-    )) or 0
+    )) or 1  -- default nivel 1 daca nu exista inregistrare
 
     -- Ce undita are jucatorul acum (cea mai buna)
     local currentRod = nil
