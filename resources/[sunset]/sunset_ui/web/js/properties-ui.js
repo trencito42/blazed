@@ -3,6 +3,7 @@ const PropertyUI = {
     sellPending: {},
     activeFilter: 'all',
     searchQuery: '',
+    activeProperty: null,
     _controlsBound: false,
 
     setMeta(meta) {
@@ -55,31 +56,124 @@ const PropertyUI = {
         return el;
     },
 
-    createOwnerTools(p, container) {
+    closeManageView() {
+        const browserView = document.getElementById('properties-view-browser');
+        const manageView = document.getElementById('properties-view-manage');
+        if (browserView) browserView.classList.remove('hidden');
+        if (manageView) manageView.classList.add('hidden');
+        this.activeProperty = null;
+    },
+
+    openManageView(p) {
+        this.activeProperty = p;
+        const browserView = document.getElementById('properties-view-browser');
+        const manageView = document.getElementById('properties-view-manage');
+        const content = document.getElementById('properties-manage-content');
+        const titleEl = document.getElementById('prop-manage-title');
+
+        if (browserView) browserView.classList.add('hidden');
+        if (manageView) manageView.classList.remove('hidden');
+        if (titleEl) titleEl.textContent = `Manage #${p.id} ${p.label || 'Residence'}`;
+
+        if (!content) return;
+        content.replaceChildren();
+
         const meta = this.meta || {};
-        const tools = document.createElement('div');
-        tools.className = 'house-owner-tools';
 
-        const head = document.createElement('div');
-        head.className = 'house-owner-tools__head';
-        head.innerHTML = `
-            <div class="house-owner-tools__title">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span>PROPERTY MANAGEMENT</span>
+        // 1. HERO QUICK BAR
+        const hero = document.createElement('div');
+        hero.className = 'prop-manage-hero';
+
+        const heroLeft = document.createElement('div');
+        heroLeft.className = 'prop-manage-hero__details';
+        heroLeft.innerHTML = `
+            <div class="house-row__title-wrap">
+                <span class="prop-id-badge">#${p.id}</span>
+                <strong class="prop-address">${this.escape(p.label || 'Residence')}</strong>
+                <div class="prop-status-badge is-owned">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>YOUR PROPERTY</span>
+                </div>
             </div>
-            <span class="house-owner-tools__sub">Configure residence settings, rental rates, interior style and view tenants</span>
         `;
-        tools.appendChild(head);
 
+        const cleanDesc = this.cleanText(p.description);
+        if (cleanDesc) {
+            const quoteEl = document.createElement('div');
+            quoteEl.className = 'house-row__quote';
+            quoteEl.innerHTML = `
+                <svg class="quote-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                <span>“${this.escape(cleanDesc)}”</span>
+            `;
+            heroLeft.appendChild(quoteEl);
+        }
+
+        const chips = document.createElement('div');
+        chips.className = 'house-row__chips';
+        chips.innerHTML = `
+            <span class="prop-chip prop-chip--lvl">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>LVL ${p.minimumLevel || 1}</span>
+            </span>
+            <span class="prop-chip prop-chip--interior">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                <span>${this.escape(p.interior || 'Standard')}</span>
+            </span>
+            <span class="prop-chip ${p.locked ? 'prop-chip--locked' : 'prop-chip--open'}">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="${p.locked ? 'M7 11V7a5 5 0 0 1 10 0v4' : 'M7 11V7a5 5 0 0 1 9.9-1'}"/></svg>
+                <span>${p.locked ? 'LOCKED' : 'OPEN'}</span>
+            </span>
+            <span class="prop-chip prop-chip--renters">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>${p.renterCount || 0}/${p.maxRenters || 1} Tenants</span>
+            </span>
+            ${p.rentEnabled ? `<span class="prop-chip prop-chip--rent-price"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8"/></svg><span>${this.money(p.rentPrice)}/payday</span></span>` : ''}
+        `;
+        heroLeft.appendChild(chips);
+
+        const heroRight = document.createElement('div');
+        heroRight.className = 'prop-manage-hero__actions';
+        heroRight.append(
+            this.createButton(
+                'Enter',
+                'enter',
+                p.id,
+                {},
+                true,
+                '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>'
+            ),
+            this.createButton(
+                'Set Home',
+                'sethome',
+                p.id,
+                {},
+                false,
+                '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+            ),
+            this.createButton(
+                p.locked ? 'Unlock' : 'Lock',
+                'lock',
+                p.id,
+                {},
+                false,
+                p.locked 
+                    ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>'
+                    : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+            )
+        );
+        hero.append(heroLeft, heroRight);
+        content.appendChild(hero);
+
+        // 2. SETTINGS GRID (3 cards)
         const grid = document.createElement('div');
-        grid.className = 'house-owner-tools__grid';
+        grid.className = 'prop-manage-grid';
 
-        // 1. Visitor Note Card
+        // Card 1: Visitor Note
         const descCard = document.createElement('div');
         descCard.className = 'owner-panel-card';
         descCard.innerHTML = `
             <div class="owner-panel-card__label">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 <span>VISITOR NOTE / NAME</span>
             </div>
         `;
@@ -112,12 +206,12 @@ const PropertyUI = {
         descCard.append(descInput, descActions);
         grid.appendChild(descCard);
 
-        // 2. Rental Settings Card
+        // Card 2: Rental Settings
         const rentCard = document.createElement('div');
         rentCard.className = 'owner-panel-card';
         rentCard.innerHTML = `
             <div class="owner-panel-card__label">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8"/></svg>
                 <span>RENTAL &amp; CAPACITY</span>
             </div>
         `;
@@ -194,12 +288,12 @@ const PropertyUI = {
         rentCard.append(rentFieldsRow, rentActions, rentHint);
         grid.appendChild(rentCard);
 
-        // 3. Interior Selector Card
+        // Card 3: Interior Design
         const interiorCard = document.createElement('div');
         interiorCard.className = 'owner-panel-card';
         interiorCard.innerHTML = `
             <div class="owner-panel-card__label">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span>INTERIOR THEME</span>
             </div>
         `;
@@ -223,19 +317,19 @@ const PropertyUI = {
         interiorBtn.addEventListener('click', () => this.dispatch(p.id, 'interior', { key: interiorSelect.value }));
         const interiorHint = document.createElement('div');
         interiorHint.className = 'owner-field-hint';
-        interiorHint.textContent = 'Switch layout and decor instantly';
+        interiorHint.textContent = 'Switch layout and decor styling instantly';
         interiorCard.append(interiorSelect, interiorBtn, interiorHint);
         grid.appendChild(interiorCard);
 
-        tools.appendChild(grid);
+        content.appendChild(grid);
 
-        // 4. Active Renters Roster
+        // 3. ACTIVE TENANTS ROSTER (Full width)
         const rentersSection = document.createElement('div');
         rentersSection.className = 'house-owner-tools__renters-section';
         rentersSection.innerHTML = `
             <div class="renters-section-head">
                 <div class="renters-section-title">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     <span>ACTIVE TENANTS ROSTER</span>
                     <span class="renters-count-chip">${p.renterCount || 0} / ${p.maxRenters || 1}</span>
                 </div>
@@ -263,11 +357,9 @@ const PropertyUI = {
             post('propertyRenters', { propertyId: p.id });
         });
         rentersSection.appendChild(rentersList);
-        tools.appendChild(rentersSection);
-        container._rentersList = rentersList;
-        container._propertyId = p.id;
+        content.appendChild(rentersSection);
 
-        // 5. Liquidation / Sell Section
+        // 4. LIQUIDATION / SELL SECTION (Full width)
         const sellRefund = Math.floor((Number(p.price) || 0) * ((meta.sellRefundPercent || 70) / 100));
         const sellCard = document.createElement('div');
         sellCard.className = 'house-owner-tools__sell-card';
@@ -303,9 +395,10 @@ const PropertyUI = {
             this.dispatch(p.id, 'sell', { confirm: true });
         });
         sellCard.appendChild(sellBtn);
-        tools.appendChild(sellCard);
+        content.appendChild(sellCard);
 
-        return tools;
+        // Fetch renters
+        post('propertyRenters', { propertyId: p.id });
     },
 
     createRow(p, selectedId) {
@@ -325,10 +418,6 @@ const PropertyUI = {
         li.dataset.owned = String(Boolean(p.owned));
         li.dataset.rent = String(Boolean(p.rentEnabled || p.rented));
         li.dataset.name = String(p.label || '').toLowerCase();
-
-        // Main horizontal bar of the card
-        const mainBar = document.createElement('div');
-        mainBar.className = 'house-row__main';
 
         // Main info section (left)
         const details = document.createElement('div');
@@ -532,7 +621,7 @@ const PropertyUI = {
             ));
         }
 
-        // Manage (Owner only)
+        // Manage (Owner only) -> OPENS SEPARATE VIEW
         if (p.owned) {
             const toggle = document.createElement('button');
             toggle.type = 'button';
@@ -543,25 +632,13 @@ const PropertyUI = {
             `;
             toggle.addEventListener('click', (event) => {
                 event.stopPropagation();
-                const existing = li.querySelector('.house-owner-tools');
-                if (existing) {
-                    existing.remove();
-                    toggle.classList.remove('is-active');
-                    toggle.querySelector('span').textContent = 'Manage';
-                    return;
-                }
-                toggle.classList.add('is-active');
-                toggle.querySelector('span').textContent = 'Close Tools';
-                const tools = this.createOwnerTools(p, li);
-                li.appendChild(tools);
-                post('propertyRenters', { propertyId: p.id });
+                this.openManageView(p);
             });
             actions.appendChild(toggle);
         }
 
         side.appendChild(actions);
-        mainBar.append(details, side);
-        li.appendChild(mainBar);
+        li.append(details, side);
         return li;
     },
 
@@ -631,6 +708,16 @@ const PropertyUI = {
                 this.applyFilters();
             });
         });
+
+        const manageBack = document.getElementById('properties-manage-back');
+        if (manageBack) {
+            manageBack.addEventListener('click', () => this.closeManageView());
+        }
+
+        const manageClose = document.getElementById('properties-manage-close');
+        if (manageClose) {
+            manageClose.addEventListener('click', () => post('propertiesClose'));
+        }
     },
 
     renderList(container, data) {
@@ -638,6 +725,7 @@ const PropertyUI = {
         container.innerHTML = '';
         this.setMeta(data.meta);
         this.setupControls();
+        this.closeManageView();
 
         const properties = data.properties || [];
         properties.forEach((p) => container.appendChild(this.createRow(p, data.selectedId)));
@@ -657,8 +745,7 @@ const PropertyUI = {
 
     updateRenters(propertyId, renters) {
         document.querySelectorAll('.house-owner-tools__renter-list').forEach((list) => {
-            const host = list.closest('.house-row');
-            if (!host || Number(host.dataset.propertyId) !== Number(propertyId)) return;
+            if (this.activeProperty && Number(this.activeProperty.id) !== Number(propertyId)) return;
             list.replaceChildren();
             if (!(renters || []).length) {
                 list.innerHTML = `

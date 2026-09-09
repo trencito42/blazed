@@ -84,6 +84,139 @@
     to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ==========================================================================
+   DUAL-VIEW SYSTEM — Browser View & Manage View
+   ========================================================================== */
+
+/* Each view occupies the full shell; only one is shown at a time */
+#properties .properties-view {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    animation: propViewIn 0.28s var(--prop-ease) both !important;
+}
+
+#properties .properties-view.hidden {
+    display: none !important;
+}
+
+@keyframes propViewIn {
+    from { opacity: 0; transform: translateX(18px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Manage view header variant — shows back-button instead of kicker */
+#properties .house-browser__head--manage {
+    padding: 18px 28px !important;
+}
+
+/* Back to Residences pill button */
+#properties .prop-manage-back-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: rgba(0, 255, 204, 0.08) !important;
+    border: 1px solid rgba(0, 255, 204, 0.25) !important;
+    border-radius: 100px !important;
+    color: var(--prop-cyan) !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.8px !important;
+    text-transform: uppercase !important;
+    padding: 7px 16px 7px 12px !important;
+    cursor: pointer !important;
+    transition: all 0.2s var(--prop-ease) !important;
+    margin-bottom: 8px !important;
+}
+
+#properties .prop-manage-back-btn svg {
+    transition: transform 0.22s var(--prop-ease) !important;
+    flex-shrink: 0 !important;
+}
+
+#properties .prop-manage-back-btn:hover {
+    background: rgba(0, 255, 204, 0.15) !important;
+    border-color: var(--prop-cyan) !important;
+    box-shadow: 0 0 16px var(--prop-cyan-glow) !important;
+}
+
+#properties .prop-manage-back-btn:hover svg {
+    transform: translateX(-4px) !important;
+}
+
+/* Manage view title */
+#properties #prop-manage-title {
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+}
+
+/* Scrollable content area of the manage view */
+#properties .house-manage-scroll {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    padding: 24px 32px 32px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 204, 0.3) transparent;
+}
+
+#properties .house-manage-scroll::-webkit-scrollbar { width: 6px; }
+#properties .house-manage-scroll::-webkit-scrollbar-track { background: transparent; }
+#properties .house-manage-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 204, 0.25);
+    border-radius: 10px;
+}
+#properties .house-manage-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--prop-cyan);
+}
+
+/* Hero bar at top of manage view */
+#properties .prop-manage-hero {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+    padding: 22px 26px !important;
+    background: rgba(0, 255, 204, 0.04) !important;
+    border: 1px solid rgba(0, 255, 204, 0.15) !important;
+    border-radius: var(--prop-radius-lg) !important;
+    flex-wrap: wrap !important;
+}
+
+#properties .prop-manage-hero__details {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+#properties .prop-manage-hero__actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+    align-items: flex-start !important;
+}
+
+/* Settings grid (3 cards) */
+#properties .prop-manage-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)) !important;
+    gap: 14px !important;
+}
+
 /* Modal Header */
 #properties .house-browser__head {
     display: flex !important;
@@ -326,12 +459,13 @@
     background: var(--prop-cyan);
 }
 
-/* Property Card Row */
+/* Property Card Row — always a clean horizontal bar in the browser list */
 #properties .house-row {
     display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
     padding: 20px 24px !important;
     background: var(--prop-bg-card) !important;
     border: 1px solid var(--prop-border) !important;
@@ -341,14 +475,6 @@
     box-shadow: none !important;
     transition: all 0.25s var(--prop-ease) !important;
     position: relative !important;
-}
-
-#properties .house-row__main {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 24px !important;
-    width: 100% !important;
 }
 
 #properties .house-row:hover {
