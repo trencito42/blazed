@@ -65,6 +65,10 @@ echo "[sunsetmp] resources merged"
 export NO_DEFAULT_CONFIG=1
 export NO_LICENSE_KEY=1
 
+txadmin_config_looks_valid() {
+  [ -f "$1" ] && grep -q '"version"' "$1" && grep -q 'cfgPath' "$1"
+}
+
 if [ -n "${TXADMIN_ENABLE}" ] && [ "${TXADMIN_ENABLE}" != "0" ]; then
   TXADMIN_CONFIG="/txData/default/config.json"
   mkdir -p /txData/default
@@ -78,16 +82,20 @@ if [ -n "${TXADMIN_ENABLE}" ] && [ "${TXADMIN_ENABLE}" != "0" ]; then
   "server": {
     "dataPath": "/config",
     "cfgPath": "/config/server.cfg"
+  },
+  "fxRunner": {
+    "autostart": true
   }
 }
 EOF
   }
-  if [ ! -f "$TXADMIN_CONFIG" ]; then
-    echo "[sunsetmp] seeding txAdmin config.json"
-    write_default_txadmin_config
-  elif ! node -e "JSON.parse(require('fs').readFileSync('/txData/default/config.json','utf8'))" 2>/dev/null; then
-    echo "[sunsetmp] corrupt txAdmin config — backup + reseed"
-    mv "$TXADMIN_CONFIG" "/txData/default/config.json.bak.$(date +%s)" 2>/dev/null || true
+  if ! txadmin_config_looks_valid "$TXADMIN_CONFIG"; then
+    if [ -f "$TXADMIN_CONFIG" ]; then
+      echo "[sunsetmp] corrupt txAdmin config — backup + reseed"
+      mv "$TXADMIN_CONFIG" "/txData/default/config.json.bak.$(date +%s)" 2>/dev/null || true
+    else
+      echo "[sunsetmp] seeding txAdmin config.json"
+    fi
     write_default_txadmin_config
   fi
   echo "[sunsetmp] txAdmin enabled — web UI on port 40120"
