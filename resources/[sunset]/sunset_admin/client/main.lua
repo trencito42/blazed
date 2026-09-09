@@ -340,14 +340,14 @@ RegisterCommand('speed', function(_, args)
     TriggerServerEvent('sunset:admin:requestSpeed', args[1])
 end, false)
 
-RegisterCommand('tpwp', function()
+local function tpToWaypoint()
     if adminLevel < 1 then
         exports.sunset_ui:Notify('No permission', 'error')
         return
     end
     local blip = GetFirstBlipInfoId(8) -- 8 = waypoint blip
     if not DoesBlipExist(blip) then
-        exports.sunset_ui:Notify('No waypoint set — right-click map → Move first', 'error')
+        exports.sunset_ui:Notify('No waypoint set on map', 'error')
         return
     end
     local coord = GetBlipInfoIdCoord(blip)
@@ -363,7 +363,11 @@ RegisterCommand('tpwp', function()
         SetEntityCoords(PlayerPedId(), coord.x, coord.y, z, false, false, false, false)
         exports.sunset_ui:Notify('Teleported to waypoint', 'success')
     end)
-end, false)
+end
+
+RegisterCommand('tpwp', function() tpToWaypoint() end, false)
+
+RegisterKeyMapping('tpwp', 'Teleport to waypoint (admin)', 'keyboard', 'F7')
 
 CreateThread(function()
     Wait(4000)
