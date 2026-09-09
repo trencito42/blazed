@@ -49,7 +49,7 @@ CreateThread(function()
 
     -- Blip pe harta
     local blip = AddBlipForCoord(NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z)
-    SetBlipSprite(blip, 66)
+    SetBlipSprite(blip, 68)  -- radar_tow_truck
     SetBlipColour(blip, 3)
     SetBlipScale(blip, 0.85)
     SetBlipAsShortRange(blip, true)
