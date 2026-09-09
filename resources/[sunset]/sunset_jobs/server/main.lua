@@ -67,6 +67,7 @@ local function buildJobCenterJobs(center)
             label = j.label or (def and def.label) or j.id,
             description = def and def.description or '',
             salary = def and def.grades and def.grades[0] and def.grades[0].salary,
+            npcCoords = def and def.npcCoords,
         })
         ::continue::
     end

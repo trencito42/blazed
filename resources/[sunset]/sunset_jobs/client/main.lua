@@ -17,18 +17,28 @@ AddEventHandler('sunset:nui:jobCenterHire', function(data)
     local ok, err = Sunset.AwaitCallback('sunset:hireJob', data.jobId)
     if ok then
         if data.jobId ~= 'unemployed' then
-            exports.sunset_ui:Notify('You are now employed as ' .. (data.jobLabel or data.jobId), 'success')
+            exports.sunset_ui:Notify('Esti acum angajat ca ' .. (data.jobLabel or data.jobId), 'success', 6000)
+        else
+            exports.sunset_ui:Notify('Te-ai dat demisie.', 'info', 4000)
         end
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('jobCenterHide', {})
     else
-        exports.sunset_ui:Notify(err or 'Could not get job', 'error')
+        exports.sunset_ui:Notify(err or 'Nu s-a putut finaliza angajarea.', 'error')
+        -- nu inchidem UI-ul — userul poate incerca alt job sau apasa ESC
     end
 end)
 
 AddEventHandler('sunset:nui:jobCenterClose', function()
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('jobCenterHide', {})
+end)
+
+AddEventHandler('sunset:nui:jobCenterWaypoint', function(data)
+    if data and data.x and data.y then
+        SetNewWaypoint(data.x, data.y)
+        exports.sunset_ui:Notify('Waypoint setat pe harta!', 'info', 3000)
+    end
 end)
 
 RegisterCommand('quitjob', function()

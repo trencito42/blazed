@@ -1373,21 +1373,60 @@ const Panels = {
 
     showJobCenter(data) {
         this.init();
-        $('#jobcenter-title').textContent = data.label || 'Job Center';
+        const jobs = data.jobs || [];
+        $('#jobcenter-title').textContent = (data.label || 'JOB CENTER').toUpperCase();
+
         const list = $('#jobcenter-list');
+        const detailEl = $('#jobcenter-details');
+        const sideTitle = $('#jobcenter-side-title');
+        const hireBtn = $('#jobcenter-hire');
+        const waypointBtn = $('#jobcenter-waypoint');
         list.innerHTML = '';
-        (data.jobs || []).forEach((job) => {
-            const li = document.createElement('li');
-            const meta = [];
-            if (job.salary) meta.push(`$${job.salary}/wk`);
-            if (job.description) meta.push(job.description);
-            li.innerHTML = `<div class="panel-list__job"><strong>${job.label}</strong>${meta.length ? `<small>${meta.join(' — ')}</small>` : ''}</div><button>HIRE</button>`;
-            li.querySelector('button')?.addEventListener('click', () => post('jobCenterHire', {
-                jobId: job.id, jobLabel: job.label,
-            }));
-            list.appendChild(li);
+
+        let selectedJob = null;
+
+        const selectJob = (job, el) => {
+            selectedJob = job;
+            list.querySelectorAll('.jobcenter-job-item').forEach(li => li.classList.remove('is-selected'));
+            el.classList.add('is-selected');
+            sideTitle.textContent = job.label;
+            const salaryText = job.salary ? `$${job.salary} / săptămână` : 'Neplătit';
+            detailEl.innerHTML = `
+                <p class="jobcenter-details__salary">${salaryText}</p>
+                ${job.description ? `<p class="jobcenter-details__desc">${job.description}</p>` : ''}
+            `;
+            hireBtn.disabled = false;
+            if (job.npcCoords) {
+                waypointBtn.classList.remove('hidden');
+            } else {
+                waypointBtn.classList.add('hidden');
+            }
+        };
+
+        jobs.forEach(job => {
+            const el = document.createElement('div');
+            el.className = 'jobcenter-job-item';
+            el.innerHTML = `<span class="jobcenter-job-item__label">${job.label}</span>` +
+                (job.salary ? `<span class="jobcenter-job-item__salary">$${job.salary}/wk</span>` : '');
+            el.addEventListener('click', () => selectJob(job, el));
+            list.appendChild(el);
         });
-        $('#jobcenter-close').onclick = () => post('jobCenterClose');
+
+        // Reset side panel
+        sideTitle.textContent = 'JOB DETAILS';
+        detailEl.innerHTML = '<p class="jobcenter-details__hint">Selecteaza un job din lista</p>';
+        hireBtn.disabled = true;
+        waypointBtn.classList.add('hidden');
+
+        hireBtn.onclick = () => {
+            if (!selectedJob) return;
+            post('jobCenterHire', { jobId: selectedJob.id, jobLabel: selectedJob.label });
+        };
+        waypointBtn.onclick = () => {
+            if (!selectedJob || !selectedJob.npcCoords) return;
+            post('jobCenterWaypoint', { x: selectedJob.npcCoords.x, y: selectedJob.npcCoords.y });
+        };
+
         $('#jobcenter')?.classList.remove('hidden');
     },
     hideJobCenter() { $('#jobcenter')?.classList.add('hidden'); },
