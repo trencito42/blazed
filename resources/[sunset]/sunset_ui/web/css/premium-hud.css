@@ -356,24 +356,28 @@
 
 .location-panel {
     display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
     margin-left: 0;
+    max-width: min(520px, 46vw);
     pointer-events: none;
 }
 
-.location-compass {
+.location-line {
     display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    min-width: 44px;
-    padding: 0 12px 0 0;
-    margin-left: 0;
-    border-left: 4px solid var(--hud-accent);
-    padding-left: 12px;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+    border-left: 3px solid var(--hud-accent);
+    padding-left: 10px;
+}
+
+.location-compass {
+    flex-shrink: 0;
     color: var(--hud-accent);
-    font-size: 30px;
+    font-size: 28px;
     font-style: italic;
     font-weight: 900;
     line-height: 1;
@@ -383,17 +387,20 @@
         0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
-.location-body {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    min-width: 0;
-    max-width: min(480px, 44vw);
+/* Thin rule — not a | character */
+.location-sep {
+    flex-shrink: 0;
+    align-self: center;
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 6px rgba(0, 255, 204, 0.15);
 }
 
 .loc-street {
-    font-size: 36px;
+    flex: 1;
+    min-width: 0;
+    font-size: 32px;
     font-style: italic;
     font-weight: 900;
     color: var(--hud-text-main);
@@ -412,7 +419,8 @@
     color: var(--hud-accent);
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin-top: 5px;
+    margin-top: 0;
+    padding-left: 13px;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
     display: flex;
     align-items: center;
@@ -462,11 +470,14 @@
     }
 
     .loc-street {
-        font-size: 28px;
+        font-size: 26px;
     }
 
     .location-compass {
-        font-size: 24px;
-        min-width: 40px;
+        font-size: 22px;
+    }
+
+    .location-sep {
+        height: 18px;
     }
 }
