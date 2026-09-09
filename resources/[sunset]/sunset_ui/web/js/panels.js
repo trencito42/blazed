@@ -2044,7 +2044,7 @@ const Panels = {
         if (this._fishingShopCart.length === 0) return;
         const isSell = this._fishingShopMode === 'sell';
         post(isSell ? 'fishingShopSell' : 'fishingShopBuy', { cart: this._fishingShopCart });
-        this.hideFishingShop();
+        // fishingShopClose releases NUI focus + sends fishingShopHide → hideFishingShop()
         post('fishingShopClose', {});
     },
 };

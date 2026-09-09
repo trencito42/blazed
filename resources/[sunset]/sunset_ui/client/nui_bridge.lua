@@ -141,6 +141,9 @@ forward('licenseQuizClose')
 forward('licenseQuizSubmit')
 forward('playerInteractionClose')
 forward('playerInteractionAction')
+forward('fishingShopBuy')
+forward('fishingShopSell')
+forward('fishingShopClose')
 
 RegisterNUICallback('licenseQuizAnswer', function(data, cb)
     data = type(data) == 'table' and data or {}

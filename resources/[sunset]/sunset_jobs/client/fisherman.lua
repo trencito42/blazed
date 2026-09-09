@@ -31,6 +31,13 @@ local function isShopMenuOpen()
     return ok and result == true
 end
 
+-- Block E for 500ms after inventory closes so drop-pickup interaction
+-- doesn't accidentally trigger a fishing cast
+local lastInventoryClose = 0
+AddEventHandler('sunset:nui:inventoryClose', function()
+    lastInventoryClose = GetGameTimer()
+end)
+
 local function isFishermanShift()
     return JC.jobId == 'fisherman' and JC.state and JC.state ~= 'IDLE'
 end
@@ -288,7 +295,9 @@ CreateThread(function()
                 local atSpot = atFishingSpot()
                 if atSpot then
                     EnableControlAction(0, 38, true)
-                    if not isShopMenuOpen() and contextJustPressed() then
+                    if not isShopMenuOpen()
+                       and (GetGameTimer() - lastInventoryClose) > 500
+                       and contextJustPressed() then
                         CreateThread(attemptFish)
                     end
                     Wait(0)
