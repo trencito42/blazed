@@ -4,6 +4,8 @@ const Chat = {
     playerId: 0,
     playerName: '',
     channel: 'ooc',
+    suggestions: [],
+    suggestionPick: 0,
     channelPrefixes: {
         me: '/me ',
         do: '/do ',
@@ -21,6 +23,138 @@ const Chat = {
 
     maxMessages() {
         return Math.max(80, this.pageSize() * 8);
+    },
+
+    setSuggestions(rows) {
+        this.suggestions = Array.isArray(rows) ? rows : [];
+        this.suggestionPick = 0;
+        this.renderSuggestions();
+    },
+
+    parseCommandInput(text) {
+        const raw = String(text || '');
+        if (!raw.startsWith('/')) return null;
+        const body = raw.slice(1);
+        const trimmed = body.trimStart();
+        const space = trimmed.indexOf(' ');
+        const cmdPart = (space === -1 ? trimmed : trimmed.slice(0, space)).toLowerCase();
+        const argsPart = space === -1 ? '' : trimmed.slice(space + 1);
+        const args = argsPart.trim() ? argsPart.trim().split(/\s+/) : [];
+        return {
+            cmd: cmdPart ? `/${cmdPart}` : '/',
+            args,
+            partial: space === -1 ? cmdPart : '',
+        };
+    },
+
+    suggestionMatches(text) {
+        const parsed = this.parseCommandInput(text);
+        if (!parsed) return [];
+        const needle = parsed.partial.toLowerCase();
+        if (!needle) {
+            return this.suggestions.slice(0, 8);
+        }
+        return this.suggestions.filter((row) => {
+            const name = String(row.name || '').toLowerCase();
+            const cmd = name.startsWith('/') ? name.slice(1) : name;
+            return cmd.startsWith(needle) || name.startsWith(`/${needle}`);
+        }).slice(0, 8);
+    },
+
+    formatSuggestionParams(params, argCount) {
+        const list = Array.isArray(params) ? params : [];
+        if (!list.length) return '';
+        return list.map((param, index) => {
+            const name = String(param?.name || param || '').trim();
+            if (!name) return '';
+            const cls = index === argCount ? ' is-active' : (index < argCount ? ' is-filled' : '');
+            return `<span class="chat-suggestion-param${cls}">[${this.escapeHtml(name)}]</span>`;
+        }).filter(Boolean).join(' ');
+    },
+
+    renderSuggestions() {
+        const box = $('#chat-suggestions');
+        const input = $('#chat-input');
+        if (!box || !input) return;
+
+        const text = input.value;
+        if (!text.startsWith('/')) {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            return;
+        }
+
+        const parsed = this.parseCommandInput(text);
+        const matches = this.suggestionMatches(text);
+        const exact = this.suggestions.find((row) => String(row.name || '').toLowerCase() === parsed?.cmd);
+        const picked = matches[this.suggestionPick] || exact || null;
+
+        if (!picked && matches.length === 0) {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            return;
+        }
+
+        box.classList.remove('hidden');
+        let html = '';
+
+        if (matches.length > 1 && (!exact || parsed?.args.length === 0)) {
+            html += '<div class="chat-suggestion-list">';
+            matches.forEach((row, index) => {
+                const active = index === this.suggestionPick ? ' is-active' : '';
+                const help = String(row.help || '').trim();
+                html += `<button type="button" class="chat-suggestion-item${active}" data-index="${index}">`
+                    + `<span class="chat-suggestion-cmd">${this.escapeHtml(row.name || '')}</span>`
+                    + (help ? `<span class="chat-suggestion-help">${this.escapeHtml(help)}</span>` : '')
+                    + '</button>';
+            });
+            html += '</div>';
+        }
+
+        const activeRow = exact || picked;
+        if (activeRow) {
+            const params = this.formatSuggestionParams(activeRow.params, parsed?.args.length || 0);
+            const help = String(activeRow.help || '').trim();
+            html += '<div class="chat-suggestion-active">';
+            html += `<span class="chat-suggestion-cmd">${this.escapeHtml(activeRow.name || '')}</span>`;
+            if (params) html += `<span class="chat-suggestion-params">${params}</span>`;
+            if (help) html += `<span class="chat-suggestion-desc">${this.escapeHtml(help)}</span>`;
+            html += '</div>';
+        }
+
+        box.innerHTML = html;
+        box.querySelectorAll('.chat-suggestion-item').forEach((btn) => {
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const index = Number(btn.dataset.index) || 0;
+                const row = matches[index];
+                if (!row) return;
+                input.value = `${row.name} `;
+                this.suggestionPick = 0;
+                this.renderSuggestions();
+                input.focus({ preventScroll: true });
+            });
+        });
+    },
+
+    applySuggestionPick() {
+        const input = $('#chat-input');
+        if (!input) return false;
+        const matches = this.suggestionMatches(input.value);
+        const row = matches[this.suggestionPick];
+        if (!row) return false;
+        input.value = `${row.name} `;
+        this.suggestionPick = 0;
+        this.renderSuggestions();
+        return true;
+    },
+
+    hideSuggestions() {
+        const box = $('#chat-suggestions');
+        if (!box) return;
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        this.suggestionPick = 0;
     },
 
     add(msg) {
@@ -702,6 +836,7 @@ const Chat = {
         } else {
             this.toggleSettings(false);
             this.closeChannelDropdown();
+            this.hideSuggestions();
             backdrop?.classList.add('hidden');
             document.body.classList.remove('chat-ui-open');
             chat?.classList.remove('chat-open');
@@ -721,6 +856,8 @@ const Chat = {
         if (!input) return;
         const next = String(text ?? '');
         if (input.value !== next) input.value = next;
+        this.suggestionPick = 0;
+        this.renderSuggestions();
         if (options.fromHistory) {
             input.focus({ preventScroll: true });
             const end = input.value.length;
@@ -739,6 +876,7 @@ const Chat = {
         }
         post('chatSend', { message: msg });
         input.value = '';
+        this.hideSuggestions();
     },
 };
 
@@ -767,7 +905,37 @@ $('#chat-settings-close')?.addEventListener('click', (e) => {
     Chat.toggleSettings(false);
 });
 
+$('#chat-input')?.addEventListener('input', () => {
+    Chat.suggestionPick = 0;
+    Chat.renderSuggestions();
+});
+
 $('#chat-input')?.addEventListener('keydown', (e) => {
+    const input = $('#chat-input');
+    const hasSuggestions = !$('#chat-suggestions')?.classList.contains('hidden');
+    const matches = input ? Chat.suggestionMatches(input.value) : [];
+
+    if (e.key === 'Tab' && input?.value.startsWith('/') && matches.length > 0) {
+        e.preventDefault();
+        Chat.applySuggestionPick();
+        return;
+    }
+
+    if (hasSuggestions && matches.length > 1) {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            Chat.suggestionPick = Math.max(0, Chat.suggestionPick - 1);
+            Chat.renderSuggestions();
+            return;
+        }
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            Chat.suggestionPick = Math.min(matches.length - 1, Chat.suggestionPick + 1);
+            Chat.renderSuggestions();
+            return;
+        }
+    }
+
     if (e.key === 'Enter') { e.preventDefault(); Chat.send(); return; }
     if (e.key === 'ArrowUp') {
         e.preventDefault();

@@ -1084,8 +1084,7 @@ AddEventHandler('sunset:nui:mdcClose', function()
     exports.sunset_ui:SetFocus(false, false)
 end)
 
-CreateThread(function()
-    Wait(3500)
+local function registerPoliceChatSuggestions()
     TriggerEvent('chat:addSuggestion', '/su', 'Set wanted level (LSPD)', { { name = 'id' }, { name = 'reason_code' } })
     TriggerEvent('chat:addSuggestion', '/so', 'Summon suspect nearby (LSPD)', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/clear', 'Clear wanted status (LSPD)', { { name = 'id' } })
@@ -1109,7 +1108,14 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/handsup', 'Toggle hands up')
     TriggerEvent('chat:addSuggestion', '/escort', 'Escort restrained suspect', { { name = 'id' } })
     TriggerEvent('chat:addSuggestion', '/frisk', 'Frisk suspect', { { name = 'id' } })
+end
+
+CreateThread(function()
+    Wait(3500)
+    registerPoliceChatSuggestions()
 end)
+
+AddEventHandler('sunset:chat:rebuildSuggestions', registerPoliceChatSuggestions)
 
 CreateThread(function()
     for _, point in ipairs((Sunset.Police and Sunset.Police.bookingPoints) or {}) do

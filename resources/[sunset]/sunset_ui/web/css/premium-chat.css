@@ -190,6 +190,7 @@
 #chat .chat-input-wrapper {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 15px;
     opacity: 0;
@@ -438,6 +439,89 @@
 #chat .chat-toolbar,
 #chat .chat-settings-popover {
     display: none !important;
+}
+
+#chat .chat-suggestions {
+    width: 100%;
+    order: 3;
+    margin-top: 2px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(8, 10, 16, 0.92);
+    border: 1px solid rgba(0, 255, 204, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
+}
+
+#chat .chat-suggestion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+#chat .chat-suggestion-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+#chat .chat-suggestion-item:hover,
+#chat .chat-suggestion-item.is-active {
+    background: rgba(0, 255, 204, 0.12);
+}
+
+#chat .chat-suggestion-cmd {
+    font-size: 11px;
+    font-weight: 900;
+    color: #00ffcc;
+    letter-spacing: 0.4px;
+    flex-shrink: 0;
+}
+
+#chat .chat-suggestion-help,
+#chat .chat-suggestion-desc {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.35;
+}
+
+#chat .chat-suggestion-active {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+#chat .chat-suggestion-params {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+#chat .chat-suggestion-param {
+    font-size: 10px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.3px;
+}
+
+#chat .chat-suggestion-param.is-active {
+    color: #facc15;
+}
+
+#chat .chat-suggestion-param.is-filled {
+    color: #4ade80;
 }
 
 @media (max-width: 1280px) {

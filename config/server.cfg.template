@@ -42,6 +42,7 @@ ensure oxmysql
 ensure bob74_ipl
 ensure sunset_core
 ensure sunset_ui
+ensure sunset_chat
 ensure sunset_world
 ensure sunset_factions
 ensure sunset_clans
@@ -73,7 +74,6 @@ ensure sunset_pass
 ensure sunset_hud
 ensure sunset_dealership
 ensure sunset_scoreboard
-ensure sunset_chat
 ensure sunset_menu
 ensure sunset_help
 ensure sunset_carjack

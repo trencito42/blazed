@@ -17,6 +17,8 @@ function createItemArtwork(row, className) {
     image.src = itemIconUrl(row?.icon);
     image.alt = '';
     image.loading = 'eager';
+    image.draggable = false;
+    image.addEventListener('dragstart', (event) => event.preventDefault());
     image.addEventListener('error', () => {
         if (!image.src.endsWith('/backpack.webp')) image.src = ITEM_ICON_FALLBACK;
     }, { once: true });
@@ -270,12 +272,21 @@ const Panels = {
             item.type = 'button';
             item.title = row.usable ? `Select ${label}; double-click to use` : `Select ${label}`;
             item.draggable = false;
-            item.addEventListener('click', () => this.selectInventoryItem(row, cell));
+            item.addEventListener('click', (event) => {
+                if (this._suppressInventoryClick) {
+                    this._suppressInventoryClick = false;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+                this.selectInventoryItem(row, cell);
+            });
             item.addEventListener('dblclick', () => {
                 if (this._inventoryTrade) this._offerInventoryRow(row);
                 else if (row.usable) post('inventoryUse', { item: def });
             });
             item.addEventListener('pointerdown', (event) => {
+                if (event.button !== 0) return;
                 this._startInventoryPointerDrag(row, cell, item, event);
             });
             item.appendChild(createItemArtwork(row, 'premium-item__icon'));
@@ -362,15 +373,24 @@ const Panels = {
             $$('.premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
         };
 
-        const endDrag = (x, y) => {
+        const endDrag = (event) => {
             const state = this._pointerDrag;
             if (!state) return;
+            const x = event.clientX;
+            const y = event.clientY;
             document.body.classList.remove('inventory-dragging');
             state.ghost?.remove();
             state.itemEl?.classList.remove('is-dragging');
+            try {
+                if (state.pointerId != null) state.itemEl?.releasePointerCapture(state.pointerId);
+            } catch (_) { /* ignore */ }
             clearHover();
 
             if (state.moved) {
+                this._suppressInventoryClick = true;
+                window.setTimeout(() => {
+                    this._suppressInventoryClick = false;
+                }, 0);
                 const el = document.elementFromPoint(x, y);
                 const offerZone = el?.closest('#inventory-my-offer');
                 const dropBtn = el?.closest('#inventory-drop-selected');
@@ -428,16 +448,20 @@ const Panels = {
             }
         }, { passive: false });
 
-        document.addEventListener('pointerup', (e) => endDrag(e.clientX, e.clientY));
-        document.addEventListener('pointercancel', (e) => endDrag(e.clientX, e.clientY));
+        document.addEventListener('pointerup', (e) => endDrag(e));
+        document.addEventListener('pointercancel', (e) => endDrag(e));
     },
 
     _startInventoryPointerDrag(row, cell, itemEl, event) {
-        if (event.button !== 0) return;
+        event.preventDefault();
+        try {
+            itemEl.setPointerCapture(event.pointerId);
+        } catch (_) { /* ignore */ }
         this._pointerDrag = {
             row,
             cell,
             itemEl,
+            pointerId: event.pointerId,
             startX: event.clientX,
             startY: event.clientY,
             moved: false,

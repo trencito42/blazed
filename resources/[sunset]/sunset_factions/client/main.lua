@@ -613,26 +613,7 @@ AddEventHandler('sunset:world:illegalSell', function(factionId)
     end
 end)
 
-CreateThread(function()
-    Wait(3000)
-    for id, faction in pairs(Sunset.Factions or {}) do
-        if faction.hq then
-            TriggerEvent('sunset:world:registerFactionHQ', id, faction)
-        end
-        if faction.depot then
-            TriggerEvent('sunset:world:registerFactionDepot', id, faction.depot, faction)
-            if faction.depot.lift then
-                TriggerEvent('sunset:world:registerElevator', id, faction.depot.lift, faction)
-            end
-        end
-        if faction.entrance then
-            TriggerEvent('sunset:world:registerFactionEntrance', id, faction.entrance, faction)
-        end
-        if faction.stash and faction.type == 'illegal' then
-            TriggerEvent('sunset:world:registerIllegalSell', id, faction.stash, faction)
-        end
-    end
-
+local function registerFactionChatSuggestions()
     TriggerEvent('chat:addSuggestion', '/duty', 'Toggle faction duty shift')
     TriggerEvent('chat:addSuggestion', '/fskins', 'Browse all available authentic real skins for your faction')
     TriggerEvent('chat:addSuggestion', '/fskin', 'Equip a specific real faction skin', { { name = 'number or name', help = 'ex: 1, 2, swat, hway' } })
@@ -673,7 +654,32 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/fd', 'LSFD how-to: duty, garage, fires, extinguisher')
     TriggerEvent('chat:addSuggestion', '/firestart', 'Dispatch a vehicle fire if none is active (LSFD on duty)')
     TriggerEvent('chat:addSuggestion', '/firecalls', 'List active fire incidents and set GPS (LSFD on duty)')
+end
+
+CreateThread(function()
+    Wait(3000)
+    for id, faction in pairs(Sunset.Factions or {}) do
+        if faction.hq then
+            TriggerEvent('sunset:world:registerFactionHQ', id, faction)
+        end
+        if faction.depot then
+            TriggerEvent('sunset:world:registerFactionDepot', id, faction.depot, faction)
+            if faction.depot.lift then
+                TriggerEvent('sunset:world:registerElevator', id, faction.depot.lift, faction)
+            end
+        end
+        if faction.entrance then
+            TriggerEvent('sunset:world:registerFactionEntrance', id, faction.entrance, faction)
+        end
+        if faction.stash and faction.type == 'illegal' then
+            TriggerEvent('sunset:world:registerIllegalSell', id, faction.stash, faction)
+        end
+    end
+
+    registerFactionChatSuggestions()
 end)
+
+AddEventHandler('sunset:chat:rebuildSuggestions', registerFactionChatSuggestions)
 
 local PD_HELP = {
     '=== LSPD (on duty) ===',

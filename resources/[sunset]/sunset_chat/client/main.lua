@@ -19,6 +19,7 @@ local function openChat()
         playerId = myId,
         playerName = myName,
     })
+    exports.sunset_chat:SyncChatSuggestions()
     SetTimeout(75, function()
         if chatOpen then exports.sunset_ui:SetFocus(true, true) end
     end)

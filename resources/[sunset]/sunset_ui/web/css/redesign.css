@@ -421,12 +421,18 @@ button.premium-item:active { opacity: .85; }
     height: 44px;
     place-items: center;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,.5));
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .premium-item__icon img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .premium-item__details {
@@ -436,6 +442,8 @@ button.premium-item:active { opacity: .85; }
     flex-direction: column;
     align-items: center;
     gap: 2px;
+    pointer-events: none;
+    user-select: none;
 }
 
 .premium-item__details strong {
@@ -457,6 +465,8 @@ button.premium-item:active { opacity: .85; }
 }
 
 .premium-item__count {
+    pointer-events: none;
+    user-select: none;
     position: absolute;
     top: 5px;
     right: 5px;
@@ -664,7 +674,10 @@ button.premium-player-card {
     box-shadow: inset 0 0 0 1px rgba(0, 255, 204, .35);
 }
 
-.premium-item.is-dragging { opacity: .35; }
+.premium-item.is-dragging {
+    opacity: .35;
+    pointer-events: none;
+}
 
 .premium-drag-ghost {
     position: fixed;

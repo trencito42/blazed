@@ -11,7 +11,10 @@ shared_scripts {
     '@sunset_core/shared/help_registry.lua',
 }
 
-client_scripts { 'client/main.lua' }
+client_scripts {
+    'client/suggestions.lua',
+    'client/main.lua',
+}
 server_scripts {
     'server/main.lua',
     'server/command_router.lua',
@@ -19,3 +22,5 @@ server_scripts {
 }
 
 dependencies { 'sunset_ui', 'sunset_core', 'sunset_admin', 'sunset_factions', 'sunset_clans' }
+
+exports { 'IsChatOpen', 'GetChatSuggestions', 'SyncChatSuggestions' }

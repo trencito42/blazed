@@ -182,6 +182,7 @@ Sunset.CommandUsage = {
     d = { usage = '/d [message]', minArgs = 1 },
     m = { usage = '/m [message]', minArgs = 1 },
     c = { usage = '/c [message]', minArgs = 1 },
+    su = { usage = '/su [id] [reason_code]', minArgs = 0 },
     startradar = { usage = '/startradar [limit_kmh]', minArgs = 0 },
     help = { usage = '/help', minArgs = 0 },
     stats = { usage = '/stats', minArgs = 0 },

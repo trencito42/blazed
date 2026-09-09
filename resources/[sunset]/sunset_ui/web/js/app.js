@@ -363,6 +363,10 @@ window.addEventListener('message', (event) => {
             }
             break;
 
+        case 'chatSuggestions':
+            if (window.Chat) Chat.setSuggestions((data || event.data.data)?.suggestions);
+            break;
+
         case 'menuShow':
             if (window.Menu) Menu.show(data || event.data.data);
             break;
