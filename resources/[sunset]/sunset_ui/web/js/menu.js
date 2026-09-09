@@ -125,7 +125,7 @@ const Menu = {
 
     factionTips(jobId) {
         const common = [
-            '<li>Civilian jobs are hired at the Job Center.</li>',
+            '<li>Factions are joined at HQ markers on the map (LSPD, EMS, Taxi…).</li>',
             '<li>Faction membership requires a leader invitation after an accepted Discord/site application. Members use <strong>[E]</strong> at HQ for duty.</li>',
         ];
         const perJob = {
@@ -430,7 +430,7 @@ const Menu = {
                 actions += `<button type="button" class="menu-job-btn menu-job-btn--danger" data-j-action="quit_civilian">Quit civilian job</button>`;
             }
         } else {
-            actions = `<p class="menu-mgmt-empty">Get a <strong>civilian job</strong> at the Job Center, or join a <strong>faction</strong> at HQ on the map (LSPD, EMS, Taxi...).</p>`;
+            actions = `<p class="menu-mgmt-empty">Join a <strong>faction</strong> at HQ on the map (LSPD, EMS, Taxi…).</p>`;
         }
 
         if (data.factionId === 'taxi') {

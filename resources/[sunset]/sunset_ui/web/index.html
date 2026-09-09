@@ -33,9 +33,7 @@
     <link rel="stylesheet" href="css/fishing.css?v=4">
     <link rel="stylesheet" href="css/license_test.css?v=7">
     <link rel="stylesheet" href="css/license_quiz.css?v=2">
-    <link rel="stylesheet" href="css/job_creator.css?v=8">
     <link rel="stylesheet" href="css/radar.css">
-    <link rel="stylesheet" href="css/courier.css">
     <link rel="stylesheet" href="css/factions.css?v=10">
     <link rel="stylesheet" href="css/clans.css?v=11">
     <link rel="stylesheet" href="css/org-panels.css?v=4">
@@ -179,83 +177,7 @@
         </div>
     </div>
 
-    <!-- COURIER ACTION HUD -->
-    <div id="job-shift-panel" class="hidden" aria-live="polite">
-        <div class="job-shift-shell state-active">
-            <div class="job-shift__title" id="job-shift-title">Work</div>
-            <div class="job-shift__counter" id="job-shift-counter"></div>
-            <div class="job-shift__message" id="job-shift-message"></div>
-            <div class="job-shift__detail" id="job-shift-detail"></div>
-            <div class="job-shift__progress"><div class="job-shift__progress-fill" id="job-shift-progress"></div></div>
-        </div>
-    </div>
-
-    <div id="job-skill-panel" class="hidden" aria-live="polite">
-        <div class="job-skill-shell">
-            <div class="job-skill__message" id="job-skill-message">Press E!</div>
-            <div class="job-skill__bar"><div class="job-skill__fill" id="job-skill-fill"></div></div>
-        </div>
-    </div>
-
-    <div id="job-creator-panel" class="hidden" aria-live="polite">
-        <div class="jc-shell" style="position:relative">
-            <button id="jc-close" class="jc-close" type="button" aria-label="Close">✕</button>
-            <aside class="jc-sidebar">
-                <div class="jc-title">Job Creator</div>
-                <button type="button" class="jc-btn" id="jc-new">+ Job nou</button>
-                <button type="button" class="jc-btn ghost" id="jc-sidebar-seed">📦 Template-uri</button>
-                <div id="jc-checklist" class="jc-checklist"></div>
-                <div id="jc-job-list" class="jc-job-list"></div>
-            </aside>
-            <main class="jc-main">
-                <div id="jc-wizard" class="jc-wizard"></div>
-                <div class="jc-tabs">
-                    <button type="button" class="jc-tab active" data-tab="general">Detalii</button>
-                    <button type="button" class="jc-tab" data-tab="stages">Pași</button>
-                    <button type="button" class="jc-tab" data-tab="locations">Locuri</button>
-                </div>
-                <div id="jc-editor"></div>
-                <div class="jc-actions" style="margin-top:12px">
-                    <button type="button" class="jc-btn" id="jc-save">Salvează</button>
-                    <button type="button" class="jc-btn" id="jc-publish">Publică</button>
-                    <button type="button" class="jc-btn ghost" id="jc-test">Testează în joc</button>
-                    <button type="button" class="jc-btn ghost" id="jc-place">📍 Pune loc aici</button>
-                    <button type="button" class="jc-btn danger" id="jc-delete">Șterge</button>
-                    <details class="jc-advanced-actions">
-                        <summary>Export / Import</summary>
-                        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                            <button type="button" class="jc-btn ghost" id="jc-export">Export JSON</button>
-                            <button type="button" class="jc-btn ghost" id="jc-import-toggle">Import JSON</button>
-                        </div>
-                        <div id="jc-import-box" class="hidden" style="margin-top:10px;">
-                            <textarea id="jc-import-text" placeholder="Lipește conținutul JSON exportat aici..." style="width:100%; min-height:80px; box-sizing:border-box; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:8px; font-family:monospace; font-size:12px; resize:vertical;"></textarea>
-                            <button type="button" class="jc-btn" id="jc-import" style="margin-top:6px;">Încarcă Job</button>
-                        </div>
-                    </details>
-                </div>
-                <div class="jc-status" id="jc-status"></div>
-            </main>
-        </div>
-    </div>
-
-    <div id="courier-panel" class="courier-shell hidden state-route" aria-live="polite">
-        <div class="courier-panel__body">
-            <div class="courier__header">
-                <svg class="courier__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
-                    <path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/><path d="M8 5l8 4"/>
-                </svg>
-                <div class="courier__title-wrap">
-                    <div class="courier__title" id="courier-title">Courier</div>
-                    <div class="courier__counter" id="courier-counter">Package 0/0</div>
-                </div>
-            </div>
-            <div class="courier__message" id="courier-message">Follow the GPS route</div>
-            <div class="courier__detail" id="courier-detail"></div>
-            <div class="courier__progress"><div class="courier__progress-fill" id="courier-progress"></div></div>
-        </div>
-    </div>
-
-    <!-- FISHING MINIGAME -->
+    <!-- INTERACTION HUD (fishing-panel) — see docs/INTERACTION_HUD.md -->
     <div id="fishing-panel" class="fishing-shell hidden state-idle" aria-live="polite">
         <svg class="fishing-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path class="fishing-frame__path" vector-effect="non-scaling-stroke" d="M5 .5 L99.5 .5 L99.5 95 L95 99.5 L.5 99.5 L.5 5 Z" />
@@ -1879,24 +1801,6 @@
         </div>
     </div>
 
-    <!-- JOBS BROWSER -->
-    <div id="jobs-browser" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide jobs-browser">
-            <div class="jobs-browser__head">
-                <div>
-                    <h2>Jobs</h2>
-                    <p class="jobs-browser__sub">Civilian careers — use <strong>/work</strong> when employed</p>
-                </div>
-                <div class="jobs-browser__current hidden" id="jobs-current">
-                    <span>Current</span>
-                    <strong id="jobs-current-label">—</strong>
-                </div>
-            </div>
-            <div class="jobs-grid" id="jobs-grid"></div>
-            <button type="button" class="panel-close" id="jobs-close">Close (ESC)</button>
-        </div>
-    </div>
-
     <!-- SKILLS -->
     <div id="skills" class="overlay-panel hidden">
         <div class="overlay-panel__box overlay-panel__box--wide skills-panel">
@@ -2785,38 +2689,6 @@
         </div>
     </div>
 
-    <!-- JOB CENTER -->
-    <div id="jobcenter" class="overlay-panel hidden">
-        <div class="overlay-panel__box">
-            <h2 id="jobcenter-title">Job Center</h2>
-            <ul class="panel-list" id="jobcenter-list"></ul>
-            <button type="button" class="panel-close" id="jobcenter-close">Close</button>
-        </div>
-    </div>
-
-    <!-- JOBS PANEL (/jobs) -->
-    <div id="jobs-panel" class="jobs-menu hidden">
-        <section class="jobs-menu__shell" aria-labelledby="jobs-panel-title">
-            <header class="jobs-menu__header">
-                <div>
-                    <span class="jobs-menu__eyebrow">Blaze civilian careers</span>
-                    <h2 id="jobs-panel-title">Jobs</h2>
-                    <p>Choose a career at the Job Center, then manage your current shift here.</p>
-                </div>
-                <button type="button" class="jobs-menu__close" id="jobs-panel-close" aria-label="Close jobs menu">ESC</button>
-            </header>
-            <div class="jobs-menu__status">
-                <div><span>Current career</span><strong id="jobs-panel-current">Unemployed</strong></div>
-                <div id="jobs-panel-session" class="hidden"><span>Shift status</span><strong>Inactive</strong></div>
-            </div>
-            <div class="jobs-menu__list" id="jobs-panel-list"></div>
-            <footer class="jobs-menu__actions">
-                <button type="button" class="jobs-menu__button jobs-menu__button--primary" id="jobs-panel-work">Start current job</button>
-                <button type="button" class="jobs-menu__button jobs-menu__button--danger" id="jobs-panel-cancel">Cancel shift</button>
-            </footer>
-        </section>
-    </div>
-
     <!-- VEHICLE DEALERSHIP -->
     <div id="dealership" class="dealership hidden">
         <aside class="dealership__panel">
@@ -3032,9 +2904,6 @@
     <script src="js/license_test.js?v=7"></script>
     <script src="js/license_quiz.js?v=3"></script>
     <script src="js/radar.js"></script>
-    <script src="js/courier.js"></script>
-    <script src="js/job_shift.js?v=3"></script>
-    <script src="js/job_creator.js?v=10"></script>
     <script src="js/factions.js?v=9"></script>
     <script src="js/clans.js?v=13"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
