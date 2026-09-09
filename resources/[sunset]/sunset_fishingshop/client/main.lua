@@ -4,10 +4,21 @@
 --  Opreste G la NPC si la zona 24/7 pentru a vinde peste
 -- ============================================================
 
-local NPC_COORDS     = vector4(-1593.23, 5207.74, 3.31, 25.49)
-local NPC_DIST       = 3.5
-local SELL_COORDS    = vector3(25.74, -1347.32, 29.50)
-local SELL_DIST      = 3.0
+local NPC_COORDS  = vector4(-1593.23, 5207.74, 3.31, 25.49)
+local NPC_DIST    = 3.5
+local SELL_DIST   = 3.5
+
+-- Toate magazinele 24/7 unde se poate vinde pestele
+local SELL_ZONES  = {
+    vector3(25.74,    -1347.32,  29.50),   -- Legion Square
+    vector3(-46.06,   -1757.88,  29.42),   -- Strawberry
+    vector3(-707.12,   -913.43,  19.22),   -- Little Seoul
+    vector3(1164.44,   -322.49,  69.21),   -- Mirror Park
+    vector3(548.46,   2671.72,   42.16),   -- Vinewood Hills
+    vector3(-3038.24,   584.19,   7.91),   -- Rockford Hills
+    vector3(2678.55,  3279.25,   55.24),   -- Sandy Shores
+    vector3(-54.37,   6244.70,   31.09),   -- Paleto Bay (langa Billy Ray)
+}
 
 local hillbillyPed   = nil
 local nearNpc        = false
@@ -59,6 +70,13 @@ CreateThread(function()
 end)
 
 -- ── Proximitate checker ───────────────────────────────────────
+local function nearAnySellZone(pos)
+    for _, coords in ipairs(SELL_ZONES) do
+        if #(pos - coords) < SELL_DIST then return true end
+    end
+    return false
+end
+
 CreateThread(function()
     while true do
         local pos = GetEntityCoords(PlayerPedId())
@@ -67,7 +85,7 @@ CreateThread(function()
 
         nearNpc  = hillbillyPed and DoesEntityExist(hillbillyPed)
                    and #(pos - vector3(NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z)) < NPC_DIST
-        nearSell = #(pos - SELL_COORDS) < SELL_DIST
+        nearSell = nearAnySellZone(pos)
 
         if (wasNpc or wasSell) and not nearNpc and not nearSell and menuOpen then
             exports.sunset_ui:Send('playerInteractionHide', {})

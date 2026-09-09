@@ -86,15 +86,13 @@ local function pickFishType(baitTier, level)
     return pool[#pool].fish
 end
 
-local function fishLevelAndCapacity(source, cfg)
+local function fishLevel(source)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return 1, cfg.carryBase or 2 end
-    local level = tonumber(MySQL.scalar.await(
+    if not char then return 1 end
+    return tonumber(MySQL.scalar.await(
         'SELECT level FROM job_progress WHERE character_id = ? AND job_id = ?',
         { char.id, 'fisherman' }
     )) or 1
-    local capacity = (cfg.carryBase or 2) + math.max(0, level - 1) * (cfg.carryPerLevel or 1)
-    return level, math.min(cfg.carryMax or 12, capacity)
 end
 
 local function fishInventorySummary(source, cfg)
@@ -117,43 +115,29 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:bagStatus', function(source)
     local cfg = Sunset.GetJobConfig('fisherman')
-    local level, capacity = fishLevelAndCapacity(source, cfg)
+    local level = fishLevel(source)
     local carried, carriedValue = fishInventorySummary(source, cfg)
     local session = SunsetJobs_GetSession(source)
     if session and session.jobId == 'fisherman' then
-        session.data.carried = carried
-        session.data.capacity = capacity
         session.data.pendingValue = carriedValue
         session.data.level = level
     end
-    return {
-        carried = carried,
-        capacity = capacity,
-        pendingValue = carriedValue,
-        full = carried >= capacity,
-    }
+    return { carried = carried, pendingValue = carriedValue, level = level }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:start', function(source)
     local cfg = Sunset.GetJobConfig('fisherman')
     local existing = SunsetJobs_GetSession(source)
     if existing and existing.jobId == 'fisherman' then
-        local level, capacity = fishLevelAndCapacity(source, cfg)
-        local carried, carriedValue = fishInventorySummary(source, cfg)
-        existing.data.level = level
-        existing.data.capacity = capacity
-        existing.data.carried = carried
-        existing.data.pendingValue = carriedValue
+        local lv = fishLevel(source)
+        existing.data.level = lv
         return existing.data
     end
-    local level, capacity = fishLevelAndCapacity(source, cfg)
-    local carried, carriedValue = fishInventorySummary(source, cfg)
+    local lv = fishLevel(source)
     local session, err = SunsetJobs_StartSession(source, 'fisherman', {
         catches      = 0,
-        carried      = carried,
-        pendingValue = carriedValue,
-        level        = level,
-        capacity     = capacity,
+        pendingValue = 0,
+        level        = lv,
         stage        = 'fishing',
     })
     if not session then return nil, err end
@@ -185,17 +169,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
         return nil, 'Stand inside a fishing marker'
     end
 
-    local level, capacity = fishLevelAndCapacity(source, cfg)
-    local carried = 0
-    for _, fi in ipairs(ALL_FISH_ITEMS) do
-        carried = carried + (exports.sunset_inventory:CountItem(source, fi) or 0)
-    end
-    session.data.level = level
-    session.data.capacity = capacity
-    session.data.carried = carried
-    if carried >= capacity then
-        return nil, ('Fishing bag full (%d/%d). Sell fish first.'):format(carried, capacity)
-    end
+    session.data.level = fishLevel(source)
 
     local now = GetGameTimer()
     local challenge = session.data.fishingChallenge
@@ -272,15 +246,6 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     local value     = math.floor(baseValue * rodValueMult)
     local fishItem  = fishType.item
 
-    local level2, capacity = fishLevelAndCapacity(source, cfg)
-    local carried = 0
-    for _, fi in ipairs(ALL_FISH_ITEMS) do
-        carried = carried + (exports.sunset_inventory:CountItem(source, fi) or 0)
-    end
-    if carried >= capacity then
-        return nil, ('Fishing bag full (%d/%d). Sell your fish before casting again.'):format(carried, capacity)
-    end
-
     if not exports.sunset_inventory:AddItem(source, fishItem, 1, nil, {
         value    = value,
         caughtAt = os.time(),
@@ -290,9 +255,6 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
 
     session.data.catches      = (session.data.catches or 0) + 1
     session.data.pendingValue = (session.data.pendingValue or 0) + value
-    session.data.carried      = carried + 1
-    session.data.capacity     = capacity
-    session.data.level        = level2
 
     SunsetJobs_AddJobXP(source, 'fisherman', cfg.xpPerCatch or 12)
     if GetResourceState('sunset_pass') == 'started' then
@@ -303,8 +265,6 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
         value        = value,
         fishItem     = fishItem,
         catches      = session.data.catches,
-        carried      = session.data.carried,
-        capacity     = capacity,
         pendingValue = session.data.pendingValue,
     }
 end)
