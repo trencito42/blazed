@@ -19,13 +19,25 @@ local inCooldown     = false
 CreateThread(function()
     local hash = GetHashKey('a_m_m_hillbilly_01')
     RequestModel(hash)
-    local t = GetGameTimer() + 10000
-    while not HasModelLoaded(hash) and GetGameTimer() < t do Wait(100) end
-    if not HasModelLoaded(hash) then return end
+    local t = GetGameTimer() + 20000
+    while not HasModelLoaded(hash) and GetGameTimer() < t do Wait(200) end
+    if not HasModelLoaded(hash) then
+        print('[sunset_fishingshop] ERR: model a_m_m_hillbilly_01 nu s-a incarcat')
+        return
+    end
+
+    Wait(500)  -- delay mic ca world-ul sa fie gata
 
     hillbillyPed = CreatePed(4, hash,
         NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z, NPC_COORDS.w,
         false, true)
+
+    if not hillbillyPed or hillbillyPed == 0 or not DoesEntityExist(hillbillyPed) then
+        print('[sunset_fishingshop] ERR: CreatePed a returnat entitate invalida')
+        SetModelAsNoLongerNeeded(hash)
+        return
+    end
+
     SetEntityAsMissionEntity(hillbillyPed, true, true)
     FreezeEntityPosition(hillbillyPed, true)
     SetEntityInvincible(hillbillyPed, true)
@@ -33,6 +45,7 @@ CreateThread(function()
     SetEntityCanBeDamaged(hillbillyPed, false)
     TaskStartScenarioInPlace(hillbillyPed, 'WORLD_HUMAN_SMOKING', 0, true)
     SetModelAsNoLongerNeeded(hash)
+    print('[sunset_fishingshop] Billy Ray spawnat la', NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z)
 
     -- Blip pe harta
     local blip = AddBlipForCoord(NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z)
