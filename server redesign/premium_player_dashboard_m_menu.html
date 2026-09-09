@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Player Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+        :root {
+            /* Design System Colors */
+            --bg-base: rgba(10, 10, 15, 0.9); /* O idee mai intunecat pentru contrast */
+            --bg-panel: rgba(255, 255, 255, 0.03);
+            --bg-hover: rgba(255, 255, 255, 0.08);
+            --bg-input: rgba(0, 0, 0, 0.4);
+            
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.5);
+            
+            --accent: #00ffcc; /* Cyan Principal */
+            --warning: #ffcc00;
+            --danger: #ff3366;
+            --success: #32d74b;
+            --info: #3399ff;
+            
+            --border: rgba(255, 255, 255, 0.1);
+            --radius-xl: 16px;
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        * { box-sizing: border-box; }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background: url('https://placehold.co/1920x1080/1a1a24/1a1a24?text=FiveM+World') no-repeat center center;
+            background-size: cover;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; user-select: none;
+        }
+
+        /* --- WRAPPER PRINCIPAL --- */
+        #dashboard-wrapper {
+            width: 1200px; height: 750px;
+            background: var(--bg-base);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            display: flex; flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            opacity: 0; transform: scale(0.95);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        #dashboard-wrapper.visible { opacity: 1; transform: scale(1); }
+
+        /* --- TOP NAV BAR --- */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            height: 70px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        }
+
+        .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
+        .brand span { color: var(--accent); }
+
+        .nav-tabs { display: flex; gap: 10px; height: 100%; }
+        
+        .nav-tab {
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 20px; height: 100%;
+            font-size: 13px; font-weight: 800; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; transition: var(--transition);
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab:hover { color: var(--text-main); background: linear-gradient(0deg, rgba(255,255,255,0.05) 0%, transparent 100%); }
+        .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: linear-gradient(0deg, rgba(0,255,204,0.05) 0%, transparent 100%); }
+
+        .close-btn-top {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 8px 15px; background: var(--bg-input); border-radius: var(--radius-md);
+            font-size: 11px; font-weight: 700; color: var(--text-muted); cursor: pointer;
+            transition: var(--transition); border: 1px solid var(--border);
+        }
+        .close-btn-top:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        .close-btn-top svg { width: 14px; height: 14px; }
+
+        /* --- BODY LAYOUT --- */
+        .dashboard-body {
+            display: flex; flex: 1; overflow: hidden;
+        }
+
+        /* --- LEFT PANEL: PROFILE & ECONOMY --- */
+        .left-panel {
+            width: 320px; border-right: 1px solid var(--border);
+            padding: 30px; display: flex; flex-direction: column; gap: 25px;
+            overflow-y: auto; background: linear-gradient(90deg, rgba(0,0,0,0.1) 0%, transparent 100%);
+        }
+        .left-panel::-webkit-scrollbar { display: none; }
+
+        .profile-card { display: flex; align-items: center; gap: 15px; }
+        .avatar {
+            width: 70px; height: 70px; border-radius: var(--radius-md);
+            background: var(--bg-panel); border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; position: relative;
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-fallback { font-size: 24px; color: var(--text-muted); }
+
+        .profile-info { display: flex; flex-direction: column; gap: 4px; }
+        .p-name { font-size: 18px; font-weight: 900; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;}
+        .p-job { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px;}
+        .p-id { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+
+        .xp-section { background: var(--bg-panel); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .xp-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; }
+        .lvl-text { font-size: 14px; font-weight: 900; color: var(--text-main); }
+        .xp-text { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+        .progress-bg { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+        .eco-grid { display: flex; flex-direction: column; gap: 10px; }
+        .eco-card {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            padding: 15px; border-radius: var(--radius-md);
+            display: flex; align-items: center; gap: 15px; transition: var(--transition);
+        }
+        .eco-card:hover { background: var(--bg-hover); transform: translateX(5px); }
+        .eco-icon {
+            width: 40px; height: 40px; border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .eco-icon.cash { background: rgba(50, 215, 75, 0.1); color: var(--success); }
+        .eco-icon.bank { background: rgba(0, 255, 204, 0.1); color: var(--accent); }
+        .eco-icon.coin { background: rgba(255, 204, 0, 0.1); color: var(--warning); }
+        .eco-icon.time { background: rgba(255, 255, 255, 0.05); color: var(--text-main); }
+        
+        .eco-details { display: flex; flex-direction: column; gap: 2px; }
+        .eco-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;}
+        .eco-val { font-size: 16px; font-weight: 900; color: var(--text-main); }
+
+        /* --- RIGHT PANEL: CONTENT --- */
+        .right-panel {
+            flex: 1; padding: 40px; display: flex; flex-direction: column; gap: 35px;
+            overflow-y: auto;
+        }
+        .right-panel::-webkit-scrollbar { width: 6px; }
+        .right-panel::-webkit-scrollbar-track { background: transparent; }
+        .right-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .section-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .section-title { font-size: 14px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin: 0;}
+        .section-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border) 0%, transparent 100%); }
+
+        /* Vitals Grid */
+        .vitals-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;
+            background: var(--bg-panel); border: 1px solid var(--border);
+            padding: 20px; border-radius: var(--radius-lg);
+        }
+        .vital-item { display: flex; flex-direction: column; gap: 8px; }
+        .vital-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; }
+        
+        .v-health .vital-header { color: var(--success); }
+        .v-armor .vital-header { color: var(--info); }
+        .v-hunger .vital-header { color: var(--warning); }
+        .v-thirst .vital-header { color: var(--accent); }
+        .v-stress .vital-header { color: var(--danger); }
+        
+        .vital-bar-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; }
+        .vital-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+        .v-health .vital-bar-fill { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .v-armor .vital-bar-fill { background: var(--info); box-shadow: 0 0 8px var(--info); }
+        .v-hunger .vital-bar-fill { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+        .v-thirst .vital-bar-fill { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .v-stress .vital-bar-fill { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+        /* Quick Actions Grid */
+        .actions-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+        }
+        
+        .action-card {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 25px 20px;
+            display: flex; flex-direction: column; gap: 15px;
+            cursor: pointer; transition: var(--transition); position: relative; overflow: hidden;
+        }
+
+        .action-card::before {
+            content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%;
+            background: var(--accent); opacity: 0; transition: var(--transition);
+        }
+
+        .action-card:hover { background: var(--bg-hover); transform: translateY(-5px); border-color: rgba(0, 255, 204, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .action-card:hover::before { opacity: 1; box-shadow: 0 0 15px var(--accent); }
+        
+        .action-icon { color: var(--text-muted); transition: var(--transition); display: flex; align-items: center; }
+        .action-card:hover .action-icon { color: var(--accent); transform: scale(1.1); }
+        .action-icon svg { width: 28px; height: 28px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round;}
+
+        .action-texts { display: flex; flex-direction: column; gap: 4px; }
+        .action-title { font-size: 14px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;}
+        .action-desc { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+
+        /* --- STREAMING_CHUNK: Notificari Toast --- */
+        #notify {
+            position: absolute; top: 30px; right: 30px; background: var(--accent); color: #000;
+            padding: 15px 25px; border-radius: var(--radius-md); font-size: 13px; font-weight: 800; text-transform: uppercase;
+            box-shadow: 0 10px 25px rgba(0,255,204,0.4); transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100; display: flex; align-items: center; gap: 10px;
+        }
+        #notify.show { transform: translateX(0); }
+
+        .tab-content { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Notificare Sistem -->
+    <div id="notify">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="notify-msg">Deschidere...</span>
+    </div>
+
+    <!-- --- STREAMING_CHUNK: Structura Principala UI --- -->
+    <div id="dashboard-wrapper">
+        
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="brand">SUNSET <span>OS</span></div>
+            
+            <div class="nav-tabs">
+                <div class="nav-tab active" onclick="switchTab('player')">Player</div>
+                <div class="nav-tab" onclick="switchTab('vehicle')">Vehicle</div>
+                <div class="nav-tab" onclick="switchTab('job')">Job</div>
+                <div class="nav-tab" onclick="switchTab('property')">Property</div>
+                <div class="nav-tab" onclick="switchTab('config')">Config</div>
+            </div>
+
+            <div class="close-btn-top" onclick="closeMenu()">
+                ESC <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+        </div>
+
+        <div class="dashboard-body">
+            
+            <!-- --- STREAMING_CHUNK: Left Panel (Identitate & Economie) --- -->
+            <div class="left-panel">
+                
+                <div class="profile-card">
+                    <div class="avatar">
+                        <!-- Poti pune un img scr="" aici in joc, acum pun un fallback icon -->
+                        <svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                    <div class="profile-info">
+                        <div class="p-name" id="ui-name">Trencito</div>
+                        <div class="p-job" id="ui-job">Los Santos Police</div>
+                        <div class="p-id">State ID: <span id="ui-id" style="color:var(--text-main); font-weight:800;">1</span></div>
+                    </div>
+                </div>
+
+                <div class="xp-section">
+                    <div class="xp-header">
+                        <span class="lvl-text">Nivel <span id="ui-lvl">32</span></span>
+                        <span class="xp-text" id="ui-xp">68 / 128 XP</span>
+                    </div>
+                    <div class="progress-bg">
+                        <div class="progress-fill" style="width: 53%;"></div>
+                    </div>
+                </div>
+
+                <div class="eco-grid">
+                    <div class="eco-card">
+                        <div class="eco-icon cash"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg></div>
+                        <div class="eco-details">
+                            <span class="eco-label">Cash Wallet</span>
+                            <span class="eco-val" style="color: var(--success);" id="ui-cash">$10,014,579</span>
+                        </div>
+                    </div>
+                    <div class="eco-card">
+                        <div class="eco-icon bank"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+                        <div class="eco-details">
+                            <span class="eco-label">Bank Account</span>
+                            <span class="eco-val" id="ui-bank">$1,989,117</span>
+                        </div>
+                    </div>
+                    <div class="eco-card">
+                        <div class="eco-icon coin"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                        <div class="eco-details">
+                            <span class="eco-label">Sunset Coins</span>
+                            <span class="eco-val" id="ui-coins">2,265 BP</span>
+                        </div>
+                    </div>
+                    <div class="eco-card">
+                        <div class="eco-icon time"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+                        <div class="eco-details">
+                            <span class="eco-label">Playtime</span>
+                            <span class="eco-val" id="ui-time">57H 42M</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- --- STREAMING_CHUNK: Right Panel (Content) --- -->
+            <div class="right-panel">
+                
+                <!-- TAB 1: PLAYER (Default) -->
+                <div id="tab-player" class="tab-content active">
+                    
+                    <div class="section-header">
+                        <h3 class="section-title">Character Vitals</h3>
+                        <div class="section-line"></div>
+                    </div>
+
+                    <div class="vitals-grid">
+                        <div class="vital-item v-health">
+                            <div class="vital-header"><span>Health</span> <span>100%</span></div>
+                            <div class="vital-bar-bg"><div class="vital-bar-fill" style="width: 100%;"></div></div>
+                        </div>
+                        <div class="vital-item v-armor">
+                            <div class="vital-header"><span>Armor</span> <span>100%</span></div>
+                            <div class="vital-bar-bg"><div class="vital-bar-fill" style="width: 100%;"></div></div>
+                        </div>
+                        <div class="vital-item v-hunger">
+                            <div class="vital-header"><span>Hunger</span> <span>89%</span></div>
+                            <div class="vital-bar-bg"><div class="vital-bar-fill" style="width: 89%;"></div></div>
+                        </div>
+                        <div class="vital-item v-thirst">
+                            <div class="vital-header"><span>Thirst</span> <span>83%</span></div>
+                            <div class="vital-bar-bg"><div class="vital-bar-fill" style="width: 83%;"></div></div>
+                        </div>
+                        <div class="vital-item v-stress">
+                            <div class="vital-header"><span>Stress</span> <span>1%</span></div>
+                            <div class="vital-bar-bg"><div class="vital-bar-fill" style="width: 1%;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="section-header" style="margin-top: 20px;">
+                        <h3 class="section-title">Quick Actions</h3>
+                        <div class="section-line"></div>
+                    </div>
+
+                    <div class="actions-grid">
+                        <div class="action-card" onclick="triggerAction('inventory')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Inventory</span>
+                                <span class="action-desc">Manage items & storage</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('animations')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Animations</span>
+                                <span class="action-desc">Emotes & walk styles</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('smartphone')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Smartphone</span>
+                                <span class="action-desc">Calls, messages & apps</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('documents')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Documents</span>
+                                <span class="action-desc">Show ID & invoices</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('licenses')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Licenses</span>
+                                <span class="action-desc">Driving & weapon permits</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('battlepass')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Battlepass</span>
+                                <span class="action-desc">Rewards & tiers progression</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('missions')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Missions</span>
+                                <span class="action-desc">Daily & weekly tasks</span>
+                            </div>
+                        </div>
+
+                        <div class="action-card" onclick="triggerAction('skills')">
+                            <div class="action-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
+                            <div class="action-texts">
+                                <span class="action-title">Statistics</span>
+                                <span class="action-desc">Skills & personal progress</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABS STUBS (For future implementation) -->
+                <div id="tab-vehicle" class="tab-content">
+                    <h2 style="color:var(--text-main); font-weight:800; margin:0;">Vehicle Management</h2>
+                    <p style="color:var(--text-muted); font-size:13px;">Acest tab poate fi populat cu date despre masina in care te afli.</p>
+                </div>
+                <div id="tab-job" class="tab-content">
+                    <h2 style="color:var(--text-main); font-weight:800; margin:0;">Job / Faction</h2>
+                    <p style="color:var(--text-muted); font-size:13px;">Acest tab te poate duce catre Faction Dashboard.</p>
+                </div>
+                <div id="tab-property" class="tab-content">
+                    <h2 style="color:var(--text-main); font-weight:800; margin:0;">Properties</h2>
+                    <p style="color:var(--text-muted); font-size:13px;">Gestioneaza casele si afacerile detinute.</p>
+                </div>
+                <div id="tab-config" class="tab-content">
+                    <h2 style="color:var(--text-main); font-weight:800; margin:0;">Settings</h2>
+                    <p style="color:var(--text-muted); font-size:13px;">Setari UI, audio si keybind-uri personale.</p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- --- STREAMING_CHUNK: JavaScript Logic --- -->
+    <script>
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            // Reset active classes
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            
+            // Set new active classes
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        // Action Trigger Logic (Simuleaza interactiunea FiveM)
+        function triggerAction(actionName) {
+            let title = "Action Executed";
+            let msg = `Comanda pentru ${actionName.toUpperCase()} a fost trimisă.`;
+
+            // Aici in mod normal faci fetch catre client.lua
+            // ex: fetch(`https://${GetParentResourceName()}/action`, { method: 'POST', body: JSON.stringify({ action: actionName }) });
+
+            showNotify(title, msg);
+        }
+
+        // Notification Toast System
+        function showNotify(title, msg) {
+            const notifyEl = document.getElementById('notify');
+            document.getElementById('notify-msg').innerText = `${title}: ${msg}`;
+            
+            notifyEl.classList.add('show');
+            setTimeout(() => notifyEl.classList.remove('show'), 3000);
+        }
+
+        // Close Menu
+        function closeMenu() {
+            document.getElementById('dashboard-wrapper').classList.remove('visible');
+            // Aici se face post catre LUA pt a elibera NUI focus
+            // fetch(`https://${GetParentResourceName()}/close`, { method: 'POST' });
+        }
+
+        // Init on Load (Demo Purposes)
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('dashboard-wrapper').classList.add('visible');
+            }, 200);
+        };
+
+        // Listen for ESC key
+        document.onkeyup = function (data) {
+            if (data.which == 27) { // 27 = ESC
+                closeMenu();
+            }
+        };
+
+        // NUI Listener (Pentru integrarea cu FiveM reala)
+        window.addEventListener('message', (event) => {
+            let data = event.data;
+            if (data.action === "openMenu") {
+                // Update UI based on received data
+                if(data.playerData) {
+                    document.getElementById('ui-name').innerText = data.playerData.name;
+                    document.getElementById('ui-job').innerText = data.playerData.job;
+                    // ... populeaza restul campurilor de bani/vitals din LUA
+                }
+                document.getElementById('dashboard-wrapper').classList.add('visible');
+            } else if (data.action === "closeMenu") {
+                closeMenu();
+            }
+        });
+    </script>
+</body>
+</html>

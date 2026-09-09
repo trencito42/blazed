@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleeca Bank App</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+        :root {
+            --bg-base: #0f172a;
+            --bg-card: #1e293b;
+            --bg-panel: rgba(255, 255, 255, 0.05);
+            --bg-hover: rgba(255, 255, 255, 0.1);
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            
+            --accent: #06b6d4; /* Cyan modern */
+            --danger: #ef4444;
+            --success: #10b981;
+            
+            --radius-xl: 20px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background: url('https://placehold.co/1920x1080/1a1a24/1a1a24?text=FiveM+Background') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Telefon Mockup */
+        .phone-mockup {
+            width: 340px;
+            height: 700px;
+            background: #000;
+            border-radius: 45px;
+            padding: 12px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 0 2px #333;
+            position: relative;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-base);
+            border-radius: 35px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Dynamic Island / Top Bar */
+        .dynamic-island {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 25px;
+            background: #000;
+            border-radius: 20px;
+            z-index: 50;
+        }
+
+        .status-bar {
+            height: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-main);
+            z-index: 40;
+            position: relative;
+        }
+
+        /* Continut Aplicatie */
+        .app-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 20px 20px 20px;
+            min-height: 0; /* Important pentru a permite scroll corect in flexbox */
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .brand-title span {
+            color: var(--accent);
+        }
+
+        .profile-pic {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-panel);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--accent);
+        }
+
+        /* Bank Card */
+        .bank-card {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: var(--radius-xl);
+            padding: 25px;
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+        }
+
+        .bank-card::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -20%;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .card-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .card-balance {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .card-logo {
+            font-weight: 900;
+            font-style: italic;
+            color: rgba(255,255,255,0.2);
+            font-size: 16px;
+        }
+
+        /* Cash Panel */
+        .cash-panel {
+            background: var(--bg-panel);
+            border-radius: var(--radius-lg);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-shrink: 0;
+        }
+
+        .cash-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .cash-val {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--success);
+        }
+
+        /* Actiuni Rapide */
+        .actions-row {
+            display: flex;
+            width: 100%;
+            margin-bottom: 25px;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--bg-panel);
+            border-radius: var(--radius-lg);
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .action-btn.primary {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.3);
+            color: var(--accent);
+        }
+
+        .action-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-text {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Tranzactii */
+        .history-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Crucial pt scroll in interior */
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            flex-shrink: 0;
+        }
+
+        .tx-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 5px;
+        }
+
+        /* Custom Scrollbar pentru tranzactii */
+        .tx-list::-webkit-scrollbar { width: 4px; }
+        .tx-list::-webkit-scrollbar-track { background: transparent; }
+        .tx-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-panel);
+            padding: 12px 15px;
+            border-radius: var(--radius-md);
+        }
+
+        .tx-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tx-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .tx-icon.in { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .tx-icon.out { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        .tx-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tx-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .tx-date {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .tx-amount {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .tx-amount.in { color: var(--success); }
+        .tx-amount.out { color: var(--text-main); }
+
+        /* Modal Transfer Slide-Up */
+        .transfer-modal {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .transfer-modal.active {
+            transform: translateY(0);
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 25px 25px 0 0;
+            padding: 30px 20px 40px 20px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .close-btn {
+            width: 30px;
+            height: 30px;
+            background: var(--bg-panel);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main);
+            padding: 15px;
+            border-radius: var(--radius-md);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: opacity 0.2s;
+        }
+
+        .submit-btn:active {
+            opacity: 0.8;
+        }
+
+        /* Notificare */
+        .notification {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-150%);
+            background: var(--success);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            z-index: 200;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+            white-space: nowrap;
+        }
+
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-mockup">
+        <div class="dynamic-island"></div>
+        
+        <div class="phone-screen">
+            <!-- Status Bar Fake -->
+            <div class="status-bar">
+                <span>21:11</span>
+                <span style="display: flex; gap: 5px; align-items: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect><line x1="23" y1="13" x2="23" y2="11"></line></svg>
+                </span>
+            </div>
+
+            <!-- Notificare Dropdown -->
+            <div class="notification" id="notify">Transfer Reușit!</div>
+
+            <div class="app-content">
+                <!-- Header -->
+                <div class="app-header">
+                    <div class="brand-title">Fleeca<span>Bank</span></div>
+                    <div class="profile-pic">
+                        <!-- Profil SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                </div>
+
+                <!-- Balanta Bancara -->
+                <div class="bank-card">
+                    <div class="card-label">Cont Curent</div>
+                    <div class="card-balance" id="bank-val">$1,989,117</div>
+                    <div class="card-footer">
+                        <span>Cont Activ</span>
+                        <span class="card-logo">FLEECA</span>
+                    </div>
+                </div>
+
+                <!-- Portofel Cash -->
+                <div class="cash-panel">
+                    <span class="cash-label" style="display: flex; align-items: center; gap: 6px;">
+                        <!-- Cash SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+                        Bani Gheață (Cash)
+                    </span>
+                    <span class="cash-val" id="cash-val">$10,010</span>
+                </div>
+
+                <!-- Buton Actiune (Full Width) -->
+                <div class="actions-row">
+                    <div class="action-btn primary" onclick="openTransfer()">
+                        <div class="action-icon">
+                            <!-- Send/Transfer SVG -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </div>
+                        <div class="action-text">Transfer Bancar</div>
+                    </div>
+                </div>
+
+                <!-- Istoric Tranzactii -->
+                <div class="history-section">
+                    <div class="section-title">Istoric Tranzacții</div>
+                    <div class="tx-list" id="tx-list">
+                        <!-- Generat din JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Transfer -->
+            <div class="transfer-modal" id="transfer-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="modal-title">Trimite Bani</div>
+                        <div class="close-btn" onclick="closeTransfer()">
+                            <!-- Close X SVG -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </div>
+                    </div>
+
+                    <form id="transfer-form" onsubmit="submitTransfer(event)">
+                        <div class="form-group">
+                            <label class="form-label">ID Jucător (Destinatar)</label>
+                            <input type="number" class="form-input" id="inp-id" placeholder="Ex: 12" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sumă de transferat ($)</label>
+                            <input type="number" class="form-input" id="inp-amount" placeholder="0" required min="1">
+                        </div>
+                        <button type="submit" class="submit-btn">Trimite Banii</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- DATE DE BAZA SIMULATE ---
+        let bankBalance = 1989117;
+        let cashBalance = 10010;
+
+        let transactions = [
+            { type: 'in', title: 'Salariu Facțiune', date: 'Astăzi, 18:30', amount: 5000 },
+            { type: 'out', title: 'Achiziție Vehicul', date: 'Ieri, 14:20', amount: 45000 },
+            { type: 'out', title: 'Transfer către ID 2', date: '12 Aug, 09:15', amount: 1500 },
+            { type: 'in', title: 'Vânzare Casă', date: '10 Aug, 20:00', amount: 350000 },
+            { type: 'out', title: 'Magazin Haine', date: '08 Aug, 11:30', amount: 850 }
+        ];
+
+        // Formatare bani (adauga virgule)
+        function formatMoney(amount) {
+            return '$' + amount.toLocaleString('en-US');
+        }
+
+        function updateBalances() {
+            document.getElementById('bank-val').innerText = formatMoney(bankBalance);
+            document.getElementById('cash-val').innerText = formatMoney(cashBalance);
+        }
+
+        // --- RANDARE ISTORIC ---
+        function renderTransactions() {
+            const list = document.getElementById('tx-list');
+            list.innerHTML = '';
+
+            // Iconite SVG arrow simple si subtiri
+            const iconIn = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`;
+            const iconOut = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
+
+            transactions.forEach(tx => {
+                const isIncome = tx.type === 'in';
+                const icon = isIncome ? iconIn : iconOut;
+                const sign = isIncome ? '+' : '-';
+                
+                const el = document.createElement('div');
+                el.className = 'tx-item';
+                el.innerHTML = `
+                    <div class="tx-info">
+                        <div class="tx-icon ${tx.type}">${icon}</div>
+                        <div class="tx-details">
+                            <div class="tx-title">${tx.title}</div>
+                            <div class="tx-date">${tx.date}</div>
+                        </div>
+                    </div>
+                    <div class="tx-amount ${tx.type}">${sign}${formatMoney(tx.amount)}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        // --- LOGICA MODAL & TRANSFER ---
+        const modal = document.getElementById('transfer-modal');
+        const notify = document.getElementById('notify');
+
+        function openTransfer() {
+            modal.classList.add('active');
+        }
+
+        function closeTransfer() {
+            modal.classList.remove('active');
+            document.getElementById('transfer-form').reset();
+        }
+
+        function showNotification(msg, isError = false) {
+            notify.innerText = msg;
+            notify.style.background = isError ? 'var(--danger)' : 'var(--success)';
+            notify.style.color = isError ? '#fff' : '#000';
+            
+            notify.classList.add('show');
+            setTimeout(() => {
+                notify.classList.remove('show');
+            }, 3000);
+        }
+
+        function submitTransfer(e) {
+            e.preventDefault();
+            
+            const targetId = document.getElementById('inp-id').value;
+            const amount = parseInt(document.getElementById('inp-amount').value);
+
+            if (amount > bankBalance) {
+                showNotification('Fonduri insuficiente!', true);
+                return;
+            }
+
+            // Simulati trimiterea la server
+            // Aici in mod normal se face: fetch('https://script_name/transfer', { ... })
+            
+            // Logica Demo Local:
+            bankBalance -= amount;
+            
+            // Adauga in istoric la inceput
+            transactions.unshift({
+                type: 'out',
+                title: `Transfer către ID ${targetId}`,
+                date: 'Chiar acum',
+                amount: amount
+            });
+
+            updateBalances();
+            renderTransactions();
+            closeTransfer();
+            showNotification(`Ai trimis ${formatMoney(amount)}!`);
+        }
+
+        // --- INITIALIZARE ---
+        window.onload = () => {
+            updateBalances();
+            renderTransactions();
+        };
+
+        // --- INTEGRARE FIVEM LUA ---
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            if (data.action === "updateBank") {
+                bankBalance = data.bank;
+                cashBalance = data.cash;
+                transactions = data.history;
+                
+                updateBalances();
+                renderTransactions();
+            }
+        });
+    </script>
+</body>
+</html>
