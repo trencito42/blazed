@@ -1,29 +1,26 @@
 -- ============================================================
 --  sunset_carjack  ·  client/main.lua
---  Lockpick flow + chop-shop NPC selling
 -- ============================================================
 
-local LOCKPICK_DIST   = 2.2   -- metres from driver door to show prompt
-local NPC_INTERACT_DIST = 3.0 -- metres from NPC to sell
+local LOCKPICK_DIST    = 2.5
+local NPC_INTERACT_DIST = 3.5
 
--- NPC samsari (no blip — discovered on foot)
+-- Samsari — coordonate verificate în zone dubioase LS
 local CHOP_NPCS = {
-    { coords = vector4(453.2,  -3002.3, 6.0,  225.0), label = 'Samsar Dubios' },
-    { coords = vector4(-147.4, -1718.5, 29.3, 90.0),  label = 'Samsar Dubios' },
-    { coords = vector4(112.8,  -1948.4, 20.8, 180.0), label = 'Samsar Dubios' },
+    { coords = vector4(835.6, -3001.4, 5.9,  270.0), label = 'Samsar Dubios' }, -- Port terminal
+    { coords = vector4(-151.9, -1716.8, 29.3, 90.0),  label = 'Samsar Dubios' }, -- Strawberry
+    { coords = vector4(115.2,  -1947.8, 20.8, 180.0), label = 'Samsar Dubios' }, -- Davis
 }
 
-local spawnedNpcs    = {}
-local nearVehicle    = nil   -- entity of nearby vehicle when prompt is active
-local nearNpc        = nil   -- index of nearby NPC
-local inCooldown     = false -- prevent spam
-local stolenNetId    = nil   -- netId of the car we carjacked (set after lockpick)
+local spawnedNpcs = {}
+local npcBlips    = {}   -- blipuri active spre NPC (apar doar dupa lockpick)
+local nearVehicle = nil
+local nearNpcIdx  = nil
+local inCooldown  = false
+local hasStolenCar = false  -- true dupa lockpick reusit → activeaza blipurile
 
 -- ── Helpers ─────────────────────────────────────────────────
-
-local function notify(msg, t)
-    exports.sunset_ui:Notify(msg, t or 'info')
-end
+local function notify(msg, t) exports.sunset_ui:Notify(msg, t or 'info') end
 
 local function drawText3D(x, y, z, text)
     SetTextScale(0.35, 0.35)
@@ -41,120 +38,159 @@ local function drawText3D(x, y, z, text)
     ClearDrawOrigin()
 end
 
--- ── Spawn NPCs ───────────────────────────────────────────────
+-- ── Blipuri NPC (apar doar dupa lockpick) ───────────────────
+local function showNpcBlips()
+    for i, npc in ipairs(CHOP_NPCS) do
+        if not npcBlips[i] then
+            local b = AddBlipForCoord(npc.coords.x, npc.coords.y, npc.coords.z)
+            SetBlipSprite(b, 120)       -- masina cu cheie
+            SetBlipColour(b, 2)         -- verde
+            SetBlipScale(b, 0.85)
+            SetBlipAsShortRange(b, false)
+            BeginTextCommandSetBlipName('STRING')
+            AddTextComponentString(npc.label)
+            EndTextCommandSetBlipName(b)
+            npcBlips[i] = b
+        end
+    end
+end
+
+local function hideNpcBlips()
+    for i, b in pairs(npcBlips) do
+        if DoesBlipExist(b) then RemoveBlip(b) end
+        npcBlips[i] = nil
+    end
+end
+
+-- ── Spawn NPC-uri la start ───────────────────────────────────
 CreateThread(function()
-    local model = GetHashKey('g_m_y_famca_01') -- shady street dude
+    local model = GetHashKey('g_m_y_famca_01')
     RequestModel(model)
-    while not HasModelLoaded(model) do Wait(50) end
+    while not HasModelLoaded(model) do Wait(100) end
 
     for i, npc in ipairs(CHOP_NPCS) do
-        local ped = CreatePed(4, model, npc.coords.x, npc.coords.y, npc.coords.z - 1.0,
-                              npc.coords.w, false, true)
+        local ped = CreatePed(4, model,
+            npc.coords.x, npc.coords.y, npc.coords.z - 1.0, npc.coords.w,
+            false, true)
         SetEntityAsMissionEntity(ped, true, true)
         FreezeEntityPosition(ped, true)
         SetEntityInvincible(ped, true)
         SetBlockingOfNonTemporaryEvents(ped, true)
+        TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_SMOKING', 0, true)
         spawnedNpcs[i] = ped
     end
     SetModelAsNoLongerNeeded(model)
 end)
 
--- ── Main proximity loop ──────────────────────────────────────
+-- ── Detectie proximitate (mai robusta) ──────────────────────
 CreateThread(function()
     while true do
-        local sleep = 500
+        local sleep = 600
         local ped   = PlayerPedId()
         local pos   = GetEntityCoords(ped)
 
-        -- Check nearby NPCs
-        nearNpc = nil
+        -- NPC nearby?
+        nearNpcIdx = nil
         for i, npc in ipairs(CHOP_NPCS) do
             if spawnedNpcs[i] and DoesEntityExist(spawnedNpcs[i]) then
-                local d = #(pos - vector3(npc.coords.x, npc.coords.y, npc.coords.z))
-                if d < NPC_INTERACT_DIST then
-                    nearNpc = i
-                    sleep   = 0
+                if #(pos - vector3(npc.coords.x, npc.coords.y, npc.coords.z)) < NPC_INTERACT_DIST then
+                    nearNpcIdx = i
+                    sleep = 0
                     break
                 end
             end
         end
 
-        -- Check nearby unoccupied vehicles (driver door side)
+        -- Vehicle nearby? (folosim game pool — mai fiabil decat GetClosestVehicle)
         nearVehicle = nil
-        local veh, dist = GetClosestVehicle(pos.x, pos.y, pos.z, LOCKPICK_DIST + 1.0, 0, 70)
-        if veh and veh ~= 0 and dist <= LOCKPICK_DIST then
-            -- Only if no one is in the driver seat
-            if GetPedInVehicleSeat(veh, -1) == 0 then
-                nearVehicle = veh
-                sleep       = 0
+        if not nearNpcIdx then
+            local vehicles = GetGamePool('CVehicle')
+            local bestDist = LOCKPICK_DIST
+            local bestVeh  = nil
+            for _, v in ipairs(vehicles) do
+                if DoesEntityExist(v) and not IsEntityDead(v) then
+                    -- Ignora daca e in mana unui ped / player
+                    local driver = GetPedInVehicleSeat(v, -1)
+                    if driver == 0 or driver == PlayerPedId() then
+                        -- Nu te propui sa furi propria masina in care esti deja
+                        if driver ~= PlayerPedId() then
+                            local d = #(pos - GetEntityCoords(v))
+                            if d < bestDist then
+                                bestDist = d
+                                bestVeh  = v
+                            end
+                        end
+                    end
+                end
             end
-        end
-
-        if sleep > 0 then
-            nearVehicle = nil
-            nearNpc     = nil
+            if bestVeh then
+                nearVehicle = bestVeh
+                sleep = 0
+            end
         end
 
         Wait(sleep)
     end
 end)
 
--- ── Render prompts + handle G key ───────────────────────────
+-- ── Render prompt + handle G ─────────────────────────────────
 CreateThread(function()
     while true do
         local sleep = 500
 
-        if nearNpc then
+        -- === Langa NPC ===
+        if nearNpcIdx then
             sleep = 0
-            local npc = CHOP_NPCS[nearNpc]
-            drawText3D(npc.coords.x, npc.coords.y, npc.coords.z, '[G] Vinde masina — ' .. npc.label)
+            local npc = CHOP_NPCS[nearNpcIdx]
+            drawText3D(npc.coords.x, npc.coords.y, npc.coords.z,
+                       '[G] Vinde masina — ' .. npc.label)
 
-            if IsControlJustPressed(0, 51) and not inCooldown then -- G
+            if IsControlJustPressed(0, 51) and not inCooldown then
                 inCooldown = true
-                local veh = GetVehiclePedIsIn(PlayerPedId(), false)
+                local playerPed = PlayerPedId()
+                local veh = GetVehiclePedIsIn(playerPed, false)
                 if veh == 0 then
                     notify('Trebuie sa fii in masina ca s-o vinzi.', 'error')
                 else
-                    local model  = GetEntityModel(veh)
-                    local modelName = ''
-                    -- Get model name string from hash
-                    for _, name in ipairs(GetAllVehicleModels and GetAllVehicleModels() or {}) do
-                        if GetHashKey(name) == model then modelName = name break end
+                    local modelHash = GetEntityModel(veh)
+                    -- Obtine numele modelului
+                    local modelName = tostring(modelHash)
+                    local allModels = GetAllVehicleModels and GetAllVehicleModels() or {}
+                    for _, name in ipairs(allModels) do
+                        if GetHashKey(name) == modelHash then
+                            modelName = name
+                            break
+                        end
                     end
-                    -- Fallback: use hash as string if lookup failed
-                    if modelName == '' then modelName = tostring(model) end
-
                     local netId = NetworkGetNetworkIdFromEntity(veh)
                     local ok, result = Sunset.AwaitCallback('sunset:carjack:sell', { model = modelName, netId = netId })
                     if ok then
-                        notify(('Masina vanduta! Ai primit $%d cash.'):format(result), 'success')
+                        notify(('Vandut! Ai primit $%d cash.'):format(result), 'success')
                         SetEntityAsMissionEntity(veh, false, true)
-                        DeleteEntity(veh)
-                        stolenNetId = nil
+                        DeleteVehicle(veh)
+                        hasStolenCar = false
+                        hideNpcBlips()
                     else
-                        notify(result or 'Nu s-a putut vinde masina.', 'error')
+                        notify(result or 'Nu s-a putut vinde.', 'error')
                     end
                 end
                 SetTimeout(1500, function() inCooldown = false end)
             end
 
-        elseif nearVehicle then
+        -- === Langa vehicul ===
+        elseif nearVehicle and DoesEntityExist(nearVehicle) then
             sleep = 0
-            local veh = nearVehicle
-            drawText3D(GetEntityCoords(veh).x, GetEntityCoords(veh).y, GetEntityCoords(veh).z,
-                       '[G] Incearca sa fortezi usa')
+            local vPos = GetEntityCoords(nearVehicle)
+            drawText3D(vPos.x, vPos.y, vPos.z, '[G] Incearca sa fortezi usa')
 
-            if IsControlJustPressed(0, 51) and not inCooldown then -- G
-                -- Don't steal if player interaction menu would fire (nearby player)
-                -- (sunset_interactions handles that; if no player nearby this is safe)
+            if IsControlJustPressed(0, 51) and not inCooldown then
                 inCooldown = true
                 local ok, err = Sunset.AwaitCallback('sunset:carjack:tryLockpick')
                 if ok then
                     notify('Usa fortata! Urca repede.', 'success')
-                    -- Put player in vehicle
-                    local ped = PlayerPedId()
-                    SetPedIntoVehicle(ped, veh, -1)
-                    stolenNetId = NetworkGetNetworkIdFromEntity(veh)
+                    SetPedIntoVehicle(PlayerPedId(), nearVehicle, -1)
+                    hasStolenCar = true
+                    showNpcBlips()
                 else
                     notify(err or 'Lockpick-ul s-a rupt.', 'error')
                 end
