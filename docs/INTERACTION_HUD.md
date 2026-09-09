@@ -58,15 +58,17 @@ exports.sunset_ui:Send('fishingHide', {})
 
 - `sunset_factions/client/police.lua` — jail sentence display (`state = 'jail'`)
 
-## Removed (not part of preserved UI)
+## Job resources (current)
 
-- `sunset_jobs`, `sunset_jobcreator` resources (not started)
+| Resource | Status |
+|----------|--------|
+| `sunset_jobs` | **Started** — trucker, garbage, courier, fisherman, mechanic |
+| `sunset_jobcreator` | **Not started** — admin editor off for now |
+
+## Removed from UI (panels not in `index.html`)
+
 - `#job-shift-panel`, `#courier-panel`, `#job-creator-panel`
 - `#jobs-browser`, `#jobcenter`, `#jobs-panel`
 - `#job-objective` corner overlay (legacy trucker/garbage)
 
-## Re-adding fishing later
-
-1. New resource (e.g. `sunset_fishing`) with client zones + server validation
-2. Call `fishingShow` / `fishingUpdate` / `fishingHide` only — no Job Creator needed
-3. Copy gameplay logic from git history: `sunset_jobs/client/fisherman.lua` + `server/fisherman.lua`
+Fishing uses `sunset_jobs` + `fishingShow` / `#fishing-panel` via `sunset_fishingshop` hire flow.

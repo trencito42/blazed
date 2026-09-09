@@ -1,7 +1,11 @@
-# RETIRED — not loaded on server
+# Active — loaded on server
 
-This resource was removed from `server.cfg` (civilian jobs system).
+`sunset_jobs` is **started** via `ensure sunset_jobs` in `config/server.cfg.template`.
 
-**Preserved UI:** bottom interaction HUD (`#fishing-panel`) lives in `sunset_ui` — see `docs/INTERACTION_HUD.md`.
+Hardcoded civilian jobs (config in `sunset_core/shared/jobs_config.lua`):
 
-Gameplay reference (fisherman, trucker, etc.) remains in git history for re-implementation.
+- trucker, garbage, courier, fisherman, mechanic
+
+Commands: `/jobs`, `/work`, `/jobhelp`, `/fish` (fisherman). Fishing hire also via `sunset_fishingshop` NPC.
+
+`sunset_jobcreator` is **not** started — editor/templates remain in repo for later.
