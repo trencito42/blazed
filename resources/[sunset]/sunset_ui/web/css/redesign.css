@@ -1512,6 +1512,7 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
 .player-interaction,
 .org-panel,
 #jobcenter,
+#jobs-panel,
 #crafting,
 #documents,
 #servicecalls,
@@ -1523,6 +1524,18 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
 #emotes {
     background: transparent !important;
 }
+
+/* Jobs panel layout */
+.jobs-menu__header { margin-bottom: 12px; }
+.jobs-menu__header h2 { margin: 0 0 4px; }
+.jobs-menu__current,
+.jobs-menu__session { margin: 0; font-size: 13px; color: var(--premium-text-dim, rgba(255,255,255,.6)); }
+.jobs-menu__list { flex: 1; overflow-y: auto; max-height: 380px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.jobs-menu__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.jobs-menu__button { padding: 10px 18px; border: 1px solid var(--premium-border); border-radius: 8px; background: var(--premium-panel); color: var(--premium-text); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s; }
+.jobs-menu__button:hover:not(:disabled) { background: var(--premium-hover); border-color: rgba(0,255,204,.44); }
+.jobs-menu__button:disabled { opacity: .4; cursor: not-allowed; }
+.jobs-menu__button--primary { background: rgba(0,255,204,.12) !important; border-color: rgba(0,255,204,.4) !important; color: var(--premium-accent, #00ffcc) !important; }
 
 .menu--solo-faction .menu-wrap,
 .menu--solo-clan .menu-wrap {

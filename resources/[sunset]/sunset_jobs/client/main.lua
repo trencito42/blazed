@@ -24,7 +24,13 @@ AddEventHandler('sunset:nui:jobCenterHire', function(data)
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('jobCenterHide', {})
     else
-        exports.sunset_ui:Notify(err or 'Nu s-a putut finaliza angajarea.', 'error')
+        local errMsg = err or 'Nu s-a putut finaliza angajarea.'
+        -- "already work" = user already has this job; treat as info, not error
+        local kind = (errMsg:find('already work') or errMsg:find('You already work')) and 'info' or 'error'
+        if kind == 'info' then
+            errMsg = 'Esti deja angajat la acest job! Foloseste /work sa incepi tura.'
+        end
+        exports.sunset_ui:Notify(errMsg, kind)
         -- nu inchidem UI-ul — userul poate incerca alt job sau apasa ESC
     end
 end)

@@ -992,15 +992,16 @@ const Panels = {
             skills.forEach((skill) => {
                 const li = document.createElement('li');
                 const xp = skill.xp || 0;
-                const xpNext = skill.xpNext || 100;
-                const pct = xpNext > 0 ? Math.min(100, Math.round((xp / xpNext) * 100)) : 0;
+                const xpNext = skill.xpNext || 100;  // REMAINING xp to next level
+                const xpTotal = xp + xpNext;          // total XP needed for this level
+                const pct = xpTotal > 0 ? Math.min(100, Math.round((xp / xpTotal) * 100)) : 0;
                 li.innerHTML = `
                     <div class="skill-row__head">
                         <span class="skill-row__name">${skill.label || skill.id}</span>
                         <span class="skill-row__level">LEVEL ${skill.level || 1}</span>
                     </div>
                     <div class="skill-row__bar"><div class="skill-row__fill" style="width:${pct}%"></div></div>
-                    <div class="skill-row__xp">${xp.toLocaleString()} / ${xpNext.toLocaleString()} XP</div>`;
+                    <div class="skill-row__xp">${xp.toLocaleString()} / ${xpTotal.toLocaleString()} XP</div>`;
                 list.appendChild(li);
             });
         }
@@ -1453,7 +1454,8 @@ const Panels = {
             const prog = job.progress || {};
             const level = Number(prog.level || job.level || 1);
             const xp = Math.max(0, Number(prog.xp || job.xp || 0));
-            const xpNext = Math.max(1, Number(prog.xpToNext || job.xpNext || 100));
+            const xpNext = Math.max(1, Number(prog.xpToNext || job.xpNext || 100));  // REMAINING
+            const xpTotal = xp + xpNext;  // total for this level
             const card = document.createElement('article');
             card.className = `jobs-menu__card${job.id === currentId ? ' is-current' : ''}`;
 
@@ -1484,7 +1486,7 @@ const Panels = {
             const progress = document.createElement('div');
             progress.className = 'jobs-menu__progress';
             const fill = document.createElement('i');
-            fill.style.width = `${Math.min(100, (xp / xpNext) * 100)}%`;
+            fill.style.width = `${xpTotal > 0 ? Math.min(100, (xp / xpTotal) * 100) : 0}%`;
             progress.appendChild(fill);
             card.append(top, meta, progress);
             list.appendChild(card);

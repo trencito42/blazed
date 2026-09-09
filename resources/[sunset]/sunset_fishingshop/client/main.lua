@@ -195,7 +195,13 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         if ok then
             exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
         else
-            exports.sunset_ui:Notify(err or 'Nu a functionat angajarea.', 'error')
+            local errMsg = err or 'Nu a functionat angajarea.'
+            -- User already has fisherman job — show info instead of error
+            if errMsg:find('already work') or errMsg:find('You already work') then
+                exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
+            else
+                exports.sunset_ui:Notify(errMsg, 'error')
+            end
         end
         SetTimeout(2000, function() inCooldown = false end)
 
