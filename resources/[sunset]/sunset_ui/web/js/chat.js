@@ -3,9 +3,20 @@ const Chat = {
     settingsOpen: false,
     playerId: 0,
     playerName: '',
+    channel: 'ooc',
+    channelPrefixes: {
+        me: '/me ',
+        do: '/do ',
+        faction: '/f ',
+        clan: '/c ',
+        dept: '/d ',
+        radio: '/r ',
+    },
 
     pageSize() {
-        return ChatSettings?.settings?.pageSize || 10;
+        const maxH = ChatSettings?.settings?.maxHeight || 350;
+        const font = ChatSettings?.settings?.fontSize || 13.5;
+        return Math.max(4, Math.floor(maxH / (font * 1.45)));
     },
 
     maxMessages() {
@@ -46,6 +57,157 @@ const Chat = {
         if (!raw) return '';
         if (raw.startsWith('[')) return raw;
         return `[${raw}]`;
+    },
+
+    premiumTime(m) {
+        const raw = String(m?.time ?? '').trim().replace(/^\[|\]$/g, '');
+        if (!raw) return '';
+        const parts = raw.split(':');
+        if (parts.length >= 2) return `${parts[0]}:${parts[1]}`;
+        return raw;
+    },
+
+    createBadge(label, className) {
+        const badge = document.createElement('span');
+        badge.className = `msg-badge ${className}`;
+        badge.textContent = label;
+        return badge;
+    },
+
+    createAuthor(html, className = '') {
+        const author = document.createElement('span');
+        author.className = `msg-author${className ? ` ${className}` : ''}`;
+        author.innerHTML = html;
+        return author;
+    },
+
+    createContent(html, className = '') {
+        const content = document.createElement('span');
+        content.className = `msg-content${className ? ` ${className}` : ''}`;
+        if (html.includes('<')) content.innerHTML = html;
+        else content.textContent = html;
+        return content;
+    },
+
+    premiumMeta(type, m) {
+        const esc = (v) => this.escapeHtml(v);
+        const name = String(m.name || 'Player').trim();
+        const id = Number(m.id) || 0;
+        const msg = String(m.message ?? '');
+        const faction = String(m.factionLabel || '').trim();
+        const rank = String(m.rank || '').trim();
+
+        if (type === 'command_error' || type === 'command_warn' || type === 'command_info') {
+            const label = type === 'command_error' ? 'ERROR' : (type === 'command_warn' ? 'WARN' : 'SYSTEM');
+            const badgeClass = type === 'command_error' ? 'badge-error' : (type === 'command_warn' ? 'badge-warn' : 'badge-system');
+            return {
+                badge: { label, className: badgeClass },
+                author: null,
+                content: { html: `${esc(name || 'SYSTEM')}: ${esc(msg)}`, className: type === 'command_error' ? 'color-error' : '' },
+            };
+        }
+
+        if (type === 'r' || type === 'd' || type === 'f') {
+            const channel = type === 'r' ? 'RADIO' : (type === 'd' ? 'DEPT' : 'FACTION');
+            let text = msg;
+            if ((type === 'r' || type === 'd') && text && !/over\.?$/i.test(text.trim())) {
+                text = `${text.replace(/[.,\s]+$/, '')}, over.`;
+            }
+            const header = [faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+            return {
+                badge: { label: channel, className: type === 'f' ? 'badge-peace' : (type === 'd' ? 'badge-dept' : 'badge-radio') },
+                author: { html: `${header}:`, className: 'color-dept' },
+                content: { html: esc(text), className: '' },
+            };
+        }
+
+        if (type === 'gov' || type === 'announce') {
+            const dept = type === 'gov' ? String(m.factionLabel || m.name || 'GOVERNMENT').trim() : name;
+            const issuer = [m.issuerRank || m.rank, this.formatPlayerNameHtml(m, m.issuerName || m.name)].filter(Boolean).join(' ');
+            const issuerLine = issuer ? ` ${issuer}` : (id > 0 ? ` (${id})` : '');
+            return {
+                badge: { label: 'GOV', className: 'badge-gov' },
+                author: { html: `${esc(type === 'announce' ? `Public announcement from ${name}${id > 0 ? ` (${id})` : ''}` : dept)}${issuerLine ? ` (${issuer})` : ''}:`, className: 'color-gov' },
+                content: { html: esc(msg), className: 'text-gov' },
+            };
+        }
+
+        if (type === 'c' || type === 'clan_action') {
+            const rankNum = m.clanRank ? `R${m.clanRank}` : '';
+            const rankTitle = String(m.clanRankLabel || '').trim();
+            const who = [rankNum, rankTitle, this.formatClanNameHtml(m)].filter(Boolean).join(' ');
+            return {
+                badge: { label: type === 'clan_action' ? 'CLAN' : 'CLAN', className: 'badge-mafia' },
+                author: { html: `${who}:`, className: 'color-mafia' },
+                content: { html: esc(msg), className: '' },
+            };
+        }
+
+        if (type === 'faction_action' || type === 'faction_info') {
+            const header = [faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+            return {
+                badge: { label: 'FACTION', className: 'badge-peace' },
+                author: { html: `${header}:`, className: 'color-peace' },
+                content: { html: esc(msg), className: '' },
+            };
+        }
+
+        if (type === 'sms' || m.smsNotify) {
+            const from = name || 'Unknown';
+            return {
+                badge: { label: 'SMS', className: 'badge-sms' },
+                author: { html: `From "${esc(from)}":`, className: 'color-sms' },
+                content: { html: esc(msg || 'You got a new message.'), className: '' },
+            };
+        }
+
+        if (type === 'me') {
+            const who = (m.clanTag || m.factionId) ? this.formatPlayerNameHtml(m) : esc(this.nameWithId(name, id));
+            return {
+                badge: { label: 'ME', className: 'badge-rp' },
+                author: { html: who, className: 'color-accent' },
+                content: { html: esc(msg), className: 'text-rp' },
+            };
+        }
+
+        if (type === 'do') {
+            const who = (m.clanTag || m.factionId) ? this.formatPlayerNameHtml(m) : esc(this.nameWithId(name, id));
+            return {
+                badge: { label: 'DO', className: 'badge-rp' },
+                author: { html: who, className: 'color-accent' },
+                content: { html: esc(msg), className: 'text-rp' },
+            };
+        }
+
+        if (type === 'say' || type === '') {
+            const who = (m.clanTag || m.factionId)
+                ? this.formatPlayerNameHtml(m)
+                : esc(this.nameWithId(name, id));
+            return {
+                badge: { label: 'OOC', className: 'badge-ooc' },
+                author: { html: `${who} says:`, className: 'color-accent' },
+                content: { html: esc(msg), className: '' },
+            };
+        }
+
+        if (type === 'megaphone' || type === 'police_alert' || type === 'hq' || type === 'radar' || type === 'radar_alert') {
+            const tag = type === 'megaphone' ? 'ADVERT' : (type === 'police_alert' ? 'ALERT' : 'SYSTEM');
+            const badgeClass = type === 'megaphone' ? 'badge-ad' : 'badge-system';
+            const header = type === 'megaphone'
+                ? this.formatPlayerNameHtml(m, name.replace(/^\[MEGAPHONE\]\s*/i, '').trim() || name)
+                : esc(name || 'SYSTEM');
+            return {
+                badge: { label: tag, className: badgeClass },
+                author: { html: `${header}:`, className: 'color-accent' },
+                content: { html: esc(msg), className: type === 'megaphone' ? 'text-ad' : '' },
+            };
+        }
+
+        return {
+            badge: { label: 'SYSTEM', className: 'badge-system' },
+            author: name ? { html: `${esc(name)}:`, className: '' } : null,
+            content: { html: esc(msg || name), className: '' },
+        };
     },
 
     splitClanParts(m) {
@@ -392,44 +554,35 @@ const Chat = {
         const el = document.createElement('div');
         const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
         const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
-        const highlighted = new Set([
-            'say', 'me', 'do', 'f', 'r', 'd', 'c', 'gov', 'announce', 'sms', 'hq',
-            'megaphone', 'police_alert', 'faction_info', 'faction_motd', 'clan_motd', 'blaze_pass',
-            'faction_action', 'clan_action', 'radar', 'radar_alert',
-            'command_error', 'command_warn', 'command_info',
-        ]);
-        const classes = ['chat-msg'];
-        if (highlighted.has(type)) classes.push(`chat-msg--${type}`);
+        const classes = ['chat-msg', `chat-msg--${type}`];
         if (factionId) classes.push(`chat-msg--faction-${factionId}`);
         if (m.spy) classes.push('chat-msg--spy');
-        el.className = classes.join(' ');
 
-        const line = document.createElement('span');
-        line.className = 'chat-msg__line';
-        if (type === 'gov') {
-            line.innerHTML = this.formatGovCardHtml(m);
-            el.classList.add('chat-msg--gov-banner');
-        } else if (type === 'r' || type === 'd' || type === 'f') {
-            line.innerHTML = this.formatRadioCardHtml(m, type);
-            el.classList.add('chat-msg--radio-card');
-        } else if (type === 'command_error' || type === 'command_warn' || type === 'command_info') {
-            line.innerHTML = this.formatSystemCardHtml(m, type);
-            el.classList.add('chat-msg--system-card');
-        } else if (type === 'c' || type === 'clan_action') {
-            line.innerHTML = this.formatClanCardHtml(m, type === 'clan_action');
-            el.classList.add('chat-msg--clan-card');
-        } else if (type === 'blaze_pass') {
-            line.innerHTML = this.formatPassEventHtml(m);
-            el.classList.add('chat-msg--blaze-pass');
-        } else if (type === 'faction_motd' || type === 'clan_motd') {
-            line.innerHTML = this.formatMotdBannerHtml(m, type);
-            el.classList.add('chat-msg--motd-banner');
-        } else if (type === 'c' || type === 'clan_action' || this.lineUsesHtml(m, type)) {
-            line.innerHTML = this.formatLine(m);
-        } else {
-            line.textContent = this.formatLine(m);
+        if (type === 'faction_motd' || type === 'clan_motd' || type === 'blaze_pass') {
+            el.className = [...classes, 'chat-msg--block'].join(' ');
+            const time = document.createElement('span');
+            time.className = 'msg-time';
+            time.textContent = this.premiumTime(m);
+            el.appendChild(time);
+            const block = document.createElement('div');
+            block.className = 'msg-content';
+            block.innerHTML = type === 'blaze_pass'
+                ? this.formatPassEventHtml(m)
+                : this.formatMotdBannerHtml(m, type);
+            el.appendChild(block);
+            return el;
         }
-        el.appendChild(line);
+
+        el.className = classes.join(' ');
+        const time = document.createElement('span');
+        time.className = 'msg-time';
+        time.textContent = this.premiumTime(m);
+        el.appendChild(time);
+
+        const meta = this.premiumMeta(type, m);
+        if (meta.badge) el.appendChild(this.createBadge(meta.badge.label, meta.badge.className));
+        if (meta.author) el.appendChild(this.createAuthor(meta.author.html, meta.author.className));
+        el.appendChild(this.createContent(meta.content.html, meta.content.className));
         return el;
     },
 
@@ -465,15 +618,58 @@ const Chat = {
     },
 
     toggleSettings(force) {
-        const popover = $('#chat-settings-popover');
-        if (!popover) return;
+        const panel = $('#chat-settings-panel');
+        const btn = $('#chat-settings-btn');
+        if (!panel) return;
         const next = typeof force === 'boolean' ? force : !this.settingsOpen;
         this.settingsOpen = next;
-        popover.classList.toggle('hidden', !next);
+        panel.classList.toggle('show', next);
+        btn?.classList.toggle('active', next);
         if (next) {
             ChatSettings.init();
             ChatSettings.syncControls();
         }
+    },
+
+    closeChannelDropdown() {
+        $('#chat-channel-dropdown')?.classList.remove('show');
+        $('#chat-channel-toggle')?.classList.remove('open');
+    },
+
+    setChannel(channelId, label, placeholder) {
+        this.channel = channelId || 'ooc';
+        const labelEl = $('#chat-channel-label');
+        const input = $('#chat-input');
+        if (labelEl && label) labelEl.textContent = label;
+        if (input && placeholder) input.placeholder = placeholder;
+        document.querySelectorAll('#chat-channel-dropdown .dropdown-item').forEach((item) => {
+            item.classList.toggle('active', item.dataset.channel === this.channel);
+        });
+    },
+
+    initChannelSelector() {
+        if (this._channelReady) return;
+        this._channelReady = true;
+        const toggle = $('#chat-channel-toggle');
+        const dropdown = $('#chat-channel-dropdown');
+        toggle?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown?.classList.toggle('show');
+            toggle.classList.toggle('open');
+        });
+        dropdown?.querySelectorAll('.dropdown-item').forEach((item) => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.setChannel(item.dataset.channel, item.textContent.trim(), item.dataset.placeholder);
+                this.closeChannelDropdown();
+                $('#chat-input')?.focus({ preventScroll: true });
+            });
+        });
+        document.addEventListener('click', (e) => {
+            if (!toggle?.contains(e.target) && !dropdown?.contains(e.target)) {
+                this.closeChannelDropdown();
+            }
+        });
     },
 
     setContext(data) {
@@ -484,14 +680,17 @@ const Chat = {
 
     toggle(open, data) {
         const chat = $('#chat');
+        const app = $('#chat-app');
         const wrap = $('#chat-input-wrap');
         const input = $('#chat-input');
         const backdrop = $('#chat-backdrop');
+        this.initChannelSelector();
         if (open) {
             this.setContext(data);
             ChatSettings.init();
             document.body.classList.add('chat-ui-open');
             chat?.classList.add('chat-open');
+            app?.classList.add('is-active');
             backdrop?.classList.remove('hidden');
             wrap?.classList.remove('hidden');
             this._pendingRender = false;
@@ -502,9 +701,11 @@ const Chat = {
             }, 50);
         } else {
             this.toggleSettings(false);
+            this.closeChannelDropdown();
             backdrop?.classList.add('hidden');
             document.body.classList.remove('chat-ui-open');
             chat?.classList.remove('chat-open');
+            app?.classList.remove('is-active');
             wrap?.classList.add('hidden');
             this._pendingRender = false;
             this.render();
@@ -529,8 +730,13 @@ const Chat = {
 
     send() {
         const input = $('#chat-input');
-        const msg = input.value.trim();
-        if (!msg) { post('chatClose'); return; }
+        const raw = input.value.trim();
+        if (!raw) { post('chatClose'); return; }
+        let msg = raw;
+        if (!msg.startsWith('/')) {
+            const prefix = this.channelPrefixes[this.channel];
+            if (prefix) msg = `${prefix}${msg}`;
+        }
         post('chatSend', { message: msg });
         input.value = '';
     },
@@ -553,6 +759,12 @@ $('#chat-settings-btn')?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     Chat.toggleSettings();
+});
+
+$('#chat-settings-close')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    Chat.toggleSettings(false);
 });
 
 $('#chat-input')?.addEventListener('keydown', (e) => {

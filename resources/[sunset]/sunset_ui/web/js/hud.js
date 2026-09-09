@@ -10,13 +10,36 @@ const Hud = {
         seatbelt: { label: 'SEATBELT OFF', key: 'K', ok: false },
         lights: { label: 'LIGHTS OFF', key: 'H', ok: false },
     },
+    taskIcons: {
+        default: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+        job: '<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>',
+        license: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+        driver: '<svg viewBox="0 0 24 24"><path d="M4 17h16M6 11l2-5h8l2 5"></path><circle cx="7.5" cy="17" r="1.5"></circle><circle cx="16.5" cy="17" r="1.5"></circle></svg>',
+    },
 
     init() {
         if (this._ready) return;
         this._ready = true;
+        this.updateDateDisplay();
+        if (!this._dateTimer) {
+            this._dateTimer = setInterval(() => this.updateDateDisplay(), 60000);
+        }
         setTimeout(() => {
             $$('.hud-boot').forEach((el) => el.classList.remove('hud-boot'));
         }, 1500);
+    },
+
+    updateDateDisplay(dateValue) {
+        const el = $('#hud-date');
+        if (!el) return;
+        const source = dateValue ? new Date(dateValue) : new Date();
+        if (Number.isNaN(source.getTime())) return;
+        const parts = source.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }).toUpperCase().replace(/\./g, '');
+        el.textContent = parts;
     },
 
     clamp(value, min = 0, max = 100) {
@@ -45,39 +68,114 @@ const Hud = {
 
     updateWantedDisplay(data) {
         const wanted = Math.max(0, Math.round(Number(data.wanted) || 0));
-        const wantedEl = $('#hud-wanted');
+        const panel = $('#hud-wanted');
+        const timerWrap = $('#hud-wanted-timer-wrap');
         const timerEl = $('#hud-wanted-timer');
-        if (!wantedEl) return;
+        const stars = document.querySelectorAll('#hud-wanted-stars .wanted-star');
+        if (!panel) return;
 
-        wantedEl.classList.toggle('hidden', wanted <= 0);
-        const levelEl = $('#hud-wanted-level');
-        if (levelEl) {
-            levelEl.textContent = '★'.repeat(Math.min(wanted, 5));
-            levelEl.setAttribute('aria-label', `Wanted level ${wanted}`);
-        }
+        panel.classList.toggle('active', wanted > 0);
+        panel.setAttribute('aria-label', wanted > 0 ? `Wanted level ${wanted}` : 'Not wanted');
 
-        if (!timerEl) return;
+        stars.forEach((star, index) => {
+            star.classList.toggle('active', index < Math.min(wanted, 5));
+        });
+
+        if (!timerWrap || !timerEl) return;
         if (wanted <= 0) {
-            timerEl.classList.add('hidden');
+            timerWrap.classList.add('hidden');
             timerEl.textContent = '';
             return;
         }
 
         if (data.wantedPersistent) {
             timerEl.textContent = '∞';
-            timerEl.classList.remove('hidden');
+            timerWrap.classList.remove('hidden');
             return;
         }
 
         const remaining = Number(data.wantedRemainingSec);
         if (Number.isFinite(remaining) && remaining > 0) {
             timerEl.textContent = this.formatWantedTimer(remaining);
-            timerEl.classList.remove('hidden');
+            timerWrap.classList.remove('hidden');
             return;
         }
 
-        timerEl.classList.add('hidden');
+        timerWrap.classList.add('hidden');
         timerEl.textContent = '';
+    },
+
+    updateVoice(data = {}) {
+        const icon = $('#hud-voice-icon');
+        const range = $('#hud-voice-range');
+        if (!icon || !range) return;
+        if (data.voiceRange !== undefined) {
+            range.textContent = String(data.voiceRange || 'Normal');
+        }
+        if (data.voiceTalking !== undefined) {
+            icon.classList.toggle('talking', data.voiceTalking === true);
+        }
+    },
+
+    showTask(data = {}) {
+        this.init();
+        const panel = $('#hud-task-panel');
+        const title = $('#hud-task-title');
+        const desc = $('#hud-task-desc');
+        const bar = $('#hud-task-bar');
+        const progressText = $('#hud-task-progress-text');
+        const progressWrap = $('#hud-task-progress-wrap');
+        if (!panel) return;
+
+        const iconKey = data.icon || data.iconKey || (data.licenseType ? 'license' : 'default');
+        const iconSvg = data.iconSVG || this.taskIcons[iconKey] || this.taskIcons.default;
+        const titleText = data.title || data.tag || 'TASK';
+        if (title) title.innerHTML = `${iconSvg} ${this.escapeHtml(titleText)}`;
+
+        if (desc) {
+            if (data.htmlDesc) {
+                desc.innerHTML = data.htmlDesc;
+            } else if (data.plainDesc) {
+                desc.textContent = data.desc || data.description || data.message || '';
+            } else {
+                desc.innerHTML = this.highlightKeys(data.desc || data.description || data.message || '');
+            }
+        }
+
+        panel.classList.toggle('task-panel--danger', data.tone === 'danger' || data.state === 'warning');
+        panel.classList.add('active');
+
+        const progressPct = data.progressPct ?? data.progress;
+        const hasProgress = progressPct !== undefined && progressPct !== null
+            || data.progressText !== undefined
+            || data.meta !== undefined;
+
+        if (progressWrap) progressWrap.classList.toggle('hidden', !hasProgress);
+        if (bar && progressPct !== undefined && progressPct !== null) {
+            bar.style.width = `${this.clamp(progressPct)}%`;
+        }
+        if (progressText) {
+            progressText.textContent = data.progressText || data.meta || '';
+        }
+    },
+
+    hideTask() {
+        const panel = $('#hud-task-panel');
+        if (!panel) return;
+        panel.classList.remove('active', 'task-panel--danger');
+    },
+
+    escapeHtml(text) {
+        return String(text ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[ch]));
+    },
+
+    highlightKeys(text) {
+        if (text == null || text === '') return '';
+        let html = this.escapeHtml(String(text));
+        html = html.replace(/\b([2EKHN])\b/g, (key) => `<span class="task-key">${key}</span>`);
+        return html;
     },
 
     update(data) {
@@ -90,16 +188,24 @@ const Hud = {
         }
         if (data.armor !== undefined) {
             const armor = Math.round(this.clamp(data.armor));
-            const armorWrap = document.querySelector('.status-bar-wrapper--armor');
+            const armorWrap = document.querySelector('.vital-row--armor');
             if (armorWrap) armorWrap.classList.toggle('hidden', armor <= 0);
             $('#hud-armor').style.width = `${armor}%`;
         }
         if (data.cash !== undefined) $('#hud-cash').textContent = formatMoney(data.cash);
         if (data.bank !== undefined) $('#hud-bank').textContent = formatMoney(data.bank);
         if (data.time) $('#hud-time').textContent = data.time;
+        if (data.date) this.updateDateDisplay(data.date);
         if (data.street) $('#hud-street').textContent = data.street;
-        if (data.zone) $('#hud-zone').textContent = data.zone;
+        if (data.zone) {
+            const zoneText = $('#hud-zone-text');
+            if (zoneText) zoneText.textContent = data.zone;
+        }
         if (data.heading) $('#hud-heading').textContent = data.heading;
+
+        if (data.voiceTalking !== undefined || data.voiceRange !== undefined) {
+            this.updateVoice(data);
+        }
 
         if (data.wanted !== undefined
             || data.wantedRemainingSec !== undefined

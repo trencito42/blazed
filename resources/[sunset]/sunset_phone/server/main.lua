@@ -211,11 +211,18 @@ exports.sunset_core:RegisterCallback('sunset:phoneAddContact', function(source, 
 
     if not name or name == '' then
         if matchedChar then
-            name = (matchedChar.firstname or '') .. ' ' .. (matchedChar.lastname or '')
+            local first = tostring(matchedChar.firstname or ''):match('^%s*(.-)%s*$') or ''
+            local last = tostring(matchedChar.lastname or ''):match('^%s*(.-)%s*$') or ''
+            name = first
+            if last ~= '' then
+                name = first ~= '' and (first .. ' ' .. last) or last
+            end
+            if name == '' then name = 'Contact ' .. formatted end
         else
             name = 'Contact ' .. formatted
         end
     end
+    name = tostring(name):match('^%s*(.-)%s*$') or name
 
     if #name > 48 then
         name = name:sub(1, 48)

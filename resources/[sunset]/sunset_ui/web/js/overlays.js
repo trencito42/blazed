@@ -90,42 +90,35 @@ const Overlays = {
 
     showJobObjective(data) {
         this.init();
-        const el = $('#job-objective');
-        if (!el) return;
+        if (!window.Hud) return;
 
-        $('#job-objective-tag').textContent = data?.tag || data?.jobLabel || 'JOB';
-        $('#job-objective-title').textContent = data?.title || data?.objective || '—';
-        const desc = $('#job-objective-desc');
-        if (desc) {
-            desc.textContent = data?.description || data?.subtitle || data?.hint || '';
-            desc.classList.toggle('hidden', !(data?.description || data?.subtitle || data?.hint));
-        }
-
+        const tag = data?.tag || data?.jobLabel || 'JOB';
+        const title = data?.title || data?.objective || '—';
+        const desc = data?.description || data?.subtitle || data?.hint || '';
         const progress = data?.progress;
-        const wrap = $('#job-objective-progress-wrap');
-        if (wrap) {
-            if (progress !== undefined && progress !== null) {
-                const pct = Math.max(0, Math.min(100, Math.round(progress)));
-                wrap.classList.remove('hidden');
-                $('#job-objective-fill').style.width = `${pct}%`;
-                $('#job-objective-pct').textContent = `${pct}%`;
-            } else {
-                wrap.classList.add('hidden');
-            }
-        }
+        const current = data?.current;
+        const total = data?.total;
+        let progressText = '';
+        if (current != null && total) progressText = `${current} / ${total}`;
+        else if (progress !== undefined && progress !== null) progressText = `${Math.round(progress)}%`;
 
-        el.classList.remove('hidden');
+        Hud.showTask({
+            icon: 'job',
+            title: `JOB ACTIV: ${tag}`,
+            desc: desc || title,
+            progress: progress,
+            progressText,
+        });
+
+        $('#job-objective')?.classList.add('hidden');
     },
 
     updateJobObjective(data) {
-        if ($('#job-objective')?.classList.contains('hidden')) {
-            this.showJobObjective(data);
-        } else {
-            this.showJobObjective(data);
-        }
+        this.showJobObjective(data);
     },
 
     hideJobObjective() {
+        if (window.Hud) Hud.hideTask();
         $('#job-objective')?.classList.add('hidden');
     },
 };

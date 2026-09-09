@@ -27,6 +27,11 @@ const HudEditor = {
         return out;
     },
 
+    panelTransform(id, x, y) {
+        const skew = (id === 'tr' || id === 'bl') ? 'skewX(-5deg) ' : '';
+        return `${skew}translate(${x}px, ${y}px)`;
+    },
+
     apply(layout) {
         this.init();
         this.positions = { ...this.defaultPositions(), ...(layout || {}) };
@@ -34,7 +39,7 @@ const HudEditor = {
             const el = document.querySelector(`[data-hud-panel="${id}"]`);
             if (!el) return;
             const pos = this.positions[id] || { x: 0, y: 0 };
-            el.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+            el.style.transform = this.panelTransform(id, pos.x, pos.y);
         });
     },
 
@@ -54,7 +59,7 @@ const HudEditor = {
         pos.y += dy;
         this.positions[this.active] = pos;
         const el = document.querySelector(`[data-hud-panel="${this.active}"]`);
-        if (el) el.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+        if (el) el.style.transform = this.panelTransform(this.active, pos.x, pos.y);
     },
 
     toggle(force) {
@@ -85,7 +90,7 @@ const HudEditor = {
         if (this.active) {
             this.positions[this.active] = { x: 0, y: 0 };
             const el = document.querySelector(`[data-hud-panel="${this.active}"]`);
-            if (el) el.style.transform = 'translate(0px, 0px)';
+            if (el) el.style.transform = this.panelTransform(this.active, 0, 0);
         }
     },
 

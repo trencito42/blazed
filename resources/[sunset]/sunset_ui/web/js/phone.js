@@ -86,6 +86,7 @@ const Phone = {
             if ($('#phone-new-avatar-preview')) $('#phone-new-avatar-preview').textContent = '+';
         });
         $('#phone-contact-cancel')?.addEventListener('click', () => {
+            this._pendingContactAdd = false;
             $('#phone-add-contact-modal')?.classList.add('hidden');
         });
         $('#phone-contact-save')?.addEventListener('click', () => {
@@ -251,10 +252,22 @@ const Phone = {
         this.renderThreads();
         this.renderContacts();
         this.renderBank();
+        if (this._pendingContactAdd) {
+            this.finishContactAdd();
+        }
         if (this.chatTarget) {
             this.chatTarget.online = this.isContactOnline(this.chatTarget.charId);
             const sub = $('#phone-chat-subtitle');
-            if (sub) sub.textContent = this.chatTarget.online ? 'iMessage' : 'Offline — message queued';
+            const phone = this.chatTarget.phone;
+            if (sub) {
+                if (this.chatTarget.isEmergency) {
+                    sub.textContent = 'iMessage · Dispatch 112';
+                } else if (phone) {
+                    sub.textContent = `${phone} · ${this.chatTarget.online ? 'iMessage' : 'Offline'}`;
+                } else {
+                    sub.textContent = this.chatTarget.online ? 'iMessage' : 'Offline — message queued';
+                }
+            }
             this.renderChat(this.chatTarget);
         }
     },
@@ -365,16 +378,16 @@ const Phone = {
             if (!threads.has(key)) {
                 threads.set(key, {
                     charId: c.characterId,
-                    name: c.name,
+                    name: this.contactLabel(c),
                     isEmergency: false,
                     preview: 'No messages yet',
                     messages: [],
-                    online: true,
+                    online: c.online === true,
                 });
             } else {
                 const t = threads.get(key);
-                t.online = true;
-                t.name = c.name || t.name;
+                t.online = c.online === true;
+                t.name = this.contactLabel(c) || t.name;
             }
         });
 
@@ -387,7 +400,16 @@ const Phone = {
 
     isContactOnline(charId) {
         const id = Number(charId);
-        return (this.data?.contacts || []).some((c) => Number(c.characterId) === id);
+        if (!id || id <= 0) return false;
+        const contact = (this.data?.contacts || []).find((c) => Number(c.characterId) === id);
+        return contact ? contact.online === true : false;
+    },
+
+    contactLabel(contact) {
+        const name = String(contact?.name || '').trim();
+        if (name) return name;
+        if (contact?.phone) return String(contact.phone);
+        return 'Unknown';
     },
 
     renderThreads() {
@@ -560,9 +582,11 @@ const Phone = {
         contacts.forEach((c) => {
             const row = document.createElement('div');
             row.className = 'phone-contact-row';
-            const initial = (c.name || '?').charAt(0).toUpperCase();
+            const label = this.contactLabel(c);
+            const initial = label.charAt(0).toUpperCase();
             const isOnline = c.online === true;
-            const avatarBg = this.getIosAvatarGradient(c.name || 'P');
+            const avatarBg = this.getIosAvatarGradient(label);
+            const phoneText = String(c.phone || '').trim();
 
             row.innerHTML = `
                 <button type="button" class="phone-contact-row__main">
@@ -571,10 +595,9 @@ const Phone = {
                         <span class="phone-contact-row__status-dot ${isOnline ? 'is-online' : ''}"></span>
                     </div>
                     <div class="phone-contact-row__details">
-                        <div class="phone-contact-row__name">${this.escapeHtml(c.name)}</div>
+                        <div class="phone-contact-row__name">${this.escapeHtml(label)}</div>
                         <div class="phone-contact-row__meta">
-                            <span>${this.escapeHtml(c.phone || '')}</span>
-                            <span>·</span>
+                            ${phoneText ? `<span class="phone-contact-num">${this.escapeHtml(phoneText)}</span>` : ''}
                             <span class="${isOnline ? 'phone-contact-row__online-badge' : 'phone-contact-row__offline-badge'}">
                                 ${isOnline ? '● Online' : '○ Offline'}
                             </span>
@@ -596,7 +619,7 @@ const Phone = {
 
             row.querySelector('.phone-contact-row__main').addEventListener('click', () => {
                 this.openChat({
-                    name: c.name,
+                    name: label,
                     charId: c.characterId,
                     phone: c.phone,
                     online: isOnline,
@@ -605,13 +628,13 @@ const Phone = {
 
             row.querySelector('.phone-contact-act-btn--call').addEventListener('click', (e) => {
                 e.stopPropagation();
-                notify(`Calling ${c.name} (${c.phone})...`, 'info');
+                notify(`Calling ${label} (${phoneText || 'unknown'})...`, 'info');
             });
 
             row.querySelector('.phone-contact-act-btn--chat').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.openChat({
-                    name: c.name,
+                    name: label,
                     charId: c.characterId,
                     phone: c.phone,
                     online: isOnline,
@@ -620,7 +643,7 @@ const Phone = {
 
             row.querySelector('.phone-contact-act-btn--del').addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.deleteContact(c.id, c.name);
+                this.deleteContact(c.id, label);
             });
 
             list.appendChild(row);
@@ -634,10 +657,18 @@ const Phone = {
             notify('Please enter a phone number', 'error');
             return;
         }
+        this._pendingContactAdd = true;
         post('phoneAddContact', { name, phone });
+    },
+
+    finishContactAdd() {
+        this._pendingContactAdd = false;
         $('#phone-add-contact-modal')?.classList.add('hidden');
         if ($('#phone-new-name')) $('#phone-new-name').value = '';
         if ($('#phone-new-phone')) $('#phone-new-phone').value = '';
+        if ($('#phone-new-avatar-preview')) $('#phone-new-avatar-preview').textContent = '+';
+        this.showView('contacts');
+        this.renderContacts();
     },
 
     deleteContact(contactId, contactName) {

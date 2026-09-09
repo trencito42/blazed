@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="css/premium-hud.css?v=1">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=18">
+    <link rel="stylesheet" href="css/premium-chat.css?v=2">
+    <link rel="stylesheet" href="css/premium-wanted.css?v=1">
     <link rel="stylesheet" href="css/menu.css?v=10">
     <link rel="stylesheet" href="css/panels.css?v=8">
     <link rel="stylesheet" href="css/studio.css">
@@ -475,12 +477,6 @@
         </section>
     </div>
 
-    <!-- WANTED (center top) -->
-    <div class="hud-wanted-center hidden" id="hud-wanted" aria-live="polite">
-        <div class="hud-wanted-center__stars" id="hud-wanted-level" aria-label="Wanted level"></div>
-        <div class="hud-wanted-center__timer hidden" id="hud-wanted-timer"></div>
-    </div>
-
     <!-- Premium HUD -->
     <div id="hud" class="hud hidden">
         <div class="hud-tr premium-hud-tr hud-boot" data-hud-panel="tr">
@@ -517,6 +513,22 @@
                             <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                         </div>
                         <div class="vital-bar-bg"><div class="vital-bar-fill fill-armor" id="hud-armor" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="premium-unskew hud-wanted-premium" id="hud-wanted" aria-live="polite">
+                <div class="wanted-title">WANTED LEVEL</div>
+                <div class="wanted-row">
+                    <div class="wanted-stars" id="hud-wanted-stars" aria-label="Wanted level">
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    </div>
+                    <div class="wanted-timer hidden" id="hud-wanted-timer-wrap">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span id="hud-wanted-timer"></span>
                     </div>
                 </div>
             </div>
@@ -598,32 +610,53 @@
         </div>
     </div>
 
-    <!-- CHAT -->
+    <!-- CHAT (premium) -->
     <div id="chat-backdrop" class="chat-backdrop hidden"></div>
     <div id="chat" class="chat">
-        <div class="chat-toolbar" id="chat-toolbar">
-            <button type="button" class="chat-settings-btn" id="chat-settings-btn" title="Chat display settings" aria-label="Chat settings">⚙</button>
-            <div class="chat-settings-popover hidden" id="chat-settings-popover">
-                <div class="chat-settings-popover__title">Chat display</div>
-                <label class="chat-settings-row">
-                    <span>Font size</span>
-                    <input type="range" id="chat-popover-font" min="10" max="20" step="1" value="13">
-                    <strong id="chat-popover-font-val">13px</strong>
-                </label>
-                <label class="chat-settings-row">
-                    <span>Visible rows</span>
-                    <input type="range" id="chat-popover-page" min="4" max="20" step="1" value="10">
-                    <strong id="chat-popover-page-val">10 rows</strong>
-                </label>
-                <div class="chat-settings-popover__actions">
-                    <button type="button" class="chat-settings-reset" id="chat-popover-reset">Reset</button>
-                    <span class="chat-settings-hint">Or use <strong>M → CONFIG</strong></span>
+        <div id="chat-app">
+            <div class="chat-header">
+                <div class="chat-title">Chat &amp; Commands</div>
+                <button type="button" class="cog-btn" id="chat-settings-btn" title="Chat settings" aria-label="Chat settings">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-wrapper hidden" id="chat-input-wrap">
+                <div class="channel-selector-container">
+                    <div class="chat-channel" id="chat-channel-toggle">
+                        <span id="chat-channel-label">OOC</span>
+                        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="channel-dropdown" id="chat-channel-dropdown">
+                        <div class="dropdown-item opt-all" data-channel="all" data-placeholder="Global message (/help for commands)">ALL</div>
+                        <div class="dropdown-item opt-ooc active" data-channel="ooc" data-placeholder="Out of Character message...">OOC</div>
+                        <div class="dropdown-item opt-me" data-channel="me" data-placeholder="RP action (/me searches the trunk...)">ME</div>
+                        <div class="dropdown-item opt-me" data-channel="do" data-placeholder="RP action (/do the trunk opens)">DO</div>
+                        <div class="dropdown-item opt-faction" data-channel="faction" data-placeholder="Faction chat...">FACTION</div>
+                        <div class="dropdown-item opt-clan" data-channel="clan" data-placeholder="Clan chat...">CLAN</div>
+                        <div class="dropdown-item opt-dept" data-channel="dept" data-placeholder="Department frequency...">DEPT</div>
+                        <div class="dropdown-item opt-radio" data-channel="radio" data-placeholder="Internal radio frequency...">RADIO</div>
+                    </div>
                 </div>
+                <input type="text" class="chat-input" id="chat-input" placeholder="Out of Character message..." maxlength="256" autocomplete="off">
             </div>
         </div>
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-wrap hidden" id="chat-input-wrap">
-            <input type="text" class="chat-input" id="chat-input" placeholder="Type a message... (/help for commands)" maxlength="256">
+        <div class="chat-settings-panel" id="chat-settings-panel">
+            <div class="chat-settings-panel__header">
+                Chat appearance
+                <button type="button" class="chat-settings-close" id="chat-settings-close" aria-label="Close settings">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"></line><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"></line></svg>
+                </button>
+            </div>
+            <div class="chat-setting-group">
+                <div class="chat-setting-label">Font size <span class="chat-setting-val"><span id="chat-popover-font-val">13.5</span>px</span></div>
+                <input type="range" id="chat-popover-font" min="10" max="18" step="0.5" value="13.5">
+            </div>
+            <div class="chat-setting-group">
+                <div class="chat-setting-label">Chat height <span class="chat-setting-val"><span id="chat-popover-page-val">350</span>px</span></div>
+                <input type="range" id="chat-popover-page" min="150" max="600" step="10" value="350">
+            </div>
+            <button type="button" class="chat-settings-reset" id="chat-popover-reset">Reset defaults</button>
         </div>
     </div>
 
@@ -759,13 +792,13 @@
                             <h4>Chat</h4>
                             <label class="menu-config-row">
                                 <span>Font size</span>
-                                <input type="range" id="chat-setting-font" min="10" max="20" step="1" value="13">
-                                <strong id="chat-setting-font-val">13px</strong>
+                                <input type="range" id="chat-setting-font" min="10" max="18" step="0.5" value="13.5">
+                                <strong id="chat-setting-font-val">13.5px</strong>
                             </label>
                             <label class="menu-config-row">
-                                <span>Visible rows</span>
-                                <input type="range" id="chat-setting-page" min="4" max="20" step="1" value="10">
-                                <strong id="chat-setting-page-val">10 rows</strong>
+                                <span>Chat height</span>
+                                <input type="range" id="chat-setting-page" min="150" max="600" step="10" value="350">
+                                <strong id="chat-setting-page-val">350px</strong>
                             </label>
                             <div class="menu-config__actions">
                                 <button type="button" class="menu-job-btn" id="chat-setting-reset">Reset chat defaults</button>
@@ -2585,31 +2618,6 @@
                             </div>
                         </div>
 
-                        <!-- Add Contact Sheet / Modal -->
-                        <div id="phone-add-contact-modal" class="phone-modal hidden">
-                            <div class="phone-modal__sheet">
-                                <div class="phone-modal__header">
-                                    <button type="button" class="phone-modal__btn phone-modal__btn--cancel" id="phone-contact-cancel">Cancel</button>
-                                    <h3>New Contact</h3>
-                                    <button type="button" class="phone-modal__btn phone-modal__btn--done" id="phone-contact-save">Done</button>
-                                </div>
-                                <div class="phone-modal__body">
-                                    <div class="phone-modal__avatar-preview" id="phone-new-avatar-preview">+</div>
-                                    <div class="phone-form-group">
-                                        <div class="phone-form-row">
-                                            <label for="phone-new-name">Name / Nickname</label>
-                                            <input type="text" id="phone-new-name" placeholder="Contact Name" maxlength="48" autocomplete="off">
-                                        </div>
-                                        <div class="phone-form-row">
-                                            <label for="phone-new-phone">Phone Number</label>
-                                            <input type="text" id="phone-new-phone" placeholder="e.g. 555-0042 or 42" maxlength="32" autocomplete="off">
-                                        </div>
-                                    </div>
-                                    <p class="phone-form-hint">Tip: Enter their phone number to save them to your contact book. You can chat and see when they're online!</p>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="phone-scroll" id="phone-contacts-container">
                             <!-- My Card (Current Player) -->
                             <div class="phone-my-card" id="phone-my-card">
@@ -2720,6 +2728,30 @@
                                 <div class="phone-settings-row">blaze.mp<span>Los Santos Roleplay</span></div>
                                 <div class="phone-settings-row">Close Phone<span>Press P or swipe home bar</span></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="phone-add-contact-modal" class="phone-modal phone-modal--device hidden" aria-hidden="true">
+                    <div class="phone-modal__sheet">
+                        <div class="phone-modal__header">
+                            <button type="button" class="phone-modal__btn phone-modal__btn--cancel" id="phone-contact-cancel">Cancel</button>
+                            <h3>New Contact</h3>
+                            <button type="button" class="phone-modal__btn phone-modal__btn--done" id="phone-contact-save">Done</button>
+                        </div>
+                        <div class="phone-modal__body">
+                            <div class="phone-modal__avatar-preview" id="phone-new-avatar-preview">+</div>
+                            <div class="phone-form-group">
+                                <div class="phone-form-row">
+                                    <label for="phone-new-name">Name / Nickname</label>
+                                    <input type="text" id="phone-new-name" placeholder="Contact Name" maxlength="48" autocomplete="off">
+                                </div>
+                                <div class="phone-form-row">
+                                    <label for="phone-new-phone">Phone Number</label>
+                                    <input type="text" id="phone-new-phone" placeholder="e.g. 555-0042 or 42" maxlength="32" autocomplete="off">
+                                </div>
+                            </div>
+                            <p class="phone-form-hint">Enter their phone number to save them. You can message them and see when they are online.</p>
                         </div>
                     </div>
                 </div>

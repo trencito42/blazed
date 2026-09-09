@@ -1603,10 +1603,12 @@
 .phone-contact-row__meta {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     font-size: 13px;
     color: rgba(255, 255, 255, 0.45);
     margin-top: 2px;
+    line-height: 1.25;
 }
 
 .phone-contact-num {
@@ -1690,6 +1692,14 @@
 }
 
 /* ── Add Contact Modal ── */
+.phone-screen {
+    position: relative;
+}
+
+.phone-modal--device {
+    z-index: 200;
+}
+
 .phone-modal {
     position: absolute;
     inset: 0;

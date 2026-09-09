@@ -327,6 +327,14 @@ window.addEventListener('message', (event) => {
             if (window.Hud) Hud.update(data || event.data.data);
             break;
 
+        case 'showTask':
+            if (window.Hud) Hud.showTask(data || event.data.data);
+            break;
+
+        case 'hideTask':
+            if (window.Hud) Hud.hideTask();
+            break;
+
         case 'vehicleHint':
             if (window.Hud) Hud.flashVehicleHint(data || event.data.data || {});
             break;

@@ -21,6 +21,31 @@ end
 
 local locked = false
 local lightMode = 0 -- 0 off, 1 low, 2 high
+
+local function boolNative(value)
+    return value == true or value == 1
+end
+
+-- SetVehicleLights(2) forces always-on and during daytime GTA shows high beams
+-- before low beams. Mode 3 behaves like normal dipped/main beam control.
+local function readLightMode(veh)
+    if not veh or veh == 0 then return 0 end
+    local _, lightsOn, highbeams = GetVehicleLightsState(veh)
+    if not boolNative(lightsOn) then return 0 end
+    if IsVehicleHighBeamOn(veh) or boolNative(highbeams) then return 2 end
+    return 1
+end
+
+local function applyLightMode(veh, mode)
+    if not veh or veh == 0 then return end
+    if mode == 0 then
+        SetVehicleFullbeam(veh, false)
+        SetVehicleLights(veh, 1)
+        return
+    end
+    SetVehicleLights(veh, 3)
+    SetVehicleFullbeam(veh, mode == 2)
+end
 local currentVeh = 0
 local fuel = 100.0
 local spawnedOwnedVehicle = nil
@@ -258,17 +283,7 @@ RegisterCommand('sunset_lights', function()
     end
 
     lightMode = (lightMode + 1) % 3
-
-    if lightMode == 0 then
-        SetVehicleLights(veh, 1)
-        SetVehicleFullbeam(veh, false)
-    elseif lightMode == 1 then
-        SetVehicleLights(veh, 2)
-        SetVehicleFullbeam(veh, false)
-    else
-        SetVehicleLights(veh, 2)
-        SetVehicleFullbeam(veh, true)
-    end
+    applyLightMode(veh, lightMode)
     showVehicleHint('lights')
 end, false)
 RegisterKeyMapping('sunset_lights', 'Vehicle lights', 'keyboard', 'H')
@@ -446,10 +461,7 @@ CreateThread(function()
                     if ownedState then spawnedOwnedVehicle = veh end
                 end
                 lastOdoCoords = GetEntityCoords(veh)
-                local _, lightsOn, highbeams = GetVehicleLightsState(veh)
-                if highbeams == 1 then lightMode = 2
-                elseif lightsOn == 1 then lightMode = 1
-                else lightMode = 0 end
+                lightMode = readLightMode(veh)
             end
 
             applyCollisionDamage(veh)

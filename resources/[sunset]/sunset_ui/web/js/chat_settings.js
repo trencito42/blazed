@@ -2,8 +2,8 @@ const CHAT_SETTINGS_KEY = 'sunset_chat_settings';
 
 const ChatSettings = {
     defaults: {
-        fontSize: 13,
-        pageSize: 10,
+        fontSize: 13.5,
+        maxHeight: 350,
     },
     settings: null,
 
@@ -21,11 +21,11 @@ const ChatSettings = {
     },
 
     normalize(input = {}) {
-        const fontSize = Math.round(Number(input.fontSize) || this.defaults.fontSize);
-        const pageSize = Math.round(Number(input.pageSize) || this.defaults.pageSize);
+        const fontSize = Number(input.fontSize) || this.defaults.fontSize;
+        const maxHeight = Number(input.maxHeight ?? input.pageSize) || this.defaults.maxHeight;
         return {
-            fontSize: Math.min(20, Math.max(10, fontSize)),
-            pageSize: Math.min(20, Math.max(4, pageSize)),
+            fontSize: Math.min(18, Math.max(10, fontSize)),
+            maxHeight: Math.min(600, Math.max(150, Math.round(maxHeight))),
         };
     },
 
@@ -59,18 +59,15 @@ const ChatSettings = {
 
     apply() {
         const s = this.settings || this.defaults;
-        const lineHeight = 1.35;
-        const rowHeight = s.fontSize * lineHeight + 2;
-        const pageHeight = Math.ceil(s.pageSize * rowHeight);
         const vars = {
             '--chat-font-size': `${s.fontSize}px`,
             '--chat-time-size': `${Math.max(9, s.fontSize - 2)}px`,
             '--chat-input-size': `${s.fontSize + 1}px`,
-            '--chat-page-size': String(s.pageSize),
-            '--chat-page-height': `${pageHeight}px`,
-            '--chat-line-height': String(lineHeight),
+            '--chat-max-height': `${s.maxHeight}px`,
+            '--chat-page-height': `${s.maxHeight}px`,
+            '--chat-line-height': '1.4',
         };
-        const targets = [document.documentElement, document.getElementById('chat')].filter(Boolean);
+        const targets = [document.documentElement, document.getElementById('chat'), document.getElementById('chat-app')].filter(Boolean);
         targets.forEach((el) => {
             Object.entries(vars).forEach(([name, value]) => el.style.setProperty(name, value));
         });
@@ -80,9 +77,9 @@ const ChatSettings = {
         const s = this.settings || this.defaults;
         const pairs = [
             ['#chat-setting-font', 'fontSize', '#chat-setting-font-val', 'px'],
-            ['#chat-setting-page', 'pageSize', '#chat-setting-page-val', ' rows'],
+            ['#chat-setting-page', 'maxHeight', '#chat-setting-page-val', 'px'],
             ['#chat-popover-font', 'fontSize', '#chat-popover-font-val', 'px'],
-            ['#chat-popover-page', 'pageSize', '#chat-popover-page-val', ' rows'],
+            ['#chat-popover-page', 'maxHeight', '#chat-popover-page-val', 'px'],
         ];
 
         pairs.forEach(([inputSel, key, labelSel, suffix]) => {
@@ -113,9 +110,9 @@ const ChatSettings = {
         };
 
         bind('#chat-setting-font', 'fontSize', '#chat-setting-font-val', 'px');
-        bind('#chat-setting-page', 'pageSize', '#chat-setting-page-val', ' rows');
+        bind('#chat-setting-page', 'maxHeight', '#chat-setting-page-val', 'px');
         bind('#chat-popover-font', 'fontSize', '#chat-popover-font-val', 'px');
-        bind('#chat-popover-page', 'pageSize', '#chat-popover-page-val', ' rows');
+        bind('#chat-popover-page', 'maxHeight', '#chat-popover-page-val', 'px');
 
         root.querySelector('#chat-setting-reset')?.addEventListener('click', () => this.reset());
         root.querySelector('#chat-popover-reset')?.addEventListener('click', () => this.reset());
