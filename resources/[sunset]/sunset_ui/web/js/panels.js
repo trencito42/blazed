@@ -387,7 +387,7 @@ const Panels = {
 
             e.preventDefault();
             if (state.ghost) {
-                state.ghost.style.transform = `translate(${e.clientX + 8}px, ${e.clientY + 8}px)`;
+                state.ghost.style.transform = `translate(${e.clientX - 28}px, ${e.clientY - 28}px)`;
             }
 
             clearHover();

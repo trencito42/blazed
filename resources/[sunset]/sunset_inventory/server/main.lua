@@ -505,10 +505,21 @@ exports.sunset_core:RegisterCallback('sunset:inventory:moveSlot', function(sourc
     if not fromRow then return nil, 'That inventory slot is empty.' end
 
     if toRow then
-        fromRow.slot = toSlot
-        toRow.slot = fromSlot
-        MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { toSlot, fromRow.id })
-        MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { fromSlot, toRow.id })
+        -- Stack identical items that have no unique metadata (e.g. bread, water, ammo)
+        if fromRow.item == toRow.item and not fromRow.metadata and not toRow.metadata then
+            toRow.count = toRow.count + fromRow.count
+            MySQL.update.await('UPDATE character_inventory SET count = ? WHERE id = ?', { toRow.count, toRow.id })
+            MySQL.update.await('DELETE FROM character_inventory WHERE id = ?', { fromRow.id })
+            for i, row in ipairs(inv) do
+                if row.id == fromRow.id then table.remove(inv, i) break end
+            end
+        else
+            -- Different items or metadata-bearing items → swap slots
+            fromRow.slot = toSlot
+            toRow.slot = fromSlot
+            MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { toSlot, fromRow.id })
+            MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { fromSlot, toRow.id })
+        end
     else
         fromRow.slot = toSlot
         MySQL.update.await('UPDATE character_inventory SET slot = ? WHERE id = ?', { toSlot, fromRow.id })
