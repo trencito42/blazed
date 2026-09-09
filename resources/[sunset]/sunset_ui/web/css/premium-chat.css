@@ -161,10 +161,12 @@
 #chat .badge-error  { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 #chat .badge-warn   { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
 #chat .badge-ooc    { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+#chat .badge-local  { background: rgba(255, 255, 255, 0.08); color: #e5e7eb; border: 1px solid rgba(255, 255, 255, 0.18); }
 #chat .badge-rp     { background: transparent; color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); }
 #chat .badge-radio  { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
 #chat .badge-dept   { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
 #chat .badge-gov    { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
+#chat .badge-admin  { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
 #chat .badge-mafia  { background: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.3); }
 #chat .badge-peace  { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
 #chat .badge-sms    { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
@@ -181,6 +183,8 @@
 
 #chat .color-dept   { color: #06b6d4; }
 #chat .color-gov    { color: #eab308; }
+#chat .color-admin  { color: #f87171; }
+#chat .color-ooc    { color: #a78bfa; }
 #chat .color-mafia  { color: #dc2626; }
 #chat .color-peace  { color: #10b981; }
 #chat .color-sms    { color: #ec4899; }
@@ -194,6 +198,8 @@
 
 #chat .msg-content.color-error { color: #fca5a5; font-style: italic; }
 #chat .msg-content.text-gov    { color: #fef08a; font-weight: 700; }
+#chat .msg-content.text-admin  { color: #fecaca; font-weight: 700; }
+#chat .msg-content.text-ooc    { color: #ddd6fe; font-style: italic; }
 #chat .msg-content.text-ad     { color: #fed7aa; }
 #chat .msg-content.text-rp     { color: #ddd6fe; font-style: italic; font-weight: 500; }
 

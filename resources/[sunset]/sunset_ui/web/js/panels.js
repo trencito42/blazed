@@ -1207,8 +1207,14 @@ const Panels = {
 
     showProperties(data) {
         this.init();
+        const payload = data || {};
         if (window.PropertyUI) {
-            PropertyUI.renderList($('#properties-list'), data || {});
+            PropertyUI.renderList($('#properties-list'), payload);
+            const manageId = payload.managePropertyId;
+            if (manageId) {
+                const row = (payload.properties || []).find((p) => Number(p.id) === Number(manageId));
+                if (row) PropertyUI.openManageView(row);
+            }
         }
         $('#properties')?.classList.remove('hidden');
     },

@@ -3,6 +3,7 @@ local cachedMeta = nil
 local insideProperty
 local refreshPending = false
 local panelSelectedId = nil
+local propertiesPanelOpen = false
 
 local function loadMeta()
     if cachedMeta then return cachedMeta end
@@ -31,12 +32,15 @@ AddEventHandler('sunset:client:playerSpawned', function() Wait(1500); refreshPro
 RegisterNetEvent('sunset:client:propertiesChanged', refreshSoon)
 RegisterNetEvent('sunset:client:propertyMessage', function(text, kind) exports.sunset_ui:Notify(text or 'House update', kind or 'info', 6500) end)
 
-local function openProperties(properties, selectedId)
+local function openProperties(properties, selectedId, opts)
+    opts = opts or {}
+    propertiesPanelOpen = true
     panelSelectedId = selectedId
     exports.sunset_ui:Send('propertiesShow', {
         properties = properties or cachedProperties,
         selectedId = selectedId,
         meta = loadMeta(),
+        managePropertyId = opts.managePropertyId,
     })
     exports.sunset_ui:SetFocus(true, true)
 end
@@ -80,21 +84,24 @@ local function runAction(action, propertyId, payload)
     end
     exports.sunset_ui:Notify(message or (ok and 'House updated.' or 'House action failed.'), ok and 'success' or 'error', 6500)
     if ok then
-        refreshSoon()
         if CLOSE_ACTIONS[action] then
+            propertiesPanelOpen = false
             exports.sunset_ui:SetFocus(false, false)
             exports.sunset_ui:Send('propertiesHide', {})
             panelSelectedId = nil
             if action == 'enter' or action == 'buy' or action == 'rent' then
                 TriggerEvent('sunset:properties:closeMenu')
             end
-        else
+            refreshSoon()
+        elseif propertiesPanelOpen then
             local rows = refreshProperties()
             exports.sunset_ui:Send('propertiesShow', {
                 properties = rows,
                 selectedId = panelSelectedId or propertyId,
                 meta = loadMeta(),
             })
+        else
+            refreshSoon()
         end
     end
 end
@@ -167,6 +174,21 @@ end, false)
 RegisterCommand('properties', function() openProperties(refreshProperties()) end, false)
 
 AddEventHandler('sunset:nui:propertiesClose', function()
+    propertiesPanelOpen = false
+    panelSelectedId = nil
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('propertiesHide', {})
+end)
+
+AddEventHandler('sunset:nui:propertyOpenManage', function(data)
+    CreateThread(function()
+        local id = tonumber(data and data.propertyId)
+        if not id then return end
+        if GetResourceState('sunset_menu') == 'started' and exports.sunset_menu:IsMenuOpen() then
+            exports.sunset_menu:CloseMenu()
+            Wait(100)
+        end
+        local rows = refreshProperties()
+        openProperties(rows, id, { managePropertyId = id })
+    end)
 end)

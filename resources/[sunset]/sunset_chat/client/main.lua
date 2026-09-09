@@ -61,7 +61,8 @@ AddEventHandler('sunset:nui:chatSend', function(data)
         local command = msg:sub(2)
         TriggerServerEvent('sunset:chat:runCommand', command)
     else
-        TriggerServerEvent('sunset:chat:send', msg)
+        local channel = tostring(data.channel or 'all'):lower()
+        TriggerServerEvent('sunset:chat:send', msg, channel)
     end
 end)
 

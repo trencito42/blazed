@@ -3,7 +3,7 @@ const Chat = {
     settingsOpen: false,
     playerId: 0,
     playerName: '',
-    channel: 'ooc',
+    channel: 'all',
     suggestions: [],
     suggestionPick: 0,
     channelPrefixes: {
@@ -50,6 +50,10 @@ const Chat = {
     suggestionMatches(text) {
         const parsed = this.parseCommandInput(text);
         if (!parsed) return [];
+        if (parsed.args.length > 0) {
+            const exact = this.suggestions.find((row) => String(row.name || '').toLowerCase() === parsed.cmd);
+            return exact ? [exact] : [];
+        }
         const needle = parsed.partial.toLowerCase();
         if (!needle) {
             return this.suggestions.slice(0, 8);
@@ -129,7 +133,9 @@ const Chat = {
                 const index = Number(btn.dataset.index) || 0;
                 const row = matches[index];
                 if (!row) return;
-                input.value = `${row.name} `;
+                const parsed = this.parseCommandInput(input.value);
+                const argsSuffix = parsed?.args?.length ? ` ${parsed.args.join(' ')}` : ' ';
+                input.value = `${row.name}${argsSuffix}`;
                 this.suggestionPick = 0;
                 this.renderSuggestions();
                 input.focus({ preventScroll: true });
@@ -140,10 +146,12 @@ const Chat = {
     applySuggestionPick() {
         const input = $('#chat-input');
         if (!input) return false;
+        const parsed = this.parseCommandInput(input.value);
         const matches = this.suggestionMatches(input.value);
         const row = matches[this.suggestionPick];
         if (!row) return false;
-        input.value = `${row.name} `;
+        const argsSuffix = parsed?.args?.length ? ` ${parsed.args.join(' ')}` : ' ';
+        input.value = `${row.name}${argsSuffix}`;
         this.suggestionPick = 0;
         this.renderSuggestions();
         return true;
@@ -255,13 +263,23 @@ const Chat = {
             };
         }
 
-        if (type === 'gov' || type === 'announce') {
-            const dept = type === 'gov' ? String(m.factionLabel || m.name || 'GOVERNMENT').trim() : name;
-            const issuer = [m.issuerRank || m.rank, this.formatPlayerNameHtml(m, m.issuerName || m.name)].filter(Boolean).join(' ');
-            const issuerLine = issuer ? ` ${issuer}` : (id > 0 ? ` (${id})` : '');
+        if (type === 'announce') {
+            const from = name || 'SERVER';
+            const idPart = id > 0 ? ` (${id})` : '';
+            return {
+                badge: { label: 'ADMIN', className: 'badge-admin' },
+                author: { html: `${esc(from)}${esc(idPart)}:`, className: 'color-admin' },
+                content: { html: esc(msg), className: 'text-admin' },
+            };
+        }
+
+        if (type === 'gov') {
+            const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
+            const rankLabel = String(m.issuerRank || m.rank || '').trim();
+            const header = [dept, rankLabel].filter(Boolean).join(' · ');
             return {
                 badge: { label: 'GOV', className: 'badge-gov' },
-                author: { html: `${esc(type === 'announce' ? `Public announcement from ${name}${id > 0 ? ` (${id})` : ''}` : dept)}${issuerLine ? ` (${issuer})` : ''}:`, className: 'color-gov' },
+                author: { html: `${esc(header)}:`, className: 'color-gov' },
                 content: { html: esc(msg), className: 'text-gov' },
             };
         }
@@ -313,12 +331,23 @@ const Chat = {
             };
         }
 
-        if (type === 'say' || type === '') {
+        if (type === 'ooc') {
             const who = (m.clanTag || m.factionId)
                 ? this.formatPlayerNameHtml(m)
                 : esc(this.nameWithId(name, id));
             return {
                 badge: { label: 'OOC', className: 'badge-ooc' },
+                author: { html: `${who}:`, className: 'color-ooc' },
+                content: { html: `(( ${esc(msg)} ))`, className: 'text-ooc' },
+            };
+        }
+
+        if (type === 'say' || type === '') {
+            const who = (m.clanTag || m.factionId)
+                ? this.formatPlayerNameHtml(m)
+                : esc(this.nameWithId(name, id));
+            return {
+                badge: { label: 'LOCAL', className: 'badge-local' },
                 author: { html: `${who} says:`, className: 'color-accent' },
                 content: { html: esc(msg), className: '' },
             };
@@ -424,7 +453,7 @@ const Chat = {
     },
 
     lineUsesHtml(m, type) {
-        if (['c', 'clan_action', 'gov', 'say', 'me', ''].includes(type)) return true;
+        if (['c', 'clan_action', 'gov', 'say', 'ooc', 'me', ''].includes(type)) return true;
         if (['f', 'r', 'd', 'do', 'megaphone', 'faction_action', 'radar_alert'].includes(type)) {
             return Boolean(m.clanTag || m.factionId);
         }
@@ -464,13 +493,11 @@ const Chat = {
     formatGovCardHtml(m) {
         const esc = (v) => this.escapeHtml(v);
         const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
-        const issuerRank = m.issuerRank || m.rank;
-        const issuerNameHtml = this.formatPlayerNameHtml(m, m.issuerName || m.name);
-        const issuer = [issuerRank ? esc(String(issuerRank)) : '', issuerNameHtml].filter(Boolean).join(' ');
+        const rankLabel = String(m.issuerRank || m.rank || '').trim();
+        const header = [dept, rankLabel].filter(Boolean).join(' · ');
         const time = this.formatTime(m);
         const timeHtml = time ? `<span class="chat-meta-time">${esc(time)}</span>` : '';
-        const issuerHtml = issuer ? ` <span class="chat-row__who">${issuer}</span>` : '';
-        return `${timeHtml}<span class="chat-pill chat-pill--gov">GOV</span> <span class="chat-gov-dept">${esc(dept)}</span>${issuerHtml}: <span class="chat-row__msg">${esc(String(m.message ?? ''))}</span>`;
+        return `${timeHtml}<span class="chat-pill chat-pill--gov">GOV</span> <span class="chat-gov-dept">${esc(header)}</span>: <span class="chat-row__msg">${esc(String(m.message ?? ''))}</span>`;
     },
 
     formatClanCardHtml(m, action = false) {
@@ -599,9 +626,9 @@ const Chat = {
 
         if (type === 'gov') {
             const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
-            const issuer = [m.issuerRank || m.rank, this.formatPlayerNameHtml(m, m.issuerName || m.name)].filter(Boolean).join(' — ');
-            const issuerLine = issuer ? ` (${issuer})` : '';
-            return `${prefix}[GOVERNMENT] ${dept}: ${msg}${issuerLine}`;
+            const rankLabel = String(m.issuerRank || m.rank || '').trim();
+            const header = [dept, rankLabel].filter(Boolean).join(' · ');
+            return `${prefix}[GOVERNMENT] ${header}: ${msg}`;
         }
 
         if (type === 'faction_motd' || type === 'clan_motd') {
@@ -627,6 +654,12 @@ const Chat = {
         if (type === 'faction_action') {
             const header = [faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
             return `${prefix}${header} ${this.escapeHtml(msg)}`.trim();
+        }
+
+        if (type === 'ooc') {
+            const idPart = id > 0 ? ` (${id})` : '';
+            const who = (m.clanTag || m.factionId) ? this.formatPlayerNameHtml(m) : `${this.escapeHtml(name)}${idPart}`;
+            return `${prefix}(( OOC )) ${who}: ${this.escapeHtml(msg)}`;
         }
 
         if (type === 'say' || type === '') {
@@ -771,7 +804,7 @@ const Chat = {
     },
 
     setChannel(channelId, label, placeholder) {
-        this.channel = channelId || 'ooc';
+        this.channel = channelId || 'all';
         const labelEl = $('#chat-channel-label');
         const input = $('#chat-input');
         if (labelEl && label) labelEl.textContent = label;
@@ -874,7 +907,7 @@ const Chat = {
             const prefix = this.channelPrefixes[this.channel];
             if (prefix) msg = `${prefix}${msg}`;
         }
-        post('chatSend', { message: msg });
+        post('chatSend', { message: msg, channel: this.channel || 'all' });
         input.value = '';
         this.hideSuggestions();
     },
@@ -921,7 +954,9 @@ $('#chat-input')?.addEventListener('keydown', (e) => {
         return;
     }
 
-    if (hasSuggestions && matches.length > 1) {
+    const parsed = input ? Chat.parseCommandInput(input.value) : null;
+    const typingArgs = (parsed?.args?.length || 0) > 0;
+    if (hasSuggestions && matches.length > 1 && !typingArgs) {
         if (e.key === 'ArrowUp') {
             e.preventDefault();
             Chat.suggestionPick = Math.max(0, Chat.suggestionPick - 1);

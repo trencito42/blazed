@@ -392,4 +392,9 @@ CreateThread(function()
         { name = 'multiplier', help = 'e.g. 2.5 — omit or use off/1 to reset' },
     })
     TriggerEvent('chat:addSuggestion', '/tpwp', 'Teleport to your map waypoint (admin)')
+    TriggerEvent('chat:addSuggestion', '/tp', 'Teleport to a player or coordinates (admin)', {
+        { name = 'id or x', help = 'Player server id, or X coordinate / vector3(...)' },
+        { name = 'y', help = 'Y coordinate (when using x y z)' },
+        { name = 'z', help = 'Z coordinate (when using x y z)' },
+    })
 end)

@@ -401,7 +401,8 @@ const PropertyUI = {
         post('propertyRenters', { propertyId: p.id });
     },
 
-    createRow(p, selectedId) {
+    createRow(p, selectedId, container) {
+        const inMenu = container?.id === 'menu-property-list';
         const li = document.createElement('li');
         const isSelected = Number(selectedId) === Number(p.id);
         const statusClass = p.owned 
@@ -632,6 +633,10 @@ const PropertyUI = {
             `;
             toggle.addEventListener('click', (event) => {
                 event.stopPropagation();
+                if (inMenu) {
+                    post('propertyOpenManage', { propertyId: p.id });
+                    return;
+                }
                 this.openManageView(p);
             });
             actions.appendChild(toggle);
@@ -728,7 +733,7 @@ const PropertyUI = {
         this.closeManageView();
 
         const properties = data.properties || [];
-        properties.forEach((p) => container.appendChild(this.createRow(p, data.selectedId)));
+        properties.forEach((p) => container.appendChild(this.createRow(p, data.selectedId, container)));
         if (!properties.length) {
             container.innerHTML = `
                 <li class="house-empty">

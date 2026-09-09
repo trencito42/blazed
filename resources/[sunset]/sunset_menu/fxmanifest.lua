@@ -25,4 +25,4 @@ server_scripts {
 
 dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone', 'sunset_vehicles', 'sunset_tuning' }
 
-exports { 'OpenVehicle' }
+exports { 'OpenVehicle', 'IsMenuOpen', 'CloseMenu' }

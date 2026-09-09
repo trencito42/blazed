@@ -85,9 +85,19 @@ local function chatIdentity(source)
     return payload
 end
 
-RegisterNetEvent('sunset:chat:send', function(message)
+local function sendBroadcast(payload, eventName)
+    eventName = eventName or 'sunset:chat:message'
+    for _, id in ipairs(GetPlayers()) do
+        TriggerClientEvent(eventName, tonumber(id), payload)
+    end
+end
+
+RegisterNetEvent('sunset:chat:send', function(message, channel)
     local src = source
-    if not checkChatRateLimit(src, 'say', CHAT_COOLDOWN_MS) then
+    channel = tostring(channel or 'all'):lower()
+    local isOoc = channel == 'ooc'
+    local rateKey = isOoc and 'ooc' or 'say'
+    if not checkChatRateLimit(src, rateKey, CHAT_COOLDOWN_MS) then
         TriggerClientEvent('sunset:chat:system', src, 'Slow down — message rate limited.', 'warning')
         return
     end
@@ -95,7 +105,7 @@ RegisterNetEvent('sunset:chat:send', function(message)
     if not message then return end
 
     local identity = chatIdentity(src)
-    sendNearby(src, {
+    local payload = {
         id = src,
         name = identity.name,
         factionId = identity.factionId,
@@ -104,8 +114,13 @@ RegisterNetEvent('sunset:chat:send', function(message)
         clanTagStyle = identity.clanTagStyle,
         message = message,
         time = os.date('%H:%M:%S'),
-        type = 'say',
-    })
+        type = isOoc and 'ooc' or 'say',
+    }
+    if isOoc then
+        sendBroadcast(payload)
+    else
+        sendNearby(src, payload)
+    end
 end)
 
 local function runMeCommand(source, args)

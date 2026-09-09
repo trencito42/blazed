@@ -247,6 +247,8 @@ end
 
 AddEventHandler('sunset:menu:openVehicle', openVehicleMenu)
 exports('OpenVehicle', openVehicleMenu)
+exports('IsMenuOpen', function() return menuOpen end)
+exports('CloseMenu', closeMenu)
 
 local function toggleMenu(initialTab)
     if not exports.sunset_core or not exports.sunset_core:GetCharacter() then return end

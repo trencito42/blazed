@@ -396,20 +396,54 @@ registerServerCommand('unban', function(source, args)
     end
 end, false)
 
--- /tp [id] sau /tp x y z
+local function scrubCoordToken(value)
+    value = tostring(value or ''):gsub(',', ''):gsub('^%s+', ''):gsub('%s+$', '')
+    return tonumber(value)
+end
+
+local function parseTpCoords(args, rest)
+    if not args or #args == 0 then return nil end
+
+    local blob = rest or table.concat(args, ' ')
+    blob = blob:gsub('^%s+', ''):gsub('%s+$', '')
+    local vx, vy, vz = blob:match('vector[34]%s*%(%s*([%-%d%.]+)%s*,%s*([%-%d%.]+)%s*,%s*([%-%d%.]+)')
+    if vx then
+        return scrubCoordToken(vx), scrubCoordToken(vy), scrubCoordToken(vz)
+    end
+
+    local nums = {}
+    for token in blob:gmatch('[^,%s]+') do
+        local n = scrubCoordToken(token)
+        if n then nums[#nums + 1] = n end
+    end
+    if #nums >= 3 then
+        return nums[1], nums[2], nums[3]
+    end
+    return nil
+end
+
+-- /tp [id] sau /tp x y z (acceptă și paste din /coords: vector3(...) sau x, y, z)
 registerServerCommand('tp', function(source, args)
     if source == 0 then return end
     if not requirePerm(source, 'tp') then return end
 
-    if args[1] and not args[2] then
-        local target = getTarget(source, args[1], 'Usage: /tp [player id]')
+    local rest = table.concat(args, ' ')
+    local x, y, z = parseTpCoords(args, rest)
+    if x and y and z then
+        TriggerClientEvent('sunset:admin:teleport', source, x, y, z)
+        return
+    end
+
+    if #args == 1 then
+        local target = getTarget(source, args[1], nil)
         if not target then return end
         local ped = GetPlayerPed(target)
         local coords = GetEntityCoords(ped)
         TriggerClientEvent('sunset:admin:teleport', source, coords.x, coords.y, coords.z)
-    elseif args[1] and args[2] and args[3] then
-        TriggerClientEvent('sunset:admin:teleport', source, tonumber(args[1]), tonumber(args[2]), tonumber(args[3]))
+        return
     end
+
+    notify(source, 'Usage: /tp [player id] or /tp [x] [y] [z] — paste from /coords works too', 'error')
 end, false)
 
 -- /bring [id]
