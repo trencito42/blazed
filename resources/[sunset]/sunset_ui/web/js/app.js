@@ -1013,7 +1013,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 2, name: 'Alexandru Popa', grade: 2, gradeLabel: 'Officer', online: true, duty: false },
             ],
             commands: [{ cmd: '/f [message]', desc: 'Faction radio' }, { cmd: '/mdc', desc: 'Open the department computer' }],
-            canManage: true,
+        });
+    } else if (qa === 'factions') {
+        window.FactionPanels?.showDirectory({
+            factions: [
+                { id: 'police', label: 'Los Santos Police Department', factionType: 'law_enforcement', leader: 'Ștefan XODO', online: 15, total: 42, recruiting: true, description: 'Servim și protejăm orașul Los Santos.' },
+                { id: 'ems', label: 'Pillbox Medical (EMS)', factionType: 'ems', leader: 'Dr. Mihai', online: 8, total: 28, recruiting: true, description: 'Serviciu medical de urgență.' },
+                { id: 'grove', label: 'Grove Street Families', type: 'illegal', leader: 'Sweet Johnson', online: 12, total: 18, recruiting: false, description: 'Controlăm zona de sud a orașului.' },
+                { id: 'bennys', label: "Benny's Motorworks", factionType: 'mechanic', leader: 'Alexandru V.', online: 5, total: 15, recruiting: true, description: 'Service de tuning și reparații autorizat.' }
+            ]
+        });
+    } else if (qa === 'clan') {
+        window.ClanPanels?.showDashboard({
+            inClan: true,
+            clanId: 1,
+            name: 'Sunset Syndicate',
+            tag: 'SS',
+            tagColor: '#ff9900',
+            tagStyle: 'brackets',
+            rank: 5,
+            rankLabel: 'Lider Suprem',
+            motd: 'Ședință sâmbătă la ora 21:00 la conac!',
+            description: 'Organizație privată de elită.',
+            memberCount: 12,
+            maxMembers: 25,
+            members: [
+                { characterId: 1, name: 'Ștefan XODO', rank: 5, rankLabel: 'Lider Suprem', online: true, serverId: 1, leader: true },
+                { characterId: 2, name: 'Alex Popescu', rank: 3, rankLabel: 'Locotenent', online: true, serverId: 14, leader: false },
+                { characterId: 3, name: 'Mihai Dobre', rank: 1, rankLabel: 'Recrut', online: false, serverId: null, leader: false }
+            ],
+            permissions: {
+                leader: true,
+                officer: true,
+                invite: true,
+                kick: true,
+                motd: true,
+                settings: true,
+                promote: true,
+                rankLabels: true,
+                warn: true,
+                dissolve: true,
+                leave: true
+            }
+        });
+    } else if (qa === 'clans') {
+        window.ClanPanels?.showDirectory({
+            clans: [
+                { id: 1, name: 'Sunset Syndicate', tag: 'SS', tagColor: '#ff9900', tagStyle: 'brackets', leader: 'Ștefan XODO', online: 8, total: 12, maxMembers: 25, description: 'Organizație privată de elită.' },
+                { id: 2, name: 'Ghost Riders', tag: 'GR', tagColor: '#00ffcc', tagStyle: 'prefix_dot', leader: 'Kane', online: 4, total: 18, maxMembers: 25, description: 'Club de motocicliști și tuning.' },
+                { id: 3, name: 'Apex Predators', tag: 'APEX', tagColor: '#ff3366', tagStyle: 'brackets', leader: 'Viper', online: 10, total: 25, maxMembers: 25, description: 'Echipă competitivă.' }
+            ]
         });
     } else if (qa === 'vehiclehud') {
         showApp(true);

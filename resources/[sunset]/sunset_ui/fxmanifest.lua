@@ -11,6 +11,7 @@ ui_page 'web/index.html'
 
 files {
     'web/index.html',
+    'web/css/*.css',
     'web/css/style.css',
     'web/css/fonts.css',
     'web/css/hud.css',
@@ -29,6 +30,7 @@ files {
     'web/css/courier.css',
     'web/css/factions.css',
     'web/css/clans.css',
+    'web/css/org-panels.css',
     'web/css/auth_loading.css',
     'web/css/spawn.css',
     'web/css/theme.css',
@@ -38,6 +40,10 @@ files {
     'web/css/atm.css',
     'web/css/battlepass.css',
     'web/css/redesign.css',
+    'web/css/premium-factions.css',
+    'web/css/fleeca-bank.css',
+    'web/css/premium-menu.css',
+    'web/css/premium-auth.css',
     'web/js/*.js',
     'web/vendor/**/*',
     'web/assets/**/*',

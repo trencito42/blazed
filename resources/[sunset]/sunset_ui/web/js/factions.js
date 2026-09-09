@@ -42,6 +42,7 @@ const FactionPanels = {
         $('#faction-manage-kick')?.addEventListener('click', () => this.manageSelected('kick', 'online'));
 
         $('#faction-directory-modal-close')?.addEventListener('click', () => this.closeDirectoryModal());
+        $('#faction-dir-modal-btn')?.addEventListener('click', () => this.applyFaction());
         $('#faction-directory-modal')?.addEventListener('click', (e) => {
             if (e.target?.id === 'faction-directory-modal') this.closeDirectoryModal();
         });
@@ -419,6 +420,7 @@ const FactionPanels = {
     openDirectoryModal(faction) {
         const modal = $('#faction-directory-modal');
         if (!modal || !faction) return;
+        this.selectedFaction = faction;
         this.dirModalOpen = true;
         modal.classList.add('is-open');
 
@@ -431,6 +433,21 @@ const FactionPanels = {
         $('#faction-dir-modal-leaders').innerHTML = '<li>Se încarcă...</li>';
         $('#faction-dir-modal-roster').innerHTML = '<p class="premium-factions-dir__empty">Se încarcă...</p>';
         $('#faction-dir-modal-recruit').innerHTML = `<li>${this.escape(faction.applicationLabel || '—')}</li>`;
+
+        const btn = $('#faction-dir-modal-btn');
+        if (btn) {
+            const isIllegal = faction.type === 'illegal';
+            if (isIllegal) {
+                btn.disabled = true;
+                btn.textContent = 'Doar In-Character (IC)';
+            } else if (faction.recruiting) {
+                btn.disabled = false;
+                btn.textContent = 'Trimite CV (Aplică)';
+            } else {
+                btn.disabled = true;
+                btn.textContent = 'Aplicații Închise';
+            }
+        }
 
         post('factionDirectoryDetail', { factionId: faction.id });
     },
@@ -481,6 +498,21 @@ const FactionPanels = {
     closeDirectoryModal() {
         this.dirModalOpen = false;
         $('#faction-directory-modal')?.classList.remove('is-open');
+        this.selectedFaction = null;
+    },
+
+    applyFaction() {
+        if (!this.selectedFaction) return;
+        this.showToast(`Aplicație trimisă la ${this.selectedFaction.label || this.selectedFaction.id}!`);
+        this.closeDirectoryModal();
+    },
+
+    showToast(msg) {
+        const toast = $('#faction-directory-toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add('is-show');
+        setTimeout(() => toast.classList.remove('is-show'), 3500);
     },
 
     showBrowseInline(payload = {}) {

@@ -1,27 +1,24 @@
+/* ═══ PREMIUM CLANS UI — Dashboard & Directory (1:1 Mockup) ═══ */
+
 const ClanPanels = {
     dashboard: null,
     directory: [],
+    selectedClanId: null,
+    ready: false,
 
     init() {
         if (this.ready) return;
         this.ready = true;
 
-        document.querySelectorAll('[data-clan-close]').forEach((button) => {
-            button.addEventListener('click', () => post('clanPanelsClose'));
-        });
-
-        document.querySelectorAll('[data-clan-detail-back]').forEach((button) => {
-            button.addEventListener('click', () => this.closeDirectoryDetail());
-        });
-
+        // Tab Switching
         document.querySelectorAll('[data-clan-tab]').forEach((tab) => {
             tab.addEventListener('click', () => {
                 const tabId = tab.dataset.clanTab;
                 this.setTab(tabId);
-                if (tabId === 'browse') this.requestBrowse();
             });
         });
 
+        // Form Submissions
         document.querySelectorAll('[data-clan-action]').forEach((form) => {
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
@@ -29,6 +26,28 @@ const ClanPanels = {
             });
         });
 
+        // Action Buttons in Management
+        $('#clan-manage-promote')?.addEventListener('click', () => this.manageSelected('rankUp'));
+        $('#clan-manage-demote')?.addEventListener('click', () => this.manageSelected('rankDown'));
+        $('#clan-manage-kick')?.addEventListener('click', () => this.manageSelected('kick'));
+        $('#clan-btn-leave')?.addEventListener('click', () => {
+            if (confirm('Ești sigur că vrei să părăsești clanul?')) {
+                post('clanManage', { action: 'leave' });
+            }
+        });
+        $('#clan-btn-dissolve')?.addEventListener('click', () => {
+            if (confirm('ATENȚIE: Ești sigur că vrei să desființezi clanul? Acțiunea este ireversibilă!')) {
+                post('clanManage', { action: 'dissolve' });
+            }
+        });
+
+        // Directory Modal Close
+        $('#clan-directory-modal-close')?.addEventListener('click', () => this.closeDirectoryModal());
+        $('#clan-directory-modal')?.addEventListener('click', (e) => {
+            if (e.target?.id === 'clan-directory-modal') this.closeDirectoryModal();
+        });
+
+        // Live Previews
         const createForm = document.querySelector('[data-clan-action="create"]');
         if (createForm) {
             ['input', 'change'].forEach((evt) => {
@@ -43,14 +62,20 @@ const ClanPanels = {
             });
         }
 
+        // ESC Key Handling
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             const panelOpen = !$('#clan-panel')?.classList.contains('hidden');
             const dirOpen = !$('#clan-directory')?.classList.contains('hidden');
-            if (panelOpen || dirOpen) {
-                event.preventDefault();
-                post('clanPanelsClose');
+            if (!panelOpen && !dirOpen) return;
+            event.preventDefault();
+
+            if (dirOpen && $('#clan-directory-modal')?.classList.contains('is-open')) {
+                this.closeDirectoryModal();
+                return;
             }
+
+            post('clanPanelsClose');
         });
     },
 
@@ -62,7 +87,7 @@ const ClanPanels = {
         $('#clan-panel')?.classList.add('hidden');
         $('#clan-directory')?.classList.add('hidden');
         this.setBodyOpen(false);
-        this.closeDirectoryDetail();
+        this.closeDirectoryModal();
     },
 
     focusReady() {
@@ -86,26 +111,6 @@ const ClanPanels = {
             .replace(/"/g, '&quot;');
     },
 
-    formatTaggedName(tag, baseName, style) {
-        tag = String(tag || '').trim();
-        baseName = String(baseName || 'Player').trim() || 'Player';
-        if (!tag) return baseName;
-        switch (style) {
-            case 'prefix_dot': return `${tag}.${baseName}`;
-            case 'suffix_brackets': return `${baseName}[${tag}]`;
-            case 'suffix_dot': return `${baseName}.${tag}`;
-            case 'glued_prefix': return `${tag}${baseName}`;
-            case 'glued_suffix': return `${baseName}${tag}`;
-            default: return `[${tag}]${baseName}`;
-        }
-    },
-
-    renderTaggedHtml(tag, baseName, style, color) {
-        const parts = this.splitTaggedParts(tag, baseName, style);
-        const col = String(color || '#FF8C00');
-        return `${this.escape(parts.prefix ? '' : '')}<span class="clan-tag" style="color:${this.escape(col)}">${this.escape(parts.prefix || parts.suffix ? '' : tag)}</span>`;
-    },
-
     splitTaggedParts(tag, baseName, style) {
         tag = String(tag || '').trim();
         baseName = String(baseName || 'Player').trim() || 'Player';
@@ -120,114 +125,46 @@ const ClanPanels = {
         }
     },
 
+    tagStyleLabel(style) {
+        const map = {
+            brackets: '[TAG]Name',
+            prefix_dot: 'TAG.Name',
+            suffix_brackets: 'Name[TAG]',
+            suffix_dot: 'Name.TAG',
+            glued_prefix: 'TAGName',
+            glued_suffix: 'NameTAG',
+        };
+        return map[style] || '[TAG]Name';
+    },
+
     paintPreview(el, tag, baseName, style, color) {
         if (!el) return;
         const parts = this.splitTaggedParts(tag, baseName, style);
         const col = color || '#FF8C00';
         el.innerHTML = [
-            parts.prefix ? `<span class="clan-identity__tag" style="color:${this.escape(col)}">${this.escape(parts.prefix)}</span>` : '',
-            `<span class="clan-identity__name">${this.escape(parts.name)}</span>`,
-            parts.suffix ? `<span class="clan-identity__tag" style="color:${this.escape(col)}">${this.escape(parts.suffix)}</span>` : '',
+            parts.prefix ? `<span style="color:${this.escape(col)}">${this.escape(parts.prefix)}</span>` : '',
+            `<span>${this.escape(parts.name)}</span>`,
+            parts.suffix ? `<span style="color:${this.escape(col)}">${this.escape(parts.suffix)}</span>` : '',
         ].join('');
     },
 
-    identityPreviewHtml(clan, baseName = 'Player') {
-        const wrap = document.createElement('div');
-        wrap.className = 'clan-identity-preview';
-        this.paintPreview(wrap, clan.tag, baseName, clan.tagStyle, clan.tagColor);
-        return wrap.innerHTML;
-    },
-
-    detailContext(listEl) {
-        if (listEl?.id === 'clan-browse-list') {
-            return {
-                layout: $('#clan-browse-layout'),
-                detail: $('#clan-browse-detail'),
-            };
-        }
-        return {
-            layout: $('#clan-browse-layout'),
-            detail: $('#clan-browse-detail'),
-        };
-    },
-
-    closeDirectoryDetail() {
-        $('#clan-browse-detail')?.classList.add('hidden');
-        $('#clan-browse-layout')?.classList.remove('is-detail-open');
-        document.querySelectorAll('.clan-directory-card.is-selected').forEach((el) => {
-            el.classList.remove('is-selected');
-        });
-        this._selectedClanId = null;
-    },
-
-    renderDetailBody(detailEl, clan, members) {
-        const body = detailEl?.querySelector('.clan-detail__body');
-        if (!body || !clan) return;
-
-        const motd = String(clan.motd || '').trim();
-        const description = String(clan.description || '').trim() || 'No public description has been set.';
-        const roster = Array.isArray(members) ? members : (clan.members || []);
-        const rosterHtml = roster.length
-            ? roster.map((member) => `
-                <article class="clan-detail-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}">
-                    <div>
-                        <strong>${this.escape(member.name || 'Unknown')}</strong>
-                        <span>${this.escape(member.rank ? `R${member.rank} · ` : '')}${this.escape(member.rankLabel || 'Member')}${member.warns ? ` · ${member.warns}/3 warns` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}</span>
-                    </div>
-                    <em>${member.leader ? 'LEADER' : (member.online ? 'ONLINE' : 'OFFLINE')}</em>
-                </article>
-            `).join('')
-            : '<p class="clan-empty">No members listed.</p>';
-
-        body.innerHTML = `
-            <h3>${this.escape(clan.name || 'Clan')}</h3>
-            <div class="clan-detail__identity">${this.identityPreviewHtml(clan)}</div>
-            <div class="clan-detail__meta-line">Tag <strong style="color:${this.escape(clan.tagColor || '#FF8C00')}">${this.escape(clan.tag || '?')}</strong> · Style ${this.escape(clan.tagStyleLabel || clan.tagStyle || '—')}</div>
-            <div class="clan-detail__stats">
-                <div class="clan-detail__stat"><strong>${Number(clan.online) || 0}</strong><span>Online</span></div>
-                <div class="clan-detail__stat"><strong>${Number(clan.total) || 0}</strong><span>Members</span></div>
-                <div class="clan-detail__stat"><strong>${Number(clan.maxMembers) || 25}</strong><span>Capacity</span></div>
-            </div>
-            <div class="clan-detail__block"><span>Leader</span><p>${this.escape(clan.leader || 'Unknown')}</p></div>
-            <div class="clan-detail__block"><span>MOTD</span><p>${this.escape(motd || 'No MOTD posted. Officers use /cmotd.')}</p></div>
-            <div class="clan-detail__block"><span>Unit intel</span><p>${this.escape(description)}</p></div>
-            <div class="clan-detail__block"><span>Recruitment</span><p>Contact the leader in-character or wait for an in-game invite via <code>/clan</code>.</p></div>
-            <div class="clan-detail__block"><span>Crew roster</span><div class="clan-detail-roster">${rosterHtml}</div></div>
-        `;
-    },
-
-    openClanDetail(clan, cardEl, listEl) {
-        const ctx = this.detailContext(listEl);
-        if (!ctx.detail || !clan) return;
-
-        document.querySelectorAll('.clan-directory-card.is-selected').forEach((el) => {
-            el.classList.remove('is-selected');
-        });
-        cardEl?.classList.add('is-selected');
-        this._selectedClanId = clan.id;
-
-        this.renderDetailBody(ctx.detail, clan, clan.members || []);
-        ctx.layout?.classList.add('is-detail-open');
-        ctx.detail.classList.remove('hidden');
-
-        if (!clan.members || !clan.members.length) {
-            post('clanProfile', { clanId: clan.id });
-        }
-    },
-
-    showClanProfile(profile = {}) {
-        if (!profile || !profile.id) return;
-        const clanId = profile.id;
-        this.directory = (this.directory || []).map((row) => (row.id === clanId ? { ...row, ...profile } : row));
-
-        const contexts = [
-            { detail: $('#clan-browse-detail'), list: $('#clan-browse-list') },
+    fillStyleSelect(select, styles, selected) {
+        if (!select) return;
+        select.innerHTML = '';
+        const rows = (styles && styles.length) ? styles : [
+            { id: 'brackets', label: '[TAG]Name' },
+            { id: 'prefix_dot', label: 'TAG.Name' },
+            { id: 'suffix_brackets', label: 'Name[TAG]' },
+            { id: 'suffix_dot', label: 'Name.TAG' },
+            { id: 'glued_prefix', label: 'TAGName' },
+            { id: 'glued_suffix', label: 'NameTAG' },
         ];
-        contexts.forEach(({ detail, list }) => {
-            if (this._selectedClanId === clanId && detail && !detail.classList.contains('hidden')) {
-                const clan = this.directory.find((row) => row.id === clanId) || profile;
-                this.renderDetailBody(detail, clan, profile.members || clan.members);
-            }
+        rows.forEach((row) => {
+            const option = document.createElement('option');
+            option.value = row.id;
+            option.textContent = row.label || row.id;
+            if (row.id === selected) option.selected = true;
+            select.appendChild(option);
         });
     },
 
@@ -251,313 +188,134 @@ const ClanPanels = {
         this.paintPreview(preview, tag, 'YourName', style, color);
     },
 
-    fillStyleSelect(select, styles, selected) {
-        if (!select) return;
-        select.innerHTML = '';
-        const rows = (styles && styles.length) ? styles : [{ id: 'brackets', label: '[tag]name' }];
-        rows.forEach((row) => {
-            const option = document.createElement('option');
-            option.value = row.id;
-            option.textContent = row.label || row.id;
-            if (row.id === selected) option.selected = true;
-            select.appendChild(option);
-        });
-    },
-
-    renderRoster(members, permissions, viewerCharacterId) {
-        const roster = $('#clan-roster');
-        if (!roster) return;
-        roster.innerHTML = '';
-        const perms = permissions || this.dashboard?.permissions || {};
-        const viewerId = Number(viewerCharacterId || this.dashboard?.viewerCharacterId) || 0;
-        const viewerRank = Number(this.dashboard?.rank) || 0;
-        const canKick = Boolean(perms.kick);
-        const canPromote = Boolean(perms.promote);
-        const canWarn = Boolean(perms.warn);
-        const isLeader = Boolean(perms.leader);
-
-        (members || []).forEach((member) => {
-            const row = document.createElement('article');
-            row.className = `clan-member faction-member${member.online ? ' is-online' : ''}${member.leader ? ' is-leader' : ''}`;
-
-            const identity = document.createElement('div');
-            identity.className = 'faction-member__identity';
-            const name = document.createElement('strong');
-            name.textContent = member.name || `CID ${member.characterId || '?'}`;
-            const rank = document.createElement('span');
-            rank.textContent = `${member.rank ? `R${member.rank}` : 'R?'} · ${member.rankLabel || 'Member'}${member.warns ? ` · ${member.warns}/3 strikes` : ''}${member.serverId ? ` · ID ${member.serverId}` : ''}`;
-            identity.append(name, rank);
-
-            const state = document.createElement('div');
-            state.className = 'faction-member__state';
-            const badge = document.createElement('span');
-            badge.className = 'org-member-badge';
-            if (member.leader) {
-                badge.classList.add('is-leader');
-                badge.textContent = 'LEADER';
-            } else if (member.online) {
-                badge.classList.add('is-online');
-                badge.textContent = 'ONLINE';
-            } else {
-                badge.classList.add('is-offline');
-                badge.textContent = 'OFFLINE';
-            }
-            state.appendChild(badge);
-
-            const actions = document.createElement('div');
-            actions.className = 'faction-member__actions';
-            const isSelf = Number(member.characterId) === viewerId;
-            const manageable = !isSelf && !member.leader && member.online && (canKick || canPromote || canWarn);
-            const lowerRank = isLeader || (Number(member.rank) < viewerRank);
-
-            if (manageable && canPromote && lowerRank) {
-                const up = document.createElement('button');
-                up.type = 'button';
-                up.className = 'faction-btn';
-                up.textContent = '▲';
-                up.title = 'Promote';
-                up.addEventListener('click', () => post('clanManage', { action: 'rankUp', targetId: member.serverId }));
-                const down = document.createElement('button');
-                down.type = 'button';
-                down.className = 'faction-btn';
-                down.textContent = '▼';
-                down.title = 'Demote';
-                down.addEventListener('click', () => post('clanManage', { action: 'rankDown', targetId: member.serverId }));
-                actions.append(up, down);
-            }
-            if (manageable && canKick && lowerRank) {
-                const kick = document.createElement('button');
-                kick.type = 'button';
-                kick.className = 'faction-btn is-danger';
-                kick.textContent = 'KICK';
-                kick.addEventListener('click', () => post('clanManage', { action: 'kick', targetId: member.serverId }));
-                actions.append(kick);
-            }
-            if (manageable && canWarn && lowerRank) {
-                const warn = document.createElement('button');
-                warn.type = 'button';
-                warn.className = 'faction-btn is-warn';
-                warn.textContent = 'STRIKE';
-                warn.addEventListener('click', () => {
-                    const reason = 'Clan disciplinary strike';
-                    post('clanManage', { action: 'warn', targetId: member.serverId, reason });
-                });
-                actions.append(warn);
-            }
-
-            row.append(identity, state, actions);
-            roster.appendChild(row);
-        });
-        if (!members?.length) roster.innerHTML = '<p class="clan-empty">No crew members found.</p>';
-    },
-
-    renderRankLabelEditor(labels) {
-        const wrap = document.getElementById('clan-rank-label-fields');
-        if (!wrap) return;
-        wrap.innerHTML = '';
-        const source = labels || {};
-        for (let i = 1; i <= 7; i += 1) {
-            const field = document.createElement('label');
-            field.className = 'clan-rank-label-field';
-            field.innerHTML = `
-                <span>Rank ${i}</span>
-                <input type="text" data-rank-label="${i}" maxlength="48" value="${this.escape(source[i] || source[String(i)] || '')}" placeholder="Rank ${i}">
-            `;
-            wrap.appendChild(field);
-        }
-    },
-
-    renderDirectoryCards(list, clans) {
-        if (!list) return;
-        list.innerHTML = '';
-        (clans || []).forEach((clan) => {
-            const card = document.createElement('button');
-            card.type = 'button';
-            card.className = 'org-directory-row clan-directory-card';
-            card.dataset.clanId = String(clan.id || '');
-
-            const main = document.createElement('div');
-            main.className = 'org-directory-row__main';
-            const title = document.createElement('strong');
-            title.textContent = clan.name || 'Clan';
-            const tagLine = document.createElement('span');
-            tagLine.textContent = `[${clan.tag || '?'}] · ${clan.tagStyleLabel || 'tag'}`;
-            const identity = document.createElement('div');
-            identity.className = 'clan-directory-card__identity';
-            identity.innerHTML = this.identityPreviewHtml(clan);
-            const description = document.createElement('p');
-            description.textContent = String(clan.description || '').trim() || 'No public intel yet.';
-            main.append(title, tagLine, identity, description);
-
-            const stats = document.createElement('div');
-            stats.className = 'org-directory-row__stats';
-            const online = document.createElement('b');
-            online.textContent = `${clan.online || 0}/${clan.total || 0}`;
-            const leader = document.createElement('em');
-            leader.textContent = clan.leader || 'Unknown';
-            stats.append(online, leader);
-
-            card.append(main, stats);
-            card.addEventListener('click', () => this.openClanDetail(clan, card, list));
-            list.appendChild(card);
-        });
-        if (!list.children.length) list.innerHTML = '<p class="clan-empty">No clans have been created yet.</p>';
-    },
-
-    requestBrowse() {
-        if (this._browseLoading) return;
-        const list = $('#clan-browse-list');
-        if (!list) return;
-        if (this._browseLoaded) return;
-        this._browseLoading = true;
-        list.innerHTML = '<p class="clan-empty">Loading clans...</p>';
-        post('clanBrowse');
-    },
-
-    showBrowseInline(payload = {}) {
+    /* --- DASHBOARD DISPLAY --- */
+    showDashboard(payload = {}) {
         this.init();
-        this._browseLoading = false;
-        this._browseLoaded = true;
-        this.directory = Array.isArray(payload.clans) ? payload.clans : [];
-        this.closeDirectoryDetail();
-        this.renderDirectoryCards($('#clan-browse-list'), this.directory);
-        this.setTab('browse');
-    },
-
-    tagStyleLabel(styleId) {
-        const styles = this.dashboard?.tagStyles || [];
-        const row = styles.find((entry) => entry.id === styleId);
-        return row?.label || styleId || '—';
-    },
-
-    showDashboard(data = {}) {
-        this.init();
+        this.dashboard = payload;
+        const inClan = Boolean(payload && payload.inClan);
+        const perms = payload?.permissions || {};
         const panel = $('#clan-panel');
-        if (!panel) {
-            console.error('[ClanPanels] #clan-panel is missing from index.html');
-            return false;
-        }
+        if (!panel) return false;
 
         $('#clan-directory')?.classList.add('hidden');
-        this._browseLoaded = false;
-        this._browseLoading = false;
-        this.dashboard = data || {};
-        const inClan = Boolean(this.dashboard.inClan);
-        const perms = this.dashboard.permissions || {};
 
         const title = $('#clan-panel-title');
-        if (title) {
-            if (inClan) {
-                const color = this.escape(this.dashboard.tagColor || '#FF8C00');
-                const clanName = this.escape(this.dashboard.name || 'Clan');
-                const clanTag = this.escape(this.dashboard.tag || '');
-                title.innerHTML = clanTag
-                    ? `CLAN <span><span style="color:${color}">${clanName}</span> · <span style="color:${color}">${clanTag}</span></span>`
-                    : `CLAN <span style="color:${color}">${clanName}</span>`;
-            } else {
-                title.innerHTML = 'CREATE <span>CLAN</span>';
-            }
-        }
-        $('#clan-panel')?.classList.toggle('clan-panel--guest', !inClan);
-
-        document.querySelector('.clan-tab--overview')?.classList.toggle('hidden', !inClan);
-        document.querySelector('.clan-tab--roster')?.classList.toggle('hidden', !inClan);
-        document.querySelector('.clan-tab--tag')?.classList.toggle('hidden', !inClan || !perms.settings);
-        document.querySelector('.clan-tab--comms')?.classList.toggle('hidden', !inClan || !perms.motd);
-        document.querySelector('.clan-tab--recruit')?.classList.toggle('hidden', !inClan || !perms.invite);
-        document.querySelector('.clan-tab--actions')?.classList.toggle('hidden', !inClan || !(perms.kick || perms.promote || perms.warn));
-        document.querySelector('.clan-tab--org')?.classList.toggle('hidden', !inClan || !(perms.rankLabels || perms.leave || perms.dissolve));
-        document.querySelector('.clan-tab--create')?.classList.toggle('hidden', inClan);
-        document.querySelector('.clan-tab--browse')?.classList.toggle('hidden', false);
-
-        document.querySelectorAll('[data-clan-action]').forEach((form) => {
-            const action = form.dataset.clanAction;
-            if (!inClan) {
-                form.classList.toggle('hidden', action !== 'create');
-                return;
-            }
-            let allowed = false;
-            if (action === 'invite') allowed = perms.invite;
-            else if (action === 'motd') allowed = perms.motd;
-            else if (action === 'settings') allowed = perms.settings;
-            else if (action === 'kick') allowed = perms.kick;
-            else if (action === 'rankUp' || action === 'rankDown') allowed = perms.promote;
-            else if (action === 'warn') allowed = perms.warn;
-            else if (action === 'rankLabels') allowed = perms.rankLabels;
-            else if (action === 'leave') allowed = perms.leave;
-            else if (action === 'dissolve') allowed = perms.dissolve;
-            else if (action === 'create') allowed = false;
-            form.classList.toggle('hidden', action !== 'create' && !allowed);
-        });
+        const typeEl = $('#clan-panel-type');
 
         if (inClan) {
+            const color = this.escape(payload.tagColor || '#FF8C00');
+            const clanName = this.escape(payload.name || 'Clan');
+            const clanTag = this.escape(payload.tag || '');
+            if (title) {
+                title.innerHTML = clanTag
+                    ? `CLAN <span>${clanName} · <span style="color:${color}">[${clanTag}]</span></span>`
+                    : `CLAN <span>${clanName}</span>`;
+            }
+            if (typeEl) typeEl.textContent = 'Organizație Privată';
+
+            // Sidebar Tab Toggles
+            document.querySelector('[data-clan-tab="overview"]')?.classList.remove('hidden');
+            document.querySelector('[data-clan-tab="roster"]')?.classList.remove('hidden');
+            document.querySelector('.clan-tab--tag')?.classList.toggle('hidden', !perms.settings);
+            document.querySelector('.clan-tab--actions')?.classList.toggle('hidden', !perms.kick && !perms.promote && !perms.warn && !perms.motd && !perms.invite);
+            document.querySelector('.clan-tab--org')?.classList.toggle('hidden', !perms.rankLabels);
+            document.querySelector('.clan-tab--create')?.classList.add('hidden');
+
+            // Overview Stats
             const rankEl = $('#clan-rank');
             if (rankEl) {
-                rankEl.textContent = this.dashboard.rank
-                    ? `R${this.dashboard.rank} · ${this.dashboard.rankLabel || 'Member'}`
-                    : (this.dashboard.rankLabel || 'Member');
+                rankEl.textContent = payload.rank
+                    ? `R${payload.rank} · ${payload.rankLabel || 'Member'}`
+                    : (payload.rankLabel || 'Member');
             }
-            const countEl = $('#clan-member-count');
-            if (countEl) {
-                countEl.textContent = `${this.dashboard.memberCount || 0} / ${this.dashboard.maxMembers || 25}`;
-            }
-            const motdEl = $('#clan-motd');
-            if (motdEl) motdEl.textContent = this.dashboard.motd || 'No MOTD posted. Officers use /cmotd.';
-            const descEl = $('#clan-description');
-            if (descEl) descEl.textContent = this.dashboard.description || 'No unit intel on file.';
-            const preview = $('#clan-overview-preview');
-            this.paintPreview(
-                preview,
-                this.dashboard.tag,
-                'Player',
-                this.dashboard.tagStyle,
-                this.dashboard.tagColor
-            );
-            const styleLabel = $('#clan-tag-style-label');
-            if (styleLabel) styleLabel.textContent = this.tagStyleLabel(this.dashboard.tagStyle);
 
-            this.renderRoster(this.dashboard.members, perms, this.dashboard.viewerCharacterId);
+            const onlineCount = (payload.members || []).filter((m) => m.online).length;
+            const onlineEl = $('#clan-online-count');
+            if (onlineEl) onlineEl.textContent = onlineCount;
+
+            const memberCountEl = $('#clan-member-count');
+            if (memberCountEl) memberCountEl.textContent = `${payload.memberCount || 0}/${payload.maxMembers || 25}`;
+
+            const styleLabel = $('#clan-tag-style-label');
+            if (styleLabel) styleLabel.textContent = this.tagStyleLabel(payload.tagStyle);
+
+            const motdEl = $('#clan-motd');
+            if (motdEl) motdEl.textContent = payload.motd || 'No MOTD posted. Officers use /cmotd.';
+
+            const descEl = $('#clan-description');
+            if (descEl) descEl.textContent = payload.description || 'No unit intel on file.';
+
+            this.paintPreview(
+                $('#clan-overview-preview'),
+                payload.tag,
+                payload.previewName ? payload.previewName.replace(/\[.*?\]|\(.*?\)/g, '').trim() : 'Player',
+                payload.tagStyle,
+                payload.tagColor
+            );
+
+            // Roster
+            this.renderRoster(payload.members, perms, payload.viewerCharacterId);
 
             const rosterMeta = $('#clan-roster-meta');
             if (rosterMeta) {
-                const members = this.dashboard.members || [];
-                const online = members.filter((m) => m.online).length;
-                rosterMeta.textContent = `${online} online · ${this.dashboard.memberCount || 0}/${this.dashboard.maxMembers || 25} slots`;
+                rosterMeta.textContent = `${onlineCount} online · ${payload.memberCount || 0}/${payload.maxMembers || 25} membri înregistrați`;
             }
 
+            // Management Select
+            this.fillManageSelect(payload.members, payload.viewerCharacterId);
+
+            // Settings Form
             const settingsForm = document.querySelector('[data-clan-action="settings"]');
             if (settingsForm) {
                 const tagInput = settingsForm.querySelector('[name="tag"]');
-                if (tagInput) tagInput.value = this.dashboard.tag || '';
+                if (tagInput) tagInput.value = payload.tag || '';
                 const descInput = settingsForm.querySelector('[name="description"]');
-                if (descInput) descInput.value = this.dashboard.description || '';
+                if (descInput) descInput.value = payload.description || '';
                 const colorInput = settingsForm.querySelector('[name="tagColor"]');
-                if (colorInput) colorInput.value = this.dashboard.tagColor || '#FF8C00';
+                if (colorInput) colorInput.value = payload.tagColor || '#FF8C00';
                 this.fillStyleSelect(
                     settingsForm.querySelector('[name="tagStyle"]'),
-                    this.dashboard.tagStyles,
-                    this.dashboard.tagStyle
+                    payload.tagStyles,
+                    payload.tagStyle
                 );
             }
+
+            // MOTD Form
             const motdForm = document.querySelector('[data-clan-action="motd"]');
             if (motdForm) {
                 const motdInput = motdForm.querySelector('[name="message"]');
-                if (motdInput) motdInput.value = this.dashboard.motd || '';
+                if (motdInput) motdInput.value = payload.motd || '';
             }
+
             this.updateSettingsPreview();
-            this.renderRankLabelEditor(this.dashboard.rankLabels);
+            this.renderRankLabelEditor(payload.rankLabels);
+
+            // Show Leave / Dissolve
+            $('#clan-btn-dissolve')?.classList.toggle('hidden', !perms.dissolve);
+
             this.setTab('overview');
         } else {
+            // Guest / Registration Mode
+            if (title) title.innerHTML = 'CLAN <span>ÎNREGISTRARE</span>';
+            if (typeEl) typeEl.textContent = 'Înregistrează un clan';
+
+            document.querySelector('[data-clan-tab="overview"]')?.classList.add('hidden');
+            document.querySelector('[data-clan-tab="roster"]')?.classList.add('hidden');
+            document.querySelector('.clan-tab--tag')?.classList.add('hidden');
+            document.querySelector('.clan-tab--actions')?.classList.add('hidden');
+            document.querySelector('.clan-tab--org')?.classList.add('hidden');
+            document.querySelector('.clan-tab--create')?.classList.remove('hidden');
+
             const createForm = document.querySelector('[data-clan-action="create"]');
             if (createForm) {
                 this.fillStyleSelect(
                     createForm.querySelector('[name="tagStyle"]'),
-                    this.dashboard.tagStyles,
+                    payload.tagStyles,
                     'brackets'
                 );
                 const costEl = $('#clan-create-cost');
                 if (costEl) {
-                    costEl.textContent = `Cost: ${Number(this.dashboard.creationCost || 500).toLocaleString()} Blaze Points — you have ${Number(this.dashboard.accountCoins || 0).toLocaleString()} BP`;
+                    costEl.textContent = `Cost: ${Number(payload.creationCost || 500).toLocaleString()} Blaze Points — ai ${Number(payload.accountCoins || 0).toLocaleString()} BP`;
                 }
             }
             this.updateCreatePreview();
@@ -570,40 +328,216 @@ const ClanPanels = {
         return true;
     },
 
-    showDirectory(payload = {}) {
-        return this.openBrowsePanel(payload);
+    renderRoster(members, permissions, viewerCharacterId) {
+        const roster = $('#clan-roster');
+        if (!roster) return;
+        roster.innerHTML = '';
+
+        (members || []).forEach((member) => {
+            const item = document.createElement('div');
+            item.className = 'premium-clan__roster-item';
+
+            const dotClass = member.online ? 'is-online' : 'is-offline';
+            const serverIdBadge = member.serverId ? `<span style="font-size:10px;color:var(--pf-text-muted);margin-left:6px;">(ID: ${member.serverId})</span>` : '';
+
+            item.innerHTML = `
+                <div class="premium-clan__roster-info">
+                    <div class="premium-clan__status-dot ${dotClass}" title="${member.online ? 'Online' : 'Offline'}"></div>
+                    <div>
+                        <div class="premium-clan__member-name">${this.escape(member.name || 'Necunoscut')} ${serverIdBadge}</div>
+                        <div class="premium-clan__member-rank">${member.leader ? '<span style="color:var(--pf-accent-orange);font-weight:800;">LIDER</span> · ' : ''}${this.escape(member.rankLabel || 'Membru')}</div>
+                    </div>
+                </div>
+                <div class="premium-clan__member-id">R${member.rank || 1}</div>
+            `;
+            roster.appendChild(item);
+        });
+
+        if (!members || !members.length) {
+            roster.innerHTML = '<p class="premium-clan__empty">Niciun membru înregistrat în acest clan.</p>';
+        }
     },
 
-    openBrowsePanel(payload = {}) {
-        this.init();
-        this.directory = Array.isArray(payload.clans) ? payload.clans : [];
-        this.closeDirectoryDetail();
-        this._browseLoaded = true;
-        this._browseLoading = false;
+    fillManageSelect(members, viewerCharacterId) {
+        const select = $('#clan-manage-select');
+        if (!select) return;
+        select.innerHTML = '<option value="" disabled selected>Alege un membru online...</option>';
 
-        $('#clan-directory')?.classList.add('hidden');
-        this.renderDirectoryCards($('#clan-browse-list'), this.directory);
+        const viewerId = Number(viewerCharacterId) || 0;
+        (members || []).forEach((m) => {
+            if (Number(m.characterId) !== viewerId && m.serverId) {
+                const opt = document.createElement('option');
+                opt.value = m.serverId;
+                opt.textContent = `${m.name} (ID: ${m.serverId}) — ${m.rankLabel || 'Membru'}`;
+                select.appendChild(opt);
+            }
+        });
+    },
 
-        const panel = $('#clan-panel');
-        const panelWasHidden = panel?.classList.contains('hidden');
-        if (panelWasHidden && !this.dashboard) {
-            document.querySelector('.clan-tab--overview')?.classList.add('hidden');
-            document.querySelector('.clan-tab--roster')?.classList.add('hidden');
-            document.querySelector('.clan-tab--tag')?.classList.add('hidden');
-            document.querySelector('.clan-tab--comms')?.classList.add('hidden');
-            document.querySelector('.clan-tab--recruit')?.classList.add('hidden');
-            document.querySelector('.clan-tab--actions')?.classList.add('hidden');
-            document.querySelector('.clan-tab--org')?.classList.add('hidden');
-            document.querySelector('.clan-tab--create')?.classList.remove('hidden');
-            const title = $('#clan-panel-title');
-            if (title) title.innerHTML = 'SERVER <span>CLANS</span>';
+    manageSelected(action) {
+        const select = $('#clan-manage-select');
+        const targetId = Number(select?.value);
+        if (!targetId) {
+            alert('Te rog selectează un membru din listă!');
+            return;
         }
 
-        panel?.classList.remove('hidden');
-        this.setTab('browse');
+        if (action === 'kick') {
+            if (!confirm(`Ești sigur că vrei să concediezi acest membru (ID ${targetId})?`)) return;
+        }
+
+        post('clanManage', { action, targetId });
+    },
+
+    renderRankLabelEditor(labels) {
+        const wrap = document.getElementById('clan-rank-label-fields');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        const source = labels || {};
+        for (let i = 1; i <= 7; i += 1) {
+            const field = document.createElement('div');
+            field.className = 'clan-rank-item';
+            field.innerHTML = `
+                <span>GRADUL ${i}</span>
+                <input type="text" class="premium-clan__form-control" data-rank-label="${i}" maxlength="48" value="${this.escape(source[i] || source[String(i)] || '')}" placeholder="Denumire Grad ${i}">
+            `;
+            wrap.appendChild(field);
+        }
+    },
+
+    /* --- DIRECTORY DISPLAY (/clans) --- */
+    showDirectory(payload = {}) {
+        this.init();
+        this.directory = Array.isArray(payload.clans) ? payload.clans : [];
+        this.closeDirectoryModal();
+
+        $('#clan-panel')?.classList.add('hidden');
+        const dir = $('#clan-directory');
+        if (!dir) return false;
+
+        this.renderDirectoryCards(this.directory);
+
+        dir.classList.remove('hidden');
         this.setBodyOpen(true);
-        if (panelWasHidden) this.focusReady();
+        this.focusReady();
         return true;
+    },
+
+    renderDirectoryCards(clans) {
+        const list = $('#clan-directory-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        (clans || []).forEach((clan) => {
+            const card = document.createElement('div');
+            card.className = 'premium-factions-dir__card premium-clans-dir__card';
+
+            const tagColor = this.escape(clan.tagColor || '#ff9900');
+            const total = Number(clan.total) || 0;
+            const maxMembers = Number(clan.maxMembers) || 25;
+            const isFull = total >= maxMembers;
+
+            card.innerHTML = `
+                <div class="premium-factions-dir__card-head">
+                    <div class="premium-factions-dir__card-icon">
+                        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    </div>
+                    <div>
+                        <div class="premium-factions-dir__card-name">${this.escape(clan.name || 'Clan')}</div>
+                        <div class="premium-factions-dir__card-type" style="color:${tagColor};font-weight:800;">[${this.escape(clan.tag || '')}] · ${this.escape(clan.tagStyleLabel || 'Clan Unit')}</div>
+                    </div>
+                </div>
+
+                <div class="premium-factions-dir__card-stats">
+                    <div class="premium-factions-dir__stat-row">
+                        <span>Lider:</span>
+                        <b>${this.escape(clan.leader || 'Necunoscut')}</b>
+                    </div>
+                    <div class="premium-factions-dir__stat-row">
+                        <span>Membri:</span>
+                        <b><span class="highlight">${Number(clan.online) || 0}</span> / ${total}</b>
+                    </div>
+                </div>
+
+                <div class="premium-factions-dir__recruit ${isFull ? 'is-closed' : 'is-open'}">
+                    <div class="dot"></div>${isFull ? 'Recrutări Închise' : 'Recrutări Deschise'}
+                </div>
+            `;
+
+            card.addEventListener('click', () => this.openDirectoryModal(clan));
+            list.appendChild(card);
+        });
+
+        if (!clans || !clans.length) {
+            list.innerHTML = '<p class="premium-clans-dir__empty">Niciun clan activ găsit pe server.</p>';
+        }
+    },
+
+    openDirectoryModal(clan) {
+        const modal = $('#clan-directory-modal');
+        if (!modal || !clan) return;
+        this.selectedClanId = clan.id;
+        modal.classList.add('is-open');
+
+        const tagColor = this.escape(clan.tagColor || '#ff9900');
+        const icon = $('#clan-dir-modal-icon');
+        if (icon) {
+            icon.innerHTML = `<span style="font-size:32px;font-weight:900;color:${tagColor};">[${this.escape(clan.tag || '')}]</span>`;
+        }
+
+        const titleEl = $('#clan-dir-modal-title');
+        if (titleEl) titleEl.textContent = clan.name || 'Clan';
+
+        const descEl = $('#clan-dir-modal-desc');
+        if (descEl) descEl.textContent = clan.description || 'Nicio descriere publică introdusă.';
+
+        const leaderEl = $('#clan-dir-modal-leader');
+        if (leaderEl) leaderEl.textContent = clan.leader || 'Necunoscut';
+
+        const motdEl = $('#clan-dir-modal-motd');
+        if (motdEl) motdEl.textContent = clan.motd || 'Niciun MOTD publicat.';
+
+        const roster = $('#clan-dir-modal-roster');
+        if (roster) {
+            roster.innerHTML = '<p class="premium-clans-dir__empty">Se încarcă membrii...</p>';
+        }
+
+        // Request clan profile (members)
+        post('clanProfile', { clanId: clan.id });
+    },
+
+    showClanProfile(profile = {}) {
+        if (!profile || !profile.id) return;
+        if (this.selectedClanId !== profile.id) return;
+
+        const roster = $('#clan-dir-modal-roster');
+        if (!roster) return;
+        roster.innerHTML = '';
+
+        const members = profile.members || [];
+        members.forEach((m) => {
+            const row = document.createElement('div');
+            row.className = 'premium-clans-dir__modal-member';
+            row.innerHTML = `
+                <strong>${this.escape(m.name || 'Necunoscut')}</strong>
+                <span>${this.escape(m.rankLabel || 'Membru')}${m.online ? ' · ONLINE' : ''}${m.leader ? ' · LIDER' : ''}</span>
+            `;
+            roster.appendChild(row);
+        });
+
+        if (!members.length) {
+            roster.innerHTML = '<p class="premium-clans-dir__empty">Niciun membru găsit.</p>';
+        }
+    },
+
+    closeDirectoryModal() {
+        this.selectedClanId = null;
+        $('#clan-directory-modal')?.classList.remove('is-open');
+    },
+
+    showBrowseInline(payload = {}) {
+        this.directory = Array.isArray(payload.clans) ? payload.clans : [];
+        this.showDirectory({ clans: this.directory });
     },
 
     submitForm(form) {

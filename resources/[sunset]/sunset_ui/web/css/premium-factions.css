@@ -1,15 +1,15 @@
-/* ═══ PREMIUM FACTION UI — dashboard + directory (1:1 mockup) ═══ */
+/* ═══ PREMIUM ORG UI — Factions & Clans (Dashboard & Directory 1:1 Mockup) ═══ */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
-.premium-faction,
-.premium-factions-dir {
-    --pf-bg-base: rgba(13, 13, 20, 0.92);
+:root {
+    --pf-bg-base: rgba(13, 13, 20, 0.95);
     --pf-bg-panel: rgba(255, 255, 255, 0.03);
     --pf-bg-hover: rgba(255, 255, 255, 0.08);
-    --pf-bg-input: rgba(0, 0, 0, 0.4);
+    --pf-bg-input: rgba(0, 0, 0, 0.45);
     --pf-text-main: #ffffff;
     --pf-text-muted: rgba(255, 255, 255, 0.5);
     --pf-accent: #00ffcc;
+    --pf-accent-orange: #ff9900;
     --pf-warning: #ffcc00;
     --pf-danger: #ff3366;
     --pf-success: #32d74b;
@@ -17,6 +17,12 @@
     --pf-radius-lg: 12px;
     --pf-radius-md: 8px;
     --pf-transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.premium-faction,
+.premium-clan,
+.premium-factions-dir,
+.premium-clans-dir {
     position: fixed;
     inset: 0;
     display: flex;
@@ -24,73 +30,83 @@
     justify-content: center;
     z-index: 9000;
     pointer-events: none;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .premium-faction:not(.hidden),
-.premium-factions-dir:not(.hidden) {
+.premium-clan:not(.hidden),
+.premium-factions-dir:not(.hidden),
+.premium-clans-dir:not(.hidden) {
     pointer-events: auto;
 }
 
+/* Base Wrapper Transitions */
 .premium-faction__wrapper,
-.premium-factions-dir__wrapper {
+.premium-clan__wrapper,
+.premium-factions-dir__wrapper,
+.premium-clans-dir__wrapper {
     opacity: 0;
     transform: scale(0.95);
     transition: var(--pf-transition);
 }
 
 .premium-faction:not(.hidden) .premium-faction__wrapper,
-.premium-factions-dir:not(.hidden) .premium-factions-dir__wrapper {
+.premium-clan:not(.hidden) .premium-clan__wrapper,
+.premium-factions-dir:not(.hidden) .premium-factions-dir__wrapper,
+.premium-clans-dir:not(.hidden) .premium-clans-dir__wrapper {
     opacity: 1;
     transform: scale(1);
 }
 
-.premium-faction__wrapper {
-    width: min(950px, 94vw);
-    height: min(600px, 86vh);
+/* Dashboard Wrappers (950x600) — NO blur to prevent CEF black box */
+.premium-faction__wrapper,
+.premium-clan__wrapper {
+    width: min(960px, 94vw);
+    height: min(620px, 86vh);
     background: var(--pf-bg-base);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-lg);
     display: flex;
     flex-direction: row;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.65);
     position: relative;
     overflow: hidden;
 }
 
-.premium-factions-dir__wrapper {
-    width: min(1150px, 96vw);
-    height: min(720px, 88vh);
+/* Directory Wrappers (1150x720) — NO blur to prevent CEF black box */
+.premium-factions-dir__wrapper,
+.premium-clans-dir__wrapper {
+    width: min(1160px, 96vw);
+    height: min(730px, 88vh);
     background: var(--pf-bg-base);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-lg);
     display: flex;
     flex-direction: row;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.75);
     position: relative;
     overflow: hidden;
 }
 
+/* --- SIDEBAR --- */
 .premium-faction__sidebar,
-.premium-factions-dir__sidebar {
+.premium-clan__sidebar,
+.premium-factions-dir__sidebar,
+.premium-clans-dir__sidebar {
     width: 260px;
     border-right: 1px solid var(--pf-border);
     display: flex;
     flex-direction: column;
     padding: 30px 0;
     flex-shrink: 0;
-}
-
-.premium-factions-dir__sidebar {
     background: rgba(0, 0, 0, 0.2);
     z-index: 10;
 }
 
 .premium-faction__brand,
-.premium-factions-dir__brand {
+.premium-clan__brand,
+.premium-factions-dir__brand,
+.premium-clans-dir__brand {
     padding: 0 30px 25px 30px;
     border-bottom: 1px solid var(--pf-border);
     margin-bottom: 15px;
@@ -99,12 +115,14 @@
     gap: 15px;
 }
 
-.premium-factions-dir__brand {
+.premium-factions-dir__brand,
+.premium-clans-dir__brand {
     margin-bottom: 20px;
     display: block;
 }
 
-.premium-faction__brand-icon {
+.premium-faction__brand-icon,
+.premium-clan__brand-icon {
     width: 45px;
     height: 45px;
     background: rgba(0, 255, 204, 0.1);
@@ -117,9 +135,18 @@
     flex-shrink: 0;
 }
 
+.premium-clan__brand-icon {
+    background: rgba(255, 153, 0, 0.1);
+    border: 1px solid rgba(255, 153, 0, 0.35);
+    color: var(--pf-accent-orange);
+}
+
 .premium-faction__brand-icon svg,
+.premium-clan__brand-icon svg,
+.premium-faction__nav-item svg,
+.premium-clan__nav-item svg,
 .premium-factions-dir__nav-item svg,
-.premium-faction__nav-item svg {
+.premium-clans-dir__nav-item svg {
     width: 18px;
     height: 18px;
     stroke: currentColor;
@@ -130,39 +157,56 @@
 }
 
 .premium-faction__brand-text h1,
-.premium-factions-dir__brand h1 {
+.premium-clan__brand-text h1,
+.premium-factions-dir__brand h1,
+.premium-clans-dir__brand h1 {
     margin: 0;
     font-size: 18px;
     font-weight: 900;
     text-transform: uppercase;
     color: var(--pf-text-main);
     letter-spacing: 1px;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__brand h1 span { color: var(--pf-accent); }
+.premium-factions-dir__brand h1 span,
+.premium-clans-dir__brand h1 span {
+    color: var(--pf-accent);
+}
+
+.premium-clans-dir__brand h1 span {
+    color: var(--pf-accent-orange);
+}
 
 .premium-faction__brand-text span,
-.premium-factions-dir__brand p {
+.premium-clan__brand-text span,
+.premium-factions-dir__brand p,
+.premium-clans-dir__brand p {
     font-size: 11px;
     font-weight: 600;
     color: var(--pf-text-muted);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__brand p { margin: 5px 0 0 0; }
+.premium-factions-dir__brand p,
+.premium-clans-dir__brand p {
+    margin: 5px 0 0 0;
+}
 
+/* Nav Menu */
 .premium-faction__nav,
-.premium-factions-dir__nav {
+.premium-clan__nav,
+.premium-factions-dir__nav,
+.premium-clans-dir__nav {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
     padding: 0 15px;
     flex: 1;
 }
 
 .premium-faction__nav-item,
-.premium-factions-dir__nav-item {
+.premium-clan__nav-item,
+.premium-factions-dir__nav-item,
+.premium-clans-dir__nav-item {
     padding: 12px 20px;
     border-radius: var(--pf-radius-md);
     cursor: pointer;
@@ -176,31 +220,50 @@
     border: none;
     background: transparent;
     text-align: left;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-family: inherit;
+    width: 100%;
 }
 
-.premium-factions-dir__nav-item { padding: 14px 20px; }
+.premium-factions-dir__nav-item,
+.premium-clans-dir__nav-item {
+    padding: 14px 20px;
+}
 
 .premium-faction__nav-item:hover,
-.premium-factions-dir__nav-item:hover {
+.premium-clan__nav-item:hover,
+.premium-factions-dir__nav-item:hover,
+.premium-clans-dir__nav-item:hover {
     background: var(--pf-bg-hover);
     color: var(--pf-text-main);
 }
 
-.premium-faction__nav-item.is-active {
+.premium-faction__nav-item.is-active,
+.premium-factions-dir__nav-item.is-active {
     background: rgba(0, 255, 204, 0.1);
     color: var(--pf-accent);
 }
 
+.premium-clan__nav-item.is-active,
+.premium-clans-dir__nav-item.is-active {
+    background: rgba(255, 153, 0, 0.12);
+    color: var(--pf-accent-orange);
+}
+
 .premium-factions-dir__nav-item.is-active {
-    background: rgba(0, 255, 204, 0.1);
-    color: var(--pf-accent);
     border-left: 3px solid var(--pf-accent);
     border-radius: 0 var(--pf-radius-md) var(--pf-radius-md) 0;
 }
 
+.premium-clans-dir__nav-item.is-active {
+    border-left: 3px solid var(--pf-accent-orange);
+    border-radius: 0 var(--pf-radius-md) var(--pf-radius-md) 0;
+}
+
+/* --- CONTENT AREA --- */
 .premium-faction__content,
-.premium-factions-dir__content {
+.premium-clan__content,
+.premium-factions-dir__content,
+.premium-clans-dir__content {
     flex: 1;
     padding: 40px;
     position: relative;
@@ -211,121 +274,154 @@
 }
 
 .premium-faction__tab,
-.premium-factions-dir__grid-wrap {
+.premium-clan__tab,
+.premium-factions-dir__grid-wrap,
+.premium-clans-dir__grid-wrap {
     display: none;
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    animation: pfFadeIn 0.3s ease;
+    animation: pfFadeIn 0.25s ease;
 }
 
 .premium-faction__tab.is-active,
-.premium-factions-dir__grid-wrap.is-active {
+.premium-clan__tab.is-active,
+.premium-factions-dir__grid-wrap.is-active,
+.premium-clans-dir__grid-wrap.is-active {
     display: flex;
 }
 
 @keyframes pfFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.premium-faction__header { margin-bottom: 30px; }
+.premium-faction__header,
+.premium-clan__header,
+.premium-factions-dir__header,
+.premium-clans-dir__header {
+    margin-bottom: 25px;
+}
+
 .premium-faction__header h2,
-.premium-factions-dir__header h2 {
+.premium-clan__header h2,
+.premium-factions-dir__header h2,
+.premium-clans-dir__header h2 {
     margin: 0;
     font-size: 24px;
     font-weight: 900;
     text-transform: uppercase;
     color: var(--pf-text-main);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__header h2 { font-size: 26px; }
+.premium-factions-dir__header h2,
+.premium-clans-dir__header h2 {
+    font-size: 26px;
+}
 
 .premium-faction__header p,
-.premium-factions-dir__header p {
+.premium-clan__header p,
+.premium-factions-dir__header p,
+.premium-clans-dir__header p {
     margin: 5px 0 0 0;
     font-size: 12px;
     font-weight: 500;
     color: var(--pf-text-muted);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__header p { font-size: 13px; }
-
-.premium-faction__stats {
+/* --- STATS GRID --- */
+.premium-faction__stats,
+.premium-clan__stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
-.premium-faction__stat {
+.premium-faction__stat,
+.premium-clan__stat {
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
-    padding: 20px;
+    padding: 18px 20px;
     border-radius: var(--pf-radius-md);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
-.premium-faction__stat-label {
+.premium-faction__stat-label,
+.premium-clan__stat-label {
     font-size: 11px;
     font-weight: 700;
     color: var(--pf-text-muted);
     text-transform: uppercase;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    letter-spacing: 0.5px;
 }
 
-.premium-faction__stat-value {
-    font-size: 22px;
+.premium-faction__stat-value,
+.premium-clan__stat-value {
+    font-size: 20px;
     font-weight: 900;
     color: var(--pf-text-main);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
 .premium-faction__stat-value span { color: var(--pf-accent); }
-.premium-faction__stat-value.is-duty { color: var(--pf-success); }
-.premium-faction__stat-value.is-off { color: var(--pf-text-muted); }
+.premium-clan__stat-value span { color: var(--pf-accent-orange); }
 
-.premium-faction__motd {
+/* MOTD Card */
+.premium-faction__motd,
+.premium-clan__motd {
     background: rgba(0, 255, 204, 0.05);
     border: 1px solid rgba(0, 255, 204, 0.2);
-    padding: 25px;
+    padding: 22px;
     border-radius: var(--pf-radius-md);
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    flex-shrink: 0;
 }
 
-.premium-faction__motd-title {
+.premium-clan__motd {
+    background: rgba(255, 153, 0, 0.05);
+    border: 1px solid rgba(255, 153, 0, 0.25);
+}
+
+.premium-faction__motd-title,
+.premium-clan__motd-title {
     font-size: 12px;
     font-weight: 800;
     color: var(--pf-accent);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 8px;
     text-transform: uppercase;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-faction__motd-text {
-    font-size: 15px;
+.premium-clan__motd-title {
+    color: var(--pf-accent-orange);
+}
+
+.premium-faction__motd-text,
+.premium-clan__motd-text {
+    font-size: 14px;
     font-weight: 500;
-    line-height: 1.6;
+    line-height: 1.55;
     color: var(--pf-text-main);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-faction__extras {
+/* Extras Cards */
+.premium-faction__extras,
+.premium-clan__extras {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     min-height: 0;
+    flex-shrink: 0;
 }
 
-.premium-faction__card {
+.premium-faction__card,
+.premium-clan__card {
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-md);
@@ -333,37 +429,33 @@
     min-height: 0;
 }
 
-.premium-faction__card > span {
+.premium-faction__card > span,
+.premium-clan__card > span {
     display: block;
     font-size: 11px;
     font-weight: 800;
     color: var(--pf-accent);
     text-transform: uppercase;
-    margin-bottom: 8px;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    margin-bottom: 6px;
+}
+
+.premium-clan__card > span {
+    color: var(--pf-accent-orange);
 }
 
 .premium-faction__card p,
-.premium-faction__card small {
+.premium-clan__card p {
     margin: 0;
     font-size: 13px;
     color: var(--pf-text-main);
     line-height: 1.5;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
-}
-
-.premium-faction__card small {
-    display: block;
-    margin-top: 8px;
-    color: var(--pf-text-muted);
-    font-size: 11px;
 }
 
 .premium-faction__report-bar {
     height: 6px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 99px;
-    margin-top: 10px;
+    margin-top: 8px;
     overflow: hidden;
 }
 
@@ -375,6 +467,7 @@
     transition: width 0.3s ease;
 }
 
+/* Commands Container */
 .premium-faction__commands {
     flex: 1;
     min-height: 0;
@@ -394,10 +487,9 @@
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-md);
-    padding: 10px 14px;
+    padding: 9px 12px;
     font-size: 12px;
     color: var(--pf-text-main);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
 .premium-faction__commands code {
@@ -405,32 +497,55 @@
     font-weight: 700;
 }
 
-.premium-faction__roster {
+/* --- ROSTER --- */
+.premium-faction__roster,
+.premium-clan__roster {
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-right: 10px;
+    padding-right: 8px;
+    min-height: 0;
 }
 
 .premium-faction__roster::-webkit-scrollbar,
+.premium-clan__roster::-webkit-scrollbar,
 .premium-factions-dir__grid::-webkit-scrollbar,
-.premium-factions-dir__modal-roster::-webkit-scrollbar {
-    width: 4px;
+.premium-clans-dir__grid::-webkit-scrollbar,
+.premium-factions-dir__modal-roster::-webkit-scrollbar,
+.premium-clans-dir__modal-roster::-webkit-scrollbar {
+    width: 5px;
+}
+
+.premium-faction__roster::-webkit-scrollbar-track,
+.premium-clan__roster::-webkit-scrollbar-track,
+.premium-factions-dir__grid::-webkit-scrollbar-track,
+.premium-clans-dir__grid::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
 }
 
 .premium-faction__roster::-webkit-scrollbar-thumb,
+.premium-clan__roster::-webkit-scrollbar-thumb,
 .premium-factions-dir__grid::-webkit-scrollbar-thumb,
-.premium-factions-dir__modal-roster::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+.premium-clans-dir__grid::-webkit-scrollbar-thumb,
+.premium-factions-dir__modal-roster::-webkit-scrollbar-thumb,
+.premium-clans-dir__modal-roster::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 204, 0.25);
+    border-radius: 3px;
 }
 
-.premium-faction__roster-item {
+.premium-clan__roster::-webkit-scrollbar-thumb,
+.premium-clans-dir__grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 153, 0, 0.3);
+}
+
+.premium-faction__roster-item,
+.premium-clan__roster-item {
     background: var(--pf-bg-panel);
-    border: 1px solid transparent;
-    padding: 15px 20px;
+    border: 1px solid var(--pf-border);
+    padding: 14px 18px;
     border-radius: var(--pf-radius-md);
     display: flex;
     align-items: center;
@@ -439,48 +554,61 @@
     transition: var(--pf-transition);
 }
 
-.premium-faction__roster-item:hover {
+.premium-faction__roster-item:hover,
+.premium-clan__roster-item:hover {
     background: var(--pf-bg-hover);
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 
-.premium-faction__roster-info {
+.premium-faction__roster-info,
+.premium-clan__roster-info {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 14px;
     min-width: 0;
     flex: 1;
 }
 
-.premium-faction__status-dot {
+.premium-faction__status-dot,
+.premium-clan__status-dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.premium-faction__status-dot.is-online {
+.premium-faction__status-dot.is-online,
+.premium-clan__status-dot.is-online {
     background: var(--pf-accent);
     box-shadow: 0 0 8px var(--pf-accent);
 }
 
-.premium-faction__status-dot.is-offline { background: var(--pf-text-muted); }
+.premium-clan__status-dot.is-online {
+    background: var(--pf-accent-orange);
+    box-shadow: 0 0 8px var(--pf-accent-orange);
+}
 
-.premium-faction__member-name {
+.premium-faction__status-dot.is-offline,
+.premium-clan__status-dot.is-offline {
+    background: var(--pf-text-muted);
+}
+
+.premium-faction__member-name,
+.premium-clan__member-name {
     font-size: 14px;
     font-weight: 800;
     color: var(--pf-text-main);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-faction__member-rank {
+.premium-faction__member-rank,
+.premium-clan__member-rank {
     font-size: 12px;
     font-weight: 600;
     color: var(--pf-text-muted);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-faction__member-id {
+.premium-faction__member-id,
+.premium-clan__member-id {
     font-size: 11px;
     font-weight: 700;
     color: var(--pf-accent);
@@ -488,17 +616,16 @@
     padding: 4px 8px;
     border-radius: 4px;
     flex-shrink: 0;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-faction__member-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    justify-content: flex-end;
+.premium-clan__member-id {
+    color: var(--pf-accent-orange);
+    background: rgba(255, 153, 0, 0.12);
 }
 
-.premium-faction__manage-grid {
+/* --- MANAGEMENT GRID --- */
+.premium-faction__manage-grid,
+.premium-clan__manage-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
@@ -509,67 +636,81 @@
     align-content: start;
 }
 
-.premium-faction__panel {
+.premium-faction__panel,
+.premium-clan__panel {
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
-    padding: 25px;
+    padding: 22px;
     border-radius: var(--pf-radius-md);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
-.premium-faction__panel-title {
-    font-size: 14px;
+.premium-faction__panel-title,
+.premium-clan__panel-title {
+    font-size: 13px;
     font-weight: 800;
     color: var(--pf-text-main);
     text-transform: uppercase;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    letter-spacing: 0.5px;
 }
 
-.premium-faction__form-group {
+.premium-faction__form-group,
+.premium-clan__form-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
-.premium-faction__form-label {
+.premium-faction__form-label,
+.premium-clan__form-label {
     font-size: 11px;
     font-weight: 700;
     color: var(--pf-text-muted);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-faction__form-control {
+.premium-faction__form-control,
+.premium-clan__form-control {
     background: var(--pf-bg-input);
     border: 1px solid var(--pf-border);
     color: var(--pf-text-main);
-    padding: 12px 15px;
+    padding: 11px 14px;
     border-radius: var(--pf-radius-md);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-family: inherit;
     font-size: 13px;
     font-weight: 600;
     outline: none;
     transition: var(--pf-transition);
     width: 100%;
+    box-sizing: border-box;
 }
 
-.premium-faction__form-control:focus { border-color: var(--pf-accent); }
+.premium-faction__form-control:focus,
+.premium-clan__form-control:focus {
+    border-color: var(--pf-accent);
+}
 
-.premium-faction__btn-group {
+.premium-clan__form-control:focus {
+    border-color: var(--pf-accent-orange);
+}
+
+.premium-faction__btn-group,
+.premium-clan__btn-group {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     margin-top: 4px;
     flex-wrap: wrap;
 }
 
-.premium-faction__btn {
+.premium-faction__btn,
+.premium-clan__btn {
     flex: 1;
     min-width: 80px;
     padding: 12px;
     border: none;
     border-radius: var(--pf-radius-md);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-family: inherit;
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
@@ -581,33 +722,66 @@
     gap: 8px;
 }
 
-.premium-faction__btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.premium-faction__btn--primary { background: var(--pf-accent); color: #000; }
-.premium-faction__btn--primary:hover:not(:disabled) { box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); transform: translateY(-2px); }
-.premium-faction__btn--secondary { background: var(--pf-bg-input); color: var(--pf-text-main); border: 1px solid var(--pf-border); }
-.premium-faction__btn--danger { background: transparent; color: var(--pf-danger); border: 1px solid var(--pf-danger); }
-.premium-faction__btn--warn { background: rgba(255, 204, 0, 0.12); color: var(--pf-warning); border: 1px solid rgba(255, 204, 0, 0.35); }
-.premium-faction__btn--muted { background: var(--pf-bg-input); color: var(--pf-text-muted); border: 1px solid var(--pf-border); font-size: 10px; padding: 8px; }
-
-.premium-faction__rank-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+.premium-faction__btn:disabled,
+.premium-clan__btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
-.premium-faction__rank-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.premium-faction__btn--primary {
+    background: var(--pf-accent);
+    color: #000;
+}
+.premium-faction__btn--primary:hover:not(:disabled) {
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+    transform: translateY(-2px);
 }
 
-.premium-faction__rank-field span {
-    font-size: 10px;
-    color: var(--pf-text-muted);
-    font-weight: 700;
+.premium-clan__btn--primary {
+    background: var(--pf-accent-orange);
+    color: #000;
+}
+.premium-clan__btn--primary:hover:not(:disabled) {
+    box-shadow: 0 0 15px rgba(255, 153, 0, 0.45);
+    transform: translateY(-2px);
 }
 
-.premium-faction__close-hint {
+.premium-faction__btn--secondary,
+.premium-clan__btn--secondary {
+    background: var(--pf-bg-input);
+    color: var(--pf-text-main);
+    border: 1px solid var(--pf-border);
+}
+.premium-faction__btn--secondary:hover:not(:disabled),
+.premium-clan__btn--secondary:hover:not(:disabled) {
+    background: var(--pf-bg-hover);
+    transform: translateY(-2px);
+}
+
+.premium-faction__btn--danger,
+.premium-clan__btn--danger {
+    background: transparent;
+    color: var(--pf-danger);
+    border: 1px solid var(--pf-danger);
+}
+.premium-faction__btn--danger:hover:not(:disabled),
+.premium-clan__btn--danger:hover:not(:disabled) {
+    background: rgba(255, 51, 102, 0.15);
+    transform: translateY(-2px);
+}
+
+.premium-faction__btn--warn,
+.premium-clan__btn--warn {
+    background: rgba(255, 204, 0, 0.12);
+    color: var(--pf-warning);
+    border: 1px solid rgba(255, 204, 0, 0.35);
+}
+
+/* Close Hint */
+.premium-faction__close-hint,
+.premium-clan__close-hint {
     position: absolute;
     bottom: -32px;
     left: 0;
@@ -615,24 +789,26 @@
     text-align: center;
     font-size: 11px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.45);
     letter-spacing: 1px;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
     pointer-events: none;
 }
 
+/* Empty / Fallback Notices */
 .premium-faction__empty,
-.premium-factions-dir__empty {
+.premium-clan__empty,
+.premium-factions-dir__empty,
+.premium-clans-dir__empty {
     color: var(--pf-text-muted);
     font-size: 13px;
     font-weight: 600;
-    padding: 20px;
+    padding: 24px;
     text-align: center;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-/* Directory grid */
-.premium-factions-dir__grid {
+/* --- DIRECTORY GRID --- */
+.premium-factions-dir__grid,
+.premium-clans-dir__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
@@ -643,14 +819,15 @@
     min-height: 0;
 }
 
-.premium-factions-dir__card {
+.premium-factions-dir__card,
+.premium-clans-dir__card {
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-md);
-    padding: 25px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 14px;
     transition: var(--pf-transition);
     cursor: pointer;
     position: relative;
@@ -660,34 +837,49 @@
     color: inherit;
 }
 
-.premium-factions-dir__card:hover {
-    transform: translateY(-5px);
+.premium-factions-dir__card:hover,
+.premium-clans-dir__card:hover {
+    transform: translateY(-4px);
     background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(0, 255, 204, 0.3);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    border-color: rgba(0, 255, 204, 0.35);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35);
 }
 
-.premium-factions-dir__card::before {
+.premium-clans-dir__card:hover {
+    border-color: rgba(255, 153, 0, 0.4);
+}
+
+.premium-factions-dir__card::before,
+.premium-clans-dir__card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     width: 4px;
     height: 100%;
-    background: var(--pf-card-accent, var(--pf-accent));
+    background: var(--pf-accent);
     opacity: 0;
     transition: var(--pf-transition);
 }
 
-.premium-factions-dir__card:hover::before { opacity: 1; }
+.premium-clans-dir__card::before {
+    background: var(--pf-accent-orange);
+}
 
-.premium-factions-dir__card-head {
+.premium-factions-dir__card:hover::before,
+.premium-clans-dir__card:hover::before {
+    opacity: 1;
+}
+
+.premium-factions-dir__card-head,
+.premium-clans-dir__card-head {
     display: flex;
     align-items: center;
     gap: 15px;
 }
 
-.premium-factions-dir__card-icon {
+.premium-factions-dir__card-icon,
+.premium-clans-dir__card-icon {
     width: 45px;
     height: 45px;
     background: var(--pf-bg-input);
@@ -697,6 +889,7 @@
     justify-content: center;
     color: var(--pf-text-muted);
     transition: var(--pf-transition);
+    flex-shrink: 0;
 }
 
 .premium-factions-dir__card:hover .premium-factions-dir__card-icon {
@@ -704,7 +897,13 @@
     background: rgba(0, 255, 204, 0.1);
 }
 
-.premium-factions-dir__card-icon svg {
+.premium-clans-dir__card:hover .premium-clans-dir__card-icon {
+    color: var(--pf-accent-orange);
+    background: rgba(255, 153, 0, 0.12);
+}
+
+.premium-factions-dir__card-icon svg,
+.premium-clans-dir__card-icon svg {
     width: 22px;
     height: 22px;
     stroke: currentColor;
@@ -712,7 +911,8 @@
     fill: none;
 }
 
-.premium-factions-dir__card-name {
+.premium-factions-dir__card-name,
+.premium-clans-dir__card-name {
     font-size: 16px;
     font-weight: 900;
     color: var(--pf-text-main);
@@ -720,30 +920,45 @@
     letter-spacing: 0.5px;
 }
 
-.premium-factions-dir__card-type {
+.premium-factions-dir__card-type,
+.premium-clans-dir__card-type {
     font-size: 11px;
     font-weight: 700;
     color: var(--pf-text-muted);
 }
 
-.premium-factions-dir__card-stats {
+.premium-factions-dir__card-stats,
+.premium-clans-dir__card-stats {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
 }
 
-.premium-factions-dir__stat-row {
+.premium-factions-dir__stat-row,
+.premium-clans-dir__stat-row {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
     font-weight: 600;
 }
 
-.premium-factions-dir__stat-row span { color: var(--pf-text-muted); }
-.premium-factions-dir__stat-row b { color: var(--pf-text-main); }
-.premium-factions-dir__stat-row b.highlight { color: var(--pf-accent); }
+.premium-factions-dir__stat-row span,
+.premium-clans-dir__stat-row span {
+    color: var(--pf-text-muted);
+}
+.premium-factions-dir__stat-row b,
+.premium-clans-dir__stat-row b {
+    color: var(--pf-text-main);
+}
+.premium-factions-dir__stat-row b.highlight {
+    color: var(--pf-accent);
+}
+.premium-clans-dir__stat-row b.highlight {
+    color: var(--pf-accent-orange);
+}
 
-.premium-factions-dir__recruit {
+.premium-factions-dir__recruit,
+.premium-clans-dir__recruit {
     margin-top: 4px;
     display: inline-flex;
     align-items: center;
@@ -752,53 +967,68 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 6px 12px;
+    padding: 5px 12px;
     border-radius: 20px;
     background: var(--pf-bg-input);
     width: fit-content;
 }
 
-.premium-factions-dir__recruit.is-open { color: var(--pf-success); }
-.premium-factions-dir__recruit.is-closed { color: var(--pf-danger); }
+.premium-factions-dir__recruit.is-open,
+.premium-clans-dir__recruit.is-open {
+    color: var(--pf-success);
+}
+.premium-factions-dir__recruit.is-closed,
+.premium-clans-dir__recruit.is-closed {
+    color: var(--pf-danger);
+}
 
-.premium-factions-dir__recruit .dot {
+.premium-factions-dir__recruit .dot,
+.premium-clans-dir__recruit .dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
 }
 
-.premium-factions-dir__recruit.is-open .dot {
+.premium-factions-dir__recruit.is-open .dot,
+.premium-clans-dir__recruit.is-open .dot {
     background: var(--pf-success);
     box-shadow: 0 0 8px var(--pf-success);
 }
 
-.premium-factions-dir__recruit.is-closed .dot { background: var(--pf-danger); }
+.premium-factions-dir__recruit.is-closed .dot,
+.premium-clans-dir__recruit.is-closed .dot {
+    background: var(--pf-danger);
+}
 
-/* Slide modal */
-.premium-factions-dir__modal {
+/* --- SLIDE-OVER DETAIL MODAL (No blur to avoid black box) --- */
+.premium-factions-dir__modal,
+.premium-clans-dir__modal {
     position: absolute;
     top: 0;
     right: -480px;
     width: min(450px, 92%);
     height: 100%;
-    background: rgba(15, 15, 23, 0.95);
-    backdrop-filter: blur(15px);
+    background: rgba(14, 14, 22, 0.98);
     border-left: 1px solid var(--pf-border);
-    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
-    transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.6);
+    transition: right 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     flex-direction: column;
     z-index: 50;
-    padding: 40px;
-    overflow: hidden;
+    padding: 35px;
+    overflow-y: auto;
 }
 
-.premium-factions-dir__modal.is-open { right: 0; }
+.premium-factions-dir__modal.is-open,
+.premium-clans-dir__modal.is-open {
+    right: 0;
+}
 
-.premium-factions-dir__modal-close {
+.premium-factions-dir__modal-close,
+.premium-clans-dir__modal-close {
     position: absolute;
-    top: 30px;
-    right: 30px;
+    top: 25px;
+    right: 25px;
     width: 32px;
     height: 32px;
     background: var(--pf-bg-input);
@@ -812,13 +1042,15 @@
     border: none;
 }
 
-.premium-factions-dir__modal-close:hover {
+.premium-factions-dir__modal-close:hover,
+.premium-clans-dir__modal-close:hover {
     background: var(--pf-danger);
     color: white;
     transform: rotate(90deg);
 }
 
-.premium-factions-dir__modal-banner {
+.premium-factions-dir__modal-banner,
+.premium-clans-dir__modal-banner {
     width: 100%;
     height: 100px;
     background: rgba(0, 255, 204, 0.1);
@@ -831,110 +1063,137 @@
     color: var(--pf-accent);
 }
 
-.premium-factions-dir__modal-title {
+.premium-clans-dir__modal-banner {
+    background: rgba(255, 153, 0, 0.1);
+    border: 1px solid rgba(255, 153, 0, 0.25);
+    color: var(--pf-accent-orange);
+}
+
+.premium-factions-dir__modal-title,
+.premium-clans-dir__modal-title {
     font-size: 22px;
     font-weight: 900;
     color: var(--pf-text-main);
     margin-bottom: 5px;
     text-transform: uppercase;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__modal-desc {
+.premium-factions-dir__modal-desc,
+.premium-clans-dir__modal-desc {
     font-size: 13px;
     color: var(--pf-text-muted);
     line-height: 1.6;
     margin-bottom: 20px;
     font-weight: 500;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__req-box {
+.premium-factions-dir__req-box,
+.premium-clans-dir__req-box {
     background: var(--pf-bg-panel);
     border: 1px solid var(--pf-border);
     border-radius: var(--pf-radius-md);
-    padding: 20px;
-    margin-bottom: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
 }
 
-.premium-factions-dir__req-title {
+.premium-factions-dir__req-title,
+.premium-clans-dir__req-title {
     font-size: 12px;
     font-weight: 800;
     color: var(--pf-accent);
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 10px;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    margin-bottom: 8px;
 }
 
-.premium-factions-dir__req-list {
+.premium-clans-dir__req-title {
+    color: var(--pf-accent-orange);
+}
+
+.premium-factions-dir__req-list,
+.premium-clans-dir__req-list {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
 }
 
-.premium-factions-dir__req-list li {
+.premium-factions-dir__req-list li,
+.premium-clans-dir__req-list li {
     font-size: 12px;
     color: var(--pf-text-main);
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__req-list li::before {
+.premium-factions-dir__req-list li::before,
+.premium-clans-dir__req-list li::before {
     content: '•';
     color: var(--pf-accent);
     font-size: 16px;
 }
 
-.premium-factions-dir__modal-motd {
+.premium-clans-dir__req-list li::before {
+    color: var(--pf-accent-orange);
+}
+
+.premium-factions-dir__modal-motd,
+.premium-clans-dir__modal-motd {
     background: rgba(0, 255, 204, 0.05);
     border: 1px solid rgba(0, 255, 204, 0.2);
     border-radius: var(--pf-radius-md);
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
     font-size: 13px;
     line-height: 1.5;
     color: var(--pf-text-main);
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__modal-roster {
+.premium-clans-dir__modal-motd {
+    background: rgba(255, 153, 0, 0.05);
+    border: 1px solid rgba(255, 153, 0, 0.2);
+}
+
+.premium-factions-dir__modal-roster,
+.premium-clans-dir__modal-roster {
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     min-height: 0;
 }
 
-.premium-factions-dir__modal-member {
+.premium-factions-dir__modal-member,
+.premium-clans-dir__modal-member {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
+    padding: 8px 12px;
     background: var(--pf-bg-panel);
     border-radius: var(--pf-radius-md);
     font-size: 12px;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__modal-member strong { color: var(--pf-text-main); }
-.premium-factions-dir__modal-member span { color: var(--pf-text-muted); }
+.premium-factions-dir__modal-member strong,
+.premium-clans-dir__modal-member strong { color: var(--pf-text-main); }
+.premium-factions-dir__modal-member span,
+.premium-clans-dir__modal-member span { color: var(--pf-text-muted); }
 
-.premium-factions-dir__toast {
+/* Toast */
+.premium-factions-dir__toast,
+.premium-clans-dir__toast {
     position: absolute;
-    top: 30px;
-    right: 30px;
+    top: 25px;
+    right: 25px;
     background: var(--pf-accent);
     color: #000;
-    padding: 15px 25px;
+    padding: 14px 22px;
     border-radius: var(--pf-radius-md);
     font-size: 13px;
     font-weight: 800;
@@ -943,31 +1202,80 @@
     transform: translateX(150%);
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 100;
-    font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.premium-factions-dir__toast.is-show { transform: translateX(0); }
+.premium-clans-dir__toast {
+    background: var(--pf-accent-orange);
+    box-shadow: 0 10px 25px rgba(255, 153, 0, 0.45);
+}
 
+.premium-factions-dir__toast.is-show,
+.premium-clans-dir__toast.is-show {
+    transform: translateX(0);
+}
+
+/* Specific Clan Identity Styles */
+.clan-preview-box {
+    background: var(--pf-bg-input);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    padding: 12px 16px;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--pf-text-main);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.clan-rank-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.clan-rank-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.clan-rank-item span {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--pf-text-muted);
+}
+
+/* Responsive */
 @media (max-width: 900px) {
     .premium-faction__wrapper,
-    .premium-factions-dir__wrapper {
+    .premium-clan__wrapper,
+    .premium-factions-dir__wrapper,
+    .premium-clans-dir__wrapper {
         flex-direction: column;
         height: min(90vh, 720px);
     }
     .premium-faction__sidebar,
-    .premium-factions-dir__sidebar {
+    .premium-clan__sidebar,
+    .premium-factions-dir__sidebar,
+    .premium-clans-dir__sidebar {
         width: 100%;
         padding: 16px 0;
         border-right: none;
         border-bottom: 1px solid var(--pf-border);
     }
     .premium-faction__nav,
-    .premium-factions-dir__nav {
+    .premium-clan__nav,
+    .premium-factions-dir__nav,
+    .premium-clans-dir__nav {
         flex-direction: row;
         overflow-x: auto;
         flex: unset;
     }
-    .premium-faction__stats { grid-template-columns: 1fr; }
-    .premium-faction__extras { grid-template-columns: 1fr; }
-    .premium-faction__manage-grid { grid-template-columns: 1fr; }
+    .premium-faction__stats,
+    .premium-clan__stats { grid-template-columns: 1fr; }
+    .premium-faction__extras,
+    .premium-clan__extras { grid-template-columns: 1fr; }
+    .premium-faction__manage-grid,
+    .premium-clan__manage-grid { grid-template-columns: 1fr; }
 }
