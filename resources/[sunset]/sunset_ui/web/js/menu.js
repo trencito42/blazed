@@ -7,7 +7,6 @@ const Menu = {
         this._ready = true;
 
         $('#menu-close-btn')?.addEventListener('click', () => this.close());
-        $('#menu-exit-btn')?.addEventListener('click', () => this.close());
 
         $$('.menu-tab').forEach((tab) => {
             tab.addEventListener('click', () => this.setTab(tab.dataset.tab));
@@ -511,19 +510,25 @@ const Menu = {
         const hunger = Math.max(0, Math.min(100, Math.round(data.hunger ?? 100)));
         const thirst = Math.max(0, Math.min(100, Math.round(data.thirst ?? 100)));
         const stress = Math.max(0, Math.min(100, Math.round(data.stress ?? 0)));
-        const fuel = data.fuel != null ? Math.max(0, Math.min(100, Math.round(data.fuel))) : null;
-        $('#menu-health-pct').textContent = `${health}%`;
-        $('#menu-armor-pct').textContent = `${armor}%`;
-        $('#menu-hunger-pct').textContent = `${hunger}%`;
-        $('#menu-thirst-pct').textContent = `${thirst}%`;
-        $('#menu-stress-pct').textContent = `${stress}%`;
-        $('#menu-fuel-pct').textContent = fuel != null ? `${fuel}%` : '—';
-        $('#menu-health-bar').style.width = `${health}%`;
-        $('#menu-armor-bar').style.width = `${armor}%`;
-        $('#menu-hunger-bar').style.width = `${hunger}%`;
-        $('#menu-thirst-bar').style.width = `${thirst}%`;
-        $('#menu-stress-bar').style.width = `${stress}%`;
-        $('#menu-fuel-bar').style.width = `${fuel ?? 0}%`;
+        const setBar = (id, pct) => {
+            const el = document.getElementById(id);
+            if (el) el.style.width = `${pct}%`;
+        };
+        const setText = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+
+        setText('menu-health-pct', `${health}%`);
+        setText('menu-armor-pct', `${armor}%`);
+        setText('menu-hunger-pct', `${hunger}%`);
+        setText('menu-thirst-pct', `${thirst}%`);
+        setText('menu-stress-pct', `${stress}%`);
+        setBar('menu-health-bar', health);
+        setBar('menu-armor-bar', armor);
+        setBar('menu-hunger-bar', hunger);
+        setBar('menu-thirst-bar', thirst);
+        setBar('menu-stress-bar', stress);
 
         $('#menu-property-count').textContent = String(data.propertyCount ?? 0);
         $('#menu-home-label').textContent = data.homeLabel || 'None';
