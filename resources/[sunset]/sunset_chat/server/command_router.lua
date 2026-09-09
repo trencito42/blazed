@@ -85,6 +85,7 @@ local RESOURCE_COMMAND_EXPORTS = {
     'sunset_robbery',
     'sunset_properties',
     'sunset_licenses',
+    'sunset_jobs',
 }
 
 local function tryRunResourceCommand(src, cmd, args)

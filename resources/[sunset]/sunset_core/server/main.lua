@@ -29,6 +29,9 @@ exports('RegisterCallback', RegisterCallback)
 
 RegisterNetEvent('sunset:server:triggerCallback', function(name, requestId, ...)
     local source = source
+    if name == 'sunset:hireJob' then
+        print(('[CB-RECV] sunset:hireJob from src=%s'):format(tostring(source)))
+    end
     if type(name) ~= 'string' or #name > 80 or type(requestId) ~= 'number' then return end
     local now = GetGameTimer()
     local rate = CallbackRate[source]
