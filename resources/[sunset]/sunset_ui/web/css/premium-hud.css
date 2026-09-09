@@ -100,6 +100,9 @@
     flex-direction: column;
     align-items: flex-end;
     padding-right: 0;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none;
 }
 
 .time-display {
@@ -391,8 +394,8 @@
     width: 2px;
     height: 24px;
     border-radius: 1px;
-    background: linear-gradient(180deg, rgba(0, 255, 204, 0.15), var(--hud-accent) 45%, rgba(0, 255, 204, 0.15));
-    box-shadow: 0 0 8px rgba(0, 255, 204, 0.35);
+    background: rgba(0, 255, 204, 0.55);
+    box-shadow: none;
 }
 
 .loc-street {
@@ -441,14 +444,27 @@
     opacity: 0;
 }
 
-.hud-boot.premium-hud-tr,
-.hud-boot.premium-hud-bl {
-    animation: premiumHudBoot 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.hud-boot.premium-hud-tr {
+    animation: premiumHudBootTr 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-@keyframes premiumHudBoot {
+.hud-boot.premium-hud-bl {
+    animation: premiumHudBootBl 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes premiumHudBootTr {
     from { opacity: 0; transform: skewX(-5deg) translateY(10px); }
     to { opacity: 1; transform: skewX(-5deg) translateY(0); }
+}
+
+/* Location panel: no skew — skew + glow caused CEF artifacts near top-right HUD */
+@keyframes premiumHudBootBl {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hud-bl.premium-hud-bl {
+    transform: none;
 }
 
 @media (max-width: 1280px) {
