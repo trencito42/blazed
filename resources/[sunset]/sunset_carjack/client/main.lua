@@ -141,16 +141,27 @@ CreateThread(function()
 end)
 
 -- ── G key → deschide meniu ───────────────────────────────────
+-- Cand suntem langa vehicul sau NPC, blocam G-ul de la sunset_interactions
+-- si il gestionam noi cu IsDisabledControlJustPressed
 CreateThread(function()
     while true do
-        Wait(0)
-        if IsControlJustPressed(0, 51) and not inCooldown then -- G = INPUT_CONTEXT
-            if nearNpcIdx and menuOpen ~= 'npc' then
-                openNpcMenu(nearNpcIdx)
-            elseif nearVehicle and DoesEntityExist(nearVehicle) and menuOpen ~= 'vehicle' then
-                openVehicleMenu(nearVehicle)
+        local active = nearVehicle ~= nil or nearNpcIdx ~= nil
+
+        if active then
+            -- Blocam G ca sa nu ajunga la sunset_interactions (care ar da "no player nearby")
+            DisableControlAction(0, 51, true)
+
+            if IsDisabledControlJustPressed(0, 51) and not inCooldown then
+                if nearNpcIdx and menuOpen ~= 'npc' then
+                    openNpcMenu(nearNpcIdx)
+                elseif nearVehicle and DoesEntityExist(nearVehicle) and menuOpen ~= 'vehicle' then
+                    openVehicleMenu(nearVehicle)
+                end
             end
-            -- daca nu suntem langa nimic, G merge normal la sunset_interactions
+            Wait(0)
+        else
+            -- Nimic in apropiere — G merge normal la sunset_interactions
+            Wait(200)
         end
     end
 end)
