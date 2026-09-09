@@ -340,6 +340,31 @@ RegisterCommand('speed', function(_, args)
     TriggerServerEvent('sunset:admin:requestSpeed', args[1])
 end, false)
 
+RegisterCommand('tpwp', function()
+    if adminLevel < 1 then
+        exports.sunset_ui:Notify('No permission', 'error')
+        return
+    end
+    local blip = GetFirstBlipInfoId(8) -- 8 = waypoint blip
+    if not DoesBlipExist(blip) then
+        exports.sunset_ui:Notify('No waypoint set — right-click map → Move first', 'error')
+        return
+    end
+    local coord = GetBlipInfoIdCoord(blip)
+    CreateThread(function()
+        RequestCollisionAtCoord(coord.x, coord.y, coord.z)
+        local found, groundZ = false, coord.z
+        for _ = 1, 100 do
+            found, groundZ = GetGroundZFor_3dCoord(coord.x, coord.y, coord.z + 100.0, false)
+            if found then break end
+            Wait(100)
+        end
+        local z = found and (groundZ + 0.5) or (coord.z + 5.0)
+        SetEntityCoords(PlayerPedId(), coord.x, coord.y, z, false, false, false, false)
+        exports.sunset_ui:Notify('Teleported to waypoint', 'success')
+    end)
+end, false)
+
 CreateThread(function()
     Wait(4000)
     TriggerEvent('chat:addSuggestion', '/coords', 'Show your position for configs (admin)', {
@@ -362,4 +387,5 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/speed', 'Vehicle speed multiplier while driving (admin)', {
         { name = 'multiplier', help = 'e.g. 2.5 — omit or use off/1 to reset' },
     })
+    TriggerEvent('chat:addSuggestion', '/tpwp', 'Teleport to your map waypoint (admin)')
 end)
