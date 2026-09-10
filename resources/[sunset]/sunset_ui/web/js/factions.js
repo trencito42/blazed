@@ -535,10 +535,20 @@ const FactionPanels = {
         const action = form.dataset.factionAction;
         const data = new FormData(form);
         const payload = { action };
-        if (action === 'invite') payload.targetId = Number(data.get('targetId'));
+        if (action === 'invite') {
+            const targetId = Math.floor(Number(data.get('targetId')));
+            if (!targetId || targetId < 1) {
+                return notify('Introdu un Server ID valid din F10.', 'error');
+            }
+            payload.targetId = targetId;
+        }
         if (action === 'motd') payload.message = String(data.get('message') || '').trim();
         if (action === 'warn') {
-            payload.targetId = Number(data.get('targetId'));
+            const targetId = Math.floor(Number(data.get('targetId')));
+            if (!targetId || targetId < 1) {
+                return notify('Introdu un Server ID valid din F10.', 'error');
+            }
+            payload.targetId = targetId;
             payload.reason = String(data.get('reason') || 'No reason given').trim();
         }
         post('factionManage', payload);

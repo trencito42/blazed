@@ -118,14 +118,17 @@ exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, ta
     local char = getChar(source)
     if not char then return nil, 'Cannot recruit: your character is not loaded. Reconnect and select it again.' end
     local myFaction = getFactionOf(char)
-    if not myFaction then return nil, 'No faction' end
-    if not FactionCore.isFactionLeader(char.id, myFaction) then
-        return nil, 'Only the faction leader appointed by an administrator can invite applicants.'
+    if not myFaction then return nil, 'You are not in a faction.' end
+    if not memberManagePerm(source, 'invite') then
+        return nil, FactionCore.manageAccessError(source, 'invite', 'invite players')
     end
 
     targetId = tonumber(targetId)
-    if not targetId or not GetPlayerName(targetId) then
-        return nil, ('Player ID %s is not online. Use F10 to check current IDs.'):format(tostring(targetId or '?'))
+    if not targetId or targetId < 1 then
+        return nil, 'Enter a valid server ID from F10 (scoreboard).'
+    end
+    if not GetPlayerName(targetId) then
+        return nil, ('Player #%d is not online. Use F10 to check current server IDs.'):format(targetId)
     end
     if targetId == source then return nil, 'You cannot invite yourself.' end
     local target = getChar(targetId)
