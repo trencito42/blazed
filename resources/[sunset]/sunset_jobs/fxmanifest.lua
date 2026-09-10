@@ -47,3 +47,7 @@ server_exports {
     'AddJobXP',
     'GetJobLevel',
 }
+
+client_exports {
+    'IsFishermanShiftActive',
+}

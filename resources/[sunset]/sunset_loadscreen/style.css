@@ -30,7 +30,7 @@ html, body {
     position: fixed;
     inset: 0;
     opacity: 1;
-    transition: opacity 0.8s ease;
+    transition: opacity 0.42s ease;
 }
 
 .loadscreen.fade-out { opacity: 0; }

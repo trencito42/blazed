@@ -25,10 +25,29 @@ local function contextJustPressed()
     return IsControlJustPressed(0, 38) or IsDisabledControlJustPressed(0, 38)
 end
 
+local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
+local BAIT_SHOP_RADIUS = 3.5
+
 local function isShopMenuOpen()
     if GetResourceState('sunset_fishingshop') ~= 'started' then return false end
     local ok, result = pcall(function() return exports.sunset_fishingshop:IsMenuOpen() end)
     return ok and result == true
+end
+
+local function nearBaitShop()
+    return #(GetEntityCoords(PlayerPedId()) - BAIT_SHOP_COORDS) < BAIT_SHOP_RADIUS
+end
+
+local function canCastLine()
+    if IsNuiFocused() or IsPauseMenuActive() then return false end
+    if isShopMenuOpen() then return false end
+    if (GetGameTimer() - lastInventoryClose) <= 500 then return false end
+    if GetResourceState('sunset_fishingshop') == 'started' then
+        local ok, nearNpc = pcall(function() return exports.sunset_fishingshop:IsNearBillyRay() end)
+        if ok and nearNpc then return false end
+    end
+    if nearBaitShop() then return false end
+    return true
 end
 
 -- Block E for 500ms after inventory closes so drop-pickup interaction
@@ -294,10 +313,7 @@ CreateThread(function()
                 JC.hideObjective()
                 local atSpot = atFishingSpot()
                 if atSpot then
-                    EnableControlAction(0, 38, true)
-                    if not isShopMenuOpen()
-                       and (GetGameTimer() - lastInventoryClose) > 500
-                       and contextJustPressed() then
+                    if canCastLine() and contextJustPressed() then
                         CreateThread(attemptFish)
                     end
                     Wait(0)
@@ -332,11 +348,19 @@ Sunset.Jobs.EnsureFishermanShift = function()
     applyShiftBlips()
 end
 
+exports('IsFishermanShiftActive', function()
+    return isFishermanShift()
+end)
+
 -- Event triggerabil din alte resurse (ex. sunset_fishingshop NPC)
 AddEventHandler('sunset:client:startFishermanShift', function()
     local jobId = JC.getCharacterJob()
     if jobId ~= 'fisherman' then
         exports.sunset_ui:Notify('Trebuie sa fii angajat Pescar. Vorbeste cu Billy Ray.', 'error', 5000)
+        return
+    end
+    if isFishermanShift() then
+        exports.sunset_ui:Notify('Ai deja o tură activă. Apasă E la pontoon sau /fish.', 'info', 5000)
         return
     end
     CreateThread(startFisherman)

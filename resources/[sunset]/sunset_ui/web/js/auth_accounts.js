@@ -66,8 +66,9 @@ const AuthAccounts = {
             const pick = document.createElement('button');
             pick.type = 'button';
             pick.className = 'auth-id-card__main auth-account-card__pick';
-            const avatar = typeof acc.avatar === 'string' && acc.avatar.startsWith('data:image/')
-                ? `<img src="${this.escape(acc.avatar)}" alt="">`
+            const hasAvatar = typeof acc.avatar === 'string' && acc.avatar.startsWith('data:image/');
+            const avatar = hasAvatar
+                ? `<span class="auth-id-avatar__initials">${this.escape(this.initials(acc.characterName || username))}</span>`
                 : `<span>${this.escape(this.initials(acc.characterName || username))}</span>`;
             const level = Number(acc.level) >= 1 ? Math.floor(Number(acc.level)) : '—';
             const availableMoney = Number(acc.cash) + Number(acc.bank);
@@ -95,6 +96,21 @@ const AuthAccounts = {
 
             card.append(pick, remove);
             list.appendChild(card);
+
+            if (hasAvatar) {
+                const avatarWrap = pick.querySelector('.auth-id-avatar');
+                const avatarSrc = acc.avatar;
+                requestAnimationFrame(() => {
+                    const img = document.createElement('img');
+                    img.decoding = 'async';
+                    img.alt = '';
+                    img.onload = () => {
+                        avatarWrap?.querySelector('.auth-id-avatar__initials')?.remove();
+                        avatarWrap?.appendChild(img);
+                    };
+                    img.src = avatarSrc;
+                });
+            }
         });
 
         this.setMode();

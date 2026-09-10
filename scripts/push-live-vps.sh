@@ -1,7 +1,12 @@
 #!/bin/sh
 set -e
-SERVICE="/data/coolify/services/b0n1oc2fcrzbgdco838ezm1i"
-LIVE="/var/lib/docker/volumes/b0n1oc2fcrzbgdco838ezm1i_fivem_config/_data/resources/[sunset]"
+SERVICE="/opt/blazed"
+LIVE="$(docker volume ls -q | grep fivem_config | head -1)"
+if [ -n "$LIVE" ]; then
+  LIVE="/var/lib/docker/volumes/${LIVE}/_data/resources/[sunset]"
+else
+  LIVE="$SERVICE/resources/[sunset]"
+fi
 ZIP="/tmp/blazed-main.zip"
 EXTRACT="/tmp/blazed-extract"
 rm -rf "$EXTRACT" "$ZIP"

@@ -29,3 +29,10 @@ client_scripts {
 exports {
     'GetNextPayday',
 }
+
+server_exports {
+    'SetWorldTime',
+    'ClearWorldTime',
+    'SetWorldWeather',
+    'ClearWorldWeather',
+}

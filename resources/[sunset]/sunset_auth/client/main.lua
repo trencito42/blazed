@@ -100,7 +100,7 @@ end
 RegisterNetEvent('sunset:client:sessionReady', function(data)
     sessionLicense = data and data.license
     if authenticated then return end
-    Wait(300)
+    exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
     openAuth()
 end)
 

@@ -1,5 +1,25 @@
 local lastPaydayHour = -1
 local PlayedMinutes = {}
+local WorldTime = { hour = nil, minute = nil, frozen = false }
+local WorldWeather = nil
+
+local WEATHER_TYPES = {
+    CLEAR = true, EXTRASUNNY = true, CLOUDS = true, OVERCAST = true, RAIN = true,
+    THUNDER = true, CLEARING = true, NEUTRAL = true, SMOG = true, FOGGY = true,
+    XMAS = true, SNOWLIGHT = true, BLIZZARD = true,
+}
+
+local function worldClock()
+    if WorldTime.hour ~= nil and WorldTime.minute ~= nil then
+        return WorldTime.hour, WorldTime.minute
+    end
+    return tonumber(os.date('%H')), tonumber(os.date('%M'))
+end
+
+local function broadcastWeather()
+    if not WorldWeather then return end
+    TriggerClientEvent('sunset:client:serverWeather', -1, { weather = WorldWeather })
+end
 
 CreateThread(function()
     while true do
@@ -89,21 +109,63 @@ local function processPayday(source)
 end
 
 local function broadcastTime()
-    local hour = tonumber(os.date('%H'))
-    local minute = tonumber(os.date('%M'))
+    local hour, minute = worldClock()
     local nextH = (hour + 1) % 24
     TriggerClientEvent('sunset:client:serverTime', -1, {
-        time = os.date('%H:%M'),
+        time = ('%02d:%02d'):format(hour, minute),
         hour = hour,
         minute = minute,
         nextPayday = ('%02d:00'):format(nextH),
     })
+    broadcastWeather()
 end
+
+exports('SetWorldTime', function(hour, minute, frozen)
+    hour = math.floor(tonumber(hour) or 0) % 24
+    minute = math.floor(tonumber(minute) or 0) % 60
+    WorldTime.hour = hour
+    WorldTime.minute = minute
+    WorldTime.frozen = frozen ~= false
+    broadcastTime()
+    return true
+end)
+
+exports('ClearWorldTime', function()
+    WorldTime.hour = nil
+    WorldTime.minute = nil
+    WorldTime.frozen = false
+    broadcastTime()
+    return true
+end)
+
+exports('SetWorldWeather', function(weather)
+    weather = string.upper(tostring(weather or ''))
+    if not WEATHER_TYPES[weather] then return false, 'Invalid weather type' end
+    WorldWeather = weather
+    broadcastWeather()
+    return true
+end)
+
+exports('ClearWorldWeather', function()
+    WorldWeather = nil
+    TriggerClientEvent('sunset:client:serverWeather', -1, { weather = 'CLEAR', reset = true })
+    return true
+end)
 
 CreateThread(function()
     while true do
-        local hour = tonumber(os.date('%H'))
-        if hour ~= lastPaydayHour then
+        local hour, minute = worldClock()
+        if not WorldTime.frozen and WorldTime.hour ~= nil then
+            minute = minute + 1
+            if minute >= 60 then
+                minute = 0
+                hour = (hour + 1) % 24
+            end
+            WorldTime.hour = hour
+            WorldTime.minute = minute
+        end
+
+        if hour ~= lastPaydayHour and WorldTime.hour == nil then
             if lastPaydayHour >= 0 then
                 for _, playerId in ipairs(GetPlayers()) do
                     processPayday(tonumber(playerId))

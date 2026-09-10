@@ -15,9 +15,10 @@ CreateThread(function()
     end
     if GetResourceState('sunset_ui') == 'started' then
         exports.sunset_ui:Show('handoff', {})
-        Wait(150)
+        exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
+        Wait(80)
         SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
-        Wait(650)
+        Wait(380)
     end
 
     ShutdownLoadingScreenNui()

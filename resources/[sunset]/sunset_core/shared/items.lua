@@ -50,18 +50,7 @@ Sunset.Items = {
 }
 
 Sunset.Shops = {
-    fishing_supply = {
-        label = 'Fishing Supply',
-        coords = vector3(-1602.11, 5203.87, 4.31),
-        markerSize = 1.2,
-        items = {
-            -- Bait (disponibil tuturor pescarilor)
-            { item = 'bait_worm',    price = 15,  desc = 'Worm — sansa medie prindere' },
-            { item = 'bait_lure',    price = 40,  desc = 'Lure — sansa buna prindere' },
-            { item = 'bait_premium', price = 90,  desc = 'Premium — sansa maxima prindere' },
-            -- Unditele NU se cumpara din shop; se upgradeaza la NPC-ul Billy Ray
-        },
-    },
+    -- fishing_supply handled by sunset_fishingshop (dedicated UI at Paleto)
     twentyfour7 = {
         label = '24/7 Store',
         coords = vector3(25.74, -1347.32, 29.50),
@@ -211,6 +200,7 @@ Sunset.JobCenters = {
         -- Creator jobs are injected at runtime from sunset_jobcreator (published templates).
         jobs = {
             { id = 'unemployed', label = 'Unemployed' },
+            { id = 'fisherman', label = 'Fisherman' },
             { id = 'mechanic', label = 'Roadside Mechanic' },
         },
     },

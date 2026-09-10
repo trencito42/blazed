@@ -682,6 +682,37 @@ end
 registerServerCommand('announce', runAnnounce)
 registerServerCommand('announcement', runAnnounce)
 
+registerServerCommand('sett', function(source, args)
+    if not requirePerm(source, 'sett') then return end
+    local hour = tonumber(args[1])
+    local minute = tonumber(args[2]) or 0
+    if hour == nil then
+        return notify(source, 'Usage: /sett [hour 0-23] [minute 0-59]. Example: /sett 14 30', 'error')
+    end
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59 then
+        return notify(source, 'Invalid time. Hour 0-23, minute 0-59.', 'error')
+    end
+    exports.sunset_economy:SetWorldTime(hour, minute, true)
+    notify(source, ('World time set to %02d:%02d for all players.'):format(hour, minute), 'success')
+end)
+
+registerServerCommand('setw', function(source, args)
+    if not requirePerm(source, 'setw') then return end
+    local weather = string.upper(tostring(args[1] or ''))
+    if weather == '' then
+        return notify(source, 'Usage: /setw [CLEAR|EXTRASUNNY|CLOUDS|OVERCAST|RAIN|THUNDER|FOGGY|...]', 'error')
+    end
+    if weather == 'RESET' or weather == 'DEFAULT' then
+        exports.sunset_economy:ClearWorldWeather()
+        return notify(source, 'Weather reset to default.', 'success')
+    end
+    local ok, err = exports.sunset_economy:SetWorldWeather(weather)
+    if not ok then
+        return notify(source, err or 'Invalid weather type.', 'error')
+    end
+    notify(source, ('Weather set to %s for all players.'):format(weather), 'success')
+end)
+
 -- /setadmin [id|username] [level]
 registerServerCommand('setadmin', function(source, args)
     if source ~= 0 and not requirePerm(source, 'setadmin') then return end

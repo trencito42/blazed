@@ -27,8 +27,53 @@ local nearSell       = false
 local menuOpen       = false   -- playerInteraction menu open
 local shopOpen       = false   -- fishing shop UI (buy/sell) open
 local inCooldown     = false
+local INTERACT_KEY   = 38
 
--- Export so fisherman.lua can block E-key cast while any menu is open
+local function getCharacterJob()
+    local char = Sunset.Character or {}
+    return select(1, Sunset.GetCharacterJob(char))
+end
+
+local function isOnFishermanShift()
+    if GetResourceState('sunset_jobs') ~= 'started' then return false end
+    local ok, active = pcall(function()
+        return exports.sunset_jobs:IsFishermanShiftActive()
+    end)
+    return ok and active == true
+end
+
+local function buildBillyRayActions()
+    local actions = {}
+    local job = getCharacterJob()
+
+    if job ~= 'fisherman' then
+        actions[#actions + 1] = { id = 'get_fisherman_job', label = 'Devino Pescar', group = 'CIVILIAN' }
+    end
+
+    if job == 'fisherman' then
+        if isOnFishermanShift() then
+            actions[#actions + 1] = { id = 'end_fishing_shift', label = 'Opreste Tura', group = 'FISHING' }
+        else
+            actions[#actions + 1] = { id = 'start_fishing_shift', label = 'Incepe Tura', group = 'FISHING' }
+        end
+        actions[#actions + 1] = { id = 'upgrade_fishing_rod', label = 'Upgrade Undita', group = 'FISHING' }
+    end
+
+    return actions
+end
+
+local function openBillyRayMenu()
+    local actions = buildBillyRayActions()
+    if #actions == 0 then return end
+    exports.sunset_ui:Send('playerInteractionShow', {
+        target = { name = 'Billy Ray', id = '' },
+        actions = actions,
+    })
+    exports.sunset_ui:SetFocus(true, true)
+    menuOpen = true
+end
+
+exports('IsNearBillyRay', function() return nearNpc == true end)
 exports('IsMenuOpen', function() return menuOpen or shopOpen end)
 
 -- ── Spawn NPC ────────────────────────────────────────────────
@@ -117,25 +162,15 @@ CreateThread(function()
     end
 end)
 
--- ── G key handler ─────────────────────────────────────────────
+-- ── E key handler ─────────────────────────────────────────────
 CreateThread(function()
     while true do
         if nearNpc or nearBaitShop or nearSell then
-            DisableControlAction(0, 51, true)  -- bloca G
+            DisableControlAction(0, INTERACT_KEY, true)
 
-            if IsDisabledControlJustPressed(0, 51) and not inCooldown and not menuOpen and not shopOpen then
+            if IsDisabledControlJustPressed(0, INTERACT_KEY) and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
                 if nearNpc then
-                    -- Meniu Billy Ray NPC
-                    exports.sunset_ui:Send('playerInteractionShow', {
-                        target  = { name = 'Billy Ray', id = '' },
-                        actions = {
-                            { id = 'get_fisherman_job',   label = 'Devino Pescar',  group = 'CIVILIAN' },
-                            { id = 'start_fishing_shift', label = 'Incepe Tura',    group = 'FISHING'  },
-                            { id = 'upgrade_fishing_rod', label = 'Upgrade Undita', group = 'FISHING'  },
-                        },
-                    })
-                    exports.sunset_ui:SetFocus(true, true)
-                    menuOpen = true
+                    openBillyRayMenu()
 
                 elseif nearBaitShop then
                     -- Deschide direct magazinul de momeala
@@ -211,6 +246,18 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         inCooldown = true
         TriggerEvent('sunset:client:startFishermanShift')
         SetTimeout(2000, function() inCooldown = false end)
+
+    elseif data.action == 'end_fishing_shift' then
+        inCooldown = true
+        CreateThread(function()
+            local ok, err = Sunset.AwaitCallback('sunset:jobs:fisherman:endShift')
+            if ok then
+                exports.sunset_ui:Notify('Tura de pescuit oprită.', 'success', 5000)
+            else
+                exports.sunset_ui:Notify(err or 'Nu ai o tură activă.', 'error')
+            end
+            SetTimeout(2000, function() inCooldown = false end)
+        end)
 
     elseif data.action == 'upgrade_fishing_rod' then
         inCooldown = true

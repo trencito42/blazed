@@ -25,6 +25,25 @@ const ENTRY_BACKGROUNDS = {
     default: 'assets/bg.webp?v=6',
 };
 let entryBackgroundRequest = 0;
+const entryBackgroundCache = new Map();
+
+function warmEntryBackground(src) {
+    if (!src || entryBackgroundCache.get(src) === true) return Promise.resolve(true);
+    if (entryBackgroundCache.get(src) instanceof Promise) return entryBackgroundCache.get(src);
+    const pending = new Promise((resolve) => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.onload = () => resolve(true);
+        image.onerror = () => resolve(false);
+        image.src = src;
+        if (image.complete) resolve(image.naturalWidth > 0);
+    }).then((ok) => {
+        entryBackgroundCache.set(src, ok === true);
+        return ok === true;
+    });
+    entryBackgroundCache.set(src, pending);
+    return pending;
+}
 
 function entryBackgroundLayers() {
     const app = $('#app');
@@ -53,13 +72,16 @@ async function setEntryBackground(screenName) {
     const request = ++entryBackgroundRequest;
     const next = layers.find((layer) => layer !== active) || layers[1];
     next.dataset.entrySource = desired;
-    const load = (src) => new Promise((resolve) => {
-        const complete = () => resolve(next.naturalWidth > 0);
-        next.onload = complete;
-        next.onerror = () => resolve(false);
-        next.src = src;
-        if (next.complete) complete();
-    });
+    const load = async (src) => {
+        await warmEntryBackground(src);
+        return new Promise((resolve) => {
+            const complete = () => resolve(next.naturalWidth > 0);
+            next.onload = complete;
+            next.onerror = () => resolve(false);
+            next.src = src;
+            if (next.complete) complete();
+        });
+    };
     let loaded = await load(desired);
     if (!loaded && request === entryBackgroundRequest) {
         next.dataset.entrySource = ENTRY_BACKGROUNDS.default;
@@ -76,11 +98,8 @@ async function setEntryBackground(screenName) {
 }
 
 function preloadEntryBackgrounds() {
-    Object.values(ENTRY_BACKGROUNDS).forEach((src) => {
-        const image = new Image();
-        image.decoding = 'async';
-        image.src = src;
-    });
+    warmEntryBackground(ENTRY_BACKGROUNDS.auth);
+    warmEntryBackground(ENTRY_BACKGROUNDS.handoff);
 }
 
 function setBrandLogo(img) {
@@ -232,7 +251,11 @@ window.addEventListener('message', (event) => {
             showHud(false);
             App.data = data || {};
             if (screen !== 'menu' && window.Menu) Menu.hide();
+            if (screen === 'handoff') {
+                warmEntryBackground(ENTRY_BACKGROUNDS.auth);
+            }
             if (screen === 'auth') {
+                warmEntryBackground(ENTRY_BACKGROUNDS.auth);
                 showScreen('auth');
                 if (window.Panels) Panels.showAuth(data || {});
                 return;
@@ -254,6 +277,10 @@ window.addEventListener('message', (event) => {
 
         case 'spawnSelectFailed':
             if (window.SpawnSelector) SpawnSelector.reset();
+            break;
+
+        case 'preloadEntryBackground':
+            warmEntryBackground(ENTRY_BACKGROUNDS[data?.screen] || ENTRY_BACKGROUNDS.auth);
             break;
 
         case 'hide':

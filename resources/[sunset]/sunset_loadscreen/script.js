@@ -45,7 +45,7 @@ window.addEventListener('message', (e) => {
         simTimer = null;
         setProgress(100, 'Welcome to Sunset Roleplay...');
         loadscreen.classList.add('is-handoff');
-        setTimeout(() => loadscreen.classList.add('fade-out'), 260);
+        setTimeout(() => loadscreen.classList.add('fade-out'), 90);
         return;
     }
     if (data.eventName === 'loadProgress') {

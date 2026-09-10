@@ -1,7 +1,7 @@
 # Deploy SunsetMP from Windows (PowerShell)
 $ErrorActionPreference = 'Stop'
 $Key = Join-Path $env:USERPROFILE '.ssh\sshxodo'
-$ServicePath = '/data/coolify/services/b0n1oc2fcrzbgdco838ezm1i'
+$ServicePath = '/opt/blazed'
 
 if (-not (Test-Path $Key)) {
     Write-Error "SSH key not found: $Key"
@@ -18,7 +18,7 @@ if ($LASTEXITCODE -eq 0 -and ($rootTest -match 'OK')) {
 Write-Host ""
 Write-Host "SSH deploy failed for root@193.33.167.216" -ForegroundColor Yellow
 Write-Host "Your key ($Key) works for loadport/blipmade-* but NOT for root." -ForegroundColor Yellow
-Write-Host "Coolify sunset files live under $ServicePath (root-only)." -ForegroundColor Yellow
+Write-Host "FiveM stack lives under $ServicePath (root-only)." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Fix (one-time on VPS as root):" -ForegroundColor Cyan
 Write-Host "  mkdir -p /root/.ssh && chmod 700 /root/.ssh"

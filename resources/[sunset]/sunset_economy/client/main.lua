@@ -1,7 +1,36 @@
 local nextPaydayLabel = '--:--'
+local shopOpen = false
+local lastShopOpenAt = 0
 
 RegisterNetEvent('sunset:client:serverTime', function(data)
     if data and data.nextPayday then nextPaydayLabel = data.nextPayday end
+end)
+
+local activeWeather = nil
+
+RegisterNetEvent('sunset:client:serverWeather', function(data)
+    if not data then return end
+    if data.reset then
+        activeWeather = nil
+        ClearOverrideWeather()
+        ClearWeatherTypePersist()
+        return
+    end
+    local weather = string.upper(tostring(data.weather or ''))
+    if weather == '' then return end
+    activeWeather = weather
+    SetWeatherTypeOvertimePersist(weather, 8.0)
+end)
+
+CreateThread(function()
+    while true do
+        if activeWeather then
+            SetWeatherTypeNowPersist(activeWeather)
+            Wait(5000)
+        else
+            Wait(2000)
+        end
+    end
 end)
 
 RegisterNetEvent('sunset:client:payday', function(net, tax, breakdown)
@@ -38,8 +67,19 @@ end
 
 AddEventHandler('sunset:world:openShop', function(shopId, shop)
     if IsNuiFocused() then return end
+    local now = GetGameTimer()
+    if shopOpen or (now - lastShopOpenAt) < 400 then return end
+    if GetResourceState('sunset_fishingshop') == 'started' and exports.sunset_fishingshop:IsMenuOpen() then
+        return
+    end
+    shopOpen = true
+    lastShopOpenAt = now
     exports.sunset_ui:Send('shopShow', { shopId = shopId, shop = enrichShop(shop) })
     exports.sunset_ui:SetFocus(true, true)
+end)
+
+AddEventHandler('sunset:nui:shopClose', function()
+    shopOpen = false
 end)
 
 AddEventHandler('sunset:world:openAtm', function()

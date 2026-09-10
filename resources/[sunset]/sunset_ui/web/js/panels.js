@@ -683,6 +683,10 @@ const Panels = {
 
     showShop(data) {
         this.init();
+        const shopEl = $('#shop');
+        if (shopEl && !shopEl.classList.contains('hidden')) {
+            this.hideShop();
+        }
         const shop = data.shop || {};
         const items = shop.items || [];
         this._shopData = data;

@@ -406,13 +406,14 @@ h5,
         linear-gradient(110deg, rgba(12, 14, 17, 0.995), rgba(18, 20, 24, 0.94));
 }
 
-/* Fishing-style HUD notifications — icon + colored title + white subtitle. */
+/* HUD notifications — below premium clock/money block (was 118px = overlapped clock). */
 .notifications {
-    top: 118px;
-    right: 25px;
+    top: 290px;
+    right: 40px;
     gap: 12px;
-    width: min(420px, 38vw);
+    width: min(380px, 34vw);
     pointer-events: none;
+    z-index: 95;
 }
 
 .notification {
@@ -481,10 +482,10 @@ h5,
         0 4px 10px rgba(0, 0, 0, 0.8);
 }
 
-.notification--success { --notify-accent: var(--sunset-orange, #ff8a00); }
-.notification--warning { --notify-accent: var(--sunset-amber, #ffb21c); }
-.notification--error { --notify-accent: var(--sunset-red, #ff554f); }
-.notification--info { --notify-accent: var(--sunset-amber, #ffb15c); }
+.notification--success { --notify-accent: #49e69d; }
+.notification--warning { --notify-accent: #ffcc00; }
+.notification--error { --notify-accent: #ff4f68; }
+.notification--info { --notify-accent: #00ffcc; }
 
 .job-objective {
     width: min(350px, 34vw);
@@ -555,8 +556,8 @@ h5,
 .veh-slot.active .veh-slot__key { color:var(--sunset-orange); background:rgba(255,138,0,.15); }
 
 @keyframes sunset-notify-in {
-    from { opacity: 0; transform: translateX(34px) skewX(-2deg); }
-    to { opacity: 1; transform: translateX(0) skewX(0); }
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes sunset-notify-out {
