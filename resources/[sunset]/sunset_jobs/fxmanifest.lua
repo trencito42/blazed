@@ -22,6 +22,7 @@ client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/core.lua',
     'client/trucker.lua',
+    'client/trucker_npc.lua',
     'client/garbage.lua',
     'client/courier.lua',
     'client/fisherman.lua',
