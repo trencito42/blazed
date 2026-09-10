@@ -120,10 +120,15 @@ end)
 exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then
+        print(('[sunset:hireJob] FAIL src=%s jobId=%s reason=character_not_loaded'):format(source, tostring(jobId)))
         return nil, 'Your character is not loaded. Reconnect and select it again.'
     end
 
+    local requestedJob = jobId
     jobId = resolveHireJobId(jobId)
+    local currentJob = select(1, Sunset.GetCharacterJob(char))
+    print(('[sunset:hireJob] src=%s request=%s resolved=%s current=%s charId=%s'):format(
+        source, tostring(requestedJob), tostring(jobId), tostring(currentJob), tostring(char.id)))
     ensureCreatorJobsRegistered()
 
     local creatorId = resolveCreatorJobId(jobId)
@@ -136,7 +141,6 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
         return quitCivilianJob(source, 'Resigned at Job Center')
     end
 
-    local currentJob = select(1, Sunset.GetCharacterJob(char))
     if currentJob == jobId or resolveHireJobId(currentJob) == jobId then
         local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
         return nil, ('You already work as %s.'):format(label)
@@ -157,8 +161,10 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
 
     local setOk = exports.sunset_core:SetJob(source, jobId, 0)
     if not setOk then
+        print(('[sunset:hireJob] FAIL src=%s jobId=%s reason=set_job_failed'):format(source, tostring(jobId)))
         return nil, 'Could not assign the job — try reconnecting or contact staff.'
     end
+    print(('[sunset:hireJob] OK src=%s jobId=%s'):format(source, tostring(jobId)))
 
     local hiredLabel = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
     exports.sunset_core:CommandReply(source,

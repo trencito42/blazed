@@ -1,5 +1,6 @@
 fx_version 'cerulean'
 game 'gta5'
+lua54 'yes'
 
 name 'sunset_fishingshop'
 description 'Fishing supply shop + job NPC at Paleto Bay pontoon'

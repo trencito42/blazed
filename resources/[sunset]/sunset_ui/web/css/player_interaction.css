@@ -139,6 +139,8 @@
     transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
         transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     max-height: calc(100vh - 80px);
+    overflow: visible;
+    padding-left: 48px;
 }
 
 .pi-screen-menu.active {
@@ -174,9 +176,12 @@
     flex-direction: column;
     gap: 15px;
     align-items: flex-end;
+    overflow-x: visible;
     overflow-y: auto;
     max-height: min(520px, calc(100vh - 160px));
-    padding-right: 4px;
+    padding: 0 4px 0 32px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .pi-menu-items::-webkit-scrollbar { width: 3px; }
@@ -193,15 +198,20 @@
     color: var(--pi-text-main);
     text-transform: uppercase;
     cursor: pointer;
-    padding-right: 0;
+    padding: 4px 0 4px 12px;
     border-right: 0 solid transparent;
     text-shadow: var(--pi-shadow-text);
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: color 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        padding 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        border-color 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        text-shadow 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     background: none;
     border-top: none;
     border-bottom: none;
     border-left: none;
     font-family: inherit;
+    max-width: 100%;
+    white-space: nowrap;
 }
 
 .pi-menu-item:hover {
@@ -211,7 +221,6 @@
     border-right-style: solid;
     border-right-color: var(--pi-accent);
     text-shadow: var(--pi-shadow-glow), 0 2px 5px rgba(0, 0, 0, 0.9);
-    transform: translateX(-10px);
 }
 
 .pi-menu-item.danger:hover {

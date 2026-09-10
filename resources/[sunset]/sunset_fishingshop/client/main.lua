@@ -29,6 +29,36 @@ local shopOpen       = false   -- fishing shop UI (buy/sell) open
 local inCooldown     = false
 local INTERACT_KEY   = 38
 
+local FISHING_ACTIONS = {
+    get_fisherman_job = true,
+    start_fishing_shift = true,
+    end_fishing_shift = true,
+    upgrade_fishing_rod = true,
+    sell_fish_247 = true,
+}
+
+local function debugHire(message)
+    print(('[sunset_fishingshop] %s'):format(message))
+    TriggerServerEvent('sunset:server:flowTrace', 'fishingshop.hire', message)
+end
+
+local function closeFishingMenu()
+    if not menuOpen then return end
+    menuOpen = false
+    exports.sunset_ui:Send('playerInteractionHide', {})
+    exports.sunset_ui:SetFocus(false, false)
+end
+
+local function notifyHireError(err)
+    local errMsg = err or 'Nu a functionat angajarea (fara detalii de la server).'
+    debugHire(('FAIL: %s'):format(errMsg))
+    if errMsg:find('already work') or errMsg:find('You already work') then
+        exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
+        return
+    end
+    exports.sunset_ui:Notify(errMsg, 'error', 8000)
+end
+
 local function getCharacterJob()
     local char = Sunset.Character or {}
     return select(1, Sunset.GetCharacterJob(char))
@@ -66,6 +96,8 @@ local function openBillyRayMenu()
     local actions = buildBillyRayActions()
     if #actions == 0 then return end
     exports.sunset_ui:Send('playerInteractionShow', {
+        instant = true,
+        menuTitle = 'Acțiuni Pescuit',
         target = { name = 'Billy Ray', id = '' },
         actions = actions,
     })
@@ -146,9 +178,7 @@ CreateThread(function()
 
         -- Auto-close playerInteraction menu when walking away
         if (wasNpc or wasSell) and not nearNpc and not nearSell and menuOpen then
-            exports.sunset_ui:Send('playerInteractionHide', {})
-            exports.sunset_ui:SetFocus(false, false)
-            menuOpen = false
+            closeFishingMenu()
         end
 
         -- Auto-close fishing shop UI when walking away from bait shop or 24/7
@@ -195,6 +225,8 @@ CreateThread(function()
                 elseif nearSell then
                     -- Meniu 24/7 sell fish
                     exports.sunset_ui:Send('playerInteractionShow', {
+                        instant = true,
+                        menuTitle = 'Acțiuni Magazin',
                         target  = { name = '24/7 Store', id = '' },
                         actions = {
                             { id = 'sell_fish_247', label = 'Vinde Pestele (cash)', group = 'STORE' },
@@ -213,34 +245,28 @@ end)
 
 -- ── playerInteraction NUI events ──────────────────────────────
 AddEventHandler('sunset:nui:playerInteractionClose', function()
-    menuOpen = false
-    exports.sunset_ui:Send('playerInteractionHide', {})
-    exports.sunset_ui:SetFocus(false, false)
+    closeFishingMenu()
 end)
 
 AddEventHandler('sunset:nui:playerInteractionAction', function(data)
     if not data or not data.action then return end
-    menuOpen = false
-    exports.sunset_ui:Send('playerInteractionHide', {})
-    exports.sunset_ui:SetFocus(false, false)
+    if not FISHING_ACTIONS[data.action] then return end
+    if not menuOpen then return end
+
+    closeFishingMenu()
 
     if data.action == 'get_fisherman_job' then
         inCooldown = true
-        CreateThread(function()
-            local ok, err = Sunset.AwaitCallback('sunset:hireJob', 'fisherman')
+        debugHire('request hire fisherman')
+        exports.sunset_core:TriggerCallback('sunset:hireJob', function(ok, err)
+            debugHire(('callback ok=%s err=%s'):format(tostring(ok), tostring(err)))
             if ok then
                 exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
             else
-                local errMsg = err or 'Nu a functionat angajarea.'
-                -- User already has fisherman job — show info instead of error
-                if errMsg:find('already work') or errMsg:find('You already work') then
-                    exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
-                else
-                    exports.sunset_ui:Notify(errMsg, 'error')
-                end
+                notifyHireError(err)
             end
             SetTimeout(2000, function() inCooldown = false end)
-        end)
+        end, 'fisherman')
 
     elseif data.action == 'start_fishing_shift' then
         inCooldown = true
