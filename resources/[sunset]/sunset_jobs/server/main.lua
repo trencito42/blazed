@@ -179,7 +179,11 @@ local function hireCivilianJob(source, jobId)
     return true
 end
 
-exports('HireCivilianJob', hireCivilianJob)
+-- Cross-resource exports only return the first Lua value; pack ok/err for callers.
+exports('HireCivilianJob', function(source, jobId)
+    local ok, err = hireCivilianJob(source, jobId)
+    return { ok = ok == true, err = err }
+end)
 
 exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     return hireCivilianJob(source, jobId)

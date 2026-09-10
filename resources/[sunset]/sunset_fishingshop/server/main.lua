@@ -42,6 +42,13 @@ local function nearBillyRay(source, maxDist)
     return #(GetEntityCoords(ped) - BILLY_RAY_COORDS) <= (maxDist or BILLY_RAY_HIRE_DIST)
 end
 
+exports.sunset_core:RegisterCallback('sunset:fishingshop:getBillyRayMenu', function(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'Personaj negasit.' end
+    local job, grade = Sunset.GetCharacterJob(char)
+    return { job = job or 'unemployed', job_grade = grade or 0 }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:fishingshop:hireFisherman', function(source)
     if not nearBillyRay(source) then
         return nil, 'Trebuie sa fii langa Billy Ray.'
@@ -49,7 +56,31 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:hireFisherman', functio
     if GetResourceState('sunset_jobs') ~= 'started' then
         return nil, 'Sistemul de joburi nu este disponibil.'
     end
-    return exports.sunset_jobs:HireCivilianJob(source, 'fisherman')
+    local hres = exports.sunset_jobs:HireCivilianJob(source, 'fisherman')
+    if type(hres) == 'table' and hres.ok then
+        return true
+    end
+    local err = type(hres) == 'table' and hres.err
+    if type(err) == 'string' and err:find('already work', 1, true) then
+        local char = exports.sunset_core:GetCharacter(source)
+        if char then
+            TriggerClientEvent('sunset:client:updateCharacter', source, {
+                job = char.job,
+                job_grade = char.job_grade or 0,
+            })
+        end
+        return true, 'already'
+    end
+    if type(err) == 'string' then
+        if err:find('character is not loaded', 1, true) then
+            err = 'Personajul nu e incarcat. Reconecteaza-te si selecteaza-l din nou.'
+        elseif err:find('Could not assign', 1, true) then
+            err = 'Nu am putut seta jobul — reconecteaza-te sau contacteaza staff.'
+        elseif err:find('not a valid civilian job', 1, true) then
+            err = 'Job invalid. Contacteaza staff.'
+        end
+    end
+    return nil, err or 'Angajarea a esuat. Incearca din nou.'
 end)
 
 local ROD_UPGRADES = {

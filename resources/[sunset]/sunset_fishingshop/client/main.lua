@@ -174,11 +174,21 @@ end
 local function notifyHireError(err)
     local errMsg = err or 'Nu a functionat angajarea (fara detalii de la server).'
     debugHire(('FAIL: %s'):format(errMsg))
-    if errMsg:find('already work') or errMsg:find('You already work') then
+    if errMsg:find('already work', 1, true)
+        or errMsg:find('deja jobul', 1, true)
+        or errMsg:find('deja Pescar', 1, true) then
         exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
         return
     end
     exports.sunset_ui:Notify(errMsg, 'error', 8000)
+end
+
+local function syncLocalJob(job, grade)
+    if not job then return end
+    if Sunset.Character then
+        Sunset.Character.job = job
+        Sunset.Character.job_grade = grade or Sunset.Character.job_grade or 0
+    end
 end
 
 local function getCharacterJob()
@@ -194,9 +204,9 @@ local function isOnFishermanShift()
     return ok and active == true
 end
 
-local function buildBillyRayActions()
+local function buildBillyRayActions(job)
     local actions = {}
-    local job = getCharacterJob()
+    job = job or getCharacterJob()
 
     if job ~= 'fisherman' then
         actions[#actions + 1] = { id = 'get_fisherman_job', label = 'Devino Pescar', group = 'CIVILIAN' }
@@ -216,18 +226,27 @@ end
 
 local function openBillyRayMenu()
     if menuOpen or not billyInteractionsReady() then return end
-    local actions = buildBillyRayActions()
-    if #actions == 0 then return end
-    billyHoldStart = nil
-    menuCloseArmed = false
-    hideBillyRayPrompt()
-    exports.sunset_ui:Send('playerInteractionShow', {
-        menuTitle = 'Acțiuni Pescuit',
-        target = { name = 'Billy Ray', id = '' },
-        actions = actions,
-    })
-    exports.sunset_ui:SetFocus(true, true)
-    menuOpen = true
+    CreateThread(function()
+        local data, err = Sunset.AwaitCallback('sunset:fishingshop:getBillyRayMenu')
+        if not data then
+            if err then exports.sunset_ui:Notify(err, 'error', 5000) end
+            return
+        end
+        if menuOpen or not billyInteractionsReady() then return end
+        syncLocalJob(data.job, data.job_grade)
+        local actions = buildBillyRayActions(data.job)
+        if #actions == 0 then return end
+        billyHoldStart = nil
+        menuCloseArmed = false
+        hideBillyRayPrompt()
+        exports.sunset_ui:Send('playerInteractionShow', {
+            menuTitle = 'Acțiuni Pescuit',
+            target = { name = 'Billy Ray', id = '' },
+            actions = actions,
+        })
+        exports.sunset_ui:SetFocus(true, true)
+        menuOpen = true
+    end)
 end
 
 exports('IsNearBillyRay', function()
@@ -475,7 +494,12 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             local ok, err = Sunset.AwaitCallback('sunset:fishingshop:hireFisherman')
             debugHire(('callback ok=%s err=%s'):format(tostring(ok), tostring(err)))
             if ok then
-                exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
+                syncLocalJob('fisherman', 0)
+                if err == 'already' then
+                    exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 8000)
+                else
+                    exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
+                end
             else
                 notifyHireError(err)
             end
