@@ -339,7 +339,17 @@ CreateThread(function()
 end)
 
 -- ── Proximitate checker ───────────────────────────────────────
+local function isNearWorldShop(pos)
+    for _, shop in pairs(Sunset.Shops or {}) do
+        if shop.coords and #(pos - shop.coords) < (shop.zoneRadius or 2.5) then
+            return true
+        end
+    end
+    return false
+end
+
 local function nearAnySellZone(pos)
+    if isNearWorldShop(pos) then return false end
     for _, coords in ipairs(SELL_ZONES) do
         if #(pos - coords) < SELL_DIST then return true end
     end

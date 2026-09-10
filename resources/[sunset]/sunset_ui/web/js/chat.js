@@ -15,6 +15,15 @@ const Chat = {
         radio: '/r ',
     },
 
+    defaultChannels: [
+        { id: 'all', label: 'LOCAL', placeholder: 'Local message — nearby players hear you' },
+        { id: 'ooc', label: 'OOC', placeholder: 'Out of Character — global (( message ))' },
+        { id: 'me', label: 'ME', placeholder: 'RP action (/me searches the trunk...)' },
+        { id: 'do', label: 'DO', placeholder: 'RP action (/do the trunk opens)' },
+    ],
+
+    availableChannels: [],
+
     pageSize() {
         const maxH = ChatSettings?.settings?.maxHeight || 350;
         const font = ChatSettings?.settings?.fontSize || 13.5;
@@ -717,7 +726,7 @@ const Chat = {
         return `${prefix}${msg || name}`;
     },
 
-    buildMessageElement(m) {
+    buildMessageElement(m, options = {}) {
         const el = document.createElement('div');
         const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
         const factionId = String(m.factionId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -737,6 +746,7 @@ const Chat = {
                 ? this.formatPassEventHtml(m)
                 : this.formatMotdBannerHtml(m, type);
             el.appendChild(block);
+            if (!options.animate) el.style.animation = 'none';
             return el;
         }
 
@@ -750,6 +760,7 @@ const Chat = {
         if (meta.badge) el.appendChild(this.createBadge(meta.badge.label, meta.badge.className));
         if (meta.author) el.appendChild(this.createAuthor(meta.author.html, meta.author.className));
         el.appendChild(this.createContent(meta.content.html, meta.content.className));
+        if (!options.animate) el.style.animation = 'none';
         return el;
     },
 
@@ -773,14 +784,14 @@ const Chat = {
         container.innerHTML = '';
         const open = this.isChatOpen();
         const visible = open ? this.messages : this.messages.slice(-this.pageSize());
-        visible.forEach((m) => container.appendChild(this.buildMessageElement(m)));
+        visible.forEach((m) => container.appendChild(this.buildMessageElement(m, { animate: false })));
         container.scrollTop = container.scrollHeight;
     },
 
     appendMessage(msg) {
         const container = $('#chat-messages');
         if (!container) return;
-        container.appendChild(this.buildMessageElement(msg));
+        container.appendChild(this.buildMessageElement(msg, { animate: true }));
         container.scrollTop = container.scrollHeight;
     },
 
@@ -804,14 +815,34 @@ const Chat = {
     },
 
     setChannel(channelId, label, placeholder) {
+        const row = this.availableChannels.find((ch) => ch.id === channelId);
         this.channel = channelId || 'all';
         const labelEl = $('#chat-channel-label');
         const input = $('#chat-input');
-        if (labelEl && label) labelEl.textContent = label;
-        if (input && placeholder) input.placeholder = placeholder;
+        if (labelEl) labelEl.textContent = label || row?.label || 'LOCAL';
+        if (input) input.placeholder = placeholder || row?.placeholder || 'Type a message...';
         document.querySelectorAll('#chat-channel-dropdown .dropdown-item').forEach((item) => {
             item.classList.toggle('active', item.dataset.channel === this.channel);
         });
+    },
+
+    applyChannels(channels) {
+        const list = Array.isArray(channels) && channels.length ? channels : this.defaultChannels;
+        this.availableChannels = list;
+        const dropdown = $('#chat-channel-dropdown');
+        if (!dropdown) return;
+
+        dropdown.innerHTML = list.map((ch) => {
+            const id = this.escapeHtml(ch.id || 'all');
+            const label = this.escapeHtml(ch.label || id.toUpperCase());
+            const placeholder = this.escapeHtml(ch.placeholder || '');
+            const optClass = `opt-${id.replace(/[^a-z0-9_-]/gi, '')}`;
+            return `<div class="dropdown-item ${optClass}" data-channel="${id}" data-placeholder="${placeholder}">${label}</div>`;
+        }).join('');
+
+        const active = list.some((ch) => ch.id === this.channel) ? this.channel : 'all';
+        const activeRow = list.find((ch) => ch.id === active) || list[0];
+        this.setChannel(activeRow.id, activeRow.label, activeRow.placeholder);
     },
 
     initChannelSelector() {
@@ -824,19 +855,20 @@ const Chat = {
             dropdown?.classList.toggle('show');
             toggle.classList.toggle('open');
         });
-        dropdown?.querySelectorAll('.dropdown-item').forEach((item) => {
-            item.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.setChannel(item.dataset.channel, item.textContent.trim(), item.dataset.placeholder);
-                this.closeChannelDropdown();
-                $('#chat-input')?.focus({ preventScroll: true });
-            });
+        dropdown?.addEventListener('click', (e) => {
+            const item = e.target.closest('.dropdown-item');
+            if (!item) return;
+            e.stopPropagation();
+            this.setChannel(item.dataset.channel, item.textContent.trim(), item.dataset.placeholder);
+            this.closeChannelDropdown();
+            $('#chat-input')?.focus({ preventScroll: true });
         });
         document.addEventListener('click', (e) => {
             if (!toggle?.contains(e.target) && !dropdown?.contains(e.target)) {
                 this.closeChannelDropdown();
             }
         });
+        this.applyChannels(this.defaultChannels);
     },
 
     setContext(data) {
@@ -851,10 +883,15 @@ const Chat = {
         const wrap = $('#chat-input-wrap');
         const input = $('#chat-input');
         const backdrop = $('#chat-backdrop');
-        this.initChannelSelector();
         if (open) {
             this.setContext(data);
             ChatSettings.init();
+            this.initChannelSelector();
+            if (data?.channels) {
+                this.applyChannels(data.channels);
+            } else if (!this.availableChannels.length) {
+                this.applyChannels(this.defaultChannels);
+            }
             document.body.classList.add('chat-ui-open');
             chat?.classList.add('chat-open');
             app?.classList.add('is-active');
@@ -862,10 +899,10 @@ const Chat = {
             wrap?.classList.remove('hidden');
             this._pendingRender = false;
             this.render();
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 if (!this.isChatOpen()) return;
                 input?.focus({ preventScroll: true });
-            }, 50);
+            });
         } else {
             this.toggleSettings(false);
             this.closeChannelDropdown();

@@ -183,8 +183,9 @@ body.chat-ui-open .chat-msg,
 .chat-messages {
     max-height: var(--chat-page-height);
     overflow: hidden;
-    padding: 0 2px;
+    padding: 0 4px 8px 0;
     display: block;
+    box-sizing: border-box;
 }
 
 .chat.chat-open .chat-messages {

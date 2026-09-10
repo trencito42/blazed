@@ -6,8 +6,8 @@
 }
 
 #chat {
-    top: 40px;
-    left: 40px;
+    top: 16px;
+    left: 16px;
     width: 550px;
     max-width: min(550px, 44vw);
     font-family: 'Montserrat', sans-serif;
@@ -33,32 +33,31 @@
 }
 
 .chat-header {
-    display: flex;
-    justify-content: space-between;
+    display: none;
+    justify-content: flex-end;
     align-items: center;
-    margin-bottom: 0;
-    padding: 0 2px 6px;
+    margin: 0;
+    padding: 0;
     background: transparent;
-    border-bottom: 1px solid transparent;
-    opacity: 0;
-    height: 0;
-    overflow: hidden;
-    transition: opacity 0.15s ease;
+    border: none;
+    pointer-events: none;
 }
 
 #chat-app.is-active .chat-header {
-    opacity: 1;
-    height: auto;
-    margin-bottom: 6px;
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    display: flex;
+    position: absolute;
+    top: -30px;
+    right: 0;
+    left: auto;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    pointer-events: auto;
+    z-index: 2;
 }
 
 .chat-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #00ffcc;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    display: none;
 }
 
 .cog-btn {
@@ -93,21 +92,26 @@
     stroke-linejoin: round;
 }
 
+#chat #chat-app {
+    position: relative;
+}
+
 #chat .chat-messages {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     max-height: var(--chat-max-height, 350px);
     overflow: hidden;
-    padding-right: 5px;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
-    transition: max-height 0.3s ease;
+    padding: 2px 4px 6px 0;
+    mask-image: none;
+    -webkit-mask-image: none;
+    transition: none;
 }
 
 #chat-app.is-active .chat-messages {
     overflow-y: auto;
     background: transparent !important;
+    padding-bottom: 4px;
 }
 
 #chat .chat-messages::-webkit-scrollbar { width: 4px; }
@@ -206,32 +210,32 @@
 #chat .msg-content.text-rp     { color: #ddd6fe; font-style: italic; font-weight: 500; }
 
 #chat .chat-input-wrapper {
-    display: flex;
+    display: none;
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
-    margin-top: 0;
-    padding: 8px 10px 8px 7px;
-    overflow: hidden;
-    opacity: 0;
-    max-height: 0;
-    background: rgba(10, 10, 15, 0.82);
-    border: 1px solid transparent;
-    border-left: 3px solid transparent;
-    border-radius: 10px;
-    box-shadow: none;
-    pointer-events: none;
-    transition: opacity 0.12s ease, max-height 0.12s ease, border-color 0.12s ease, border-left-color 0.12s ease;
+    margin-top: 6px;
+    padding: 6px 8px 6px 6px;
+    overflow: visible;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 2px solid rgba(0, 255, 204, 0.45);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+    pointer-events: auto !important;
+    transition: none;
 }
 
-#chat-app.is-active .chat-input-wrapper {
-    opacity: 1;
-    max-height: 120px;
+#chat .chat-input-wrapper:not(.hidden) {
+    display: flex;
+}
+
+#chat-app.is-active .chat-input-wrapper:not(.hidden) {
     margin-top: 6px;
-    overflow: visible;
-    border-color: rgba(0, 255, 204, 0.14);
-    border-left-color: #00ffcc;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.32);
+    border-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(0, 255, 204, 0.65);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
     pointer-events: auto !important;
 }
 
@@ -327,9 +331,9 @@
 
 #chat .chat-input {
     flex: 1;
-    background: rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
     color: #fff;
     padding: 10px 12px;
     border-radius: 6px;
@@ -353,8 +357,8 @@
 
 .chat-settings-panel {
     position: absolute;
-    top: 55px;
-    left: calc(100% + 20px);
+    top: calc(100% + 10px);
+    left: 0;
     width: 280px;
     background: var(--chat-bg-panel);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -579,30 +583,17 @@
     padding: 0 !important;
 }
 
-/* Active (T open): semi-transparent BG, rounded shell, no layout shift */
+/* Active (T): stay fully transparent — only the input row has light glass */
 #chat #chat-app.is-active {
-    background: rgba(8, 8, 14, 0.78) !important;
-    border-radius: 12px !important;
-    padding: 10px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55) !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
 }
 
-/* Remove fade mask when open — timestamps at top always visible */
-#chat-app.is-active .chat-messages {
-    mask-image: none !important;
-    -webkit-mask-image: none !important;
-}
-
-/* Prevent display:none jump on input-wrapper — keep in flow with max-height 0 */
 #chat .chat-input-wrapper.hidden {
-    display: flex !important;
-    max-height: 0 !important;
-    opacity: 0 !important;
+    display: none !important;
     pointer-events: none !important;
-    overflow: hidden !important;
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
 }
 
 #chat .chat-header {
@@ -610,14 +601,14 @@
     padding: 0 2px 6px !important;
 }
 
-#chat-app.is-active .chat-input-wrapper {
-    background: rgba(10, 10, 15, 0.82) !important;
-    border-color: rgba(0, 255, 204, 0.14) !important;
-    border-left-color: #00ffcc !important;
+#chat-app.is-active .chat-input-wrapper:not(.hidden) {
+    background: rgba(0, 0, 0, 0.32) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    border-left-color: rgba(0, 255, 204, 0.65) !important;
 }
 
 #chat .chat-input {
-    background: rgba(0, 0, 0, 0.45) !important;
+    background: rgba(0, 0, 0, 0.22) !important;
     clip-path: none !important;
     outline: none !important;
 }

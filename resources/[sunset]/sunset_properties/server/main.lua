@@ -213,7 +213,16 @@ exports.sunset_core:RegisterCallback('sunset:buyProperty', function(source,id)
     if currentLevel < requiredLevel then
         return nil,('Purchase blocked: this house requires level %d, but you are level %d. No money was charged. Earn RP at payday and use /buylevel.'):format(requiredLevel,currentLevel)
     end
-    if MySQL.scalar.await('SELECT 1 FROM properties WHERE owner_character_id=? LIMIT 1',{char.id}) then return nil,'You already own a house. Sell it before buying another.' end
+    local maxOwned = tonumber(SunsetProperties.MaxOwnedPerCharacter) or 0
+    if maxOwned > 0 then
+        local ownedCount = tonumber(MySQL.scalar.await(
+            'SELECT COUNT(*) FROM properties WHERE owner_character_id=?',
+            { char.id }
+        )) or 0
+        if ownedCount >= maxOwned then
+            return nil, ('You can own at most %d houses. Sell one before buying another.'):format(maxOwned)
+        end
+    end
     local price=tonumber(prop.price) or 0
     local bank, cash = exports.sunset_core:GetMoney(source,'bank'), exports.sunset_core:GetMoney(source,'cash')
     if bank<price and cash<price then return nil,('Purchase blocked: the house costs $%d. You have $%d in bank and $%d cash; the full price must be in one account. No money was charged.'):format(price,bank,cash) end
@@ -311,10 +320,14 @@ local function ownedProperty(source,id)
     if not char then return nil,nil,'Character data is unavailable.' end
     local prop=id and property(id) or (Inside[source] and property(Inside[source]))
     if not prop then
-        local only=MySQL.query.await('SELECT id FROM properties WHERE owner_character_id=?',{char.id}) or {}
-        if #only==1 then prop=property(only[1].id) end
+        local owned = MySQL.query.await('SELECT id FROM properties WHERE owner_character_id=?', { char.id }) or {}
+        if #owned == 1 then
+            prop = property(owned[1].id)
+        elseif #owned > 1 then
+            return char, nil, 'You own multiple houses — specify the house ID in the command or UI.'
+        end
     end
-    if not prop then return char,nil,'Specify a house ID or stand inside your house.' end
+    if not prop then return char, nil, 'Specify a house ID or stand inside your house.' end
     if tonumber(prop.owner_character_id)~=tonumber(char.id) then return char,nil,'Only the house owner can change this setting.' end
     return char,prop
 end
@@ -406,6 +419,51 @@ local function kickRenter(source,id,characterId)
     return true,('Renter #%d was removed.'):format(characterId)
 end
 
+local function evictPropertyRenters(propertyId, label, reasonSuffix)
+    local renters = MySQL.query.await(
+        'SELECT character_id FROM property_rentals WHERE property_id=? AND active=1',
+        { propertyId }
+    ) or {}
+    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE property_id=?', { propertyId })
+    local suffix = reasonSuffix or 'ownership changed'
+    for _, renter in ipairs(renters) do
+        clearHome(renter.character_id, propertyId, ('Your rental at %s ended because %s.'):format(label, suffix))
+    end
+    MySQL.update.await('UPDATE characters SET home_property_id=NULL WHERE home_property_id=?', { propertyId })
+end
+
+local function transferPropertyOwnership(propertyId, fromCharId, toCharId)
+    propertyId = tonumber(propertyId)
+    fromCharId = tonumber(fromCharId)
+    toCharId = tonumber(toCharId)
+    if not propertyId or not fromCharId or not toCharId then return false, 'Invalid property transfer.' end
+    local prop = property(propertyId)
+    if not prop or tonumber(prop.owner_character_id) ~= fromCharId then
+        return false, 'Seller no longer owns this property.'
+    end
+    evictPropertyRenters(propertyId, prop.label or 'the house', 'the house was traded')
+    local changed = MySQL.update.await(
+        'UPDATE properties SET owner_character_id=? WHERE id=? AND owner_character_id=?',
+        { toCharId, propertyId, fromCharId }
+    )
+    if changed ~= 1 then return false, 'Property transfer failed.' end
+    if tonumber(prop.owner_character_id) == fromCharId then
+        for _, playerId in ipairs(GetPlayers()) do
+            local src = tonumber(playerId)
+            local online = exports.sunset_core:GetCharacter(src)
+            if online and tonumber(online.id) == fromCharId and tonumber(online.home_property_id) == propertyId then
+                exports.sunset_core:SetHomeProperty(src, nil)
+            end
+        end
+    end
+    TriggerClientEvent('sunset:client:propertiesChanged', -1)
+    return true
+end
+exports('TransferPropertyOwnership', transferPropertyOwnership)
+exports('GetMaxOwnedPerCharacter', function()
+    return tonumber(SunsetProperties.MaxOwnedPerCharacter) or 0
+end)
+
 local function sellHouse(source,id,confirm)
     local owner,prop,err=ownedProperty(source,id)
     if not prop then return nil,err end
@@ -413,12 +471,7 @@ local function sellHouse(source,id,confirm)
     if not confirm then
         return false,('This permanently sells %s for 70%% ($%d). Confirm to proceed.'):format(prop.label,refund)
     end
-    local renters=MySQL.query.await('SELECT character_id FROM property_rentals WHERE property_id=? AND active=1',{prop.id}) or {}
-    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE property_id=?',{prop.id})
-    for _,renter in ipairs(renters) do
-        clearHome(renter.character_id,prop.id,('Your rental at %s ended because the house was sold.'):format(prop.label))
-    end
-    MySQL.update.await('UPDATE characters SET home_property_id=NULL WHERE home_property_id=?',{prop.id})
+    evictPropertyRenters(prop.id, prop.label, 'the house was sold')
     MySQL.update.await('UPDATE properties SET owner_character_id=NULL,locked=1,rent_enabled=0 WHERE id=? AND owner_character_id=?',{prop.id,owner.id})
     exports.sunset_core:SetHomeProperty(source,nil)
     exports.sunset_core:AddMoney(source,'bank',refund,'house_sale')

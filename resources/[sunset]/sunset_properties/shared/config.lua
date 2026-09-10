@@ -7,6 +7,8 @@ SunsetProperties.MaxRentersMin = 1
 SunsetProperties.MaxRentersMax = 10
 SunsetProperties.AdminLevel = 3
 SunsetProperties.BucketBase = 20000
+-- 0 = unlimited owned houses per character
+SunsetProperties.MaxOwnedPerCharacter = 0
 
 -- Stable GTA Online interiors. Routing buckets isolate each physical house.
 SunsetProperties.Interiors = {

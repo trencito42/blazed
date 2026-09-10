@@ -174,3 +174,61 @@ function RunServerCommand(source, name, args)
     return false
 end
 exports('RunServerCommand', RunServerCommand)
+
+local BASE_CHAT_CHANNELS = {
+    { id = 'all', label = 'LOCAL', placeholder = 'Local message — nearby players hear you' },
+    { id = 'ooc', label = 'OOC', placeholder = 'Out of Character — global (( message ))' },
+    { id = 'me', label = 'ME', placeholder = 'RP action (/me searches the trunk...)' },
+    { id = 'do', label = 'DO', placeholder = 'RP action (/do the trunk opens)' },
+}
+
+local function buildChatChannels(source)
+    local channels = {}
+    for _, row in ipairs(BASE_CHAT_CHANNELS) do
+        channels[#channels + 1] = row
+    end
+
+    local char = exports.sunset_core:GetCharacter(source)
+    local factionId = select(1, Sunset.GetCharacterFaction(char))
+    if factionId and Sunset.Factions[factionId] then
+        local faction = Sunset.Factions[factionId]
+        local label = faction.label or factionId
+        if Sunset.IsEmergencyDepartment(factionId) then
+            channels[#channels + 1] = {
+                id = 'radio',
+                label = 'RADIO',
+                placeholder = ('%s radio — your department only'):format(label),
+            }
+            channels[#channels + 1] = {
+                id = 'dept',
+                label = 'DEPT',
+                placeholder = 'Inter-agency radio (LSPD, Sheriff, FIB, EMS, LSFD)',
+            }
+        else
+            channels[#channels + 1] = {
+                id = 'faction',
+                label = string.upper(label),
+                placeholder = ('%s faction chat'):format(label),
+            }
+        end
+    end
+
+    if GetResourceState('sunset_clans') == 'started' then
+        local ok, meta = pcall(function()
+            return exports.sunset_clans:GetClanChatMeta(source)
+        end)
+        if ok and type(meta) == 'table' and meta.clanTag and meta.clanTag ~= '' then
+            channels[#channels + 1] = {
+                id = 'clan',
+                label = string.upper(meta.clanTag),
+                placeholder = ('%s clan chat'):format(meta.clanTag),
+            }
+        end
+    end
+
+    return channels
+end
+
+exports.sunset_core:RegisterCallback('sunset:getChatChannels', function(source)
+    return buildChatChannels(source)
+end)

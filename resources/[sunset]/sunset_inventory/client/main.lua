@@ -103,6 +103,33 @@ AddEventHandler('sunset:nui:inventoryTradeRemove', function(data)
     inventoryAction('sunset:inventory:tradeRemove', data)
 end)
 
+AddEventHandler('sunset:nui:inventoryTradeOfferCash', function(data)
+    inventoryAction('sunset:inventory:tradeOfferCash', data)
+end)
+
+AddEventHandler('sunset:nui:inventoryTradeRemoveCash', function()
+    inventoryAction('sunset:inventory:tradeRemoveCash', {})
+end)
+
+AddEventHandler('sunset:nui:inventoryTradeCatalog', function()
+    CreateThread(function()
+        local catalog, err = Sunset.AwaitCallback('sunset:inventory:tradeCatalog', {})
+        if catalog then
+            exports.sunset_ui:Send('inventoryTradeCatalog', catalog)
+        else
+            exports.sunset_ui:Notify(err or 'Could not load trade assets.', 'error')
+        end
+    end)
+end)
+
+AddEventHandler('sunset:nui:inventoryTradeOfferAsset', function(data)
+    inventoryAction('sunset:inventory:tradeOfferAsset', data)
+end)
+
+AddEventHandler('sunset:nui:inventoryTradeRemoveAsset', function(data)
+    inventoryAction('sunset:inventory:tradeRemoveAsset', data)
+end)
+
 AddEventHandler('sunset:nui:inventoryTradeConfirm', function(data)
     inventoryAction('sunset:inventory:tradeConfirm', data)
 end)
@@ -271,6 +298,21 @@ local function removeDropObject(dropId)
     dropObjects[dropId] = nil
 end
 
+local function configureDropObject(object)
+    if not object or object == 0 or not DoesEntityExist(object) then return end
+    SetEntityDynamic(object, false)
+    SetEntityInvincible(object, true)
+    SetEntityCanBeDamaged(object, false)
+    SetEntityRecordsCollisions(object, false)
+    FreezeEntityPosition(object, true)
+    SetEntityCollision(object, false, false)
+    SetEntityCompletelyDisableCollision(object, true, true)
+    local ped = PlayerPedId()
+    if ped and ped ~= 0 then
+        SetEntityNoCollisionEntity(object, ped, true)
+    end
+end
+
 local function createDropObject(drop)
     CreateThread(function()
         RequestModel(DROP_MODEL)
@@ -278,13 +320,16 @@ local function createDropObject(drop)
         while not HasModelLoaded(DROP_MODEL) and GetGameTimer() < timeout do Wait(20) end
         if not HasModelLoaded(DROP_MODEL) or not worldDrops[drop.id] then return end
         local c = drop.coords
-        local object = CreateObjectNoOffset(DROP_MODEL, c.x, c.y, c.z, false, false, false)
+        local object = CreateObjectNoOffset(DROP_MODEL, c.x, c.y, c.z - 0.02, false, false, false)
         PlaceObjectOnGroundProperly(object)
-        FreezeEntityPosition(object, true)
-        SetEntityCollision(object, false, false)
-        SetEntityCompletelyDisableCollision(object, true, false)
+        configureDropObject(object)
         dropObjects[drop.id] = object
         SetModelAsNoLongerNeeded(DROP_MODEL)
+        for _ = 1, 8 do
+            Wait(75)
+            if not DoesEntityExist(object) or not worldDrops[drop.id] then return end
+            configureDropObject(object)
+        end
     end)
 end
 
@@ -327,6 +372,8 @@ CreateThread(function()
             local distance = #(coords - c)
             if distance < 18.0 then
                 wait = 0
+                local object = dropObjects[dropId]
+                if object and DoesEntityExist(object) then configureDropObject(object) end
                 drawDropText(c, ('~b~[E]~s~ %s x%d'):format(drop.label or drop.item or 'Dropped item', tonumber(drop.count) or 1))
                 if distance < 2.2 and (not closestDistance or distance < closestDistance) then
                     closestId, closestDistance = dropId, distance

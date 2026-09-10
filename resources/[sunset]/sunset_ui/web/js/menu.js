@@ -1,6 +1,7 @@
 const Menu = {
     activeTab: 'player',
     selectedVehicleId: null,
+    openEcuVehicleId: null,
 
     init() {
         if (this._ready) return;
@@ -219,14 +220,24 @@ const Menu = {
     bindEcuToggles(root) {
         if (!root) return;
         root.querySelectorAll('[data-ecu-toggle]').forEach((btn) => {
+            const id = btn.dataset.ecuToggle;
+            const detail = root.querySelector(`[data-ecu-detail="${id}"]`);
+            if (!detail) return;
+            const isOpen = String(this.openEcuVehicleId) === String(id);
+            detail.classList.toggle('hidden', !isOpen);
+            btn.classList.toggle('is-open', isOpen);
+            btn.textContent = isOpen ? '−' : '⋯';
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = btn.dataset.ecuToggle;
-                const detail = root.querySelector(`[data-ecu-detail="${id}"]`);
-                if (!detail) return;
-                const open = detail.classList.toggle('hidden');
-                btn.classList.toggle('is-open', !open);
-                btn.textContent = open ? '⋯' : '−';
+                if (String(this.openEcuVehicleId) === String(id)) {
+                    this.openEcuVehicleId = null;
+                } else {
+                    this.openEcuVehicleId = id;
+                }
+                const nowOpen = String(this.openEcuVehicleId) === String(id);
+                detail.classList.toggle('hidden', !nowOpen);
+                btn.classList.toggle('is-open', nowOpen);
+                btn.textContent = nowOpen ? '−' : '⋯';
             });
         });
     },
@@ -335,7 +346,11 @@ const Menu = {
 
         grid.querySelectorAll('[data-v-select]').forEach((button) => {
             button.addEventListener('click', () => {
-                this.selectedVehicleId = Number(button.dataset.vSelect);
+                const nextId = Number(button.dataset.vSelect);
+                if (String(nextId) !== String(this.selectedVehicleId)) {
+                    this.openEcuVehicleId = null;
+                }
+                this.selectedVehicleId = nextId;
                 this.renderVehicles(data);
             });
         });

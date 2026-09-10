@@ -158,7 +158,12 @@ CreateThread(function()
                 if nearNpcIdx and menuOpen ~= 'npc' then
                     openNpcMenu(nearNpcIdx)
                 elseif nearVehicle and DoesEntityExist(nearVehicle) and menuOpen ~= 'vehicle' then
-                    openVehicleMenu(nearVehicle)
+                    local plate = (GetVehicleNumberPlateText(nearVehicle) or ''):gsub('%s+', ''):upper()
+                    if plate ~= '' and Sunset.AwaitCallback('sunset:hasVehicleKeys', plate) then
+                        -- Owned / keyed vehicles use the normal vehicle menu, not lockpick.
+                    else
+                        openVehicleMenu(nearVehicle)
+                    end
                 end
             end
             Wait(0)

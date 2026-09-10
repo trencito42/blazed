@@ -61,6 +61,7 @@ ensure sunset_vehicles
 ensure sunset_tuning
 ensure sunset_admin
 ensure sunset_properties
+ensure sunset_businesses
 ensure sunset_emotes
 ensure sunset_clothing
 ensure sunset_phone

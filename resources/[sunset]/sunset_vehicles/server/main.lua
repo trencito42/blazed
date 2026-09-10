@@ -464,7 +464,8 @@ exports.sunset_core:RegisterCallback('sunset:claimVehicleInsurance', function(so
 
     MySQL.update.await([[
         UPDATE vehicles
-        SET stored = 1, destroyed = 0, engine = 1000.0, body = 1000.0, fuel = 100.0
+        SET stored = 1, destroyed = 0, engine = 1000.0, body = 1000.0, fuel = 100.0,
+            parked_x = NULL, parked_y = NULL, parked_z = NULL, parked_h = NULL
         WHERE id = ? AND character_id = ?
     ]], { veh.id, char.id })
 
@@ -646,6 +647,10 @@ exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(sou
         end)
     end
 
+    if GetResourceState('sunset_businesses') == 'started' then
+        exports.sunset_businesses:RecordSaleAtCoords(GetEntityCoords(ped), 'gas', cost)
+    end
+
     return { newFuel = toFuel, cost = cost, liters = added }
 end)
 
@@ -680,6 +685,10 @@ exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targe
     if not exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { liters = targetLiters }) then
         exports.sunset_core:AddMoney(source, 'cash', cost, 'gas_can_refund')
         return nil, 'Could not fill gas can'
+    end
+
+    if GetResourceState('sunset_businesses') == 'started' then
+        exports.sunset_businesses:RecordSaleAtCoords(GetEntityCoords(ped), 'gas', cost)
     end
 
     return { liters = targetLiters, maxLiters = maxLiters, cost = cost, added = added }
@@ -916,3 +925,37 @@ function ExecutePlayerCommand(source, name, args)
 end
 
 exports('ExecutePlayerCommand', ExecutePlayerCommand)
+
+function TransferVehicleOwnership(vehicleId, fromCharId, toCharId)
+    vehicleId = tonumber(vehicleId)
+    fromCharId = tonumber(fromCharId)
+    toCharId = tonumber(toCharId)
+    if not vehicleId or not fromCharId or not toCharId then
+        return false, 'Invalid vehicle transfer.'
+    end
+
+    local row = MySQL.single.await(
+        'SELECT id, plate, stored, destroyed FROM vehicles WHERE id = ? AND character_id = ?',
+        { vehicleId, fromCharId }
+    )
+    if not row then return false, 'Seller no longer owns this vehicle.' end
+    if row.destroyed == 1 or row.destroyed == true or row.destroyed == '1' then
+        return false, 'Destroyed vehicles cannot be traded.'
+    end
+    if normalizeStored(row.stored) ~= 1 then
+        return false, 'Only garage-stored vehicles can be traded.'
+    end
+
+    local entity = findVehicleEntityByPlate(row.plate)
+    if entity and DoesEntityExist(entity) then
+        DeleteEntity(entity)
+    end
+
+    local changed = MySQL.update.await(
+        'UPDATE vehicles SET character_id = ?, stored = 1 WHERE id = ? AND character_id = ?',
+        { toCharId, vehicleId, fromCharId }
+    )
+    if changed ~= 1 then return false, 'Vehicle transfer failed.' end
+    return true
+end
+exports('TransferVehicleOwnership', TransferVehicleOwnership)

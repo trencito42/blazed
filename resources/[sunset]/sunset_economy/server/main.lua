@@ -186,7 +186,7 @@ CreateThread(function()
     end
 end)
 
-exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, itemName, amount)
+exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, itemName, amount, businessId)
     amount = math.floor(amount or 1)
     if amount < 1 then return nil, 'Invalid amount' end
 
@@ -233,6 +233,11 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     if not exports.sunset_inventory:AddItem(source, itemName, amount) then
         exports.sunset_core:AddMoney(source, chargedAccount, total, 'shop_refund')
         return nil, 'Inventory full'
+    end
+
+    businessId = tonumber(businessId)
+    if businessId and GetResourceState('sunset_businesses') == 'started' then
+        exports.sunset_businesses:RecordSale(businessId, total)
     end
 
     return true

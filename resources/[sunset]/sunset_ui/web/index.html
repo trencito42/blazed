@@ -25,7 +25,7 @@
     <link rel="stylesheet" href="css/hud.css?v=11">
     <link rel="stylesheet" href="css/premium-hud.css?v=9">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
-    <link rel="stylesheet" href="css/chat.css?v=18">
+    <link rel="stylesheet" href="css/chat.css?v=19">
     <link rel="stylesheet" href="css/premium-wanted.css?v=1">
     <link rel="stylesheet" href="css/menu.css?v=10">
     <link rel="stylesheet" href="css/panels.css?v=8">
@@ -54,7 +54,7 @@
     <link rel="stylesheet" href="css/premium-menu.css?v=5">
     <link rel="stylesheet" href="css/premium-auth.css?v=1">
     <link rel="stylesheet" href="css/premium-properties.css?v=6">
-    <link rel="stylesheet" href="css/premium-chat.css?v=12">
+    <link rel="stylesheet" href="css/premium-chat.css?v=13">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -630,16 +630,7 @@
                         <span id="chat-channel-label">ALL</span>
                         <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
-                    <div class="channel-dropdown" id="chat-channel-dropdown">
-                        <div class="dropdown-item opt-all active" data-channel="all" data-placeholder="Local message — nearby players hear you">ALL</div>
-                        <div class="dropdown-item opt-ooc" data-channel="ooc" data-placeholder="Out of Character — global (( message ))">OOC</div>
-                        <div class="dropdown-item opt-me" data-channel="me" data-placeholder="RP action (/me searches the trunk...)">ME</div>
-                        <div class="dropdown-item opt-me" data-channel="do" data-placeholder="RP action (/do the trunk opens)">DO</div>
-                        <div class="dropdown-item opt-faction" data-channel="faction" data-placeholder="Faction chat...">FACTION</div>
-                        <div class="dropdown-item opt-clan" data-channel="clan" data-placeholder="Clan chat...">CLAN</div>
-                        <div class="dropdown-item opt-dept" data-channel="dept" data-placeholder="Department frequency...">DEPT</div>
-                        <div class="dropdown-item opt-radio" data-channel="radio" data-placeholder="Internal radio frequency...">RADIO</div>
-                    </div>
+                    <div class="channel-dropdown" id="chat-channel-dropdown"></div>
                 </div>
                 <input type="text" class="chat-input" id="chat-input" placeholder="Local message — nearby players hear you" maxlength="256" autocomplete="off">
                 <div class="chat-suggestions hidden" id="chat-suggestions" aria-live="polite"></div>
@@ -832,7 +823,7 @@
                 <header class="premium-inventory-header">
                     <h1>INVENTORY</h1>
                     <div class="premium-inventory-stats">
-                        <div class="premium-cash-badge" title="Wallet Cash">
+                        <div class="premium-cash-badge" id="inventory-cash-badge" title="Wallet cash — drag into trade offer">
                             <span class="premium-cash-badge__icon">$</span>
                             <strong id="inventory-cash">0</strong>
                         </div>
@@ -853,14 +844,29 @@
                 </div>
                 <div class="premium-trade-panel hidden" id="inventory-trade-panel">
                     <div class="premium-side-heading">TRADE WITH <strong id="inventory-trade-target">PLAYER</strong></div>
-                    <span class="premium-trade-label">YOUR OFFER — DRAG HERE OR PRESS OFFER</span>
+                    <span class="premium-trade-label">YOUR OFFER — DRAG ITEMS OR CASH HERE</span>
                     <div class="premium-trade-zone" id="inventory-my-offer"></div>
+                    <span class="premium-trade-label">YOUR ASSETS</span>
+                    <div class="premium-trade-assets" id="inventory-my-assets"></div>
+                    <button type="button" class="premium-trade-add-asset" id="inventory-trade-add-asset">+ ADD HOUSE / VEHICLE / BUSINESS</button>
                     <span class="premium-trade-label">THEIR OFFER</span>
                     <div class="premium-trade-zone is-readonly" id="inventory-their-offer"></div>
+                    <span class="premium-trade-label">THEIR ASSETS</span>
+                    <div class="premium-trade-assets is-readonly" id="inventory-their-assets"></div>
                     <button type="button" class="premium-trade-confirm" id="inventory-trade-confirm">ACCEPT TRADE</button>
                     <button type="button" class="premium-trade-cancel" id="inventory-trade-cancel">CANCEL</button>
                 </div>
             </aside>
+            <div class="premium-trade-asset-modal hidden" id="inventory-trade-asset-modal" aria-hidden="true">
+                <div class="premium-qty-box premium-trade-asset-box">
+                    <h3>ADD ASSET TO TRADE</h3>
+                    <p class="premium-trade-asset-hint">Only garage-stored vehicles and assets you own can be traded.</p>
+                    <div class="premium-trade-asset-list" id="inventory-trade-asset-list"></div>
+                    <div class="premium-qty-actions">
+                        <button type="button" class="premium-qty-cancel" id="inventory-trade-asset-close">CLOSE</button>
+                    </div>
+                </div>
+            </div>
             <div class="premium-qty-modal hidden" id="inventory-qty-modal" aria-hidden="true">
                 <div class="premium-qty-box">
                     <h3 id="inventory-qty-title">SELECT AMOUNT</h3>
@@ -3066,6 +3072,82 @@
         </div>
     </div>
 
+    <!-- BUSINESS PANEL (/abusiness admin, /mybusiness owner) -->
+    <div id="business-panel" class="premium-clan hidden" aria-hidden="true">
+        <div class="premium-clan__wrapper">
+            <aside class="premium-clan__sidebar">
+                <div class="premium-clan__brand">
+                    <div class="premium-clan__brand-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    </div>
+                    <div class="premium-clan__brand-text">
+                        <h1 id="business-panel-title">BUSINESS</h1>
+                        <span id="business-panel-type">Management</span>
+                    </div>
+                </div>
+                <nav class="premium-clan__nav" aria-label="Business sections">
+                    <button type="button" class="premium-clan__nav-item is-active" data-business-tab="admin" id="business-tab-admin">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Administrare
+                    </button>
+                    <button type="button" class="premium-clan__nav-item" data-business-tab="owner" id="business-tab-owner">
+                        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        Afacerile Mele
+                    </button>
+                </nav>
+                <button type="button" class="premium-clan__close" id="business-panel-close">ÎNCHIDE</button>
+            </aside>
+            <div class="premium-clan__content">
+                <div class="premium-clan__tab is-active" data-business-panel="admin">
+                    <div class="premium-clan__header">
+                        <h2>Administrare Business-uri</h2>
+                        <p>Setează preț, profit %, disponibilitate și proprietar pentru fiecare locație.</p>
+                    </div>
+                    <div class="business-admin-layout">
+                        <div class="business-admin-list-wrap">
+                            <h3>Locații</h3>
+                            <div id="business-admin-list" class="premium-clan__roster business-admin-list"></div>
+                        </div>
+                        <div class="business-admin-detail-wrap">
+                            <p id="business-admin-empty" class="premium-clan__empty">Selectează o locație din listă.</p>
+                            <div id="business-admin-form" class="premium-clan__form hidden" data-business-id="">
+                                <h3 id="business-admin-selected-label">Business</h3>
+                                <div class="premium-clan__stats business-admin-stats">
+                                    <div class="premium-clan__stat"><span class="premium-clan__stat-label">Tip</span><span class="premium-clan__stat-value" id="business-admin-type">—</span></div>
+                                    <div class="premium-clan__stat"><span class="premium-clan__stat-label">Catalog</span><span class="premium-clan__stat-value" id="business-admin-catalog">—</span></div>
+                                    <div class="premium-clan__stat"><span class="premium-clan__stat-label">Proprietar</span><span class="premium-clan__stat-value" id="business-admin-owner">—</span></div>
+                                    <div class="premium-clan__stat"><span class="premium-clan__stat-label">Profit acumulat</span><span class="premium-clan__stat-value" id="business-admin-balance" style="color:var(--pf-success);">$0</span></div>
+                                </div>
+                                <label>Nume afișat<input type="text" id="business-admin-label" maxlength="128"></label>
+                                <label>Preț cumpărare ($)<input type="number" id="business-admin-price" min="0" step="1000"></label>
+                                <label>Profit proprietar (%)<input type="number" id="business-admin-profit" min="0" max="100" step="1"></label>
+                                <label class="premium-clan__check"><input type="checkbox" id="business-admin-for-sale"> De vânzare (fără owner)</label>
+                                <label class="premium-clan__check"><input type="checkbox" id="business-admin-enabled" checked> Activ</label>
+                                <div class="business-admin-actions premium-clan__btn-group">
+                                    <button type="button" class="premium-clan__btn premium-clan__btn--primary" id="business-admin-save">SALVEAZĂ</button>
+                                    <button type="button" class="premium-clan__btn premium-clan__btn--secondary" id="business-admin-teleport">TELEPORT</button>
+                                    <button type="button" class="premium-clan__btn premium-clan__btn--danger" id="business-admin-clear-owner">SCOATE OWNER</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="premium-clan__tab" data-business-panel="owner">
+                    <div class="premium-clan__header">
+                        <h2>Afacerile Tale</h2>
+                        <p>Profit din vânzări la magazine și benzinării. Retrage în bancă.</p>
+                    </div>
+                    <div class="premium-clan__stat business-owner-total-stat">
+                        <span class="premium-clan__stat-label">Total disponibil</span>
+                        <span class="premium-clan__stat-value" id="business-owner-total" style="color:var(--pf-success);">$0</span>
+                    </div>
+                    <div id="business-owner-list" class="business-owner-list"></div>
+                </div>
+            </div>
+            <div class="premium-clans-dir__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+        </div>
+    </div>
+
     <script src="js/app.js?v=20"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>
@@ -3074,7 +3156,7 @@
     <script src="js/player_identity.js?v=3"></script>
     <script src="js/scoreboard.js?v=2"></script>
     <script src="js/chat_settings.js"></script>
-    <script src="js/chat.js?v=24"></script>
+    <script src="js/chat.js?v=26"></script>
     <script src="js/properties-ui.js?v=5"></script>
     <script src="js/menu.js?v=11"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
@@ -3094,6 +3176,7 @@
     <script src="js/radar.js"></script>
     <script src="js/factions.js?v=10"></script>
     <script src="js/clans.js?v=13"></script>
+    <script src="js/businesses.js?v=1"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
     <script src="js/player_interaction.js?v=5"></script>
     <script src="js/atm.js?v=1"></script>

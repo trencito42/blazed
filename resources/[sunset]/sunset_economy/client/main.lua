@@ -74,7 +74,11 @@ AddEventHandler('sunset:world:openShop', function(shopId, shop)
     end
     shopOpen = true
     lastShopOpenAt = now
-    exports.sunset_ui:Send('shopShow', { shopId = shopId, shop = enrichShop(shop) })
+    local businessId = nil
+    if GetResourceState('sunset_businesses') == 'started' then
+        businessId = Sunset.AwaitCallback('sunset:getBusinessForShop', shopId)
+    end
+    exports.sunset_ui:Send('shopShow', { shopId = shopId, businessId = businessId, shop = enrichShop(shop) })
     exports.sunset_ui:SetFocus(true, true)
 end)
 
@@ -108,7 +112,7 @@ AddEventHandler('sunset:world:openAtm', function()
 end)
 
 AddEventHandler('sunset:nui:shopBuy', function(data)
-    local ok, err = Sunset.AwaitCallback('sunset:buyItem', data.shopId, data.item, data.amount or 1)
+    local ok, err = Sunset.AwaitCallback('sunset:buyItem', data.shopId, data.item, data.amount or 1, data.businessId)
     if ok then
         exports.sunset_ui:Notify('Purchase successful', 'success')
     else

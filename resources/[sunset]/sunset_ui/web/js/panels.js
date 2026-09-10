@@ -89,6 +89,8 @@ const Panels = {
         });
         $('#inventory-trade-confirm')?.addEventListener('click', () => post('inventoryTradeConfirm', {}));
         $('#inventory-trade-cancel')?.addEventListener('click', () => post('inventoryTradeCancel', {}));
+        $('#inventory-trade-add-asset')?.addEventListener('click', () => this.openTradeAssetCatalog());
+        $('#inventory-trade-asset-close')?.addEventListener('click', () => this.hideTradeAssetPicker());
 
         this._bindInventoryPointerDrag();
         $('#shop-close')?.addEventListener('click', () => post('shopClose'));
@@ -313,6 +315,7 @@ const Panels = {
         if (fill) fill.style.width = `${Math.min(100, Math.max(0, currentWeight / maxWeight * 100))}%`;
 
         const cash = Number(data.cash) || 0;
+        this._inventoryCash = cash;
         const cashEl = $('#inventory-cash');
         if (cashEl) cashEl.textContent = '$' + cash.toLocaleString();
 
@@ -363,6 +366,54 @@ const Panels = {
         else doOffer(count || 1);
     },
 
+    _offerTradeCash(amount) {
+        if (!this._inventoryTrade) return;
+        post('inventoryTradeOfferCash', { amount: Math.max(0, Math.floor(Number(amount) || 0)) });
+    },
+
+    openCashOfferModal(maxCash, onConfirm) {
+        const modal = $('#inventory-qty-modal');
+        const available = Math.max(0, Math.floor(Number(maxCash) || 0));
+        if (!modal || available <= 0) return;
+        if (available === 1) return onConfirm(1);
+
+        $('#inventory-qty-title').textContent = 'OFFER CASH';
+        $('#inventory-qty-item-name').textContent = `Wallet cash ($${available.toLocaleString()} available)`;
+        const input = $('#inventory-qty-input');
+        const slider = $('#inventory-qty-slider');
+        input.min = 1; input.max = available; input.value = 1;
+        slider.min = 1; slider.max = available; slider.value = 1;
+
+        const updateVal = (val) => {
+            const v = Math.max(1, Math.min(available, Math.floor(Number(val) || 1)));
+            input.value = v;
+            slider.value = v;
+        };
+
+        input.oninput = () => updateVal(input.value);
+        slider.oninput = () => updateVal(slider.value);
+        $('#inventory-qty-minus').onclick = () => updateVal(Number(input.value) - 1);
+        $('#inventory-qty-plus').onclick = () => updateVal(Number(input.value) + 1);
+        $('#inventory-qty-quick-1').onclick = () => updateVal(1);
+        $('#inventory-qty-quick-half').onclick = () => updateVal(Math.max(1, Math.floor(available / 2)));
+        $('#inventory-qty-quick-all').onclick = () => updateVal(available);
+
+        $('#inventory-qty-cancel').onclick = () => {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+        $('#inventory-qty-confirm').onclick = () => {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            onConfirm(Number(input.value) || 1);
+        };
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        input.focus();
+        input.select();
+    },
+
     _bindInventoryPointerDrag() {
         if (this._pointerDragBound) return;
         this._pointerDragBound = true;
@@ -370,6 +421,7 @@ const Panels = {
 
         const clearHover = () => {
             $('#inventory-my-offer')?.classList.remove('is-dragover');
+            $('#inventory-cash-badge')?.classList.remove('is-dragover');
             $('#inventory-drop-selected')?.classList.remove('is-dragover');
             $$('.premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
         };
@@ -382,8 +434,12 @@ const Panels = {
             document.body.classList.remove('inventory-dragging');
             state.ghost?.remove();
             state.itemEl?.classList.remove('is-dragging');
+            state.badgeEl?.classList.remove('is-dragging');
             try {
-                if (state.pointerId != null) state.itemEl?.releasePointerCapture(state.pointerId);
+                if (state.pointerId != null) {
+                    if (state.cash) state.badgeEl?.releasePointerCapture(state.pointerId);
+                    else state.itemEl?.releasePointerCapture(state.pointerId);
+                }
             } catch (_) { /* ignore */ }
             clearHover();
 
@@ -398,10 +454,15 @@ const Panels = {
                 const slot = el?.closest('.premium-slot');
 
                 if (offerZone && this._inventoryTrade) {
-                    this._offerInventoryRow(state.row);
+                    if (state.cash) this.openCashOfferModal(this._inventoryCash, (amount) => this._offerTradeCash(amount));
+                    else this._offerInventoryRow(state.row);
                 } else if (dropBtn) {
-                    if (this._inventoryTrade) this._offerInventoryRow(state.row);
-                    else this._dropInventoryRow(state.row);
+                    if (this._inventoryTrade) {
+                        if (state.cash) this.openCashOfferModal(this._inventoryCash, (amount) => this._offerTradeCash(amount));
+                        else this._offerInventoryRow(state.row);
+                    } else if (!state.cash) {
+                        this._dropInventoryRow(state.row);
+                    }
                 } else if (slot && !this._inventoryTrade) {
                     const toSlot = Number(slot.dataset.slot) || 0;
                     const fromSlot = Number(state.row.slot) || Number(state.cell?.dataset.slot) || 0;
@@ -426,10 +487,19 @@ const Panels = {
                 document.body.classList.add('inventory-dragging');
                 const ghost = document.createElement('div');
                 ghost.className = 'premium-drag-ghost';
-                ghost.appendChild(createItemArtwork(state.row, 'premium-drag-ghost__icon'));
+                if (state.cash) {
+                    ghost.classList.add('premium-drag-ghost--cash');
+                    const icon = document.createElement('span');
+                    icon.className = 'premium-drag-ghost__cash';
+                    icon.textContent = '$';
+                    ghost.appendChild(icon);
+                    state.badgeEl?.classList.add('is-dragging');
+                } else {
+                    ghost.appendChild(createItemArtwork(state.row, 'premium-drag-ghost__icon'));
+                    state.itemEl?.classList.add('is-dragging');
+                }
                 document.body.appendChild(ghost);
                 state.ghost = ghost;
-                state.itemEl?.classList.add('is-dragging');
             }
 
             e.preventDefault();
@@ -441,6 +511,8 @@ const Panels = {
             const el = document.elementFromPoint(e.clientX, e.clientY);
             if (el?.closest('#inventory-my-offer') && this._inventoryTrade) {
                 $('#inventory-my-offer')?.classList.add('is-dragover');
+            } else if (el?.closest('#inventory-cash-badge') && this._inventoryTrade) {
+                $('#inventory-cash-badge')?.classList.add('is-dragover');
             } else if (el?.closest('#inventory-drop-selected')) {
                 $('#inventory-drop-selected')?.classList.add('is-dragover');
             } else {
@@ -451,6 +523,33 @@ const Panels = {
 
         document.addEventListener('pointerup', (e) => endDrag(e));
         document.addEventListener('pointercancel', (e) => endDrag(e));
+
+        const cashBadge = $('#inventory-cash-badge');
+        cashBadge?.addEventListener('pointerdown', (event) => {
+            if (!this._inventoryTrade || event.button !== 0) return;
+            const available = Math.max(0, Math.floor(Number(this._inventoryCash) || 0));
+            if (available <= 0) return;
+            event.preventDefault();
+            try {
+                cashBadge.setPointerCapture(event.pointerId);
+            } catch (_) { /* ignore */ }
+            this._pointerDrag = {
+                cash: true,
+                badgeEl: cashBadge,
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                moved: false,
+                ghost: null,
+            };
+        });
+
+        cashBadge?.addEventListener('dblclick', () => {
+            if (!this._inventoryTrade) return;
+            const available = Math.max(0, Math.floor(Number(this._inventoryCash) || 0));
+            if (available <= 0) return;
+            this.openCashOfferModal(available, (amount) => this._offerTradeCash(amount));
+        });
     },
 
     _startInventoryPointerDrag(row, cell, itemEl, event) {
@@ -598,11 +697,123 @@ const Panels = {
         if (drop) drop.disabled = !row;
     },
 
+    _tradeAssetTypeLabel(assetType) {
+        if (assetType === 'vehicle') return 'VEHICLE';
+        if (assetType === 'property') return 'HOUSE';
+        if (assetType === 'business') return 'BUSINESS';
+        return 'ASSET';
+    },
+
+    openTradeAssetCatalog() {
+        if (!this._inventoryTrade) return;
+        post('inventoryTradeCatalog', {});
+    },
+
+    hideTradeAssetPicker() {
+        const modal = $('#inventory-trade-asset-modal');
+        modal?.classList.add('hidden');
+        modal?.setAttribute('aria-hidden', 'true');
+    },
+
+    showTradeAssetPicker(catalog = {}) {
+        const modal = $('#inventory-trade-asset-modal');
+        const list = $('#inventory-trade-asset-list');
+        if (!modal || !list) return;
+
+        const sections = [
+            { title: 'VEHICLES (GARAGE STORED)', items: catalog.vehicles || [] },
+            { title: 'HOUSES', items: catalog.properties || [] },
+            { title: 'BUSINESSES', items: catalog.businesses || [] },
+        ];
+
+        list.innerHTML = '';
+        let hasItems = false;
+        sections.forEach((section) => {
+            if (!section.items.length) return;
+            hasItems = true;
+            const heading = document.createElement('div');
+            heading.className = 'premium-trade-asset-section';
+            heading.textContent = section.title;
+            list.appendChild(heading);
+            section.items.forEach((asset) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'premium-trade-asset-option';
+                const type = document.createElement('span');
+                type.className = 'premium-trade-asset-option__type';
+                type.textContent = this._tradeAssetTypeLabel(asset.assetType);
+                const main = document.createElement('strong');
+                main.textContent = asset.label || 'Asset';
+                const detail = document.createElement('small');
+                detail.textContent = asset.detail || '';
+                btn.appendChild(type);
+                btn.appendChild(main);
+                if (detail.textContent) btn.appendChild(detail);
+                btn.addEventListener('click', () => {
+                    this.hideTradeAssetPicker();
+                    post('inventoryTradeOfferAsset', {
+                        assetType: asset.assetType,
+                        id: asset.id,
+                    });
+                });
+                list.appendChild(btn);
+            });
+        });
+
+        if (!hasItems) {
+            const empty = document.createElement('p');
+            empty.className = 'premium-trade-asset-empty';
+            empty.textContent = 'You have no tradeable houses, vehicles, or businesses right now.';
+            list.appendChild(empty);
+        }
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+    },
+
+    _renderTradeAssets(selector, rows, removable) {
+        const zone = $(selector);
+        if (!zone) return;
+        zone.innerHTML = '';
+        const assets = Array.isArray(rows) ? rows : [];
+        const types = ['vehicle', 'property', 'business'];
+        types.forEach((assetType) => {
+            const asset = assets.find((row) => row.assetType === assetType);
+            const slot = document.createElement('div');
+            slot.className = 'premium-trade-asset-slot';
+            if (asset) {
+                slot.classList.add('is-filled');
+                const type = document.createElement('span');
+                type.className = 'premium-trade-asset-slot__type';
+                type.textContent = this._tradeAssetTypeLabel(assetType);
+                const label = document.createElement('strong');
+                label.textContent = asset.label || 'Asset';
+                const detail = document.createElement('small');
+                detail.textContent = asset.detail || '';
+                slot.appendChild(type);
+                slot.appendChild(label);
+                if (detail.textContent) slot.appendChild(detail);
+                slot.title = asset.label || assetType;
+                if (removable) {
+                    slot.classList.add('is-removable');
+                    slot.addEventListener('click', () => post('inventoryTradeRemoveAsset', { assetType }));
+                }
+            } else {
+                slot.classList.add('is-empty');
+                slot.textContent = this._tradeAssetTypeLabel(assetType);
+            }
+            zone.appendChild(slot);
+        });
+    },
+
     showInventoryTrade(data = {}) {
         this._inventoryTrade = data.active ? data : null;
         $('#inventory-nearby-panel')?.classList.toggle('hidden', data.active === true);
         $('#inventory-trade-panel')?.classList.toggle('hidden', data.active !== true);
-        if (!data.active) return;
+        if (!data.active) {
+            this.hideTradeAssetPicker();
+            return;
+        }
         const dropBtn = $('#inventory-drop-selected');
         if (dropBtn) {
             dropBtn.textContent = 'OFFER';
@@ -610,31 +821,61 @@ const Panels = {
         }
         const target = $('#inventory-trade-target');
         if (target) target.textContent = data.target?.name || `PLAYER #${data.target?.id || '?'}`;
-        const renderOffer = (selector, rows, removable) => {
+        const renderOffer = (selector, rows, cashAmount, removable) => {
             const zone = $(selector);
             if (!zone) return;
             zone.innerHTML = '';
             const offer = Array.isArray(rows) ? rows : [];
+            const cash = Math.max(0, Math.floor(Number(cashAmount) || 0));
+            const slots = [];
+            if (cash > 0) slots.push({ cash });
+            offer.forEach((row) => slots.push(row));
             for (let i = 0; i < 6; i += 1) {
                 const slot = document.createElement('div');
                 slot.className = 'premium-trade-slot';
-                const row = offer[i];
+                const row = slots[i];
                 if (row) {
-                    slot.appendChild(createItemArtwork(row, 'premium-trade-slot__icon'));
-                    const count = document.createElement('b');
-                    count.textContent = `x${Number(row.count) || 0}`;
-                    slot.appendChild(count);
-                    slot.title = row.label || row.item;
-                    if (removable) {
-                        slot.classList.add('is-removable');
-                        slot.addEventListener('click', () => post('inventoryTradeRemove', { rowId: row.id }));
+                    if (row.cash) {
+                        slot.classList.add('premium-trade-slot--cash');
+                        const icon = document.createElement('span');
+                        icon.className = 'premium-trade-slot__cash';
+                        icon.textContent = '$';
+                        slot.appendChild(icon);
+                        const count = document.createElement('b');
+                        count.textContent = `$${cash.toLocaleString()}`;
+                        slot.appendChild(count);
+                        slot.title = 'Cash offer';
+                        if (removable) {
+                            slot.classList.add('is-removable');
+                            slot.addEventListener('click', () => post('inventoryTradeRemoveCash', {}));
+                        }
+                    } else {
+                        slot.appendChild(createItemArtwork(row, 'premium-trade-slot__icon'));
+                        const count = document.createElement('b');
+                        count.textContent = `x${Number(row.count) || 0}`;
+                        slot.appendChild(count);
+                        slot.title = row.label || row.item;
+                        if (removable) {
+                            slot.classList.add('is-removable');
+                            slot.addEventListener('click', () => post('inventoryTradeRemove', { rowId: row.id }));
+                        }
                     }
                 }
                 zone.appendChild(slot);
             }
         };
-        renderOffer('#inventory-my-offer', data.myOffer, true);
-        renderOffer('#inventory-their-offer', data.theirOffer, false);
+        renderOffer('#inventory-my-offer', data.myOffer, data.myCash, true);
+        renderOffer('#inventory-their-offer', data.theirOffer, data.theirCash, false);
+        this._renderTradeAssets('#inventory-my-assets', data.myAssets, true);
+        this._renderTradeAssets('#inventory-their-assets', data.theirAssets, false);
+        $('#inventory-trade-add-asset')?.classList.toggle('hidden', data.finalizing === true);
+        const cashBadge = $('#inventory-cash-badge');
+        if (cashBadge) {
+            cashBadge.classList.toggle('is-trade-draggable', (Number(this._inventoryCash) || 0) > 0);
+            cashBadge.title = data.active
+                ? 'Drag cash into your trade offer (or double-click)'
+                : 'Wallet cash';
+        }
         const confirm = $('#inventory-trade-confirm');
         if (confirm) {
             confirm.classList.remove('is-countdown');
@@ -654,6 +895,8 @@ const Panels = {
 
     hideInventoryTrade() {
         this._inventoryTrade = null;
+        this.hideTradeAssetPicker();
+        $('#inventory-cash-badge')?.classList.remove('is-trade-draggable', 'is-dragging', 'is-dragover');
         $('#inventory-trade-panel')?.classList.add('hidden');
         $('#inventory-nearby-panel')?.classList.remove('hidden');
         const dropBtn = $('#inventory-drop-selected');
@@ -690,6 +933,7 @@ const Panels = {
         const shop = data.shop || {};
         const items = shop.items || [];
         this._shopData = data;
+        this._shopBusinessId = data.businessId || null;
 
         $('#shop-title').textContent = shop.label || 'Shop';
         const sub = $('#shop-subtitle');
@@ -751,7 +995,12 @@ const Panels = {
                 buy.textContent = 'BUY';
                 buy.setAttribute('aria-label', `Buy ${name.textContent}`);
                 buy.addEventListener('click', () => {
-                    post('shopBuy', { shopId: data.shopId, item: row.item, amount: 1 });
+                    post('shopBuy', {
+                        shopId: data.shopId,
+                        businessId: this._shopBusinessId,
+                        item: row.item,
+                        amount: 1,
+                    });
                 });
                 card.appendChild(buy);
                 grid.appendChild(card);

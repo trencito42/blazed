@@ -1321,3 +1321,113 @@
     .premium-faction__manage-grid,
     .premium-clan__manage-grid { grid-template-columns: 1fr; }
 }
+
+/* Business admin / owner panel */
+body.business-panels-open { overflow: hidden; }
+
+.business-admin-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 34%) minmax(0, 1fr);
+    gap: 16px;
+    min-height: 0;
+}
+
+.business-admin-list-wrap h3,
+.business-admin-detail-wrap h3 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--pf-text-muted);
+}
+
+.business-admin-list {
+    max-height: 52vh;
+    overflow: auto;
+}
+
+.business-admin-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    border: 1px solid transparent;
+    background: var(--pf-bg-panel);
+    color: var(--pf-text-main);
+    padding: 10px 12px;
+    border-radius: var(--pf-radius-md);
+    cursor: pointer;
+}
+
+.business-admin-row.is-selected {
+    border-color: rgba(0, 255, 204, 0.45);
+    background: rgba(0, 255, 204, 0.08);
+}
+
+.business-admin-row strong { display: block; font-size: 13px; }
+.business-admin-row small { color: var(--pf-text-muted); font-size: 11px; }
+
+.business-admin-detail-wrap .premium-clan__form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--pf-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.business-admin-detail-wrap input[type="text"],
+.business-admin-detail-wrap input[type="number"] {
+    background: var(--pf-bg-input);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    color: var(--pf-text-main);
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.business-admin-stats { margin-bottom: 14px; }
+
+.business-owner-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.business-owner-card__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.business-owner-total-stat { margin-top: 8px; }
+
+.premium-clan__empty {
+    color: var(--pf-text-muted);
+    font-size: 13px;
+    padding: 12px 0;
+}
+
+.premium-clan__sidebar .premium-clan__close {
+    margin: 12px 16px 0;
+    width: calc(100% - 32px);
+    padding: 12px;
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+    background: transparent;
+    color: var(--pf-text-muted);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+}
+
+.premium-clan__sidebar .premium-clan__close:hover {
+    color: var(--pf-text-main);
+    border-color: rgba(255, 255, 255, 0.22);
+}

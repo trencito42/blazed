@@ -69,6 +69,209 @@ local function offerArray(trade, owner)
     return rows
 end
 
+local function offeredCash(trade, owner)
+    if not trade or not trade.cash then return 0 end
+    return math.max(0, math.floor(tonumber(trade.cash[owner]) or 0))
+end
+
+local ASSET_TYPES = { vehicle = true, property = true, business = true }
+
+local function assetsMap(trade, owner)
+    return (trade and trade.assets and trade.assets[owner]) or {}
+end
+
+local function assetsArray(trade, owner)
+    local rows = {}
+    for _, asset in pairs(assetsMap(trade, owner)) do
+        rows[#rows + 1] = asset
+    end
+    table.sort(rows, function(a, b)
+        local order = { vehicle = 1, property = 2, business = 3 }
+        return (order[a.assetType] or 99) < (order[b.assetType] or 99)
+    end)
+    return rows
+end
+
+local function countAssets(trade, owner)
+    local count = 0
+    for _ in pairs(assetsMap(trade, owner)) do count = count + 1 end
+    return count
+end
+
+local function tradeSideHasOffer(trade, owner)
+    for _ in pairs(trade.offers[owner] or {}) do return true end
+    if offeredCash(trade, owner) > 0 then return true end
+    if countAssets(trade, owner) > 0 then return true end
+    return false
+end
+
+local function assetAlreadyOffered(trade, owner, assetType, assetId)
+    local offered = assetsMap(trade, owner)[assetType]
+    return offered and tonumber(offered.id) == tonumber(assetId)
+end
+
+local function validateAssetOwnership(source, asset)
+    local char = character(source)
+    if not char or not asset or not ASSET_TYPES[asset.assetType] then
+        return nil, 'Invalid trade asset.'
+    end
+    local assetId = tonumber(asset.id)
+    if not assetId then return nil, 'Invalid trade asset.' end
+
+    if asset.assetType == 'vehicle' then
+        local row = MySQL.single.await(
+            'SELECT id, stored, destroyed FROM vehicles WHERE id = ? AND character_id = ?',
+            { assetId, char.id }
+        )
+        if not row then return nil, ('%s no longer owns that vehicle.'):format(displayName(source)) end
+        if row.destroyed == 1 or row.destroyed == true or row.destroyed == '1' then
+            return nil, 'Destroyed vehicles cannot be traded.'
+        end
+        if tonumber(row.stored) ~= 1 then
+            return nil, 'Only garage-stored vehicles can be traded.'
+        end
+    elseif asset.assetType == 'property' then
+        local row = MySQL.single.await(
+            'SELECT id FROM properties WHERE id = ? AND owner_character_id = ? AND enabled = 1',
+            { assetId, char.id }
+        )
+        if not row then return nil, ('%s no longer owns that house.'):format(displayName(source)) end
+    elseif asset.assetType == 'business' then
+        if GetResourceState('sunset_businesses') ~= 'started' then
+            return nil, 'Business trading is unavailable.'
+        end
+        local row = exports.sunset_businesses:GetBusinessRow(assetId)
+        if not row or tonumber(row.ownerCharacterId) ~= tonumber(char.id) then
+            return nil, ('%s no longer owns that business.'):format(displayName(source))
+        end
+    end
+    return true
+end
+
+local function receiverCanTakeAsset(receiverSource, asset)
+    local char = character(receiverSource)
+    if not char then return nil, 'Both characters must remain loaded.' end
+
+    if asset.assetType == 'property' then
+        local maxOwned = 0
+        if GetResourceState('sunset_properties') == 'started' then
+            maxOwned = tonumber(exports.sunset_properties:GetMaxOwnedPerCharacter()) or 0
+        end
+        if maxOwned > 0 then
+            local owned = tonumber(MySQL.scalar.await(
+                'SELECT COUNT(*) FROM properties WHERE owner_character_id = ?',
+                { char.id }
+            )) or 0
+            if owned >= maxOwned then
+                return nil, ('%s cannot own more than %d houses.'):format(displayName(receiverSource), maxOwned)
+            end
+        end
+    elseif asset.assetType == 'business' then
+        if GetResourceState('sunset_businesses') ~= 'started' then
+            return nil, 'Business trading is unavailable.'
+        end
+        local maxOwned = 0
+        if GetResourceState('sunset_businesses') == 'started' then
+            maxOwned = tonumber(exports.sunset_businesses:GetMaxOwnedPerCharacter()) or 0
+        end
+        if maxOwned > 0 then
+            local owned = tonumber(MySQL.scalar.await(
+                'SELECT COUNT(*) FROM player_businesses WHERE owner_character_id = ?',
+                { char.id }
+            )) or 0
+            if owned >= maxOwned then
+                return nil, ('%s cannot own more than %d businesses.'):format(displayName(receiverSource), maxOwned)
+            end
+        end
+    end
+    return true
+end
+
+local function transferTradeAsset(fromSource, toSource, asset)
+    local fromChar = character(fromSource)
+    local toChar = character(toSource)
+    if not fromChar or not toChar then return nil, 'Both characters must remain loaded.' end
+
+    if asset.assetType == 'vehicle' then
+        if GetResourceState('sunset_vehicles') ~= 'started' then
+            return nil, 'Vehicle trading is unavailable.'
+        end
+        local ok, err = exports.sunset_vehicles:TransferVehicleOwnership(asset.id, fromChar.id, toChar.id)
+        if not ok then return nil, err or 'Vehicle transfer failed.' end
+    elseif asset.assetType == 'property' then
+        if GetResourceState('sunset_properties') ~= 'started' then
+            return nil, 'Property trading is unavailable.'
+        end
+        local ok, err = exports.sunset_properties:TransferPropertyOwnership(asset.id, fromChar.id, toChar.id)
+        if not ok then return nil, err or 'Property transfer failed.' end
+    elseif asset.assetType == 'business' then
+        if GetResourceState('sunset_businesses') ~= 'started' then
+            return nil, 'Business trading is unavailable.'
+        end
+        local ok, err = exports.sunset_businesses:TransferOwnership(asset.id, fromChar.id, toChar.id)
+        if not ok then return nil, err or 'Business transfer failed.' end
+    else
+        return nil, 'Invalid trade asset.'
+    end
+    return true
+end
+
+local function buildTradeCatalog(source)
+    local char = character(source)
+    if not char then return { vehicles = {}, properties = {}, businesses = {} } end
+    local trade = TradesByPlayer[source]
+    local offered = trade and assetsMap(trade, source) or {}
+
+    local vehicles = {}
+    local vehicleRows = MySQL.query.await([[
+        SELECT id, plate, model FROM vehicles
+        WHERE character_id = ? AND stored = 1 AND (destroyed IS NULL OR destroyed = 0)
+        ORDER BY model ASC, plate ASC
+    ]], { char.id }) or {}
+    for _, row in ipairs(vehicleRows) do
+        if not assetAlreadyOffered(trade, source, 'vehicle', row.id) then
+            vehicles[#vehicles + 1] = {
+                assetType = 'vehicle',
+                id = tonumber(row.id),
+                label = ('%s · %s'):format(string.upper(row.model or 'vehicle'), row.plate or '?'),
+                detail = 'Garage stored',
+            }
+        end
+    end
+
+    local properties = {}
+    local propertyRows = MySQL.query.await(
+        'SELECT id, label FROM properties WHERE owner_character_id = ? AND enabled = 1 ORDER BY label ASC',
+        { char.id }
+    ) or {}
+    for _, row in ipairs(propertyRows) do
+        if not assetAlreadyOffered(trade, source, 'property', row.id) then
+            properties[#properties + 1] = {
+                assetType = 'property',
+                id = tonumber(row.id),
+                label = row.label or ('House #%d'):format(row.id),
+                detail = 'Owned property',
+            }
+        end
+    end
+
+    local businesses = {}
+    if GetResourceState('sunset_businesses') == 'started' then
+        for _, row in ipairs(exports.sunset_businesses:GetOwnedBusinesses(source) or {}) do
+            if not assetAlreadyOffered(trade, source, 'business', row.id) then
+                businesses[#businesses + 1] = {
+                    assetType = 'business',
+                    id = tonumber(row.id),
+                    label = row.label or ('Business #%d'):format(row.id),
+                    detail = row.catalogKey or 'Player business',
+                }
+            end
+        end
+    end
+
+    return { vehicles = vehicles, properties = properties, businesses = businesses }
+end
+
 local function otherParty(trade, source)
     return source == trade.a and trade.b or trade.a
 end
@@ -83,6 +286,10 @@ local function sendTradeState(trade)
                 target = { id = other, name = displayName(other) },
                 myOffer = offerArray(trade, source),
                 theirOffer = offerArray(trade, other),
+                myCash = offeredCash(trade, source),
+                theirCash = offeredCash(trade, other),
+                myAssets = assetsArray(trade, source),
+                theirAssets = assetsArray(trade, other),
                 myAccepted = trade.accepted[source] == true,
                 theirAccepted = trade.accepted[other] == true,
                 countdown = trade.countdown or 0,
@@ -117,6 +324,15 @@ local function validateTrade(trade)
             if not row or row.item ~= offered.item or (tonumber(row.count) or 0) < offered.count then
                 return nil, ('%s inventory changed. Reopen the trade.'):format(displayName(owner))
             end
+        end
+        local char = character(owner)
+        local cashOffer = offeredCash(trade, owner)
+        if cashOffer > 0 and (not char or cashOffer > (tonumber(char.cash) or 0)) then
+            return nil, ('%s no longer has enough cash for this trade.'):format(displayName(owner))
+        end
+        for _, asset in pairs(assetsMap(trade, owner)) do
+            local assetOk, assetErr = validateAssetOwnership(owner, asset)
+            if not assetOk then return nil, assetErr end
         end
     end
     return true
@@ -171,7 +387,20 @@ local function completeTrade(trade)
     local valid, err = validateTrade(trade)
     if not valid then return nil, err end
     local aOut, bOut = offerArray(trade, trade.a), offerArray(trade, trade.b)
-    if #aOut == 0 and #bOut == 0 then return nil, 'Add at least one item before accepting the trade.' end
+    local aCash, bCash = offeredCash(trade, trade.a), offeredCash(trade, trade.b)
+    local aAssets, bAssets = assetsArray(trade, trade.a), assetsArray(trade, trade.b)
+    if not tradeSideHasOffer(trade, trade.a) and not tradeSideHasOffer(trade, trade.b) then
+        return nil, 'Add at least one item, cash, or asset before accepting the trade.'
+    end
+
+    for _, asset in ipairs(bAssets) do
+        local canTake, takeErr = receiverCanTakeAsset(trade.a, asset)
+        if not canTake then return nil, takeErr end
+    end
+    for _, asset in ipairs(aAssets) do
+        local canTake, takeErr = receiverCanTakeAsset(trade.b, asset)
+        if not canTake then return nil, takeErr end
+    end
 
     local maxWeight = tonumber(Sunset.Config.MaxWeight) or 30
     if inventoryWeightAfter(trade.a, aOut, bOut) > maxWeight then return nil, ('%s has insufficient carry capacity.'):format(displayName(trade.a)) end
@@ -208,6 +437,43 @@ local function completeTrade(trade)
     transfer(bOut, bChar.id, aChar.id, aSlots)
     local ok = MySQL.transaction.await(queries)
     if not ok then return nil, 'The database rejected the exchange. No items were moved.' end
+
+    local function moveCash(fromSrc, toSrc, amount, fromLabel, toLabel)
+        amount = math.floor(tonumber(amount) or 0)
+        if amount <= 0 then return true end
+        if not exports.sunset_core:RemoveMoney(fromSrc, 'cash', amount, 'player_trade') then
+            return nil, ('%s could not pay $%s cash.'):format(fromLabel, amount)
+        end
+        if not exports.sunset_core:AddMoney(toSrc, 'cash', amount, 'player_trade') then
+            exports.sunset_core:AddMoney(fromSrc, 'cash', amount, 'player_trade_rollback')
+            return nil, ('%s could not receive $%s cash.'):format(toLabel, amount)
+        end
+        return true
+    end
+
+    local movedA = false
+    if aCash > 0 then
+        local okCash, cashErr = moveCash(trade.a, trade.b, aCash, displayName(trade.a), displayName(trade.b))
+        if not okCash then return nil, cashErr end
+        movedA = true
+    end
+    if bCash > 0 then
+        local okCash, cashErr = moveCash(trade.b, trade.a, bCash, displayName(trade.b), displayName(trade.a))
+        if not okCash then
+            if movedA then moveCash(trade.b, trade.a, aCash, displayName(trade.b), displayName(trade.a)) end
+            return nil, cashErr
+        end
+    end
+
+    for _, asset in ipairs(bAssets) do
+        local moved, moveErr = transferTradeAsset(trade.b, trade.a, asset)
+        if not moved then return nil, moveErr end
+    end
+    for _, asset in ipairs(aAssets) do
+        local moved, moveErr = transferTradeAsset(trade.a, trade.b, asset)
+        if not moved then return nil, moveErr end
+    end
+
     ReloadInventory(trade.a)
     ReloadInventory(trade.b)
     return true
@@ -231,8 +497,10 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeAccept', function(so
     end
     if TradesByPlayer[source] or TradesByPlayer[invite.from] then return nil, 'One of the players already has an active trade.' end
     nextTradeId = nextTradeId + 1
-    local trade = { id = nextTradeId, a = invite.from, b = source, offers = {}, accepted = {}, busy = false }
+    local trade = { id = nextTradeId, a = invite.from, b = source, offers = {}, cash = {}, assets = {}, accepted = {}, busy = false }
     trade.offers[trade.a], trade.offers[trade.b] = {}, {}
+    trade.cash[trade.a], trade.cash[trade.b] = 0, 0
+    trade.assets[trade.a], trade.assets[trade.b] = {}, {}
     TradesByPlayer[trade.a], TradesByPlayer[trade.b] = trade, trade
     sendTradeState(trade)
     return { message = ('Trade opened with %s.'):format(displayName(invite.from)) }
@@ -274,6 +542,92 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeRemove', function(so
     trade.accepted[trade.a], trade.accepted[trade.b] = false, false
     sendTradeState(trade)
     return { message = 'Item removed from your offer.', kind = 'info' }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:inventory:tradeOfferCash', function(source, data)
+    local trade = TradesByPlayer[source]
+    local valid, err = validateTrade(trade)
+    if not valid then if trade then endTrade(trade, err, 'error') end return nil, err end
+    local char = character(source)
+    if not char then return nil, 'Character not loaded.' end
+    local amount = math.floor(tonumber(type(data) == 'table' and data.amount) or 0)
+    if amount < 0 then return nil, 'Invalid cash amount.' end
+    if amount > (tonumber(char.cash) or 0) then return nil, 'You do not have that much cash.' end
+    trade.cash[source] = amount
+    trade.finalizing = false
+    trade.countdown = 0
+    trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+    sendTradeState(trade)
+    if amount > 0 then
+        return { message = ('$%s added to your offer.'):format(amount), kind = 'info' }
+    end
+    return { message = 'Cash removed from your offer.', kind = 'info' }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:inventory:tradeCatalog', function(source)
+    local trade = TradesByPlayer[source]
+    if not trade then return nil, 'No active trade.' end
+    return buildTradeCatalog(source)
+end)
+
+exports.sunset_core:RegisterCallback('sunset:inventory:tradeOfferAsset', function(source, data)
+    local trade = TradesByPlayer[source]
+    local valid, err = validateTrade(trade)
+    if not valid then if trade then endTrade(trade, err, 'error') end return nil, err end
+
+    local assetType = type(data) == 'table' and data.assetType
+    local assetId = tonumber(type(data) == 'table' and data.id)
+    if not ASSET_TYPES[assetType] or not assetId then return nil, 'Invalid trade asset.' end
+    if assetsMap(trade, source)[assetType] then
+        return nil, 'Remove your current asset offer of that type first.'
+    end
+
+    local catalog = buildTradeCatalog(source)
+    local match
+    for _, list in ipairs({ catalog.vehicles, catalog.properties, catalog.businesses }) do
+        for _, entry in ipairs(list or {}) do
+            if entry.assetType == assetType and tonumber(entry.id) == assetId then
+                match = entry
+                break
+            end
+        end
+        if match then break end
+    end
+    if not match then return nil, 'That asset is no longer available to trade.' end
+
+    local assetOk, assetErr = validateAssetOwnership(source, match)
+    if not assetOk then return nil, assetErr end
+
+    trade.assets[source][assetType] = match
+    trade.finalizing = false
+    trade.countdown = 0
+    trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+    sendTradeState(trade)
+    return { message = ('%s added to your offer.'):format(match.label), kind = 'info' }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:inventory:tradeRemoveAsset', function(source, data)
+    local trade = TradesByPlayer[source]
+    if not trade then return nil, 'No active trade.' end
+    local assetType = type(data) == 'table' and data.assetType
+    if not ASSET_TYPES[assetType] then return nil, 'Invalid trade asset.' end
+    trade.assets[source][assetType] = nil
+    trade.finalizing = false
+    trade.countdown = 0
+    trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+    sendTradeState(trade)
+    return { message = 'Asset removed from your offer.', kind = 'info' }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:inventory:tradeRemoveCash', function(source)
+    local trade = TradesByPlayer[source]
+    if not trade then return nil, 'No active trade.' end
+    trade.cash[source] = 0
+    trade.finalizing = false
+    trade.countdown = 0
+    trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+    sendTradeState(trade)
+    return { message = 'Cash removed from your offer.', kind = 'info' }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:inventory:tradeConfirm', function(source)

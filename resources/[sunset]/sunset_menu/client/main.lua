@@ -250,6 +250,16 @@ exports('OpenVehicle', openVehicleMenu)
 exports('IsMenuOpen', function() return menuOpen end)
 exports('CloseMenu', closeMenu)
 
+AddEventHandler('sunset:menu:refreshIfOpen', function()
+    if not menuOpen then return end
+    cachedExtras = nil
+    cachedExtrasAt = 0
+    local ok, menuData = pcall(buildMenuData, true)
+    if ok and menuData then
+        exports.sunset_ui:Send('menuUpdate', menuData)
+    end
+end)
+
 local function toggleMenu(initialTab)
     if not exports.sunset_core or not exports.sunset_core:GetCharacter() then return end
     if IsPauseMenuActive() and not menuOpen then return end
@@ -384,7 +394,7 @@ AddEventHandler('sunset:nui:menuVehicleAction', function(data)
                 exports.sunset_ui:Notify(err or 'Could not spawn', 'error')
             end
         elseif data.action == 'claim_insurance' then
-            TriggerEvent('sunset:nui:garageClaimInsurance', { vehicleId = tonumber(data.vehicleId) })
+            TriggerEvent('sunset:nui:garageClaimInsurance', { vehicleId = tonumber(data.vehicleId), fromMenu = true })
             cachedExtras = nil
             cachedExtrasAt = 0
             Wait(400)
@@ -393,7 +403,7 @@ AddEventHandler('sunset:nui:menuVehicleAction', function(data)
                 exports.sunset_ui:Send('menuUpdate', menuData)
             end
         elseif data.action == 'renew_insurance' then
-            TriggerEvent('sunset:nui:garageRenewInsurance', { vehicleId = tonumber(data.vehicleId) })
+            TriggerEvent('sunset:nui:garageRenewInsurance', { vehicleId = tonumber(data.vehicleId), fromMenu = true })
             cachedExtras = nil
             cachedExtrasAt = 0
             Wait(400)

@@ -7,6 +7,14 @@ local function inputBlocked()
 end
 exports('IsChatOpen', function() return chatOpen end)
 
+local function fetchChatChannels()
+    local ok, channels = pcall(function()
+        return Sunset.AwaitCallback('sunset:getChatChannels')
+    end)
+    if ok and type(channels) == 'table' then return channels end
+    return nil
+end
+
 local function openChat()
     if chatOpen then return end
     chatOpen = true
@@ -18,6 +26,7 @@ local function openChat()
         open = true,
         playerId = myId,
         playerName = myName,
+        channels = fetchChatChannels(),
     })
     exports.sunset_chat:SyncChatSuggestions()
     SetTimeout(75, function()

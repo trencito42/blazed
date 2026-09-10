@@ -429,6 +429,9 @@ window.addEventListener('message', (event) => {
         case 'inventoryTradeEnded':
             if (window.Panels) Panels.hideInventoryTrade();
             break;
+        case 'inventoryTradeCatalog':
+            if (window.Panels) Panels.showTradeAssetPicker(data || event.data.data || {});
+            break;
         case 'shopShow':
             if (window.Panels) Panels.showShop(data || event.data.data);
             break;
@@ -600,6 +603,12 @@ window.addEventListener('message', (event) => {
                 }
             }
             break;
+        case 'businessPanelShow':
+            window.BusinessPanels?.showDashboard(data || event.data.data || {});
+            break;
+        case 'businessPanelHide':
+            window.BusinessPanels?.hide();
+            break;
         case 'clanPanelShow':
             if (window.ClanPanels) {
                 try {
@@ -755,7 +764,11 @@ window.addEventListener('message', (event) => {
             if (window.Courier) Courier.hide();
             break;
         case 'garageShow':
-            if (window.Panels) Panels.showGarage(data || event.data.data);
+            if (window.Menu) {
+                Menu.show({ ...(data || event.data.data || {}), initialTab: 'vehicle', soloMode: 'vehicle' });
+            } else if (window.Panels) {
+                Panels.showGarage(data || event.data.data);
+            }
             break;
         case 'garageHide':
             if (window.Panels) Panels.hideGarage();
