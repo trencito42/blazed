@@ -876,7 +876,7 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'authQuickLoginStart':
-            if (window.AuthLoading) AuthLoading.beginSubmit();
+            if (window.AuthLoading && !AuthLoading._pending) AuthLoading.beginSubmit();
             break;
 
         case 'authNeedsEmail':

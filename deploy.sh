@@ -6,6 +6,29 @@ REPO="${REPO:-https://github.com/trencito42/blazed}"
 BRANCH="${BRANCH:-main}"
 DIR="$(pwd)"
 
+restore_env() {
+  if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
+    cp "$ENV_BACKUP" .env
+    cp "$ENV_BACKUP" .env.persist
+    rm -f "$ENV_BACKUP"
+  fi
+}
+
+sync_tree() {
+  src="$1"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete \
+      --exclude '.env' --exclude '.env.persist' \
+      "${src}/" "${DIR}/"
+  else
+    rm -rf /tmp/blazed-deploy
+    mkdir -p /tmp/blazed-deploy
+    cp -a "${src}/." /tmp/blazed-deploy/
+    cp -a /tmp/blazed-deploy/. "${DIR}/"
+    rm -rf /tmp/blazed-deploy
+  fi
+}
+
 pull_repo() {
   ENV_BACKUP=""
   if [ -f .env ]; then
@@ -19,35 +42,56 @@ pull_repo() {
   fi
 
   if [ -d .git ]; then
-    if GIT_TERMINAL_PROMPT=0 git fetch origin "$BRANCH" 2>/dev/null; then
-      GIT_TERMINAL_PROMPT=0 git reset --hard "origin/$BRANCH"
-      if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
-        cp "$ENV_BACKUP" .env
-        cp "$ENV_BACKUP" .env.persist
-        rm -f "$ENV_BACKUP"
-      fi
+    echo "[deploy] git fetch origin/${BRANCH}..."
+    if GIT_TERMINAL_PROMPT=0 git fetch --depth 1 origin "${BRANCH}"; then
+      GIT_TERMINAL_PROMPT=0 git reset --hard "origin/${BRANCH}"
+      restore_env
+      echo "[deploy] git update OK"
       return 0
     fi
-  fi
-
-  echo "[deploy] git failed — using GitHub ZIP (repo public)"
-  curl -fsSL -o /tmp/blazed.zip "${REPO}/archive/refs/heads/${BRANCH}.zip?$(date +%s)"
-  rm -rf /tmp/blazed-main
-  unzip -qo /tmp/blazed.zip -d /tmp
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete /tmp/blazed-main/ "$DIR/"
+    echo "[deploy] git fetch failed — trying clone/ZIP fallback"
   else
-    rm -rf /tmp/blazed-deploy
-    mkdir -p /tmp/blazed-deploy
-    cp -a /tmp/blazed-main/. /tmp/blazed-deploy/
-    cp -a /tmp/blazed-deploy/. "$DIR/"
+    echo "[deploy] no .git in ${DIR} — shallow clone (first deploy or migrated folder)"
+    CLONE_DIR="$(mktemp -d /tmp/blazed-clone.XXXXXX)"
+    if GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "${BRANCH}" "${REPO}" "${CLONE_DIR}"; then
+      echo "[deploy] syncing files (keeps .env)..."
+      sync_tree "${CLONE_DIR}"
+      rm -rf "${CLONE_DIR}"
+      restore_env
+      echo "[deploy] clone + sync OK (.git created for next deploy)"
+      return 0
+    fi
+    rm -rf "${CLONE_DIR}"
+    echo "[deploy] git clone failed — trying GitHub ZIP fallback"
   fi
 
-  if [ -n "$ENV_BACKUP" ] && [ -f "$ENV_BACKUP" ]; then
-    cp "$ENV_BACKUP" .env
-    cp "$ENV_BACKUP" .env.persist
-    rm -f "$ENV_BACKUP"
+  ZIP="/tmp/blazed-${BRANCH}.zip"
+  ARCHIVE_DIR="/tmp/blazed-${BRANCH}"
+  rm -f "${ZIP}"
+  rm -rf "${ARCHIVE_DIR}"
+
+  echo "[deploy] downloading GitHub archive (~30MB, may take 10-60s)..."
+  if ! curl -fL --connect-timeout 20 --max-time 300 --progress-bar \
+    -o "${ZIP}" "${REPO}/archive/refs/heads/${BRANCH}.zip"; then
+    restore_env
+    echo "[deploy] ERROR: could not download ${REPO}/archive/refs/heads/${BRANCH}.zip" >&2
+    exit 1
   fi
+
+  echo "[deploy] extracting..."
+  unzip -qo "${ZIP}" -d /tmp
+  if [ ! -d "${ARCHIVE_DIR}" ]; then
+    restore_env
+    echo "[deploy] ERROR: expected folder ${ARCHIVE_DIR} after unzip" >&2
+    exit 1
+  fi
+
+  echo "[deploy] syncing files (keeps .env)..."
+  sync_tree "${ARCHIVE_DIR}"
+  rm -f "${ZIP}"
+  rm -rf "${ARCHIVE_DIR}"
+  restore_env
+  echo "[deploy] ZIP fallback OK (run again after fix to use fast git pull)"
 }
 
 pull_repo

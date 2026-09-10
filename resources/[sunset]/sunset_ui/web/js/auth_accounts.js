@@ -81,6 +81,8 @@ const AuthAccounts = {
                 </span>
             `;
             pick.addEventListener('click', () => {
+                if (window.AuthLoading?._pending) return;
+                if (window.AuthLoading) AuthLoading.beginSubmit();
                 post('authPickAccount', { username });
             });
 

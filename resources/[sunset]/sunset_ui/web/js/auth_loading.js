@@ -123,10 +123,11 @@ const AuthLoading = {
     },
 
     beginSubmit() {
+        if (this._pending) return;
         this._pending = true;
         document.getElementById('auth-panel')?.classList.add('is-hidden');
         if (typeof showScreen === 'function') showScreen('loading');
-        LoadingScreen.start({ duration: 8000, holdAt: 92, holdText: 'Awaiting game state...' });
+        LoadingScreen.start({ duration: 8000, holdAt: 92, holdText: 'Authenticating account...' });
         this.armSafety(120000);
     },
 

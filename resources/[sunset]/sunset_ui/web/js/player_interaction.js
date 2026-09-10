@@ -240,9 +240,9 @@
         }
 
         if (payload.holding === true) {
-            startHoldAnimation();
+            if (!isHolding) startHoldAnimation();
         } else if (payload.holding === false) {
-            stopHoldAnimation(true);
+            if (isHolding) stopHoldAnimation(true);
         } else if (payload.progress != null) {
             setProgress(payload.progress);
         }

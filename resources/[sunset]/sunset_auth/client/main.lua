@@ -111,7 +111,9 @@ end)
 
 AddEventHandler('sunset:nui:authLogin', function(data)
     local remember = isEnabled(data and data.rememberQuickLogin)
-    performLogin(data.username, data.password, remember)
+    CreateThread(function()
+        performLogin(data.username, data.password, remember)
+    end)
 end)
 
 AddEventHandler('sunset:nui:authRegister', function(data)
@@ -168,8 +170,10 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
     end
 
     if type(row.password) == 'string' and row.password ~= '' then
-        exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
-        performLogin(row.username, row.password, store.quickLogin ~= false)
+        CreateThread(function()
+            exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
+            performLogin(row.username, row.password, store.quickLogin ~= false)
+        end)
         return
     end
 

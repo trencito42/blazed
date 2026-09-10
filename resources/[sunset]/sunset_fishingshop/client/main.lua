@@ -29,7 +29,17 @@ local menuOpen       = false   -- playerInteraction menu open
 local shopOpen       = false   -- fishing shop UI (buy/sell) open
 local inCooldown     = false
 local billyPromptVisible = false
+local billyHoldStart = nil
+local billyHoldVisual = false
+local menuCloseArmed = false
+local BILLY_HOLD_MS  = 800
 local INTERACT_KEY   = 38
+local billyInteractUnlockAt = GetGameTimer() + 60000
+
+-- Forward declarations (closeFishingMenu <-> hideBillyRayPrompt)
+local hideBillyRayPrompt
+local closeFishingMenu
+local sendBillyHoldState
 
 local FISHING_ACTIONS = {
     get_fisherman_job = true,
@@ -42,14 +52,6 @@ local FISHING_ACTIONS = {
 local function debugHire(message)
     print(('[sunset_fishingshop] %s'):format(message))
     TriggerServerEvent('sunset:server:flowTrace', 'fishingshop.hire', message)
-end
-
-local function closeFishingMenu()
-    if not menuOpen then return end
-    menuOpen = false
-    hideBillyRayPrompt()
-    exports.sunset_ui:Send('playerInteractionHide', {})
-    exports.sunset_ui:SetFocus(false, false)
 end
 
 local function npcCenter()
@@ -68,6 +70,19 @@ local function isNearNpcPrompt(pos)
     return hillbillyPed and DoesEntityExist(hillbillyPed) and distanceToNpc(pos) < NPC_PROMPT_DIST
 end
 
+local function armBillyInteractGrace(ms)
+    billyInteractUnlockAt = GetGameTimer() + (ms or 3000)
+    billyHoldStart = nil
+    sendBillyHoldState(false)
+end
+
+local function billyInteractionsReady()
+    if GetGameTimer() < billyInteractUnlockAt then return false end
+    if not NetworkIsPlayerActive(PlayerId()) then return false end
+    if IsNuiFocused() or IsPauseMenuActive() then return false end
+    return true
+end
+
 local function anotherPlayerBlocksNpcPrompt(pos)
     for _, player in ipairs(GetActivePlayers()) do
         if player ~= PlayerId() then
@@ -82,10 +97,20 @@ local function anotherPlayerBlocksNpcPrompt(pos)
     return false
 end
 
-local function hideBillyRayPrompt()
+hideBillyRayPrompt = function()
     if not billyPromptVisible then return end
     billyPromptVisible = false
-    exports.sunset_ui:Send('playerInteractionPrompt', { visible = false })
+    billyHoldStart = nil
+    billyHoldVisual = false
+    exports.sunset_ui:Send('playerInteractionPrompt', { visible = false, holding = false })
+end
+
+sendBillyHoldState = function(active)
+    active = active == true
+    if billyHoldVisual == active then return end
+    billyHoldVisual = active
+    if not billyPromptVisible then return end
+    exports.sunset_ui:Send('playerInteractionPrompt', { holding = active })
 end
 
 local function sendBillyRayPrompt()
@@ -119,11 +144,23 @@ local function sendBillyRayPrompt()
 end
 
 local function shouldShowBillyRayPrompt()
-    if menuOpen or shopOpen or IsNuiFocused() or IsPauseMenuActive() then return false end
+    if not billyInteractionsReady() then return false end
+    if menuOpen or shopOpen then return false end
     local pos = GetEntityCoords(PlayerPedId())
     if not isNearNpcPrompt(pos) then return false end
     if anotherPlayerBlocksNpcPrompt(pos) then return false end
     return true
+end
+
+closeFishingMenu = function()
+    if not menuOpen then return end
+    menuOpen = false
+    menuCloseArmed = false
+    billyHoldStart = nil
+    sendBillyHoldState(false)
+    hideBillyRayPrompt()
+    exports.sunset_ui:Send('playerInteractionHide', {})
+    exports.sunset_ui:SetFocus(false, false)
 end
 
 local function notifyHireError(err)
@@ -170,11 +207,13 @@ local function buildBillyRayActions()
 end
 
 local function openBillyRayMenu()
+    if menuOpen or not billyInteractionsReady() then return end
     local actions = buildBillyRayActions()
     if #actions == 0 then return end
+    billyHoldStart = nil
+    menuCloseArmed = false
     hideBillyRayPrompt()
     exports.sunset_ui:Send('playerInteractionShow', {
-        instant = true,
         menuTitle = 'Acțiuni Pescuit',
         target = { name = 'Billy Ray', id = '' },
         actions = actions,
@@ -187,6 +226,32 @@ exports('IsNearBillyRay', function()
     return isNearNpcMenu(GetEntityCoords(PlayerPedId()))
 end)
 exports('IsMenuOpen', function() return menuOpen or shopOpen end)
+
+local function resetBillyUiOnEntry()
+    armBillyInteractGrace(3500)
+    billyHoldStart = nil
+    menuCloseArmed = false
+    if menuOpen then
+        menuOpen = false
+    end
+    if shopOpen then
+        shopOpen = false
+    end
+    hideBillyRayPrompt()
+    exports.sunset_ui:Send('playerInteractionHide', {})
+    exports.sunset_ui:SetFocus(false, false)
+end
+
+AddEventHandler('sunset:client:playerSpawned', resetBillyUiOnEntry)
+AddEventHandler('sunset:client:characterFlowComplete', function()
+    armBillyInteractGrace(3500)
+end)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    print('[sunset_fishingshop] client billy-hold-v3')
+    resetBillyUiOnEntry()
+end)
 
 -- ── Spawn NPC ────────────────────────────────────────────────
 CreateThread(function()
@@ -288,19 +353,60 @@ end)
 CreateThread(function()
     while true do
         if nearNpc or nearBaitShop or nearSell then
+            local pos = GetEntityCoords(PlayerPedId())
+            local canPromptBilly = isNearNpcPrompt(pos) and not anotherPlayerBlocksNpcPrompt(pos)
+
             if nearNpc or nearBaitShop then
                 DisableControlAction(0, INTERACT_KEY, true)
             end
 
-            local pressed = nearNpc or nearBaitShop
-                and IsDisabledControlJustPressed(0, INTERACT_KEY)
-                or IsControlJustPressed(0, INTERACT_KEY)
+            if canPromptBilly then
+                if menuOpen then
+                    if IsDisabledControlJustPressed(0, INTERACT_KEY) and menuCloseArmed then
+                        closeFishingMenu()
+                    end
+                    if IsDisabledControlJustReleased(0, INTERACT_KEY) then
+                        menuCloseArmed = true
+                    end
+                elseif billyInteractionsReady() and not inCooldown and not shopOpen then
+                    if IsDisabledControlJustPressed(0, INTERACT_KEY) then
+                        billyHoldStart = GetGameTimer()
+                        sendBillyHoldState(true)
+                    end
 
-            if pressed and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
-                if nearNpc then
-                    openBillyRayMenu()
+                    if billyHoldStart and IsDisabledControlPressed(0, INTERACT_KEY) then
+                        if (GetGameTimer() - billyHoldStart) >= BILLY_HOLD_MS and isNearNpcMenu(pos) then
+                            billyHoldStart = nil
+                            sendBillyHoldState(false)
+                            openBillyRayMenu()
+                        end
+                    end
 
-                elseif nearBaitShop then
+                    if IsDisabledControlJustReleased(0, INTERACT_KEY) then
+                        billyHoldStart = nil
+                        sendBillyHoldState(false)
+                    end
+                end
+            elseif menuOpen and nearNpc then
+                if IsDisabledControlJustPressed(0, INTERACT_KEY) and menuCloseArmed then
+                    closeFishingMenu()
+                end
+                if IsDisabledControlJustReleased(0, INTERACT_KEY) then
+                    menuCloseArmed = true
+                end
+            end
+
+            local pressed = false
+            if (nearBaitShop or nearSell) and not nearNpc and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
+                if nearBaitShop then
+                    pressed = IsDisabledControlJustPressed(0, INTERACT_KEY)
+                elseif nearSell then
+                    pressed = IsControlJustPressed(0, INTERACT_KEY)
+                end
+            end
+
+            if pressed then
+                if nearBaitShop then
                     -- Deschide direct magazinul de momeala
                     inCooldown = true
                     CreateThread(function()
@@ -336,6 +442,9 @@ CreateThread(function()
             end
             Wait(0)
         else
+            billyHoldStart = nil
+            sendBillyHoldState(false)
+            menuCloseArmed = false
             Wait(200)
         end
     end
@@ -343,6 +452,7 @@ end)
 
 -- ── playerInteraction NUI events ──────────────────────────────
 AddEventHandler('sunset:nui:playerInteractionClose', function()
+    if not menuOpen then return end
     closeFishingMenu()
 end)
 
