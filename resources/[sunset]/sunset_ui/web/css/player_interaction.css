@@ -42,8 +42,9 @@
     transform: translate(-50%, -50%) skewX(-5deg);
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
     animation: pi-float-target 3s ease-in-out infinite;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
+    will-change: left, top, opacity, transform;
 }
 
 @keyframes pi-float-target {
@@ -119,7 +120,7 @@
     stroke-width: 4;
     stroke-linecap: round;
     filter: drop-shadow(0 0 4px var(--pi-accent));
-    transition: stroke-dashoffset 0.08s linear;
+    transition: none;
 }
 
 /* ── SCREEN-SPACE MENU ── */

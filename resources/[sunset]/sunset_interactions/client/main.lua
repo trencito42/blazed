@@ -3,11 +3,9 @@ local activeTarget = nil
 local promptTarget = nil
 local promptPlayer = nil
 local contextRequestActive = false
-local holdingInteract = false
-local holdStart = nil
+local holdActive = false
+local menuCloseArmed = false
 local lastPromptVisible = false
-
-local HOLD_MS = 800
 
 local function notify(message, kind, duration)
     exports.sunset_ui:Notify(message, kind or 'info', duration)
@@ -63,7 +61,7 @@ local function hidePlayerPrompt()
     exports.sunset_ui:Send('playerInteractionPrompt', { visible = false })
 end
 
-local function sendPlayerPrompt(player, progress)
+local function sendPlayerPrompt(player, extra)
     if not player then
         hidePlayerPrompt()
         return
@@ -89,14 +87,25 @@ local function sendPlayerPrompt(player, progress)
     end
 
     lastPromptVisible = true
-    exports.sunset_ui:Send('playerInteractionPrompt', {
+    local payload = {
         visible = true,
         x = screenX * 100.0,
         y = screenY * 100.0,
         name = getPromptDisplayName(player),
-        progress = progress or 0.0,
         key = 'G',
-    })
+    }
+    if type(extra) == 'table' then
+        for key, value in pairs(extra) do
+            payload[key] = value
+        end
+    end
+    exports.sunset_ui:Send('playerInteractionPrompt', payload)
+end
+
+local function setHoldState(active)
+    holdActive = active == true
+    if not promptPlayer or menuOpen then return end
+    sendPlayerPrompt(promptPlayer, { holding = holdActive })
 end
 
 local function closeMenu()
@@ -108,7 +117,7 @@ local function closeMenu()
 end
 
 local function openMenu()
-    if menuOpen then return closeMenu() end
+    if menuOpen then return end
     if contextRequestActive or inputIsBusy() then return end
     local ped = PlayerPedId()
     if IsPedDeadOrDying(ped, true) then return notify('You cannot interact while downed.', 'error') end
@@ -117,8 +126,8 @@ local function openMenu()
     if not targetId then return notify('No player is close enough. Move within 3 metres and try again.', 'info') end
 
     hidePlayerPrompt()
-    holdingInteract = false
-    holdStart = nil
+    holdActive = false
+    menuCloseArmed = false
 
     contextRequestActive = true
     local context, err = Sunset.AwaitCallback('sunset:interactionContext', targetId)
@@ -139,27 +148,46 @@ end
 AddEventHandler('sunset:client:chatFocusChanged', function(open)
     if open == true then
         contextRequestActive = false
-        holdingInteract = false
-        holdStart = nil
+        holdActive = false
+        menuCloseArmed = false
         if menuOpen then closeMenu() end
     end
 end)
 
-RegisterCommand('interact', openMenu, false)
+RegisterCommand('interact', function()
+    if menuOpen then
+        closeMenu()
+        return
+    end
+    CreateThread(openMenu)
+end, false)
 
 RegisterCommand('+interactplayer', function()
-    if menuOpen or contextRequestActive or inputIsBusy() or not promptPlayer then return end
-    holdingInteract = true
-    holdStart = GetGameTimer()
+    if menuOpen then
+        if menuCloseArmed then
+            closeMenu()
+            menuCloseArmed = false
+        end
+        return
+    end
+    if contextRequestActive or inputIsBusy() or not promptPlayer then return end
+    setHoldState(true)
 end, false)
 
 RegisterCommand('-interactplayer', function()
-    holdingInteract = false
-    holdStart = nil
-    if not menuOpen and promptPlayer then
-        sendPlayerPrompt(promptPlayer, 0.0)
+    if menuOpen then
+        menuCloseArmed = true
+        return
     end
+    setHoldState(false)
 end, false)
+
+AddEventHandler('sunset:nui:playerInteractionHoldComplete', function()
+    if menuOpen or contextRequestActive or inputIsBusy() or not promptPlayer then return end
+    holdActive = false
+    menuCloseArmed = false
+    CreateThread(openMenu)
+end)
 
 RegisterKeyMapping('+interactplayer', 'Interact with nearby player (hold)', 'keyboard', 'G')
 
@@ -202,8 +230,8 @@ local function refreshMenu()
 end
 
 AddEventHandler('sunset:nui:playerInteractionClose', function()
-    holdingInteract = false
-    holdStart = nil
+    holdActive = false
+    menuCloseArmed = false
     closeMenu()
 end)
 
@@ -285,6 +313,17 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    while true do
+        if promptPlayer and not menuOpen and not contextRequestActive and not inputIsBusy() then
+            sendPlayerPrompt(promptPlayer)
+            Wait(0)
+        else
+            Wait(200)
+        end
+    end
+end)
+
+CreateThread(function()
     local lastScan = 0
     while true do
         local sleep = 250
@@ -300,48 +339,40 @@ CreateThread(function()
                 local targetCoords = GetEntityCoords(currentPed)
                 local dist = #(myCoords - targetCoords)
                 if dist <= 3.35 and HasEntityClearLosToEntity(me, currentPed, 17) then
-                    if holdingInteract and holdStart then
-                        local progress = math.min(1.0, (GetGameTimer() - holdStart) / HOLD_MS)
-                        sendPlayerPrompt(promptPlayer, progress)
-                        if progress >= 1.0 then
-                            holdingInteract = false
-                            holdStart = nil
-                            openMenu()
-                        end
-                    else
-                        sendPlayerPrompt(promptPlayer, 0.0)
-                    end
                     sleep = 0
                 else
                     promptTarget = nil
                     promptPlayer = nil
-                    holdingInteract = false
-                    holdStart = nil
+                    holdActive = false
+                    menuCloseArmed = false
                     hidePlayerPrompt()
                 end
             else
                 promptTarget = nil
                 promptPlayer = nil
-                holdingInteract = false
-                holdStart = nil
+                holdActive = false
+                menuCloseArmed = false
                 hidePlayerPrompt()
             end
 
             local now = GetGameTimer()
-            if not promptPlayer or (now - lastScan > 200) then
+            if not promptPlayer or (now - lastScan > 150) then
                 lastScan = now
-                local targetId, dist = closestPlayer(3.2)
+                local targetId = closestPlayer(3.2)
                 if targetId then
                     promptTarget = targetId
                     promptPlayer = playerFromServerId(targetId)
                     if promptPlayer then sleep = 0 end
+                elseif not promptPlayer then
+                    promptTarget = nil
                 end
             end
+        elseif menuOpen then
+            sleep = 350
         else
             promptTarget = nil
             promptPlayer = nil
-            holdingInteract = false
-            holdStart = nil
+            holdActive = false
             hidePlayerPrompt()
             sleep = 350
         end

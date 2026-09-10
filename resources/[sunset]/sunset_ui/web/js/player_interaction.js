@@ -13,10 +13,14 @@
     const inputSubmit = document.getElementById('pi-input-submit');
 
     const RING_RADIUS = 16;
+    const HOLD_MS = 800;
     const circumference = 2 * Math.PI * RING_RADIUS;
     let state = null;
     let pendingInputAction = null;
     let promptVisible = false;
+    let holdRaf = null;
+    let isHolding = false;
+    let screenMenuOpen = false;
 
     if (progressRing) {
         progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
@@ -80,6 +84,39 @@
         const clamped = Math.max(0, Math.min(1, Number(progress) || 0));
         const offset = circumference - clamped * circumference;
         progressRing.style.strokeDashoffset = String(offset);
+    }
+
+    function stopHoldAnimation(resetProgress = true) {
+        isHolding = false;
+        if (holdRaf) {
+            cancelAnimationFrame(holdRaf);
+            holdRaf = null;
+        }
+        if (resetProgress) setProgress(0);
+    }
+
+    function startHoldAnimation() {
+        if (screenMenuOpen) return;
+        stopHoldAnimation(false);
+        isHolding = true;
+        const startedAt = performance.now();
+        const tick = () => {
+            if (!isHolding || screenMenuOpen) {
+                holdRaf = null;
+                return;
+            }
+            const progress = Math.min(1, (performance.now() - startedAt) / HOLD_MS);
+            setProgress(progress);
+            if (progress >= 1) {
+                isHolding = false;
+                holdRaf = null;
+                setProgress(1);
+                postNui('playerInteractionHoldComplete');
+                return;
+            }
+            holdRaf = requestAnimationFrame(tick);
+        };
+        holdRaf = requestAnimationFrame(tick);
     }
 
     function deriveMenuTitle(target, actions, payload) {
@@ -178,12 +215,12 @@
 
         if (!payload.visible) {
             promptVisible = false;
+            stopHoldAnimation(true);
             worldTarget?.classList.add('hidden');
-            if (!screenMenu?.classList.contains('active')) {
+            if (!screenMenuOpen) {
                 root.classList.add('hidden');
                 root.setAttribute('aria-hidden', 'true');
             }
-            setProgress(0);
             return;
         }
 
@@ -202,10 +239,18 @@
             worldTarget.classList.remove('hidden');
         }
 
-        setProgress(payload.progress);
+        if (payload.holding === true) {
+            startHoldAnimation();
+        } else if (payload.holding === false) {
+            stopHoldAnimation(true);
+        } else if (payload.progress != null) {
+            setProgress(payload.progress);
+        }
     }
 
     function openScreenMenu() {
+        screenMenuOpen = true;
+        stopHoldAnimation(true);
         worldTarget?.classList.add('hidden');
         screenMenu?.classList.add('active');
         root?.classList.add('is-menu-open');
@@ -213,6 +258,7 @@
     }
 
     function closeScreenMenu() {
+        screenMenuOpen = false;
         screenMenu?.classList.remove('active');
         root?.classList.remove('is-menu-open');
         document.body.classList.remove('player-interaction-open');
@@ -258,7 +304,7 @@
         if (!screenMenu?.classList.contains('active')) return;
         const tag = (event.target && event.target.tagName) || '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return;
-        if (event.key === 'Escape' || event.key.toLowerCase() === 'g') {
+        if (event.key === 'Escape') {
             event.preventDefault();
             postNui('playerInteractionClose');
         }
