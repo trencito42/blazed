@@ -1,9 +1,3 @@
--- Business profit / balance / type columns (run once)
-ALTER TABLE `player_businesses`
-    ADD COLUMN `business_type` VARCHAR(16) NOT NULL DEFAULT 'shop' AFTER `shop_key`;
-
-ALTER TABLE `player_businesses`
-    ADD COLUMN `profit_percent` TINYINT UNSIGNED NOT NULL DEFAULT 70 AFTER `for_sale`;
-
-ALTER TABLE `player_businesses`
-    ADD COLUMN `balance` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `profit_percent`;
+-- Profit columns are included in 31-player-businesses.sql (fresh installs).
+-- No-op for databases that already applied an older 31 + 32 split.
+SELECT 1;
