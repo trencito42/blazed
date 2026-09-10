@@ -45,6 +45,7 @@ local function inventoryView(items)
             label = def.label or row.item,
             usable = def.usable == true,
             icon = def.icon,
+            weight = def.weight or 0,
         }
     end
     return view

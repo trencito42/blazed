@@ -271,13 +271,16 @@ const Panels = {
                 const value = Math.max(0, Number(row.metadata.value) || 0);
                 label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
             }
-            if (['fish_common','fish_uncommon','fish_rare','fish_epic','fish_legendary'].includes(def) && row.metadata) {
+            const FISH_TYPES = ['fish_common','fish_uncommon','fish_rare','fish_epic','fish_legendary'];
+            if (FISH_TYPES.includes(def) && row.metadata) {
                 const kg = Number(row.metadata.fishKg) || 0;
                 const value = Math.max(0, Number(row.metadata.value) || 0);
                 const parts = [];
                 if (kg > 0) parts.push(`${kg.toFixed(1)} kg`);
                 if (value > 0) parts.push(`$${Math.round(value)}`);
                 if (parts.length) fishMeta = parts.join(' — ');
+            } else if (row.weight > 0) {
+                fishMeta = `${Number(row.weight).toFixed(2).replace(/\.?0+$/, '')} kg`;
             }
             const item = document.createElement('button');
             item.className = 'premium-item';
