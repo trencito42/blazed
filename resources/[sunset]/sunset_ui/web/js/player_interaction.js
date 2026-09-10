@@ -213,7 +213,7 @@
         payload = payload || {};
         if (!root) return;
 
-        if (!payload.visible) {
+        if (payload.visible === false) {
             promptVisible = false;
             stopHoldAnimation(true);
             worldTarget?.classList.add('hidden');
@@ -224,19 +224,21 @@
             return;
         }
 
-        promptVisible = true;
-        root.classList.remove('hidden');
-        root.setAttribute('aria-hidden', 'false');
+        if (payload.visible === true) {
+            promptVisible = true;
+            root.classList.remove('hidden');
+            root.setAttribute('aria-hidden', 'false');
 
-        if (targetNameEl) targetNameEl.textContent = payload.name || 'PLAYER';
-        if (keyLetterEl) keyLetterEl.textContent = payload.key || 'G';
+            if (targetNameEl) targetNameEl.textContent = payload.name || 'PLAYER';
+            if (keyLetterEl) keyLetterEl.textContent = payload.key || 'G';
 
-        const x = Number(payload.x);
-        const y = Number(payload.y);
-        if (worldTarget) {
-            worldTarget.style.left = `${Number.isFinite(x) ? x : 50}%`;
-            worldTarget.style.top = `${Number.isFinite(y) ? y : 45}%`;
-            worldTarget.classList.remove('hidden');
+            const x = Number(payload.x);
+            const y = Number(payload.y);
+            if (worldTarget) {
+                worldTarget.style.left = `${Number.isFinite(x) ? x : 50}%`;
+                worldTarget.style.top = `${Number.isFinite(y) ? y : 45}%`;
+                worldTarget.classList.remove('hidden');
+            }
         }
 
         if (payload.holding === true) {

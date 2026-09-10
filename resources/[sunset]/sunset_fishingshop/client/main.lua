@@ -36,10 +36,11 @@ local BILLY_HOLD_MS  = 800
 local INTERACT_KEY   = 38
 local billyInteractUnlockAt = GetGameTimer() + 60000
 
--- Forward declarations (closeFishingMenu <-> hideBillyRayPrompt)
+-- Forward declarations
 local hideBillyRayPrompt
 local closeFishingMenu
 local sendBillyHoldState
+local safeUiCall
 
 local FISHING_ACTIONS = {
     get_fisherman_job = true,
@@ -81,6 +82,11 @@ local function billyInteractionsReady()
     if not NetworkIsPlayerActive(PlayerId()) then return false end
     if IsNuiFocused() or IsPauseMenuActive() then return false end
     return true
+end
+
+safeUiCall = function(fn)
+    if GetResourceState('sunset_ui') ~= 'started' then return false end
+    return pcall(fn)
 end
 
 local function anotherPlayerBlocksNpcPrompt(pos)
@@ -229,12 +235,6 @@ exports('IsNearBillyRay', function()
 end)
 exports('IsMenuOpen', function() return menuOpen or shopOpen end)
 
-local function safeUiCall(fn)
-    if GetResourceState('sunset_ui') ~= 'started' then return false end
-    local ok = pcall(fn)
-    return ok
-end
-
 local function resetBillyUiOnEntry()
     armBillyInteractGrace(3500)
     billyHoldStart = nil
@@ -255,7 +255,7 @@ end)
 
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
-    print('[sunset_fishingshop] client billy-hold-v4')
+    print('[sunset_fishingshop] client billy-hold-v5')
 end)
 
 -- ── Spawn NPC ────────────────────────────────────────────────
