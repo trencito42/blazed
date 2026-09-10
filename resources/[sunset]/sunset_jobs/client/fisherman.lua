@@ -260,7 +260,7 @@ local function attemptFish()
             if result then
                 local fishLabel = (result.fishItem or 'fish'):gsub('fish_', ''):gsub('^%l', string.upper)
                 showFishingState('success', {
-                    message = ('%s caught! $%s'):format(fishLabel, result.value or 0),
+                    message = ('%s caught! %.1f kg — $%s'):format(fishLabel, result.fishKg or 0, result.value or 0),
                     value = result.value,
                 })
                 Wait(1800)
@@ -280,8 +280,8 @@ local function attemptFish()
 
     if result then
         local fishLabel2 = ((result.fishItem or 'fish'):gsub('fish_', ''):gsub('^%l', string.upper))
-        JC.notify(('%s +$%s. Vinde pestele la orice magazin 24/7.'):format(
-            fishLabel2, result.value or 0), 'success', 5000)
+        JC.notify(('%s %.1f kg +$%s. Vinde pestele la orice magazin 24/7.'):format(
+            fishLabel2, result.fishKg or 0, result.value or 0), 'success', 5000)
     elseif not early and reelErr then
         JC.notify(reelErr, 'warning')
     elseif not early then

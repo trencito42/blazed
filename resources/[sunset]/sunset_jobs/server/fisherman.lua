@@ -19,14 +19,16 @@ local BAIT_TIERS = {
 -- Sansa de prindere (%) pe tier momeala
 local CATCH_CHANCE = { [0] = 35, [1] = 60, [2] = 75, [3] = 90 }
 
--- Peste + pret + tier minim momeala + greutati pe nivel (1-5)
--- w[level] = greutate; 0 inseamna imposibil
+-- Peste + greutate aleatoare (kg) + pret/kg + tier minim momeala + greutati pe nivel (1-5)
+-- minKg/maxKg = intervalul de greutate al pestelui (1 zecimala)
+-- pricePerKg  = pretul de baza per kg (inainte de multiplicatorul unditei)
+-- w[level]    = greutate selectie; 0 inseamna imposibil la nivelul respectiv
 local ALL_FISH = {
-    { item = 'fish_common',   min = 40,  max = 80,   minBait = 0, w = { 90, 70, 55, 40, 25 } },
-    { item = 'fish_uncommon', min = 90,  max = 150,  minBait = 1, w = {  8, 25, 28, 28, 25 } },
-    { item = 'fish_rare',     min = 170, max = 280,  minBait = 2, w = {  0,  5, 15, 22, 25 } },
-    { item = 'fish_epic',     min = 320, max = 550,  minBait = 3, w = {  0,  0,  2,  8, 15 } },
-    { item = 'fish_legendary',min = 650, max = 1200, minBait = 3, w = {  0,  0,  0,  2, 10 } },
+    { item = 'fish_common',    minKg =  0.5, maxKg =  1.5, pricePerKg =  57, minBait = 0, w = { 90, 70, 55, 40, 25 } },
+    { item = 'fish_uncommon',  minKg =  1.5, maxKg =  3.5, pricePerKg =  45, minBait = 1, w = {  8, 25, 28, 28, 25 } },
+    { item = 'fish_rare',      minKg =  3.5, maxKg =  6.0, pricePerKg =  48, minBait = 2, w = {  0,  5, 15, 22, 25 } },
+    { item = 'fish_epic',      minKg =  5.0, maxKg =  8.5, pricePerKg =  64, minBait = 3, w = {  0,  0,  2,  8, 15 } },
+    { item = 'fish_legendary', minKg =  8.0, maxKg = 15.5, pricePerKg =  80, minBait = 3, w = {  0,  0,  0,  2, 10 } },
 }
 
 -- Toate itemele de peste (pentru inventar summary)
@@ -171,6 +173,19 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
 
     session.data.level = fishLevel(source)
 
+    -- Verifica spatiu in inventar (cel mai usor peste = fish_common = 0.8 kg)
+    local inv = exports.sunset_inventory:GetInventory(source) or {}
+    local currentWeight = 0
+    for _, row in ipairs(inv) do
+        local def = Sunset.Items[row.item]
+        if def then currentWeight = currentWeight + (def.weight or 0) * (row.count or 1) end
+    end
+    local minFishWeight = (Sunset.Items['fish_common'] or {}).weight or 0.8
+    if currentWeight + minFishWeight > Sunset.Config.MaxWeight then
+        return nil, ('Geanta plina! Vinde pestele mai intai. (%.1f / %.1f kg)'):format(
+            currentWeight, Sunset.Config.MaxWeight)
+    end
+
     local now = GetGameTimer()
     local challenge = session.data.fishingChallenge
     if challenge and now <= challenge.expiresAt then return nil, 'Your line is already cast' end
@@ -180,7 +195,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
 
     local delay  = math.max(800,
         math.random(cfg.biteDelayMinMs or 2500, cfg.biteDelayMaxMs or 6500) - rod.delayReduction)
-    local window = (cfg.reactionWindowMs or 1400) + rod.windowBonus + 1000
+    local window = (cfg.reactionWindowMs or 1400) + rod.windowBonus
     local token  = ('%d-%d-%d'):format(source, session.id, math.random(100000, 999999))
 
     session.data.fishingChallenge = {
@@ -240,14 +255,15 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
         return nil, 'The fish got away... try again!'
     end
 
-    -- Selectie tip peste
+    -- Selectie tip peste si greutate aleatoare
     local fishType = pickFishType(baitTier, level)
-    local baseValue = math.random(fishType.min, fishType.max)
-    local value     = math.floor(baseValue * rodValueMult)
-    local fishItem  = fishType.item
+    local fishKg   = math.random(math.floor(fishType.minKg * 10), math.floor(fishType.maxKg * 10)) / 10
+    local value    = math.floor(fishKg * fishType.pricePerKg * rodValueMult)
+    local fishItem = fishType.item
 
     if not exports.sunset_inventory:AddItem(source, fishItem, 1, nil, {
         value    = value,
+        fishKg   = fishKg,
         caughtAt = os.time(),
     }) then
         return nil, 'Inventory full or no slot. Free space and try again.'
@@ -263,6 +279,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     TriggerClientEvent('sunset:jobs:stateChanged', source, session.state, session.data)
     return {
         value        = value,
+        fishKg       = fishKg,
         fishItem     = fishItem,
         catches      = session.data.catches,
         pendingValue = session.data.pendingValue,

@@ -20,13 +20,13 @@ Sunset.Items = {
     sealed_pouch = { label = 'Sealed Pouch', weight = 0.15, usable = true, stress = -15, category = 'supplies', icon = 'filled_evidence_bag' },
     shiv = { label = 'Shiv', weight = 0.3, usable = false, weapon = 'WEAPON_SWITCHBLADE', category = 'tools', icon = 'weapon_trigger' },
     gas_can = { label = 'Gas Can', weight = 3.0, usable = true, maxLiters = 20, category = 'tools', icon = 'jerry_can' },
-    fresh_fish    = { label = 'Fresh Fish',      weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
-    -- Typed fish (caught with new rarity system)
-    fish_common   = { label = 'Common Fish',     weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
-    fish_uncommon = { label = 'Uncommon Fish',   weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
-    fish_rare     = { label = 'Rare Fish',        weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
-    fish_epic     = { label = 'Epic Fish',        weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
-    fish_legendary = { label = 'Legendary Fish', weight = 1.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fresh_fish    = { label = 'Fresh Fish',      weight = 0.8,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    -- Typed fish (caught with new rarity system) — heavier rarity = more bag space used
+    fish_common   = { label = 'Common Fish',     weight = 0.8,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_uncommon = { label = 'Uncommon Fish',   weight = 1.2,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_rare     = { label = 'Rare Fish',        weight = 2.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_epic     = { label = 'Epic Fish',        weight = 3.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
+    fish_legendary = { label = 'Legendary Fish', weight = 5.0,  usable = false, category = 'food',    icon = 'cooked_fish' },
     -- Fishing bait (consumabil la fiecare aruncare)
     bait_worm    = { label = 'Worm Bait',         weight = 0.05, usable = false, category = 'fishing', icon = 'bread' },
     bait_lure    = { label = 'Artificial Lure',   weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
