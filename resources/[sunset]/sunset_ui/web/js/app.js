@@ -140,8 +140,10 @@ function showHud(visible) {
     const hud = $('#hud');
     if (visible) {
         hud.classList.remove('hidden');
+        window.DamageIndicators?.setActive(true);
     } else {
         hud.classList.add('hidden');
+        window.DamageIndicators?.setActive(false);
     }
 }
 
@@ -352,6 +354,10 @@ window.addEventListener('message', (event) => {
 
         case 'updateHud':
             if (window.Hud) Hud.update(data || event.data.data);
+            break;
+
+        case 'updateVoice':
+            if (window.Hud) Hud.updateVoice(data || event.data.data);
             break;
 
         case 'showTask':

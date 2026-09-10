@@ -10,5 +10,5 @@ dependencies { 'sunset_core', 'sunset_ui', 'oxmysql' }
 
 shared_scripts { '@sunset_core/shared/config.lua', 'shared/config.lua' }
 
-client_scripts { 'client/main.lua' }
+client_scripts { 'client/main.lua', 'client/damage_indicators.lua' }
 server_scripts { '@oxmysql/lib/MySQL.lua', 'server/main.lua' }

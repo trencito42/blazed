@@ -339,7 +339,7 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
     local changed = MySQL.update.await([[
         UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?,
             parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?
-        WHERE plate = ? AND character_id = ?
+        WHERE id = ? AND character_id = ?
     ]], {
         garageId or 'legion',
         encodedProps,
@@ -347,7 +347,7 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         engine,
         body,
         px, py, pz, ph,
-        plate,
+        owned.id,
         char.id,
     })
     if not changed or changed < 1 then return nil, 'Vehicle could not be stored' end

@@ -191,6 +191,9 @@ RegisterCommand('sethome', function(_, args)
 end, false)
 
 RegisterCommand('properties', function() openProperties(refreshProperties()) end, false)
+RegisterCommand('house', function() openProperties(refreshProperties()) end, false)
+RegisterCommand('houses', function() openProperties(refreshProperties()) end, false)
+RegisterCommand('myhouse', function() openProperties(refreshProperties()) end, false)
 
 AddEventHandler('sunset:nui:propertiesClose', function()
     propertiesPanelOpen = false

@@ -1,115 +1,150 @@
+const SPAWN_META = {
+    last: { status: 'Safe', risk: 'Scăzut', statusClass: 'val-safe', riskClass: '' },
+    default: { status: 'Public', risk: 'Mediu', statusClass: '', riskClass: '' },
+    house: { status: 'Proprietate', risk: 'Zero', statusClass: 'val-safe', riskClass: '' },
+    hq: { status: 'Facțiune', risk: 'Scăzut', statusClass: 'val-safe', riskClass: '' },
+};
+
 const SpawnSelector = {
-    selected: 'last', busy: false, dismissible: false,
-    activeCards() { return [...document.querySelectorAll('.spawn-option:not(.hidden)')].filter((card) => !card.disabled); },
+    selected: 'last',
+    busy: false,
+    dismissible: false,
+
+    activeItems() {
+        return [...document.querySelectorAll('.spawn-loc-item:not(.hidden)')].filter((item) => !item.disabled);
+    },
+
     reset() {
         this.busy = false;
-        document.querySelectorAll('.spawn-option').forEach((card) => {
-            card.classList.remove('is-confirming');
-            if (card.classList.contains('hidden')) return;
-            if (card.dataset.spawn === 'last' && card.hasAttribute('data-force-disabled')) {
-                card.disabled = true;
+        const ui = document.getElementById('spawn-main-ui');
+        const fade = document.getElementById('spawn-fade-overlay');
+        ui?.classList.remove('exit');
+        fade?.classList.remove('active');
+        document.querySelectorAll('.spawn-loc-item').forEach((item) => {
+            if (item.classList.contains('hidden')) return;
+            if (item.dataset.spawn === 'last' && item.hasAttribute('data-force-disabled')) {
+                item.disabled = true;
+                item.classList.add('is-locked');
                 return;
             }
-            card.disabled = false;
+            item.disabled = false;
+            item.classList.remove('is-locked');
         });
+        const btn = document.getElementById('spawn-btn-confirm');
+        if (btn) btn.disabled = false;
     },
+
+    updateDetails(item) {
+        const statusEl = document.getElementById('spawn-info-status');
+        const riskEl = document.getElementById('spawn-info-risk');
+        if (!item || !statusEl || !riskEl) return;
+        const status = item.dataset.status || 'Safe';
+        const risk = item.dataset.risk || 'Scăzut';
+        statusEl.textContent = status;
+        riskEl.textContent = risk;
+        statusEl.className = 'spawn-detail-value ' + (status === 'Public' ? '' : 'val-safe');
+        riskEl.className = 'spawn-detail-value ' + (risk === 'Ridicat' ? 'val-danger' : '');
+    },
+
+    select(location) {
+        const target = document.querySelector(`.spawn-loc-item[data-spawn="${location}"]`);
+        if (!target || target.disabled || target.classList.contains('hidden')) return;
+        this.selected = location;
+        document.querySelectorAll('.spawn-loc-item').forEach((item) => {
+            item.classList.toggle('active', item === target);
+        });
+        this.updateDetails(target);
+    },
+
+    move(direction) {
+        const items = this.activeItems();
+        if (!items.length) return;
+        const current = Math.max(0, items.findIndex((item) => item.dataset.spawn === this.selected));
+        const next = items[(current + direction + items.length) % items.length];
+        this.select(next.dataset.spawn);
+    },
+
     show(data = {}) {
         this.dismissible = data.dismissible === true;
         this.reset();
-        const footer = document.querySelector('.spawn-footer');
-        if (footer) {
-            footer.innerHTML = this.dismissible
-                ? '<span>ESC</span> close · <span>A / D</span> navigate · <span>Enter</span> confirm'
-                : '<span>A / D</span> or arrow keys to navigate · <span>Enter</span> to confirm';
-        }
-        const last = document.querySelector('[data-spawn="last"]');
+
+        const last = document.querySelector('.spawn-loc-item[data-spawn="last"]');
         if (last) {
             const disabled = data.hasLastLocation === false;
             last.disabled = disabled;
+            last.classList.toggle('is-locked', disabled);
             if (disabled) last.setAttribute('data-force-disabled', '1');
             else last.removeAttribute('data-force-disabled');
         }
+
         const home = Array.isArray(data.homes) ? data.homes[0] : null;
-        const house = document.querySelector('[data-spawn="house"]');
+        const house = document.querySelector('.spawn-loc-item[data-spawn="house"]');
         if (house) {
             house.classList.toggle('hidden', !home);
             house.disabled = !home;
             house.dataset.propertyId = home?.id || '';
-            const name = document.getElementById('spawn-house-name');
-            const access = document.getElementById('spawn-house-access');
-            const description = document.getElementById('spawn-house-description');
-            if (name) name.textContent = home?.label || 'House';
-            if (access) access.textContent = home?.access_type === 'owner' ? 'Your house' : 'Your rental';
-            if (description) description.textContent = home?.access_type === 'owner'
-                ? 'Spawn outside the house you own.' : 'Spawn outside the house you currently rent.';
+            const label = house.querySelector('.spawn-loc-label');
+            if (label) label.textContent = home?.label || 'Proprietate';
+            const meta = SPAWN_META.house;
+            house.dataset.status = home?.access_type === 'owner' ? 'Proprietate' : 'Chirie';
+            house.dataset.risk = meta.risk;
         }
+
         const hq = data.factionHq;
-        const hqCard = document.querySelector('[data-spawn="hq"]');
-        if (hqCard) {
+        const hqItem = document.querySelector('.spawn-loc-item[data-spawn="hq"]');
+        if (hqItem) {
             const hasHq = Boolean(hq && hq.label);
-            hqCard.classList.toggle('hidden', !hasHq);
-            hqCard.disabled = !hasHq;
-            const hqName = document.getElementById('spawn-hq-name');
-            const hqAccess = document.getElementById('spawn-hq-access');
-            const hqDescription = document.getElementById('spawn-hq-description');
-            if (hqName) hqName.textContent = hq?.label || 'Faction HQ';
-            if (hqAccess) hqAccess.textContent = hq?.hidden ? 'Hidden HQ' : 'Faction HQ';
-            if (hqDescription) {
-                hqDescription.textContent = hq?.hidden
-                    ? `Spawn at ${hq.label} headquarters. Not shown on the public map.`
-                    : `Spawn at ${hq?.label || 'your faction'} headquarters.`;
-            }
+            hqItem.classList.toggle('hidden', !hasHq);
+            hqItem.disabled = !hasHq;
+            const label = hqItem.querySelector('.spawn-loc-label');
+            if (label) label.textContent = hq?.label || 'HQ Facțiune';
+            hqItem.dataset.status = hq?.hidden ? 'HQ Ascuns' : 'HQ Facțiune';
+            hqItem.dataset.risk = SPAWN_META.hq.risk;
         }
-        this.select(last && !last.disabled ? 'last' : 'default');
+
+        const first = this.activeItems()[0];
+        this.select(first ? first.dataset.spawn : 'default');
     },
-    select(location) {
-        const target = document.querySelector(`[data-spawn="${location}"]`);
-        if (!target || target.disabled || target.classList.contains('hidden')) return;
-        this.selected = location;
-        const cards = this.activeCards();
-        const center = cards.indexOf(target);
-        const gap = cards.length > 3 ? 215 : 270;
-        cards.forEach((card, index) => {
-            const offset = index - center;
-            card.classList.toggle('is-selected', card === target);
-            card.dataset.pos = String(offset);
-            const scale = offset === 0 ? 1.08 : Math.max(0.58, 1.08 - Math.abs(offset) * 0.13);
-            const opacity = offset === 0 ? 1 : Math.max(0.26, 0.82 - Math.abs(offset) * 0.2);
-            const x = offset * gap;
-            const rotate = -offset * 11;
-            card.style.transform = `translate(-50%, -50%) translateX(${x}px) scale(${scale}) rotateY(${rotate}deg)`;
-            card.style.opacity = String(opacity);
-            card.style.zIndex = String(10 - Math.abs(offset));
-            card.style.filter = offset === 0 ? 'none' : 'saturate(0.72)';
-        });
-    },
-    move(direction) {
-        const cards = this.activeCards();
-        if (!cards.length) return;
-        const current = Math.max(0, cards.findIndex((card) => card.dataset.spawn === this.selected));
-        this.select(cards[(current + direction + cards.length) % cards.length].dataset.spawn);
-    },
+
     confirm(location = this.selected) {
         if (this.busy) return;
-        const target = document.querySelector(`[data-spawn="${location}"]`);
+        const target = document.querySelector(`.spawn-loc-item[data-spawn="${location}"]`);
         if (!target || target.disabled || target.classList.contains('hidden')) return;
+
         this.busy = true;
-        target.classList.add('is-confirming');
-        document.querySelectorAll('.spawn-option').forEach((card) => { card.disabled = true; });
-        post('spawnSelect', { location, propertyId: Number(target.dataset.propertyId || 0) || null });
+        const ui = document.getElementById('spawn-main-ui');
+        const fade = document.getElementById('spawn-fade-overlay');
+        const btn = document.getElementById('spawn-btn-confirm');
+        if (btn) btn.disabled = true;
+        document.querySelectorAll('.spawn-loc-item').forEach((item) => { item.disabled = true; });
+
+        ui?.classList.add('exit');
+        setTimeout(() => fade?.classList.add('active'), 300);
+        setTimeout(() => {
+            post('spawnSelect', {
+                location,
+                propertyId: Number(target.dataset.propertyId || 0) || null,
+            });
+        }, 420);
     },
+
     close() {
         if (!this.dismissible || this.busy) return;
         this.reset();
         post('spawnClose');
     },
 };
-document.querySelectorAll('.spawn-option').forEach((card) => {
-    card.addEventListener('mouseenter', () => SpawnSelector.select(card.dataset.spawn));
-    card.addEventListener('focus', () => SpawnSelector.select(card.dataset.spawn));
-    card.addEventListener('click', () => SpawnSelector.selected === card.dataset.spawn
-        ? SpawnSelector.confirm() : SpawnSelector.select(card.dataset.spawn));
+
+document.getElementById('spawn-btn-confirm')?.addEventListener('click', () => SpawnSelector.confirm());
+
+document.querySelectorAll('.spawn-loc-item').forEach((item) => {
+    item.addEventListener('click', () => {
+        if (item.disabled || item.classList.contains('hidden')) return;
+        if (SpawnSelector.selected === item.dataset.spawn) SpawnSelector.confirm();
+        else SpawnSelector.select(item.dataset.spawn);
+    });
 });
+
 document.addEventListener('keydown', (event) => {
     if (window.App?.currentScreen !== 'spawn') return;
     if (event.key === 'Escape' && SpawnSelector.dismissible) {
@@ -117,8 +152,18 @@ document.addEventListener('keydown', (event) => {
         SpawnSelector.close();
         return;
     }
-    if (['ArrowLeft', 'a', 'A'].includes(event.key)) SpawnSelector.move(-1);
-    if (['ArrowRight', 'd', 'D'].includes(event.key)) SpawnSelector.move(1);
-    if (event.key === 'Enter') SpawnSelector.confirm();
+    if (['ArrowDown', 'ArrowRight', 'd', 'D'].includes(event.key)) {
+        event.preventDefault();
+        SpawnSelector.move(1);
+    }
+    if (['ArrowUp', 'ArrowLeft', 'a', 'A'].includes(event.key)) {
+        event.preventDefault();
+        SpawnSelector.move(-1);
+    }
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        SpawnSelector.confirm();
+    }
 });
+
 window.SpawnSelector = SpawnSelector;

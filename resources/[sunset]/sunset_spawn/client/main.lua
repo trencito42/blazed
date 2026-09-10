@@ -60,8 +60,8 @@ local function spawnPlayer(char, spawnPosition)
 
     local pos = resolvePosition(char, spawnPosition)
 
-    DoScreenFadeOut(500)
-    Wait(600)
+    DoScreenFadeOut(300)
+    Wait(350)
 
     local model = char.gender == 1 and `mp_f_freemode_01` or `mp_m_freemode_01`
     RequestModel(model)
@@ -93,10 +93,10 @@ local function spawnPlayer(char, spawnPosition)
 
     TriggerServerEvent('sunset:server:characterSpawned', char.id)
 
-    exports.sunset_ui:Send('enterGameplay', { duration = 850 })
-    Wait(200)
-    DoScreenFadeIn(1500)
-    Wait(1500)
+    exports.sunset_ui:Send('enterGameplay', { duration = 500 })
+    Wait(100)
+    DoScreenFadeIn(800)
+    Wait(800)
 
     FreezeEntityPosition(ped, false)
     SetEntityVisible(ped, true, false)

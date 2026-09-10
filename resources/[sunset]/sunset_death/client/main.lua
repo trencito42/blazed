@@ -77,16 +77,25 @@ local function enterDownedState()
     downed = true
     dead = true
     stabilized = false
-    bleedoutEndsAt = GetGameTimer() + ((cfg().bleedoutSeconds or 300) * 1000)
+    bleedoutEndsAt = GetGameTimer() + ((cfg().soloBleedoutSeconds or 15) * 1000)
 
     local ped = getPed()
     NetworkResurrectLocalPlayer(GetEntityCoords(ped), GetEntityHeading(ped), true, false)
     SetEntityHealth(ped, 150)
     playDownedAnim()
 
-    exports.sunset_ui:Notify('You are downed. EMS can stabilize and revive you.', 'error', 8000)
+    exports.sunset_ui:Notify('Esti la pamant. Foloseste /respawn pentru spital sau /112 pentru echipaj medical.', 'error', 10000)
     TriggerServerEvent('sunset:death:enteredDowned')
 end
+
+RegisterNetEvent('sunset:death:syncTimer', function(seconds)
+    if not downed then return end
+    seconds = tonumber(seconds) or 15
+    bleedoutEndsAt = GetGameTimer() + (seconds * 1000)
+    if seconds <= 15 then
+        exports.sunset_ui:Notify(('Nu sunt medici disponibili. Te poti respawna la spital in %d secunde (/respawn).'):format(seconds), 'warning', 6000)
+    end
+end)
 
 AddEventHandler('sunset:client:playerSpawned', function()
     active = true
@@ -118,7 +127,7 @@ RegisterNetEvent('sunset:death:stabilized', function()
     if not downed then return end
     stabilized = true
     bleedoutEndsAt = GetGameTimer() + ((cfg().stabilizeBonusSeconds or 120) * 1000)
-    exports.sunset_ui:Notify('Stabilized — bleedout slowed. EMS can still revive you.', 'info', 6000)
+    exports.sunset_ui:Notify('Stabilizat — sangerare incetinita.', 'info', 6000)
 end)
 
 RegisterNetEvent('sunset:death:forceHospital', function(pos, bill)
@@ -127,7 +136,7 @@ end)
 
 RegisterCommand('respawn', function()
     if not downed and not dead and not IsEntityDead(getPed()) then
-        exports.sunset_ui:Notify('You are not downed', 'error')
+        exports.sunset_ui:Notify('Nu esti la pamant.', 'error')
         return
     end
     TriggerServerEvent('sunset:server:requestRespawn')

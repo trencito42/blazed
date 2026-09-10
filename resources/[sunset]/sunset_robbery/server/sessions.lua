@@ -69,8 +69,8 @@ function RobberySessions.canStart(source, locationId, skipGates)
     local lcd = math.max(RobberySessions.locationCd[locationId] or 0, storedLocationCd)
     RobberySessions.locationCd[locationId] = lcd
     if now < lcd then return nil, ('This store is on lockdown for %d min'):format(math.ceil((lcd - now) / 60)) end
-    local needPolice = loc.minPolice or SunsetRobbery.MinPolice
-    if RobberyAdapter.policeCount() < needPolice then
+    local needPolice = loc.minPolice or SunsetRobbery.MinPolice or 1
+    if RobberyAdapter.policeCount() < needPolice and SunsetRobbery.RequireRealPolice == true then
         return nil, ('Need at least %d police on duty'):format(needPolice)
     end
     if not RobberyAdapter.hasItem(source, SunsetRobbery.RequiredItem, 1) then

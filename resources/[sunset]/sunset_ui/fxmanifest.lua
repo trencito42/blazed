@@ -33,6 +33,7 @@ files {
     'web/css/org-panels.css',
     'web/css/auth_loading.css',
     'web/css/spawn.css',
+    'web/css/damage-indicators.css',
     'web/css/theme.css',
     'web/css/gameplay_glass.css',
     'web/css/mdc_tablet.css',

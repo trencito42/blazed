@@ -384,14 +384,7 @@ function Sunset.AddXP(source, amount)
     if not char or not amount or amount <= 0 then return false end
 
     char.xp = (char.xp or 0) + amount
-    local xpMax = math.max(5000, (char.level or 1) * 5000)
-    while char.xp >= xpMax do
-        char.xp = char.xp - xpMax
-        char.level = (char.level or 1) + 1
-        xpMax = math.max(5000, char.level * 5000)
-        TriggerClientEvent('sunset:client:notify', source, ('Level up! You are now level %d'):format(char.level), 'success', 6000)
-    end
-
+    MySQL.update.await('UPDATE characters SET xp = ? WHERE id = ?', { char.xp, char.id })
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
 end

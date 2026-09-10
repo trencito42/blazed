@@ -131,9 +131,6 @@ local function autoEnterGame()
     inCharacterFlow = true
     trace('character_request_started')
 
-    DoScreenFadeOut(300)
-    Wait(400)
-
     local result, err = Sunset.AwaitCallback('sunset:enterGame')
     if result and result.character then
         trace('character_request_complete', result.character.id)
@@ -145,7 +142,6 @@ local function autoEnterGame()
     inCharacterFlow = false
     exports.sunset_ui:Hide()
     exports.sunset_ui:Notify(err or 'Could not load your character', 'error')
-    DoScreenFadeIn(500)
 end
 
 AddEventHandler('sunset:client:onPlayerReady', function()

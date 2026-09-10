@@ -1,36 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>blaze.mp</title>
+    <title>XODO RP — Loading</title>
     <link rel="stylesheet" href="nui://sunset_ui/web/css/fonts.css">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body onselectstart="return false" ondragstart="return false">
     <div class="loadscreen" id="loadscreen">
-        <div class="loadscreen__bg"></div>
-        <div class="loadscreen__vignette"></div>
-        <div class="loadscreen__scanlines"></div>
+        <div class="bg-container"></div>
+        <div class="vignette"></div>
 
-        <div class="loadscreen__brand">
-            <div class="loadscreen__logo" role="img" aria-label="blaze.mp"></div>
-            <p class="loadscreen__tag">Welcome to Los Santos</p>
-        </div>
-
-        <div class="loadscreen__stage">
-            <div class="loadscreen__info">
-                <div>
-                    <div class="loadscreen__title">Loading assets</div>
-                    <div class="loadscreen__status" id="status-text">Connecting to server instance...</div>
-                </div>
-                <div class="loadscreen__percent" id="progress-percent">0%</div>
+        <div class="hud-wrapper">
+            <div class="brand-container">
+                <div class="brand-title">XODO <span>RP</span></div>
+                <div class="brand-subtitle">Est. 2026 &middot; Los Santos</div>
             </div>
-            <div class="loadscreen__bar">
-                <div class="loadscreen__bar-fill" id="progress-fill"></div>
+
+            <div class="bottom-area">
+                <div class="tips-container">
+                    <div class="tips-header">Informații Server</div>
+                    <div class="tips-text" id="tip-text">
+                        Respectă regulile de Roleplay în orice moment. Folosește tasta G pentru meniul rapid de interacțiune.
+                    </div>
+                </div>
+
+                <div class="speedometer-loading">
+                    <div class="massive-pct" id="loading-pct">0<span>%</span></div>
+                    <div class="loading-status-text">
+                        <span id="loading-task">Se inițializează motorul grafic...</span>
+                        <span class="file-count" id="loading-files"></span>
+                    </div>
+                    <div class="rpm-bar-container" id="rpm-bar"></div>
+                </div>
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script src="script.js?v=11"></script>
 </body>
 </html>

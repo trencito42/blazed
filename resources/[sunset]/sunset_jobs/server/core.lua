@@ -261,7 +261,10 @@ function SunsetJobs_PayReward(source, jobId, amount, reason, countTask)
     if not char or not amount or amount <= 0 then return false end
 
     exports.sunset_core:AddMoney(source, 'cash', amount, reason or ('job_' .. jobId))
-    exports.sunset_core:AddXP(source, math.max(1, math.floor(amount / 20)))
+    
+    -- Award job skill XP (Skill 1-5 in job_progress table)
+    local jobXp = math.max(5, math.floor(amount / 10))
+    SunsetJobs_AddJobXP(source, jobId, jobXp)
 
     local row = MySQL.single.await(
         'SELECT completed_tasks, total_earned FROM job_progress WHERE character_id = ? AND job_id = ?',

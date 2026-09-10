@@ -136,7 +136,7 @@ local function buildHudData()
         street = street,
         zone = zone,
         heading = getCompassDirection(ped),
-        voiceTalking = NetworkIsPlayerTalking(PlayerId()),
+        voiceTalking = (MumbleIsPlayerTalking and MumbleIsPlayerTalking(PlayerId())) or NetworkIsPlayerTalking(PlayerId()) == 1 or NetworkIsPlayerTalking(PlayerId()) == true,
         voiceRange = getVoiceRangeLabel(),
         inVehicle = false,
         wanted = exports['sunset_hud']:GetWantedLevel(),

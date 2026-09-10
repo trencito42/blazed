@@ -9,12 +9,18 @@ end
 local function showHint(text)
     if hasOx() then
         exports.ox_lib:showTextUI(text, { position = 'bottom-center' })
+    else
+        BeginTextCommandDisplayHelp('STRING')
+        AddTextComponentSubstringPlayerName(text)
+        EndTextCommandDisplayHelp(0, false, true, 1)
     end
 end
 
 local function hideHint()
     if hasOx() then
         exports.ox_lib:hideTextUI()
+    else
+        ClearHelp(true)
     end
 end
 

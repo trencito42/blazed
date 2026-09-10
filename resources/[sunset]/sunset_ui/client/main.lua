@@ -148,15 +148,18 @@ RegisterNUICallback('loadingTimeout', function(_, cb)
     cb('ok')
 end)
 
--- ESC handling
-CreateThread(function()
-    while true do
-        if isOpen and currentScreen ~= 'loading' then
-            DisableAllControlActions(0)
-            EnableControlAction(0, 249, true) -- PTT
-            EnableControlAction(0, 46, true)  -- E
-        end
-        Wait(isOpen and currentScreen ~= 'loading' and 0 or 500)
-    end
-end)
+RegisterCommand('fixnui', function()
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    isOpen = false
+    currentScreen = nil
+    SendNUIMessage({ action = 'hide' })
+    Notify('Interfata a fost resetata si controalele au fost deblocate.', 'success')
+end, false)
+
+RegisterCommand('cursor', function()
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    Notify('Cursorul a fost resetat.', 'info')
+end, false)
 

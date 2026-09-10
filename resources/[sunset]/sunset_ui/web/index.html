@@ -42,7 +42,8 @@
     <link rel="stylesheet" href="css/clans.css?v=11">
     <link rel="stylesheet" href="css/org-panels.css?v=4">
     <link rel="stylesheet" href="css/auth_loading.css?v=10">
-    <link rel="stylesheet" href="css/spawn.css?v=3">
+    <link rel="stylesheet" href="css/spawn.css?v=12">
+    <link rel="stylesheet" href="css/damage-indicators.css?v=1">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=6">
     <link rel="stylesheet" href="css/mdc_tablet.css?v=12">
     <link rel="stylesheet" href="css/player_interaction.css?v=6">
@@ -376,51 +377,46 @@
         </section>
 
         <section id="screen-spawn" class="screen screen--spawn hidden">
+            <div class="spawn-bg-map"></div>
             <div class="spawn-vignette"></div>
-            <header class="spawn-heading">
-                <span>Blaze entry protocol</span>
-                <h1>Choose your location</h1>
-                <p>Select where your character enters Los Santos.</p>
-            </header>
-            <div class="spawn-options" id="spawn-options">
-                <button type="button" class="spawn-option is-selected" data-spawn="last">
-                    <span class="spawn-option__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
-                    </span>
-                    <span class="spawn-option__eyebrow">Continue journey</span>
-                    <strong>Last Location</strong>
-                    <small>Return to the place where you last disconnected.</small>
-                    <span class="spawn-option__action">Select location <b>→</b></span>
-                </button>
-                <button type="button" class="spawn-option" data-spawn="default">
-                    <span class="spawn-option__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-6h4v6"/></svg>
-                    </span>
-                    <span class="spawn-option__eyebrow">Fresh arrival</span>
-                    <strong>Default Spawn</strong>
-                    <small>Start from the city arrival point.</small>
-                    <span class="spawn-option__action">Select location <b>→</b></span>
-                </button>
-                <button type="button" class="spawn-option hidden" data-spawn="house" data-property-id="">
-                    <span class="spawn-option__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V21h13V10.5M9 21v-6h6v6"/><path d="M8 11h8"/></svg>
-                    </span>
-                    <span class="spawn-option__eyebrow" id="spawn-house-access">Your residence</span>
-                    <strong id="spawn-house-name">House</strong>
-                    <small id="spawn-house-description">Spawn outside your owned or rented house.</small>
-                    <span class="spawn-option__action">Select location <b>→</b></span>
-                </button>
-                <button type="button" class="spawn-option hidden" data-spawn="hq">
-                    <span class="spawn-option__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/></svg>
-                    </span>
-                    <span class="spawn-option__eyebrow" id="spawn-hq-access">Faction HQ</span>
-                    <strong id="spawn-hq-name">Faction HQ</strong>
-                    <small id="spawn-hq-description">Spawn at your faction headquarters.</small>
-                    <span class="spawn-option__action">Select location <b>→</b></span>
-                </button>
+            <div class="spawn-cinematic-fade" id="spawn-fade-overlay"></div>
+            <div class="spawn-ui" id="spawn-main-ui">
+                <div class="spawn-locations">
+                    <div class="spawn-section-title">Selectează Punctul de Inserție</div>
+                    <div class="spawn-location-list" id="spawn-location-list">
+                        <button type="button" class="spawn-loc-item active" data-spawn="last" data-status="Safe" data-risk="Scăzut" style="--delay:0.1s">
+                            <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
+                            <span class="spawn-loc-label">Ultima Locație</span>
+                        </button>
+                        <button type="button" class="spawn-loc-item" data-spawn="default" data-status="Public" data-risk="Mediu" style="--delay:0.2s">
+                            <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-6h4v6"/></svg></span>
+                            <span class="spawn-loc-label">Spawn Implicit</span>
+                        </button>
+                        <button type="button" class="spawn-loc-item hidden" data-spawn="house" data-property-id="" data-status="Proprietate" data-risk="Zero" style="--delay:0.3s">
+                            <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V21h13V10.5M9 21v-6h6v6"/></svg></span>
+                            <span class="spawn-loc-label">Proprietate</span>
+                        </button>
+                        <button type="button" class="spawn-loc-item hidden" data-spawn="hq" data-status="Facțiune" data-risk="Scăzut" style="--delay:0.4s">
+                            <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/></svg></span>
+                            <span class="spawn-loc-label">HQ Facțiune</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="spawn-details">
+                    <div class="spawn-detail-row">
+                        <span class="spawn-detail-label">Status Zonă</span>
+                        <span class="spawn-detail-value val-safe" id="spawn-info-status">Safe</span>
+                    </div>
+                    <div class="spawn-detail-row">
+                        <span class="spawn-detail-label">Nivel Risc</span>
+                        <span class="spawn-detail-value" id="spawn-info-risk">Scăzut</span>
+                    </div>
+                    <button type="button" class="spawn-btn-confirm" id="spawn-btn-confirm">
+                        <span class="spawn-key-hint">ENTER</span>
+                        Confirmă
+                    </button>
+                </div>
             </div>
-            <footer class="spawn-footer"><span>A / D</span> or arrow keys to navigate · <span>Enter</span> to confirm</footer>
         </section>
 
         <section id="screen-auth" class="screen screen--auth hidden">
@@ -3148,6 +3144,17 @@
         </div>
     </div>
 
+    <div id="damage-indicators" class="damage-indicators hidden" aria-hidden="true">
+        <div class="dmg-screen-flash" id="dmg-screen-flash"></div>
+        <div class="dmg-hit-marker-container">
+            <svg class="dmg-hit-arc dmg-arc-top" id="dmg-marker-top" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+            <svg class="dmg-hit-arc dmg-arc-right" id="dmg-marker-right" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+            <svg class="dmg-hit-arc dmg-arc-bottom" id="dmg-marker-bottom" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+            <svg class="dmg-hit-arc dmg-arc-left" id="dmg-marker-left" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+        </div>
+        <div class="dmg-container" id="dmg-container"></div>
+    </div>
+
     <script src="js/app.js?v=20"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>
@@ -3167,7 +3174,8 @@
     <script src="js/auth_accounts.js?v=6"></script>
     <script src="js/auth_email.js?v=1"></script>
     <script src="js/auth_loading.js?v=5"></script>
-    <script src="js/spawn.js?v=4"></script>
+    <script src="js/spawn.js?v=5"></script>
+    <script src="js/damage-indicators.js?v=1"></script>
     <script src="js/fuel_pump.js"></script>
     <script src="js/job_icons.js?v=1"></script>
     <script src="js/fishing.js?v=6"></script>

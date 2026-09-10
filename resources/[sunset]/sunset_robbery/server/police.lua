@@ -71,6 +71,15 @@ function RobberyPolice.alert(session, stage)
     for _, src in ipairs(priority) do notifyOfficer(src, true) end
     for _, src in ipairs(regular) do notifyOfficer(src, false) end
 
+    if #priority == 0 and #regular == 0 and stage == 'first' then
+        pcall(function()
+            if GetResourceState('sunset_factions') == 'started' then
+                exports.sunset_factions:AddWantedCharge(session.source, 3, 'Armed Robbery (Local Alarm)')
+            end
+        end)
+        RobberyAdapter.notify(session.source, 'Alarma silentioasa a pornit! Politia locala a fost alertata (Wanted ★★★).', 'error', 10000)
+    end
+
     if stage == 'first' and GetResourceState('sunset_dispatch') == 'started' then
         pcall(function()
             exports.sunset_dispatch:CreateServiceCall(session.source, 'police_backup', loc.coords, {

@@ -86,6 +86,11 @@ local RESOURCE_COMMAND_EXPORTS = {
     'sunset_properties',
     'sunset_licenses',
     'sunset_jobs',
+    'sunset_jobcreator',
+    'sunset_pass',
+    'sunset_economy',
+    'sunset_businesses',
+    'sunset_clans',
 }
 
 local function tryRunResourceCommand(src, cmd, args)
@@ -202,7 +207,7 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
     if cmd == '' then return end
 
     if not commandExists(cmd) then
-        chatSystem(src, ('Unknown command: /%s. Type /help for available commands.'):format(cmd), 'error')
+        TriggerClientEvent('sunset:chat:executeCommand', src, line)
         return
     end
 
@@ -242,18 +247,11 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
             TriggerClientEvent('sunset:chat:executeCommand', src, line)
             return
         end
-        if serverCommands[cmd] and tryRunResourceCommand(src, cmd, args) then
+        if tryRunResourceCommand(src, cmd, args) then
             return
         end
-        if serverCommands[cmd] then
-            chatSystem(src,
-                ('/%s failed on the server. Reconnect or contact staff if this persists.'):format(cmd),
-                'error')
-            return
-        end
-        chatSystem(src,
-            ('/%s is registered but has no handler on this server. Contact staff or reconnect.'):format(cmd),
-            'error')
+        -- Fallback to client native execution for admin commands
+        TriggerClientEvent('sunset:chat:executeCommand', src, line)
         return
     end
 
@@ -266,24 +264,12 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
         return
     end
 
-    if serverCommands[cmd] then
-        if tryRunResourceCommand(src, cmd, args) then
-            return
-        end
-        chatSystem(src,
-            ('/%s could not be executed on the server. Reconnect or contact staff.'):format(cmd),
-            'error')
+    if tryRunResourceCommand(src, cmd, args) then
         return
     end
 
-    if Sunset.ClientCommands[cmd] then
-        TriggerClientEvent('sunset:chat:executeCommand', src, line)
-        return
-    end
-
-    chatSystem(src,
-        ('Command /%s could not be executed. Reconnect or contact staff.'):format(cmd),
-        'error')
+    -- Delegate to native FiveM command execution on client/server
+    TriggerClientEvent('sunset:chat:executeCommand', src, line)
 end)
 
 exports('RefreshCommandList', refreshServerCommands)

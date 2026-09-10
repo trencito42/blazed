@@ -19,6 +19,7 @@ shared_scripts {
 client_scripts {
     'client/world.lua',
     'client/main.lua',
+    'client/voice.lua',
 }
 
 server_scripts {
@@ -33,6 +34,9 @@ exports {
     'GetPaydaySeconds',
     'GetWantedLevel',
     'SetWantedLevel',
+    'CycleVoiceProximity',
+    'SetVoiceProximity',
+    'GetVoiceProximity',
 }
 
 dependencies {

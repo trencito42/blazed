@@ -98,13 +98,49 @@ exports('StabilizePlayer', StabilizePlayer)
 exports('ClearDownedForCustody', ClearDownedForCustody)
 exports('IsPlayerDowned', function(source) return Downed[source] ~= nil end)
 
+local function getOnDutyEmsCount()
+    local count = 0
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if src then
+            local onDuty = false
+            pcall(function()
+                if exports.sunset_factions:IsOnDuty(src) then
+                    local char = exports.sunset_core:GetCharacter(src)
+                    if char then
+                        local factionId = Sunset.GetCharacterFaction and select(1, Sunset.GetCharacterFaction(char))
+                        if not factionId and type(char.metadata) == 'table' then
+                            factionId = char.metadata.faction
+                        end
+                        if factionId == 'ems' or factionId == 'medic' or (Sunset.FactionTypeMatches and Sunset.FactionTypeMatches(factionId, 'medical')) then
+                            count = count + 1
+                        end
+                    end
+                end
+            end)
+            if onDuty then count = count + 1 end
+        end
+    end
+    return count
+end
+
+local function bleedoutDurationFor(source)
+    local ems = getOnDutyEmsCount()
+    if ems == 0 then
+        return math.max(15, tonumber(Sunset.Death and Sunset.Death.soloBleedoutSeconds) or 15)
+    end
+    return math.max(30, tonumber(Sunset.Death and Sunset.Death.bleedoutSeconds) or 180)
+end
+
 RegisterNetEvent('sunset:server:playerDied', function()
     local source = source
     local char = exports.sunset_core:GetCharacter(source)
     if char then char.is_dead = true end
     local now = os.time()
-    Downed[source] = { startedAt = now, releaseAt = now + bleedoutDuration(), stabilized = false }
+    local dur = bleedoutDurationFor(source)
+    Downed[source] = { startedAt = now, releaseAt = now + dur, stabilized = false }
     TriggerEvent('sunset:death:playerDowned', source)
+    TriggerClientEvent('sunset:death:syncTimer', source, dur)
 
     local pending = LastPvPAttacker[source]
     LastPvPAttacker[source] = nil
@@ -114,7 +150,7 @@ RegisterNetEvent('sunset:server:playerDied', function()
             if not MurderWindow[source] then
                 MurderWindow[source] = { killerId = killer, expires = now + 60 }
                 TriggerClientEvent('sunset:client:notify', source,
-                    'You were attacked! You have 60 seconds to use /112 to call emergency services and report your attacker.',
+                    'Ai fost atacat! Ai 60 de secunde sa folosesti /112 pentru a raporta atacatorul.',
                     'error', 10000)
                 SetTimeout(61000, function()
                     local row = MurderWindow[source]
@@ -131,7 +167,9 @@ RegisterNetEvent('sunset:death:enteredDowned', function()
     local source = source
     if not Downed[source] then
         local now = os.time()
-        Downed[source] = { startedAt = now, releaseAt = now + bleedoutDuration(), stabilized = false }
+        local dur = bleedoutDurationFor(source)
+        Downed[source] = { startedAt = now, releaseAt = now + dur, stabilized = false }
+        TriggerClientEvent('sunset:death:syncTimer', source, dur)
     end
 end)
 
@@ -139,14 +177,31 @@ RegisterNetEvent('sunset:server:bleedoutExpired', function()
     local source = source
     local state = Downed[source]
     if not state or os.time() < (state.releaseAt or math.huge) then return end
-    respawnPlayer(source, Sunset.Config.HospitalBill or 0)
+    respawnPlayer(source, Sunset.Config.HospitalBill or 250)
 end)
 
 RegisterNetEvent('sunset:server:requestRespawn', function()
     local source = source
     local state = Downed[source]
-    if not state or os.time() < (state.releaseAt or math.huge) then return end
-    respawnPlayer(source, Sunset.Config.HospitalBill or 0)
+    if not state then
+        TriggerClientEvent('sunset:client:notify', source, 'Nu esti la pamant.', 'info', 4000)
+        return
+    end
+    local now = os.time()
+    local ems = getOnDutyEmsCount()
+    if ems == 0 and (now - (state.startedAt or 0)) >= 10 then
+        respawnPlayer(source, Sunset.Config.HospitalBill or 250)
+        return
+    end
+
+    if now < (state.releaseAt or math.huge) then
+        local remaining = math.max(1, (state.releaseAt or now) - now)
+        TriggerClientEvent('sunset:client:notify', source,
+            ('Trebuie sa mai astepti %d secunde inainte de respawn la spital sau apeleaza /112.'):format(remaining),
+            'warning', 5000)
+        return
+    end
+    respawnPlayer(source, Sunset.Config.HospitalBill or 250)
 end)
 
 local MurderWindow = {}
