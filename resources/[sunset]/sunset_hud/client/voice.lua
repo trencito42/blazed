@@ -157,7 +157,6 @@ CreateThread(function()
         local talking = isPlayerTalkingNow()
         if talking ~= lastTalking then
             lastTalking = talking
-            LocalPlayer.state:set('isTalking', talking, true)
             pushVoiceHud()
         end
         Wait(talking and 40 or 80)
