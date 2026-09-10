@@ -190,9 +190,22 @@ const loadingUI = createForzaLoadUI('screen-loading');
 
 const HandoffScreen = {
     show() {
+        const el = document.getElementById('screen-handoff');
+        if (el) {
+            el.classList.remove('hidden');
+            el.setAttribute('aria-hidden', 'false');
+        }
         handoffUI._ensureSegments();
         handoffUI.showComplete('Entering session...');
         handoffUI._startTips();
+    },
+    hide() {
+        handoffUI._stopTips();
+        const el = document.getElementById('screen-handoff');
+        if (el) {
+            el.classList.add('hidden');
+            el.setAttribute('aria-hidden', 'true');
+        }
     },
 };
 

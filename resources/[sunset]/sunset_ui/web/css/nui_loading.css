@@ -1,7 +1,7 @@
 /* Forza HUD loading — handoff bridge + post-auth/spawn loading */
 
-#screen-handoff.nui-forza-load,
-#screen-loading.nui-forza-load {
+#screen-handoff.nui-forza-load:not(.hidden),
+#screen-loading.nui-forza-load:not(.hidden) {
     display: block !important;
     position: relative;
     overflow: hidden;
@@ -252,4 +252,11 @@
     #screen-loading.nui-forza-load .speedometer-loading { align-items: flex-start; width: 100%; }
     #screen-handoff.nui-forza-load .loading-status-text,
     #screen-loading.nui-forza-load .loading-status-text { justify-content: flex-start; }
+}
+
+#screen-handoff.nui-forza-load.hidden,
+#screen-loading.nui-forza-load.hidden {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
 }

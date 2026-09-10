@@ -259,6 +259,7 @@ window.addEventListener('message', (event) => {
             }
             if (screen === 'auth') {
                 warmEntryBackground(ENTRY_BACKGROUNDS.auth);
+                if (window.HandoffScreen) HandoffScreen.hide();
                 showScreen('auth');
                 if (window.Panels) Panels.showAuth(data || {});
                 return;
