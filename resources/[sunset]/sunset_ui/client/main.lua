@@ -154,7 +154,10 @@ RegisterCommand('fixnui', function()
     isOpen = false
     currentScreen = nil
     SendNUIMessage({ action = 'hide' })
-    Notify('Interfata a fost resetata si controalele au fost deblocate.', 'success')
+    if GetResourceState('sunset_auth') == 'started' then
+        TriggerEvent('sunset:auth:openLogin')
+    end
+    Notify('UI reset. Login reopened if you were still on the entry screen.', 'success')
 end, false)
 
 RegisterCommand('cursor', function()

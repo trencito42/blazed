@@ -140,7 +140,12 @@ local function autoEnterGame()
 
     trace('character_request_failed', err or 'empty_response')
     inCharacterFlow = false
-    exports.sunset_ui:Hide()
+    if GetResourceState('sunset_auth') == 'started' then
+        TriggerEvent('sunset:auth:openLogin')
+    else
+        exports.sunset_ui:Show('auth', {})
+        exports.sunset_ui:SetFocus(true, true)
+    end
     exports.sunset_ui:Notify(err or 'Could not load your character', 'error')
 end
 

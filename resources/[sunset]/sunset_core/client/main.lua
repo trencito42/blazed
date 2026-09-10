@@ -9,7 +9,7 @@ CreateThread(function()
 
     -- Keep the same preloaded background underneath the FiveM loadscreen.
     -- This prevents a world/black-frame flash while the independent NUIs swap.
-    local uiDeadline = GetGameTimer() + 5000
+    local uiDeadline = GetGameTimer() + 15000
     while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < uiDeadline do
         Wait(50)
     end
@@ -19,10 +19,13 @@ CreateThread(function()
         Wait(80)
         SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
         Wait(380)
+    else
+        print('^1[sunset_core]^7 sunset_ui was not ready before loadscreen shutdown; login UI may need /fixlogin')
     end
 
     ShutdownLoadingScreenNui()
     ShutdownLoadingScreen()
+    DoScreenFadeIn(500)
 
     TriggerServerEvent('sunset:server:playerLoaded')
 end)

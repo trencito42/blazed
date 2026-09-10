@@ -117,13 +117,15 @@ local function enterStudio(char, skipFade)
 
     ShutdownLoadingScreenNui()
     ShutdownLoadingScreen()
-    exports.sunset_ui:Send('hide', {})
 
     if not loadFreemodePed(char) then
         if not skipFade then DoScreenFadeIn(500) end
+        TriggerEvent('sunset:auth:openLogin')
         exports.sunset_ui:Notify('Failed to load character model', 'error')
         return false
     end
+
+    exports.sunset_ui:Send('hide', {})
 
     local studio = getStudioCoords()
     local ped = PlayerPedId()

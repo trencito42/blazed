@@ -37,6 +37,25 @@ local function openAuth()
     exports.sunset_ui:Show('auth', authPayload())
     exports.sunset_ui:SetFocus(true, true)
 end
+exports('OpenLogin', openAuth)
+
+local function scheduleAuthWatchdog()
+    CreateThread(function()
+        for attempt = 1, 6 do
+            Wait(attempt == 1 and 1200 or 2000)
+            if authenticated then return end
+            if not exports.sunset_ui:IsOpen() then
+                openAuth()
+            else
+                exports.sunset_ui:Show('auth', authPayload())
+                exports.sunset_ui:SetFocus(true, true)
+            end
+        end
+        if not authenticated then
+            exports.sunset_ui:Notify('Login did not open. Type /fixlogin in chat or F8.', 'error', 15000)
+        end
+    end)
+end
 
 local function persistLogin(username, password, rememberQuickLogin)
     local license = activeLicense()
@@ -102,7 +121,19 @@ RegisterNetEvent('sunset:client:sessionReady', function(data)
     if authenticated then return end
     exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
     openAuth()
+    scheduleAuthWatchdog()
 end)
+
+RegisterNetEvent('sunset:auth:openLogin', openAuth)
+
+RegisterCommand('fixlogin', function()
+    if authenticated then
+        exports.sunset_ui:Notify('You are already logged in.', 'info')
+        return
+    end
+    openAuth()
+end, false)
+TriggerEvent('chat:addSuggestion', '/fixlogin', 'Re-open the login screen if you only see a black screen')
 
 RegisterNetEvent('sunset:client:playerReady', function()
     authenticated = true
