@@ -102,7 +102,7 @@ Sunset.JobsConfig = {
         },
         biteDelayMinMs = 2500,
         biteDelayMaxMs = 6500,
-        reactionWindowMs = 2500,
+        reactionWindowMs = 1500,
         catchRadius    = 50.0,   -- zona de 50m in jurul lui Billy Ray
         catchZTolerance = 8.0,   -- toleranta verticala mare (pontoon, dig, mal)
         markerSize     = 0,      -- fara marker vizibil

@@ -180,7 +180,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
 
     local delay  = math.max(800,
         math.random(cfg.biteDelayMinMs or 2500, cfg.biteDelayMaxMs or 6500) - rod.delayReduction)
-    local window = (cfg.reactionWindowMs or 1400) + rod.windowBonus
+    local window = (cfg.reactionWindowMs or 1400) + rod.windowBonus + 1000
     local token  = ('%d-%d-%d'):format(source, session.id, math.random(100000, 999999))
 
     session.data.fishingChallenge = {
