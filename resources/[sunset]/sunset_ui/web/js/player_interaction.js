@@ -60,6 +60,9 @@
         lockpick_vehicle: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.6 7.6a6.5 6.5 0 1 0 2.2 2.2L21 8l-4-4-2.4 2.4z"></path></svg>',
         sell_stolen_car: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M5 17h14l-1-7H6z"></path><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg>',
         sell_fish_247: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M2 12s3-6 10-6 10 6 10 6-3 6-10 6-10-6-10-6z"></path><circle cx="14" cy="12" r="1"></circle></svg>',
+        open_shop_247: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21V12h6v9"></path></svg>',
+        buy_business: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path><line x1="12" y1="12" x2="12" y2="16"></line><line x1="10" y1="14" x2="14" y2="14"></line></svg>',
+        manage_business: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M3 12h18"></path><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>',
         get_fisherman_job: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M4 14l4-2 4 2 4-4 4 2"></path><path d="M4 18h16"></path></svg>',
         start_fishing_shift: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>',
         end_fishing_shift: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
@@ -76,7 +79,8 @@
         SERVICE: { title: 'Servicii' },
         ADMIN: { title: 'Panou Administrare' },
         FISHING: { title: 'Acțiuni Pescuit' },
-        STORE: { title: 'Acțiuni Magazin' },
+        STORE: { title: 'Store' },
+        BUSINESS: { title: 'Business' },
     };
 
     function setProgress(progress) {

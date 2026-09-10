@@ -12,7 +12,7 @@ shared_scripts {
     '@sunset_core/shared/items.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_jobs' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_jobs', 'sunset_businesses' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',

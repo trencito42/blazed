@@ -123,10 +123,12 @@ CreateThread(function()
 
     for id, shop in pairs(Sunset.Shops or {}) do
         addBlip(shop.coords, presets.shop or {}, shop.label, false)
-        zones[#zones + 1] = registerZone('shop:' .. id, shop.coords, shop.zoneRadius or 2.5,
-            '[E] ' .. shop.label, { 46, 204, 113 }, function()
-                TriggerEvent('sunset:world:openShop', id, shop)
-            end, shop.markerSize)
+        if id ~= 'twentyfour7' then
+            zones[#zones + 1] = registerZone('shop:' .. id, shop.coords, shop.zoneRadius or 2.5,
+                '[E] ' .. shop.label, { 46, 204, 113 }, function()
+                    TriggerEvent('sunset:world:openShop', id, shop)
+                end, shop.markerSize)
+        end
     end
 
     for i, atm in ipairs(Sunset.ATMs or {}) do

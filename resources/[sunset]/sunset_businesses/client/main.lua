@@ -84,36 +84,6 @@ AddEventHandler('sunset:nui:businessSelect', function(data)
     end)
 end)
 
-CreateThread(function()
-    while true do
-        local sleep = 900
-        local ped = PlayerPedId()
-        local pos = GetEntityCoords(ped)
-        for _, biz in ipairs(cachedBusinesses) do
-            if biz.coords and not biz.owned and biz.forSale then
-                local coords = vector3(biz.coords.x, biz.coords.y, biz.coords.z)
-                if #(pos - coords) < (SunsetBusinesses.PurchaseRadius or 3.5) then
-                    sleep = 0
-                    BeginTextCommandDisplayHelp('STRING')
-                    AddTextComponentSubstringPlayerName(('Press ~INPUT_CONTEXT~ to buy %s ($%s)'):format(
-                        biz.label or 'business', biz.price or 0))
-                    EndTextCommandDisplayHelp(0, false, true, -1)
-                    if IsControlJustReleased(0, 38) and not IsNuiFocused() then
-                        CreateThread(function()
-                            local ok, err = Sunset.AwaitCallback('sunset:buyBusiness', biz.id)
-                            if ok then
-                                notify(err or 'Business purchased.', 'success')
-                                refreshBusinesses()
-                            else
-                                notify(err or 'Could not buy business.', 'error')
-                            end
-                        end)
-                        Wait(500)
-                    end
-                    break
-                end
-            end
-        end
-        Wait(sleep)
-    end
+RegisterNetEvent('sunset:businesses:openOwner', function()
+    openPanel('owner')
 end)

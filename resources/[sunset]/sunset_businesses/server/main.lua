@@ -214,6 +214,37 @@ exports.sunset_core:RegisterCallback('sunset:getBusinesses', function(source)
     return businessListForPlayer(source)
 end)
 
+exports.sunset_core:RegisterCallback('sunset:getStoreContext', function(source)
+    local char = character(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil end
+    local coords = GetEntityCoords(ped)
+    local row = findNearestBusiness(coords, 'shop', 4.0)
+    local shopId = 'twentyfour7'
+    local shopLabel = '24/7 Store'
+    if row and row.catalog_key and Sunset.Shops[row.catalog_key] then
+        shopId = row.catalog_key
+        shopLabel = row.label or Sunset.Shops[shopId].label or shopLabel
+    elseif Sunset.Shops.twentyfour7 then
+        shopLabel = Sunset.Shops.twentyfour7.label or shopLabel
+    end
+
+    local business = nil
+    if row then
+        local view = rowToView(row)
+        view.owned = view.ownerCharacterId ~= nil
+        view.mine = char and view.ownerCharacterId == tonumber(char.id)
+        business = view
+        if view.label then shopLabel = view.label end
+    end
+
+    return {
+        shopId = shopId,
+        shopLabel = shopLabel,
+        business = business,
+    }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:getBusinessForShop', function(source, shopId)
     local shop = Sunset.Shops[shopId]
     if not shop or not shop.coords then return nil end

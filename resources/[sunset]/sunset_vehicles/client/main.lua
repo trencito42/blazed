@@ -48,8 +48,61 @@ local function applyLightMode(veh, mode)
 end
 local currentVeh = 0
 local fuel = 100.0
-local spawnedOwnedVehicle = nil
+local spawnedOwnedVehicles = {}
 local protectedVehicles = {}
+
+local function isTrackedOwnedVehicle(veh)
+    if not veh or veh == 0 then return false end
+    for _, tracked in pairs(spawnedOwnedVehicles) do
+        if tracked == veh then return true end
+    end
+    return false
+end
+
+local function trackSpawnedOwned(plate, vehicle)
+    local key = normalizePlate(plate)
+    if key == '' or not vehicle or vehicle == 0 then return end
+    spawnedOwnedVehicles[key] = vehicle
+end
+
+local function untrackSpawnedOwned(vehOrPlate)
+    if type(vehOrPlate) == 'number' then
+        for plate, veh in pairs(spawnedOwnedVehicles) do
+            if veh == vehOrPlate then
+                spawnedOwnedVehicles[plate] = nil
+                return
+            end
+        end
+        return
+    end
+    spawnedOwnedVehicles[normalizePlate(vehOrPlate)] = nil
+end
+
+local function getNearestTrackedOwned(maxDist)
+    local ped = PlayerPedId()
+    local pCoords = GetEntityCoords(ped)
+    local best, bestDist = nil, maxDist or 30.0
+    for _, veh in pairs(spawnedOwnedVehicles) do
+        if DoesEntityExist(veh) then
+            local dist = #(pCoords - GetEntityCoords(veh))
+            if dist <= bestDist then
+                best = veh
+                bestDist = dist
+            end
+        end
+    end
+    return best
+end
+
+local function forEachTrackedOwned(fn)
+    for plate, veh in pairs(spawnedOwnedVehicles) do
+        if DoesEntityExist(veh) then
+            fn(plate, veh)
+        else
+            spawnedOwnedVehicles[plate] = nil
+        end
+    end
+end
 local lastBodyHealth = 1000.0
 local lastVehSpeed = 0.0
 local spawnGraceUntil = 0
@@ -204,7 +257,7 @@ end
 
 local function hasKeysFor(veh)
     if veh == 0 then return false end
-    if spawnedOwnedVehicle == veh then return true end
+    if isTrackedOwnedVehicle(veh) then return true end
     local ok = Sunset.AwaitCallback('sunset:hasVehicleKeys', plateOf(veh))
     return ok == true
 end
@@ -379,7 +432,7 @@ CreateThread(function()
     while true do
         Wait(30000)
         local veh = getVeh()
-        if veh ~= 0 and isDriver() and spawnedOwnedVehicle == veh and DoesEntityExist(veh) then
+        if veh ~= 0 and isDriver() and isTrackedOwnedVehicle(veh) and DoesEntityExist(veh) then
             local plate = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
             Sunset.AwaitCallback('sunset:syncOwnedVehicleState', VehToNet(veh),
                 plate, fuel, odometerKm)
@@ -465,14 +518,14 @@ CreateThread(function()
                     local ownedState = Sunset.AwaitCallback('sunset:getDrivenOwnedVehicleState', VehToNet(veh), plate)
                     local props = ownedState and decodeVehicleProps(ownedState.props) or nil
                     resetOdometerTracking(plate, props and props.odometer or 0, props)
-                    if ownedState then spawnedOwnedVehicle = veh end
+                    if ownedState then trackSpawnedOwned(plate, veh) end
                 end
                 lastOdoCoords = GetEntityCoords(veh)
                 lightMode = readLightMode(veh)
             end
 
             applyCollisionDamage(veh)
-            if spawnedOwnedVehicle == veh then
+            if isTrackedOwnedVehicle(veh) then
                 tickOdometer(veh)
             end
 
@@ -518,7 +571,7 @@ function GetVehicleState()
     local class = GetVehicleClass(veh)
     local fuelExempt = class == 13 or class == 14 or class == 15 or class == 16
 
-    local plate = spawnedOwnedVehicle == veh and plateOf(veh) or nil
+    local plate = isTrackedOwnedVehicle(veh) and plateOf(veh) or nil
     local ecuInfo = nil
     if vehicleProps and vehicleProps.ecu then
         if SunsetTuning and SunsetTuning.BuildVehicleInfo then
@@ -545,8 +598,8 @@ function GetVehicleState()
         seatbelt = seatbelt,
         lightMode = lightMode,
         engineOn = engineOn,
-        odometer = spawnedOwnedVehicle == veh and (math.floor(odometerKm * 10) / 10) or nil,
-        showOdometer = spawnedOwnedVehicle == veh,
+        odometer = isTrackedOwnedVehicle(veh) and (math.floor(odometerKm * 10) / 10) or nil,
+        showOdometer = isTrackedOwnedVehicle(veh),
         vehicleClass = class,
         supportsSeatbelt = supportsSeatbelt(veh),
         supportsDoorLock = supportsDoorLock(veh),
@@ -599,9 +652,9 @@ local function findVehicleByPlate(plate)
         end
     end
 
-    if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
-        if plateTextMatches(GetVehicleNumberPlateText(spawnedOwnedVehicle), target) then
-            return spawnedOwnedVehicle
+    for _, veh in pairs(spawnedOwnedVehicles) do
+        if DoesEntityExist(veh) and plateTextMatches(GetVehicleNumberPlateText(veh), target) then
+            return veh
         end
     end
 
@@ -621,7 +674,7 @@ end)
 exports('IsProtectedVehicle', function(veh)
     if not veh or veh == 0 then return false end
     if protectedVehicles[veh] then return true end
-    if spawnedOwnedVehicle and spawnedOwnedVehicle == veh then return true end
+    if isTrackedOwnedVehicle(veh) then return true end
     return false
 end)
 
@@ -629,16 +682,10 @@ local function deleteVehicleByPlate(plate)
     local veh = findVehicleByPlate(plate)
     if not veh then return end
     deleteVehicleEntity(veh)
-    if spawnedOwnedVehicle == veh then
-        spawnedOwnedVehicle = nil
-    end
+    untrackSpawnedOwned(veh)
 end
 
 RegisterNetEvent('sunset:client:cleanupOwnedVehicles', function(plates)
-    if spawnedOwnedVehicle then
-        deleteVehicleEntity(spawnedOwnedVehicle)
-        spawnedOwnedVehicle = nil
-    end
     for _, row in ipairs(plates or {}) do
         deleteVehicleByPlate(row.plate or row)
     end
@@ -704,14 +751,13 @@ local function captureParkedPosition(entity)
     }
 end
 
-RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
+local function spawnOwnedVehicleEntity(vehData, spawnOpts)
     deleteVehicleByPlate(vehData.plate)
-    Wait(200)
 
     local model = joaat(vehData.model)
     if not IsModelInCdimage(model) or not IsModelAVehicle(model) then
         notify('Invalid vehicle model: ' .. tostring(vehData.model), 'error')
-        return
+        return nil
     end
 
     RequestModel(model)
@@ -719,7 +765,7 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     while not HasModelLoaded(model) do
         if GetGameTimer() > timeout then
             notify('Failed to load vehicle model', 'error')
-            return
+            return nil
         end
         Wait(10)
     end
@@ -740,7 +786,7 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     if vehicle == 0 then
         SetModelAsNoLongerNeeded(model)
         notify('Could not spawn vehicle — move to open space', 'error')
-        return
+        return nil
     end
 
     SetVehicleNumberPlateText(vehicle, vehData.plate)
@@ -753,7 +799,6 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
     writeFuelPercent(vehicle, vehFuel)
     SetVehicleOnGroundProperly(vehicle)
     Wait(150)
-    -- Only fully repair brand-new / full-health records. Damaged cars keep saved HP.
     if vehEngine >= 999.0 and vehBody >= 999.0 then
         SetVehicleFixed(vehicle)
         SetVehicleDeformationFixed(vehicle)
@@ -795,11 +840,17 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
         end)
     end
 
-    spawnedOwnedVehicle = vehicle
+    trackSpawnedOwned(vehData.plate, vehicle)
     markProtected(vehicle)
     fuel = vehFuel
     currentVeh = 0
     notify(('Vehicle spawned: %s (fuel %d%%)'):format(vehData.plate, math.floor(vehFuel)), 'success')
+    return vehicle
+end
+
+RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData, spawnOpts)
+    Wait(200)
+    spawnOwnedVehicleEntity(vehData, spawnOpts)
 end)
 
 local function showGaragePanel(_vehicles)
@@ -895,7 +946,7 @@ CreateThread(function()
         if trying ~= 0 then
             local class = GetVehicleClass(trying)
             local lockedState = GetVehicleDoorLockStatus(trying)
-            local mine = spawnedOwnedVehicle == trying
+            local mine = isTrackedOwnedVehicle(trying)
             if mine then
                 SetVehicleDoorsLockedForPlayer(trying, PlayerId(), false)
             elseif class ~= 13 and lockedState > 1 then
@@ -906,7 +957,7 @@ CreateThread(function()
                     ClearPedTasks(ped)
                     notify('This is not your vehicle', 'error')
                 end
-            elseif spawnedOwnedVehicle ~= trying then
+            elseif not isTrackedOwnedVehicle(trying) then
                 -- unlocked but not yours: allow enter, just inform once
             end
         end
@@ -958,7 +1009,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         if entity and DoesEntityExist(entity) then
             deleteVehicleEntity(entity)
         end
-        if spawnedOwnedVehicle == entity then spawnedOwnedVehicle = nil end
+        if entity then untrackSpawnedOwned(entity) end
         notify('Vehiculul a fost garat cu succes', 'success')
         closeGarageUiUnlessMenu()
     end)
@@ -1035,9 +1086,7 @@ local function reportVehicleDestroyed(veh)
     if plate == '' then return end
 
     TriggerServerEvent('sunset:server:vehicleDestroyed', VehToNet(veh), plate)
-    if spawnedOwnedVehicle == veh then
-        spawnedOwnedVehicle = nil
-    end
+    untrackSpawnedOwned(veh)
 
     SetTimeout(60000, function()
         reportedDestroyedVehicles[veh] = nil
@@ -1048,7 +1097,7 @@ AddEventHandler('gameEventTriggered', function(name, args)
     if name == 'CEventNetworkVehicleUndriveable' then
         local veh = args and args[1]
         if veh and veh ~= 0 and DoesEntityExist(veh) then
-            if (spawnedOwnedVehicle and spawnedOwnedVehicle == veh) or hasKeysFor(veh) then
+            if isTrackedOwnedVehicle(veh) or hasKeysFor(veh) then
                 reportVehicleDestroyed(veh)
             end
         end
@@ -1057,13 +1106,13 @@ end)
 
 CreateThread(function()
     while true do
-        if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
-            if IsEntityDead(spawnedOwnedVehicle)
-                or GetVehicleEngineHealth(spawnedOwnedVehicle) <= -3900.0
-                or (IsEntityInWater(spawnedOwnedVehicle) and GetEntitySubmergedLevel(spawnedOwnedVehicle) >= 0.85) then
-                reportVehicleDestroyed(spawnedOwnedVehicle)
+        forEachTrackedOwned(function(_, veh)
+            if IsEntityDead(veh)
+                or GetVehicleEngineHealth(veh) <= -3900.0
+                or (IsEntityInWater(veh) and GetEntitySubmergedLevel(veh) >= 0.85) then
+                reportVehicleDestroyed(veh)
             end
-        end
+        end)
         Wait(1000)
     end
 end)
@@ -1073,21 +1122,15 @@ local function resolveVehicleToStore()
     if IsPedInAnyVehicle(ped, false) then
         return GetVehiclePedIsIn(ped, false)
     end
-    if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
-        local pCoords = GetEntityCoords(ped)
-        local vCoords = GetEntityCoords(spawnedOwnedVehicle)
-        if #(pCoords - vCoords) <= 30.0 then
-            return spawnedOwnedVehicle
-        end
-    end
+    local nearbyOwned = getNearestTrackedOwned(30.0)
+    if nearbyOwned then return nearbyOwned end
     local coords = GetEntityCoords(ped)
     local closest = GetClosestVehicle(coords.x, coords.y, coords.z, 15.0, 0, 71)
     if closest ~= 0 and DoesEntityExist(closest) then
         return closest
     end
-    if spawnedOwnedVehicle and DoesEntityExist(spawnedOwnedVehicle) then
-        return spawnedOwnedVehicle
-    end
+    nearbyOwned = getNearestTrackedOwned(120.0)
+    if nearbyOwned then return nearbyOwned end
     return 0
 end
 
@@ -1110,7 +1153,7 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
             props, vehFuel, garageId or 'legion', parked)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
-        if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
+        untrackSpawnedOwned(veh)
         notify('Vehiculul a fost garat cu succes', 'success')
     end)
 end)
@@ -1136,7 +1179,7 @@ AddEventHandler('sunset:world:garageStore', function(garageId)
             props, vehFuel, garageId or 'legion', parked)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
-        if spawnedOwnedVehicle == veh then spawnedOwnedVehicle = nil end
+        untrackSpawnedOwned(veh)
         notify('Vehiculul a fost garat cu succes', 'success')
     end)
 end)

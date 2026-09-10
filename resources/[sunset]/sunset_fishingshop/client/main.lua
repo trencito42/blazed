@@ -24,7 +24,8 @@ local SELL_ZONES = {
 local hillbillyPed   = nil
 local nearNpc        = false
 local nearBaitShop   = false
-local nearSell       = false
+local nearStore      = false
+local storeContext   = nil
 local menuOpen       = false   -- playerInteraction menu open
 local shopOpen       = false   -- fishing shop UI (buy/sell) open
 local inCooldown     = false
@@ -48,7 +49,75 @@ local FISHING_ACTIONS = {
     end_fishing_shift = true,
     upgrade_fishing_rod = true,
     sell_fish_247 = true,
+    open_shop_247 = true,
+    buy_business = true,
+    manage_business = true,
 }
+
+local function isAllowedMenuAction(action)
+    return action and FISHING_ACTIONS[action] == true
+end
+
+local function formatMoney(amount)
+    local n = math.floor(tonumber(amount) or 0)
+    local formatted = tostring(n)
+    local k
+    while true do
+        formatted, k = formatted:gsub('^(-?%d+)(%d%d%d)', '%1,%2')
+        if k == 0 then break end
+    end
+    return '$' .. formatted
+end
+
+local function buildStoreActions(ctx)
+    local actions = {}
+    local shopLabel = (ctx and ctx.shopLabel) or '24/7 Store'
+    actions[#actions + 1] = {
+        id = 'open_shop_247',
+        label = ('Open %s'):format(shopLabel),
+        group = 'STORE',
+    }
+    actions[#actions + 1] = {
+        id = 'sell_fish_247',
+        label = 'Sell Fish',
+        group = 'STORE',
+    }
+
+    local biz = ctx and ctx.business
+    if biz and not biz.owned and biz.forSale then
+        actions[#actions + 1] = {
+            id = 'buy_business',
+            label = ('Buy Business (%s)'):format(formatMoney(biz.price)),
+            group = 'BUSINESS',
+        }
+    elseif biz and biz.mine then
+        actions[#actions + 1] = {
+            id = 'manage_business',
+            label = 'Manage Business',
+            group = 'BUSINESS',
+        }
+    end
+
+    return actions
+end
+
+local function openStoreContextMenu()
+    CreateThread(function()
+        local ctx = Sunset.AwaitCallback('sunset:getStoreContext')
+        if not ctx then
+            exports.sunset_ui:Notify('Store unavailable right now.', 'error')
+            return
+        end
+        storeContext = ctx
+        exports.sunset_ui:Send('playerInteractionShow', {
+            menuTitle = ctx.shopLabel or '24/7 Store',
+            target = { name = ctx.shopLabel or '24/7 Store', id = '' },
+            actions = buildStoreActions(ctx),
+        })
+        exports.sunset_ui:SetFocus(true, true)
+        menuOpen = true
+    end)
+end
 
 local function debugHire(message)
     print(('[sunset_fishingshop] %s'):format(message))
@@ -161,6 +230,7 @@ end
 closeFishingMenu = function()
     if not menuOpen then return end
     menuOpen = false
+    storeContext = nil
     menuCloseArmed = false
     billyHoldStart = nil
     sendBillyHoldState(false)
@@ -253,6 +323,7 @@ exports('IsNearBillyRay', function()
     return isNearNpcMenu(GetEntityCoords(PlayerPedId()))
 end)
 exports('IsMenuOpen', function() return menuOpen or shopOpen end)
+exports('IsNearStore', function() return nearStore end)
 
 local function resetBillyUiOnEntry()
     armBillyInteractGrace(3500)
@@ -339,17 +410,7 @@ CreateThread(function()
 end)
 
 -- ── Proximitate checker ───────────────────────────────────────
-local function isNearWorldShop(pos)
-    for _, shop in pairs(Sunset.Shops or {}) do
-        if shop.coords and #(pos - shop.coords) < (shop.zoneRadius or 2.5) then
-            return true
-        end
-    end
-    return false
-end
-
-local function nearAnySellZone(pos)
-    if isNearWorldShop(pos) then return false end
+local function nearAnyStoreZone(pos)
     for _, coords in ipairs(SELL_ZONES) do
         if #(pos - coords) < SELL_DIST then return true end
     end
@@ -361,32 +422,32 @@ CreateThread(function()
         local pos = GetEntityCoords(PlayerPedId())
         local wasNpc       = nearNpc
         local wasBaitShop  = nearBaitShop
-        local wasSell      = nearSell
+        local wasStore     = nearStore
 
         nearNpc      = isNearNpcMenu(pos)
         nearBaitShop = #(pos - BAIT_SHOP_COORDS) < BAIT_SHOP_DIST
-        nearSell     = nearAnySellZone(pos)
+        nearStore    = nearAnyStoreZone(pos)
 
         -- Auto-close playerInteraction menu when walking away
-        if (wasNpc or wasSell) and not nearNpc and not nearSell and menuOpen then
+        if (wasNpc or wasStore) and not nearNpc and not nearStore and menuOpen then
             closeFishingMenu()
         end
 
         -- Auto-close fishing shop UI when walking away from bait shop or 24/7
-        if (wasBaitShop or wasSell) and not nearBaitShop and not nearSell and shopOpen then
+        if (wasBaitShop or wasStore) and not nearBaitShop and not nearStore and shopOpen then
             exports.sunset_ui:Send('fishingShopHide', {})
             exports.sunset_ui:SetFocus(false, false)
             shopOpen = false
         end
 
-        Wait((nearNpc or nearBaitShop or nearSell) and 0 or 350)
+        Wait((nearNpc or nearBaitShop or nearStore) and 0 or 350)
     end
 end)
 
 -- ── E key handler ─────────────────────────────────────────────
 CreateThread(function()
     while true do
-        if nearNpc or nearBaitShop or nearSell then
+        if nearNpc or nearBaitShop or nearStore then
             local pos = GetEntityCoords(PlayerPedId())
             local canPromptBilly = isNearNpcPrompt(pos) and not anotherPlayerBlocksNpcPrompt(pos)
 
@@ -431,10 +492,16 @@ CreateThread(function()
             end
 
             local pressed = false
-            if (nearBaitShop or nearSell) and not nearNpc and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
+            if nearStore and not nearNpc and not menuOpen and not shopOpen and not IsNuiFocused() then
+                BeginTextCommandDisplayHelp('STRING')
+                AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ for store options')
+                EndTextCommandDisplayHelp(0, false, true, -1)
+            end
+
+            if (nearBaitShop or nearStore) and not nearNpc and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
                 if nearBaitShop then
                     pressed = IsDisabledControlJustPressed(0, INTERACT_KEY)
-                elseif nearSell then
+                elseif nearStore then
                     pressed = IsControlJustPressed(0, INTERACT_KEY)
                 end
             end
@@ -460,18 +527,8 @@ CreateThread(function()
                         SetTimeout(1500, function() inCooldown = false end)
                     end)
 
-                elseif nearSell then
-                    -- Meniu 24/7 sell fish
-                    exports.sunset_ui:Send('playerInteractionShow', {
-                        instant = true,
-                        menuTitle = 'Acțiuni Magazin',
-                        target  = { name = '24/7 Store', id = '' },
-                        actions = {
-                            { id = 'sell_fish_247', label = 'Vinde Pestele (cash)', group = 'STORE' },
-                        },
-                    })
-                    exports.sunset_ui:SetFocus(true, true)
-                    menuOpen = true
+                elseif nearStore then
+                    openStoreContextMenu()
                 end
             end
             Wait(0)
@@ -492,12 +549,44 @@ end)
 
 AddEventHandler('sunset:nui:playerInteractionAction', function(data)
     if not data or not data.action then return end
-    if not FISHING_ACTIONS[data.action] then return end
+    if not isAllowedMenuAction(data.action) then return end
     if not menuOpen then return end
 
+    local action = data.action
+    local ctx = storeContext
     closeFishingMenu()
+    storeContext = nil
 
-    if data.action == 'get_fisherman_job' then
+    if action == 'open_shop_247' then
+        local shopId = (ctx and ctx.shopId) or 'twentyfour7'
+        local shop = Sunset.Shops and Sunset.Shops[shopId]
+        if not shop then
+            exports.sunset_ui:Notify('Shop unavailable.', 'error')
+            return
+        end
+        TriggerEvent('sunset:world:openShop', shopId, shop)
+
+    elseif action == 'buy_business' then
+        local biz = ctx and ctx.business
+        if not biz or not biz.id then
+            exports.sunset_ui:Notify('This business is not for sale.', 'error')
+            return
+        end
+        inCooldown = true
+        CreateThread(function()
+            local ok, err = Sunset.AwaitCallback('sunset:buyBusiness', biz.id)
+            if ok then
+                exports.sunset_ui:Notify(err or 'Business purchased.', 'success')
+            else
+                exports.sunset_ui:Notify(err or 'Could not buy business.', 'error')
+            end
+            SetTimeout(2000, function() inCooldown = false end)
+        end)
+
+    elseif action == 'manage_business' then
+        TriggerEvent('sunset:businesses:openOwner')
+
+    elseif action == 'get_fisherman_job' then
         inCooldown = true
         debugHire('request hire fisherman')
         CreateThread(function()
@@ -516,12 +605,12 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             SetTimeout(2000, function() inCooldown = false end)
         end)
 
-    elseif data.action == 'start_fishing_shift' then
+    elseif action == 'start_fishing_shift' then
         inCooldown = true
         TriggerEvent('sunset:client:startFishermanShift')
         SetTimeout(2000, function() inCooldown = false end)
 
-    elseif data.action == 'end_fishing_shift' then
+    elseif action == 'end_fishing_shift' then
         inCooldown = true
         CreateThread(function()
             local ok, err = Sunset.AwaitCallback('sunset:jobs:fisherman:endShift')
@@ -533,7 +622,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             SetTimeout(2000, function() inCooldown = false end)
         end)
 
-    elseif data.action == 'upgrade_fishing_rod' then
+    elseif action == 'upgrade_fishing_rod' then
         inCooldown = true
         CreateThread(function()
             local ok, msg = Sunset.AwaitCallback('sunset:fishingshop:upgradeRod')
@@ -545,7 +634,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             SetTimeout(2000, function() inCooldown = false end)
         end)
 
-    elseif data.action == 'sell_fish_247' then
+    elseif action == 'sell_fish_247' then
         inCooldown = true
         CreateThread(function()
             local invData, err = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
@@ -555,7 +644,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
                 else
                     exports.sunset_ui:Send('fishingShopShow', {
                         mode  = 'sell',
-                        title = '24/7 — VINDE PESTE',
+                        title = '24/7 — SELL FISH',
                         cash  = invData.cash,
                         items = invData.items,
                     })

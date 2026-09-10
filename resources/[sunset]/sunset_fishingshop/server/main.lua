@@ -36,6 +36,26 @@ local function getCharCash(source)
     return tonumber(char.cash) or tonumber(char.money) or 0
 end
 
+local function decodeMetadata(raw)
+    if type(raw) == 'table' then return raw end
+    if type(raw) ~= 'string' or raw == '' then return nil end
+    local ok, value = pcall(json.decode, raw)
+    return ok and type(value) == 'table' and value or nil
+end
+
+local function fishUnitValue(fishItem, metadata)
+    local meta = decodeMetadata(metadata)
+    if meta then
+        local value = tonumber(meta.value)
+        if value and value > 0 then return math.floor(value) end
+        local kg = tonumber(meta.fishKg)
+        if kg and kg > 0 then return math.floor(kg * 10) end
+    end
+    local range = FISH_PRICES[fishItem]
+    if not range then return 0 end
+    return math.floor((range.min + range.max) / 2)
+end
+
 local function nearBillyRay(source, maxDist)
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return false end
@@ -98,21 +118,35 @@ end)
 
 -- ── Fetch fish inventory (pentru sell UI) ─────────────────────
 exports.sunset_core:RegisterCallback('sunset:fishingshop:getFishInventory', function(source)
-    local items = {}
-    for fishItem, priceRange in pairs(FISH_PRICES) do
-        local count = exports.sunset_inventory:CountItem(source, fishItem) or 0
-        if count > 0 then
-            local midValue = math.floor((priceRange.min + priceRange.max) / 2)
-            items[#items + 1] = {
-                item       = fishItem,
-                label      = FISH_LABELS[fishItem] or fishItem,
-                icon       = fishItem,
-                count      = count,
-                unitValue  = midValue,
-                totalValue = midValue * count,
-            }
+    local grouped = {}
+    for _, row in ipairs(exports.sunset_inventory:GetInventory(source) or {}) do
+        if FISH_PRICES[row.item] then
+            local count = math.max(0, tonumber(row.count) or 0)
+            if count > 0 then
+                local unitValue = fishUnitValue(row.item, row.metadata)
+                local bucket = grouped[row.item]
+                if not bucket then
+                    bucket = {
+                        item = row.item,
+                        label = FISH_LABELS[row.item] or row.item,
+                        icon = row.item,
+                        count = 0,
+                        totalValue = 0,
+                    }
+                    grouped[row.item] = bucket
+                end
+                bucket.count = bucket.count + count
+                bucket.totalValue = bucket.totalValue + (unitValue * count)
+            end
         end
     end
+
+    local items = {}
+    for _, bucket in pairs(grouped) do
+        bucket.unitValue = bucket.count > 0 and math.floor(bucket.totalValue / bucket.count) or 0
+        items[#items + 1] = bucket
+    end
+    table.sort(items, function(a, b) return a.item < b.item end)
     return { items = items, cash = getCharCash(source) }
 end)
 
@@ -157,18 +191,29 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(sou
         local inInv = exports.sunset_inventory:CountItem(source, fishItem) or 0
         local amount = math.max(1, math.min(math.floor(tonumber(entry.amount) or 1), inInv))
         if amount <= 0 then return nil, ('Nu ai destui %s.'):format(FISH_LABELS[fishItem] or fishItem) end
-        local value = math.floor((FISH_PRICES[fishItem].min + FISH_PRICES[fishItem].max) / 2)
-        -- Remove one at a time to handle fish split across multiple inventory rows
+
         local actuallyRemoved = 0
+        local earned = 0
         for _ = 1, amount do
+            local inv = exports.sunset_inventory:GetInventory(source) or {}
+            local row
+            for _, candidate in ipairs(inv) do
+                if candidate.item == fishItem and (tonumber(candidate.count) or 0) > 0 then
+                    row = candidate
+                    break
+                end
+            end
+            if not row then break end
+
+            local value = fishUnitValue(fishItem, row.metadata)
             if exports.sunset_inventory:RemoveItem(source, fishItem, 1) then
                 actuallyRemoved = actuallyRemoved + 1
+                earned = earned + value
             else
                 break
             end
         end
         if actuallyRemoved == 0 then return nil, ('Nu ai %s in inventar.'):format(FISH_LABELS[fishItem] or fishItem) end
-        local earned = value * actuallyRemoved
         total = total + earned
         sold[#sold + 1] = ('%dx %s = $%d'):format(actuallyRemoved, FISH_LABELS[fishItem] or fishItem, earned)
     end
