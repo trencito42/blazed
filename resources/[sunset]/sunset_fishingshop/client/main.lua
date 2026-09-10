@@ -159,8 +159,10 @@ closeFishingMenu = function()
     billyHoldStart = nil
     sendBillyHoldState(false)
     hideBillyRayPrompt()
-    exports.sunset_ui:Send('playerInteractionHide', {})
-    exports.sunset_ui:SetFocus(false, false)
+    safeUiCall(function()
+        exports.sunset_ui:Send('playerInteractionHide', {})
+        exports.sunset_ui:SetFocus(false, false)
+    end)
 end
 
 local function notifyHireError(err)
@@ -227,19 +229,23 @@ exports('IsNearBillyRay', function()
 end)
 exports('IsMenuOpen', function() return menuOpen or shopOpen end)
 
+local function safeUiCall(fn)
+    if GetResourceState('sunset_ui') ~= 'started' then return false end
+    local ok = pcall(fn)
+    return ok
+end
+
 local function resetBillyUiOnEntry()
     armBillyInteractGrace(3500)
     billyHoldStart = nil
     menuCloseArmed = false
-    if menuOpen then
-        menuOpen = false
-    end
-    if shopOpen then
-        shopOpen = false
-    end
+    menuOpen = false
+    shopOpen = false
     hideBillyRayPrompt()
-    exports.sunset_ui:Send('playerInteractionHide', {})
-    exports.sunset_ui:SetFocus(false, false)
+    safeUiCall(function()
+        exports.sunset_ui:Send('playerInteractionHide', {})
+        exports.sunset_ui:SetFocus(false, false)
+    end)
 end
 
 AddEventHandler('sunset:client:playerSpawned', resetBillyUiOnEntry)
@@ -249,8 +255,7 @@ end)
 
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
-    print('[sunset_fishingshop] client billy-hold-v3')
-    resetBillyUiOnEntry()
+    print('[sunset_fishingshop] client billy-hold-v4')
 end)
 
 -- ── Spawn NPC ────────────────────────────────────────────────
