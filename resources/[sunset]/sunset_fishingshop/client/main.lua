@@ -3,6 +3,7 @@
 -- ============================================================
 
 local NPC_COORDS       = vector4(-1593.23, 5207.74, 3.31, 25.49)
+local NPC_PROMPT_DIST  = 4.5
 local NPC_MENU_DIST    = 2.15
 local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
 local BAIT_SHOP_DIST   = 2.5
@@ -27,6 +28,7 @@ local nearSell       = false
 local menuOpen       = false   -- playerInteraction menu open
 local shopOpen       = false   -- fishing shop UI (buy/sell) open
 local inCooldown     = false
+local billyPromptVisible = false
 local INTERACT_KEY   = 38
 
 local FISHING_ACTIONS = {
@@ -45,6 +47,7 @@ end
 local function closeFishingMenu()
     if not menuOpen then return end
     menuOpen = false
+    hideBillyRayPrompt()
     exports.sunset_ui:Send('playerInteractionHide', {})
     exports.sunset_ui:SetFocus(false, false)
 end
@@ -59,6 +62,68 @@ end
 
 local function isNearNpcMenu(pos)
     return hillbillyPed and DoesEntityExist(hillbillyPed) and distanceToNpc(pos) < NPC_MENU_DIST
+end
+
+local function isNearNpcPrompt(pos)
+    return hillbillyPed and DoesEntityExist(hillbillyPed) and distanceToNpc(pos) < NPC_PROMPT_DIST
+end
+
+local function anotherPlayerBlocksNpcPrompt(pos)
+    for _, player in ipairs(GetActivePlayers()) do
+        if player ~= PlayerId() then
+            local targetPed = GetPlayerPed(player)
+            if targetPed ~= 0 and DoesEntityExist(targetPed) then
+                if #(pos - GetEntityCoords(targetPed)) < 3.0 then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+local function hideBillyRayPrompt()
+    if not billyPromptVisible then return end
+    billyPromptVisible = false
+    exports.sunset_ui:Send('playerInteractionPrompt', { visible = false })
+end
+
+local function sendBillyRayPrompt()
+    local ped = hillbillyPed
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        hideBillyRayPrompt()
+        return
+    end
+
+    local headCoords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
+    if headCoords.x == 0.0 and headCoords.y == 0.0 and headCoords.z == 0.0 then
+        headCoords = GetEntityCoords(ped) + vector3(0.0, 0.0, 0.85)
+    else
+        headCoords = headCoords + vector3(0.0, 0.0, 0.40)
+    end
+
+    local visible, screenX, screenY = World3dToScreen2d(headCoords.x, headCoords.y, headCoords.z)
+    if not visible then
+        hideBillyRayPrompt()
+        return
+    end
+
+    billyPromptVisible = true
+    exports.sunset_ui:Send('playerInteractionPrompt', {
+        visible = true,
+        x = screenX * 100.0,
+        y = screenY * 100.0,
+        name = 'Billy Ray',
+        key = 'E',
+    })
+end
+
+local function shouldShowBillyRayPrompt()
+    if menuOpen or shopOpen or IsNuiFocused() or IsPauseMenuActive() then return false end
+    local pos = GetEntityCoords(PlayerPedId())
+    if not isNearNpcPrompt(pos) then return false end
+    if anotherPlayerBlocksNpcPrompt(pos) then return false end
+    return true
 end
 
 local function notifyHireError(err)
@@ -107,6 +172,7 @@ end
 local function openBillyRayMenu()
     local actions = buildBillyRayActions()
     if #actions == 0 then return end
+    hideBillyRayPrompt()
     exports.sunset_ui:Send('playerInteractionShow', {
         instant = true,
         menuTitle = 'Acțiuni Pescuit',
@@ -168,6 +234,19 @@ CreateThread(function()
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentString('Fishing Supply')
     EndTextCommandSetBlipName(shopBlip)
+end)
+
+-- ── World tooltip deasupra capului (Hold E To Interact) ───────
+CreateThread(function()
+    while true do
+        if shouldShowBillyRayPrompt() then
+            sendBillyRayPrompt()
+            Wait(0)
+        else
+            hideBillyRayPrompt()
+            Wait(200)
+        end
+    end
 end)
 
 -- ── Proximitate checker ───────────────────────────────────────
