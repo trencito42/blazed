@@ -256,6 +256,7 @@ const Panels = {
             }
             const def = row.item || 'unknown';
             let label = row.label || def;
+            let fishMeta = null;
             if (def === 'gas_can' && row.metadata) {
                 const maxL = 20;
                 let liters = Number(row.metadata.liters);
@@ -269,6 +270,14 @@ const Panels = {
             if (def === 'fresh_fish' && row.metadata) {
                 const value = Math.max(0, Number(row.metadata.value) || 0);
                 label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
+            }
+            if (['fish_common','fish_uncommon','fish_rare','fish_epic','fish_legendary'].includes(def) && row.metadata) {
+                const kg = Number(row.metadata.fishKg) || 0;
+                const value = Math.max(0, Number(row.metadata.value) || 0);
+                const parts = [];
+                if (kg > 0) parts.push(`${kg.toFixed(1)} kg`);
+                if (value > 0) parts.push(`$${Math.round(value)}`);
+                if (parts.length) fishMeta = parts.join(' — ');
             }
             const item = document.createElement('button');
             item.className = 'premium-item';
@@ -298,7 +307,7 @@ const Panels = {
             const name = document.createElement('strong');
             name.textContent = label;
             const meta = document.createElement('span');
-            meta.textContent = row.usable ? 'CLICK TO USE' : 'STORED ITEM';
+            meta.textContent = fishMeta ?? (row.usable ? 'CLICK TO USE' : 'STORED ITEM');
             details.append(name, meta);
             item.appendChild(details);
             const count = document.createElement('span');
@@ -690,7 +699,23 @@ const Panels = {
         $$('.premium-slot.is-selected').forEach((slot) => slot.classList.remove('is-selected'));
         cell?.classList.add('is-selected');
         const label = $('#inventory-selected-label');
-        if (label) label.textContent = row ? `${row.label || row.item}  x${Number(row.count) || 0}` : 'SELECT AN ITEM';
+        if (label) {
+            if (row) {
+                const fishTypes = ['fish_common','fish_uncommon','fish_rare','fish_epic','fish_legendary'];
+                let selectedText = `${row.label || row.item}  x${Number(row.count) || 0}`;
+                if (fishTypes.includes(row.item) && row.metadata) {
+                    const kg = Number(row.metadata.fishKg) || 0;
+                    const value = Math.max(0, Number(row.metadata.value) || 0);
+                    const parts = [];
+                    if (kg > 0) parts.push(`${kg.toFixed(1)} kg`);
+                    if (value > 0) parts.push(`$${Math.round(value)}`);
+                    if (parts.length) selectedText = `${row.label || row.item} (${parts.join(' — ')})  x${Number(row.count) || 0}`;
+                }
+                label.textContent = selectedText;
+            } else {
+                label.textContent = 'SELECT AN ITEM';
+            }
+        }
         const use = $('#inventory-use-selected');
         const drop = $('#inventory-drop-selected');
         if (use) use.disabled = !row?.usable;
