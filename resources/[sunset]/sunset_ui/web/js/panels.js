@@ -276,11 +276,11 @@ const Panels = {
                 const kg = Number(row.metadata.fishKg) || 0;
                 const value = Math.max(0, Number(row.metadata.value) || 0);
                 const parts = [];
-                if (kg > 0) parts.push(`${kg.toFixed(1)} kg`);
+                if (kg > 0) parts.push(`${kg.toFixed(1)} KG`);
                 if (value > 0) parts.push(`$${Math.round(value)}`);
                 if (parts.length) fishMeta = parts.join(' — ');
             } else if (row.weight > 0) {
-                fishMeta = `${Number(row.weight).toFixed(2).replace(/\.?0+$/, '')} kg`;
+                fishMeta = `${Number(row.weight).toFixed(2).replace(/\.?0+$/, '')} KG`;
             }
             const item = document.createElement('button');
             item.className = 'premium-item';
@@ -710,7 +710,7 @@ const Panels = {
                     const kg = Number(row.metadata.fishKg) || 0;
                     const value = Math.max(0, Number(row.metadata.value) || 0);
                     const parts = [];
-                    if (kg > 0) parts.push(`${kg.toFixed(1)} kg`);
+                    if (kg > 0) parts.push(`${kg.toFixed(1)} KG`);
                     if (value > 0) parts.push(`$${Math.round(value)}`);
                     if (parts.length) selectedText = `${row.label || row.item} (${parts.join(' — ')})  x${Number(row.count) || 0}`;
                 }
