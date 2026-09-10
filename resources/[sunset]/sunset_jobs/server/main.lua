@@ -117,7 +117,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:getJobCenterJobs', function(so
     return buildJobCenterJobs(center)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
+local function hireCivilianJob(source, jobId)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then
         print(('[sunset:hireJob] FAIL src=%s jobId=%s reason=character_not_loaded'):format(source, tostring(jobId)))
@@ -177,6 +177,12 @@ exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
     end
     TriggerClientEvent('sunset:jobs:waypointToWork', source, jobId, coords)
     return true
+end
+
+exports('HireCivilianJob', hireCivilianJob)
+
+exports.sunset_core:RegisterCallback('sunset:hireJob', function(source, jobId)
+    return hireCivilianJob(source, jobId)
 end)
 
 exports.sunset_core:RegisterCallback('sunset:quitCivilianJob', function(source)

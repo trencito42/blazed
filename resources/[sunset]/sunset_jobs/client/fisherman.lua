@@ -26,7 +26,7 @@ local function contextJustPressed()
 end
 
 local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
-local BAIT_SHOP_RADIUS = 3.5
+local BAIT_SHOP_RADIUS = 2.5
 
 local function isShopMenuOpen()
     if GetResourceState('sunset_fishingshop') ~= 'started' then return false end

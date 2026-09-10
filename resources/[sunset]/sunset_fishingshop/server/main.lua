@@ -27,11 +27,30 @@ local BAIT_SHOP_ITEMS = {
     { item = 'bait_premium', label = 'Premium Bait', price = 250, description = '90% catch chance', icon = 'bait_premium' },
 }
 
+local BILLY_RAY_COORDS = vector3(-1593.23, 5207.74, 3.31)
+local BILLY_RAY_HIRE_DIST = 3.0
+
 local function getCharCash(source)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return 0 end
     return tonumber(char.cash) or tonumber(char.money) or 0
 end
+
+local function nearBillyRay(source, maxDist)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return false end
+    return #(GetEntityCoords(ped) - BILLY_RAY_COORDS) <= (maxDist or BILLY_RAY_HIRE_DIST)
+end
+
+exports.sunset_core:RegisterCallback('sunset:fishingshop:hireFisherman', function(source)
+    if not nearBillyRay(source) then
+        return nil, 'Trebuie sa fii langa Billy Ray.'
+    end
+    if GetResourceState('sunset_jobs') ~= 'started' then
+        return nil, 'Sistemul de joburi nu este disponibil.'
+    end
+    return exports.sunset_jobs:HireCivilianJob(source, 'fisherman')
+end)
 
 local ROD_UPGRADES = {
     { requires = nil,             gives = 'fishing_rod_1', cost = 200,  minLevel = 1 },

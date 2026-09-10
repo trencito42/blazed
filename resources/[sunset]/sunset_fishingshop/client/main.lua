@@ -3,10 +3,10 @@
 -- ============================================================
 
 local NPC_COORDS       = vector4(-1593.23, 5207.74, 3.31, 25.49)
-local NPC_DIST         = 3.5
+local NPC_MENU_DIST    = 2.15
 local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
-local BAIT_SHOP_DIST   = 3.5
-local SELL_DIST        = 3.5
+local BAIT_SHOP_DIST   = 2.5
+local SELL_DIST        = 2.5
 
 -- Toate magazinele 24/7 unde se poate vinde pestele
 local SELL_ZONES = {
@@ -47,6 +47,18 @@ local function closeFishingMenu()
     menuOpen = false
     exports.sunset_ui:Send('playerInteractionHide', {})
     exports.sunset_ui:SetFocus(false, false)
+end
+
+local function npcCenter()
+    return vector3(NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z)
+end
+
+local function distanceToNpc(pos)
+    return #(pos - npcCenter())
+end
+
+local function isNearNpcMenu(pos)
+    return hillbillyPed and DoesEntityExist(hillbillyPed) and distanceToNpc(pos) < NPC_MENU_DIST
 end
 
 local function notifyHireError(err)
@@ -105,7 +117,9 @@ local function openBillyRayMenu()
     menuOpen = true
 end
 
-exports('IsNearBillyRay', function() return nearNpc == true end)
+exports('IsNearBillyRay', function()
+    return isNearNpcMenu(GetEntityCoords(PlayerPedId()))
+end)
 exports('IsMenuOpen', function() return menuOpen or shopOpen end)
 
 -- ── Spawn NPC ────────────────────────────────────────────────
@@ -171,8 +185,7 @@ CreateThread(function()
         local wasBaitShop  = nearBaitShop
         local wasSell      = nearSell
 
-        nearNpc      = hillbillyPed and DoesEntityExist(hillbillyPed)
-                       and #(pos - vector3(NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z)) < NPC_DIST
+        nearNpc      = isNearNpcMenu(pos)
         nearBaitShop = #(pos - BAIT_SHOP_COORDS) < BAIT_SHOP_DIST
         nearSell     = nearAnySellZone(pos)
 
@@ -196,9 +209,15 @@ end)
 CreateThread(function()
     while true do
         if nearNpc or nearBaitShop or nearSell then
-            DisableControlAction(0, INTERACT_KEY, true)
+            if nearNpc or nearBaitShop then
+                DisableControlAction(0, INTERACT_KEY, true)
+            end
 
-            if IsDisabledControlJustPressed(0, INTERACT_KEY) and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
+            local pressed = nearNpc or nearBaitShop
+                and IsDisabledControlJustPressed(0, INTERACT_KEY)
+                or IsControlJustPressed(0, INTERACT_KEY)
+
+            if pressed and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
                 if nearNpc then
                     openBillyRayMenu()
 
@@ -258,7 +277,8 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
     if data.action == 'get_fisherman_job' then
         inCooldown = true
         debugHire('request hire fisherman')
-        exports.sunset_core:TriggerCallback('sunset:hireJob', function(ok, err)
+        CreateThread(function()
+            local ok, err = Sunset.AwaitCallback('sunset:fishingshop:hireFisherman')
             debugHire(('callback ok=%s err=%s'):format(tostring(ok), tostring(err)))
             if ok then
                 exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
@@ -266,7 +286,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
                 notifyHireError(err)
             end
             SetTimeout(2000, function() inCooldown = false end)
-        end, 'fisherman')
+        end)
 
     elseif data.action == 'start_fishing_shift' then
         inCooldown = true

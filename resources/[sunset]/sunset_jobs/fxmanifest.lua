@@ -46,6 +46,7 @@ server_exports {
     'PayReward',
     'AddJobXP',
     'GetJobLevel',
+    'HireCivilianJob',
 }
 
 client_exports {
