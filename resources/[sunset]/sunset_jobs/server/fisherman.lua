@@ -190,7 +190,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
         expiresAt    = now + delay + window,
         rodValueMult = rod.valueMult,
         baitTier     = baitTier,
-        level        = level,
+        level        = session.data.level,
     }
     if session.state == 'STARTING' then SunsetJobs_SetState(source, 'ACTIVE') end
 
