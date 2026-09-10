@@ -30,9 +30,9 @@ end
 -- before low beams. Mode 3 behaves like normal dipped/main beam control.
 local function readLightMode(veh)
     if not veh or veh == 0 then return 0 end
-    local _, lightsOn, highbeams = GetVehicleLightsState(veh)
+    local _, lightsOn, highbeamsOn = GetVehicleLightsState(veh)
     if not boolNative(lightsOn) then return 0 end
-    if IsVehicleHighBeamOn(veh) or boolNative(highbeams) then return 2 end
+    if boolNative(highbeamsOn) then return 2 end
     return 1
 end
 
