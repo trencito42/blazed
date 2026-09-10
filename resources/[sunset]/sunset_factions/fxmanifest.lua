@@ -27,6 +27,10 @@ client_scripts {
     'client/main.lua',
 }
 
+client_exports {
+    'IsFactionPanelOpen',
+}
+
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/core.lua',

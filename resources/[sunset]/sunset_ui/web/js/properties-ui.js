@@ -51,7 +51,8 @@ const PropertyUI = {
         }
         el.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.dispatch(propertyId, action, payload);
+            const resolved = typeof payload === 'function' ? payload() : (payload || {});
+            this.dispatch(propertyId, action, resolved);
         });
         return el;
     },
@@ -189,11 +190,10 @@ const PropertyUI = {
             'Save Note',
             'description',
             p.id,
-            {},
+            () => ({ text: descInput.value.trim() }),
             true,
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
         );
-        saveDesc.addEventListener('click', () => this.dispatch(p.id, 'description', { text: descInput.value.trim() }));
         const clearDesc = this.createButton(
             'Clear',
             'description',
@@ -251,21 +251,19 @@ const PropertyUI = {
             p.rentEnabled ? 'Update Rent' : 'Enable Rent',
             'rent_on',
             p.id,
-            {},
+            () => ({ price: Number(rentInput.value) }),
             !p.rentEnabled,
             rentToggleIcon
         );
-        rentOn.addEventListener('click', () => this.dispatch(p.id, 'rent_on', { price: Number(rentInput.value) }));
-        
+
         const saveSlots = this.createButton(
             'Save Capacity',
             'max_renters',
             p.id,
-            {},
+            () => ({ count: Number(slotsInput.value) }),
             false,
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
         );
-        saveSlots.addEventListener('click', () => this.dispatch(p.id, 'max_renters', { count: Number(slotsInput.value) }));
 
         rentActions.append(rentOn, saveSlots);
 
@@ -310,11 +308,10 @@ const PropertyUI = {
             'Change Interior',
             'interior',
             p.id,
-            {},
+            () => ({ key: interiorSelect.value }),
             false,
             '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>'
         );
-        interiorBtn.addEventListener('click', () => this.dispatch(p.id, 'interior', { key: interiorSelect.value }));
         const interiorHint = document.createElement('div');
         interiorHint.className = 'owner-field-hint';
         interiorHint.textContent = 'Switch layout and decor styling instantly';
@@ -337,25 +334,20 @@ const PropertyUI = {
         `;
         const rentersHeadRight = document.createElement('div');
         rentersHeadRight.className = 'renters-head-actions';
-        const loadRenters = this.createButton(
-            'Refresh List',
-            'renters_refresh',
-            p.id,
-            {},
-            false,
-            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
-            'prop-btn--sm'
-        );
+        const loadRenters = document.createElement('button');
+        loadRenters.type = 'button';
+        loadRenters.className = 'prop-btn prop-btn--sm';
+        loadRenters.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><span>Refresh List</span>';
+        loadRenters.addEventListener('click', () => {
+            rentersList.innerHTML = '<span class="renter-loading"><svg class="spin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Fetching tenants...</span>';
+            post('propertyRenters', { propertyId: p.id });
+        });
         rentersHeadRight.appendChild(loadRenters);
         rentersSection.querySelector('.renters-section-head').appendChild(rentersHeadRight);
 
         const rentersList = document.createElement('div');
         rentersList.className = 'house-owner-tools__renter-list';
         rentersList.innerHTML = '<span class="renter-loading"><svg class="spin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Loading tenants list...</span>';
-        loadRenters.addEventListener('click', () => {
-            rentersList.innerHTML = '<span class="renter-loading"><svg class="spin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Fetching tenants...</span>';
-            post('propertyRenters', { propertyId: p.id });
-        });
         rentersSection.appendChild(rentersList);
         content.appendChild(rentersSection);
 
@@ -746,6 +738,13 @@ const PropertyUI = {
             `;
         }
         this.applyFilters();
+    },
+
+    refreshManageView(propertyId, properties) {
+        if (!propertyId) return;
+        const row = (properties || []).find((p) => Number(p.id) === Number(propertyId));
+        if (!row) return;
+        this.openManageView(row);
     },
 
     updateRenters(propertyId, renters) {

@@ -352,6 +352,12 @@ local function setMaxRenters(source,id,count)
     if not count or count<SunsetProperties.MaxRentersMin or count>SunsetProperties.MaxRentersMax then
         return nil,('Maximum renters must be between %d and %d.'):format(SunsetProperties.MaxRentersMin,SunsetProperties.MaxRentersMax)
     end
+    local activeRenters = tonumber(prop.renter_count) or tonumber(MySQL.scalar.await(
+        'SELECT COUNT(*) FROM property_rentals WHERE property_id = ? AND active = 1', { prop.id }
+    )) or 0
+    if count < activeRenters then
+        return nil, ('You already have %d active tenants. Evict someone first or choose a higher cap.'):format(activeRenters)
+    end
     MySQL.update.await('UPDATE properties SET max_renters=? WHERE id=?',{math.floor(count),prop.id})
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,('Maximum renters set to %d.'):format(count)

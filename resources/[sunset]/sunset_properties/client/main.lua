@@ -4,6 +4,7 @@ local insideProperty
 local refreshPending = false
 local panelSelectedId = nil
 local propertiesPanelOpen = false
+local managePropertyId = nil
 
 local function loadMeta()
     if cachedMeta then return cachedMeta end
@@ -36,14 +37,23 @@ local function openProperties(properties, selectedId, opts)
     opts = opts or {}
     propertiesPanelOpen = true
     panelSelectedId = selectedId
+    if opts.managePropertyId then
+        managePropertyId = opts.managePropertyId
+    elseif not opts.keepManage then
+        managePropertyId = nil
+    end
     exports.sunset_ui:Send('propertiesShow', {
         properties = properties or cachedProperties,
         selectedId = selectedId,
         meta = loadMeta(),
-        managePropertyId = opts.managePropertyId,
+        managePropertyId = managePropertyId,
     })
     exports.sunset_ui:SetFocus(true, true)
 end
+
+exports('IsPanelOpen', function()
+    return propertiesPanelOpen
+end)
 
 AddEventHandler('sunset:world:propertyInteract', function(prop)
     if insideProperty then return end
@@ -86,7 +96,8 @@ local function runAction(action, propertyId, payload)
     if ok then
         if CLOSE_ACTIONS[action] then
             propertiesPanelOpen = false
-            exports.sunset_ui:SetFocus(false, false)
+            managePropertyId = nil
+            exports.sunset_ui:ReleaseFocusUnlessModal()
             exports.sunset_ui:Send('propertiesHide', {})
             panelSelectedId = nil
             if action == 'enter' or action == 'buy' or action == 'rent' then
@@ -95,11 +106,19 @@ local function runAction(action, propertyId, payload)
             refreshSoon()
         elseif propertiesPanelOpen then
             local rows = refreshProperties()
+            local refreshId = managePropertyId or panelSelectedId or propertyId
             exports.sunset_ui:Send('propertiesShow', {
                 properties = rows,
-                selectedId = panelSelectedId or propertyId,
+                selectedId = refreshId,
                 meta = loadMeta(),
+                managePropertyId = managePropertyId,
             })
+            if managePropertyId then
+                exports.sunset_ui:Send('propertyManageRefresh', {
+                    propertyId = managePropertyId,
+                    properties = rows,
+                })
+            end
         else
             refreshSoon()
         end
@@ -176,7 +195,8 @@ RegisterCommand('properties', function() openProperties(refreshProperties()) end
 AddEventHandler('sunset:nui:propertiesClose', function()
     propertiesPanelOpen = false
     panelSelectedId = nil
-    exports.sunset_ui:SetFocus(false, false)
+    managePropertyId = nil
+    exports.sunset_ui:ReleaseFocusUnlessModal()
     exports.sunset_ui:Send('propertiesHide', {})
 end)
 
@@ -189,6 +209,7 @@ AddEventHandler('sunset:nui:propertyOpenManage', function(data)
             Wait(100)
         end
         local rows = refreshProperties()
+        managePropertyId = id
         openProperties(rows, id, { managePropertyId = id })
     end)
 end)

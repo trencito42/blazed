@@ -982,7 +982,21 @@
 
 #properties .owner-actions-row {
     display: flex !important;
+    flex-wrap: wrap !important;
     gap: 8px !important;
+    align-items: stretch !important;
+}
+
+#properties .owner-actions-row .prop-btn {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+#properties .owner-panel-card {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    min-width: 0 !important;
 }
 
 /* Tenant Roster Section */

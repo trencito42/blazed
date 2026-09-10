@@ -63,4 +63,5 @@ exports {
     'Notify',
     'ProgressBar',
     'SetFocus',
+    'ReleaseFocusUnlessModal',
 }

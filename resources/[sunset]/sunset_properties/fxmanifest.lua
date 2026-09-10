@@ -17,6 +17,10 @@ client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/main.lua',
 }
+
+client_exports {
+    'IsPanelOpen',
+}
 server_scripts { '@oxmysql/lib/MySQL.lua', 'server/main.lua' }
 
 server_exports {

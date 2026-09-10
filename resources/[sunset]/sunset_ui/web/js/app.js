@@ -530,6 +530,18 @@ window.addEventListener('message', (event) => {
                 post('factionPanelsClose');
             }
             break;
+        case 'factionPanelRefresh':
+            if (window.FactionPanels) {
+                try { FactionPanels.refreshDashboard(data || event.data.data); }
+                catch (err) { console.error('[FactionPanels] refreshDashboard failed', err); }
+            }
+            break;
+        case 'propertyManageRefresh':
+            if (window.PropertyUI) {
+                const payload = data || event.data.data || {};
+                PropertyUI.refreshManageView(payload.propertyId, payload.properties);
+            }
+            break;
         case 'factionDirectoryShow':
             if (window.FactionPanels) {
                 try { FactionPanels.showDirectory(data || event.data.data); }

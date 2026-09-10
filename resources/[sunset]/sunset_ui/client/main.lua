@@ -33,6 +33,28 @@ function SetFocus(hasFocus, hasCursor, keepInput)
 end
 exports('SetFocus', SetFocus)
 
+local function modalStillOpen()
+    if GetResourceState('sunset_menu') == 'started' then
+        local ok, open = pcall(function() return exports.sunset_menu:IsMenuOpen() end)
+        if ok and open then return true end
+    end
+    if GetResourceState('sunset_properties') == 'started' then
+        local ok, open = pcall(function() return exports.sunset_properties:IsPanelOpen() end)
+        if ok and open then return true end
+    end
+    if GetResourceState('sunset_factions') == 'started' then
+        local ok, open = pcall(function() return exports.sunset_factions:IsFactionPanelOpen() end)
+        if ok and open then return true end
+    end
+    return false
+end
+
+function ReleaseFocusUnlessModal()
+    if modalStillOpen() then return end
+    SetFocus(false, false)
+end
+exports('ReleaseFocusUnlessModal', ReleaseFocusUnlessModal)
+
 function Send(action, data)
     SendNUIMessage({
         action = action,

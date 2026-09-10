@@ -16,7 +16,7 @@ local function getMemberRow(characterId)
     characterId = tonumber(characterId)
     if not characterId then return nil end
     local row = MySQL.single.await(
-        'SELECT id, firstname, lastname, metadata FROM characters WHERE id = ? LIMIT 1',
+        'SELECT id, firstname, lastname, job, job_grade, metadata FROM characters WHERE id = ? LIMIT 1',
         { characterId }
     )
     if not row then return nil end
@@ -26,12 +26,32 @@ local function getMemberRow(characterId)
         metadata = ok and decoded or {}
     end
     metadata = type(metadata) == 'table' and metadata or {}
+    local charLike = {
+        job = row.job,
+        job_grade = tonumber(row.job_grade) or 0,
+        metadata = metadata,
+    }
+    local factionId, grade = Sunset.GetCharacterFaction(charLike)
     return {
         id = tonumber(row.id),
         name = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('^%s+', ''):gsub('%s+$', ''),
-        factionId = metadata.faction,
-        grade = tonumber(metadata.faction_grade) or 0,
+        factionId = factionId,
+        grade = grade or 0,
     }
+end
+
+local function rosterRankPerm(source)
+    local char = FactionCore.getChar(source)
+    if not char then return nil, nil, 'Your character is not loaded.' end
+    local factionId = select(1, FactionCore.getFactionOf(char))
+    if not factionId then return nil, nil, 'No faction' end
+    if FactionCore.isFactionLeader(char.id, factionId) then
+        return char, factionId, nil
+    end
+    if FactionCore.hasManagePerm(source, 'giverank') or FactionCore.hasManagePerm(source, 'promote') then
+        return char, factionId, nil
+    end
+    return nil, nil, FactionCore.manageAccessError(source, 'giverank', 'manage faction ranks')
 end
 
 local function onlineSourceForCharacter(characterId)
@@ -57,16 +77,8 @@ local function canManageMember(actorSource, actorChar, factionId, targetGrade, t
 end
 
 function FactionRoster.adjustGrade(source, characterId, delta)
-    local char, factionId = rosterLeaderPerm(source, 'giverank')
-    if not char then
-        if FactionCore.hasManagePerm(source, 'promote') then
-            char = FactionCore.getChar(source)
-            factionId = char and select(1, FactionCore.getFactionOf(char))
-        else
-            return nil, factionId
-        end
-    end
-    if not char or not factionId then return nil, 'No faction' end
+    local char, factionId, permErr = rosterRankPerm(source)
+    if not char or not factionId then return nil, permErr or 'No faction' end
 
     characterId = tonumber(characterId)
     delta = tonumber(delta) or 0
@@ -100,10 +112,14 @@ function FactionRoster.adjustGrade(source, characterId, delta)
     end
 
     local targetSource = onlineSourceForCharacter(characterId)
+    local setOk
     if targetSource then
-        exports.sunset_core:SetFaction(targetSource, factionId, newGrade)
+        setOk = exports.sunset_core:SetFaction(targetSource, factionId, newGrade)
     else
-        exports.sunset_core:SetFactionByCharacterId(characterId, factionId, newGrade)
+        setOk = exports.sunset_core:SetFactionByCharacterId(characterId, factionId, newGrade)
+    end
+    if not setOk then
+        return nil, 'Could not save the new rank. Reconnect and try again.'
     end
 
     local label = FactionLabels.get(factionId, newGrade)
@@ -217,7 +233,13 @@ function FactionRoster.warnMember(source, characterId, reason)
 end
 
 exports.sunset_core:RegisterCallback('sunset:factionMemberRankDelta', function(source, characterId, delta)
-    return FactionRoster.adjustGrade(source, characterId, delta)
+    local ok, result, err = pcall(FactionRoster.adjustGrade, source, characterId, delta)
+    if not ok then
+        print(('[sunset:factionMemberRankDelta] error src=%s charId=%s delta=%s: %s'):format(
+            tostring(source), tostring(characterId), tostring(delta), tostring(result)))
+        return nil, 'Could not update rank. Try again or contact staff.'
+    end
+    return result, err
 end)
 
 exports.sunset_core:RegisterCallback('sunset:factionMemberKick', function(source, characterId, mode)

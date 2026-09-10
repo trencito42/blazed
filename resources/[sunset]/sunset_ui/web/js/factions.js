@@ -16,6 +16,7 @@ const FactionPanels = {
     directory: [],
     dirFilter: 'all',
     dirModalOpen: false,
+    activeTab: 'overview',
 
     init() {
         if (this.ready) return;
@@ -74,6 +75,7 @@ const FactionPanels = {
     },
 
     setTab(tabId) {
+        this.activeTab = tabId || 'overview';
         document.querySelectorAll('[data-faction-tab]').forEach((tab) => {
             tab.classList.toggle('is-active', tab.dataset.factionTab === tabId);
         });
@@ -283,7 +285,11 @@ const FactionPanels = {
         }
     },
 
-    showDashboard(data = {}) {
+    refreshDashboard(data = {}) {
+        this.showDashboard(data, { preserveTab: true });
+    },
+
+    showDashboard(data = {}, opts = {}) {
         this.init();
         this.dashboard = data;
         $('#faction-directory')?.classList.add('hidden');
@@ -339,7 +345,7 @@ const FactionPanels = {
         this.updateManageForms(perms, data);
         this.populateManageSelect(members, data.viewerCharacterId);
 
-        this.setTab('overview');
+        this.setTab(opts.preserveTab ? (this.activeTab || 'overview') : 'overview');
         $('#faction-panel')?.classList.remove('hidden');
         this.setBodyOpen(true);
     },

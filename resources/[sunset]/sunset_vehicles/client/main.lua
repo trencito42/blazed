@@ -815,14 +815,20 @@ TriggerEvent('chat:addSuggestion', '/v', 'Personal vehicle garage')
 TriggerEvent('chat:addSuggestion', '/garage', 'Personal vehicle garage')
 TriggerEvent('chat:addSuggestion', '/park', 'Save your personal vehicle at its current position')
 
+local function closeGarageUiUnlessMenu()
+    local menuOpen = GetResourceState('sunset_menu') == 'started' and exports.sunset_menu:IsMenuOpen()
+    if menuOpen then return end
+    exports.sunset_ui:ReleaseFocusUnlessModal()
+    exports.sunset_ui:Send('garageHide', {})
+end
+
 AddEventHandler('sunset:nui:garageSpawn', function(data)
     CreateThread(function()
         local ok, err = Sunset.AwaitCallback('sunset:spawnVehicle', data.vehicleId)
         if not ok then
             notify(err or 'Could not spawn vehicle', 'error')
         end
-        exports.sunset_ui:SetFocus(false, false)
-        exports.sunset_ui:Send('garageHide', {})
+        closeGarageUiUnlessMenu()
     end)
 end)
 
@@ -947,8 +953,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
         end
         if spawnedOwnedVehicle == entity then spawnedOwnedVehicle = nil end
         notify('Vehiculul a fost garat cu succes', 'success')
-        exports.sunset_ui:SetFocus(false, false)
-        exports.sunset_ui:Send('garageHide', {})
+        closeGarageUiUnlessMenu()
     end)
 end)
 
@@ -958,8 +963,7 @@ AddEventHandler('sunset:nui:garageLocate', function(data)
         local coords = GetEntityCoords(entity)
         SetNewWaypoint(coords.x, coords.y)
         notify('GPS set to ' .. normalizePlate(data.plate), 'success')
-        exports.sunset_ui:SetFocus(false, false)
-        exports.sunset_ui:Send('garageHide', {})
+        closeGarageUiUnlessMenu()
         return
     end
 
@@ -975,13 +979,11 @@ AddEventHandler('sunset:nui:garageLocate', function(data)
     else
         notify('Vehicle not found — no parked location saved', 'error')
     end
-    exports.sunset_ui:SetFocus(false, false)
-    exports.sunset_ui:Send('garageHide', {})
+    closeGarageUiUnlessMenu()
 end)
 
 AddEventHandler('sunset:nui:garageClose', function()
-    exports.sunset_ui:SetFocus(false, false)
-    exports.sunset_ui:Send('garageHide', {})
+    closeGarageUiUnlessMenu()
 end)
 
 AddEventHandler('sunset:nui:garageClaimInsurance', function(data)

@@ -348,7 +348,7 @@ for _, name in ipairs(closePanels) do
         elseif name == 'clanPanelsClose' then
             Send('clanPanelsHide', {})
         end
-        SetFocus(false, false)
+        ReleaseFocusUnlessModal()
     end)
 end
 

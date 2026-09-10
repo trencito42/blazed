@@ -455,12 +455,19 @@ RegisterCommand('fence', function()
     else exports.sunset_ui:Notify(err or 'Fence failed', 'error') end
 end, false)
 
+local factionPanelOpen = false
+
 RegisterCommand('faction', function()
     local data, err = Sunset.AwaitCallback('sunset:factionDashboard')
     if not data then return exports.sunset_ui:Notify(err or 'Faction panel could not be opened.', 'error', 7000) end
+    factionPanelOpen = true
     exports.sunset_ui:Send('factionPanelShow', data)
     exports.sunset_ui:SetFocus(true, true)
 end, false)
+
+exports('IsFactionPanelOpen', function()
+    return factionPanelOpen
+end)
 
 RegisterCommand('factions', function()
     local data, err = Sunset.AwaitCallback('sunset:factionDirectory')
@@ -539,10 +546,15 @@ AddEventHandler('sunset:nui:factionManage', function(data)
 
     local dashboard, dashErr = Sunset.AwaitCallback('sunset:factionDashboard')
     if dashboard then
-        exports.sunset_ui:Send('factionPanelShow', dashboard)
+        factionPanelOpen = true
+        exports.sunset_ui:Send('factionPanelRefresh', dashboard)
     elseif dashErr then
         exports.sunset_ui:Notify(dashErr, 'error', 7000)
     end
+end)
+
+AddEventHandler('sunset:nui:factionPanelsClose', function()
+    factionPanelOpen = false
 end)
 
 AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
