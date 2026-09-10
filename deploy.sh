@@ -29,48 +29,23 @@ sync_tree() {
   fi
 }
 
-pull_repo() {
-  ENV_BACKUP=""
-  if [ -f .env ]; then
-    ENV_BACKUP="$(mktemp)"
-    cp .env "$ENV_BACKUP"
-    cp .env .env.persist
-  elif [ -f .env.persist ]; then
-    cp .env.persist .env
-    ENV_BACKUP="$(mktemp)"
-    cp .env "$ENV_BACKUP"
-  fi
-
-  if [ -d .git ]; then
-    echo "[deploy] git fetch origin/${BRANCH}..."
-    if GIT_TERMINAL_PROMPT=0 git fetch --depth 1 origin "${BRANCH}"; then
-      GIT_TERMINAL_PROMPT=0 git reset --hard "origin/${BRANCH}"
-      restore_env
-      echo "[deploy] git update OK"
-      return 0
-    fi
-    echo "[deploy] git fetch failed — trying clone/ZIP fallback"
+git_with_timeout() {
+  secs="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$secs" env GIT_TERMINAL_PROMPT=0 GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=20 "$@"
   else
-    echo "[deploy] no .git in ${DIR} — shallow clone (first deploy or migrated folder)"
-    CLONE_DIR="$(mktemp -d /tmp/blazed-clone.XXXXXX)"
-    if GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "${BRANCH}" "${REPO}" "${CLONE_DIR}"; then
-      echo "[deploy] syncing files (keeps .env)..."
-      sync_tree "${CLONE_DIR}"
-      rm -rf "${CLONE_DIR}"
-      restore_env
-      echo "[deploy] clone + sync OK (.git created for next deploy)"
-      return 0
-    fi
-    rm -rf "${CLONE_DIR}"
-    echo "[deploy] git clone failed — trying GitHub ZIP fallback"
+    env GIT_TERMINAL_PROMPT=0 GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=20 "$@"
   fi
+}
 
+pull_from_zip() {
   ZIP="/tmp/blazed-${BRANCH}.zip"
   ARCHIVE_DIR="/tmp/blazed-${BRANCH}"
   rm -f "${ZIP}"
   rm -rf "${ARCHIVE_DIR}"
 
-  echo "[deploy] downloading GitHub archive (~30MB, may take 10-60s)..."
+  echo "[deploy] downloading GitHub archive (curl, ~30MB, 10-60s)..."
   if ! curl -fL --connect-timeout 20 --max-time 300 --progress-bar \
     -o "${ZIP}" "${REPO}/archive/refs/heads/${BRANCH}.zip"; then
     restore_env
@@ -91,7 +66,56 @@ pull_repo() {
   rm -f "${ZIP}"
   rm -rf "${ARCHIVE_DIR}"
   restore_env
-  echo "[deploy] ZIP fallback OK (run again after fix to use fast git pull)"
+  echo "[deploy] ZIP update OK"
+}
+
+bootstrap_git() {
+  if [ -d .git ] || ! command -v git >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "[deploy] creating .git for faster future deploys..."
+  git init -q
+  git remote add origin "${REPO}" 2>/dev/null || git remote set-url origin "${REPO}"
+  if git_with_timeout 90 git fetch --depth 1 origin "${BRANCH}"; then
+    git checkout -B "${BRANCH}" FETCH_HEAD -q 2>/dev/null || git reset --hard FETCH_HEAD
+    echo "[deploy] .git ready — next deploy will use git fetch"
+  else
+    rm -rf .git
+    echo "[deploy] git bootstrap skipped (ZIP deploy OK; will use ZIP again next time)"
+  fi
+}
+
+pull_repo() {
+  ENV_BACKUP=""
+  if [ -f .env ]; then
+    ENV_BACKUP="$(mktemp)"
+    cp .env "$ENV_BACKUP"
+    cp .env .env.persist
+  elif [ -f .env.persist ]; then
+    cp .env.persist .env
+    ENV_BACKUP="$(mktemp)"
+    cp .env "$ENV_BACKUP"
+  fi
+
+  if [ -d .git ]; then
+    echo "[deploy] git fetch origin/${BRANCH}..."
+    if git_with_timeout 90 git fetch --depth 1 origin "${BRANCH}"; then
+      GIT_TERMINAL_PROMPT=0 git reset --hard "origin/${BRANCH}"
+      restore_env
+      echo "[deploy] git update OK"
+      return 0
+    fi
+    echo "[deploy] git fetch failed — trying GitHub ZIP"
+  else
+    echo "[deploy] no .git in ${DIR} (Coolify copy / manual folder — normal)"
+    echo "[deploy] skipping git clone (often hangs on VPS); using GitHub ZIP instead"
+    pull_from_zip
+    bootstrap_git
+    return 0
+  fi
+
+  pull_from_zip
+  bootstrap_git
 }
 
 pull_repo
