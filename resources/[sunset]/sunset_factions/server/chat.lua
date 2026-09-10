@@ -293,6 +293,18 @@ function RunChatCommand(source, name, args)
         exports.sunset_factions:RunFactionMotdCommand(source, args)
         return true
     end
+    if name == 'finvite' then
+        exports.sunset_factions:RunFactionInviteCommand(source, args)
+        return true
+    end
+    if name == 'acceptfaction' then
+        exports.sunset_factions:RunFactionAcceptInviteCommand(source)
+        return true
+    end
+    if name == 'declinefaction' then
+        exports.sunset_factions:RunFactionDeclineInviteCommand(source)
+        return true
+    end
 
     local handler
     if name == 'f' then handler = runFactionChat

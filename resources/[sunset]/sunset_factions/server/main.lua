@@ -114,9 +114,11 @@ exports.sunset_core:RegisterCallback('sunset:leaveFaction', function(source)
     return leaveFactionForSource(source)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, targetId)
+local function performFactionInvite(source, targetId)
     local char = getChar(source)
     if not char then return nil, 'Cannot recruit: your character is not loaded. Reconnect and select it again.' end
+    FactionCore.ensureFactionMembership(source, char)
+    char = getChar(source) or char
     local myFaction = getFactionOf(char)
     if not myFaction then return nil, 'You are not in a faction.' end
     if not memberManagePerm(source, 'invite') then
@@ -168,53 +170,111 @@ exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, ta
         target = exports.sunset_core:GetPlayerDisplayName(targetId),
         expiresIn = FACTION_INVITE_SECONDS,
     }
+end
+
+exports.sunset_core:RegisterCallback('sunset:factionInvite', function(source, targetId)
+    return performFactionInvite(source, targetId)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:factionAcceptInvite', function(source)
+local function performFactionAcceptInvite(source)
     local invite = PendingFactionInvites[source]
     if not invite then return nil, 'You do not have a pending faction invitation.' end
     PendingFactionInvites[source] = nil
-    if invite.expiresAt <= os.time() then return nil, 'Your faction invitation expired. Ask the leader to invite you again.' end
+    if invite.expiresAt <= os.time() then return nil, 'Your faction invitation expired. Ask them to invite you again.' end
 
     local char = getChar(source)
     if not char or tonumber(char.id) ~= tonumber(invite.targetCharacterId) then
         return nil, 'The invitation belongs to a different or unloaded character.'
     end
     if getFactionOf(char) then return nil, 'You are already a member of a faction.' end
-    local leader = getChar(invite.inviterSource)
-    if not leader or select(1, getFactionOf(leader)) ~= invite.factionId
-        or not FactionCore.isFactionLeader(leader.id, invite.factionId) then
-        return nil, 'The inviting leader is no longer available. Ask them to send a new invitation.'
+    local inviter = getChar(invite.inviterSource)
+    if not inviter or select(1, getFactionOf(inviter)) ~= invite.factionId then
+        return nil, 'The inviting faction member is no longer available. Ask them to send a new invitation.'
     end
     if not exports.sunset_core:SetFaction(source, invite.factionId, 0) then
         return nil, 'Faction membership could not be saved. Please try again.'
     end
 
     local faction = Sunset.Factions[invite.factionId]
-    FactionCore.auditLog(invite.factionId, leader.id, 'invite_accepted', char.id, {})
-    FactionCore.broadcastManagement(invite.factionId, source,
-        ('joined the faction.'))
-    TriggerClientEvent('sunset:client:notify', invite.inviterSource,
-        ('%s accepted the invitation to %s.'):format(exports.sunset_core:GetPlayerDisplayName(source), faction.label), 'success', 7000)
+    FactionCore.auditLog(invite.factionId, invite.inviterCharacterId, 'invite_accepted', char.id, {})
+    FactionCore.broadcastManagement(invite.factionId, source, ('joined the faction.'))
+    if GetPlayerName(invite.inviterSource) then
+        TriggerClientEvent('sunset:client:notify', invite.inviterSource,
+            ('%s accepted the invitation to %s.'):format(
+                exports.sunset_core:GetPlayerDisplayName(source), faction.label), 'success', 7000)
+    end
     return { factionId = invite.factionId, label = faction.label }
+end
+
+exports.sunset_core:RegisterCallback('sunset:factionAcceptInvite', function(source)
+    return performFactionAcceptInvite(source)
 end)
 
-exports.sunset_core:RegisterCallback('sunset:factionDeclineInvite', function(source)
+local function performFactionDeclineInvite(source)
     local invite = PendingFactionInvites[source]
     if not invite then return nil, 'You do not have a pending faction invitation.' end
     PendingFactionInvites[source] = nil
     local char = getChar(source)
     FactionCore.auditLog(invite.factionId, char and char.id or nil, 'invite_declined', invite.targetCharacterId, {})
     if char then
-        FactionCore.broadcastManagement(invite.factionId, source,
-            ('declined the faction invitation.'))
+        FactionCore.broadcastManagement(invite.factionId, source, ('declined the faction invitation.'))
     end
     if GetPlayerName(invite.inviterSource) then
         TriggerClientEvent('sunset:client:notify', invite.inviterSource,
             ('%s declined the faction invitation.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 6000)
     end
     return true
+end
+
+exports.sunset_core:RegisterCallback('sunset:factionDeclineInvite', function(source)
+    return performFactionDeclineInvite(source)
 end)
+
+function RunFactionInviteCommand(source, args)
+    if source == 0 then return true end
+    args = args or {}
+    local targetId = tonumber(args[1])
+    if not targetId then
+        FactionCore.notify(source, 'Usage: /finvite [server id] — use F10 for current IDs.', 'error')
+        return true
+    end
+    local ok, err = performFactionInvite(source, targetId)
+    if ok then
+        FactionCore.notify(source,
+            ('%s was invited to %s and has %d seconds to accept.'):format(ok.target, ok.label, ok.expiresIn),
+            'success', 8000)
+    else
+        FactionCore.notify(source, err or 'Recruitment failed. Check your permission and the target ID.', 'error', 8000)
+    end
+    return true
+end
+exports('RunFactionInviteCommand', RunFactionInviteCommand)
+
+function RunFactionAcceptInviteCommand(source)
+    if source == 0 then return true end
+    local ok, err = performFactionAcceptInvite(source)
+    if ok then
+        FactionCore.notify(source,
+            ('You joined %s. Your civilian job is unchanged. Go to HQ and press E to start duty.'):format(ok.label),
+            'success', 10000)
+    else
+        FactionCore.notify(source, err or 'The faction invitation could not be accepted.', 'error', 8000)
+    end
+    return true
+end
+exports('RunFactionAcceptInviteCommand', RunFactionAcceptInviteCommand)
+
+function RunFactionDeclineInviteCommand(source)
+    if source == 0 then return true end
+    local ok, err = performFactionDeclineInvite(source)
+    if ok then
+        FactionCore.notify(source, 'Faction invitation declined.', 'info')
+    else
+        FactionCore.notify(source, err or 'The faction invitation could not be declined.', 'error')
+    end
+    return true
+end
+exports('RunFactionDeclineInviteCommand', RunFactionDeclineInviteCommand)
 
 exports.sunset_core:RegisterCallback('sunset:factionPromote', function(source, targetId, newGrade)
     local char = getChar(source)
@@ -721,6 +781,8 @@ end
 exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
     local char = getChar(source)
     if not char then return nil, 'Your character is not loaded.' end
+    FactionCore.ensureFactionMembership(source, char)
+    char = getChar(source) or char
     local factionId, grade = getFactionOf(char)
     local faction = factionId and Sunset.Factions[factionId]
     if not faction then return nil, 'You are not a member of a faction. Use /factions to browse them.' end

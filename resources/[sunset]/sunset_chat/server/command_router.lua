@@ -123,6 +123,7 @@ end
 local SERVER_CHAT_COMMANDS = {
     f = true, r = true, d = true, gov = true, m = true, megaphone = true,
     cmotd = true, fmotd = true,
+    finvite = true, acceptfaction = true, declinefaction = true,
 }
 
 local function hasFactionMedicPerm(src, cmd)

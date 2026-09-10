@@ -45,4 +45,4 @@ server_scripts {
     'server/friendlyfire.lua',
 }
 
-exports { 'IsOnDuty', 'GetDutyState', 'IsFactionLeader', 'GetLeaderHqSpawn', 'HasFactionPerm', 'IsCuffed', 'GetWantedState', 'IsJailed', 'GetDetentionState', 'AddWantedCharge', 'ExecutePlayerCommand', 'RunChatCommand', 'RunFactionMotdCommand', 'GetConnectMotd' }
+exports { 'IsOnDuty', 'GetDutyState', 'IsFactionLeader', 'GetLeaderHqSpawn', 'HasFactionPerm', 'IsCuffed', 'GetWantedState', 'IsJailed', 'GetDetentionState', 'AddWantedCharge', 'ExecutePlayerCommand', 'RunChatCommand', 'RunFactionMotdCommand', 'RunFactionInviteCommand', 'RunFactionAcceptInviteCommand', 'RunFactionDeclineInviteCommand', 'GetConnectMotd' }

@@ -168,6 +168,15 @@ function ExecutePlayerCommand(source, name, args)
     if name == 'removeleader' then
         return handleRemoveLeader(source, args or {}) == true
     end
+    if name == 'finvite' then
+        return exports.sunset_factions:RunFactionInviteCommand(source, args or {}) == true
+    end
+    if name == 'acceptfaction' then
+        return exports.sunset_factions:RunFactionAcceptInviteCommand(source) == true
+    end
+    if name == 'declinefaction' then
+        return exports.sunset_factions:RunFactionDeclineInviteCommand(source) == true
+    end
     return false
 end
 exports('ExecutePlayerCommand', ExecutePlayerCommand)
