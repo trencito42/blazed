@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>blaze.mp</title>
-    <link rel="preload" href="assets/bg_login.webp?v=6" as="image" type="image/webp">
-    <link rel="preload" href="assets/bg.webp?v=6" as="image" type="image/webp">
+    <link rel="preload" href="assets/bg_login.webp?v=7" as="image" type="image/webp">
+    <link rel="preload" href="assets/bg_loading.webp?v=7" as="image" type="image/webp">
     <script>
         // Prevent Chromium CEF from spawning native OS dialog boxes outside GTA V
         window.prompt = function(msg, def) {
@@ -42,7 +42,8 @@
     <link rel="stylesheet" href="css/clans.css?v=11">
     <link rel="stylesheet" href="css/org-panels.css?v=4">
     <link rel="stylesheet" href="css/auth_loading.css?v=10">
-    <link rel="stylesheet" href="css/spawn.css?v=12">
+    <link rel="stylesheet" href="css/nui_loading.css?v=8">
+    <link rel="stylesheet" href="css/spawn.css?v=13">
     <link rel="stylesheet" href="css/damage-indicators.css?v=1">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=6">
     <link rel="stylesheet" href="css/mdc_tablet.css?v=12">
@@ -320,12 +321,33 @@
 
     <!-- CHARACTER SCREENS -->
     <div id="app" class="app hidden">
-        <img class="app-bg is-active" src="assets/bg.webp?v=6" data-entry-source="assets/bg.webp?v=6" decoding="async" alt="">
+        <img class="app-bg is-active" src="assets/bg_loading.webp?v=7" data-entry-source="assets/bg_loading.webp?v=7" decoding="async" alt="">
         <div class="app-overlay"></div>
-        <!-- Background-only bridge rendered below FiveM's separate loadscreen NUI. -->
-        <section id="screen-handoff" class="screen screen--handoff hidden" aria-hidden="true">
-            <div class="handoff-vignette"></div>
-            <div class="handoff-scanlines"></div>
+        <!-- Bridge under FiveM loadscreen — same Forza HUD, frozen at 100%. -->
+        <section id="screen-handoff" class="screen screen--handoff nui-forza-load hidden" aria-hidden="true">
+            <div class="nui-load-vignette"></div>
+            <div class="hud-wrapper">
+                <div class="brand-container">
+                    <div class="brand-title">XODO <span>RP</span></div>
+                    <div class="brand-subtitle">Est. 2026 &middot; Los Santos</div>
+                </div>
+                <div class="bottom-area">
+                    <div class="tips-container">
+                        <div class="tips-header">Server Tips</div>
+                        <div class="tips-text forza-load-tip">
+                            Stay in character at all times. Press G to open the quick interaction menu.
+                        </div>
+                    </div>
+                    <div class="speedometer-loading">
+                        <div class="massive-pct forza-load-pct">100<span>%</span></div>
+                        <div class="loading-status-text">
+                            <span class="forza-load-status">Entering session...</span>
+                            <span class="file-count forza-load-files"></span>
+                        </div>
+                        <div class="rpm-bar-container forza-load-rpm"></div>
+                    </div>
+                </div>
+            </div>
         </section>
         <section id="screen-characters" class="screen hidden">
             <div class="panel panel--left">
@@ -359,19 +381,28 @@
                 </form>
             </div>
         </section>
-        <section id="screen-loading" class="screen screen--loading hidden">
-            <div class="auth-vignette"></div>
-            <div class="auth-scanlines"></div>
-            <div class="loading-stage">
-                <div class="loading-info">
-                    <div>
-                        <div class="loading-title">Loading assets</div>
-                        <div class="loading-subtext" id="loading-status">Connecting to server instance...</div>
-                    </div>
-                    <div class="loading-percent" id="loading-pct">0%</div>
+        <section id="screen-loading" class="screen screen--loading nui-forza-load hidden">
+            <div class="nui-load-vignette"></div>
+            <div class="hud-wrapper">
+                <div class="brand-container">
+                    <div class="brand-title">XODO <span>RP</span></div>
+                    <div class="brand-subtitle">Est. 2026 &middot; Los Santos</div>
                 </div>
-                <div class="loading-bar-container">
-                    <div class="loading-bar__fill" id="loading-fill"></div>
+                <div class="bottom-area">
+                    <div class="tips-container">
+                        <div class="tips-header">Server Tips</div>
+                        <div class="tips-text forza-load-tip">
+                            Stay in character at all times. Press G to open the quick interaction menu.
+                        </div>
+                    </div>
+                    <div class="speedometer-loading">
+                        <div class="massive-pct forza-load-pct">0<span>%</span></div>
+                        <div class="loading-status-text">
+                            <span class="forza-load-status">Initializing session...</span>
+                            <span class="file-count forza-load-files"></span>
+                        </div>
+                        <div class="rpm-bar-container forza-load-rpm"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -382,38 +413,38 @@
             <div class="spawn-cinematic-fade" id="spawn-fade-overlay"></div>
             <div class="spawn-ui" id="spawn-main-ui">
                 <div class="spawn-locations">
-                    <div class="spawn-section-title">Selectează Punctul de Inserție</div>
+                    <div class="spawn-section-title">Select Spawn Point</div>
                     <div class="spawn-location-list" id="spawn-location-list">
-                        <button type="button" class="spawn-loc-item active" data-spawn="last" data-status="Safe" data-risk="Scăzut" style="--delay:0.1s">
+                        <button type="button" class="spawn-loc-item active" data-spawn="last" data-status="Safe" data-risk="Low" style="--delay:0.1s">
                             <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></span>
-                            <span class="spawn-loc-label">Ultima Locație</span>
+                            <span class="spawn-loc-label">Last Location</span>
                         </button>
-                        <button type="button" class="spawn-loc-item" data-spawn="default" data-status="Public" data-risk="Mediu" style="--delay:0.2s">
+                        <button type="button" class="spawn-loc-item" data-spawn="default" data-status="Public" data-risk="Medium" style="--delay:0.2s">
                             <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10.5V20h11v-9.5M10 20v-6h4v6"/></svg></span>
-                            <span class="spawn-loc-label">Spawn Implicit</span>
+                            <span class="spawn-loc-label">Default Spawn</span>
                         </button>
-                        <button type="button" class="spawn-loc-item hidden" data-spawn="house" data-property-id="" data-status="Proprietate" data-risk="Zero" style="--delay:0.3s">
+                        <button type="button" class="spawn-loc-item hidden" data-spawn="house" data-property-id="" data-status="Property" data-risk="None" style="--delay:0.3s">
                             <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V21h13V10.5M9 21v-6h6v6"/></svg></span>
-                            <span class="spawn-loc-label">Proprietate</span>
+                            <span class="spawn-loc-label">Property</span>
                         </button>
-                        <button type="button" class="spawn-loc-item hidden" data-spawn="hq" data-status="Facțiune" data-risk="Scăzut" style="--delay:0.4s">
+                        <button type="button" class="spawn-loc-item hidden" data-spawn="hq" data-status="Faction" data-risk="Low" style="--delay:0.4s">
                             <span class="spawn-loc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/></svg></span>
-                            <span class="spawn-loc-label">HQ Facțiune</span>
+                            <span class="spawn-loc-label">Faction HQ</span>
                         </button>
                     </div>
                 </div>
                 <div class="spawn-details">
                     <div class="spawn-detail-row">
-                        <span class="spawn-detail-label">Status Zonă</span>
+                        <span class="spawn-detail-label">Zone Status</span>
                         <span class="spawn-detail-value val-safe" id="spawn-info-status">Safe</span>
                     </div>
                     <div class="spawn-detail-row">
-                        <span class="spawn-detail-label">Nivel Risc</span>
-                        <span class="spawn-detail-value" id="spawn-info-risk">Scăzut</span>
+                        <span class="spawn-detail-label">Risk Level</span>
+                        <span class="spawn-detail-value" id="spawn-info-risk">Low</span>
                     </div>
                     <button type="button" class="spawn-btn-confirm" id="spawn-btn-confirm">
                         <span class="spawn-key-hint">ENTER</span>
-                        Confirmă
+                        Confirm
                     </button>
                 </div>
             </div>
@@ -562,7 +593,7 @@
 
         <div id="veh-hints" class="veh-hints" data-hud-panel="veh-hints" aria-hidden="true">
             <div class="veh-hints__row" data-hint="engine"><span class="veh-hints__label">ENGINE OFF</span><span class="veh-hints__key">2</span></div>
-            <div class="veh-hints__row" data-hint="lock"><span class="veh-hints__label">UNLOCKED</span><span class="veh-hints__key">N</span></div>
+            <div class="veh-hints__row" data-hint="lock"><span class="veh-hints__label">UNLOCKED</span><span class="veh-hints__key">U</span></div>
             <div class="veh-hints__row" data-hint="seatbelt"><span class="veh-hints__label">SEATBELT OFF</span><span class="veh-hints__key">K</span></div>
             <div class="veh-hints__row" data-hint="lights"><span class="veh-hints__label">LIGHTS OFF</span><span class="veh-hints__key">H</span></div>
         </div>
@@ -3173,7 +3204,7 @@
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=6"></script>
     <script src="js/auth_email.js?v=1"></script>
-    <script src="js/auth_loading.js?v=5"></script>
+    <script src="js/auth_loading.js?v=9"></script>
     <script src="js/spawn.js?v=5"></script>
     <script src="js/damage-indicators.js?v=1"></script>
     <script src="js/fuel_pump.js"></script>

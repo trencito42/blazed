@@ -32,6 +32,7 @@ files {
     'web/css/clans.css',
     'web/css/org-panels.css',
     'web/css/auth_loading.css',
+    'web/css/nui_loading.css',
     'web/css/spawn.css',
     'web/css/damage-indicators.css',
     'web/css/theme.css',

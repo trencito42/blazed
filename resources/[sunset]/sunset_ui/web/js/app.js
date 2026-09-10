@@ -18,11 +18,11 @@ function post(action, data = {}) {
 }
 
 const ENTRY_BACKGROUNDS = {
-    auth: 'assets/bg_login.webp?v=6',
-    handoff: 'assets/bg.webp?v=6',
-    loading: 'assets/bg.webp?v=6',
-    spawn: 'assets/bg.webp?v=6',
-    default: 'assets/bg.webp?v=6',
+    auth: 'assets/bg_login.webp?v=7',
+    handoff: 'assets/bg_loading.webp?v=8',
+    loading: 'assets/bg_loading.webp?v=8',
+    spawn: 'assets/bg_loading.webp?v=8',
+    default: 'assets/bg_loading.webp?v=8',
 };
 let entryBackgroundRequest = 0;
 const entryBackgroundCache = new Map();
@@ -255,6 +255,7 @@ window.addEventListener('message', (event) => {
             if (screen !== 'menu' && window.Menu) Menu.hide();
             if (screen === 'handoff') {
                 warmEntryBackground(ENTRY_BACKGROUNDS.auth);
+                if (window.HandoffScreen) HandoffScreen.show();
             }
             if (screen === 'auth') {
                 warmEntryBackground(ENTRY_BACKGROUNDS.auth);
@@ -270,7 +271,10 @@ window.addEventListener('message', (event) => {
                 Characters.initCreate(data);
             }
             if (screen === 'loading') {
-                if (window.LoadingScreen) LoadingScreen.start(data);
+                if (window.LoadingScreen) {
+                    const authPending = window.AuthLoading?._pending;
+                    LoadingScreen.start(authPending ? (data || {}) : { ...(data || {}), force: true });
+                }
             }
             if (screen === 'spawn' && window.SpawnSelector) {
                 SpawnSelector.show(data || {});
@@ -883,10 +887,14 @@ window.addEventListener('message', (event) => {
 
         case 'authHide':
             if (window.Panels) Panels.hideAuth();
-            // beginSubmit already selected loading. Preserve whichever newer
-            // screen the character flow may have opened in the meantime.
             showApp(true);
             showHud(false);
+            if (window.App?.currentScreen !== 'loading' && typeof showScreen === 'function') {
+                showScreen('loading');
+                if (window.LoadingScreen) {
+                    LoadingScreen.start({ force: true, holdText: 'Authenticating account...' });
+                }
+            }
             if (window.AuthLoading) AuthLoading._pending = false;
             break;
 

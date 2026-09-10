@@ -9,7 +9,7 @@
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: url('../assets/bg.webp?v=6') center / cover no-repeat;
+    background: url('../assets/bg_loading.webp?v=7') center / cover no-repeat;
     filter: grayscale(80%) brightness(0.4) contrast(1.2);
     animation: spawnSlowPan 30s linear infinite alternate;
 }

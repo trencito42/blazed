@@ -1,14 +1,14 @@
 /* Sunset OS — auth + loading screens (login mockup) */
 
 .screen--auth,
-.screen--loading {
+.screen--loading:not(.nui-forza-load) {
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
 }
 
-.screen--loading {
+.screen--loading:not(.nui-forza-load) {
     align-items: stretch;
     justify-content: flex-end;
 }

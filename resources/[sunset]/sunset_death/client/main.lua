@@ -93,7 +93,7 @@ RegisterNetEvent('sunset:death:syncTimer', function(seconds)
     seconds = tonumber(seconds) or 15
     bleedoutEndsAt = GetGameTimer() + (seconds * 1000)
     if seconds <= 15 then
-        exports.sunset_ui:Notify(('Nu sunt medici disponibili. Te poti respawna la spital in %d secunde (/respawn).'):format(seconds), 'warning', 6000)
+        exports.sunset_ui:Notify(('No EMS are available. You can respawn at the hospital in %d seconds (/respawn).'):format(seconds), 'warning', 6000)
     end
 end)
 

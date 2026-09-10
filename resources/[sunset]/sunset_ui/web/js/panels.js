@@ -227,8 +227,9 @@ const Panels = {
 
     hideAuth() {
         $('#screen-auth')?.classList.add('hidden');
-        document.getElementById('auth-panel')?.classList.remove('is-hidden');
-        if (window.AuthLoading) AuthLoading._pending = false;
+        if (window.App?.currentScreen !== 'loading') {
+            document.getElementById('auth-panel')?.classList.remove('is-hidden');
+        }
     },
 
     showInventory(data) {
@@ -1362,7 +1363,7 @@ const Panels = {
             let status = stored ? 'In garage' : (inWorld ? 'Out' : 'Missing');
             let statusClass = stored ? 'stored' : (inWorld ? 'out' : 'missing');
             if (isDestroyed) {
-                status = 'Distrus (Asigurare)';
+                status = 'Totaled (Insurance)';
                 statusClass = 'destroyed';
             }
             const model = (v.model || 'vehicle').toUpperCase();
@@ -1387,9 +1388,9 @@ const Panels = {
                     <div class="menu-vcard__plate">${v.plate}</div>
                     <div class="menu-vcard__meta">${v.garage || 'legion'}</div>
                     <div class="menu-vcard__insurance">
-                        <span class="insurance-badge">🛡️ Asigurare: <strong>${points} pct</strong></span>
+                        <span class="insurance-badge">🛡️ Insurance: <strong>${points} pts</strong></span>
                         <span class="insurance-level ${level > 1 ? 'is-elevated' : ''}">Nivel ${level}/11</span>
-                        <span class="insurance-cost">Taxă: ${formatMoney(claimCost)}</span>
+                        <span class="insurance-cost">Claim fee: ${formatMoney(claimCost)}</span>
                     </div>
                     ${window.Menu ? window.Menu.formatEcuBlock(v.ecuInfo, v.id) : ''}
                     <div class="menu-vcard__actions"></div>
@@ -1398,9 +1399,9 @@ const Panels = {
             const actions = li.querySelector('.menu-vcard__actions');
             if (isDestroyed) {
                 if (points > 0) {
-                    addBtn(actions, `Revendică Asigurare (${formatMoney(claimCost)})`, 'menu-vcard__btn--danger', () => post('garageClaimInsurance', { vehicleId: v.id }));
+                    addBtn(actions, `File Insurance Claim (${formatMoney(claimCost)})`, 'menu-vcard__btn--danger', () => post('garageClaimInsurance', { vehicleId: v.id }));
                 } else {
-                    addBtn(actions, `Fără Puncte — Reînnoiește (${formatMoney(renewCost)})`, 'menu-vcard__btn--warning', () => post('garageRenewInsurance', { vehicleId: v.id }));
+                    addBtn(actions, `No Points — Renew Coverage (${formatMoney(renewCost)})`, 'menu-vcard__btn--warning', () => post('garageRenewInsurance', { vehicleId: v.id }));
                 }
             } else if (stored) {
                 addBtn(actions, 'Spawn', 'menu-vcard__btn--primary', () => post('garageSpawn', { vehicleId: v.id }));
@@ -1672,7 +1673,7 @@ const Panels = {
             list.querySelectorAll('.jobcenter-job-item').forEach(li => li.classList.remove('is-selected'));
             el.classList.add('is-selected');
             sideTitle.textContent = job.label;
-            const salaryText = job.salary ? `$${job.salary} / săptămână` : 'Neplătit';
+            const salaryText = job.salary ? `$${job.salary} / week` : 'Unpaid';
             detailEl.innerHTML = `
                 <p class="jobcenter-details__salary">${salaryText}</p>
                 ${job.description ? `<p class="jobcenter-details__desc">${job.description}</p>` : ''}
@@ -1905,7 +1906,7 @@ const Panels = {
                 if (!btn.dataset.confirming) {
                     btn.dataset.confirming = 'true';
                     const origText = btn.textContent;
-                    btn.textContent = `Confirmi ștergerea ${model}?`;
+                    btn.textContent = `Confirm delete ${model}?`;
                     btn.style.color = '#ef4444';
                     btn.style.borderColor = '#ef4444';
                     setTimeout(() => {

@@ -17,6 +17,7 @@ files {
     'script.js',
     'assets/bg.png',
     'assets/bg.webp',
+    'assets/bg_loading.webp',
     'assets/bg_login.png',
     'assets/logoblaze.svg',
 }

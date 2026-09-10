@@ -19,7 +19,7 @@ local function showSpawnSelection(char, optional)
     local jail = Sunset.AwaitCallback('sunset:getJailSpawnLock')
     if jail and jail.locked then
         pendingSpawnCharacter = char
-        exports.sunset_ui:Show('loading')
+        exports.sunset_ui:Show('loading', { holdText = 'Loading character...' })
         TriggerEvent('sunset:client:spawnCharacter', char, {
             x = jail.x, y = jail.y, z = jail.z, w = jail.w or 0.0,
         })
@@ -106,7 +106,7 @@ AddEventHandler('sunset:nui:spawnSelect', function(data)
     pendingSpawnCharacter = nil
     optionalSpawnMenu = false
     trace('spawn_selected', choice)
-    exports.sunset_ui:Show('loading')
+    exports.sunset_ui:Show('loading', { holdText = 'Loading character...' })
     TriggerEvent('sunset:client:spawnCharacter', char, resolved)
 end)
 

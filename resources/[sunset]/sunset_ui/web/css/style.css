@@ -39,7 +39,7 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: #070504 url('../assets/bg.webp?v=6') center / cover no-repeat;
+    background: #070504 url('../assets/bg_loading.webp?v=7') center / cover no-repeat;
     opacity: 1;
     filter: blur(0);
     transform: scale(1);
@@ -434,8 +434,8 @@ body.fuel-pump-open #job-objective {
     border-color: #d4521f;
 }
 
-/* ═══ LOADING ═══ */
-.screen--loading {
+/* ═══ LOADING (legacy screens only — Forza uses nui_loading.css) ═══ */
+.screen--loading:not(.nui-forza-load) {
     display: flex;
     flex-direction: column;
     align-items: center;

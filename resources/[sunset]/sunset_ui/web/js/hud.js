@@ -6,7 +6,7 @@ const Hud = {
     hintTimers: {},
     hintState: {
         engine: { label: 'ENGINE OFF', key: '2', ok: false },
-        lock: { label: 'UNLOCKED', key: 'N', ok: true },
+        lock: { label: 'UNLOCKED', key: 'U', ok: true },
         seatbelt: { label: 'SEATBELT OFF', key: 'K', ok: false },
         lights: { label: 'LIGHTS OFF', key: 'H', ok: false },
     },
@@ -256,7 +256,7 @@ const Hud = {
         };
         this.hintState.lock = {
             label: data.locked ? 'LOCKED' : 'UNLOCKED',
-            key: 'N',
+            key: 'U',
             ok: !data.locked,
             tone: data.locked ? 'off' : 'on',
             hidden: !supportsDoorLock,

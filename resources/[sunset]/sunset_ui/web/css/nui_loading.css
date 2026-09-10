@@ -1,0 +1,255 @@
+/* Forza HUD loading — handoff bridge + post-auth/spawn loading */
+
+#screen-handoff.nui-forza-load,
+#screen-loading.nui-forza-load {
+    display: block !important;
+    position: relative;
+    overflow: hidden;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    --nui-load-text: #ffffff;
+    --nui-load-muted: rgba(255, 255, 255, 0.6);
+    --nui-load-accent: #00ffcc;
+    --nui-load-danger: #ff3366;
+    --nui-load-shadow-heavy: 0 10px 30px rgba(0, 0, 0, 0.9);
+    --nui-load-shadow-text: 0 4px 12px rgba(0, 0, 0, 0.9);
+}
+
+#screen-handoff.nui-forza-load::before,
+#screen-loading.nui-forza-load::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: #050508 url('../assets/bg_loading.webp?v=8') center / cover no-repeat;
+    animation: nuiLoadPan 40s linear infinite alternate;
+}
+
+@keyframes nuiLoadPan {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.1) translate(-2%, 2%); }
+}
+
+#screen-handoff.nui-forza-load .nui-load-vignette,
+#screen-loading.nui-forza-load .nui-load-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+#screen-handoff.nui-forza-load .hud-wrapper,
+#screen-loading.nui-forza-load .hud-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transform: skewX(-6deg);
+    pointer-events: none;
+    transition: opacity 360ms ease, transform 520ms cubic-bezier(0.22, 1, 0.36, 1), filter 360ms ease;
+}
+
+#screen-handoff.nui-forza-load.is-fading .hud-wrapper,
+#screen-loading.nui-forza-load.is-fading .hud-wrapper {
+    opacity: 0;
+    filter: blur(6px);
+    transform: skewX(-6deg) translateY(12px);
+}
+
+#screen-handoff.nui-forza-load .brand-container,
+#screen-loading.nui-forza-load .brand-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    filter: drop-shadow(var(--nui-load-shadow-text));
+}
+
+#screen-handoff.nui-forza-load .brand-title,
+#screen-loading.nui-forza-load .brand-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 64px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--nui-load-text);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 0.9;
+}
+
+#screen-handoff.nui-forza-load .brand-title span,
+#screen-loading.nui-forza-load .brand-title span {
+    color: var(--nui-load-accent);
+}
+
+#screen-handoff.nui-forza-load .brand-subtitle,
+#screen-loading.nui-forza-load .brand-subtitle {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--nui-load-muted);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-top: 5px;
+    padding-left: 5px;
+    border-left: 4px solid var(--nui-load-accent);
+}
+
+#screen-handoff.nui-forza-load .bottom-area,
+#screen-loading.nui-forza-load .bottom-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    gap: 40px;
+}
+
+#screen-handoff.nui-forza-load .tips-container,
+#screen-loading.nui-forza-load .tips-container {
+    max-width: 450px;
+    filter: drop-shadow(var(--nui-load-shadow-text));
+}
+
+#screen-handoff.nui-forza-load .tips-header,
+#screen-loading.nui-forza-load .tips-header {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--nui-load-accent);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+#screen-handoff.nui-forza-load .tips-header::before,
+#screen-loading.nui-forza-load .tips-header::before {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 12px;
+    background: var(--nui-load-accent);
+    border-radius: 50%;
+    animation: nuiLoadPulseGlow 2s infinite;
+}
+
+@keyframes nuiLoadPulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.6); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 255, 204, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); }
+}
+
+#screen-handoff.nui-forza-load .tips-text,
+#screen-loading.nui-forza-load .tips-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--nui-load-text);
+    line-height: 1.5;
+    min-height: 48px;
+    transition: opacity 0.4s ease;
+}
+
+#screen-handoff.nui-forza-load .speedometer-loading,
+#screen-loading.nui-forza-load .speedometer-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    filter: drop-shadow(var(--nui-load-shadow-heavy));
+}
+
+#screen-handoff.nui-forza-load .massive-pct,
+#screen-loading.nui-forza-load .massive-pct {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 180px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--nui-load-text);
+    line-height: 0.75;
+    letter-spacing: -5px;
+    margin-bottom: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+#screen-handoff.nui-forza-load .massive-pct span,
+#screen-loading.nui-forza-load .massive-pct span {
+    font-size: 60px;
+    color: var(--nui-load-accent);
+    letter-spacing: 0;
+    margin-left: -5px;
+}
+
+#screen-handoff.nui-forza-load .loading-status-text,
+#screen-loading.nui-forza-load .loading-status-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--nui-load-text);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#screen-handoff.nui-forza-load .loading-status-text .file-count,
+#screen-loading.nui-forza-load .loading-status-text .file-count {
+    color: var(--nui-load-accent);
+    font-weight: 900;
+}
+
+#screen-handoff.nui-forza-load .rpm-bar-container,
+#screen-loading.nui-forza-load .rpm-bar-container {
+    display: flex;
+    gap: 4px;
+    width: 400px;
+    height: 16px;
+}
+
+#screen-handoff.nui-forza-load .rpm-segment,
+#screen-loading.nui-forza-load .rpm-segment {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.1s linear, box-shadow 0.1s linear;
+}
+
+#screen-handoff.nui-forza-load .rpm-segment.active,
+#screen-loading.nui-forza-load .rpm-segment.active {
+    background: var(--nui-load-accent);
+    border-color: var(--nui-load-accent);
+    box-shadow: 0 0 10px var(--nui-load-accent);
+}
+
+#screen-handoff.nui-forza-load .rpm-segment.active.redline,
+#screen-loading.nui-forza-load .rpm-segment.active.redline {
+    background: var(--nui-load-danger);
+    border-color: var(--nui-load-danger);
+    box-shadow: 0 0 10px var(--nui-load-danger);
+}
+
+@media (max-width: 900px) {
+    #screen-handoff.nui-forza-load .hud-wrapper,
+    #screen-loading.nui-forza-load .hud-wrapper { padding: 32px 24px; }
+    #screen-handoff.nui-forza-load .brand-title,
+    #screen-loading.nui-forza-load .brand-title { font-size: 42px; }
+    #screen-handoff.nui-forza-load .massive-pct,
+    #screen-loading.nui-forza-load .massive-pct { font-size: 110px; }
+    #screen-handoff.nui-forza-load .rpm-bar-container,
+    #screen-loading.nui-forza-load .rpm-bar-container { width: min(400px, 72vw); }
+    #screen-handoff.nui-forza-load .bottom-area,
+    #screen-loading.nui-forza-load .bottom-area { flex-direction: column; align-items: flex-start; gap: 28px; }
+    #screen-handoff.nui-forza-load .speedometer-loading,
+    #screen-loading.nui-forza-load .speedometer-loading { align-items: flex-start; width: 100%; }
+    #screen-handoff.nui-forza-load .loading-status-text,
+    #screen-loading.nui-forza-load .loading-status-text { justify-content: flex-start; }
+}

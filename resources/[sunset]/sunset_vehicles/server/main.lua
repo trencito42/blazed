@@ -226,7 +226,7 @@ exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, veh
     if not veh then return nil, 'Vehicle not found' end
 
     if veh.destroyed == 1 or veh.destroyed == true or veh.destroyed == '1' then
-        return nil, 'Acest vehicul este distrus! Revendică asigurarea din meniul garajului (/v).'
+        return nil, 'This vehicle is totaled. File an insurance claim from the garage menu (/v).'
     end
 
     local stored = normalizeStored(veh.stored)
@@ -304,7 +304,7 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
     if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
         local driver = GetPedInVehicleSeat(vehicle, -1)
         if driver ~= 0 and driver ~= playerPed then
-            return nil, 'Vehiculul este condus în acest moment de altcineva'
+            return nil, 'Someone else is currently driving this vehicle.'
         end
     end
 
@@ -403,7 +403,7 @@ RegisterNetEvent('sunset:server:vehicleDestroyed', function(netId, plate)
     end
 
     TriggerClientEvent('sunset:client:notify', src,
-        ('Vehiculul tău [%s] a fost distrus! Asigurare: nivel %d/11 (Taxă: $%s) · Puncte rămase: %d. Deschide /v pentru recuperare.'):format(
+        ('Your vehicle [%s] was totaled. Insurance tier %d/11 · Claim fee: $%s · Points remaining: %d. Open /v to recover it.'):format(
             plate, nextLevel, claimCost, nextPoints
         ),
         'error'
@@ -421,25 +421,25 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:claimVehicleInsurance', function(source, vehicleId)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return nil, 'Nu ești conectat cu un caracter' end
+    if not char then return nil, 'No active character loaded.' end
 
     vehicleId = tonumber(vehicleId)
-    if not vehicleId then return nil, 'Vehicul invalid' end
+    if not vehicleId then return nil, 'Invalid vehicle.' end
 
     local veh = MySQL.single.await(
         'SELECT id, model, plate, destroyed, insurance_points, insurance_level, insurance_cost, garage FROM vehicles WHERE id = ? AND character_id = ?',
         { vehicleId, char.id }
     )
-    if not veh then return nil, 'Vehiculul nu a fost găsit' end
+    if not veh then return nil, 'Vehicle not found.' end
 
     local isDestroyed = (veh.destroyed == 1 or veh.destroyed == true or veh.destroyed == '1')
     if not isDestroyed then
-        return nil, 'Acest vehicul nu este distrus. Îl poți scoate direct din garaj.'
+        return nil, 'This vehicle is not totaled. Retrieve it from the garage as usual.'
     end
 
     local points = math.max(0, tonumber(veh.insurance_points) or 0)
     if points <= 0 then
-        return nil, 'Nu mai ai puncte de asigurare! Reînnoiește asigurarea mai întâi.'
+        return nil, 'You have no insurance points left. Renew your coverage first.'
     end
 
     local baseCost = calculateVehicleInsuranceCost(veh.model, veh.insurance_cost)
@@ -448,11 +448,11 @@ exports.sunset_core:RegisterCallback('sunset:claimVehicleInsurance', function(so
 
     local paidAccount = nil
     if exports.sunset_core:RemoveMoney(source, 'bank', claimCost, 'vehicle_insurance_claim') then
-        paidAccount = 'bancă'
+        paidAccount = 'bank'
     elseif exports.sunset_core:RemoveMoney(source, 'cash', claimCost, 'vehicle_insurance_claim') then
-        paidAccount = 'numerar'
+        paidAccount = 'cash'
     else
-        return nil, ('Fonduri insuficiente. Ai nevoie de $%s (Bancă sau Cash).'):format(claimCost)
+        return nil, ('Insufficient funds. You need $%s in bank or cash.'):format(claimCost)
     end
 
     local plate = normalizePlate(veh.plate)
@@ -470,7 +470,7 @@ exports.sunset_core:RegisterCallback('sunset:claimVehicleInsurance', function(so
     ]], { veh.id, char.id })
 
     TriggerClientEvent('sunset:client:notify', source,
-        ('Asigurare revendicată cu succes pentru $%s (%s)! Vehiculul tău a fost reparat complet și te așteaptă în garaj.'):format(claimCost, paidAccount),
+        ('Insurance claim approved for $%s (%s). Your vehicle has been repaired and returned to the garage.'):format(claimCost, paidAccount),
         'success'
     )
 
@@ -494,27 +494,27 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:renewVehicleInsurance', function(source, vehicleId)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return nil, 'Nu ești conectat cu un caracter' end
+    if not char then return nil, 'No active character loaded.' end
 
     vehicleId = tonumber(vehicleId)
-    if not vehicleId then return nil, 'Vehicul invalid' end
+    if not vehicleId then return nil, 'Invalid vehicle.' end
 
     local veh = MySQL.single.await(
         'SELECT id, model, plate, insurance_points, insurance_level, insurance_cost FROM vehicles WHERE id = ? AND character_id = ?',
         { vehicleId, char.id }
     )
-    if not veh then return nil, 'Vehiculul nu a fost găsit' end
+    if not veh then return nil, 'Vehicle not found.' end
 
     local baseCost = calculateVehicleInsuranceCost(veh.model, veh.insurance_cost)
     local renewCost = math.floor(baseCost * 3)
 
     local paidAccount = nil
     if exports.sunset_core:RemoveMoney(source, 'bank', renewCost, 'vehicle_insurance_renew') then
-        paidAccount = 'bancă'
+        paidAccount = 'bank'
     elseif exports.sunset_core:RemoveMoney(source, 'cash', renewCost, 'vehicle_insurance_renew') then
-        paidAccount = 'numerar'
+        paidAccount = 'cash'
     else
-        return nil, ('Fonduri insuficiente. Ai nevoie de $%s pentru reînnoirea a 5 puncte de asigurare.'):format(renewCost)
+        return nil, ('Insufficient funds. You need $%s to renew 5 insurance points.'):format(renewCost)
     end
 
     MySQL.update.await([[
@@ -524,7 +524,7 @@ exports.sunset_core:RegisterCallback('sunset:renewVehicleInsurance', function(so
     ]], { veh.id, char.id })
 
     TriggerClientEvent('sunset:client:notify', source,
-        ('Ai achiziționat +5 puncte de asigurare pentru $%s (%s)!'):format(renewCost, paidAccount),
+        ('Purchased +5 insurance points for $%s (%s).'):format(renewCost, paidAccount),
         'success'
     )
 

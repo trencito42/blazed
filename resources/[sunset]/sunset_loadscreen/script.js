@@ -7,19 +7,19 @@ const rpmContainer = document.getElementById('rpm-bar');
 
 const TOTAL_SEGMENTS = 25;
 const TASKS = [
-    'Se descarcă pachetele de sunet',
-    'Se încarcă vehiculele custom',
-    'Sincronizare inventar jucător',
-    'Generare LOD-uri hartă',
-    'Validare conexiune server',
+    'Downloading audio packages',
+    'Loading custom vehicles',
+    'Syncing player data',
+    'Preparing map assets',
+    'Validating server connection',
 ];
 
 const TIPS = [
-    'Respectă regulile de Roleplay în orice moment. Folosește tasta G pentru meniul rapid de interacțiune.',
-    'Poți ajusta volumul vocal din setările jocului. HUD-ul îți va arăta raza de acțiune.',
-    'Vehiculele lăsate pe mijlocul drumului vor fi ridicate de Poliție la restart.',
-    'Folosește tasta G pentru a deschide meniul rapid de interacțiune cu jucătorii din jur.',
-    'Pentru raportări folosește comanda /report. Un admin te va prelua imediat.',
+    'Stay in character at all times. Press G to open the quick interaction menu.',
+    'Your voice range is shown on the HUD. Adjust voice settings in the pause menu.',
+    'Vehicles left in traffic lanes may be impounded after server restarts.',
+    'Press G near other players to open contextual interaction options.',
+    'Need help? Use /report and describe the issue clearly.',
 ];
 
 let segments = [];
@@ -50,7 +50,7 @@ function updateRpmBar(pct) {
 }
 
 function fileLabel(pct) {
-    if (pct >= 90) return 'COMPLET';
+    if (pct >= 90) return 'COMPLETE';
     const mbLoaded = Math.floor(pct * 14.5);
     return `${mbLoaded} MB / 1450 MB`;
 }
@@ -72,7 +72,7 @@ function setProgress(pct, task, files) {
 function finishHandoff() {
     clearTimeout(simTimer);
     simTimer = null;
-    setProgress(100, 'Pregătit! Intrăm în sesiune...', '');
+    setProgress(100, 'Entering session...', '');
     segments.forEach((seg) => {
         seg.classList.add('active');
         if (seg.classList.contains('is-redline')) seg.classList.add('redline');
@@ -102,7 +102,7 @@ const handlers = {
         useRealProgress = true;
         clearTimeout(simTimer);
         simTimer = null;
-        setProgress((data.loadFraction || 0) * 100, 'Se încarcă resursele jocului...');
+        setProgress((data.loadFraction || 0) * 100, 'Loading game assets...');
     },
     startInitFunctionOrder(data) {
         useRealProgress = true;
@@ -124,7 +124,7 @@ const handlers = {
     startDataFileEntries(data) {
         useRealProgress = true;
         if (data && data.count) {
-            taskEl.innerText = `Se descarcă ${data.count} fișiere...`;
+            taskEl.innerText = `Downloading ${data.count} files...`;
         }
     },
     onDataFileEntry(data) {
@@ -135,7 +135,7 @@ const handlers = {
         useRealProgress = true;
         if (data && data.idx !== undefined && data.count) {
             const pct = (Number(data.idx) / Number(data.count)) * 100;
-            setProgress(pct, 'Se încarcă harta...');
+            setProgress(pct, 'Loading map data...');
         }
     },
 };

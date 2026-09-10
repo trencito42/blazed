@@ -1,8 +1,8 @@
 const SPAWN_META = {
-    last: { status: 'Safe', risk: 'Scăzut', statusClass: 'val-safe', riskClass: '' },
-    default: { status: 'Public', risk: 'Mediu', statusClass: '', riskClass: '' },
-    house: { status: 'Proprietate', risk: 'Zero', statusClass: 'val-safe', riskClass: '' },
-    hq: { status: 'Facțiune', risk: 'Scăzut', statusClass: 'val-safe', riskClass: '' },
+    last: { status: 'Safe', risk: 'Low', statusClass: 'val-safe', riskClass: '' },
+    default: { status: 'Public', risk: 'Medium', statusClass: '', riskClass: '' },
+    house: { status: 'Property', risk: 'None', statusClass: 'val-safe', riskClass: '' },
+    hq: { status: 'Faction', risk: 'Low', statusClass: 'val-safe', riskClass: '' },
 };
 
 const SpawnSelector = {
@@ -39,11 +39,11 @@ const SpawnSelector = {
         const riskEl = document.getElementById('spawn-info-risk');
         if (!item || !statusEl || !riskEl) return;
         const status = item.dataset.status || 'Safe';
-        const risk = item.dataset.risk || 'Scăzut';
+        const risk = item.dataset.risk || 'Low';
         statusEl.textContent = status;
         riskEl.textContent = risk;
         statusEl.className = 'spawn-detail-value ' + (status === 'Public' ? '' : 'val-safe');
-        riskEl.className = 'spawn-detail-value ' + (risk === 'Ridicat' ? 'val-danger' : '');
+        riskEl.className = 'spawn-detail-value ' + (risk === 'High' ? 'val-danger' : '');
     },
 
     select(location) {
@@ -84,9 +84,9 @@ const SpawnSelector = {
             house.disabled = !home;
             house.dataset.propertyId = home?.id || '';
             const label = house.querySelector('.spawn-loc-label');
-            if (label) label.textContent = home?.label || 'Proprietate';
+            if (label) label.textContent = home?.label || 'Property';
             const meta = SPAWN_META.house;
-            house.dataset.status = home?.access_type === 'owner' ? 'Proprietate' : 'Chirie';
+            house.dataset.status = home?.access_type === 'owner' ? 'Property' : 'Rental';
             house.dataset.risk = meta.risk;
         }
 
@@ -97,8 +97,8 @@ const SpawnSelector = {
             hqItem.classList.toggle('hidden', !hasHq);
             hqItem.disabled = !hasHq;
             const label = hqItem.querySelector('.spawn-loc-label');
-            if (label) label.textContent = hq?.label || 'HQ Facțiune';
-            hqItem.dataset.status = hq?.hidden ? 'HQ Ascuns' : 'HQ Facțiune';
+            if (label) label.textContent = hq?.label || 'Faction HQ';
+            hqItem.dataset.status = hq?.hidden ? 'Hidden HQ' : 'Faction HQ';
             hqItem.dataset.risk = SPAWN_META.hq.risk;
         }
 

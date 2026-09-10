@@ -27,9 +27,10 @@ ensure ox_lib
 ensure pma-voice
 setr voice_useNativeAudio true
 setr voice_useSendingRangeOnly false
-setr voice_enableUi 1
+setr voice_enableUi 0
 setr voice_enableRadios 1
 setr voice_enablePhones 1
+setr voice_defaultCycle Z
 setr sv_stateBagStrictMode true
 
 # ox_inventory optional — enable after bridge migration

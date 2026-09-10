@@ -145,7 +145,7 @@ local function showVehicleHint(id)
     local mode = lightMode or 0
     local rows = {
         engine = { label = engineOn and 'ENGINE ON' or 'ENGINE OFF', key = '2', ok = engineOn, tone = engineOn and 'on' or 'off' },
-        lock = { label = locked and 'LOCKED' or 'UNLOCKED', key = 'N', ok = not locked, tone = locked and 'off' or 'on' },
+        lock = { label = locked and 'LOCKED' or 'UNLOCKED', key = 'U', ok = not locked, tone = locked and 'off' or 'on' },
         seatbelt = { label = seatbelt and 'SEATBELT ON' or 'SEATBELT OFF', key = 'K', ok = seatbelt, tone = seatbelt and 'on' or 'off' },
         lights = { label = lights[mode + 1] or 'LIGHTS OFF', key = 'H', ok = mode > 0, tone = lightTones[mode + 1] or 'off' },
     }
@@ -197,7 +197,7 @@ local function syncLockState(veh)
     locked = state == 2 or state == 3 or state == 4
 end
 
--- ═══ LOCK (N) ═══
+-- ═══ LOCK (U / /lock) ═══
 local function plateOf(veh)
     return (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
 end
@@ -209,7 +209,7 @@ local function hasKeysFor(veh)
     return ok == true
 end
 
-RegisterCommand('sunset_lock', function()
+local function toggleVehicleLock()
     if blocked() then return end
     local ped = PlayerPedId()
     local veh = getVeh()
@@ -231,8 +231,15 @@ RegisterCommand('sunset_lock', function()
         SetVehicleDoorsLockedForPlayer(veh, PlayerId(), false)
         showVehicleHint('lock')
     end)
+end
+
+RegisterCommand('sunset_lock', function()
+    toggleVehicleLock()
 end, false)
-RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'N')
+RegisterCommand('lock', function()
+    toggleVehicleLock()
+end, false)
+RegisterKeyMapping('sunset_lock', 'Lock vehicle', 'keyboard', 'U')
 
 -- ═══ SEATBELT (K) ═══
 RegisterCommand('sunset_seatbelt', function()
@@ -996,7 +1003,7 @@ AddEventHandler('sunset:nui:garageClaimInsurance', function(data)
                 TriggerEvent('sunset:menu:openVehicle')
             end
         else
-            notify(err or 'Nu s-a putut revendica asigurarea.', 'error')
+            notify(err or 'Insurance claim could not be processed.', 'error')
         end
     end)
 end)
@@ -1011,7 +1018,7 @@ AddEventHandler('sunset:nui:garageRenewInsurance', function(data)
                 TriggerEvent('sunset:menu:openVehicle')
             end
         else
-            notify(err or 'Nu s-a putut reînnoi asigurarea.', 'error')
+            notify(err or 'Insurance renewal could not be processed.', 'error')
         end
     end)
 end)

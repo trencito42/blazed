@@ -44,4 +44,5 @@ dependencies {
     'sunset_ui',
     'sunset_vehicles',
     'sunset_admin',
+    'pma-voice',
 }
