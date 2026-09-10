@@ -9,11 +9,15 @@ local WEATHER_TYPES = {
     XMAS = true, SNOWLIGHT = true, BLIZZARD = true,
 }
 
+local function serverClock()
+    return tonumber(os.date('%H')), tonumber(os.date('%M'))
+end
+
 local function worldClock()
     if WorldTime.hour ~= nil and WorldTime.minute ~= nil then
         return WorldTime.hour, WorldTime.minute
     end
-    return tonumber(os.date('%H')), tonumber(os.date('%M'))
+    return serverClock()
 end
 
 local function broadcastWeather()
@@ -109,12 +113,16 @@ local function processPayday(source)
 end
 
 local function broadcastTime()
-    local hour, minute = worldClock()
-    local nextH = (hour + 1) % 24
+    local srvHour, srvMinute = serverClock()
+    local worldHour, worldMinute = worldClock()
+    local nextH = (srvHour + 1) % 24
     TriggerClientEvent('sunset:client:serverTime', -1, {
-        time = ('%02d:%02d'):format(hour, minute),
-        hour = hour,
-        minute = minute,
+        -- HUD clock (top-right) always shows real server time, not /sett world override.
+        time = ('%02d:%02d'):format(srvHour, srvMinute),
+        hour = srvHour,
+        minute = srvMinute,
+        worldHour = worldHour,
+        worldMinute = worldMinute,
         nextPayday = ('%02d:00'):format(nextH),
     })
     broadcastWeather()

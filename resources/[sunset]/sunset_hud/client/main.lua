@@ -331,8 +331,10 @@ RegisterNetEvent('sunset:client:serverTime', function(data)
     if not data then return end
     if data.time then serverTimeLabel = data.time end
     if data.nextPayday then nextPaydayLabel = data.nextPayday end
-    if data.hour and data.minute then
-        NetworkOverrideClockTime(data.hour, data.minute, 0)
+    local worldHour = data.worldHour or data.hour
+    local worldMinute = data.worldMinute or data.minute
+    if worldHour ~= nil and worldMinute ~= nil then
+        NetworkOverrideClockTime(worldHour, worldMinute, 0)
     end
 end)
 
