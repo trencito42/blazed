@@ -1,278 +1,241 @@
-/* ═══ PLAYER INTERACTION MENU (1:1 Port from server redesign/player_interaction_menu.html) ═══ */
+/* ═══ PREMIUM INTERACTION MENU (1:1 premium-interaction-menu.html) ═══ */
 
 :root {
-    --pi-bg-base: rgba(13, 13, 20, 0.94); 
-    --pi-bg-panel: rgba(255, 255, 255, 0.03);
-    --pi-bg-hover: rgba(255, 255, 255, 0.08);
-    --pi-bg-input: rgba(0, 0, 0, 0.4);
-    
     --pi-text-main: #ffffff;
-    --pi-text-muted: rgba(255, 255, 255, 0.5);
-    
-    --pi-accent: #00ffcc; /* Cyan Principal */
-    --pi-warning: #ffcc00; /* Galben pt Faction */
-    --pi-danger: #ff3366; /* Rosu pt Admin/Negative */
-    --pi-admin-glow: rgba(255, 51, 102, 0.15);
-    
-    --pi-border: rgba(255, 255, 255, 0.1);
-    --pi-radius-lg: 16px;
-    --pi-radius-md: 10px;
-    --pi-radius-sm: 6px;
-    --pi-transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --pi-text-muted: rgba(255, 255, 255, 0.6);
+    --pi-accent: #00ffcc;
+    --pi-danger: #ff3366;
+    --pi-warning: #f59e0b;
+    --pi-shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
+    --pi-shadow-glow: 0 0 15px rgba(0, 255, 204, 0.4);
 }
 
 .player-interaction {
     position: fixed;
     inset: 0;
     z-index: 9200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
     color: var(--pi-text-main);
     font-family: 'Montserrat', sans-serif;
     user-select: none;
+    background: transparent !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    animation: pi-fade-in 0.2s ease-out both;
 }
 
-.player-interaction.hidden { display: none !important; }
+.player-interaction.hidden {
+    display: none !important;
+}
 
-.player-interaction__shade {
+.player-interaction.is-menu-open {
+    pointer-events: auto;
+}
+
+/* ── WORLD-SPACE TOOLTIP ── */
+.pi-world-target {
     position: absolute;
-    inset: 0;
-    cursor: pointer;
-    background: transparent;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-}
-
-/* --- CUTIA PRINCIPALA A MENIULUI (1:1 interact-box) --- */
-.interact-box {
-    width: 320px;
-    max-height: min(720px, calc(100vh - 60px));
-    background: var(--pi-bg-base);
-    border: 1px solid var(--pi-border);
-    border-radius: var(--pi-radius-lg);
+    z-index: 10;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
-    animation: pi-box-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-}
-
-@keyframes pi-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes pi-box-in {
-    from { opacity: 0; transform: scale(0.9) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* --- HEADER JUCATOR TINTA --- */
-.target-header {
-    padding: 22px 22px 18px 22px;
-    border-bottom: 1px solid var(--pi-border);
-    display: flex;
     align-items: center;
-    gap: 14px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
-    border-radius: var(--pi-radius-lg) var(--pi-radius-lg) 0 0;
-    position: relative;
+    gap: 4px;
+    transform: translate(-50%, -50%) skewX(-5deg);
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
+    animation: pi-float-target 3s ease-in-out infinite;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
 }
 
-.target-avatar {
-    width: 46px;
-    height: 46px;
-    background: var(--pi-bg-input);
-    border: 1px solid var(--pi-border);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--pi-accent);
-    flex-shrink: 0;
+@keyframes pi-float-target {
+    0% { margin-top: 0; }
+    50% { margin-top: -12px; }
+    100% { margin-top: 0; }
 }
 
-.target-avatar svg {
-    width: 24px;
-    height: 24px;
-    stroke: currentColor;
-    stroke-width: 2;
-    fill: none;
+.pi-world-target.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) skewX(-5deg) scale(0.8);
+    pointer-events: none;
 }
 
-.target-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.target-name {
-    font-size: 16px;
+.pi-target-name {
+    font-size: 28px;
     font-weight: 900;
     color: var(--pi-text-main);
-    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: var(--pi-shadow-text);
+    max-width: min(90vw, 520px);
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-transform: uppercase;
 }
 
-.target-id {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--pi-accent);
-    margin-top: 2px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.target-badge {
-    display: inline-block;
-    padding: 2px 6px;
-    font-size: 9px;
-    font-weight: 800;
-    border-radius: 4px;
-    background: rgba(0, 255, 204, 0.12);
-    color: var(--pi-accent);
-    border: 1px solid rgba(0, 255, 204, 0.3);
-}
-
-.target-badge.badge--danger {
-    background: rgba(255, 51, 102, 0.15);
-    color: var(--pi-danger);
-    border-color: rgba(255, 51, 102, 0.35);
-}
-
-/* Iconita inchidere */
-.btn-close {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--pi-bg-panel);
-    border: 1px solid var(--pi-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--pi-text-muted);
-    cursor: pointer;
-    transition: var(--pi-transition);
-    padding: 0;
-}
-
-.btn-close:hover {
-    background: var(--pi-danger);
-    border-color: var(--pi-danger);
-    color: #fff;
-    transform: rotate(90deg);
-}
-
-.btn-close svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    stroke-width: 2.2;
-    fill: none;
-}
-
-/* --- GRUPURI DE ACTIUNI (action-container) --- */
-.action-container {
-    padding: 14px 20px 20px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    max-height: 520px;
-    overflow-y: auto;
-}
-
-.action-container::-webkit-scrollbar { width: 4px; }
-.action-container::-webkit-scrollbar-track { background: transparent; }
-.action-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
-
-.action-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.group-title {
-    font-size: 10px;
-    font-weight: 800;
-    color: var(--pi-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 4px;
-    padding-left: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.group-title svg {
-    width: 12px;
-    height: 12px;
-    stroke: currentColor;
-    stroke-width: 2;
-    fill: none;
-}
-
-/* Standard Action Card / Button */
-.act-btn {
-    background: var(--pi-bg-panel);
-    border: 1px solid transparent;
-    padding: 11px 14px;
-    border-radius: var(--pi-radius-md);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    cursor: pointer;
-    transition: var(--pi-transition);
-    color: var(--pi-text-main);
-    font-family: 'Montserrat', sans-serif;
-    position: relative;
-    user-select: none;
-}
-
-.act-btn__main {
+.pi-target-action {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--pi-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
-.act-btn:hover {
-    background: var(--pi-bg-hover);
-    transform: translateX(4px);
-    border-color: rgba(255, 255, 255, 0.12);
-}
-
-.act-btn:active {
-    transform: scale(0.98);
-}
-
-.act-icon {
+.pi-key-circle-wrapper {
+    position: relative;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--pi-accent);
-    flex-shrink: 0;
 }
 
-.act-icon svg {
-    width: 18px;
-    height: 18px;
+.pi-key-letter {
+    position: absolute;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--pi-text-main);
+    transform: skewX(5deg);
+    text-shadow: var(--pi-shadow-text);
+}
+
+.pi-key-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.pi-circle-track {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.6);
+    stroke-width: 4;
+}
+
+.pi-circle-progress {
+    fill: none;
+    stroke: var(--pi-accent);
+    stroke-width: 4;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px var(--pi-accent));
+    transition: stroke-dashoffset 0.08s linear;
+}
+
+/* ── SCREEN-SPACE MENU ── */
+.pi-screen-menu {
+    position: absolute;
+    top: 50%;
+    right: 80px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 15px;
+    transform: translateY(-50%) skewX(-5deg) translateX(50px);
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-height: calc(100vh - 80px);
+}
+
+.pi-screen-menu.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(-50%) skewX(-5deg) translateX(0);
+}
+
+.pi-menu-title {
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--pi-accent);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.pi-menu-title::after {
+    content: '';
+    width: 20px;
+    height: 2px;
+    background: var(--pi-accent);
+}
+
+.pi-menu-items {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-end;
+    overflow-y: auto;
+    max-height: min(520px, calc(100vh - 160px));
+    padding-right: 4px;
+}
+
+.pi-menu-items::-webkit-scrollbar { width: 3px; }
+.pi-menu-items::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+
+.pi-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 15px;
+    font-size: 22px;
+    font-style: italic;
+    font-weight: 800;
+    color: var(--pi-text-main);
+    text-transform: uppercase;
+    cursor: pointer;
+    padding-right: 0;
+    border-right: 0 solid transparent;
+    text-shadow: var(--pi-shadow-text);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: none;
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+    font-family: inherit;
+}
+
+.pi-menu-item:hover {
+    color: var(--pi-accent);
+    padding-right: 15px;
+    border-right-width: 4px;
+    border-right-style: solid;
+    border-right-color: var(--pi-accent);
+    text-shadow: var(--pi-shadow-glow), 0 2px 5px rgba(0, 0, 0, 0.9);
+    transform: translateX(-10px);
+}
+
+.pi-menu-item.danger:hover {
+    color: var(--pi-danger);
+    border-right-color: var(--pi-danger);
+    text-shadow: 0 0 15px rgba(255, 51, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.9);
+}
+
+.pi-menu-item--close {
+    margin-top: 10px;
+    font-size: 16px;
+    color: var(--pi-text-muted);
+}
+
+.pi-menu-item--close:hover {
+    color: var(--pi-text-main);
+    border-right-color: var(--pi-text-muted);
+}
+
+.pi-menu-icon {
+    width: 24px;
+    height: 24px;
+    transform: skewX(5deg);
+    flex-shrink: 0;
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
@@ -280,82 +243,80 @@
     stroke-linejoin: round;
 }
 
-.act-text {
-    font-size: 13px;
-    font-weight: 700;
-    flex: 1;
-    text-align: left;
+.pi-menu-item span {
+    transform: skewX(5deg);
 }
 
-.act-btn--danger .act-icon {
-    color: var(--pi-danger);
+/* ── INPUT PANEL (give cash etc.) ── */
+.pi-input-panel {
+    width: min(320px, calc(100vw - 120px));
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    transform: skewX(5deg);
 }
-.act-btn--danger:hover {
-    background: var(--pi-admin-glow);
-    border-color: rgba(255, 51, 102, 0.4);
+
+.pi-input-panel.hidden { display: none !important; }
+
+.pi-input-panel__label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--pi-accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
 }
 
-/* Faction Group (Galben) */
-.group-faction .group-title { color: var(--pi-warning); }
-.group-faction .act-btn:hover { background: rgba(255, 204, 0, 0.05); border-color: rgba(255, 204, 0, 0.3); }
-.group-faction .act-icon { color: var(--pi-warning); }
-
-/* Admin Group (Rosu) */
-.group-admin .group-title { color: var(--pi-danger); }
-.group-admin .act-btn { border: 1px solid rgba(255, 51, 102, 0.1); }
-.group-admin .act-btn:hover { background: var(--pi-admin-glow); border-color: rgba(255, 51, 102, 0.4); }
-.group-admin .act-icon { color: var(--pi-danger); }
-
-/* Inline input for actions needing input (e.g. Give cash) */
-.act-input-row {
+.pi-input-panel__row {
     display: flex;
-    align-items: center;
     gap: 8px;
-    width: 100%;
-    margin-top: 4px;
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.act-input {
+.pi-input-panel__field {
     flex: 1;
-    background: var(--pi-bg-input);
-    border: 1px solid var(--pi-border);
-    border-radius: var(--pi-radius-sm);
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
     color: #fff;
-    padding: 6px 10px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 12px;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 13px;
     font-weight: 600;
     outline: none;
-    transition: var(--pi-transition);
 }
 
-.act-input:focus {
+.pi-input-panel__field:focus {
     border-color: var(--pi-accent);
-    box-shadow: 0 0 8px rgba(0, 255, 204, 0.3);
+    box-shadow: 0 0 8px rgba(0, 255, 204, 0.25);
 }
 
-.act-submit {
+.pi-input-panel__submit {
     background: var(--pi-accent);
     color: #000;
     border: none;
-    border-radius: var(--pi-radius-sm);
-    padding: 6px 12px;
-    font-family: 'Montserrat', sans-serif;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-family: inherit;
     font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
     cursor: pointer;
-    transition: var(--pi-transition);
+    transition: box-shadow 0.2s ease;
 }
 
-.act-submit:hover {
+.pi-input-panel__submit:hover {
     box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
 }
 
-.act-submit:disabled {
+.pi-input-panel__submit:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
+}
+
+@media (max-width: 900px), (max-height: 700px) {
+    .pi-screen-menu { right: 24px; }
+    .pi-target-name { font-size: 22px; }
+    .pi-menu-item { font-size: 18px; }
 }

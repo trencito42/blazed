@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="css/spawn.css?v=3">
     <link rel="stylesheet" href="css/gameplay_glass.css?v=6">
     <link rel="stylesheet" href="css/mdc_tablet.css?v=12">
-    <link rel="stylesheet" href="css/player_interaction.css?v=3">
+    <link rel="stylesheet" href="css/player_interaction.css?v=4">
     <link rel="stylesheet" href="css/atm.css?v=1">
     <link rel="stylesheet" href="css/battlepass.css?v=2">
     <link rel="stylesheet" href="css/redesign.css?v=11">
@@ -2918,24 +2918,33 @@
         </div>
     </div>
 
-    <!-- NEARBY PLAYER INTERACTION (1:1 from player_interaction_menu.html) -->
+    <!-- PREMIUM INTERACTION MENU (1:1 premium-interaction-menu.html) -->
     <div id="player-interaction" class="player-interaction hidden" aria-hidden="true">
-        <div class="player-interaction__shade"></div>
-        <div class="interact-box" id="player-interaction-box">
-            <div class="target-header">
-                <button type="button" class="btn-close" id="player-interaction-close" title="Close (ESC)">
-                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-                <div class="target-avatar">
-                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <div class="pi-world-target hidden" id="pi-world-target">
+            <div class="pi-target-name" id="pi-target-name">PLAYER</div>
+            <div class="pi-target-action">
+                <span>Hold</span>
+                <div class="pi-key-circle-wrapper">
+                    <span class="pi-key-letter" id="pi-key-letter">G</span>
+                    <svg class="pi-key-svg" viewBox="0 0 36 36" aria-hidden="true">
+                        <circle class="pi-circle-track" cx="18" cy="18" r="16"></circle>
+                        <circle class="pi-circle-progress" id="pi-progress-ring" cx="18" cy="18" r="16"></circle>
+                    </svg>
                 </div>
-                <div class="target-info">
-                    <div class="target-name" id="player-interaction-name">PLAYER</div>
-                    <div class="target-id">Jucător ID: <span id="player-interaction-id">?</span> <span id="player-interaction-badge" class="target-badge hidden"></span></div>
+                <span>To Interact</span>
+            </div>
+        </div>
+
+        <div class="pi-screen-menu" id="pi-screen-menu">
+            <div class="pi-menu-title" id="pi-menu-title">Acțiuni Jucător</div>
+            <div class="pi-menu-items" id="pi-menu-items"></div>
+            <div class="pi-input-panel hidden" id="pi-input-panel">
+                <div class="pi-input-panel__label" id="pi-input-label"></div>
+                <div class="pi-input-panel__row">
+                    <input type="text" class="pi-input-panel__field" id="pi-input-field" autocomplete="off">
+                    <button type="button" class="pi-input-panel__submit" id="pi-input-submit">OK</button>
                 </div>
             </div>
-
-            <div class="action-container" id="player-interaction-groups"></div>
         </div>
     </div>
 
@@ -3086,7 +3095,7 @@
     <script src="js/factions.js?v=9"></script>
     <script src="js/clans.js?v=13"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
-    <script src="js/player_interaction.js?v=1"></script>
+    <script src="js/player_interaction.js?v=2"></script>
     <script src="js/atm.js?v=1"></script>
     <script src="js/battlepass.js?v=1"></script>
 </body>

@@ -3,6 +3,11 @@ local activeTarget = nil
 local promptTarget = nil
 local promptPlayer = nil
 local contextRequestActive = false
+local holdingInteract = false
+local holdStart = nil
+local lastPromptVisible = false
+
+local HOLD_MS = 800
 
 local function notify(message, kind, duration)
     exports.sunset_ui:Notify(message, kind or 'info', duration)
@@ -46,9 +51,29 @@ local function playerFromServerId(serverId)
     return nil
 end
 
-local function drawPlayerPrompt(player)
-    local ped = player and GetPlayerPed(player) or 0
-    if ped == 0 or not DoesEntityExist(ped) then return end
+local function getPromptDisplayName(player)
+    local serverId = GetPlayerServerId(player)
+    local name = GetPlayerName(player) or ('Player #' .. serverId)
+    return ('%s (%d)'):format(name, serverId)
+end
+
+local function hidePlayerPrompt()
+    if not lastPromptVisible then return end
+    lastPromptVisible = false
+    exports.sunset_ui:Send('playerInteractionPrompt', { visible = false })
+end
+
+local function sendPlayerPrompt(player, progress)
+    if not player then
+        hidePlayerPrompt()
+        return
+    end
+
+    local ped = GetPlayerPed(player)
+    if ped == 0 or not DoesEntityExist(ped) then
+        hidePlayerPrompt()
+        return
+    end
 
     local headCoords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
     if headCoords.x == 0.0 and headCoords.y == 0.0 and headCoords.z == 0.0 then
@@ -58,34 +83,20 @@ local function drawPlayerPrompt(player)
     end
 
     local visible, screenX, screenY = World3dToScreen2d(headCoords.x, headCoords.y, headCoords.z)
-    if not visible then return end
+    if not visible then
+        hidePlayerPrompt()
+        return
+    end
 
-    local camCoords = GetGameplayCamCoords()
-    local dist = #(camCoords - headCoords)
-    local fov = (1.0 / GetGameplayCamFov()) * 100.0
-    local scale = (1.0 / dist) * fov * 0.55
-    if scale < 0.22 then scale = 0.22 end
-    if scale > 0.32 then scale = 0.32 end
-
-    local boxW = 0.088 * (scale / 0.28)
-    local boxH = 0.028 * (scale / 0.28)
-
-    -- Dark glass badge background (matches --pi-bg-base: rgba(13, 13, 20, 0.94))
-    DrawRect(screenX, screenY + 0.0125, boxW, boxH, 13, 13, 20, 225)
-
-    -- Cyan accent bottom border (matches --pi-accent: #00ffcc)
-    DrawRect(screenX, screenY + 0.0125 + (boxH / 2) - 0.001, boxW, 0.0022, 0, 255, 204, 255)
-
-    -- Crisp text: [G] INTERACTION
-    SetTextFont(4)
-    SetTextScale(0.0, scale)
-    SetTextCentre(true)
-    SetTextColour(255, 255, 255, 255)
-    SetTextDropshadow(2, 0, 0, 0, 255)
-    SetTextOutline()
-    BeginTextCommandDisplayText('STRING')
-    AddTextComponentSubstringPlayerName('~HUD_COLOUR_NET_PLAYER1~[G]~s~  INTERACTION')
-    EndTextCommandDisplayText(screenX, screenY)
+    lastPromptVisible = true
+    exports.sunset_ui:Send('playerInteractionPrompt', {
+        visible = true,
+        x = screenX * 100.0,
+        y = screenY * 100.0,
+        name = getPromptDisplayName(player),
+        progress = progress or 0.0,
+        key = 'G',
+    })
 end
 
 local function closeMenu()
@@ -105,6 +116,10 @@ local function openMenu()
     local targetId = closestPlayer(3.0)
     if not targetId then return notify('No player is close enough. Move within 3 metres and try again.', 'info') end
 
+    hidePlayerPrompt()
+    holdingInteract = false
+    holdStart = nil
+
     contextRequestActive = true
     local context, err = Sunset.AwaitCallback('sunset:interactionContext', targetId)
     contextRequestActive = false
@@ -121,17 +136,32 @@ local function openMenu()
     exports.sunset_ui:SetFocus(true, true)
 end
 
-
 AddEventHandler('sunset:client:chatFocusChanged', function(open)
     if open == true then
         contextRequestActive = false
+        holdingInteract = false
+        holdStart = nil
         if menuOpen then closeMenu() end
     end
 end)
 
-RegisterCommand('interactplayer', openMenu, false)
 RegisterCommand('interact', openMenu, false)
-RegisterKeyMapping('interactplayer', 'Interact with nearby player', 'keyboard', 'G')
+
+RegisterCommand('+interactplayer', function()
+    if menuOpen or contextRequestActive or inputIsBusy() or not promptPlayer then return end
+    holdingInteract = true
+    holdStart = GetGameTimer()
+end, false)
+
+RegisterCommand('-interactplayer', function()
+    holdingInteract = false
+    holdStart = nil
+    if not menuOpen and promptPlayer then
+        sendPlayerPrompt(promptPlayer, 0.0)
+    end
+end, false)
+
+RegisterKeyMapping('+interactplayer', 'Interact with nearby player (hold)', 'keyboard', 'G')
 
 local CallbackActions = {
     cuff = 'sunset:detentionCuff',
@@ -171,7 +201,12 @@ local function refreshMenu()
     if context then exports.sunset_ui:Send('playerInteractionUpdate', context) end
 end
 
-AddEventHandler('sunset:nui:playerInteractionClose', closeMenu)
+AddEventHandler('sunset:nui:playerInteractionClose', function()
+    holdingInteract = false
+    holdStart = nil
+    closeMenu()
+end)
+
 AddEventHandler('sunset:nui:playerInteractionAction', function(data)
     if not menuOpen or not activeTarget then return end
     data = type(data) == 'table' and data or {}
@@ -261,23 +296,37 @@ CreateThread(function()
             local myCoords = GetEntityCoords(me)
             local currentPed = promptPlayer and GetPlayerPed(promptPlayer) or 0
 
-            -- 1. If we already have a locked player, update and draw every frame (0ms) so it never lags behind
             if currentPed ~= 0 and DoesEntityExist(currentPed) then
                 local targetCoords = GetEntityCoords(currentPed)
                 local dist = #(myCoords - targetCoords)
                 if dist <= 3.35 and HasEntityClearLosToEntity(me, currentPed, 17) then
-                    drawPlayerPrompt(promptPlayer)
+                    if holdingInteract and holdStart then
+                        local progress = math.min(1.0, (GetGameTimer() - holdStart) / HOLD_MS)
+                        sendPlayerPrompt(promptPlayer, progress)
+                        if progress >= 1.0 then
+                            holdingInteract = false
+                            holdStart = nil
+                            openMenu()
+                        end
+                    else
+                        sendPlayerPrompt(promptPlayer, 0.0)
+                    end
                     sleep = 0
                 else
                     promptTarget = nil
                     promptPlayer = nil
+                    holdingInteract = false
+                    holdStart = nil
+                    hidePlayerPrompt()
                 end
             else
                 promptTarget = nil
                 promptPlayer = nil
+                holdingInteract = false
+                holdStart = nil
+                hidePlayerPrompt()
             end
 
-            -- 2. Periodically scan for the closest player if none locked or check timeout
             local now = GetGameTimer()
             if not promptPlayer or (now - lastScan > 200) then
                 lastScan = now
@@ -291,6 +340,9 @@ CreateThread(function()
         else
             promptTarget = nil
             promptPlayer = nil
+            holdingInteract = false
+            holdStart = nil
+            hidePlayerPrompt()
             sleep = 350
         end
 
@@ -299,5 +351,8 @@ CreateThread(function()
 end)
 
 AddEventHandler('onResourceStop', function(resource)
-    if resource == GetCurrentResourceName() then closeMenu() end
+    if resource == GetCurrentResourceName() then
+        hidePlayerPrompt()
+        closeMenu()
+    end
 end)

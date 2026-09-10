@@ -552,6 +552,9 @@ window.addEventListener('message', (event) => {
         case 'playerInteractionHide':
             if (window.PlayerInteraction) PlayerInteraction.hide();
             break;
+        case 'playerInteractionPrompt':
+            if (window.PlayerInteraction) PlayerInteraction.showPrompt(data || event.data.data);
+            break;
         case 'battlepassShow':
             if (window.Battlepass) Battlepass.show(data || event.data.data);
             break;
@@ -1021,24 +1024,36 @@ document.addEventListener('DOMContentLoaded', () => {
             requesterName: 'HORJA',
             timeout: 30,
         });
-    } else if (qa === 'interaction') {
-        window.PlayerInteraction?.show({
-            target: {
-                id: 45,
-                name: 'Mihai Dobre',
-                level: 12,
-                faction: 'Civilian',
-            },
-            actions: [
-                { id: 'trade', group: 'CIVILIAN', label: 'Propune Schimb (Trade)' },
-                { id: 'give_cash', group: 'CIVILIAN', label: 'Oferă Bani Cash', input: { type: 'number', placeholder: '$ Sumă', min: 1, max: 50000 } },
-                { id: 'show_id', group: 'CIVILIAN', label: 'Arată Buletinul' },
-                { id: 'add_contact', group: 'CIVILIAN', label: 'Adaugă la Contacte' },
-                { id: 'faction_invite', group: 'FACTION', label: 'Invită în Facțiune' },
-                { id: 'cuff', group: 'POLICE', label: 'Cuff Suspect', danger: true },
-                { id: 'frisk', group: 'POLICE', label: 'Search Player' },
-            ]
+    } else if (qa === 'interaction' || qa === 'interaction-prompt') {
+        window.PlayerInteraction?.showPrompt({
+            visible: true,
+            x: 50,
+            y: 45,
+            name: 'Alexandru M. (14)',
+            progress: 0,
+            key: 'G',
         });
+        if (qa === 'interaction') {
+            setTimeout(() => {
+                window.PlayerInteraction?.show({
+                    target: {
+                        id: 45,
+                        name: 'Mihai Dobre',
+                        level: 12,
+                        faction: 'Civilian',
+                    },
+                    actions: [
+                        { id: 'trade', group: 'CIVILIAN', label: 'Cere Buletin' },
+                        { id: 'give_cash', group: 'CIVILIAN', label: 'Oferă Bani', input: { type: 'number', placeholder: '$ Sumă', min: 1, max: 50000 } },
+                        { id: 'show_id', group: 'CIVILIAN', label: 'Arată Buletinul' },
+                        { id: 'add_contact', group: 'CIVILIAN', label: 'Adaugă la Contacte' },
+                        { id: 'faction_invite', group: 'FACTION', label: 'Invită în Facțiune' },
+                        { id: 'cuff', group: 'POLICE', label: 'Încătușează', danger: true },
+                        { id: 'frisk', group: 'POLICE', label: 'Percheziționează' },
+                    ],
+                });
+            }, 400);
+        }
     } else if (qa === 'battlepass' || qa === 'missions') {
         window.Battlepass?.show();
         if (qa === 'missions') {
