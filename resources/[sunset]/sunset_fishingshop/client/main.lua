@@ -242,12 +242,11 @@ closeFishingMenu = function()
 end
 
 local function notifyHireError(err)
-    local errMsg = err or 'Nu a functionat angajarea (fara detalii de la server).'
+    local errMsg = err or 'Hiring failed (no details from server).'
     debugHire(('FAIL: %s'):format(errMsg))
     if errMsg:find('already work', 1, true)
-        or errMsg:find('deja jobul', 1, true)
-        or errMsg:find('deja Pescar', 1, true) then
-        exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 7000)
+        or errMsg:find('already', 1, true) then
+        exports.sunset_ui:Notify('You are already a Fisherman! Press Start Shift to begin.', 'info', 7000)
         return
     end
     exports.sunset_ui:Notify(errMsg, 'error', 8000)
@@ -279,16 +278,16 @@ local function buildBillyRayActions(job)
     job = job or getCharacterJob()
 
     if job ~= 'fisherman' then
-        actions[#actions + 1] = { id = 'get_fisherman_job', label = 'Devino Pescar', group = 'CIVILIAN' }
+        actions[#actions + 1] = { id = 'get_fisherman_job', label = 'Become a Fisherman', group = 'CIVILIAN' }
     end
 
     if job == 'fisherman' then
         if isOnFishermanShift() then
-            actions[#actions + 1] = { id = 'end_fishing_shift', label = 'Opreste Tura', group = 'FISHING' }
+            actions[#actions + 1] = { id = 'end_fishing_shift', label = 'End Shift', group = 'FISHING' }
         else
-            actions[#actions + 1] = { id = 'start_fishing_shift', label = 'Incepe Tura', group = 'FISHING' }
+            actions[#actions + 1] = { id = 'start_fishing_shift', label = 'Start Shift', group = 'FISHING' }
         end
-        actions[#actions + 1] = { id = 'upgrade_fishing_rod', label = 'Upgrade Undita', group = 'FISHING' }
+        actions[#actions + 1] = { id = 'upgrade_fishing_rod', label = 'Upgrade Fishing Rod', group = 'FISHING' }
     end
 
     return actions
@@ -310,7 +309,7 @@ local function openBillyRayMenu()
         menuCloseArmed = false
         hideBillyRayPrompt()
         exports.sunset_ui:Send('playerInteractionShow', {
-            menuTitle = 'Acțiuni Pescuit',
+            menuTitle = 'Fishing Actions',
             target = { name = 'Billy Ray', id = '' },
             actions = actions,
         })
@@ -522,7 +521,7 @@ CreateThread(function()
                             exports.sunset_ui:SetFocus(true, true)
                             shopOpen = true
                         else
-                            exports.sunset_ui:Notify(err or 'Nu s-a putut deschide magazinul.', 'error')
+                            exports.sunset_ui:Notify(err or 'Could not open the shop.', 'error')
                         end
                         SetTimeout(1500, function() inCooldown = false end)
                     end)
@@ -595,9 +594,9 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             if ok then
                 syncLocalJob('fisherman', 0)
                 if err == 'already' then
-                    exports.sunset_ui:Notify('Esti deja Pescar! Apasa Incepe Tura ca sa incepi.', 'info', 8000)
+                    exports.sunset_ui:Notify('You are already a Fisherman! Press Start Shift to begin.', 'info', 8000)
                 else
-                    exports.sunset_ui:Notify('Esti acum Pescar! Apasa Incepe Tura ca sa incepi.', 'success', 8000)
+                    exports.sunset_ui:Notify('You are now a Fisherman! Press Start Shift to begin.', 'success', 8000)
                 end
             else
                 notifyHireError(err)
@@ -615,9 +614,9 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         CreateThread(function()
             local ok, err = Sunset.AwaitCallback('sunset:jobs:fisherman:endShift')
             if ok then
-                exports.sunset_ui:Notify('Tura de pescuit oprită.', 'success', 5000)
+                exports.sunset_ui:Notify('Fishing shift ended.', 'success', 5000)
             else
-                exports.sunset_ui:Notify(err or 'Nu ai o tură activă.', 'error')
+                exports.sunset_ui:Notify(err or 'You have no active shift.', 'error')
             end
             SetTimeout(2000, function() inCooldown = false end)
         end)
@@ -627,9 +626,9 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         CreateThread(function()
             local ok, msg = Sunset.AwaitCallback('sunset:fishingshop:upgradeRod')
             if ok then
-                exports.sunset_ui:Notify(msg or 'Undita upgradata!', 'success', 6000)
+                exports.sunset_ui:Notify(msg or 'Rod upgraded!', 'success', 6000)
             else
-                exports.sunset_ui:Notify(msg or 'Nu s-a putut face upgrade.', 'error')
+                exports.sunset_ui:Notify(msg or 'Could not upgrade rod.', 'error')
             end
             SetTimeout(2000, function() inCooldown = false end)
         end)
@@ -640,7 +639,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             local invData, err = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
             if invData then
                 if not invData.items or #invData.items == 0 then
-                    exports.sunset_ui:Notify('Nu ai niciun peste in inventar.', 'info')
+                    exports.sunset_ui:Notify('You have no fish in your inventory.', 'info')
                 else
                     exports.sunset_ui:Send('fishingShopShow', {
                         mode  = 'sell',
@@ -652,7 +651,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
                     shopOpen = true
                 end
             else
-                exports.sunset_ui:Notify(err or 'Eroare la incarcare inventar.', 'error')
+                exports.sunset_ui:Notify(err or 'Failed to load inventory.', 'error')
             end
             SetTimeout(2000, function() inCooldown = false end)
         end)
@@ -671,9 +670,9 @@ AddEventHandler('sunset:nui:fishingShopBuy', function(data)
     if not cart or #cart == 0 then return end
     local ok, err = Sunset.AwaitCallback('sunset:fishingshop:buyCart', cart)
     if ok then
-        exports.sunset_ui:Notify(('Achizitie reusita! -$%d'):format(ok.total or 0), 'success', 5000)
+        exports.sunset_ui:Notify(('Purchase successful! -$%d'):format(ok.total or 0), 'success', 5000)
     else
-        exports.sunset_ui:Notify(tostring(err or 'Cumparare esecuata.'), 'error')
+        exports.sunset_ui:Notify(tostring(err or 'Purchase failed.'), 'error')
     end
 end)
 
@@ -684,6 +683,6 @@ AddEventHandler('sunset:nui:fishingShopSell', function(data)
     if ok then
         exports.sunset_ui:Notify(tostring(ok), 'success', 5000)
     else
-        exports.sunset_ui:Notify(tostring(err or 'Vanzare esecuata.'), 'error')
+        exports.sunset_ui:Notify(tostring(err or 'Sale failed.'), 'error')
     end
 end)

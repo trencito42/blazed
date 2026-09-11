@@ -2358,7 +2358,7 @@ const Panels = {
         if (this._fishingShopCart.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'fishing-shop-cart-empty';
-            empty.textContent = isSell ? 'Selecteaza pestii de vandut' : 'Click pe item ca sa adaugi in cos';
+            empty.textContent = isSell ? 'Select fish to sell' : 'Click an item to add it to your cart';
             list.appendChild(empty);
         }
     },

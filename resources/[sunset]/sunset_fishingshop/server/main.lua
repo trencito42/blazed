@@ -64,17 +64,17 @@ end
 
 exports.sunset_core:RegisterCallback('sunset:fishingshop:getBillyRayMenu', function(source)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return nil, 'Personaj negasit.' end
+    if not char then return nil, 'Character not found.' end
     local job, grade = Sunset.GetCharacterJob(char)
     return { job = job or 'unemployed', job_grade = grade or 0 }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:fishingshop:hireFisherman', function(source)
     if not nearBillyRay(source) then
-        return nil, 'Trebuie sa fii langa Billy Ray.'
+        return nil, 'You need to be near Billy Ray.'
     end
     if GetResourceState('sunset_jobs') ~= 'started' then
-        return nil, 'Sistemul de joburi nu este disponibil.'
+        return nil, 'The job system is currently unavailable.'
     end
     local hres = exports.sunset_jobs:HireCivilianJob(source, 'fisherman')
     if type(hres) == 'table' and hres.ok then
@@ -93,14 +93,14 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:hireFisherman', functio
     end
     if type(err) == 'string' then
         if err:find('character is not loaded', 1, true) then
-            err = 'Personajul nu e incarcat. Reconecteaza-te si selecteaza-l din nou.'
+            err = 'Character not loaded. Reconnect and reselect your character.'
         elseif err:find('Could not assign', 1, true) then
-            err = 'Nu am putut seta jobul — reconecteaza-te sau contacteaza staff.'
+            err = 'Could not assign job — reconnect or contact staff.'
         elseif err:find('not a valid civilian job', 1, true) then
-            err = 'Job invalid. Contacteaza staff.'
+            err = 'Invalid job. Contact staff.'
         end
     end
-    return nil, err or 'Angajarea a esuat. Incearca din nou.'
+    return nil, err or 'Hiring failed. Please try again.'
 end)
 
 local ROD_UPGRADES = {
@@ -153,7 +153,7 @@ end)
 -- ── Cumpara momeala din cos (fishing shop UI) ─────────────────
 exports.sunset_core:RegisterCallback('sunset:fishingshop:buyCart', function(source, cart)
     if not cart or type(cart) ~= 'table' or #cart == 0 then
-        return nil, 'Cos gol.'
+        return nil, 'Cart is empty.'
     end
     local priceMap = {}
     for _, b in ipairs(BAIT_SHOP_ITEMS) do priceMap[b.item] = b.price end
@@ -168,7 +168,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:buyCart', function(sour
 
     local ok = exports.sunset_core:RemoveMoney(source, 'cash', total, 'bait_shop')
     if not ok then
-        return nil, ('Nu ai destui bani. Necesar: $%d'):format(total)
+        return nil, ('Not enough cash. Required: $%d'):format(total)
     end
 
     for _, entry in ipairs(cart) do
@@ -181,7 +181,7 @@ end)
 -- ── Vinde peste selectat din cos (fishing shop UI) ────────────
 exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(source, cart)
     if not cart or type(cart) ~= 'table' or #cart == 0 then
-        return nil, 'Cos de vanzare gol.'
+        return nil, 'Sell cart is empty.'
     end
     local total = 0
     local sold  = {}
@@ -190,7 +190,7 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(sou
         if not FISH_PRICES[fishItem] then return nil, 'Item invalid: ' .. tostring(fishItem) end
         local inInv = exports.sunset_inventory:CountItem(source, fishItem) or 0
         local amount = math.max(1, math.min(math.floor(tonumber(entry.amount) or 1), inInv))
-        if amount <= 0 then return nil, ('Nu ai destui %s.'):format(FISH_LABELS[fishItem] or fishItem) end
+        if amount <= 0 then return nil, ('Not enough %s in inventory.'):format(FISH_LABELS[fishItem] or fishItem) end
 
         local actuallyRemoved = 0
         local earned = 0
@@ -213,13 +213,13 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(sou
                 break
             end
         end
-        if actuallyRemoved == 0 then return nil, ('Nu ai %s in inventar.'):format(FISH_LABELS[fishItem] or fishItem) end
+        if actuallyRemoved == 0 then return nil, ('No %s found in inventory.'):format(FISH_LABELS[fishItem] or fishItem) end
         total = total + earned
         sold[#sold + 1] = ('%dx %s = $%d'):format(actuallyRemoved, FISH_LABELS[fishItem] or fishItem, earned)
     end
-    if total == 0 then return nil, 'Nimic vandut.' end
+    if total == 0 then return nil, 'Nothing sold.' end
     exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_247')
-    return ('Vandut! +$%d (%s)'):format(total, table.concat(sold, ', '))
+    return ('Sold! +$%d (%s)'):format(total, table.concat(sold, ', '))
 end)
 
 -- ── Vinde tot pestele la 24/7 (legacy — pastrat pentru compatibilitate) ──
@@ -245,17 +245,17 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellFish247', function(
     end
 
     if total == 0 then
-        return nil, 'Nu ai niciun peste in inventar.'
+        return nil, 'You have no fish in your inventory.'
     end
 
     exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_legacy')
-    return ('Ai vandut pestele! +$%d cash (%s)'):format(total, table.concat(sold, ', '))
+    return ('Fish sold! +$%d cash (%s)'):format(total, table.concat(sold, ', '))
 end)
 
 -- ── Upgrade undita la Billy Ray ───────────────────────────────
 exports.sunset_core:RegisterCallback('sunset:fishingshop:upgradeRod', function(source)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return nil, 'Personaj negasit.' end
+    if not char then return nil, 'Character not found.' end
 
     local fishLevel = tonumber(MySQL.scalar.await(
         'SELECT level FROM job_progress WHERE character_id = ? AND job_id = ?',
@@ -281,16 +281,16 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:upgradeRod', function(s
     end
 
     if not upgrade then
-        return nil, 'Ai deja undita maxima (Mk5)!'
+        return nil, 'You already have the maximum rod (Mk5)!'
     end
 
     if fishLevel < upgrade.minLevel then
-        return nil, ('Ai nevoie de Fisherman nivel %d. (nivel actual: %d)'):format(upgrade.minLevel, fishLevel)
+        return nil, ('You need Fisherman level %d to upgrade. (current level: %d)'):format(upgrade.minLevel, fishLevel)
     end
 
     local ok = exports.sunset_core:RemoveMoney(source, 'cash', upgrade.cost, 'rod_upgrade')
     if not ok then
-        return nil, ('Nu ai destui bani. Cost upgrade: $%d'):format(upgrade.cost)
+        return nil, ('Not enough cash. Upgrade cost: $%d'):format(upgrade.cost)
     end
 
     if upgrade.requires then
@@ -299,5 +299,5 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:upgradeRod', function(s
     exports.sunset_inventory:AddItem(source, upgrade.gives, 1)
 
     local mk = upgrade.gives:gsub('fishing_rod_', 'Mk')
-    return ('Undita upgradata la %s! (-$%d)'):format(mk, upgrade.cost)
+    return ('Rod upgraded to %s! (-$%d)'):format(mk, upgrade.cost)
 end)

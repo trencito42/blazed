@@ -201,7 +201,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     local cfg = Sunset.GetJobConfig('fisherman')
     spotIndex = tonumber(spotIndex) or 1
     if not inFishZone(source, cfg) then
-        return nil, 'Nu esti in zona de pescuit'
+        return nil, 'You are not in the fishing area'
     end
 
     session.data.level = fishLevel(source)
@@ -215,7 +215,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     end
     local minFishWeight = (Sunset.Items['fish_common'] or {}).weight or 0.8
     if currentWeight + minFishWeight > Sunset.Config.MaxWeight then
-        return nil, ('Geanta plina! Vinde pestele mai intai. (%.1f / %.1f kg)'):format(
+        return nil, ('Bag full! Sell your fish first. (%.1f / %.1f kg)'):format(
             currentWeight, Sunset.Config.MaxWeight)
     end
 
@@ -262,7 +262,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     spotIndex = tonumber(spotIndex) or 1
     if not inFishZone(source, cfg) then
         session.data.fishingChallenge = nil
-        return nil, 'Ai iesit din zona de pescuit'
+        return nil, 'You left the fishing area'
     end
 
     local challenge = session.data.fishingChallenge

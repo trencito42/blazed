@@ -192,7 +192,7 @@ end
 local function startFisherman()
     local jobId = JC.getCharacterJob()
     if jobId ~= 'fisherman' then
-        JC.notify('Trebuie sa fii angajat Pescar. Vorbeste cu Billy Ray.', 'error', 6000)
+        JC.notify('You must be a Fisherman. Speak with Billy Ray.', 'error', 6000)
         return
     end
 
@@ -206,7 +206,7 @@ local function startFisherman()
         JC.state = 'STARTING'
     end
     applyShiftBlips()
-    JC.notify('Tura inceput! Mergi la pontoon Paleto Bay si apasa E sa pescuiesti.', 'info', 7000)
+    JC.notify('Shift started! Head to the Paleto Bay pontoon and press E to fish.', 'info', 7000)
 end
 
 local function attemptFish()
@@ -216,7 +216,7 @@ local function attemptFish()
     end
     local spotIdx = nearestSpotIndex()
     if not atFishingSpot() then
-        return JC.notify('Nu esti in zona de pescuit Paleto Bay.', 'error')
+        return JC.notify('You are not in the Paleto Bay fishing area.', 'error')
     end
 
     fishing = true
@@ -301,7 +301,7 @@ local function attemptFish()
 
     if result then
         local fishLabel2 = ((result.fishItem or 'fish'):gsub('fish_', ''):gsub('^%l', string.upper))
-        JC.notify(('%s %.1f kg +$%s. Vinde pestele la orice magazin 24/7.'):format(
+        JC.notify(('%s %.1f kg +$%s. Sell your fish at any 24/7 store.'):format(
             fishLabel2, result.fishKg or 0, result.value or 0), 'success', 5000)
     elseif not early and reelErr then
         JC.notify(reelErr, 'warning')
@@ -377,11 +377,11 @@ end)
 AddEventHandler('sunset:client:startFishermanShift', function()
     local jobId = JC.getCharacterJob()
     if jobId ~= 'fisherman' then
-        exports.sunset_ui:Notify('Trebuie sa fii angajat Pescar. Vorbeste cu Billy Ray.', 'error', 5000)
+        exports.sunset_ui:Notify('You must be a Fisherman. Speak with Billy Ray.', 'error', 5000)
         return
     end
     if isFishermanShift() then
-        exports.sunset_ui:Notify('Ai deja o tură activă. Apasă E la pontoon sau /fish.', 'info', 5000)
+        exports.sunset_ui:Notify('You already have an active shift. Press E at the pontoon or use /fish.', 'info', 5000)
         return
     end
     CreateThread(startFisherman)
