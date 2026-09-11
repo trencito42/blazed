@@ -126,8 +126,10 @@ const InventoryForza = {
             cell.dataset.slot = String(i);
             cell.dataset.grid = 'grid-quick';
             cell.dataset.hotbarSlot = String(i);
+            const disabledInVehicle = i === 2 && document.body.classList.contains('is-driver');
+            if (disabledInVehicle) cell.classList.add('inv-slot--disabled-key');
             const marker = document.createElement('div');
-            marker.className = 'hotbar-marker';
+            marker.className = `hotbar-marker${disabledInVehicle ? ' hotbar-marker--disabled' : ''}`;
             marker.textContent = String(i);
             cell.appendChild(marker);
 

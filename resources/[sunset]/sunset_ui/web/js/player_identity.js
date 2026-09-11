@@ -27,7 +27,7 @@ const SunsetPlayerIdentity = {
     splitClanParts(row) {
         const tag = String(row.clanTag || '').trim();
         const style = String(row.clanTagStyle || 'brackets');
-        const color = String(row.clanTagColor || '#FF8C00');
+        const color = String(row.clanTagColor || '#00ffcc');
         const name = this.stripTaggedName(row.name, tag, style);
         if (!tag) return { prefix: '', name, suffix: '', color };
         switch (style) {

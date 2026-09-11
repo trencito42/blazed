@@ -154,6 +154,7 @@ local function buildHudData()
         data.vehicleClass = vehState.vehicleClass
         data.supportsSeatbelt = vehState.supportsSeatbelt
         data.supportsDoorLock = vehState.supportsDoorLock
+        data.isDriver = vehState.isDriver == true
     end
 
     return data
@@ -283,7 +284,7 @@ CreateThread(function()
                 RemoveMpGamerTag(i)
             end
         end
-        Wait(200)
+        Wait(2500)
     end
 end)
 

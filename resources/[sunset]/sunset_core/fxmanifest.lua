@@ -29,6 +29,8 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/command_feedback.lua',
+    'server/discord_logs.lua',
+    'server/security.lua',
     'server/main.lua',
     'server/money_log.lua',
     'server/player.lua',
@@ -55,6 +57,7 @@ server_exports {
     'SaveCharacter',
     'GetMoneyHistory',
     'LogMoneyTransaction',
+    'SendDiscordLog',
     'AddMoney',
     'RefreshMoney',
     'RemoveMoney',

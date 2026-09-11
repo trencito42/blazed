@@ -163,8 +163,8 @@
 }
 
 .fishing__cmd {
-    background: rgba(255, 138, 0, 0.16);
-    border: 1px solid rgba(255, 138, 0, 0.55);
+    background: rgba(0, 255, 204, 0.16);
+    border: 1px solid rgba(0, 255, 204, 0.55);
     color: #ffb260;
     border-radius: 4px;
     min-height: 22px;
@@ -196,20 +196,20 @@
 .fishing__progress-fill {
     height: 100%;
     width: 0%;
-    background: var(--sunset-orange, #ff7700);
+    background: var(--sunset-orange, #00ffcc);
     -webkit-mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
     mask-image: repeating-linear-gradient(to right, black 0, black 6px, transparent 6px, transparent 8px);
 }
 
 /* idle */
-.fishing-shell.state-idle { --f-accent: var(--sunset-orange, #ff8a00); }
+.fishing-shell.state-idle { --f-accent: var(--sunset-orange, #00ffcc); }
 .fishing-shell.state-idle .fishing__title,
-.fishing-shell.state-idle .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+.fishing-shell.state-idle .fishing__icon { color: var(--sunset-orange, #00ffcc); }
 
 /* shift */
-.fishing-shell.state-shift { --f-accent: var(--sunset-orange, #ff8a00); }
+.fishing-shell.state-shift { --f-accent: var(--sunset-orange, #00ffcc); }
 .fishing-shell.state-shift .fishing__title,
-.fishing-shell.state-shift .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+.fishing-shell.state-shift .fishing__icon { color: var(--sunset-orange, #00ffcc); }
 .fishing-shell.state-idle .fishing__progress,
 .fishing-shell.state-shift .fishing__progress {
     display: none;
@@ -230,22 +230,22 @@
 }
 
 .fishing-shell.state-work {
-    --f-accent: var(--sunset-orange, #ff7700);
-    --f-edge: rgba(255, 119, 0, 0.38);
+    --f-accent: var(--sunset-orange, #00ffcc);
+    --f-edge: rgba(0, 255, 204, 0.38);
 }
 .fishing-shell.state-work .fishing__title,
-.fishing-shell.state-work .fishing__icon { color: var(--sunset-amber, #ffb15c); }
+.fishing-shell.state-work .fishing__icon { color: var(--sunset-amber, #26ffd5); }
 .fishing-shell.state-work .fishing__message { color: #fff1df; text-transform: uppercase; }
 .fishing-shell.state-work .fishing__progress { display: block; }
-.fishing-shell.state-work .fishing__progress-fill { background: var(--sunset-orange, #ff7700); }
+.fishing-shell.state-work .fishing__progress-fill { background: var(--sunset-orange, #00ffcc); }
 
 /* full */
 .fishing-shell.state-full {
-    --f-accent: #ffb21c;
+    --f-accent: #26ffd5;
     --f-edge: rgba(255, 178, 28, 0.45);
 }
 .fishing-shell.state-full .fishing__title,
-.fishing-shell.state-full .fishing__icon { color: #ffb21c; }
+.fishing-shell.state-full .fishing__icon { color: #26ffd5; }
 .fishing-shell.state-full .fishing__message {
     font-size: 15px;
     font-weight: 600;
@@ -255,20 +255,20 @@
     color: rgba(255, 255, 255, 0.96);
 }
 .fishing-shell.state-full .fishing__progress-fill {
-    background: #ffb21c;
+    background: #26ffd5;
     width: 100% !important;
 }
 
 /* waiting */
 .fishing-shell.state-waiting {
-    --f-accent: var(--sunset-orange, #ff7700);
-    --f-edge: rgba(255, 119, 0, 0.38);
+    --f-accent: var(--sunset-orange, #00ffcc);
+    --f-edge: rgba(0, 255, 204, 0.38);
 }
 .fishing-shell.state-waiting .fishing__title,
-.fishing-shell.state-waiting .fishing__icon { color: var(--sunset-amber, #ffb15c); }
+.fishing-shell.state-waiting .fishing__icon { color: var(--sunset-amber, #26ffd5); }
 .fishing-shell.state-waiting .fishing__message { color: #fff1df; }
 .fishing-shell.state-waiting .fishing__progress-fill {
-    background: var(--sunset-orange, #ff7700);
+    background: var(--sunset-orange, #00ffcc);
     width: 100%;
     animation: fishingScan 2s infinite linear;
 }
@@ -307,7 +307,7 @@
 
 /* failed */
 .fishing-shell.state-failed {
-    --f-accent: var(--sunset-red, #ff554f);
+    --f-accent: var(--sunset-red, #00e6b8);
     --f-edge: rgba(255, 85, 79, 0.45);
 }
 .fishing-shell.state-failed {
@@ -316,42 +316,42 @@
     animation: fishingGlitch 0.3s ease-out;
 }
 .fishing-shell.state-failed .fishing__title,
-.fishing-shell.state-failed .fishing__icon { color: var(--sunset-red, #ff554f); }
+.fishing-shell.state-failed .fishing__icon { color: var(--sunset-red, #00e6b8); }
 .fishing-shell.state-failed .fishing__message {
     color: #ffffff;
     text-shadow: 0 0 10px rgba(255, 85, 79, 0.55), 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 .fishing-shell.state-failed .fishing__progress-fill {
-    background: var(--sunset-red, #ff554f);
+    background: var(--sunset-red, #00e6b8);
     width: 0% !important;
     transition: none;
 }
 
 /* success */
 .fishing-shell.state-success {
-    --f-accent: var(--sunset-orange, #ff8a00);
-    --f-edge: rgba(255, 138, 0, 0.45);
+    --f-accent: var(--sunset-orange, #00ffcc);
+    --f-edge: rgba(0, 255, 204, 0.45);
 }
 .fishing-shell.state-success {
     filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95))
-        drop-shadow(0 0 18px rgba(255, 138, 0, 0.4));
+        drop-shadow(0 0 18px rgba(0, 255, 204, 0.4));
     transform: translateX(-50%) scale(1.03);
 }
 .fishing-shell.state-success .fishing__title,
-.fishing-shell.state-success .fishing__icon { color: var(--sunset-orange, #ff8a00); }
+.fishing-shell.state-success .fishing__icon { color: var(--sunset-orange, #00ffcc); }
 .fishing-shell.state-success .fishing__message {
     color: #ffffff;
-    text-shadow: 0 0 14px rgba(255, 138, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.92);
+    text-shadow: 0 0 14px rgba(0, 255, 204, 0.55), 0 2px 10px rgba(0, 0, 0, 0.92);
 }
 .fishing-shell.state-success .fishing__progress-fill {
-    background: var(--sunset-orange, #ff8a00);
+    background: var(--sunset-orange, #00ffcc);
     width: 100% !important;
     transition: width 0.3s ease;
 }
 
 /* jail sentence */
 .fishing-shell.state-jail {
-    --f-accent: #ff554f;
+    --f-accent: #00e6b8;
 }
 .fishing-shell.state-jail .fishing__title,
 .fishing-shell.state-jail .fishing__icon { color: #ff6b63; }
@@ -362,7 +362,7 @@
 }
 .fishing-shell.state-jail .fishing__progress { display: block; }
 .fishing-shell.state-jail .fishing__progress-fill {
-    background: linear-gradient(90deg, #ff554f, #ff8a66);
+    background: linear-gradient(90deg, #00e6b8, #ff8a66);
 }
 
 @keyframes fishingShake {

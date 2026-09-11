@@ -510,62 +510,77 @@ CreateThread(function()
         else
             local ped = PlayerPedId()
             local pos = GetEntityCoords(ped)
-            local veh = getDriverVehicle()
-            local station, pump, pumpIndex, stationIndex, dist = findNearestPump(pos)
-            syncPumpTooltips(pos, station, pump, stationIndex, pumpIndex, dist)
 
-            if station and pump and dist <= PUMP_REACH then
-                local globalId = pumpGlobalId(stationIndex, pumpIndex)
-                if veh ~= 0 then
-                    local current = getFuelLevel()
-                    if not uiVisible then
-                        showPumpUi('ready', {
-                            station = station.label,
-                            stationRef = station,
-                            vehicleName = vehicleDisplayName(veh),
-                            tankPct = current,
-                            sessionLiters = 0,
-                            cost = 0,
-                            pumpLabel = ('Pompă #%02d'):format(globalId),
-                        })
-                    end
+            -- Coarse station proximity filter (sleep 1000ms if far from any station)
+            local nearStation = false
+            for _, station in ipairs(Sunset.GasStations or {}) do
+                if station.coords and #(pos - station.coords) < 60.0 then
+                    nearStation = true
+                    break
+                end
+            end
 
-                    if not IsControlPressed(0, PUMP_KEY_VEHICLE) then
-                        waitForStartRelease = false
-                    elseif not waitForStartRelease and current < 99.9 then
-                        startRefuel(station, pumpIndex, stationIndex)
-                    end
-                elseif not IsPedInAnyVehicle(ped, false) then
-                    local currentLiters = getCachedCanLiters()
-                    local maxLiters = maxCanLiters()
-                    if not uiVisible then
-                        showPumpUi('ready', {
-                            station = station.label,
-                            stationRef = station,
-                            vehicleName = 'Gas Can',
-                            tankPct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0,
-                            sessionLiters = 0,
-                            cost = 0,
-                            pumpLabel = ('Pompă #%02d'):format(globalId),
-                        })
-                    end
+            if not nearStation then
+                if uiVisible and not refueling and not fillingCan then hidePumpUi() end
+                Wait(1000)
+            else
+                local veh = getDriverVehicle()
+                local station, pump, pumpIndex, stationIndex, dist = findNearestPump(pos)
+                syncPumpTooltips(pos, station, pump, stationIndex, pumpIndex, dist)
 
-                    if not IsControlPressed(0, PUMP_KEY_CAN) then
-                        waitForStartRelease = false
-                    elseif not waitForStartRelease then
-                        local hasCan = Sunset.AwaitCallback('sunset:inventoryHasItem', 'gas_can')
-                        if hasCan then
-                            startCanFill(station, pumpIndex, stationIndex)
-                        else
-                            notify('Buy a gas can at a 24/7 store first', 'error')
-                            waitForStartRelease = true
+                if station and pump and dist <= PUMP_REACH then
+                    local globalId = pumpGlobalId(stationIndex, pumpIndex)
+                    if veh ~= 0 then
+                        local current = getFuelLevel()
+                        if not uiVisible then
+                            showPumpUi('ready', {
+                                station = station.label,
+                                stationRef = station,
+                                vehicleName = vehicleDisplayName(veh),
+                                tankPct = current,
+                                sessionLiters = 0,
+                                cost = 0,
+                                pumpLabel = ('Pompă #%02d'):format(globalId),
+                            })
+                        end
+
+                        if not IsControlPressed(0, PUMP_KEY_VEHICLE) then
+                            waitForStartRelease = false
+                        elseif not waitForStartRelease and current < 99.9 then
+                            startRefuel(station, pumpIndex, stationIndex)
+                        end
+                    elseif not IsPedInAnyVehicle(ped, false) then
+                        local currentLiters = getCachedCanLiters()
+                        local maxLiters = maxCanLiters()
+                        if not uiVisible then
+                            showPumpUi('ready', {
+                                station = station.label,
+                                stationRef = station,
+                                vehicleName = 'Gas Can',
+                                tankPct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0,
+                                sessionLiters = 0,
+                                cost = 0,
+                                pumpLabel = ('Pompă #%02d'):format(globalId),
+                            })
+                        end
+
+                        if not IsControlPressed(0, PUMP_KEY_CAN) then
+                            waitForStartRelease = false
+                        elseif not waitForStartRelease then
+                            local hasCan = Sunset.AwaitCallback('sunset:inventoryHasItem', 'gas_can')
+                            if hasCan then
+                                startCanFill(station, pumpIndex, stationIndex)
+                            else
+                                notify('Buy a gas can at a 24/7 store first', 'error')
+                                waitForStartRelease = true
+                            end
                         end
                     end
+                    Wait(0)
+                else
+                    if uiVisible and not refueling and not fillingCan then hidePumpUi() end
+                    Wait(250)
                 end
-                Wait(0)
-            else
-                if uiVisible and not refueling and not fillingCan then hidePumpUi() end
-                Wait(350)
             end
         end
     end

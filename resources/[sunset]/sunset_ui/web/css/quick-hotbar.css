@@ -116,6 +116,19 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     pointer-events: auto;
 }
 
+.hotbar-slot--disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    filter: grayscale(0.85);
+}
+
+.hotbar-slot--disabled .hotbar-slot-key {
+    color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    text-decoration: line-through;
+}
+
 .hotbar-slot.is-drop-target {
     border-color: var(--hotbar-accent);
     box-shadow: 0 0 16px rgba(0, 255, 204, 0.35);

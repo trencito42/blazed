@@ -220,18 +220,22 @@ local function xpForLevel(level)
     return math.max(100, (level or 1) * 100)
 end
 
-function SunsetJobs_AddJobXP(source, jobId, amount)
+function SunsetJobs_AddJobProgress(source, jobId, xpDelta, taskDelta, earnedDelta)
     local char = getChar(source)
-    if not char or not amount or amount <= 0 then return end
+    if not char then return end
+
+    xpDelta = tonumber(xpDelta) or 0
+    taskDelta = tonumber(taskDelta) or 0
+    earnedDelta = tonumber(earnedDelta) or 0
 
     local row = MySQL.single.await(
         'SELECT xp, level, completed_tasks, total_earned FROM job_progress WHERE character_id = ? AND job_id = ?',
         { char.id, jobId }
     )
-    local xp = (row and row.xp or 0) + amount
+    local xp = (row and row.xp or 0) + xpDelta
     local level = row and row.level or 1
-    local tasks = row and row.completed_tasks or 0
-    local earned = row and row.total_earned or 0
+    local tasks = (row and row.completed_tasks or 0) + taskDelta
+    local earned = (row and row.total_earned or 0) + earnedDelta
 
     local needed = xpForLevel(level)
     while xp >= needed do
@@ -256,34 +260,21 @@ function SunsetJobs_AddJobXP(source, jobId, amount)
     end
 end
 
+function SunsetJobs_AddJobXP(source, jobId, amount)
+    if not amount or amount <= 0 then return end
+    SunsetJobs_AddJobProgress(source, jobId, amount, 0, 0)
+end
+
 function SunsetJobs_PayReward(source, jobId, amount, reason, countTask)
     local char = getChar(source)
     if not char or not amount or amount <= 0 then return false end
 
     exports.sunset_core:AddMoney(source, 'cash', amount, reason or ('job_' .. jobId))
     
-    -- Award job skill XP (Skill 1-5 in job_progress table)
+    -- Award job skill XP and progress in a single unified atomic pass
     local jobXp = math.max(5, math.floor(amount / 10))
-    SunsetJobs_AddJobXP(source, jobId, jobXp)
-
-    local row = MySQL.single.await(
-        'SELECT completed_tasks, total_earned FROM job_progress WHERE character_id = ? AND job_id = ?',
-        { char.id, jobId }
-    )
-    local tasks = (row and row.completed_tasks or 0) + (countTask and 1 or 0)
-    local earned = (row and row.total_earned or 0) + amount
-
-    if row then
-        MySQL.update.await(
-            'UPDATE job_progress SET completed_tasks = ?, total_earned = ? WHERE character_id = ? AND job_id = ?',
-            { tasks, earned, char.id, jobId }
-        )
-    else
-        MySQL.insert.await(
-            'INSERT INTO job_progress (character_id, job_id, xp, level, completed_tasks, total_earned) VALUES (?, ?, 0, 1, ?, ?)',
-            { char.id, jobId, tasks, earned }
-        )
-    end
+    local taskCount = countTask and 1 or 0
+    SunsetJobs_AddJobProgress(source, jobId, jobXp, taskCount, amount)
     return true
 end
 

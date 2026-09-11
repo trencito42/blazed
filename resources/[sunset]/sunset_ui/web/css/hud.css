@@ -58,7 +58,7 @@
     font-family: 'Chakra Petch', 'Rajdhani', sans-serif;
     font-size: 22px;
     font-weight: normal;
-    color: #e85d2a;
+    color: #00ffcc;
     letter-spacing: 0.03em;
     line-height: 1;
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
@@ -85,7 +85,7 @@
     text-transform: uppercase;
 }
 
-.badge--payday { color: #e85d2a; }
+.badge--payday { color: #00ffcc; }
 
 /* ── Top Right ── */
 .hud-tr {
@@ -295,7 +295,7 @@
     font-family: 'Inter', monospace;
 }
 
-.veh-slot.active .veh-slot__key { color: #e85d2a; background: rgba(232,93,42,0.15); }
+.veh-slot.active .veh-slot__key { color: #00ffcc; background: rgba(0, 255, 204,0.15); }
 
 /* ── Speedometer — Forza Horizon style (jos-dreapta) ── */
 .fh-speedo {
@@ -450,7 +450,7 @@
     top: 0;
     bottom: 0;
     width: 0%;
-    background: linear-gradient(90deg, rgba(255,255,255,0.55) 0%, #ffb347 72%, #ff4757 100%);
+    background: linear-gradient(90deg, rgba(255,255,255,0.55) 0%, #26ffd5 72%, #ff4757 100%);
     border-radius: 2px;
     transition: width 0.06s linear;
     box-shadow: 0 0 8px rgba(255, 180, 70, 0.35);
@@ -502,9 +502,9 @@
 }
 
 .fh-stat--fuel .fh-stat__val { color: rgba(255, 255, 255, 0.65); }
-.fh-stat--fuel.warn .fh-stat__val { color: #ffb347; }
+.fh-stat--fuel.warn .fh-stat__val { color: #26ffd5; }
 .fh-stat--eng .fh-stat__val { color: #7ee787; }
-.fh-stat--eng.warn .fh-stat__val { color: #ffb347; }
+.fh-stat--eng.warn .fh-stat__val { color: #26ffd5; }
 .fh-stat--eng.crit .fh-stat__val { color: #ff6b6b; }
 
 .fh-speedo.hidden, .hud-bc.hidden { display: none; }
@@ -512,14 +512,14 @@
 /* ── HUD Editor ── */
 .hud--editing { pointer-events: auto; }
 .hud--editing [data-hud-panel] {
-    outline: 1px dashed rgba(232, 93, 42, 0.55);
+    outline: 1px dashed rgba(0, 255, 204, 0.55);
     outline-offset: 3px;
     cursor: pointer;
     pointer-events: auto;
 }
 .hud--editing [data-hud-panel].hud-panel--selected {
-    outline: 2px solid #e85d2a;
-    box-shadow: 0 0 0 4px rgba(232, 93, 42, 0.15);
+    outline: 2px solid #00ffcc;
+    box-shadow: 0 0 0 4px rgba(0, 255, 204, 0.15);
 }
 
 .hud-editor-bar {
@@ -533,7 +533,7 @@
     gap: 6px;
     padding: 14px 22px;
     background: rgba(0, 0, 0, 0.82);
-    border: 1px solid rgba(232, 93, 42, 0.35);
+    border: 1px solid rgba(0, 255, 204, 0.35);
     border-radius: 6px;
     pointer-events: none;
     z-index: 20;
@@ -544,7 +544,7 @@
 #hud-editor-label {
     font-size: 13px;
     font-weight: 700;
-    color: #e85d2a;
+    color: #00ffcc;
     letter-spacing: 0.04em;
 }
 
@@ -759,8 +759,8 @@
     max-width: 320px;
     padding: 10px 14px;
     background: rgba(0, 0, 0, 0.68);
-    border: 1px solid rgba(232, 93, 42, 0.35);
-    border-left: 3px solid #e85d2a;
+    border: 1px solid rgba(0, 255, 204, 0.35);
+    border-left: 3px solid #00ffcc;
     border-radius: 4px;
     pointer-events: none;
     font-family: 'Inter', sans-serif;
@@ -771,7 +771,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: #e85d2a;
+    color: #00ffcc;
     margin-bottom: 3px;
 }
 .job-objective__title {
@@ -802,7 +802,7 @@
 }
 .job-objective__fill {
     height: 100%;
-    background: linear-gradient(90deg, #e85d2a, #ff8c00);
+    background: linear-gradient(90deg, #00ffcc, #00ffcc);
     border-radius: 2px;
     width: 0%;
     transition: width 0.3s ease;
@@ -818,10 +818,10 @@
 
 /* ═══ SUNSET OS SCREEN HUD — faithful onscreenhud.txt integration ═══ */
 .hud {
-    --screen-accent: #ff7700;
-    --screen-accent-dim: rgba(255,119,0,.2);
-    --screen-accent-glow: 0 0 10px rgba(255,119,0,.6);
-    --screen-secondary: #ffb21c;
+    --screen-accent: #00ffcc;
+    --screen-accent-dim: rgba(0, 255, 204,.2);
+    --screen-accent-glow: 0 0 10px rgba(0, 255, 204,.6);
+    --screen-secondary: #26ffd5;
     --screen-secondary-dim: rgba(255,178,28,.2);
     --screen-secondary-glow: 0 0 10px rgba(255,178,28,.55);
     --screen-green: #00ff66;
@@ -935,7 +935,7 @@
     border: none;
     clip-path: none;
     font: 700 22px/1 'Chakra Petch',sans-serif;
-    text-shadow: 0 0 8px rgba(255,119,0,.75), 0 2px 6px rgba(0,0,0,.85);
+    text-shadow: 0 0 8px rgba(0, 255, 204,.75), 0 2px 6px rgba(0,0,0,.85);
     backdrop-filter: none;
 }
 .location-panel {

@@ -18,6 +18,7 @@ server_scripts {
     'server/main.lua',
     'server/quickslots.lua',
     'server/trade.lua',
+    'server/containers.lua',
 }
 
 client_scripts {
@@ -26,6 +27,7 @@ client_scripts {
     'client/weapons.lua',
     'client/props.lua',
     'client/quickslots.lua',
+    'client/containers.lua',
 }
 
 server_exports {

@@ -1,7 +1,7 @@
 /* ═══ SCOREBOARD (F10) — Sunset OS ═══ */
 .scoreboard {
-    --sb-accent: #ff7700;
-    --sb-accent-bright: #ffb21c;
+    --sb-accent: #00ffcc;
+    --sb-accent-bright: #26ffd5;
     --sb-muted: rgba(255, 255, 255, 0.58);
     position: fixed;
     inset: 0;
@@ -29,7 +29,7 @@
     flex-direction: column;
     overflow: hidden;
     background: linear-gradient(180deg, rgba(24, 20, 18, 0.9), rgba(9, 8, 8, 0.94));
-    border-top: 2px solid rgba(255, 119, 0, 0.55);
+    border-top: 2px solid rgba(0, 255, 204, 0.55);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
     animation: sbIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -124,11 +124,11 @@
 }
 
 .sb-table tbody tr:hover td {
-    background: rgba(255, 119, 0, 0.06);
+    background: rgba(0, 255, 204, 0.06);
 }
 
 .sb-table tr.is-self td {
-    background: rgba(255, 119, 0, 0.12);
+    background: rgba(0, 255, 204, 0.12);
 }
 
 .sb-table .col-id {
@@ -186,7 +186,7 @@
 }
 
 .sb-admin--5 { background: #ff5555; color: #ff5555; }
-.sb-admin--3 { background: #ff7700; color: #ff7700; }
+.sb-admin--3 { background: #00ffcc; color: #00ffcc; }
 .sb-admin--2 { background: #5aa8ff; color: #5aa8ff; }
 .sb-admin--1 { background: #b58cff; color: #b58cff; }
 

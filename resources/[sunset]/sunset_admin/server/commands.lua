@@ -15,9 +15,23 @@ local function deny(source, cmd)
     exports.sunset_core:CommandDenyAdmin(source, cmd)
 end
 
+local function logAdminAction(source, cmd)
+    local adminName = source == 0 and 'CONSOLE' or (GetPlayerName(source) or 'Unknown')
+    pcall(function()
+        exports.sunset_core:SendDiscordLog('admin', 'Comanda Admin Executata', ('Adminul **%s** (ID: %s) a apelat `/%s`'):format(adminName, tostring(source), cmd), 'orange', {
+            { name = 'Admin', value = adminName, inline = true },
+            { name = 'Server ID', value = tostring(source), inline = true },
+            { name = 'Comanda', value = '/' .. cmd, inline = true },
+        })
+    end)
+end
+
 local function requirePerm(source, cmd)
     if source == 0 then return true end
-    if hasPerm(source, cmd) then return true end
+    if hasPerm(source, cmd) then
+        logAdminAction(source, cmd)
+        return true
+    end
     deny(source, cmd)
     return false
 end

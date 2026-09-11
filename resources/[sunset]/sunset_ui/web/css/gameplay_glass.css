@@ -70,7 +70,7 @@
 .menu-action:hover,
 .menu-vcard:hover,
 .menu-inventory-list .inventory-row:hover {
-    background: linear-gradient(90deg, rgba(255, 119, 0, 0.105), rgba(7, 6, 6, 0.055)) !important;
+    background: linear-gradient(90deg, rgba(0, 255, 204, 0.105), rgba(7, 6, 6, 0.055)) !important;
 }
 
 /* Fleet garage: both the shell and every vehicle card stay see-through. */
@@ -107,7 +107,7 @@
 .menu--solo-clan .tech-panel,
 .menu--solo-faction .tech-panel {
     background: linear-gradient(145deg, rgba(14, 12, 10, 0.96), rgba(7, 7, 7, 0.94)) !important;
-    border: 1px solid rgba(255, 140, 0, 0.24) !important;
+    border: 1px solid rgba(0, 255, 204, 0.24) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 40px rgba(0, 0, 0, 0.52) !important;
 }
 

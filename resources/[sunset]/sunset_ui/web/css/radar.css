@@ -1,6 +1,6 @@
 #radar-panel,
 .radar-shell {
-    --r-accent: var(--sunset-orange, #ff8a00);
+    --r-accent: var(--sunset-orange, #00ffcc);
     position: fixed;
     left: 50%;
     bottom: 80px;
@@ -169,22 +169,22 @@
 
 .radar__hit-over { color: #ff6b64; }
 
-.radar-shell.state-scan { --r-accent: var(--sunset-orange, #ff8a00); }
+.radar-shell.state-scan { --r-accent: var(--sunset-orange, #00ffcc); }
 .radar-shell.state-scan .radar__title,
-.radar-shell.state-scan .radar__icon { color: var(--sunset-orange, #ff8a00); }
+.radar-shell.state-scan .radar__icon { color: var(--sunset-orange, #00ffcc); }
 
 .radar-shell.state-track { --r-accent: #ffad5b; }
 .radar-shell.state-track .radar__title,
 .radar-shell.state-track .radar__icon { color: #ffad5b; }
 
 .radar-shell.state-lock {
-    --r-accent: #ff554f;
+    --r-accent: #00e6b8;
     animation: radar-lock 0.7s ease-in-out infinite;
 }
 .radar-shell.state-lock .radar__title,
 .radar-shell.state-lock .radar__icon,
 .radar-shell.state-lock .radar__message { color: #ff6b64; }
-.radar-shell.state-lock .radar__progress-fill { background: #ff554f; }
+.radar-shell.state-lock .radar__progress-fill { background: #00e6b8; }
 
 @keyframes radar-lock {
     0%, 100% { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.95)); }

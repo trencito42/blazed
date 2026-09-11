@@ -269,6 +269,7 @@ const Hud = {
         }
 
         document.body.classList.toggle('in-vehicle', !!data.inVehicle);
+        document.body.classList.toggle('is-driver', !!data.inVehicle && !!data.isDriver);
 
         const speedo = $('#hud-speedo');
         if (!speedo) return;

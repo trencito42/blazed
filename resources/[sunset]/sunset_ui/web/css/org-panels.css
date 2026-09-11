@@ -22,7 +22,7 @@
     min-height: 0;
     max-height: 58vh;
     overflow: hidden;
-    border-top: 2px solid rgba(255, 119, 0, 0.45);
+    border-top: 2px solid rgba(0, 255, 204, 0.45);
     background: linear-gradient(135deg, rgba(8, 7, 8, 0.42), rgba(8, 7, 8, 0.24));
 }
 
@@ -55,9 +55,9 @@
 
 .org-rail .faction-tab.is-active,
 .org-rail .clan-tab.is-active {
-    border-left-color: var(--os-accent, #ff7700);
-    background: rgba(255, 119, 0, 0.14);
-    box-shadow: inset 0 0 12px rgba(255, 119, 0, 0.08);
+    border-left-color: var(--os-accent, #00ffcc);
+    background: rgba(0, 255, 204, 0.14);
+    box-shadow: inset 0 0 12px rgba(0, 255, 204, 0.08);
 }
 
 .org-main {
@@ -101,7 +101,7 @@
     padding: 2px 6px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: rgba(0, 0, 0, 0.45);
-    color: #ffb21c;
+    color: #26ffd5;
     font: 700 10px/1 var(--os-title);
     letter-spacing: 0.06em;
     vertical-align: middle;
@@ -117,11 +117,11 @@
     gap: 8px;
     margin-bottom: 8px;
     padding-bottom: 6px;
-    border-bottom: 1px solid rgba(255, 119, 0, 0.22);
+    border-bottom: 1px solid rgba(0, 255, 204, 0.22);
 }
 
 .org-section__head span {
-    color: var(--os-accent-bright, #ffb21c);
+    color: var(--os-accent-bright, #26ffd5);
     font: 700 10px/1 var(--os-title);
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -130,7 +130,7 @@
 .org-section__head i {
     flex: 1;
     height: 1px;
-    background: linear-gradient(90deg, rgba(255, 119, 0, 0.35), transparent);
+    background: linear-gradient(90deg, rgba(0, 255, 204, 0.35), transparent);
 }
 
 .org-stat-strip {
@@ -210,7 +210,7 @@
 
 .org-member-badge.is-online { border-color: rgba(0, 255, 102, 0.35); color: #6dffb0; }
 .org-member-badge.is-duty { border-color: rgba(255, 177, 28, 0.45); color: #ffd27a; }
-.org-member-badge.is-leader { border-color: rgba(255, 119, 0, 0.55); color: #ffb86a; }
+.org-member-badge.is-leader { border-color: rgba(0, 255, 204, 0.55); color: #ffb86a; }
 .org-member-badge.is-offline { color: rgba(255, 255, 255, 0.38); }
 
 .org-directory-row {
@@ -221,7 +221,7 @@
     width: 100%;
     padding: 11px 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-left: 3px solid var(--faction-accent, var(--os-accent, #ff7700));
+    border-left: 3px solid var(--faction-accent, var(--os-accent, #00ffcc));
     background: rgba(0, 0, 0, 0.32);
     color: inherit;
     text-align: left;
@@ -232,9 +232,9 @@
 
 .org-directory-row:hover,
 .org-directory-row.is-selected {
-    background: rgba(255, 119, 0, 0.12);
-    border-color: rgba(255, 119, 0, 0.4);
-    border-left-color: var(--faction-accent, var(--os-accent, #ff7700));
+    background: rgba(0, 255, 204, 0.12);
+    border-color: rgba(0, 255, 204, 0.4);
+    border-left-color: var(--faction-accent, var(--os-accent, #00ffcc));
 }
 
 .org-directory-row--illegal { --faction-accent: #ff715f; }

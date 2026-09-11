@@ -148,3 +148,24 @@ end)
 AddEventHandler('sunset:client:playerSpawned', function()
     TriggerServerEvent('sunset:server:playerSpawned')
 end)
+
+RegisterNetEvent('sunset:economy:playDiceAnim', function()
+    local ped = PlayerPedId()
+    if not ped or ped == 0 then return end
+
+    local dict = 'anim@mp_player_intcelebrationmale@wank'
+    RequestAnimDict(dict)
+    local t = 0
+    while not HasAnimDictLoaded(dict) and t < 15 do
+        Wait(50)
+        t = t + 1
+    end
+
+    if HasAnimDictLoaded(dict) then
+        TaskPlayAnim(ped, dict, 'wank', 8.0, -8.0, 1500, 49, 0, false, false, false)
+    else
+        TaskStartScenarioInPlace(ped, 'PROP_HUMAN_PARKING_METER', 0, true)
+        SetTimeout(1500, function() ClearPedTasks(ped) end)
+    end
+    PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+end)

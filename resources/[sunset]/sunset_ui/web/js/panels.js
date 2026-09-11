@@ -436,7 +436,8 @@ const Panels = {
 
                 if (hotbarSlot && !this._inventoryTrade) {
                     const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
-                    if (hotbarIndex >= 1 && hotbarIndex <= 5) {
+                    const slotBlockedInVehicle = hotbarIndex === 2 && document.body.classList.contains('is-driver');
+                    if (hotbarIndex >= 1 && hotbarIndex <= 5 && !slotBlockedInVehicle) {
                         if (state.dutyWeapon) {
                             post('hotbarAssign', {
                                 slot: hotbarIndex,
@@ -470,6 +471,7 @@ const Panels = {
                     const toSlot = Number(slot.dataset.slot) || 0;
                     const fromSlot = Number(state.row.slot) || Number(state.cell?.dataset.slot) || 0;
                     if (toGrid === 'grid-quick' && fromGrid === 'grid-player' && toSlot >= 1 && toSlot <= 5) {
+                        if (toSlot === 2 && document.body.classList.contains('is-driver')) return;
                         post('hotbarAssign', { slot: toSlot, kind: 'item', rowId: state.row.id, fromInventory: true });
                     } else if (toGrid === 'grid-player' && fromGrid === 'grid-player' && toSlot && fromSlot && toSlot !== fromSlot) {
                         post('inventoryMoveSlot', { fromSlot, toSlot });

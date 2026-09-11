@@ -1189,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clanId: 1,
             name: 'Sunset Syndicate',
             tag: 'SS',
-            tagColor: '#ff9900',
+            tagColor: '#00ffcc',
             tagStyle: 'brackets',
             rank: 5,
             rankLabel: 'Lider Suprem',
@@ -1219,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (qa === 'clans') {
         window.ClanPanels?.showDirectory({
             clans: [
-                { id: 1, name: 'Sunset Syndicate', tag: 'SS', tagColor: '#ff9900', tagStyle: 'brackets', leader: 'Ștefan XODO', online: 8, total: 12, maxMembers: 25, description: 'Organizație privată de elită.' },
+                { id: 1, name: 'Sunset Syndicate', tag: 'SS', tagColor: '#00ffcc', tagStyle: 'brackets', leader: 'Ștefan XODO', online: 8, total: 12, maxMembers: 25, description: 'Organizație privată de elită.' },
                 { id: 2, name: 'Ghost Riders', tag: 'GR', tagColor: '#00ffcc', tagStyle: 'prefix_dot', leader: 'Kane', online: 4, total: 18, maxMembers: 25, description: 'Club de motocicliști și tuning.' },
                 { id: 3, name: 'Apex Predators', tag: 'APEX', tagColor: '#ff3366', tagStyle: 'brackets', leader: 'Viper', online: 10, total: 25, maxMembers: 25, description: 'Echipă competitivă.' }
             ]

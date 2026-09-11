@@ -141,7 +141,7 @@ const ClanPanels = {
     paintPreview(el, tag, baseName, style, color) {
         if (!el) return;
         const parts = this.splitTaggedParts(tag, baseName, style);
-        const col = color || '#FF8C00';
+        const col = color || '#00ffcc';
         el.innerHTML = [
             parts.prefix ? `<span style="color:${this.escape(col)}">${this.escape(parts.prefix)}</span>` : '',
             `<span>${this.escape(parts.name)}</span>`,
@@ -175,7 +175,7 @@ const ClanPanels = {
         if (!form || !preview) return;
         const tag = form.querySelector('[name="tag"]')?.value || 'uS';
         const style = form.querySelector('[name="tagStyle"]')?.value || 'brackets';
-        const color = form.querySelector('[name="tagColor"]')?.value || '#FF8C00';
+        const color = form.querySelector('[name="tagColor"]')?.value || '#00ffcc';
         this.paintPreview(preview, tag, 'YourName', style, color);
     },
 
@@ -185,7 +185,7 @@ const ClanPanels = {
         if (!form || !preview || !this.dashboard) return;
         const tag = form.querySelector('[name="tag"]')?.value || this.dashboard.tag || 'uS';
         const style = form.querySelector('[name="tagStyle"]')?.value || this.dashboard.tagStyle || 'brackets';
-        const color = form.querySelector('[name="tagColor"]')?.value || this.dashboard.tagColor || '#FF8C00';
+        const color = form.querySelector('[name="tagColor"]')?.value || this.dashboard.tagColor || '#00ffcc';
         this.paintPreview(preview, tag, 'YourName', style, color);
     },
 
@@ -204,7 +204,7 @@ const ClanPanels = {
         const typeEl = $('#clan-panel-type');
 
         if (inClan) {
-            const color = this.escape(payload.tagColor || '#FF8C00');
+            const color = this.escape(payload.tagColor || '#00ffcc');
             const clanName = this.escape(payload.name || 'Clan');
             const clanTag = this.escape(payload.tag || '');
             if (title) {
@@ -273,7 +273,7 @@ const ClanPanels = {
                 const descInput = settingsForm.querySelector('[name="description"]');
                 if (descInput) descInput.value = payload.description || '';
                 const colorInput = settingsForm.querySelector('[name="tagColor"]');
-                if (colorInput) colorInput.value = payload.tagColor || '#FF8C00';
+                if (colorInput) colorInput.value = payload.tagColor || '#00ffcc';
                 this.fillStyleSelect(
                     settingsForm.querySelector('[name="tagStyle"]'),
                     payload.tagStyles,
@@ -433,7 +433,7 @@ const ClanPanels = {
             const card = document.createElement('div');
             card.className = 'premium-factions-dir__card premium-clans-dir__card';
 
-            const tagColor = this.escape(clan.tagColor || '#ff9900');
+            const tagColor = this.escape(clan.tagColor || '#00ffcc');
             const total = Number(clan.total) || 0;
             const maxMembers = Number(clan.maxMembers) || 25;
             const isFull = total >= maxMembers;
@@ -480,7 +480,7 @@ const ClanPanels = {
         this.selectedClanId = clan.id;
         modal.classList.add('is-open');
 
-        const tagColor = this.escape(clan.tagColor || '#ff9900');
+        const tagColor = this.escape(clan.tagColor || '#00ffcc');
         const icon = $('#clan-dir-modal-icon');
         if (icon) {
             icon.innerHTML = `<span style="font-size:32px;font-weight:900;color:${tagColor};">[${this.escape(clan.tag || '')}]</span>`;

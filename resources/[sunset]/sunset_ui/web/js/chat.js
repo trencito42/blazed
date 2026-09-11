@@ -385,7 +385,7 @@ const Chat = {
     splitClanParts(m) {
         const tag = String(m.clanTag || '').trim();
         const style = String(m.clanTagStyle || 'brackets');
-        const color = String(m.clanTagColor || '#FF8C00');
+        const color = String(m.clanTagColor || '#00ffcc');
         const name = SunsetPlayerIdentity?.stripTaggedName?.(m.name, tag, style)
             || String(m.name || 'Player').trim();
         if (!tag) return { prefix: '', name, suffix: '', color };
@@ -422,7 +422,7 @@ const Chat = {
         const rankNum = m.clanRank ? `R${m.clanRank}` : '';
         const rankTitle = String(m.clanRankLabel || '').trim();
         const msg = esc(String(m.message ?? ''));
-        const tagColor = esc(String(m.clanTagColor || '#FF8C00'));
+        const tagColor = esc(String(m.clanTagColor || '#00ffcc'));
         const nameHtml = this.formatClanNameHtml(m);
 
         const rankBits = [];
@@ -516,7 +516,7 @@ const Chat = {
         const rankNum = m.clanRank ? `R${m.clanRank}` : '';
         const rankTitle = String(m.clanRankLabel || '').trim();
         const msg = esc(String(m.message ?? ''));
-        const tagColor = esc(String(m.clanTagColor || '#FF8C00'));
+        const tagColor = esc(String(m.clanTagColor || '#00ffcc'));
         const nameHtml = this.formatClanNameHtml(m);
         const rankBits = [];
         if (rankNum) rankBits.push(`<span class="chat-clan-rank">${esc(rankNum)}</span>`);

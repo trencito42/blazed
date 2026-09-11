@@ -2,7 +2,7 @@
 
 :root {
     --ui-hover-ring-teal: 0 0 0 1px rgba(0, 255, 204, 0.42);
-    --ui-hover-ring-orange: 0 0 0 1px rgba(255, 140, 0, 0.45);
+    --ui-hover-ring-orange: 0 0 0 1px rgba(0, 255, 204, 0.45);
     --ui-hover-elevate: 0 8px 22px rgba(0, 0, 0, 0.38);
     --ui-hover-elevate-soft: 0 4px 14px rgba(0, 0, 0, 0.28);
 }

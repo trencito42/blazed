@@ -588,6 +588,7 @@ function GetVehicleState()
 
     return {
         inVehicle = true,
+        isDriver = isDriver(),
         speed = speed,
         gear = gear,
         rpm = rpm,

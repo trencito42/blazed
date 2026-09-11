@@ -31,7 +31,7 @@
     flex-direction: column;
     padding: 28px 26px 24px;
     background: linear-gradient(270deg, rgba(6, 6, 8, 0.97) 0%, rgba(6, 6, 8, 0.94) 70%, rgba(6, 6, 8, 0.55) 100%);
-    border-left: 1px solid rgba(255, 140, 0, 0.18);
+    border-left: 1px solid rgba(0, 255, 204, 0.18);
     box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
 }
 
@@ -79,7 +79,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(255, 140, 0, 0.85);
+    color: rgba(0, 255, 204, 0.85);
 }
 
 .studio-preview-keys {
@@ -95,7 +95,7 @@
 }
 
 .studio-controls::-webkit-scrollbar { width: 4px; }
-.studio-controls::-webkit-scrollbar-thumb { background: rgba(255, 140, 0, 0.35); }
+.studio-controls::-webkit-scrollbar-thumb { background: rgba(0, 255, 204, 0.35); }
 
 .studio-gender {
     display: flex;
@@ -118,9 +118,9 @@
 }
 
 .studio-gender__btn.is-active {
-    border-color: rgba(255, 140, 0, 0.55);
-    background: rgba(255, 140, 0, 0.12);
-    color: #ff8c00;
+    border-color: rgba(0, 255, 204, 0.55);
+    background: rgba(0, 255, 204, 0.12);
+    color: #00ffcc;
 }
 
 .studio-row {
@@ -144,7 +144,7 @@
 
 .studio-row__val {
     font-size: 11px;
-    color: #ff8c00;
+    color: #00ffcc;
     font-variant-numeric: tabular-nums;
 }
 
@@ -163,9 +163,9 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #ff8c00;
+    background: #00ffcc;
     border: 2px solid #1a1a1a;
-    box-shadow: 0 0 8px rgba(255, 140, 0, 0.45);
+    box-shadow: 0 0 8px rgba(0, 255, 204, 0.45);
     cursor: default;
 }
 
@@ -188,16 +188,16 @@
 }
 
 .studio-rotate button.is-active {
-    border-color: rgba(255, 140, 0, 0.55);
-    color: #ff8c00;
-    background: rgba(255, 140, 0, 0.12);
+    border-color: rgba(0, 255, 204, 0.55);
+    color: #00ffcc;
+    background: rgba(0, 255, 204, 0.12);
 }
 
 .studio-save {
     width: 100%;
     padding: 14px;
     border: none;
-    background: linear-gradient(90deg, #e67a00, #ff8c00);
+    background: linear-gradient(90deg, #00ffcc, #00ffcc);
     color: #111;
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 15px;

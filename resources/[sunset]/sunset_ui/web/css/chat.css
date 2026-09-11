@@ -71,9 +71,9 @@ body.chat-ui-open * {
 }
 
 .chat-settings-btn:hover {
-    color: #ff8a00;
-    border-color: rgba(255, 138, 0, 0.45);
-    background: rgba(255, 138, 0, 0.12);
+    color: #00ffcc;
+    border-color: rgba(0, 255, 204, 0.45);
+    background: rgba(0, 255, 204, 0.12);
 }
 
 .chat-settings-popover {
@@ -92,7 +92,7 @@ body.chat-ui-open * {
 
 .chat-settings-popover__title {
     margin-bottom: 10px;
-    color: #ff8a00;
+    color: #00ffcc;
     font: 700 11px/1 'Chakra Petch', sans-serif;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -127,7 +127,7 @@ body.chat-ui-open * {
 .chat-settings-row input[type="range"],
 .menu-config-row input[type="range"] {
     width: 100%;
-    accent-color: #ff8a00;
+    accent-color: #00ffcc;
     cursor: pointer !important;
 }
 
@@ -239,7 +239,7 @@ body.chat-ui-open .chat-msg,
 }
 
 .chat-msg--clan_motd {
-    color: #ffb347;
+    color: #26ffd5;
     font-weight: 600;
 }
 
@@ -263,7 +263,7 @@ body.chat-ui-open .chat-msg,
 
 .chat-motd-label {
     display: block;
-    color: #ff8a00;
+    color: #00ffcc;
     font: 700 11px/1.2 'Chakra Petch', sans-serif;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -316,7 +316,7 @@ body.chat-ui-open .chat-msg,
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    color: #ff8a00;
+    color: #00ffcc;
 }
 
 .chat-pass__wrap {
@@ -328,7 +328,7 @@ body.chat-ui-open .chat-msg,
 
 .chat-pass__title {
     display: block;
-    color: #ffb21c;
+    color: #26ffd5;
     font: 700 13px/1.1 'Chakra Petch', sans-serif;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -467,7 +467,7 @@ body.chat-ui-open .chat-msg,
 
 /* Clan chat (/c) */
 .chat-msg--c {
-    color: #ffb347;
+    color: #26ffd5;
     font-weight: 600;
 }
 
@@ -495,7 +495,7 @@ body.chat-ui-open .chat-msg,
 }
 
 .chat-msg--clan_action {
-    color: #ffb347;
+    color: #26ffd5;
     font-weight: 600;
 }
 
@@ -597,7 +597,7 @@ body.chat-ui-open .chat-msg,
     padding: 8px 12px;
     background: rgba(0, 0, 0, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-left: 3px solid #e85d2a;
+    border-left: 3px solid #00ffcc;
     color: #fff;
     font-family: 'Inter', sans-serif;
     font-size: var(--chat-input-size);
@@ -606,7 +606,7 @@ body.chat-ui-open .chat-msg,
     -webkit-user-select: text !important;
     pointer-events: auto !important;
     cursor: text !important;
-    caret-color: #e85d2a;
+    caret-color: #00ffcc;
 }
 
 .chat-input::placeholder { color: rgba(255, 255, 255, 0.35); }

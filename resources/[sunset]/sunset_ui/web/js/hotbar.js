@@ -1,6 +1,7 @@
 const HotbarUI = {
     slots: {},
     activeSlot: null,
+    driverReservesSlot2: false,
     emotes: [],
     wheelOpen: false,
     selectedEmoteIndex: -1,
@@ -50,11 +51,17 @@ const HotbarUI = {
         return `<img src="${src}" alt="" draggable="false" onerror="this.src='assets/items/backpack.webp'">`;
     },
 
+    _isSlotDisabledInVehicle(slotIndex) {
+        if (slotIndex !== 2) return false;
+        return this.driverReservesSlot2 || document.body.classList.contains('is-driver');
+    },
+
     _renderSlot(container, slotIndex, slot, interactive) {
-        const isActive = Number(this.activeSlot) === slotIndex;
-        const isUsable = !!(slot && slot.usable);
+        const disabledInVehicle = this._isSlotDisabledInVehicle(slotIndex);
+        const isActive = !disabledInVehicle && Number(this.activeSlot) === slotIndex;
+        const isUsable = !disabledInVehicle && !!(slot && slot.usable);
         const el = document.createElement('div');
-        el.className = `hotbar-slot${isActive ? ' active' : ''}${slot ? ' has-item' : ''}${isUsable ? ' is-usable' : ''}${isActive && isUsable ? ' is-ready' : ''}`;
+        el.className = `hotbar-slot${isActive ? ' active' : ''}${slot ? ' has-item' : ''}${isUsable ? ' is-usable' : ''}${isActive && isUsable ? ' is-ready' : ''}${disabledInVehicle ? ' hotbar-slot--disabled' : ''}`;
         el.dataset.hotbarSlot = String(slotIndex);
         el.innerHTML = `
             <div class="hotbar-slot-key">${slotIndex}</div>
@@ -62,10 +69,16 @@ const HotbarUI = {
             <div class="hotbar-slot-qty">${this._slotAmmoHtml(slot) || this._slotQtyText(slot)}</div>
         `;
         if (interactive === true) {
-            el.title = slot ? `${slot.label || 'Quick slot'} — double-click to clear` : `Quick slot ${slotIndex}`;
-            el.addEventListener('dblclick', () => {
-                post('hotbarAssign', { slot: slotIndex, clear: true, fromInventory: true });
-            });
+            el.title = disabledInVehicle
+                ? 'Slot 2 indisponibil la volan (tasta 2 = motor)'
+                : (slot ? `${slot.label || 'Quick slot'} — double-click to clear` : `Quick slot ${slotIndex}`);
+            if (!disabledInVehicle) {
+                el.addEventListener('dblclick', () => {
+                    post('hotbarAssign', { slot: slotIndex, clear: true, fromInventory: true });
+                });
+            }
+        } else if (disabledInVehicle) {
+            el.title = 'Slot 2 indisponibil la volan (tasta 2 = motor)';
         } else if (interactive === 'hud' && isUsable) {
             el.title = isActive
                 ? `${slot.label} — click or press ${slotIndex} to use`
@@ -111,6 +124,11 @@ const HotbarUI = {
         this.init();
         if (data.slots) this.slots = data.slots;
         if (data.activeSlot !== undefined) this.activeSlot = data.activeSlot;
+        if (data.driverReservesSlot2 !== undefined) {
+            this.driverReservesSlot2 = !!data.driverReservesSlot2;
+        } else if (!document.body.classList.contains('is-driver')) {
+            this.driverReservesSlot2 = false;
+        }
 
         const hud = $('#hotbar-hud');
         if (!hud) return;
@@ -126,7 +144,7 @@ const HotbarUI = {
         hud.innerHTML = '';
         for (let i = 1; i <= 5; i += 1) {
             const slot = this.slots[String(i)] || this.slots[i];
-            this._renderSlot(hud, i, slot, slot?.usable ? 'hud' : false);
+            this._renderSlot(hud, i, slot, 'hud');
         }
         requestAnimationFrame(() => hud.classList.add('is-visible'));
     },

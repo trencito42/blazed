@@ -53,6 +53,12 @@ SunsetRobbery.LootTables = {
         { id = 'stolen_diamond_jewelry', label = 'Designer Jewelry', tier = 'EPIC', weight = 2, baseValue = 2300, rarity = 9, family = 'jewelry' },
         { id = 'stolen_collector_watch', label = 'Collector Piece', tier = 'VERY_RARE', weight = 2, baseValue = 3666, rarity = 3, family = 'jewelry' },
     },
+    vault = {
+        { id = 'stolen_silver_watch', label = 'Banded Cash Stack', tier = 'COMMON', weight = 1, baseValue = 950, rarity = 40, family = 'cash' },
+        { id = 'stolen_gold_chain', label = 'Small Gold Bullion', tier = 'RARE', weight = 2, baseValue = 2800, rarity = 25, family = 'gold' },
+        { id = 'stolen_diamond_jewelry', label = 'Bearer Bonds', tier = 'EPIC', weight = 1, baseValue = 4500, rarity = 12, family = 'bonds' },
+        { id = 'stolen_collector_watch', label = 'Safety Deposit Box', tier = 'VERY_RARE', weight = 3, baseValue = 7500, rarity = 5, family = 'jewelry' },
+    },
 }
 
 SunsetRobbery.SellVariance = { min = 0.50, max = 0.68 }
@@ -66,14 +72,11 @@ SunsetRobbery.Animations = {
 }
 
 SunsetRobbery.Sounds = {
-    terminal = { name = 'PIN_BUTTON', set = 'ATM_SOUNDS' },
     hackOk = { name = 'Hack_Success', set = 'DLC_HEIST_FLEECA_SOUNDSET' },
     hackFail = { name = 'Hack_Failed', set = 'DLC_HEIST_FLEECA_SOUNDSET' },
     glass = { name = 'Glass_Smash', set = 'BREATHING_SWIM_SOUNDSET' },
     pickup = { name = 'PICK_UP', set = 'HUD_FRONTEND_DEFAULT_SOUNDSET' },
     bag = { name = 'PICK_UP_WEAPON', set = 'HUD_FRONTEND_CUSTOM_SOUNDSET' },
-    alarm = { name = 'CHECKPOINT_MISSED', set = 'HUD_MINI_GAME_SOUNDSET' },
-    complete = { name = 'CHECKPOINT_PERFECT', set = 'HUD_MINI_GAME_SOUNDSET' },
 }
 
 SunsetRobbery.BagProp = {
@@ -114,6 +117,33 @@ SunsetRobbery.Locations = {
             { id = 'd4', coords = vector3(-620.24, -234.38, 38.06), lootTable = 'jewelry', label = 'Designer Case' },
             { id = 'd5', coords = vector3(-617.86, -230.48, 38.06), lootTable = 'watches', label = 'Gold Watches' },
             { id = 'd6', coords = vector3(-619.20, -227.28, 38.06), lootTable = 'jewelry', label = 'Gold Bracelets' },
+        },
+    },
+    fleeca_legion = {
+        id = 'fleeca_legion',
+        label = 'Fleeca Bank Legion',
+        street = 'Legion Square',
+        zone = 'Downtown',
+        coords = vector3(147.05, -1044.88, 29.37),
+        radius = 20.0,
+        minPolice = 3,
+        startHint = '[E] Rob Fleeca Bank',
+        blip = { sprite = 500, color = 2, scale = 0.9, label = 'Bank — Fleeca Legion' },
+        entrance = {
+            coords = vector3(149.20, -1040.50, 29.37),
+            radius = 4.0,
+        },
+        doors = {},
+        hackTerminal = {
+            coords = vector3(147.20, -1046.20, 29.37),
+            heading = 340.0,
+            label = '[E] Bypass vault keypad',
+        },
+        displays = {
+            { id = 'fb1', coords = vector3(148.80, -1050.20, 29.37), lootTable = 'vault', label = 'Safety Deposit Row A' },
+            { id = 'fb2', coords = vector3(147.10, -1051.40, 29.37), lootTable = 'vault', label = 'Cash Safe Compartment' },
+            { id = 'fb3', coords = vector3(145.40, -1049.80, 29.37), lootTable = 'vault', label = 'Safety Deposit Row B' },
+            { id = 'fb4', coords = vector3(146.50, -1047.80, 29.37), lootTable = 'vault', label = 'Teller Vault Box' },
         },
     },
 }

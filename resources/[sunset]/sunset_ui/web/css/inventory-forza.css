@@ -229,6 +229,18 @@
     z-index: 10;
 }
 
+.inventory-forza .hotbar-marker--disabled {
+    color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.12);
+    text-decoration: line-through;
+}
+
+.inventory-forza .inv-slot--disabled-key {
+    opacity: 0.45;
+    filter: grayscale(0.85);
+    pointer-events: none;
+}
+
 .inventory-forza .inv-item {
     width: 90%;
     height: 90%;

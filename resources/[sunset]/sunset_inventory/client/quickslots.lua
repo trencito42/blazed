@@ -36,6 +36,7 @@ local function enrichInventoryPayload(data)
     data.dutyWeapons = getDutyWeaponsForUi()
     data.quickslots = hotbarSlots
     data.activeHotbarSlot = activeHotbarSlot
+    data.driverReservesSlot2 = isDriverInVehicle()
     return data
 end
 
@@ -91,6 +92,7 @@ local function pushHotbarUpdate()
         slots = hotbarSlots,
         activeSlot = activeHotbarSlot,
         visible = isHotbarHudVisible(),
+        driverReservesSlot2 = isDriverInVehicle(),
     })
 end
 
@@ -201,11 +203,10 @@ local function requestHotbarSlot(slot, consume)
     if blocked() then return end
     slot = tonumber(slot)
     if not slot or slot < 1 or slot > HOTBAR_SLOTS then return end
+    if slot == 2 and isDriverInVehicle() then return end
 
     peekHotbarHud()
     pushHotbarUpdate()
-
-    if slot == 2 and isDriverInVehicle() then return end
 
     local slotData = getSlotData(slot)
 
@@ -398,6 +399,18 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local lastDriver = false
+    while true do
+        local driver = isDriverInVehicle()
+        if driver ~= lastDriver then
+            lastDriver = driver
+            pushHotbarUpdate()
+        end
+        Wait((driver or lastDriver) and 250 or 600)
+    end
+end)
+
+CreateThread(function()
     while true do
         if hotbarPeekUntil > 0 and GetGameTimer() >= hotbarPeekUntil then
             hotbarPeekUntil = 0
@@ -458,6 +471,7 @@ CreateThread(function()
                                 slots = hotbarSlots,
                                 activeSlot = activeHotbarSlot,
                                 visible = true,
+                                driverReservesSlot2 = isDriverInVehicle(),
                             })
                         end
                     end

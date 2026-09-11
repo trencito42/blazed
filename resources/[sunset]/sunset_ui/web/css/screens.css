@@ -94,7 +94,7 @@
     width: 64px;
     height: 64px;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--sunset-dusk), rgba(255, 119, 0, 0.28));
+    background: linear-gradient(135deg, var(--sunset-dusk), rgba(0, 255, 204, 0.28));
     display: flex;
     align-items: center;
     justify-content: center;

@@ -1,5 +1,5 @@
 #fuel-pump {
-    --pump-accent: var(--sunset-orange, #ff8a00);
+    --pump-accent: var(--sunset-orange, #00ffcc);
     position: fixed;
     left: 50%;
     bottom: 80px;
@@ -34,7 +34,7 @@
     width: 26px;
     height: 26px;
     color: var(--pump-accent);
-    filter: drop-shadow(0 0 9px rgba(255, 138, 0, .5));
+    filter: drop-shadow(0 0 9px rgba(0, 255, 204, .5));
 }
 
 .fuel-pump__brand {
@@ -124,7 +124,7 @@
     width: 0;
     height: 100%;
     background: var(--pump-accent);
-    box-shadow: 0 0 10px rgba(255, 138, 0, .55);
+    box-shadow: 0 0 10px rgba(0, 255, 204, .55);
     -webkit-mask-image: repeating-linear-gradient(to right, #000 0, #000 5px, transparent 5px, transparent 7px);
     mask-image: repeating-linear-gradient(to right, #000 0, #000 5px, transparent 5px, transparent 7px);
     transition: width .08s linear;
@@ -165,8 +165,8 @@
 #fuel-pump.is-full .fuel-pump__prompt kbd { display: none; }
 
 @keyframes pumpPulse {
-    from { transform: scale(1); filter: drop-shadow(0 0 6px rgba(255, 138, 0, .4)); }
-    to { transform: scale(1.10); filter: drop-shadow(0 0 13px rgba(255, 138, 0, .8)); }
+    from { transform: scale(1); filter: drop-shadow(0 0 6px rgba(0, 255, 204, .4)); }
+    to { transform: scale(1.10); filter: drop-shadow(0 0 13px rgba(0, 255, 204, .8)); }
 }
 
 @media (max-width: 1280px) {

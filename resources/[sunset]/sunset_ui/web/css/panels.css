@@ -32,8 +32,8 @@
     pointer-events: auto;
     padding: 12px 12px 10px;
     background: linear-gradient(145deg, rgba(10, 9, 8, .38), rgba(4, 4, 4, .24));
-    border: 1px solid rgba(255, 119, 0, .32);
-    border-top: 2px solid rgba(255, 119, 0, .85);
+    border: 1px solid rgba(0, 255, 204, .32);
+    border-top: 2px solid rgba(0, 255, 204, .85);
     box-shadow: 0 12px 32px rgba(0, 0, 0, .24);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -47,14 +47,14 @@
     right: 0;
     bottom: 0;
     height: 3px;
-    background: var(--os-accent, #ff7700);
+    background: var(--os-accent, #00ffcc);
 }
 
 .fleet-garage__head span {
     display: block;
     font: 700 14px/1 var(--os-title, 'Chakra Petch', sans-serif);
     letter-spacing: .14em;
-    color: var(--os-accent-bright, #ffb21c);
+    color: var(--os-accent-bright, #26ffd5);
     text-transform: uppercase;
 }
 
@@ -82,7 +82,7 @@
     padding: 8px 10px;
     background: rgba(0, 0, 0, 0.34);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-left: 3px solid rgba(255, 119, 0, 0.75);
+    border-left: 3px solid rgba(0, 255, 204, 0.75);
 }
 
 .fleet-unit-row__thumb {
@@ -105,7 +105,7 @@
     height: 100%;
     align-items: center;
     justify-content: center;
-    color: var(--os-accent, #ff7700);
+    color: var(--os-accent, #00ffcc);
     font: 700 18px/1 var(--os-title, 'Chakra Petch', sans-serif);
 }
 
@@ -126,8 +126,8 @@
 
 .fleet-unit-row__btn {
     padding: 8px 12px;
-    border: 1px solid rgba(255, 119, 0, 0.45);
-    background: rgba(255, 119, 0, 0.16);
+    border: 1px solid rgba(0, 255, 204, 0.45);
+    background: rgba(0, 255, 204, 0.16);
     color: #ffd7a8;
     font: 700 10px/1 var(--os-title, 'Chakra Petch', sans-serif);
     letter-spacing: 0.1em;
@@ -137,7 +137,7 @@
 }
 
 .fleet-unit-row__btn:hover:not(:disabled) {
-    background: rgba(255, 119, 0, 0.28);
+    background: rgba(0, 255, 204, 0.28);
     color: #fff;
 }
 
@@ -183,7 +183,7 @@
 .overlay-panel h2 {
     margin: 0 0 16px;
     font-size: 18px;
-    color: #ff8c00;
+    color: #00ffcc;
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -210,7 +210,7 @@
     font-size: 12px;
     letter-spacing: 0.05em;
 }
-.overlay-panel .btn--primary { background: #ff8c00; color: #111; }
+.overlay-panel .btn--primary { background: #00ffcc; color: #111; }
 .overlay-panel .btn--ghost { background: rgba(255,255,255,0.08); color: #fff; }
 
 .clothing-options {
@@ -248,9 +248,9 @@
 }
 .panel-list button {
     flex-shrink: 0;
-    background: rgba(255,140,0,0.15);
-    border: 1px solid rgba(255,140,0,0.35);
-    color: #ff8c00;
+    background: rgba(0, 255, 204,0.15);
+    border: 1px solid rgba(0, 255, 204,0.35);
+    color: #00ffcc;
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 11px;
@@ -285,25 +285,25 @@
 
 .craft-meta--ok { color: #55d98a; }
 .craft-meta--missing { color: #ff6b64; }
-.craft-lock { color: #ffb347; font-size: 12px; }
+.craft-lock { color: #26ffd5; font-size: 12px; }
 .panel-list button:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.6); }
 
 /* /jobs — central Sunset career panel. No full-screen fill or CEF backdrop blur. */
 .jobs-menu { position: fixed; inset: 0; z-index: 82; display: grid; place-items: center; padding: 4vh 4vw; color: #f6f2e9; font-family: 'Rajdhani', 'Inter', sans-serif; }
 .jobs-menu.hidden { display: none; }
-.jobs-menu__shell { width: min(880px, 92vw); max-height: 84vh; display: flex; flex-direction: column; padding: 24px; border-top: 1px solid #ff8c00; border-bottom: 1px solid rgba(255,140,0,.45); background: linear-gradient(115deg, rgba(11,11,13,.88), rgba(15,13,12,.72)); box-shadow: 0 22px 70px rgba(0,0,0,.38); clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
+.jobs-menu__shell { width: min(880px, 92vw); max-height: 84vh; display: flex; flex-direction: column; padding: 24px; border-top: 1px solid #00ffcc; border-bottom: 1px solid rgba(0, 255, 204,.45); background: linear-gradient(115deg, rgba(11,11,13,.88), rgba(15,13,12,.72)); box-shadow: 0 22px 70px rgba(0,0,0,.38); clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
 .jobs-menu__header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.09); }
 .jobs-menu__eyebrow { color: #ff9b20; font: 700 10px/1 'Chakra Petch', sans-serif; letter-spacing: .19em; text-transform: uppercase; }
 .jobs-menu__header h2 { margin: 5px 0 1px; color: #fff; font: 700 28px/1.1 'Chakra Petch', sans-serif; letter-spacing: .06em; text-transform: uppercase; }
 .jobs-menu__header p { margin: 0; color: rgba(255,255,255,.58); font-size: 13px; }
 .jobs-menu__close { width: 48px; height: 34px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: #ddd; font: 700 11px 'Chakra Petch', sans-serif; }
-.jobs-menu__status { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 0; background: rgba(255,255,255,.035); border-left: 2px solid #ff8c00; }
+.jobs-menu__status { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 0; background: rgba(255,255,255,.035); border-left: 2px solid #00ffcc; }
 .jobs-menu__status > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-right: 1px solid rgba(255,255,255,.07); }
 .jobs-menu__status span { color: #ff9b20; font: 700 9px 'Chakra Petch', sans-serif; letter-spacing: .15em; text-transform: uppercase; }
 .jobs-menu__status strong { color: #fff; font-size: 15px; text-transform: uppercase; }
 .jobs-menu__list { min-height: 0; overflow-y: auto; display: grid; gap: 7px; padding-right: 4px; }
-.jobs-menu__card { position: relative; padding: 13px 15px; border: 1px solid rgba(255,255,255,.07); border-left: 2px solid rgba(255,140,0,.38); background: rgba(5,5,7,.34); }
-.jobs-menu__card.is-current { border-left-color: #ff8c00; background: linear-gradient(90deg, rgba(255,140,0,.12), rgba(5,5,7,.32) 40%); }
+.jobs-menu__card { position: relative; padding: 13px 15px; border: 1px solid rgba(255,255,255,.07); border-left: 2px solid rgba(0, 255, 204,.38); background: rgba(5,5,7,.34); }
+.jobs-menu__card.is-current { border-left-color: #00ffcc; background: linear-gradient(90deg, rgba(0, 255, 204,.12), rgba(5,5,7,.32) 40%); }
 .jobs-menu__card-top { display: flex; justify-content: space-between; gap: 20px; }
 .jobs-menu__card h3 { margin: 0; color: #fff; font: 700 16px 'Chakra Petch', sans-serif; }
 .jobs-menu__card p { margin: 2px 0 0; color: rgba(255,255,255,.57); font-size: 12px; }
@@ -311,10 +311,10 @@
 .jobs-menu__meta { display: flex; align-items: center; gap: 13px; margin-top: 10px; color: rgba(255,255,255,.65); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
 .jobs-menu__badge { margin-left: auto; color: #ff9b20; font-weight: 700; }
 .jobs-menu__progress { height: 2px; margin-top: 8px; background: rgba(255,255,255,.1); overflow: hidden; }
-.jobs-menu__progress i { display: block; height: 100%; background: #ff8c00; }
+.jobs-menu__progress i { display: block; height: 100%; background: #00ffcc; }
 .jobs-menu__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
 .jobs-menu__button { min-height: 38px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: #eee; font: 700 11px 'Chakra Petch', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
-.jobs-menu__button--primary { border-color: rgba(255,140,0,.7); background: #ff8c00; color: #17110a; }
+.jobs-menu__button--primary { border-color: rgba(0, 255, 204,.7); background: #00ffcc; color: #17110a; }
 .jobs-menu__button--danger:not(:disabled) { border-color: rgba(255,91,72,.35); color: #ff7868; }
 .jobs-menu__button:disabled { opacity: .35; }
 @media (max-width: 680px) { .jobs-menu__status, .jobs-menu__actions { grid-template-columns: 1fr; } .jobs-menu__shell { padding: 18px; } }
@@ -322,12 +322,12 @@
 /* Dealership keeps the right side transparent for the live in-world preview. */
 .dealership { position: fixed; inset: 0; z-index: 82; font-family: 'Inter', sans-serif; color: #f6f6f6; pointer-events: none; }
 .dealership.hidden { display: none; }
-.dealership__panel { pointer-events: auto; width: min(620px, 48vw); height: 100vh; box-sizing: border-box; padding: 28px; overflow-y: auto; background: linear-gradient(110deg, rgba(11,12,15,.94) 0%, rgba(16,17,21,.88) 72%, rgba(16,17,21,.55) 100%); border-right: 1px solid rgba(255,140,0,.35); box-shadow: 30px 0 70px rgba(0,0,0,.28); }
+.dealership__panel { pointer-events: auto; width: min(620px, 48vw); height: 100vh; box-sizing: border-box; padding: 28px; overflow-y: auto; background: linear-gradient(110deg, rgba(11,12,15,.94) 0%, rgba(16,17,21,.88) 72%, rgba(16,17,21,.55) 100%); border-right: 1px solid rgba(0, 255, 204,.35); box-shadow: 30px 0 70px rgba(0,0,0,.28); }
 .dealership__header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 4px; }
 .dealership__header h2 { margin: 3px 0 0; font-family: 'Chakra Petch', 'Inter', sans-serif; font-size: 23px; text-transform: uppercase; letter-spacing: .06em; color: #fff; }
-.dealership__eyebrow { color: #ff8c00; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+.dealership__eyebrow { color: #00ffcc; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
 .dealership__close { border: 0; background: rgba(255,255,255,.07); color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 24px; }
-.dealership__balance { margin: 16px 0; padding: 10px 12px; background: rgba(255,140,0,.08); border-left: 3px solid #ff8c00; color: #ddd; font-size: 12px; letter-spacing: .04em; }
+.dealership__balance { margin: 16px 0; padding: 10px 12px; background: rgba(0, 255, 204,.08); border-left: 3px solid #00ffcc; color: #ddd; font-size: 12px; letter-spacing: .04em; }
 .dealership__filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .dealership__filters input, .dealership__filters select, .dealership__admin input { box-sizing: border-box; width: 100%; border: 1px solid rgba(255,255,255,.11); background: rgba(0,0,0,.32); color: #fff; border-radius: 5px; padding: 10px; }
 .dealership__filters input[type="search"] { grid-column: 1 / -1; }
@@ -337,23 +337,23 @@
 .dealership__content { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 300px; }
 .dealership__list { max-height: 410px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .dealership-card { text-align: left; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); color: #eee; padding: 10px 12px; border-radius: 0; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); transition: border-color .15s, background .15s, transform .15s; cursor: pointer; }
-.dealership-card:hover { border-color: rgba(255,140,0,.45); background: rgba(255,140,0,.06); transform: translateX(2px); }
-.dealership-card.is-active { border-color: rgba(255,140,0,.85); background: rgba(255,140,0,.12); box-shadow: inset 3px 0 0 #ff8c00; }
+.dealership-card:hover { border-color: rgba(0, 255, 204,.45); background: rgba(0, 255, 204,.06); transform: translateX(2px); }
+.dealership-card.is-active { border-color: rgba(0, 255, 204,.85); background: rgba(0, 255, 204,.12); box-shadow: inset 3px 0 0 #00ffcc; }
 .dealership-card__top { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
 .dealership-card__meta { display: flex; justify-content: space-between; margin-top: 5px; color: #999; font-size: 10px; text-transform: uppercase; }
 .dealership-card__stock--out { color: #ff625a; }
 .dealership__detail { border: 1px solid rgba(255,255,255,.08); border-radius: 7px; padding: 16px; background: rgba(0,0,0,.2); }
 .dealership__detail h3 { margin: 0 0 4px; font-size: 21px; }
-.dealership__detail-brand { color: #ff8c00; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+.dealership__detail-brand { color: #00ffcc; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
 .dealership__detail-price { font-size: 24px; font-weight: 800; margin: 22px 0 4px; }
 .dealership__detail-stock { color: #aaa; font-size: 12px; }
 .dealership__detail-actions { display: grid; gap: 8px; margin-top: 20px; }
-.dealership__detail-actions button, .dealership__admin button, .dealership__preview-controls button { border: 0; border-radius: 5px; padding: 10px; background: #ff8c00; color: #111; font-weight: 800; font-size: 11px; letter-spacing: .04em; }
+.dealership__detail-actions button, .dealership__admin button, .dealership__preview-controls button { border: 0; border-radius: 5px; padding: 10px; background: #00ffcc; color: #111; font-weight: 800; font-size: 11px; letter-spacing: .04em; }
 .dealership__detail-actions button.secondary { background: rgba(255,255,255,.1); color: #fff; }
 .dealership__detail-actions button:disabled { opacity: .4; }
-.dealership__admin { margin-top: 18px; border-top: 1px solid rgba(255,140,0,.25); padding-top: 16px; }
+.dealership__admin { margin-top: 18px; border-top: 1px solid rgba(0, 255, 204,.25); padding-top: 16px; }
 .dealership__admin.hidden { display: none; }
-.dealership__admin-title { display: flex; justify-content: space-between; align-items: center; color: #ff8c00; font-size: 12px; }
+.dealership__admin-title { display: flex; justify-content: space-between; align-items: center; color: #00ffcc; font-size: 12px; }
 .dealership__admin-title button { padding: 7px 10px; }
 .dealership__admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 12px; }
 .dealership__admin-grid label { color: #888; font-size: 10px; text-transform: uppercase; }
@@ -415,8 +415,8 @@
 }
 
 .garage-item__status--out {
-    background: rgba(255, 140, 0, 0.15);
-    color: #ff8c00;
+    background: rgba(0, 255, 204, 0.15);
+    color: #00ffcc;
 }
 
 .garage-item__status--missing {
@@ -437,9 +437,9 @@
 }
 
 .garage-btn--primary {
-    background: rgba(255, 140, 0, 0.15) !important;
-    border-color: rgba(255, 140, 0, 0.35) !important;
-    color: #ff8c00 !important;
+    background: rgba(0, 255, 204, 0.15) !important;
+    border-color: rgba(0, 255, 204, 0.35) !important;
+    color: #00ffcc !important;
 }
 
 .garage-empty {
@@ -474,12 +474,12 @@
     padding-right: 6px;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 140, 0, 0.45) rgba(255, 255, 255, 0.06);
+    scrollbar-color: rgba(0, 255, 204, 0.45) rgba(255, 255, 255, 0.06);
 }
 
 .overlay-panel__box--garage .menu-vehicle-grid::-webkit-scrollbar { width: 6px; }
 .overlay-panel__box--garage .menu-vehicle-grid::-webkit-scrollbar-thumb {
-    background: rgba(255, 140, 0, 0.4);
+    background: rgba(0, 255, 204, 0.4);
     border-radius: 4px;
 }
 
@@ -531,7 +531,7 @@
     font-size: 11px;
     cursor: default;
 }
-.auth-tab.is-active { background: rgba(255,140,0,0.2); color: #ff8c00; }
+.auth-tab.is-active { background: rgba(0, 255, 204,0.2); color: #00ffcc; }
 .auth-form.hidden { display: none; }
 
 /* ── MDC ── */
@@ -551,7 +551,7 @@
     letter-spacing: 0.06em;
     cursor: default;
 }
-.mdc-tab.is-active { background: rgba(255,140,0,0.12); border-color: rgba(255,140,0,0.35); color: #ff8c00; }
+.mdc-tab.is-active { background: rgba(0, 255, 204,0.12); border-color: rgba(0, 255, 204,0.35); color: #00ffcc; }
 .mdc-pane { display: none; }
 .mdc-pane.is-active { display: block; }
 .mdc-wanted-list, .mdc-charges { list-style: none; padding: 0; margin: 0; }
@@ -574,7 +574,7 @@
 .mdc-result { padding: 14px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; }
 .mdc-result__head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
 .mdc-result__head strong { font-size: 16px; }
-.mdc-result__id { color: #ff8c00; font-size: 13px; }
+.mdc-result__id { color: #00ffcc; font-size: 13px; }
 .mdc-result__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
 .mdc-stat { display: flex; flex-direction: column; gap: 2px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; }
 .mdc-stat span { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; }
@@ -597,7 +597,7 @@
     color: #ff453a;
 }
 .ticket-receive__officer { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 12px; }
-.ticket-receive__amount { font-size: 36px; font-weight: 700; color: #ff8c00; margin-bottom: 8px; }
+.ticket-receive__amount { font-size: 36px; font-weight: 700; color: #00ffcc; margin-bottom: 8px; }
 .ticket-receive__reason { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
 .ticket-receive__hint { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 16px; line-height: 1.4; }
 
@@ -622,7 +622,7 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #ff8c00;
+    color: #00ffcc;
 }
 .servicecalls-list .sc-title { font-weight: 600; font-size: 14px; }
 .servicecalls-list .sc-meta { font-size: 11px; color: rgba(255,255,255,0.45); grid-column: 1 / -1; }
@@ -635,15 +635,15 @@
     align-self: start;
 }
 .sc-status--open { background: rgba(52,199,89,0.15); color: #34c759; }
-.sc-status--assigned { background: rgba(255,140,0,0.15); color: #ff8c00; }
+.sc-status--assigned { background: rgba(0, 255, 204,0.15); color: #00ffcc; }
 .sc-status--closed { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
 .servicecalls-list button {
     grid-row: 1 / 3;
     grid-column: 2;
     align-self: center;
-    background: rgba(255,140,0,0.15);
-    border: 1px solid rgba(255,140,0,0.35);
-    color: #ff8c00;
+    background: rgba(0, 255, 204,0.15);
+    border: 1px solid rgba(0, 255, 204,0.35);
+    color: #00ffcc;
     padding: 8px 14px;
     border-radius: 4px;
     font-size: 11px;
@@ -657,7 +657,7 @@
 .jobs-browser__head h2 { margin: 0; }
 .jobs-browser__sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 4px; }
 .jobs-browser__current { text-align: right; font-size: 11px; color: rgba(255,255,255,0.45); }
-.jobs-browser__current strong { display: block; font-size: 14px; color: #ff8c00; margin-top: 2px; }
+.jobs-browser__current strong { display: block; font-size: 14px; color: #00ffcc; margin-top: 2px; }
 .jobs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -676,7 +676,7 @@
     border-radius: 6px;
     transition: border-color 0.15s;
 }
-.job-card.is-current { border-color: rgba(255,140,0,0.45); box-shadow: inset 0 0 0 1px rgba(255,140,0,0.12); }
+.job-card.is-current { border-color: rgba(0, 255, 204,0.45); box-shadow: inset 0 0 0 1px rgba(0, 255, 204,0.12); }
 .job-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .job-card__name { font-size: 14px; font-weight: 700; }
 .job-card__pay { font-size: 11px; color: #34c759; font-weight: 600; white-space: nowrap; }
@@ -685,10 +685,10 @@
 .job-card__btn {
     margin-top: 4px;
     padding: 8px;
-    background: rgba(255,140,0,0.12);
-    border: 1px solid rgba(255,140,0,0.3);
+    background: rgba(0, 255, 204,0.12);
+    border: 1px solid rgba(0, 255, 204,0.3);
     border-radius: 4px;
-    color: #ff8c00;
+    color: #00ffcc;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -709,9 +709,9 @@
 .skills-list li:last-child { border-bottom: none; }
 .skill-row__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .skill-row__name { font-size: 14px; font-weight: 600; }
-.skill-row__level { font-size: 11px; color: #ff8c00; font-weight: 700; }
+.skill-row__level { font-size: 11px; color: #00ffcc; font-weight: 700; }
 .skill-row__bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-.skill-row__fill { height: 100%; background: linear-gradient(90deg, #e85d2a, #ff8c00); border-radius: 2px; transition: width 0.3s ease; }
+.skill-row__fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00ffcc); border-radius: 2px; transition: width 0.3s ease; }
 .skill-row__xp { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; }
 .skills-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 32px 0; }
 
@@ -726,7 +726,7 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #ff8c00;
+    color: #00ffcc;
     margin: 0 0 8px;
     padding-bottom: 6px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -807,9 +807,9 @@
 }
 
 .shop-tab.is-active {
-    background: rgba(255, 140, 0, 0.14);
-    border-color: rgba(255, 140, 0, 0.4);
-    color: #ff8c00;
+    background: rgba(0, 255, 204, 0.14);
+    border-color: rgba(0, 255, 204, 0.4);
+    color: #00ffcc;
 }
 
 .shop-grid {
@@ -843,8 +843,8 @@
 }
 
 .shop-card:hover {
-    border-color: rgba(255, 140, 0, 0.35);
-    box-shadow: 0 0 0 1px rgba(255, 140, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.28);
+    border-color: rgba(0, 255, 204, 0.35);
+    box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.25), 0 6px 16px rgba(0, 0, 0, 0.28);
 }
 
 .shop-card__icon {
@@ -887,9 +887,9 @@
     width: 100%;
     padding: 8px 10px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 140, 0, 0.35);
-    background: rgba(255, 140, 0, 0.14);
-    color: #ff8c00;
+    border: 1px solid rgba(0, 255, 204, 0.35);
+    background: rgba(0, 255, 204, 0.14);
+    color: #00ffcc;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -897,7 +897,7 @@
 }
 
 .shop-card__buy:hover {
-    background: rgba(255, 140, 0, 0.22);
+    background: rgba(0, 255, 204, 0.22);
 }
 /* House / Property browser styles moved to css/premium-properties.css */
 

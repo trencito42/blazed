@@ -5,14 +5,14 @@
     --sunset-dusk: #1b1713;
     --sunset-purple: #b85b12;
     --sunset-magenta: #e56f12;
-    --sunset-coral: #ff7700;
-    --sunset-gold: #ffb15c;
+    --sunset-coral: #00ffcc;
+    --sunset-gold: #26ffd5;
     --sunset-peach: #ffd4a8;
     --sunset-cream: #fff5eb;
 
     /* Semantic */
     --color-primary: var(--sunset-coral);
-    --color-primary-glow: rgba(255, 119, 0, 0.4);
+    --color-primary-glow: rgba(0, 255, 204, 0.4);
     --color-secondary: var(--sunset-gold);
     --color-accent: var(--sunset-gold);
     --color-success: #4ade80;

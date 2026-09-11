@@ -55,9 +55,12 @@ local function getPromptDisplayName(player)
     return ('%s (%d)'):format(name, serverId)
 end
 
+local lastScreenX, lastScreenY = nil, nil
+
 local function hidePlayerPrompt()
     if not lastPromptVisible then return end
     lastPromptVisible = false
+    lastScreenX, lastScreenY = nil, nil
     exports.sunset_ui:Send('playerInteractionPrompt', { visible = false })
 end
 
@@ -86,11 +89,18 @@ local function sendPlayerPrompt(player, extra)
         return
     end
 
+    local sx = screenX * 100.0
+    local sy = screenY * 100.0
+    if not extra and lastScreenX and math.abs(sx - lastScreenX) < 0.15 and math.abs(sy - lastScreenY) < 0.15 then
+        return
+    end
+    lastScreenX, lastScreenY = sx, sy
+
     lastPromptVisible = true
     local payload = {
         visible = true,
-        x = screenX * 100.0,
-        y = screenY * 100.0,
+        x = sx,
+        y = sy,
         name = getPromptDisplayName(player),
         key = 'G',
     }
@@ -316,7 +326,7 @@ CreateThread(function()
     while true do
         if promptPlayer and not menuOpen and not contextRequestActive and not inputIsBusy() then
             sendPlayerPrompt(promptPlayer)
-            Wait(0)
+            Wait(16)
         else
             Wait(200)
         end

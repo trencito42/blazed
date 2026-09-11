@@ -1,0 +1,18 @@
+SunsetTurfs = SunsetTurfs or {}
+
+SunsetTurfs.WarDurationSec = 600 -- 10 minutes war
+SunsetTurfs.ScorePerSecond = 1
+SunsetTurfs.ScorePerKill = 10
+SunsetTurfs.TurfCooldownSec = 1800 -- 30 minutes cooldown after a war
+SunsetTurfs.MinMembersToAttack = 1
+
+SunsetTurfs.WeaponBlacklist = {
+    [`WEAPON_RPG`] = true,
+    [`WEAPON_HOMINGLAUNCHER`] = true,
+    [`WEAPON_MINIGUN`] = true,
+    [`WEAPON_RAILGUN`] = true,
+    [`WEAPON_GRENADE`] = true,
+    [`WEAPON_STICKYBOMB`] = true,
+    [`WEAPON_MOLOTOV`] = true,
+    [`WEAPON_COMPACTLAUNCHER`] = true,
+}

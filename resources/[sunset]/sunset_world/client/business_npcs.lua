@@ -119,28 +119,32 @@ CreateThread(function()
     while true do
         local pos = GetEntityCoords(PlayerPedId())
         local nearest = nil
-        local nearestDist = PROMPT_DIST
+        local minGlobalDist = 999.0
 
         for _, row in ipairs(businessNpcs) do
             if row.ped and DoesEntityExist(row.ped) then
                 local dist = #(pos - GetEntityCoords(row.ped))
+                if dist < minGlobalDist then minGlobalDist = dist end
                 if dist < PROMPT_DIST then
                     SunsetWorld.Npc.showTooltip(row.id, row.ped, row.meta)
-                    if dist < nearestDist then
-                        nearestDist = dist
-                        nearest = row
-                    end
+                    nearest = row
                 else
                     SunsetWorld.Npc.hideTooltip(row.id)
                 end
             end
         end
 
-        if nearest and nearestDist < INTERACT_DIST and IsControlJustPressed(0, INTERACT_KEY) and SunsetWorld.tryInteract() then
+        if nearest and minGlobalDist < INTERACT_DIST and IsControlJustPressed(0, INTERACT_KEY) and SunsetWorld.tryInteract() then
             if nearest.onInteract then nearest.onInteract() end
         end
 
-        Wait(nearest and 0 or 250)
+        if nearest then
+            Wait(0)
+        elseif minGlobalDist < 25.0 then
+            Wait(250)
+        else
+            Wait(800)
+        end
     end
 end)
 

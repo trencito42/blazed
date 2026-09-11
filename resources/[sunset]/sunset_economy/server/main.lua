@@ -82,8 +82,18 @@ local function processPayday(source)
     end
 
     local salary, civilianSalary, factionSalary = getSalary(char, source)
-    local tax = math.floor(salary * (Sunset.Config.TaxRate or 0))
-    local net = salary - tax
+    local incomeTax = math.floor(salary * (Sunset.Config.TaxRate or 0))
+
+    -- Anti-inflation maintenance taxes
+    local vehCount = 0
+    pcall(function()
+        vehCount = tonumber(MySQL.scalar.await('SELECT COUNT(*) FROM `vehicles` WHERE `character_id` = ? AND `destroyed` = 0', { char.id })) or 0
+    end)
+    local vehicleTax = math.min(1000, vehCount * 30)
+    local propertyTax = (char.home_property_id and tonumber(char.home_property_id) > 0) and 50 or 0
+    local totalTax = incomeTax + vehicleTax + propertyTax
+
+    local net = math.max(0, salary - totalTax)
     if net > 0 then
         exports.sunset_core:AddMoney(source, 'bank', net, 'payday')
     end
@@ -97,10 +107,13 @@ local function processPayday(source)
     TriggerEvent('sunset:payday:processed', source)
     local robPts = 1
     exports.sunset_core:AddRobPoints(source, robPts)
-    TriggerClientEvent('sunset:client:payday', source, net, tax, {
+    TriggerClientEvent('sunset:client:payday', source, net, totalTax, {
         civilian = civilianSalary,
         faction = factionSalary,
         gross = salary,
+        tax = totalTax,
+        vehicleTax = vehicleTax,
+        propertyTax = propertyTax,
         rent = rent.charged or 0,
         rentProperty = rent.label,
         rentEvicted = rent.evicted == true,
@@ -162,6 +175,23 @@ end)
 
 CreateThread(function()
     while true do
+        local srvHour, _ = serverClock()
+        if lastPaydayHour == -1 then
+            lastPaydayHour = srvHour
+        elseif srvHour ~= lastPaydayHour then
+            lastPaydayHour = srvHour
+            print(('[sunset_economy] Triggering hourly payday at %02d:00'):format(srvHour))
+            for _, playerId in ipairs(GetPlayers()) do
+                local pSrc = tonumber(playerId)
+                if pSrc then
+                    processPayday(pSrc)
+                end
+            end
+            if SunsetLottery and SunsetLottery.Draw then
+                pcall(SunsetLottery.Draw)
+            end
+        end
+
         local hour, minute = worldClock()
         if not WorldTime.frozen and WorldTime.hour ~= nil then
             minute = minute + 1
@@ -173,14 +203,6 @@ CreateThread(function()
             WorldTime.minute = minute
         end
 
-        if hour ~= lastPaydayHour and WorldTime.hour == nil then
-            if lastPaydayHour >= 0 then
-                for _, playerId in ipairs(GetPlayers()) do
-                    processPayday(tonumber(playerId))
-                end
-            end
-            lastPaydayHour = hour
-        end
         broadcastTime()
         Wait(10000)
     end

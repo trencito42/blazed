@@ -248,6 +248,16 @@ AddEventHandler('playerDropped', function()
                 Police.saveJailToDb(char.id, releaseAt, combatLogSeconds, 'Combat Logging (Disconnected while cuffed)', nil)
             end)
             print(('[SECURITY] Player %s (Char #%d) disconnected while cuffed. Persisted 30m combat log jail.'):format(GetPlayerName(src) or '?', char.id))
+            pcall(function()
+                exports.sunset_core:SendDiscordLog('security', 'COMBAT LOGGING (DECONECTAT INCATUSAT)',
+                    ('Jucatorul **%s** s-a deconectat in timp ce era incatusat. A primit automat 30 minute de puscarie.'):format(GetPlayerName(src) or 'Necunoscut'), 'red', {
+                        { name = 'Jucator', value = GetPlayerName(src) or 'Necunoscut', inline = true },
+                        { name = 'Server ID', value = tostring(src), inline = true },
+                        { name = 'Caracter ID', value = tostring(char.id), inline = true },
+                        { name = 'Pedeapsa', value = '1800 secunde (30 minute)', inline = true },
+                    }
+                )
+            end)
         end
     end
     Detention.clear(src)

@@ -65,7 +65,7 @@ local function drawPropertyLabel(prop, distance)
     SetDrawOrigin(prop.coords.x, prop.coords.y, prop.coords.z + 0.38, 0)
     local scale = math.max(0.24, math.min(0.34, 0.4 - distance * 0.012))
     local y = -0.045
-    drawPropertyLine(('House #%d  |  %s'):format(prop.id or 0, prop.label or 'Residence'), y, scale + 0.025, 255, 145, 36)
+    drawPropertyLine(('House #%d  |  %s'):format(prop.id or 0, prop.label or 'Residence'), y, scale + 0.025, 0, 255, 204)
     y = y + 0.021
     drawPropertyLine(priceLine, y, scale)
     y = y + 0.019
@@ -275,24 +275,31 @@ CreateThread(function()
     while true do
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
-        local anyNearby = false
+        local sleep = 1000
 
         for _, zone in ipairs(zones) do
-            if #(coords - zone.coords) < MARKER_DRAW_DIST then
-                anyNearby = true
-                drawMarkerAt(zone.coords, zone.markerColor[1], zone.markerColor[2], zone.markerColor[3], zone.markerSize)
+            local dist = #(coords - zone.coords)
+            if dist < MARKER_DRAW_DIST then
+                if dist < 35.0 then
+                    sleep = 0
+                    drawMarkerAt(zone.coords, zone.markerColor[1], zone.markerColor[2], zone.markerColor[3], zone.markerSize)
+                elseif sleep > 150 then
+                    sleep = 150
+                end
             end
         end
 
         for _, prop in ipairs(propertyZones) do
             local distance = #(coords - prop.coords)
             if distance < 10.0 then
-                anyNearby = true
+                sleep = 0
                 drawPropertyLabel(prop, distance)
+            elseif distance < 30.0 and sleep > 200 then
+                sleep = 200
             end
         end
 
-        Wait(anyNearby and 0 or 500)
+        Wait(sleep)
     end
 end)
 
@@ -324,7 +331,7 @@ CreateThread(function()
                     coords = prop.coords,
                     radius = 2.5,
                     hint = hint,
-                    markerColor = { 255, 140, 0 },
+                    markerColor = { 0, 255, 204 },
                     floating = true,
                     onInteract = function()
                         TriggerEvent('sunset:world:propertyInteract', prop)
@@ -348,7 +355,7 @@ CreateThread(function()
                 activeZone = nil
                 hideHint()
             end
-            Wait(250)
+            Wait(closestDist < 15.0 and 150 or 500)
         end
     end
 end)

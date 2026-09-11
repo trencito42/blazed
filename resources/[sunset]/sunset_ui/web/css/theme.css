@@ -1,14 +1,14 @@
 /* Sunset OS — shared visual language inspired by the approved dashboard mock. */
 :root {
-    --sunset-orange: #ff7700;
-    --sunset-amber: #ffb15c;
-    --sunset-hot: #ff941f;
+    --sunset-orange: #00ffcc;
+    --sunset-amber: #26ffd5;
+    --sunset-hot: #00ffcc;
     --sunset-green: #54e38e;
-    --sunset-red: #ff554f;
+    --sunset-red: #00e6b8;
     --sunset-ink: #08090b;
     --sunset-panel: rgba(13, 15, 18, 0.965);
     --sunset-panel-soft: rgba(21, 24, 29, 0.94);
-    --sunset-line: rgba(255, 119, 0, 0.34);
+    --sunset-line: rgba(0, 255, 204, 0.34);
     --sunset-line-soft: rgba(255, 255, 255, 0.09);
     --sunset-text: #f6f2e9;
     --sunset-muted: rgba(246, 242, 233, 0.54);
@@ -19,10 +19,10 @@
     --sunset-body: 'Rajdhani', 'Inter', sans-serif;
 
     /* Screen HUD tokens — shared with in-game overlay + menus */
-    --screen-accent: #ff7700;
-    --screen-accent-dim: rgba(255, 119, 0, 0.2);
-    --screen-accent-glow: 0 0 10px rgba(255, 119, 0, 0.55);
-    --screen-secondary: #ffb15c;
+    --screen-accent: #00ffcc;
+    --screen-accent-dim: rgba(0, 255, 204, 0.2);
+    --screen-accent-glow: 0 0 10px rgba(0, 255, 204, 0.55);
+    --screen-secondary: #26ffd5;
     --screen-secondary-dim: rgba(255, 177, 92, 0.2);
     --screen-secondary-glow: 0 0 10px rgba(255, 177, 92, 0.45);
     --screen-green: #00ff66;
@@ -70,7 +70,7 @@ h5,
 .app-overlay {
     background:
         linear-gradient(100deg, rgba(2, 3, 5, 0.88), rgba(2, 3, 5, 0.36) 58%, rgba(2, 3, 5, 0.72)),
-        radial-gradient(circle at 18% 45%, rgba(255, 138, 0, 0.13), transparent 34%);
+        radial-gradient(circle at 18% 45%, rgba(0, 255, 204, 0.13), transparent 34%);
 }
 
 .panel {
@@ -84,7 +84,7 @@ h5,
 .panel--center {
     border: 1px solid var(--sunset-line);
     border-radius: 2px;
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.62), 0 0 32px rgba(255, 138, 0, 0.06);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.62), 0 0 32px rgba(0, 255, 204, 0.06);
 }
 
 .panel-title,
@@ -116,7 +116,7 @@ h5,
 /* Shared fullscreen panels. The corners and hairlines mirror the M dashboard. */
 .overlay-panel {
     background:
-        radial-gradient(circle at 50% 42%, rgba(255, 138, 0, 0.05), transparent 32%),
+        radial-gradient(circle at 50% 42%, rgba(0, 255, 204, 0.05), transparent 32%),
         rgba(0, 0, 0, 0.2);
     backdrop-filter: none;
     font-family: var(--sunset-body);
@@ -153,7 +153,7 @@ h5,
     background:
         repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255, 255, 255, 0.012) 4px),
         linear-gradient(145deg, rgba(13, 15, 18, 0.52), rgba(7, 8, 10, 0.46));
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38), inset 3px 0 0 rgba(255, 138, 0, 0.85);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38), inset 3px 0 0 rgba(0, 255, 204, 0.85);
 }
 
 /* Overlay panels — match M-menu typography scale */
@@ -220,7 +220,7 @@ h5,
 .overlay-panel h2 {
     color: var(--sunset-orange);
     letter-spacing: 0.12em;
-    text-shadow: 0 0 18px rgba(255, 138, 0, 0.22);
+    text-shadow: 0 0 18px rgba(0, 255, 204, 0.22);
 }
 
 .overlay-panel .field span,
@@ -241,7 +241,7 @@ h5,
 .overlay-panel select:focus,
 .overlay-panel textarea:focus {
     border-color: var(--sunset-orange);
-    box-shadow: 0 0 0 1px rgba(255, 138, 0, 0.16);
+    box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.16);
 }
 
 .panel-close,
@@ -297,8 +297,8 @@ h5,
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: radial-gradient(circle, rgba(255, 138, 0, 0.12), rgba(0, 0, 0, 0.28) 70%);
-    border: 1px solid rgba(255, 138, 0, 0.13);
+    background: radial-gradient(circle, rgba(0, 255, 204, 0.12), rgba(0, 0, 0, 0.28) 70%);
+    border: 1px solid rgba(0, 255, 204, 0.13);
 }
 
 .inventory-row__icon { width: 52px; height: 52px; }
@@ -325,7 +325,7 @@ h5,
 }
 
 .shop-tab.is-active {
-    background: linear-gradient(90deg, rgba(255, 90, 31, 0.2), rgba(255, 138, 0, 0.1));
+    background: linear-gradient(90deg, rgba(255, 90, 31, 0.2), rgba(0, 255, 204, 0.1));
     border-color: var(--sunset-line);
     color: var(--sunset-amber);
     box-shadow: inset 3px 0 0 var(--sunset-orange);
@@ -350,7 +350,7 @@ h5,
     padding: 7px 9px 7px 7px;
     border: 1px solid var(--sunset-line-soft);
     border-radius: 2px;
-    background: linear-gradient(90deg, rgba(255, 138, 0, 0.065), rgba(255, 255, 255, 0.02));
+    background: linear-gradient(90deg, rgba(0, 255, 204, 0.065), rgba(255, 255, 255, 0.02));
 }
 
 .shop-card:hover {
@@ -369,7 +369,7 @@ h5,
     width: 100%;
     border-radius: 2px;
     border-color: var(--sunset-line);
-    background: linear-gradient(100deg, rgba(255, 90, 31, 0.18), rgba(255, 138, 0, 0.13));
+    background: linear-gradient(100deg, rgba(255, 90, 31, 0.18), rgba(0, 255, 204, 0.13));
     color: var(--sunset-amber);
     font-family: var(--sunset-display);
 }
@@ -417,7 +417,7 @@ h5,
 }
 
 .notification {
-    --notify-accent: var(--sunset-orange, #ff8a00);
+    --notify-accent: var(--sunset-orange, #00ffcc);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -495,18 +495,18 @@ h5,
     background:
         repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,.014) 4px),
         rgba(9,8,12,.88) !important;
-    border: 1px solid rgba(255,138,0,.22) !important;
+    border: 1px solid rgba(0, 255, 204,.22) !important;
     border-left: 3px solid var(--sunset-orange) !important;
-    box-shadow: 0 8px 26px rgba(0,0,0,.4), 0 0 16px rgba(255,138,0,.05) !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.4), 0 0 16px rgba(0, 255, 204,.05) !important;
     clip-path: polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
 }
-.job-objective::before { content:''; position:absolute; top:0; left:18px; width:46px; height:2px; background:var(--sunset-orange); box-shadow:0 0 10px rgba(255,138,0,.55); }
+.job-objective::before { content:''; position:absolute; top:0; left:18px; width:46px; height:2px; background:var(--sunset-orange); box-shadow:0 0 10px rgba(0, 255, 204,.55); }
 .job-objective__tag { color:var(--sunset-orange); font:700 10px/1 var(--sunset-display); letter-spacing:.2em; }
 .job-objective__tag::before { content:'> '; }
 .job-objective__title { margin-top:6px; color:#fff; font:700 15px/1.2 var(--sunset-display); letter-spacing:.05em; text-transform:uppercase; }
 .job-objective__desc { margin-top:4px; color:rgba(255,255,255,.5); font-size:12px; letter-spacing:.025em; }
 .job-objective__bar { height:6px; border-radius:0; background:rgba(255,255,255,.1); clip-path:polygon(2px 0,100% 0,100% calc(100% - 2px),calc(100% - 2px) 100%,0 100%,0 2px); }
-.job-objective__fill { border-radius:0; background:var(--sunset-orange); box-shadow:0 0 8px rgba(255,138,0,.45); mask-image:repeating-linear-gradient(to right,#000 0,#000 3px,transparent 3px,transparent 5px); }
+.job-objective__fill { border-radius:0; background:var(--sunset-orange); box-shadow:0 0 8px rgba(0, 255, 204,.45); mask-image:repeating-linear-gradient(to right,#000 0,#000 3px,transparent 3px,transparent 5px); }
 .job-objective__pct { color:var(--sunset-amber); font-family:var(--sunset-display); }
 
 .taxi-meter {
@@ -529,7 +529,7 @@ h5,
     padding: 12px 15px;
     transform: translateX(-50%);
     background: rgba(9,8,12,.9);
-    border: 1px solid rgba(255,138,0,.23);
+    border: 1px solid rgba(0, 255, 204,.23);
     border-left: 3px solid var(--sunset-orange);
     clip-path: polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
 }
@@ -538,22 +538,22 @@ h5,
 .progress__header>span { color:var(--sunset-orange); font:700 9px/1 var(--sunset-display); letter-spacing:.18em; }
 .progress__label { overflow:hidden; color:rgba(255,255,255,.72); font:600 12px/1 var(--sunset-display); text-overflow:ellipsis; white-space:nowrap; }
 .progress__track { height:7px; overflow:hidden; background:rgba(255,255,255,.1); }
-.progress__fill { width:0; height:100%; background:var(--sunset-orange); box-shadow:0 0 8px rgba(255,138,0,.5); mask-image:repeating-linear-gradient(to right,#000 0,#000 4px,transparent 4px,transparent 6px); }
+.progress__fill { width:0; height:100%; background:var(--sunset-orange); box-shadow:0 0 8px rgba(0, 255, 204,.5); mask-image:repeating-linear-gradient(to right,#000 0,#000 4px,transparent 4px,transparent 6px); }
 
 .sb-panel {
     border-radius: 0;
-    border-color: rgba(255,138,0,.25);
+    border-color: rgba(0, 255, 204,.25);
     border-left: 3px solid var(--sunset-orange);
     background: rgba(9,8,12,.9);
     clip-path: polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);
 }
 .sb-tab,.sb-server-name,.sb-table th { font-family:var(--sunset-display); }
-.sb-tab.active { color:var(--sunset-orange); border-color:var(--sunset-orange); text-shadow:0 0 10px rgba(255,138,0,.35); }
-.chat-input { border-color:rgba(255,138,0,.28); border-left-color:var(--sunset-orange); background:rgba(9,8,12,.9); font-family:var(--sunset-body); clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px); }
+.sb-tab.active { color:var(--sunset-orange); border-color:var(--sunset-orange); text-shadow:0 0 10px rgba(0, 255, 204,.35); }
+.chat-input { border-color:rgba(0, 255, 204,.28); border-left-color:var(--sunset-orange); background:rgba(9,8,12,.9); font-family:var(--sunset-body); clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px); }
 
-.hud-bc { border-radius:0; border-color:rgba(255,138,0,.18); background:rgba(9,8,12,.72); clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px); }
+.hud-bc { border-radius:0; border-color:rgba(0, 255, 204,.18); background:rgba(9,8,12,.72); clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px); }
 .veh-slot,.veh-slot__key { border-radius:0; }
-.veh-slot.active .veh-slot__key { color:var(--sunset-orange); background:rgba(255,138,0,.15); }
+.veh-slot.active .veh-slot__key { color:var(--sunset-orange); background:rgba(0, 255, 204,.15); }
 
 @keyframes sunset-notify-in {
     from { opacity: 0; transform: translateX(16px); }
