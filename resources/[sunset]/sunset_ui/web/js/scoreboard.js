@@ -1,5 +1,6 @@
 const Scoreboard = {
     myId: null,
+    active: false,
 
     escape(value) {
         return String(value ?? '')
@@ -7,65 +8,66 @@ const Scoreboard = {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    },
-
-    adminBadge(level) {
-        if (level >= 5) return '<span class="sb-admin sb-admin--5" title="Owner"></span>';
-        if (level >= 3) return '<span class="sb-admin sb-admin--3" title="Admin"></span>';
-        if (level >= 2) return '<span class="sb-admin sb-admin--2" title="Moderator"></span>';
-        if (level >= 1) return '<span class="sb-admin sb-admin--1" title="Helper"></span>';
-        return '';
+            .replace(/'/g, '&#39;');
     },
 
     show(data) {
         data = data || {};
-        const sb = $('#scoreboard');
+        this.active = true;
+        const sb = document.getElementById('scoreboard');
         if (!sb) return;
         sb.classList.remove('hidden');
-        $('#hud')?.classList.add('scoreboard-open');
+        sb.classList.add('is-active');
+        sb.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('scoreboard-open');
+        document.getElementById('hud')?.classList.add('scoreboard-open');
 
         const count = data.count || 0;
         const max = data.max || 48;
-        $('#sb-count').textContent = `${count}/${max}`;
-        $('#sb-tab-players').textContent = `PLAYERS ${count}/${max}`;
-        $('#sb-server-name').textContent = data.serverName || 'blaze.mp';
+        const title = document.getElementById('sb-title-text');
+        const countEl = document.getElementById('sb-title-count');
+        if (title) title.textContent = data.serverName || 'Los Santos';
+        if (countEl) countEl.textContent = `${count} / ${max}`;
 
-        const body = $('#sb-body');
-        body.innerHTML = '';
+        const stats = data.stats || {};
+        const cops = document.getElementById('sb-stat-cops');
+        const ems = document.getElementById('sb-stat-ems');
+        const mech = document.getElementById('sb-stat-mech');
+        if (cops) cops.textContent = `LSPD: ${stats.police || 0}`;
+        if (ems) ems.textContent = `EMS: ${stats.ems || 0}`;
+        if (mech) mech.textContent = `Mechanics: ${stats.mechanic || 0}`;
+
+        const list = document.getElementById('sb-player-list');
+        if (!list) return;
+        list.innerHTML = '';
 
         (data.players || []).forEach((player) => {
-            const tr = document.createElement('tr');
-            if (player.id === this.myId) tr.classList.add('is-self');
-
-            const pingClass = player.ping < 80 ? 'ping-good' : player.ping < 150 ? 'ping-mid' : 'ping-bad';
+            const row = document.createElement('div');
+            row.className = 'sb-player' + (player.id === this.myId ? ' is-self' : '');
+            const pingClass = player.ping < 80 ? '' : player.ping < 150 ? ' ping-mid' : ' ping-bad';
             const identity = window.SunsetPlayerIdentity;
             const playerName = identity
                 ? identity.formatNameHtml(player)
                 : this.escape(player.name || 'Player');
-            const factionName = identity
-                ? identity.formatFactionHtml(player)
-                : this.escape(player.factionLabel || player.job || 'Unemployed');
-            const cash = Number(player.money);
-
-            tr.innerHTML = `
-                <td class="col-id">${player.id}</td>
-                <td class="col-player">
-                    ${this.adminBadge(player.admin)}
-                    <span class="col-player__name">${playerName}</span>
-                </td>
-                <td class="col-faction">${factionName}</td>
-                <td class="col-ping ${pingClass}">${player.ping}</td>
-                <td class="col-level">${player.level || 1}</td>
-                <td class="col-money">${formatMoney(Number.isFinite(cash) ? cash : 0)}</td>
+            row.innerHTML = `
+                <div class="sb-id">${player.id}</div>
+                <div class="sb-name">${playerName}</div>
+                <div class="sb-ping${pingClass}"><i class="ph-bold ph-wifi-high"></i> ${player.ping}ms</div>
             `;
-            body.appendChild(tr);
+            list.appendChild(row);
         });
     },
 
     hide() {
-        $('#scoreboard').classList.add('hidden');
-        $('#hud')?.classList.remove('scoreboard-open');
+        this.active = false;
+        const sb = document.getElementById('scoreboard');
+        if (sb) {
+            sb.classList.add('hidden');
+            sb.classList.remove('is-active');
+            sb.setAttribute('aria-hidden', 'true');
+        }
+        document.body.classList.remove('scoreboard-open');
+        document.getElementById('hud')?.classList.remove('scoreboard-open');
     },
 };
 

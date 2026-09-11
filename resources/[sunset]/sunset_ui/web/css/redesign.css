@@ -126,7 +126,8 @@ body :where(button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h
 .jobs-menu,
 .dealership,
 .fleet-garage,
-.scoreboard,
+.scoreboard-forza,
+.store-forza,
 .dispatch-modal-overlay,
 #inventory {
     background: transparent !important;

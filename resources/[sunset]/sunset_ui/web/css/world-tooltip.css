@@ -1,0 +1,90 @@
+#world-tooltip-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 8500;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.world-tooltip-3d {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transform: translate(-50%, -100%) skewX(-5deg);
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.8));
+    transition: opacity 0.15s ease;
+    opacity: 0;
+}
+
+.world-tooltip-3d.is-visible {
+    opacity: 1;
+}
+
+.world-tooltip-3d .wt-badge {
+    align-self: flex-start;
+    background: var(--wt-accent, #00ffcc);
+    color: #000;
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transform: skewX(5deg);
+    font-family: 'Montserrat', sans-serif;
+}
+
+.world-tooltip-3d .wt-badge.npc { background: #f59e0b; }
+
+.world-tooltip-3d .wt-body {
+    background: rgba(0, 0, 0, 0.7);
+    border-left: 3px solid var(--wt-accent, #00ffcc);
+    backdrop-filter: blur(5px);
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.world-tooltip-3d .wt-body.npc { border-left-color: #f59e0b; }
+
+.world-tooltip-3d .wt-icon {
+    font-size: 24px;
+    color: #fff;
+    transform: skewX(5deg);
+}
+
+.world-tooltip-3d .wt-info {
+    display: flex;
+    flex-direction: column;
+    transform: skewX(5deg);
+    font-family: 'Montserrat', sans-serif;
+}
+
+.world-tooltip-3d .wt-title {
+    font-size: 14px;
+    font-weight: 900;
+    font-style: italic;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.world-tooltip-3d .wt-desc {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.world-tooltip-3d .wt-key {
+    display: inline-block;
+    background: #fff;
+    color: #000;
+    padding: 0 4px;
+    border-radius: 2px;
+    font-weight: 900;
+    margin-right: 4px;
+}

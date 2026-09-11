@@ -20,7 +20,6 @@ end
 local hillbillyPed   = nil
 local nearNpc        = false
 local nearBaitShop   = false
-local nearStore      = false
 local storeContext   = nil
 local menuOpen       = false   -- playerInteraction menu open
 local shopOpen       = false   -- fishing shop UI (buy/sell) open
@@ -95,24 +94,6 @@ local function buildStoreActions(ctx)
     end
 
     return actions
-end
-
-local function openStoreContextMenu()
-    CreateThread(function()
-        local ctx = Sunset.AwaitCallback('sunset:getStoreContext')
-        if not ctx then
-            exports.sunset_ui:Notify('Store unavailable right now.', 'error')
-            return
-        end
-        storeContext = ctx
-        exports.sunset_ui:Send('playerInteractionShow', {
-            menuTitle = ctx.shopLabel or '24/7 Store',
-            target = { name = ctx.shopLabel or '24/7 Store', id = '' },
-            actions = buildStoreActions(ctx),
-        })
-        exports.sunset_ui:SetFocus(true, true)
-        menuOpen = true
-    end)
 end
 
 local function debugHire(message)
@@ -404,45 +385,33 @@ CreateThread(function()
     end
 end)
 
--- ── Proximitate checker ───────────────────────────────────────
-local function nearAnyStoreZone(pos)
-    for _, coords in ipairs(getSellZones()) do
-        if #(pos - coords) < SELL_DIST then return true end
-    end
-    return false
-end
-
 CreateThread(function()
     while true do
         local pos = GetEntityCoords(PlayerPedId())
         local wasNpc       = nearNpc
         local wasBaitShop  = nearBaitShop
-        local wasStore     = nearStore
 
         nearNpc      = isNearNpcMenu(pos)
         nearBaitShop = #(pos - BAIT_SHOP_COORDS) < BAIT_SHOP_DIST
-        nearStore    = nearAnyStoreZone(pos)
 
-        -- Auto-close playerInteraction menu when walking away
-        if (wasNpc or wasStore) and not nearNpc and not nearStore and menuOpen then
+        if wasNpc and not nearNpc and menuOpen then
             closeFishingMenu()
         end
 
-        -- Auto-close fishing shop UI when walking away from bait shop or 24/7
-        if (wasBaitShop or wasStore) and not nearBaitShop and not nearStore and shopOpen then
+        if wasBaitShop and not nearBaitShop and shopOpen then
             exports.sunset_ui:Send('fishingShopHide', {})
             exports.sunset_ui:SetFocus(false, false)
             shopOpen = false
         end
 
-        Wait((nearNpc or nearBaitShop or nearStore) and 0 or 350)
+        Wait((nearNpc or nearBaitShop) and 0 or 350)
     end
 end)
 
 -- ── E key handler ─────────────────────────────────────────────
 CreateThread(function()
     while true do
-        if nearNpc or nearBaitShop or nearStore then
+        if nearNpc or nearBaitShop then
             local pos = GetEntityCoords(PlayerPedId())
             local canPromptBilly = isNearNpcPrompt(pos) and not anotherPlayerBlocksNpcPrompt(pos)
 
@@ -487,18 +456,8 @@ CreateThread(function()
             end
 
             local pressed = false
-            if nearStore and not nearNpc and not menuOpen and not shopOpen and not IsNuiFocused() then
-                BeginTextCommandDisplayHelp('STRING')
-                AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ for store options')
-                EndTextCommandDisplayHelp(0, false, true, -1)
-            end
-
-            if (nearBaitShop or nearStore) and not nearNpc and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
-                if nearBaitShop then
-                    pressed = IsDisabledControlJustPressed(0, INTERACT_KEY)
-                elseif nearStore then
-                    pressed = IsControlJustPressed(0, INTERACT_KEY)
-                end
+            if nearBaitShop and not nearNpc and not inCooldown and not menuOpen and not shopOpen and not IsNuiFocused() then
+                pressed = IsDisabledControlJustPressed(0, INTERACT_KEY)
             end
 
             if pressed then
@@ -522,9 +481,6 @@ CreateThread(function()
                         SetTimeout(1500, function() inCooldown = false end)
                     end)
 
-                elseif nearStore then
-                    openStoreContextMenu()
-                end
             end
             Wait(0)
         else

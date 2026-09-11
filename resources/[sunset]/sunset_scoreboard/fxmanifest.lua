@@ -3,7 +3,7 @@ game 'gta5'
 lua54 'yes'
 
 name 'sunset_scoreboard'
-description 'F10 scoreboard — player list'
+description 'Z-hold scoreboard — player list'
 version '1.0.0'
 
 shared_scripts {
@@ -12,6 +12,7 @@ shared_scripts {
     '@sunset_core/shared/jobs_civilian.lua',
     '@sunset_core/shared/profile.lua',
     '@sunset_core/shared/factions.lua',
+    '@sunset_core/shared/faction_core.lua',
 }
 
 client_scripts {
@@ -23,4 +24,4 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_clans' }
+dependencies { 'sunset_core', 'sunset_ui', 'sunset_clans', 'sunset_factions' }

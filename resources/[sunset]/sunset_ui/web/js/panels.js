@@ -93,7 +93,6 @@ const Panels = {
         $('#inventory-trade-asset-close')?.addEventListener('click', () => this.hideTradeAssetPicker());
 
         this._bindInventoryPointerDrag();
-        $('#shop-close')?.addEventListener('click', () => post('shopClose'));
         $('#atm-close')?.addEventListener('click', () => post('atmClose'));
         $('#mdc-close')?.addEventListener('click', () => post('mdcClose'));
         $('#mdc-search-btn')?.addEventListener('click', () => {
@@ -140,13 +139,12 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#fishing-shop', '#shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#clothing'];
+            const panels = ['#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#clothing'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
                     const map = {
                         '#fishing-shop': 'fishingShopClose',
-                        '#shop': 'shopClose',
                         '#mdc': 'mdcClose',
                         '#ticket': 'ticketClose',
                         '#servicecalls': 'serviceCallsClose',
@@ -1045,112 +1043,12 @@ const Panels = {
 
     showShop(data) {
         this.init();
-        const shopEl = $('#shop');
-        if (shopEl && !shopEl.classList.contains('hidden')) {
-            this.hideShop();
-        }
-        const shop = data.shop || {};
-        const items = shop.items || [];
-        this._shopData = data;
-        this._shopBusinessId = data.businessId || null;
-
-        $('#shop-title').textContent = shop.label || 'Shop';
-        const sub = $('#shop-subtitle');
-        if (sub) sub.textContent = `${items.length} item${items.length === 1 ? '' : 's'} available`;
-
-        const categories = ['all'];
-        const seen = new Set();
-        items.forEach((row) => {
-            const cat = row.category || 'misc';
-            if (!seen.has(cat)) {
-                seen.add(cat);
-                categories.push(cat);
-            }
-        });
-
-        const tabs = $('#shop-categories');
-        const grid = $('#shop-grid');
-        if (!tabs || !grid) return;
-
-        const renderItems = (filter) => {
-            grid.innerHTML = '';
-            const filtered = filter === 'all'
-                ? items
-                : items.filter((row) => (row.category || 'misc') === filter);
-
-            if (!filtered.length) {
-                grid.innerHTML = '<p class="shop-empty">No items in this category</p>';
-                return;
-            }
-
-            filtered.forEach((row) => {
-                const card = document.createElement('article');
-                card.className = 'shop-card';
-                const weight = row.weight != null ? `${Number(row.weight).toFixed(1)} kg` : '';
-                card.appendChild(createItemArtwork(row, 'shop-card__icon'));
-
-                const body = document.createElement('div');
-                body.className = 'shop-card__body';
-                const name = document.createElement('span');
-                name.className = 'shop-card__name';
-                name.textContent = row.label || row.item || 'Unknown item';
-                body.appendChild(name);
-                if (weight) {
-                    const meta = document.createElement('span');
-                    meta.className = 'shop-card__meta';
-                    meta.textContent = `${weight} • ${(row.category || 'misc').toUpperCase()}`;
-                    body.appendChild(meta);
-                }
-                card.appendChild(body);
-
-                const price = document.createElement('span');
-                price.className = 'shop-card__price';
-                price.textContent = formatMoney(row.price);
-                card.appendChild(price);
-
-                const buy = document.createElement('button');
-                buy.type = 'button';
-                buy.className = 'shop-card__buy';
-                buy.textContent = 'BUY';
-                buy.setAttribute('aria-label', `Buy ${name.textContent}`);
-                buy.addEventListener('click', () => {
-                    post('shopBuy', {
-                        shopId: data.shopId,
-                        businessId: this._shopBusinessId,
-                        item: row.item,
-                        amount: 1,
-                    });
-                });
-                card.appendChild(buy);
-                grid.appendChild(card);
-            });
-        };
-
-        tabs.innerHTML = '';
-        categories.forEach((cat, idx) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = `shop-tab${idx === 0 ? ' is-active' : ''}`;
-            btn.dataset.category = cat;
-            btn.textContent = this._shopCategoryLabels[cat] || cat;
-            btn.addEventListener('click', () => {
-                $$('.shop-tab').forEach((el) => el.classList.toggle('is-active', el === btn));
-                renderItems(cat);
-            });
-            tabs.appendChild(btn);
-        });
-
-        if (categories.length <= 2) {
-            tabs.classList.add('hidden');
-        } else {
-            tabs.classList.remove('hidden');
-        }
-
-        renderItems('all');
-        $('#shop')?.classList.remove('hidden');
+        if (window.StoreUI) StoreUI.show(data || {});
     },
 
-    hideShop() { $('#shop')?.classList.add('hidden'); },
+    hideShop() {
+        if (window.StoreUI) StoreUI.hide();
+    },
 
     showAtm() { this.init(); $('#atm')?.classList.remove('hidden'); },
     hideAtm() { $('#atm')?.classList.add('hidden'); },
@@ -2044,73 +1942,11 @@ const Panels = {
 
     showFishingShop(data) {
         this.init();
-        this._fishingShopData = data;
-        this._fishingShopCart = [];
-        this._fishingShopMode = data.mode || 'buy';
-        const isSell = this._fishingShopMode === 'sell';
-
-        const titleEl = $('#fishing-shop-title');
-        if (titleEl) titleEl.textContent = data.title || (isSell ? 'VINDE PESTE' : 'FISHING SHOP');
-        const sideTitle = $('#fishing-shop-side-title');
-        if (sideTitle) sideTitle.textContent = isSell ? 'VANZARE' : 'CART';
-        const confirmBtn = $('#fishing-shop-confirm');
-        if (confirmBtn) confirmBtn.textContent = isSell ? 'VINDE TOT' : 'PURCHASE';
-
-        const cashEl = $('#fishing-shop-cash');
-        if (cashEl) cashEl.textContent = (data.cash || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-        const grid = $('#fishing-shop-grid');
-        if (!grid) return;
-        grid.innerHTML = '';
-
-        (data.items || []).forEach((row) => {
-            const slot = document.createElement('div');
-            slot.className = 'premium-slot has-item fishing-shop-slot';
-
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'premium-item';
-
-            btn.appendChild(createItemArtwork(row, 'premium-item__icon'));
-
-            const details = document.createElement('div');
-            details.className = 'premium-item__details';
-            const nameEl = document.createElement('strong');
-            nameEl.textContent = row.label || row.item || '?';
-            details.appendChild(nameEl);
-            if (isSell) {
-                const countEl = document.createElement('span');
-                countEl.textContent = `×${row.count}`;
-                details.appendChild(countEl);
-            }
-            btn.appendChild(details);
-            slot.appendChild(btn);
-
-            const badge = document.createElement('div');
-            badge.className = 'premium-item__count';
-            if (isSell) {
-                badge.style.color = '#4ade80';
-                badge.style.background = 'rgba(34,197,94,.12)';
-                badge.textContent = `$${row.unitValue}`;
-            } else {
-                badge.textContent = `$${row.price}`;
-            }
-            slot.appendChild(badge);
-
-            btn.addEventListener('click', () => {
-                this._fishingShopOpenQty(row, isSell ? (row.count || 1) : 500);
-            });
-
-            grid.appendChild(slot);
-        });
-
-        this._fishingShopRenderCart();
-        if (confirmBtn) confirmBtn.onclick = () => this._fishingShopConfirm();
-        this._fishingShopInitQtyModal();
-        $('#fishing-shop')?.classList.remove('hidden');
+        if (window.StoreUI) StoreUI.show(data || {});
     },
 
     hideFishingShop() {
+        if (window.StoreUI) StoreUI.hide();
         $('#fishing-shop')?.classList.add('hidden');
         $('#fishing-shop-qty-modal')?.classList.add('hidden');
         this._fishingShopCart = [];

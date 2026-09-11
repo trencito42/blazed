@@ -58,11 +58,37 @@ CreateThread(function()
 
         table.sort(list, function(a, b) return a.id < b.id end)
 
+        local stats = { police = 0, ems = 0, mechanic = 0 }
+        for _, row in ipairs(list) do
+            local src = row.id
+            local factionId = row.factionId
+            if not factionId then goto continue end
+
+            local onDuty = false
+            if GetResourceState('sunset_factions') == 'started' then
+                local okDuty, duty = pcall(function()
+                    return exports.sunset_factions:IsOnDuty(src)
+                end)
+                if okDuty then onDuty = duty == true end
+            end
+            if not onDuty then goto continue end
+
+            if Sunset.FactionTypeMatches(factionId, 'law_enforcement') then
+                stats.police = stats.police + 1
+            elseif Sunset.FactionTypeMatches(factionId, 'ems') or Sunset.FactionTypeMatches(factionId, 'fire_rescue') then
+                stats.ems = stats.ems + 1
+            elseif Sunset.FactionTypeMatches(factionId, 'mechanic') then
+                stats.mechanic = stats.mechanic + 1
+            end
+            ::continue::
+        end
+
         return {
             players = list,
             count = #list,
             max = maxClients,
             serverName = Sunset.Config.ServerName,
+            stats = stats,
         }
     end)
 end)

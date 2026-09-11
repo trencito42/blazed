@@ -80,14 +80,14 @@ Sunset.Shops = {
 
 -- Every purchasable 24/7 location (shared catalog; each row is a separate business).
 Sunset.TwentyFourSevenStores = {
-    { id = 'legion',      label = '24/7 - Legion Square',  coords = vector3(25.74,   -1347.32, 29.50) },
-    { id = 'strawberry',  label = '24/7 - Strawberry',     coords = vector3(-46.06,  -1757.88, 29.42) },
-    { id = 'littleseoul', label = '24/7 - Little Seoul',   coords = vector3(-707.12,  -913.43,  19.22) },
-    { id = 'mirrorpark',  label = '24/7 - Mirror Park',    coords = vector3(1164.44,  -322.49,  69.21) },
-    { id = 'vinewood',    label = '24/7 - Vinewood Hills', coords = vector3(548.46,   2671.72,  42.16) },
-    { id = 'rockford',    label = '24/7 - Rockford Hills', coords = vector3(-3038.24,  584.19,   7.91) },
-    { id = 'sandy',       label = '24/7 - Sandy Shores',   coords = vector3(2678.55,  3279.25,  55.24) },
-    { id = 'paleto',      label = '24/7 - Paleto Bay',     coords = vector3(-54.37,   6244.70,  31.09) },
+    { id = 'legion',      label = '24/7 - Legion Square',  coords = vector3(25.74,   -1347.32, 29.50), cashier = vector4(24.47,  -1347.38, 29.50, 270.0) },
+    { id = 'strawberry',  label = '24/7 - Strawberry',     coords = vector3(-46.06,  -1757.88, 29.42), cashier = vector4(-47.52, -1758.66, 29.42, 45.0) },
+    { id = 'littleseoul', label = '24/7 - Little Seoul',   coords = vector3(-707.12,  -913.43,  19.22), cashier = vector4(-706.06, -914.63, 19.22, 90.0) },
+    { id = 'mirrorpark',  label = '24/7 - Mirror Park',    coords = vector3(1164.44,  -322.49,  69.21), cashier = vector4(1165.05, -323.68, 69.21, 100.0) },
+    { id = 'vinewood',    label = '24/7 - Vinewood Hills', coords = vector3(548.46,   2671.72,  42.16), cashier = vector4(549.04,  2671.36, 42.16, 100.0) },
+    { id = 'rockford',    label = '24/7 - Rockford Hills', coords = vector3(-3038.24,  584.19,   7.91), cashier = vector4(-3039.54, 584.75,  7.91,  20.0) },
+    { id = 'sandy',       label = '24/7 - Sandy Shores',   coords = vector3(2678.55,  3279.25,  55.24), cashier = vector4(2679.95, 3280.55, 55.24, 0.0) },
+    { id = 'paleto',      label = '24/7 - Paleto Bay',     coords = vector3(-54.37,   6244.70,  31.09), cashier = vector4(-51.87,  6244.40, 31.09, 315.0) },
 }
 
 Sunset.ATMs = {

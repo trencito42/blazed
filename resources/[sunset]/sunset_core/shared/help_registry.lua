@@ -55,7 +55,7 @@ Sunset.HelpGeneralEntries = {
     { cmd = 'M', desc = 'Player menu — stats, vehicle, job, settings' },
     { cmd = 'I', desc = 'Inventory — select an item to use/drop it or choose a nearby player to trade' },
     { cmd = 'P', desc = 'Phone' },
-    { cmd = 'F10', desc = 'Hold for player list' },
+    { cmd = 'Z', desc = 'Hold for player list' },
     { cmd = 'Z', desc = 'Cycle voice range — HUD shows mode + meters (e.g. Normal · 3.0m)' },
     { cmd = '/proximity [whisper|normal|shout]', desc = 'Set voice range directly' },
     { cmd = 'E', desc = 'Interact — shops, ATMs, faction HQ, crafting' },

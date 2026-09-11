@@ -538,7 +538,7 @@ const FactionPanels = {
         if (action === 'invite') {
             const targetId = Math.floor(Number(data.get('targetId')));
             if (!targetId || targetId < 1) {
-                return notify('Introdu un Server ID valid din F10.', 'error');
+                return notify('Introdu un Server ID valid (ține Z pentru listă).', 'error');
             }
             payload.targetId = targetId;
         }
@@ -546,7 +546,7 @@ const FactionPanels = {
         if (action === 'warn') {
             const targetId = Math.floor(Number(data.get('targetId')));
             if (!targetId || targetId < 1) {
-                return notify('Introdu un Server ID valid din F10.', 'error');
+                return notify('Introdu un Server ID valid (ține Z pentru listă).', 'error');
             }
             payload.targetId = targetId;
             payload.reason = String(data.get('reason') || 'No reason given').trim();

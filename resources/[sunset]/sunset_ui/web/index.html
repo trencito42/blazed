@@ -24,7 +24,8 @@
     <link rel="stylesheet" href="css/style.css?v=12">
     <link rel="stylesheet" href="css/hud.css?v=11">
     <link rel="stylesheet" href="css/premium-hud.css?v=11">
-    <link rel="stylesheet" href="css/scoreboard.css?v=2">
+    <link rel="stylesheet" href="css/scoreboard-forza.css?v=1">
+    <link rel="stylesheet" href="css/store-forza.css?v=1">
     <link rel="stylesheet" href="css/chat.css?v=19">
     <link rel="stylesheet" href="css/premium-wanted.css?v=1">
     <link rel="stylesheet" href="css/menu.css?v=12">
@@ -32,7 +33,9 @@
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css?v=2">
-    <link rel="stylesheet" href="css/fuel_pump.css">
+    <link rel="stylesheet" href="css/fuel-pump-forza.css?v=1">
+    <link rel="stylesheet" href="css/world-tooltip.css?v=1">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap">
     <link rel="stylesheet" href="css/theme.css?v=9">
     <link rel="stylesheet" href="css/fishing.css?v=4">
     <link rel="stylesheet" href="css/license_test.css?v=7">
@@ -150,43 +153,51 @@
         <div class="progress__track"><div class="progress__fill"></div></div>
     </div>
 
-    <div id="fuel-pump" class="hidden" aria-hidden="true" aria-live="polite">
-        <div class="fuel-pump__header">
-            <div class="fuel-pump__identity">
-                <svg class="fuel-pump__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
-                    <path d="M3 22V8a5 5 0 0 1 10 0v14M3 22h10M8 22v-8M17 5v14M21 9v10M17 5h4"/>
-                    <path d="M17 5a2 2 0 0 0-2-2M21 9a2 2 0 0 0 2-2 2 2 0 0 0-2-2"/>
-                </svg>
-                <div>
-                    <div class="fuel-pump__brand">Blaze Fuel</div>
-                    <div class="fuel-pump__station" id="fuel-pump-station">Gas Station</div>
+    <div id="world-tooltip-layer" aria-hidden="true"></div>
+
+    <div id="fuel-pump" class="fuel-pump-forza hidden" aria-hidden="true" aria-live="polite">
+        <div class="fp-info-panel">
+            <div>
+                <div class="fp-label" id="fp-station-label">Gas Station</div>
+                <div class="fp-car" id="fp-vehicle-name">Vehicle</div>
+            </div>
+            <div class="fp-type">
+                <i class="ph-fill ph-drop" style="color:var(--fp-warning);font-size:18px;"></i>
+                <span id="fp-fuel-type">Premium Gasoline 99</span>
+            </div>
+            <div class="fp-type">
+                <i class="ph-fill ph-wallet" style="color:var(--fp-accent);font-size:18px;"></i>
+                <span id="fp-price-line">$2.45 / Liter</span>
+            </div>
+        </div>
+        <div class="fp-counter-panel">
+            <div class="fp-counter-group">
+                <div class="fp-cg-label">Pump Volume</div>
+                <div class="fp-cg-value"><span id="fp-val-liters">00.00</span> <span class="fp-cg-unit">L</span></div>
+            </div>
+            <div class="fp-counter-group" style="margin-bottom:0;">
+                <div class="fp-cg-label" style="color:var(--fp-accent);">Total Due</div>
+                <div class="fp-cg-value total"><span class="fp-cg-unit" style="color:var(--fp-accent);">$</span> <span id="fp-val-price">00.00</span></div>
+            </div>
+        </div>
+        <div class="fp-action-panel">
+            <div class="fp-tank-gauge">
+                <div class="fp-tank-fill" id="fp-tank-fill"></div>
+                <div class="fp-tank-markers">
+                    <div class="fp-tm-line"></div><div class="fp-tm-line"></div>
+                    <div class="fp-tm-line"></div><div class="fp-tm-line"></div><div class="fp-tm-line"></div>
                 </div>
             </div>
-            <div class="fuel-pump__price">
-                <span>PRICE</span>
-                <strong id="fuel-pump-price">$0.00 / UNIT</strong>
+            <div class="fp-pump-action">
+                <div class="fp-tank-pct">
+                    <span id="fp-tank-pct">0%</span>
+                    <i class="ph-fill ph-gas-pump" id="fp-tank-icon" style="color:var(--fp-danger);"></i>
+                </div>
+                <button type="button" class="fp-btn-pump" id="fp-btn-pump" disabled>
+                    <div class="fp-pump-text"><span class="fp-key-hint">SPACE</span> Press Pump</div>
+                </button>
+                <button type="button" class="fp-btn-checkout" id="fp-btn-checkout" disabled>Pay &amp; Close</button>
             </div>
-        </div>
-        <div class="fuel-pump__display">
-            <div class="fuel-pump__metric">
-                <span class="fuel-pump__label">Delivered</span>
-                <strong class="fuel-pump__value"><span id="fuel-pump-liters">0.00</span><small>L</small></strong>
-            </div>
-            <div class="fuel-pump__divider"></div>
-            <div class="fuel-pump__metric fuel-pump__metric--cost">
-                <span class="fuel-pump__label">Total sale</span>
-                <strong class="fuel-pump__value"><small>$</small><span id="fuel-pump-cost">0.00</span></strong>
-            </div>
-        </div>
-        <div class="fuel-pump__tank">
-            <div class="fuel-pump__tank-head">
-                <span>Tank level</span>
-                <strong id="fuel-pump-tank">0%</strong>
-            </div>
-            <div class="fuel-pump__bar"><div class="fuel-pump__fill" id="fuel-pump-fill"></div></div>
-        </div>
-        <div class="fuel-pump__prompt" id="fuel-pump-prompt">
-            <span>HOLD</span><kbd>E</kbd><span>TO REFUEL</span>
         </div>
     </div>
 
@@ -610,40 +621,18 @@
         </div>
     </div>
 
-    <!-- SCOREBOARD (F10) -->
-    <div id="scoreboard" class="scoreboard hidden">
-        <div class="sb-shell">
-            <header class="sb-top">
-                <div class="sb-brand">
-                    <span class="sb-kicker">Blaze Network</span>
-                    <h2 id="sb-tab-players">Players</h2>
-                </div>
-                <div class="sb-meta">
-                    <span class="sb-server-name" id="sb-server-name">blaze.mp</span>
-                    <span class="sb-count" id="sb-count">0/48</span>
-                </div>
-            </header>
-            <div class="sb-table-wrap">
-                <table class="sb-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Player</th>
-                            <th>Faction</th>
-                            <th>Ping</th>
-                            <th>Lvl</th>
-                            <th>Cash</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sb-body"></tbody>
-                </table>
+    <!-- SCOREBOARD (hold Z) -->
+    <div id="scoreboard" class="scoreboard-forza hidden" aria-hidden="true">
+        <div class="sb-header">
+            <div class="sb-title"><span id="sb-title-text">Los Santos</span> <span id="sb-title-count">0 / 48</span></div>
+            <div class="sb-stats">
+                <div class="sb-stat cops"><i class="ph-fill ph-shield-check"></i> <span id="sb-stat-cops">LSPD: 0</span></div>
+                <div class="sb-stat ems"><i class="ph-fill ph-first-aid"></i> <span id="sb-stat-ems">EMS: 0</span></div>
+                <div class="sb-stat mech"><i class="ph-fill ph-users"></i> <span id="sb-stat-mech">Mechanics: 0</span></div>
             </div>
-            <footer class="sb-footer">
-                <span><i class="dot dot--admin"></i> Admin</span>
-                <span><i class="dot dot--mod"></i> Moderator</span>
-                <span><i class="dot dot--player"></i> Player</span>
-            </footer>
         </div>
+        <div class="sb-list" id="sb-player-list"></div>
+        <div class="sb-hint">Hold <strong style="color:var(--sb-accent)">Z</strong> · scroll list</div>
     </div>
 
     <!-- CHAT (premium) -->
@@ -933,20 +922,58 @@
         </div>
     </div>
 
-    <!-- SHOP -->
-    <div id="shop" class="overlay-panel hidden">
-        <div class="overlay-panel__box overlay-panel__box--shop">
-            <div class="shop-header">
-                <div>
-                    <h2 id="shop-title">Shop</h2>
-                    <p class="shop-subtitle" id="shop-subtitle">Browse &amp; buy</p>
-                </div>
-                <span class="shop-badge">OPEN 24/7</span>
+    <!-- 24/7 STORE (Forza) -->
+    <div id="store-forza" class="store-forza hidden" aria-hidden="true">
+        <div class="st-vignette"></div>
+        <div class="st-ui-layer">
+            <div class="st-categories-panel">
+                <div class="st-section-title" id="store-title">24/7 Supermarket</div>
+                <div class="st-cat-list" id="store-cat-list"></div>
             </div>
-            <div class="shop-categories" id="shop-categories"></div>
-            <div class="shop-list" id="shop-grid"></div>
-            <button type="button" class="panel-close" id="shop-close">Close (ESC)</button>
+            <div class="st-items-panel">
+                <div class="st-section-title" style="color:var(--st-text-muted);margin-bottom:15px;">Product Shelves</div>
+                <div class="st-items-grid" id="store-items-grid"></div>
+            </div>
+            <div class="st-checkout-panel">
+                <div id="store-checkout-content" style="display:none;flex-direction:column;height:100%;">
+                    <div class="st-preview-box">
+                        <div class="st-preview-icon" id="store-preview-icon"></div>
+                        <div class="st-preview-info">
+                            <div class="st-preview-name" id="store-preview-name">Item</div>
+                            <div class="st-preview-price" id="store-preview-price">$0 / each</div>
+                            <div class="st-preview-weight" id="store-preview-weight"></div>
+                        </div>
+                    </div>
+                    <div class="st-qty-group">
+                        <div class="st-qty-header"><span>Quantity</span> <span style="color:var(--st-accent);">Bulk Buy</span></div>
+                        <div class="st-qty-controls">
+                            <button type="button" class="st-qty-btn" id="store-qty-dec"><i class="ph-bold ph-minus"></i></button>
+                            <div class="st-qty-value" id="store-qty-value">1</div>
+                            <button type="button" class="st-qty-btn" id="store-qty-inc"><i class="ph-bold ph-plus"></i></button>
+                        </div>
+                        <div class="st-qty-quick">
+                            <button type="button" class="st-quick-btn" data-store-qty="5">+5</button>
+                            <button type="button" class="st-quick-btn" data-store-qty="10">+10</button>
+                            <button type="button" class="st-quick-btn" data-store-qty="50">+50</button>
+                            <button type="button" class="st-quick-btn" data-store-qty="9999">MAX</button>
+                        </div>
+                    </div>
+                    <div class="st-checkout-summary">
+                        <span class="st-total-label">Total Due</span>
+                        <div class="st-total-value"><span>$</span><div id="store-total-value">0</div></div>
+                        <button type="button" class="st-btn-hold" id="store-buy" disabled>
+                            <div class="st-btn-progress" id="store-buy-progress"></div>
+                            <div class="st-btn-text" id="store-buy-text"><span class="st-key-hint">ENTER</span> Pay</div>
+                        </button>
+                    </div>
+                </div>
+                <div id="store-checkout-empty" class="st-empty-state">
+                    <i class="ph-fill ph-shopping-cart"></i>
+                    <span>Select a product<br>from the shelf</span>
+                </div>
+            </div>
         </div>
+        <div class="st-close-hint">Press ESC to close</div>
     </div>
 
     <!-- FISHING SHOP (buy bait / sell fish) — premium inventory layout -->
@@ -2129,8 +2156,8 @@
                         <div class="premium-faction__panel">
                             <div class="premium-faction__panel-title">Recrutare</div>
                             <form data-faction-action="invite">
-                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invite online player by F10 server ID.</p>
-                                <input class="premium-faction__form-control" type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
+                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invite online player by server ID (hold Z).</p>
+                                <input class="premium-faction__form-control" type="number" name="targetId" min="1" placeholder="Server ID (Z)" required>
                                 <button type="submit" class="premium-faction__btn premium-faction__btn--primary" style="margin-top:10px;">Trimite Invitație</button>
                             </form>
                         </div>
@@ -2381,8 +2408,8 @@
                         <div class="premium-clan__panel">
                             <div class="premium-clan__panel-title">Recrutare</div>
                             <form data-clan-action="invite">
-                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invită un jucător online folosind ID-ul de pe F10.</p>
-                                <input class="premium-clan__form-control" type="number" name="targetId" min="1" placeholder="Server ID (F10)" required>
+                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invită un jucător online folosind ID-ul din scoreboard (ține Z).</p>
+                                <input class="premium-clan__form-control" type="number" name="targetId" min="1" placeholder="Server ID (Z)" required>
                                 <button type="submit" class="premium-clan__btn premium-clan__btn--primary" style="margin-top:10px;">Trimite Invitație</button>
                             </form>
                         </div>
@@ -3309,13 +3336,14 @@
         <div class="dmg-container" id="dmg-container"></div>
     </div>
 
-    <script src="js/app.js?v=24"></script>
+    <script src="js/app.js?v=25"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>
     <script src="js/hud.js?v=9"></script>
     <script src="js/hud_editor.js"></script>
     <script src="js/player_identity.js?v=3"></script>
-    <script src="js/scoreboard.js?v=2"></script>
+    <script src="js/scoreboard.js?v=3"></script>
+    <script src="js/store247.js?v=1"></script>
     <script src="js/chat_settings.js"></script>
     <script src="js/chat.js?v=26"></script>
     <script src="js/properties-ui.js?v=5"></script>
@@ -3325,14 +3353,15 @@
     <script src="js/phone.js?v=5"></script>
     <script src="js/dealership.js?v=3"></script>
     <script src="js/hotbar.js?v=2"></script>
-    <script src="js/panels.js?v=16"></script>
+    <script src="js/panels.js?v=17"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=6"></script>
     <script src="js/auth_email.js?v=1"></script>
     <script src="js/auth_loading.js?v=11"></script>
     <script src="js/spawn.js?v=5"></script>
     <script src="js/damage-indicators.js?v=1"></script>
-    <script src="js/fuel_pump.js"></script>
+    <script src="js/world-tooltip.js?v=1"></script>
+    <script src="js/fuel_pump.js?v=2"></script>
     <script src="js/job_icons.js?v=1"></script>
     <script src="js/fishing.js?v=6"></script>
     <script src="js/license_test.js?v=7"></script>

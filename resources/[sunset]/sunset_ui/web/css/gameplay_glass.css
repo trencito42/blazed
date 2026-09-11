@@ -16,7 +16,9 @@
 .dealership,
 #dealership.dealership-forza,
 .fleet-garage,
-.scoreboard,
+.scoreboard-forza,
+.store-forza,
+#fuel-pump.fuel-pump-forza,
 .dispatch-modal-overlay {
     background: transparent !important;
     -webkit-backdrop-filter: none !important;

@@ -4,7 +4,7 @@ lua54 'yes'
 
 name 'sunset_world'
 description 'Map blips, markers and world interaction zones'
-version '1.0.3'
+version '1.1.0'
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
@@ -16,7 +16,10 @@ shared_scripts {
 }
 
 client_scripts {
+    '@sunset_core/client/callbacks.lua',
     'client/interaction.lua',
+    'client/world_tooltips.lua',
+    'client/stores_247.lua',
     'client/main.lua',
     'client/elevators.lua',
     'client/fib_interior.lua',
@@ -26,4 +29,4 @@ server_scripts {
     'server/access.lua',
 }
 
-dependencies { 'sunset_core' }
+dependencies { 'sunset_core', 'sunset_ui' }

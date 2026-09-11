@@ -1,14 +1,23 @@
 local refueling = false
 local fillingCan = false
 local sessionStartFuel = 0.0
+local sessionAddedLiters = 0.0
 local canSessionStartLiters = 0.0
 local canCurrentLiters = 0.0
 local sessionStation = nil
+local sessionPumpIndex = 0
 local sessionVeh = 0
-local pumpHintShown = false
-local canHintShown = false
-local waitForUseRelease = false
-local waitForCanRelease = false
+local uiVisible = false
+local isPumping = false
+local pumpSpeed = 0.02
+local waitForStartRelease = false
+local cachedCanLiters = 0.0
+local cachedCanAt = 0
+
+local PUMP_REACH = 4.2
+local PUMP_KEY_VEHICLE = 47 -- G
+local PUMP_KEY_CAN = 38 -- E
+local PUMP_KEY_FLOW = 22 -- SPACE
 
 local function notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
@@ -34,131 +43,116 @@ local function setFuelLevel(veh, level)
     exports.sunset_vehicles:SetFuelLevel(veh, level)
 end
 
-local function pricePerPercent()
-    return Sunset.Config.FuelPricePerPercent or 1.75
-end
-
 local function pricePerLiter()
-    return Sunset.Config.FuelPricePerLiter or 2.92
+    return Sunset.Config.FuelPricePerLiter or 2.45
 end
 
 local function maxCanLiters()
     return Sunset.GetGasCanMaxLiters()
 end
 
-local function vehicleFlowLitersPerSec()
-    return Sunset.Config.FuelFlowLitersPerSecond or 3.0
-end
-
-local function canFlowLitersPerSec()
-    return Sunset.Config.GasCanFlowLitersPerSecond or vehicleFlowLitersPerSec()
-end
-
-local function fillRatePercent(veh)
-    local flow = vehicleFlowLitersPerSec()
-    local class = GetVehicleClass(veh)
-    local tankLiters = Sunset.GetVehicleTankCapacityLiters(class)
-    if tankLiters <= 0 then return 0 end
-    return (flow / tankLiters) * 100.0
-end
-
-local function pumpReach()
-    return Sunset.Config.FuelPumpReach or 4.2
+local function vehicleDisplayName(veh)
+    if not veh or veh == 0 then return 'Vehicle' end
+    local model = GetEntityModel(veh)
+    local label = GetDisplayNameFromVehicleModel(model)
+    if label and label ~= 'CARNOTFOUND' then
+        return GetLabelText(label)
+    end
+    return 'Vehicle'
 end
 
 local function findNearestPump(coords)
-    local bestStation, bestPump, bestDist = nil, nil, pumpReach() + 1.0
-
+    local bestStation, bestPump, bestIndex, bestDist = nil, nil, 0, PUMP_REACH + 1.0
     for _, station in ipairs(Sunset.GasStations or {}) do
-        for _, pump in ipairs(station.pumps or {}) do
+        for index, pump in ipairs(station.pumps or {}) do
             local px, py, pz = pump.x, pump.y, pump.z
             local dist = #(coords - vector3(px, py, pz))
             if dist < bestDist then
                 bestDist = dist
                 bestStation = station
                 bestPump = pump
+                bestIndex = index
             end
         end
     end
-
-    if bestStation then return bestStation, bestPump end
-    return nil, nil
+    if bestStation then return bestStation, bestPump, bestIndex, bestDist end
+    return nil, nil, 0, 999.0
 end
 
-local function findNearestPumpForVehicle()
-    local veh = getDriverVehicle()
-    if veh == 0 then return nil, nil end
-    return findNearestPump(GetEntityCoords(veh))
+local function pumpTooltipCoords(pump)
+    return vector3(pump.x, pump.y, pump.z + 1.15)
 end
 
-local function findNearestPumpOnFoot()
-    if IsPedInAnyVehicle(PlayerPedId(), false) then return nil, nil end
-    return findNearestPump(GetEntityCoords(PlayerPedId()))
-end
-
-local function showPumpUi(station, startFuel, tankLabel)
-    exports.sunset_ui:Send('fuelPumpShow', {
-        station = station.label or 'Gas Station',
-        pricePerLiter = fillingCan and pricePerLiter() or pricePerPercent(),
-        startFuel = startFuel,
-        fuel = startFuel,
-        liters = 0,
-        cost = 0,
-        tankLabel = tankLabel,
-        mode = 'pumping',
-        priceUnit = fillingCan and 'L' or '% TANK',
-    })
-end
-
-local function showVehiclePumpPrompt(station, veh)
-    local current = getFuelLevel()
-    local class = GetVehicleClass(veh)
-    local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
-    local tankLiters = Sunset.PercentToTankLiters(current, class)
-    exports.sunset_ui:Send('fuelPumpShow', {
-        station = station.label or 'Gas Station',
-        pricePerLiter = pricePerPercent(),
-        priceUnit = '% TANK',
-        fuel = current,
-        liters = 0,
-        cost = 0,
-        tankLabel = ('%.0f%% — %.1f/%.0f L'):format(current, tankLiters, tankCap),
-        mode = current >= 99.9 and 'full' or 'ready',
-        promptLabel = current >= 99.9 and 'TANK FULL' or 'TO REFUEL',
-    })
-end
-
-local function showCanPumpPrompt(station, currentLiters)
-    local maxLiters = maxCanLiters()
-    local pct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0
-    exports.sunset_ui:Send('fuelPumpShow', {
-        station = station.label or 'Gas Station',
+local function buildUiPayload(mode, extra)
+    extra = extra or {}
+    local stationLabel = sessionStation and (sessionStation.label or 'Gas Station') or (extra.station or 'Gas Station')
+    local payload = {
+        mode = mode,
+        station = stationLabel,
+        fuelType = fillingCan and 'Gas Can Fill' or 'Premium Gasoline 99',
         pricePerLiter = pricePerLiter(),
-        priceUnit = 'L',
-        fuel = pct,
-        liters = 0,
-        cost = 0,
-        tankLabel = ('Gas can %.1f/%.0f L'):format(currentLiters, maxLiters),
-        mode = currentLiters >= maxLiters - 0.05 and 'full' or 'ready',
-        promptLabel = currentLiters >= maxLiters - 0.05 and 'GAS CAN FULL' or 'WITH GAS CAN',
-    })
+        sessionLiters = extra.sessionLiters or sessionAddedLiters or 0,
+        cost = extra.cost or 0,
+        tankPct = extra.tankPct or 0,
+        interactive = mode == 'pumping',
+        canPump = extra.canPump ~= false,
+        pumping = isPumping,
+    }
+
+    if fillingCan then
+        local maxLiters = maxCanLiters()
+        payload.vehicleName = 'Gas Can'
+        payload.tankPct = maxLiters > 0 and ((canCurrentLiters or 0) / maxLiters) * 100.0 or 0
+    elseif sessionVeh ~= 0 and DoesEntityExist(sessionVeh) then
+        local class = GetVehicleClass(sessionVeh)
+        local current = getFuelLevel()
+        payload.vehicleName = vehicleDisplayName(sessionVeh)
+        payload.tankPct = current
+    else
+        payload.vehicleName = extra.vehicleName or 'Vehicle'
+        payload.tankPct = extra.tankPct or 0
+    end
+
+    return payload
 end
 
-local function updatePumpUi(station, fuel, liters, cost, tankLabel)
-    exports.sunset_ui:Send('fuelPumpUpdate', {
-        station = station and station.label or 'Gas Station',
-        fuel = fuel,
-        liters = liters,
-        cost = cost,
-        pricePerLiter = fillingCan and pricePerLiter() or pricePerPercent(),
-        priceUnit = fillingCan and 'L' or '% TANK',
-        tankLabel = tankLabel,
-        mode = 'pumping',
-    })
+local function showPumpUi(mode, extra)
+    uiVisible = true
+    exports.sunset_ui:Send('fuelPumpShow', buildUiPayload(mode, extra))
+end
+
+local function updatePumpUi(mode, extra)
+    if not uiVisible then return end
+    exports.sunset_ui:Send('fuelPumpUpdate', buildUiPayload(mode, extra))
 end
 
 local function hidePumpUi()
+    uiVisible = false
     exports.sunset_ui:Send('fuelPumpHide', {})
+    if GetResourceState('sunset_world') == 'started' then
+        SunsetWorld.Tooltips.clear('fuel_pump')
+    end
+end
+
+local function getCachedCanLiters()
+    local now = GetGameTimer()
+    if now - cachedCanAt > 1200 then
+        cachedCanLiters = Sunset.AwaitCallback('sunset:getGasCanLiters') or 0
+        cachedCanAt = now
+    end
+    return cachedCanLiters
+end
+
+local function updatePumpTooltip(station, pump, pumpIndex, key, desc)
+    if GetResourceState('sunset_world') ~= 'started' or not station or not pump then return end
+    SunsetWorld.Tooltips.set('fuel_pump', {
+        coords = pumpTooltipCoords(pump),
+        badge = 'XODO FUEL INC.',
+        icon = 'ph-gas-pump',
+        title = ('Pompă Benzina #%02d'):format(pumpIndex or 1),
+        desc = desc or 'Alimentați Vehiculul',
+        key = key or 'G',
+    })
 end
 
 local function cancelRefuel()
@@ -166,49 +160,80 @@ local function cancelRefuel()
         setFuelLevel(sessionVeh, sessionStartFuel)
     end
     refueling = false
+    fillingCan = false
+    isPumping = false
     sessionStation = nil
     sessionVeh = 0
+    sessionAddedLiters = 0
     hidePumpUi()
 end
 
-local function finishRefuel(veh, startFuel, endFuel, station)
+local function finishRefuel(veh)
     refueling = false
+    isPumping = false
+    local endFuel = getFuelLevel()
     sessionVeh = 0
 
-    if endFuel <= startFuel + 0.05 then
+    if endFuel <= sessionStartFuel + 0.05 or sessionAddedLiters <= 0.05 then
         hidePumpUi()
         notify('Refueling cancelled', 'warning')
-        setFuelLevel(veh, startFuel)
+        setFuelLevel(veh, sessionStartFuel)
         return
     end
 
     local plate = normalizePlate(GetVehicleNumberPlateText(veh))
-    local result, err = Sunset.AwaitCallback('sunset:refuelVehiclePartial', startFuel, endFuel, plate)
+    local result, err = Sunset.AwaitCallback('sunset:refuelVehiclePartial', sessionStartFuel, endFuel, plate)
     if not result then
         hidePumpUi()
-        setFuelLevel(veh, startFuel)
+        setFuelLevel(veh, sessionStartFuel)
         notify(err or 'Payment failed', 'error')
         return
     end
 
     setFuelLevel(veh, result.newFuel or endFuel)
     local finalFuel = result.newFuel or endFuel
-    local class = GetVehicleClass(veh)
-    local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
-    updatePumpUi(station, finalFuel, (finalFuel - startFuel) / 100.0 * tankCap, result.cost or 0,
-        ('%.0f%% — %.1f/%.0f L'):format(finalFuel, Sunset.PercentToTankLiters(finalFuel, class), tankCap))
-    exports.sunset_ui:Send('fuelPumpUpdate', { mode = finalFuel >= 99.9 and 'full' or 'complete',
-        promptLabel = finalFuel >= 99.9 and 'TANK FULL' or 'PAYMENT COMPLETE' })
-    notify(('Refueled +%d%% — paid $%s (tank %d%%)'):format(
-        math.floor((result.newFuel or endFuel) - startFuel),
-        result.cost or 0,
-        math.floor(result.newFuel or endFuel)
-    ), 'success')
+    updatePumpUi('complete', {
+        sessionLiters = sessionAddedLiters,
+        cost = result.cost or math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+        tankPct = finalFuel,
+    })
+    notify(('Refueled %.1f L — paid $%s'):format(sessionAddedLiters, result.cost or 0), 'success')
+    sessionAddedLiters = 0
     Wait(900)
     hidePumpUi()
 end
 
-local function startRefuel(station)
+local function finishCanFill()
+    fillingCan = false
+    isPumping = false
+    local endLiters = canCurrentLiters
+
+    if endLiters <= canSessionStartLiters + 0.05 or sessionAddedLiters <= 0.05 then
+        hidePumpUi()
+        notify('Gas can fill cancelled', 'warning')
+        return
+    end
+
+    local result, err = Sunset.AwaitCallback('sunset:fillGasCan', endLiters)
+    if not result then
+        hidePumpUi()
+        notify(err or 'Payment failed', 'error')
+        return
+    end
+
+    local maxLiters = result.maxLiters or maxCanLiters()
+    updatePumpUi('complete', {
+        sessionLiters = sessionAddedLiters,
+        cost = result.cost or math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+        tankPct = maxLiters > 0 and ((result.liters or endLiters) / maxLiters) * 100.0 or 0,
+    })
+    notify(('Gas can: %.0f/%.0f L — paid $%s'):format(result.liters or endLiters, maxLiters, result.cost or 0), 'success')
+    sessionAddedLiters = 0
+    Wait(900)
+    hidePumpUi()
+end
+
+local function startRefuel(station, pumpIndex)
     local veh = getDriverVehicle()
     if veh == 0 then return end
 
@@ -225,43 +250,20 @@ local function startRefuel(station)
     end
 
     refueling = true
-    waitForUseRelease = true
+    fillingCan = false
+    waitForStartRelease = true
     sessionStartFuel = current
     sessionStation = station
+    sessionPumpIndex = pumpIndex or 1
     sessionVeh = veh
-    showPumpUi(station, current)
+    sessionAddedLiters = 0
+    isPumping = false
+    pumpSpeed = 0.02
+    showPumpUi('pumping', { tankPct = current, sessionLiters = 0, cost = 0 })
     SetVehicleEngineOn(veh, false, true, true)
 end
 
-local function finishCanFill(endLiters)
-    fillingCan = false
-
-    if endLiters <= canSessionStartLiters + 0.05 then
-        hidePumpUi()
-        notify('Gas can fill cancelled', 'warning')
-        return
-    end
-
-    local result, err = Sunset.AwaitCallback('sunset:fillGasCan', endLiters)
-    if not result then
-        hidePumpUi()
-        notify(err or 'Payment failed', 'error')
-        return
-    end
-
-    local maxLiters = result.maxLiters or maxCanLiters()
-    local pct = maxLiters > 0 and ((result.liters or endLiters) / maxLiters) * 100.0 or 0
-    updatePumpUi(sessionStation, pct, result.added or (endLiters - canSessionStartLiters), result.cost or 0,
-        ('Gas can %.1f/%.0f L'):format(result.liters or endLiters, maxLiters))
-    exports.sunset_ui:Send('fuelPumpUpdate', { mode = pct >= 99.9 and 'full' or 'complete',
-        promptLabel = pct >= 99.9 and 'GAS CAN FULL' or 'PAYMENT COMPLETE' })
-    notify(('Gas can: %.0f/%.0f L — paid $%s'):format(
-        result.liters or endLiters, maxLiters, result.cost or 0), 'success')
-    Wait(900)
-    hidePumpUi()
-end
-
-local function startCanFill(station)
+local function startCanFill(station, pumpIndex)
     local currentLiters = Sunset.AwaitCallback('sunset:getGasCanLiters') or 0
     local maxLiters = maxCanLiters()
     if currentLiters >= maxLiters - 0.05 then
@@ -270,146 +272,88 @@ local function startCanFill(station)
     end
 
     fillingCan = true
-    waitForCanRelease = true
+    refueling = false
+    waitForStartRelease = true
     canSessionStartLiters = currentLiters
     canCurrentLiters = currentLiters
     sessionStation = station
+    sessionPumpIndex = pumpIndex or 1
+    sessionAddedLiters = 0
+    isPumping = false
+    pumpSpeed = 0.02
     local pct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0
-    showPumpUi(station, pct, ('%.1f/%.0f L'):format(currentLiters, maxLiters))
+    showPumpUi('pumping', { tankPct = pct, sessionLiters = 0, cost = 0 })
+end
+
+local function pumpTick()
+    if not isPumping then return end
+
+    local minSpeed, maxSpeed, acceleration = 0.02, 0.5, 0.01
+    pumpSpeed = math.min(maxSpeed, pumpSpeed + acceleration)
+
+    if refueling then
+        local veh = sessionVeh
+        if veh == 0 or not DoesEntityExist(veh) then
+            cancelRefuel()
+            return
+        end
+        local class = GetVehicleClass(veh)
+        local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
+        if tankCap <= 0 then return end
+
+        local current = getFuelLevel()
+        if current >= 99.95 then
+            setFuelLevel(veh, 100.0)
+            isPumping = false
+            updatePumpUi('pumping', {
+                sessionLiters = sessionAddedLiters,
+                cost = math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+                tankPct = 100.0,
+                canPump = false,
+                pumping = false,
+            })
+            return
+        end
+
+        sessionAddedLiters = sessionAddedLiters + pumpSpeed
+        local addedPct = (pumpSpeed / tankCap) * 100.0
+        local nextFuel = math.min(100.0, current + addedPct)
+        setFuelLevel(veh, nextFuel)
+        updatePumpUi('pumping', {
+            sessionLiters = sessionAddedLiters,
+            cost = math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+            tankPct = nextFuel,
+            pumping = true,
+        })
+    elseif fillingCan then
+        local maxLiters = maxCanLiters()
+        canCurrentLiters = math.min(maxLiters, canCurrentLiters + pumpSpeed)
+        sessionAddedLiters = canCurrentLiters - canSessionStartLiters
+        local pct = maxLiters > 0 and (canCurrentLiters / maxLiters) * 100.0 or 0
+        updatePumpUi('pumping', {
+            sessionLiters = sessionAddedLiters,
+            cost = math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+            tankPct = pct,
+            pumping = true,
+        })
+        if canCurrentLiters >= maxLiters - 0.05 then
+            canCurrentLiters = maxLiters
+            isPumping = false
+            updatePumpUi('pumping', {
+                sessionLiters = sessionAddedLiters,
+                cost = math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+                tankPct = 100.0,
+                canPump = false,
+                pumping = false,
+            })
+        end
+    end
 end
 
 CreateThread(function()
     while true do
-        local veh = getDriverVehicle()
-        if veh ~= 0 and not refueling and not fillingCan and not IsNuiFocused() then
-            local station, pump = findNearestPumpForVehicle()
-            if station and pump then
-                DrawMarker(1, pump.x, pump.y, pump.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    1.4, 1.4, 0.6, 46, 204, 113, 160, false, false, 2, false, nil, nil, false)
-
-                if not pumpHintShown then
-                    pumpHintShown = true
-                    showVehiclePumpPrompt(station, veh)
-                end
-
-                if not IsControlPressed(0, 38) then
-                    waitForUseRelease = false
-                elseif not waitForUseRelease then
-                    startRefuel(station)
-                end
-                Wait(0)
-            else
-                if pumpHintShown then
-                    pumpHintShown = false
-                    hidePumpUi()
-                end
-                Wait(350)
-            end
-        elseif refueling or fillingCan then
-            Wait(0)
-        else
-            if pumpHintShown then
-                pumpHintShown = false
-                if not refueling then hidePumpUi() end
-            end
-            Wait(450)
-        end
-    end
-end)
-
-CreateThread(function()
-    while true do
-        if not refueling and not fillingCan and not IsNuiFocused() and not IsPedInAnyVehicle(PlayerPedId(), false) then
-            local station, pump = findNearestPumpOnFoot()
-            if station and pump then
-                DrawMarker(1, pump.x, pump.y, pump.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    1.4, 1.4, 0.6, 255, 180, 0, 160, false, false, 2, false, nil, nil, false)
-
-                if not canHintShown then
-                    canHintShown = true
-                    local currentLiters = Sunset.AwaitCallback('sunset:getGasCanLiters') or 0
-                    showCanPumpPrompt(station, currentLiters)
-                end
-
-                if not IsControlPressed(0, 38) then
-                    waitForCanRelease = false
-                elseif not waitForCanRelease then
-                    local hasCan = Sunset.AwaitCallback('sunset:inventoryHasItem', 'gas_can')
-                    if hasCan then
-                        startCanFill(station)
-                    else
-                        notify('Buy a gas can at a 24/7 store first', 'error')
-                        waitForCanRelease = true
-                    end
-                end
-                Wait(0)
-            else
-                if canHintShown then
-                    canHintShown = false
-                    hidePumpUi()
-                end
-                Wait(350)
-            end
-        else
-            if canHintShown then
-                canHintShown = false
-                if not fillingCan then hidePumpUi() end
-            end
-            Wait(450)
-        end
-    end
-end)
-
-CreateThread(function()
-    while true do
-        if refueling then
-            local veh = getDriverVehicle()
-            if veh == 0 or veh ~= sessionVeh then
-                cancelRefuel()
-            elseif not IsControlPressed(0, 38) then
-                finishRefuel(veh, sessionStartFuel, getFuelLevel(), sessionStation)
-            else
-                local current = getFuelLevel()
-                if current >= 99.95 then
-                    setFuelLevel(veh, 100.0)
-                    finishRefuel(veh, sessionStartFuel, 100.0, sessionStation)
-                else
-                    local dt = GetFrameTime()
-                    local added = fillRatePercent(veh) * dt
-                    local nextFuel = math.min(100.0, current + added)
-                    setFuelLevel(veh, nextFuel)
-                    local class = GetVehicleClass(veh)
-                    local tankCap = Sunset.GetVehicleTankCapacityLiters(class)
-                    local addedPct = nextFuel - sessionStartFuel
-                    local addedLiters = addedPct / 100.0 * tankCap
-                    local tankLiters = Sunset.PercentToTankLiters(nextFuel, class)
-                    local cost = math.floor(addedPct * pricePerPercent() * 100) / 100
-                    updatePumpUi(sessionStation, nextFuel, addedLiters, cost,
-                        ('%.0f%% — %.1f/%.0f L'):format(nextFuel, tankLiters, tankCap))
-                end
-            end
-            Wait(0)
-        elseif fillingCan then
-            if IsPedInAnyVehicle(PlayerPedId(), false) then
-                fillingCan = false
-                hidePumpUi()
-            elseif not IsControlPressed(0, 38) then
-                finishCanFill(canCurrentLiters)
-            else
-                local dt = GetFrameTime()
-                local maxLiters = maxCanLiters()
-                local added = canFlowLitersPerSec() * dt
-                canCurrentLiters = math.min(maxLiters, canCurrentLiters + added)
-                local sessionAdded = canCurrentLiters - canSessionStartLiters
-                local cost = math.floor(sessionAdded * pricePerLiter() * 100) / 100
-                local pct = maxLiters > 0 and (canCurrentLiters / maxLiters) * 100.0 or 0
-                updatePumpUi(sessionStation, pct, sessionAdded, cost,
-                    ('%.1f/%.0f L'):format(canCurrentLiters, maxLiters))
-                if canCurrentLiters >= maxLiters - 0.05 then
-                    canCurrentLiters = maxLiters
-                    finishCanFill(maxLiters)
-                end
-            end
+        if refueling or fillingCan then
+            if isPumping then pumpTick() end
             Wait(0)
         else
             Wait(200)
@@ -417,14 +361,131 @@ CreateThread(function()
     end
 end)
 
+CreateThread(function()
+    while true do
+        if refueling or fillingCan or IsNuiFocused() then
+            Wait(400)
+        else
+            local ped = PlayerPedId()
+            local pos = GetEntityCoords(ped)
+            local veh = getDriverVehicle()
+            local station, pump, pumpIndex, dist = findNearestPump(pos)
+
+            if station and pump and dist <= PUMP_REACH then
+                if veh ~= 0 then
+                    local current = getFuelLevel()
+                    updatePumpTooltip(station, pump, pumpIndex, 'G', 'Alimentați Vehiculul')
+                    if not uiVisible then
+                        showPumpUi('ready', {
+                            station = station.label,
+                            vehicleName = vehicleDisplayName(veh),
+                            tankPct = current,
+                            sessionLiters = 0,
+                            cost = 0,
+                        })
+                    end
+
+                    if not IsControlPressed(0, PUMP_KEY_VEHICLE) then
+                        waitForStartRelease = false
+                    elseif not waitForStartRelease and current < 99.9 then
+                        startRefuel(station, pumpIndex)
+                    end
+                elseif not IsPedInAnyVehicle(ped, false) then
+                    updatePumpTooltip(station, pump, pumpIndex, 'E', 'Umple Bidonul')
+                    local currentLiters = getCachedCanLiters()
+                    local maxLiters = maxCanLiters()
+                    if not uiVisible then
+                        showPumpUi('ready', {
+                            station = station.label,
+                            vehicleName = 'Gas Can',
+                            tankPct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0,
+                            sessionLiters = 0,
+                            cost = 0,
+                        })
+                    end
+
+                    if not IsControlPressed(0, PUMP_KEY_CAN) then
+                        waitForStartRelease = false
+                    elseif not waitForStartRelease then
+                        local hasCan = Sunset.AwaitCallback('sunset:inventoryHasItem', 'gas_can')
+                        if hasCan then
+                            startCanFill(station, pumpIndex)
+                        else
+                            notify('Buy a gas can at a 24/7 store first', 'error')
+                            waitForStartRelease = true
+                        end
+                    end
+                end
+                Wait(0)
+            else
+                if uiVisible and not refueling and not fillingCan then hidePumpUi() end
+                if GetResourceState('sunset_world') == 'started' then
+                    SunsetWorld.Tooltips.clear('fuel_pump')
+                end
+                Wait(350)
+            end
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if refueling or fillingCan then
+            if IsControlPressed(0, PUMP_KEY_FLOW) then
+                if not isPumping then
+                    isPumping = true
+                    pumpSpeed = 0.02
+                end
+            else
+                if isPumping then
+                    isPumping = false
+                    updatePumpUi('pumping', {
+                        sessionLiters = sessionAddedLiters,
+                        cost = math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+                        pumping = false,
+                    })
+                end
+            end
+            Wait(0)
+        else
+            Wait(250)
+        end
+    end
+end)
+
+AddEventHandler('sunset:nui:fuelPumpCheckout', function()
+    if refueling then
+        local veh = sessionVeh
+        if veh ~= 0 and DoesEntityExist(veh) then
+            finishRefuel(veh)
+        else
+            cancelRefuel()
+        end
+    elseif fillingCan then
+        finishCanFill()
+    end
+end)
+
+AddEventHandler('sunset:nui:fuelPumpPumpStart', function()
+    if refueling or fillingCan then
+        isPumping = true
+        pumpSpeed = 0.02
+        updatePumpUi('pumping', { pumping = true })
+    end
+end)
+
+AddEventHandler('sunset:nui:fuelPumpPumpStop', function()
+    if refueling or fillingCan then
+        isPumping = false
+        updatePumpUi('pumping', {
+            sessionLiters = sessionAddedLiters,
+            cost = math.floor(sessionAddedLiters * pricePerLiter() * 100) / 100,
+            pumping = false,
+        })
+    end
+end)
+
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    if refueling then
-        cancelRefuel()
-    elseif fillingCan then
-        fillingCan = false
-        hidePumpUi()
-    else
-        hidePumpUi()
-    end
+    if refueling then cancelRefuel() elseif fillingCan then fillingCan = false hidePumpUi() else hidePumpUi() end
 end)

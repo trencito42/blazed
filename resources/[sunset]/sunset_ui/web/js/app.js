@@ -400,6 +400,7 @@ window.addEventListener('message', (event) => {
 
         case 'showScoreboard':
             if (window.Scoreboard) Scoreboard.show(event.data.data || data);
+            $('#hud')?.classList.add('scoreboard-open');
             break;
 
         case 'hideScoreboard':
@@ -1001,6 +1002,10 @@ window.addEventListener('message', (event) => {
             break;
         case 'fuelPumpHide':
             if (window.FuelPump) FuelPump.hide();
+            break;
+
+        case 'worldTooltipsSync':
+            if (window.WorldTooltipLayer) WorldTooltipLayer.sync((data || event.data.data) || []);
             break;
     }
 });
