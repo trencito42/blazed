@@ -84,8 +84,21 @@ body.in-vehicle .weapon-ammo-hud {
     position: relative;
     bottom: auto;
     right: auto;
+    opacity: 1 !important;
+    visibility: visible !important;
     transform: skewX(-5deg);
-    pointer-events: auto;
+    pointer-events: auto !important;
+    z-index: 6;
+    transition: none;
+}
+
+#inventory-hotbar .hotbar-slot {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+body.inventory-dragging #inventory-hotbar .hotbar-slot {
+    pointer-events: auto !important;
 }
 
 .hotbar-slot {

@@ -4,8 +4,9 @@ local activeHotbarSlot = nil
 local hotbarSlots = {}
 local hotbarPeekUntil = 0
 local emoteWheelOpen = false
+local xEmoteHolding = false
 local xHoldToken = 0
-local X_HOLD_MS = 320
+local X_HOLD_MS = 280
 
 local UNARMED = `WEAPON_UNARMED`
 
@@ -246,9 +247,23 @@ local function activateHotbarSlot(slot)
     requestHotbarSlot(slot, false)
 end
 
+local function blockDefaultXControls()
+    DisableControlAction(0, 73, true)
+    DisableControlAction(1, 73, true)
+    DisableControlAction(2, 73, true)
+end
+
+local function clearHandsUpAnim(ped)
+    if IsEntityPlayingAnim(ped, 'missminuteman_1ig_2', 'handsup_base', 3)
+        or IsEntityPlayingAnim(ped, 'random@mugging3', 'handsup_standing_base', 3) then
+        ClearPedSecondaryTask(ped)
+    end
+end
+
 local function openEmoteWheel()
     if emoteWheelOpen or blocked() then return end
     emoteWheelOpen = true
+    clearHandsUpAnim(PlayerPedId())
     exports.sunset_ui:SetFocus(true, true)
     exports.sunset_ui:Send('emoteWheelShow', {
         emotes = GetResourceState('sunset_emotes') == 'started' and exports.sunset_emotes:GetEmoteWheelList() or {},
@@ -274,17 +289,31 @@ end
 
 RegisterCommand('+sunset_emote_wheel', function()
     if blocked() or emoteWheelOpen then return end
+    xEmoteHolding = true
+    blockDefaultXControls()
+    clearHandsUpAnim(PlayerPedId())
+
     local token = xHoldToken + 1
     xHoldToken = token
+
+    CreateThread(function()
+        while xEmoteHolding and xHoldToken == token and not emoteWheelOpen do
+            blockDefaultXControls()
+            clearHandsUpAnim(PlayerPedId())
+            Wait(0)
+        end
+    end)
+
     CreateThread(function()
         Wait(X_HOLD_MS)
         if xHoldToken ~= token then return end
-        if blocked() or emoteWheelOpen then return end
+        if blocked() or emoteWheelOpen or not xEmoteHolding then return end
         openEmoteWheel()
     end)
 end, false)
 
 RegisterCommand('-sunset_emote_wheel', function()
+    xEmoteHolding = false
     xHoldToken = xHoldToken + 1
     if emoteWheelOpen then
         exports.sunset_ui:Send('emoteWheelRelease', {})
@@ -300,9 +329,7 @@ CreateThread(function()
                 DisableControlAction(0, control, true)
             end
             DisableControlAction(0, 37, true)
-            if not emoteWheelOpen then
-                DisableControlAction(0, 73, true)
-            end
+            blockDefaultXControls()
         end
         Wait(0)
     end

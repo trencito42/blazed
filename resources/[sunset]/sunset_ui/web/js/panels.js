@@ -516,11 +516,13 @@ const Panels = {
                 window.setTimeout(() => {
                     this._suppressInventoryClick = false;
                 }, 0);
-                const el = document.elementFromPoint(x, y);
+                const stack = document.elementsFromPoint(x, y);
+                const el = stack[0] || null;
+                const hotbarSlot = stack.map((node) => node.closest?.('.hotbar-slot')).find(Boolean)
+                    || el?.closest('.hotbar-slot');
                 const offerZone = el?.closest('#inventory-my-offer');
                 const dropBtn = el?.closest('#inventory-drop-selected');
                 const slot = el?.closest('.premium-slot');
-                const hotbarSlot = el?.closest('.hotbar-slot');
 
                 if (hotbarSlot && !this._inventoryTrade) {
                     const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
