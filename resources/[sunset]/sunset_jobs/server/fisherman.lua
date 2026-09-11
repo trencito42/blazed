@@ -30,13 +30,17 @@ local function inFishZone(source, cfg)
 end
 
 -- ── Rod / Bait tables ─────────────────────────────────────────
+-- catchBonus = bonus procentual la sansa de prindere (adaos mic, max +5%)
 local ROD_TIERS = {
-    { item = 'fishing_rod_5', valueMult = 1.75, delayReduction = 2000, windowBonus = 600 },
-    { item = 'fishing_rod_4', valueMult = 1.50, delayReduction = 1500, windowBonus = 400 },
-    { item = 'fishing_rod_3', valueMult = 1.30, delayReduction = 1000, windowBonus = 200 },
-    { item = 'fishing_rod_2', valueMult = 1.15, delayReduction = 500,  windowBonus = 0   },
-    { item = 'fishing_rod_1', valueMult = 1.05, delayReduction = 0,    windowBonus = 0   },
+    { item = 'fishing_rod_5', valueMult = 1.75, delayReduction = 2000, windowBonus = 600, catchBonus = 5 },
+    { item = 'fishing_rod_4', valueMult = 1.50, delayReduction = 1500, windowBonus = 400, catchBonus = 4 },
+    { item = 'fishing_rod_3', valueMult = 1.30, delayReduction = 1000, windowBonus = 200, catchBonus = 3 },
+    { item = 'fishing_rod_2', valueMult = 1.15, delayReduction = 500,  windowBonus = 0,   catchBonus = 2 },
+    { item = 'fishing_rod_1', valueMult = 1.05, delayReduction = 0,    windowBonus = 0,   catchBonus = 1 },
 }
+
+-- Bonus catch% per nivel (nivel 1 = 0%, nivel 5 = 4%)
+local LEVEL_CATCH_BONUS = { [1] = 0, [2] = 1, [3] = 2, [4] = 3, [5] = 4 }
 
 -- baitTier: 0 = no bait, 1 = worm, 2 = lure, 3 = premium
 local BAIT_TIERS = {
@@ -223,13 +227,14 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     local token  = ('%d-%d-%d'):format(source, session.id, math.random(100000, 999999))
 
     session.data.fishingChallenge = {
-        token        = token,
-        spotIndex    = spotIndex,
-        biteAt       = now + delay,
-        expiresAt    = now + delay + window,
-        rodValueMult = rod.valueMult,
-        baitTier     = baitTier,
-        level        = session.data.level,
+        token         = token,
+        spotIndex     = spotIndex,
+        biteAt        = now + delay,
+        expiresAt     = now + delay + window,
+        rodValueMult  = rod.valueMult,
+        rodCatchBonus = rod.catchBonus or 0,
+        baitTier      = baitTier,
+        level         = session.data.level,
     }
     if session.state == 'STARTING' then SunsetJobs_SetState(source, 'ACTIVE') end
 
@@ -265,13 +270,16 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     if now < challenge.biteAt    then return nil, 'Too early — the fish escaped' end
     if now > challenge.expiresAt then return nil, 'Too late — the fish escaped' end
 
-    local rodValueMult = challenge.rodValueMult or 1.0
-    local baitTier     = challenge.baitTier     or 0
-    local level        = challenge.level        or 1
+    local rodValueMult  = challenge.rodValueMult  or 1.0
+    local rodCatchBonus = challenge.rodCatchBonus or 0
+    local baitTier      = challenge.baitTier      or 0
+    local level         = challenge.level         or 1
 
-    -- Verifica sansa de prindere
-    local catchRoll = math.random(1, 100)
-    local catchChance = CATCH_CHANCE[baitTier] or 35
+    -- Sansa de prindere: baza (momeala) + bonus undita + bonus nivel, cap 98%
+    local baseChance  = CATCH_CHANCE[baitTier] or 35
+    local levelBonus  = LEVEL_CATCH_BONUS[level] or 0
+    local catchChance = math.min(98, baseChance + rodCatchBonus + levelBonus)
+    local catchRoll   = math.random(1, 100)
     if catchRoll > catchChance then
         -- Rata — nimic prins
         return nil, 'The fish got away... try again!'
