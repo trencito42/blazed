@@ -11,38 +11,24 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
     <div id="app" class="hidden">
         <div class="vignette"></div>
 
-        <header class="tune-topbar">
-            <div class="tune-brand">
-                <span class="tune-brand__title">SUNSET ECU</span>
-                <span class="tune-brand__sub" id="shopLabel">ECU Bay</span>
-            </div>
-            <div class="tune-meta">
-                <span id="plateLabel">—</span>
-                <span id="drivetrainLabel">PETROL</span>
-                <span id="ecuStatus" class="ecu-status ecu-status--stock">FACTORY MAP</span>
-            </div>
-        </header>
-
-        <div class="ui-layer tune-ui-layer">
-            <div class="ui-col ui-col--left tuning-wrapper">
-                <div class="tune-categories" id="tuneCategories">
-                    <div class="section-title">Components</div>
-                </div>
+        <div class="ui-layer">
+            <div class="tuning-wrapper">
+                <div class="tune-categories" id="tuneCategories"></div>
                 <div class="tune-parts-col">
-                    <div class="section-title section-title--muted" id="tunePartsTitle">Engine</div>
+                    <div class="section-title section-title--muted" id="tunePartsTitle">Engine Upgrades</div>
                     <div class="item-list" id="tunePartsList"></div>
                     <div class="tune-detail" id="tuneDetail"></div>
                 </div>
             </div>
 
-            <div class="ui-col ui-col--right stats-panel">
-                <div class="section-title" style="margin-bottom: 15px;">Performance Impact</div>
+            <div class="stats-panel">
+                <div class="section-title section-title--compact">Performance Impact</div>
 
                 <div class="stat-row">
                     <div class="stat-header">
@@ -67,15 +53,24 @@
                 </div>
 
                 <div class="price-display">
-                    <span class="price-label">Install Cost</span>
-                    <span class="price-value" id="tune-install-cost">$0</span>
+                    <span class="price-label" id="tune-price-label">Install Cost</span>
+                    <span class="price-value" id="tune-install-cost">0</span>
                 </div>
 
-                <button type="button" class="btn-install" id="btnSave">Install Part (ENTER)</button>
-                <button type="button" class="btn-cancel" id="btnCancel">Cancel (ESC)</button>
+                <button type="button" class="btn-install" id="btnSave">
+                    <span class="btn-install__text"><span class="key-hint">ENTER</span> Apply Changes</span>
+                </button>
             </div>
         </div>
+
+        <p class="tune-footer-hint">
+            Press ESC to close · <span id="shopLabel">ECU Bay</span> · <span id="plateLabel">—</span>
+        </p>
+
+        <span id="ecuStatus" class="sr-only" aria-hidden="true">FACTORY MAP</span>
+        <span id="drivetrainLabel" class="sr-only" aria-hidden="true">PETROL</span>
+        <button type="button" id="btnCancel" class="sr-only" aria-hidden="true" tabindex="-1"></button>
     </div>
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
 </body>
 </html>

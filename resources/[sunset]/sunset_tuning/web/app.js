@@ -228,12 +228,21 @@ function renderStatsPanel() {
     updateTuneLabel('tune-accel-val', base.accel, delta.accel);
     updateTuneLabel('tune-speed-val', base.speed, delta.speed);
     updateTuneLabel('tune-hand-val', base.hand, delta.hand);
-    if (installCostEl) installCostEl.textContent = `$${installQuote().toLocaleString('en-US')}`;
+    if (installCostEl) installCostEl.textContent = installQuote().toLocaleString('en-US');
+    updatePriceLabel();
+}
+
+function updatePriceLabel() {
+    const label = document.getElementById('tune-price-label');
+    if (!label) return;
+    if (previewDirty) label.textContent = 'Install Cost · Preview';
+    else if (hasSavedMap) label.textContent = 'Install Cost · Saved';
+    else label.textContent = 'Install Cost';
 }
 
 function updateInstallButton() {
-    if (btnSave) btnSave.textContent = `Install Part — $${installQuote().toLocaleString('en-US')}`;
-    if (installCostEl) installCostEl.textContent = `$${installQuote().toLocaleString('en-US')}`;
+    if (installCostEl) installCostEl.textContent = installQuote().toLocaleString('en-US');
+    updatePriceLabel();
 }
 
 function updateStatusBanner() {
@@ -288,7 +297,9 @@ function hwUnitCost(key) {
 function formatPartPrice(amount) {
     if (!amount || amount === 'Installed') return 'Installed';
     if (typeof amount === 'string') return amount;
-    return `$${Number(amount).toLocaleString('en-US')}`;
+    const n = Number(amount);
+    if (n >= 1000) return `$${Math.round(n / 1000)}k`;
+    return `$${n.toLocaleString('en-US')}`;
 }
 
 function createListItem(part, onSelect) {
