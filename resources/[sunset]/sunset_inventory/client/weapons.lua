@@ -1,5 +1,6 @@
 local UNARMED = `WEAPON_UNARMED`
 local syncedWeapons = {}
+local hotbarEquippedHash = nil
 
 local MELEE_WEAPONS = {
     WEAPON_UNARMED = true,
@@ -109,8 +110,33 @@ function SyncInventoryWeapons(items)
         end
     end
 
-    SetCurrentPedWeapon(ped, UNARMED, true)
+    if hotbarEquippedHash and HasPedGotWeapon(ped, hotbarEquippedHash, false) then
+        SetCurrentPedWeapon(ped, hotbarEquippedHash, true)
+    else
+        hotbarEquippedHash = nil
+        SetCurrentPedWeapon(ped, UNARMED, true)
+    end
 end
+
+local function equipHotbarWeapon(hash)
+    if not hash or hash == UNARMED then return false end
+    local ped = PlayerPedId()
+    if not HasPedGotWeapon(ped, hash, false) then return false end
+    SetCurrentPedWeapon(ped, hash, true)
+    hotbarEquippedHash = hash
+    return true
+end
+
+local function holsterHotbarWeapon()
+    local ped = PlayerPedId()
+    hotbarEquippedHash = nil
+    SetCurrentPedWeapon(ped, UNARMED, true)
+    return true
+end
+
+exports('EquipHotbarWeapon', equipHotbarWeapon)
+exports('HolsterHotbarWeapon', holsterHotbarWeapon)
+exports('GetHotbarEquippedHash', function() return hotbarEquippedHash end)
 
 RegisterNetEvent('sunset:client:inventoryUpdate', function(items)
     SyncInventoryWeapons(items)
@@ -175,6 +201,10 @@ CreateThread(function()
         local ped = PlayerPedId()
         ensureUnarmed(ped)
         SetPedCanSwitchWeapon(ped, true)
+        if hotbarEquippedHash and not HasPedGotWeapon(ped, hotbarEquippedHash, false) then
+            hotbarEquippedHash = nil
+            SetCurrentPedWeapon(ped, UNARMED, true)
+        end
         Wait(5000)
     end
 end)

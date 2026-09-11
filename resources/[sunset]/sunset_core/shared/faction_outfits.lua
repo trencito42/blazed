@@ -6,14 +6,17 @@ end
 
 local function leoOutfit(top, pants, opts)
     opts = opts or {}
-    return {
+    local outfit = {
         [1] = piece(0, 0),
-        [3] = piece(opts.arms or 0, 0),
         [4] = piece(pants or 35, 0),
         [6] = piece(opts.shoes or 25, 0),
         [8] = piece(opts.undershirt or 58, 0),
         [11] = piece(top or 55, opts.topTexture or 0),
     }
+    if opts.arms ~= nil then
+        outfit[3] = piece(opts.arms, 0)
+    end
+    return outfit
 end
 
 function Sunset.BuildLeoGradeOutfits(style)
@@ -40,13 +43,11 @@ function Sunset.BuildLeoGradeOutfits(style)
             male = leoOutfit(topsM[idx], malePants, {
                 undershirt = style == 'fib' and 58 or 58,
                 shoes = style == 'sheriff' and 24 or 25,
-                arms = style == 'sheriff' and 19 or (style == 'fib' and 12 or 0),
                 topTexture = style == 'sheriff' and sheriffTex or 0,
             }),
             female = leoOutfit(topsF[idx], femalePants, {
                 undershirt = style == 'fib' and 35 or 35,
                 shoes = style == 'sheriff' and 24 or 25,
-                arms = style == 'sheriff' and 31 or (style == 'fib' and 14 or 0),
                 topTexture = style == 'sheriff' and sheriffTex or 0,
             }),
         }
@@ -61,8 +62,8 @@ function Sunset.BuildEmsGradeOutfits()
     for grade = 0, 7 do
         local idx = grade + 1
         gradeOutfits[grade] = {
-            male = leoOutfit(maleTops[idx], 96, { undershirt = 15, shoes = 42, arms = 85 }),
-            female = leoOutfit(femaleTops[idx], 99, { undershirt = 15, shoes = 42, arms = 109 }),
+            male = leoOutfit(maleTops[idx], 96, { undershirt = 15, shoes = 42 }),
+            female = leoOutfit(femaleTops[idx], 99, { undershirt = 15, shoes = 42 }),
         }
     end
     return gradeOutfits
@@ -75,8 +76,8 @@ function Sunset.BuildFireGradeOutfits()
     for grade = 0, 7 do
         local idx = grade + 1
         gradeOutfits[grade] = {
-            male = leoOutfit(maleTops[idx], 120, { undershirt = 15, shoes = 24, arms = 85 }),
-            female = leoOutfit(femaleTops[idx], 126, { undershirt = 15, shoes = 24, arms = 109 }),
+            male = leoOutfit(maleTops[idx], 120, { undershirt = 15, shoes = 24 }),
+            female = leoOutfit(femaleTops[idx], 126, { undershirt = 15, shoes = 24 }),
         }
     end
     return gradeOutfits
@@ -134,13 +135,11 @@ function Sunset.BuildServiceGradeOutfits(presetKey)
             male = leoOutfit(preset.maleTops[idx], preset.malePants, {
                 undershirt = preset.maleUndershirt,
                 shoes = preset.maleShoes,
-                arms = preset.maleArms,
                 topTexture = preset.maleTopTextures[idx] or 0,
             }),
             female = leoOutfit(preset.femaleTops[idx], preset.femalePants, {
                 undershirt = preset.femaleUndershirt,
                 shoes = preset.femaleShoes,
-                arms = preset.femaleArms,
                 topTexture = preset.femaleTopTextures[idx] or 0,
             }),
         }

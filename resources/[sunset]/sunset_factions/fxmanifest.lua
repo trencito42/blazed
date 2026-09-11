@@ -29,6 +29,7 @@ client_scripts {
 
 client_exports {
     'IsFactionPanelOpen',
+    'GetDutyWeaponsForUi',
 }
 
 server_scripts {

@@ -58,6 +58,7 @@ local function closePanel(restoreStock)
     if not panelOpen then return end
     panelOpen = false
     SetNuiFocus(false, false)
+    exports.sunset_ui:Send('tuningUiClose', {})
     sendUi('close')
     if restoreStock and currentVeh ~= 0 and DoesEntityExist(currentVeh) then
         if savedCosmetics then
@@ -123,6 +124,7 @@ local function openPanel(shop)
 
     panelOpen = true
     SetNuiFocus(true, true)
+    exports.sunset_ui:Send('tuningUiOpen', {})
 
     sendUi('open', {
         tune = draftTune,

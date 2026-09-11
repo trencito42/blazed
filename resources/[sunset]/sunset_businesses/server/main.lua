@@ -396,9 +396,17 @@ local function ownerDashboard(source)
     }
 end
 
+local function ownedSummary(source)
+    local owned = GetOwnedBusinesses(source)
+    local totalBalance = 0
+    for _, row in ipairs(owned) do totalBalance = totalBalance + (row.balance or 0) end
+    return owned, totalBalance
+end
+
 local function adminDashboard(source, selectedId)
     if not isAdmin(source) then return nil, 'Admin access required.' end
     local businesses = businessListForPlayer(source)
+    local owned, ownedTotal = ownedSummary(source)
     local selected = nil
     selectedId = tonumber(selectedId)
     if selectedId then
@@ -410,6 +418,8 @@ local function adminDashboard(source, selectedId)
     return {
         mode = 'admin',
         businesses = businesses,
+        ownedBusinesses = owned,
+        ownedTotalBalance = ownedTotal,
         selected = selected,
         defaultProfitPercent = SunsetBusinesses.DefaultProfitPercent or 70,
         permissions = { admin = true },
@@ -501,6 +511,24 @@ exports.sunset_core:RegisterCallback('sunset:businessManage', function(source, p
             return refreshAfterManage(source, 'admin', businessId), 'Teleported to business.'
         end
         return nil, 'Unknown admin action.'
+    end
+
+    if action == 'teleport' then
+        local char = character(source)
+        if not char then return nil, 'Character not loaded.' end
+        local row = MySQL.single.await(
+            'SELECT id, coords_x, coords_y, coords_z, owner_character_id FROM player_businesses WHERE id = ? AND enabled = 1',
+            { businessId }
+        )
+        if not row or tonumber(row.owner_character_id) ~= tonumber(char.id) then
+            return nil, 'You do not own this business.'
+        end
+        TriggerClientEvent('sunset:client:businessTeleport', source, {
+            x = tonumber(row.coords_x) or 0,
+            y = tonumber(row.coords_y) or 0,
+            z = tonumber(row.coords_z) or 0,
+        })
+        return refreshAfterManage(source, 'owner'), 'Teleported to your business.'
     end
 
     return nil, 'Unknown action.'

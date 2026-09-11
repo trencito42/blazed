@@ -1,0 +1,364 @@
+.wardrobe-forza {
+    --wr-text-main: #ffffff;
+    --wr-text-muted: rgba(255, 255, 255, 0.4);
+    --wr-accent: #00ffcc;
+    --wr-shadow-text: 0 4px 12px rgba(0, 0, 0, 0.9);
+    --wr-shadow-glow: 0 0 20px rgba(0, 255, 204, 0.4);
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    pointer-events: auto;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.wardrobe-forza.hidden { display: none; }
+
+.wardrobe-forza .wr-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.9) 100%);
+    pointer-events: none;
+}
+
+.wardrobe-forza .wr-ui-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    padding: 80px 100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    transform: skewX(-5deg);
+}
+
+.wardrobe-forza .wr-section-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--wr-accent);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    margin-bottom: 25px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wardrobe-forza .wr-section-title::before {
+    content: '';
+    width: 24px;
+    height: 2px;
+    background: var(--wr-accent);
+}
+
+.wardrobe-forza .wr-categories-panel {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+}
+
+.wardrobe-forza .wr-cat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 70vh;
+    padding-right: 20px;
+}
+
+.wardrobe-forza .wr-cat-list::-webkit-scrollbar { width: 0; }
+
+.wardrobe-forza .wr-cat-item {
+    font-size: 24px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--wr-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 10px 0;
+    border-left: 0 solid transparent;
+    text-shadow: var(--wr-shadow-text);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: none;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    text-align: left;
+    width: 100%;
+}
+
+.wardrobe-forza .wr-cat-item i {
+    font-size: 28px;
+    transform: skewX(5deg);
+    transition: 0.2s;
+}
+
+.wardrobe-forza .wr-cat-item span { transform: skewX(5deg); }
+
+.wardrobe-forza .wr-cat-item:hover,
+.wardrobe-forza .wr-cat-item.is-active {
+    color: var(--wr-text-main);
+    padding-left: 20px;
+    border-left: 6px solid var(--wr-accent);
+    text-shadow: var(--wr-shadow-glow), var(--wr-shadow-text);
+    transform: translateX(10px);
+}
+
+.wardrobe-forza .wr-cat-item.is-active {
+    color: var(--wr-accent);
+}
+
+.wardrobe-forza .wr-cat-item.is-active i { color: var(--wr-accent); }
+
+.wardrobe-forza .wr-selection-panel {
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 40px;
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    justify-content: center;
+    gap: 30px;
+}
+
+.wardrobe-forza .wr-active-cat-name {
+    font-size: 32px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--wr-text-main);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: var(--wr-shadow-text);
+    margin-bottom: 10px;
+}
+
+.wardrobe-forza .wr-slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wardrobe-forza .wr-slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--wr-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.wardrobe-forza .wr-slider-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    height: 60px;
+}
+
+.wardrobe-forza .wr-slider-btn {
+    background: transparent;
+    border: none;
+    color: var(--wr-text-main);
+    font-size: 24px;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 100%;
+}
+
+.wardrobe-forza .wr-slider-btn:hover {
+    color: var(--wr-accent);
+    text-shadow: var(--wr-shadow-glow);
+    transform: scale(1.2);
+}
+
+.wardrobe-forza .wr-slider-value {
+    font-size: 36px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--wr-text-main);
+    font-variant-numeric: tabular-nums;
+    text-shadow: var(--wr-shadow-text);
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.wardrobe-forza .wr-slider-max {
+    font-size: 16px;
+    color: var(--wr-text-muted);
+}
+
+.wardrobe-forza .wr-slider-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    margin-top: 5px;
+    position: relative;
+}
+
+.wardrobe-forza .wr-slider-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: var(--wr-accent);
+    box-shadow: 0 0 10px var(--wr-accent);
+    transition: width 0.1s linear;
+}
+
+.wardrobe-forza .wr-cart-summary {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 30px;
+}
+
+.wardrobe-forza .wr-price-label {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--wr-accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.wardrobe-forza .wr-price-value {
+    font-size: 64px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--wr-text-main);
+    line-height: 0.9;
+    letter-spacing: -2px;
+    font-variant-numeric: tabular-nums;
+    text-shadow: var(--wr-shadow-text);
+}
+
+.wardrobe-forza .wr-btn-hold {
+    margin-top: 20px;
+    position: relative;
+    width: 100%;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--wr-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--wr-text-main);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: 0.2s;
+}
+
+.wardrobe-forza .wr-btn-hold:hover:not(:disabled) {
+    border-color: var(--wr-accent);
+    color: var(--wr-accent);
+    text-shadow: var(--wr-shadow-glow);
+}
+
+.wardrobe-forza .wr-btn-hold:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.wardrobe-forza .wr-btn-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 0%;
+    background: var(--wr-accent);
+    z-index: 0;
+    transition: width 0.1s linear;
+}
+
+.wardrobe-forza .wr-btn-text {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wardrobe-forza .wr-key-hint {
+    background: var(--wr-text-main);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-style: normal;
+    transform: skewX(5deg);
+    font-weight: 900;
+}
+
+.wardrobe-forza .wr-cam-controls {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) skewX(-5deg);
+    display: flex;
+    gap: 30px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    z-index: 20;
+}
+
+.wardrobe-forza .wr-cam-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--wr-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.wardrobe-forza .wr-cam-btn .wr-key {
+    background: var(--wr-text-main);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 3px;
+    transform: skewX(5deg);
+}
+
+.wardrobe-forza .wr-close-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) skewX(-5deg);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    z-index: 25;
+}
+
+@media (max-width: 1200px) {
+    .wardrobe-forza .wr-ui-layer { padding: 60px 40px; }
+    .wardrobe-forza .wr-cat-item { font-size: 20px; }
+    .wardrobe-forza .wr-selection-panel { width: 340px; }
+}

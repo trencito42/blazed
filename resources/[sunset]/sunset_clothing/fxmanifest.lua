@@ -16,6 +16,8 @@ dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_appearance' }
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     '@sunset_appearance/client/appearance_lib.lua',
+    '@sunset_appearance/client/clothing_compat.lua',
+    'client/wardrobe.lua',
     'client/main.lua',
 }
 

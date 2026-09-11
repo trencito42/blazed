@@ -63,6 +63,16 @@ function Send(action, data)
 end
 exports('Send', Send)
 
+function HideHudChrome()
+    Send('hudChromeHide', { show = false })
+end
+exports('HideHudChrome', HideHudChrome)
+
+function ShowHudChrome()
+    Send('hudChromeHide', { show = true })
+end
+exports('ShowHudChrome', ShowHudChrome)
+
 function IsOpen()
     return isOpen
 end

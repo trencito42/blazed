@@ -140,6 +140,36 @@ body.fuel-pump-open #job-objective {
     visibility: hidden !important;
 }
 
+/* Hide chat + top-right HUD + location when immersive panels are open */
+body.hud-chrome-hidden #chat,
+body.hud-chrome-hidden #chat-backdrop,
+body.hud-chrome-hidden .hud-tr,
+body.hud-chrome-hidden .hud-bl,
+body.inventory-open #chat,
+body.inventory-open #chat-backdrop,
+body.inventory-open .hud-tr,
+body.inventory-open .hud-bl,
+body.tuning-ui-open #chat,
+body.tuning-ui-open #chat-backdrop,
+body.tuning-ui-open .hud-tr,
+body.tuning-ui-open .hud-bl,
+body.business-panels-open #chat,
+body.business-panels-open #chat-backdrop,
+body.business-panels-open .hud-tr,
+body.business-panels-open .hud-bl,
+body.wardrobe-open #chat,
+body.wardrobe-open #chat-backdrop,
+body.wardrobe-open .hud-tr,
+body.wardrobe-open .hud-bl,
+body.emote-wheel-open #chat,
+body.emote-wheel-open #chat-backdrop,
+body.emote-wheel-open .hud-tr,
+body.emote-wheel-open .hud-bl {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 .app-bg {
     position: absolute;
     inset: 0;

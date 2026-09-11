@@ -360,7 +360,46 @@ const Panels = {
                 });
             }
         }
+        const dutyWrap = $('#inventory-duty-wrap');
+        const dutyList = $('#inventory-duty-list');
+        const dutyWeapons = Array.isArray(data.dutyWeapons) ? data.dutyWeapons : [];
+        if (dutyWrap && dutyList) {
+            dutyList.innerHTML = '';
+            if (!dutyWeapons.length) {
+                dutyWrap.classList.add('hidden');
+            } else {
+                dutyWrap.classList.remove('hidden');
+                dutyWeapons.forEach((weaponRow) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'premium-duty-weapon';
+                    btn.title = `Drag to quick slot — ${weaponRow.label || weaponRow.weapon}`;
+                    btn.appendChild(createItemArtwork(weaponRow, 'premium-item__icon'));
+                    const copy = document.createElement('div');
+                    const name = document.createElement('strong');
+                    name.textContent = weaponRow.label || weaponRow.weapon;
+                    const meta = document.createElement('span');
+                    meta.textContent = weaponRow.ammo != null ? `${weaponRow.ammo} rounds` : 'On duty';
+                    copy.append(name, meta);
+                    btn.appendChild(copy);
+                    btn.addEventListener('pointerdown', (event) => {
+                        if (event.button !== 0) return;
+                        this._startDutyWeaponDrag(weaponRow, btn, event);
+                    });
+                    dutyList.appendChild(btn);
+                });
+            }
+        }
+
+        if (window.HotbarUI) {
+            HotbarUI.renderInventory({
+                quickslots: data.quickslots || {},
+                activeHotbarSlot: data.activeHotbarSlot,
+            });
+        }
+
         document.body.classList.add('inventory-open');
+        document.body.classList.add('hud-chrome-hidden');
         $('#inventory')?.classList.remove('hidden');
     },
 
@@ -437,6 +476,7 @@ const Panels = {
             $('#inventory-cash-badge')?.classList.remove('is-dragover');
             $('#inventory-drop-selected')?.classList.remove('is-dragover');
             $$('.premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+            if (window.HotbarUI) HotbarUI.clearDropTargets();
         };
 
         const endDrag = (event) => {
@@ -465,8 +505,29 @@ const Panels = {
                 const offerZone = el?.closest('#inventory-my-offer');
                 const dropBtn = el?.closest('#inventory-drop-selected');
                 const slot = el?.closest('.premium-slot');
+                const hotbarSlot = el?.closest('.hotbar-slot');
 
-                if (offerZone && this._inventoryTrade) {
+                if (hotbarSlot && !this._inventoryTrade) {
+                    const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
+                    if (hotbarIndex >= 1 && hotbarIndex <= 5) {
+                        if (state.dutyWeapon) {
+                            post('hotbarAssign', {
+                                slot: hotbarIndex,
+                                kind: 'duty_weapon',
+                                weapon: state.dutyWeapon.weapon,
+                                label: state.dutyWeapon.label,
+                                fromInventory: true,
+                            });
+                        } else if (state.row) {
+                            post('hotbarAssign', {
+                                slot: hotbarIndex,
+                                kind: 'item',
+                                rowId: state.row.id,
+                                fromInventory: true,
+                            });
+                        }
+                    }
+                } else if (offerZone && this._inventoryTrade) {
                     if (state.cash) this.openCashOfferModal(this._inventoryCash, (amount) => this._offerTradeCash(amount));
                     else this._offerInventoryRow(state.row);
                 } else if (dropBtn) {
@@ -507,6 +568,9 @@ const Panels = {
                     icon.textContent = '$';
                     ghost.appendChild(icon);
                     state.badgeEl?.classList.add('is-dragging');
+                } else if (state.dutyWeapon) {
+                    ghost.appendChild(createItemArtwork(state.dutyWeapon, 'premium-drag-ghost__icon'));
+                    state.itemEl?.classList.add('is-dragging');
                 } else {
                     ghost.appendChild(createItemArtwork(state.row, 'premium-drag-ghost__icon'));
                     state.itemEl?.classList.add('is-dragging');
@@ -529,8 +593,14 @@ const Panels = {
             } else if (el?.closest('#inventory-drop-selected')) {
                 $('#inventory-drop-selected')?.classList.add('is-dragover');
             } else {
-                const slot = el?.closest('.premium-slot');
-                if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
+                const hotbarSlot = el?.closest('.hotbar-slot');
+                if (hotbarSlot && !this._inventoryTrade) {
+                    const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
+                    if (window.HotbarUI) HotbarUI.markDropTarget(hotbarIndex, true);
+                } else {
+                    const slot = el?.closest('.premium-slot');
+                    if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
+                }
             }
         }, { passive: false });
 
@@ -574,6 +644,22 @@ const Panels = {
             row,
             cell,
             itemEl,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+            ghost: null,
+        };
+    },
+
+    _startDutyWeaponDrag(weaponRow, btnEl, event) {
+        event.preventDefault();
+        try {
+            btnEl.setPointerCapture(event.pointerId);
+        } catch (_) { /* ignore */ }
+        this._pointerDrag = {
+            dutyWeapon: weaponRow,
+            itemEl: btnEl,
             pointerId: event.pointerId,
             startX: event.clientX,
             startY: event.clientY,
@@ -938,6 +1024,10 @@ const Panels = {
     hideInventory() {
         $('#inventory')?.classList.add('hidden');
         document.body.classList.remove('inventory-open');
+        if (!document.body.classList.contains('tuning-ui-open')
+            && !document.body.classList.contains('emote-wheel-open')) {
+            document.body.classList.remove('hud-chrome-hidden');
+        }
         this.selectInventoryItem(null, null);
     },
 

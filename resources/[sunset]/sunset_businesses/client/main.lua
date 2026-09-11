@@ -100,6 +100,28 @@ AddEventHandler('sunset:nui:businessManage', function(data)
     end)
 end)
 
+AddEventHandler('sunset:nui:businessOwnerRefresh', function()
+    CreateThread(function()
+        local data, err = Sunset.AwaitCallback('sunset:businessOwnerDashboard', {})
+        if data then
+            exports.sunset_ui:Send('businessOwnerUpdate', data)
+        elseif err then
+            notify(err, 'error')
+        end
+    end)
+end)
+
+AddEventHandler('sunset:nui:businessAdminRefresh', function()
+    CreateThread(function()
+        local data, err = Sunset.AwaitCallback('sunset:businessAdminDashboard', {})
+        if data then
+            exports.sunset_ui:Send('businessAdminUpdate', data)
+        elseif err then
+            notify(err, 'error')
+        end
+    end)
+end)
+
 AddEventHandler('sunset:nui:businessSelect', function(data)
     CreateThread(function()
         local dashboard, err = Sunset.AwaitCallback('sunset:businessAdminDashboard', tonumber(data and data.businessId))

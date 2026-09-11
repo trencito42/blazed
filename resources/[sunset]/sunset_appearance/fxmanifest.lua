@@ -13,12 +13,13 @@ shared_scripts {
     '@sunset_core/shared/utils.lua',
 }
 
-exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso' }
+exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso', 'ApplyFactionOutfit', 'ApplyAllClothing' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/torso_data.lua',
     'client/appearance_lib.lua',
+    'client/clothing_compat.lua',
     'client/main.lua',
 }
 

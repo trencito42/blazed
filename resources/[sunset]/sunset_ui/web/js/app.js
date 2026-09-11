@@ -311,6 +311,24 @@ window.addEventListener('message', (event) => {
             showHud(false);
             break;
 
+        case 'hudChromeHide':
+            document.body.classList.toggle('hud-chrome-hidden', !(data || event.data.data)?.show);
+            break;
+
+        case 'tuningUiOpen':
+            document.body.classList.add('tuning-ui-open');
+            document.body.classList.add('hud-chrome-hidden');
+            break;
+
+        case 'tuningUiClose':
+            document.body.classList.remove('tuning-ui-open');
+            if (document.body.classList.contains('inventory-open')
+                || document.body.classList.contains('emote-wheel-open')) {
+                break;
+            }
+            document.body.classList.remove('hud-chrome-hidden');
+            break;
+
         case 'pauseState': {
             const paused = Boolean(data?.paused);
             document.body.classList.toggle('game-paused', paused);
@@ -620,6 +638,12 @@ window.addEventListener('message', (event) => {
         case 'businessPanelHide':
             window.BusinessPanels?.hide();
             break;
+        case 'businessOwnerUpdate':
+            window.BusinessPanels?.updateOwnerPanel(data || event.data.data || {});
+            break;
+        case 'businessAdminUpdate':
+            window.BusinessPanels?.updateAdminPanel(data || event.data.data || {});
+            break;
         case 'clanPanelShow':
             if (window.ClanPanels) {
                 try {
@@ -811,8 +835,29 @@ window.addEventListener('message', (event) => {
         case 'emotesHide':
             if (window.Panels) Panels.hideEmotes();
             break;
+        case 'hotbarUpdate':
+            if (window.HotbarUI) HotbarUI.renderHud(data || event.data.data);
+            break;
+        case 'emoteWheelShow':
+            if (window.HotbarUI) HotbarUI.showEmoteWheel((data || event.data.data)?.emotes || []);
+            break;
+        case 'emoteWheelHide':
+            if (window.HotbarUI) HotbarUI.hideEmoteWheel();
+            break;
+        case 'emoteWheelRelease':
+            if (window.HotbarUI) HotbarUI._releaseWheel();
+            break;
         case 'clothingShow':
             if (window.Panels) Panels.showClothing(data || event.data.data);
+            break;
+        case 'wardrobeShow':
+            window.WardrobeUI?.show(data || event.data.data || {});
+            break;
+        case 'wardrobeUpdate':
+            window.WardrobeUI?.update(data || event.data.data || {});
+            break;
+        case 'wardrobeHide':
+            window.WardrobeUI?.hide();
             break;
         case 'clothingHide':
             if (window.Panels) Panels.hideClothing();

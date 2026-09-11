@@ -89,7 +89,7 @@ local function nearestUsableDrawable(ped, slot, drawable)
     return 0
 end
 
-local function setComponentSafe(ped, slot, drawable, texture)
+function SunsetAppearance.setComponentSafe(ped, slot, drawable, texture)
     drawable = nearestUsableDrawable(ped, slot, drawable)
     texture = texture or 0
     local maxTex = GetNumberOfPedTextureVariations(ped, slot, drawable) - 1
@@ -98,6 +98,8 @@ local function setComponentSafe(ped, slot, drawable, texture)
     SetPedComponentVariation(ped, slot, drawable, texture, 2)
     return drawable, texture
 end
+
+local setComponentSafe = SunsetAppearance.setComponentSafe
 
 local function overlayMax(overlayId)
     local count = GetNumHeadOverlayValues(overlayId)
@@ -120,11 +122,19 @@ function SunsetAppearance.default(gender)
             ['2'] = { index = 0, opacity = 0.0, color = 0 },
         },
         components = {
+            ['1'] = { drawable = 0, texture = 0 },
             ['3'] = { drawable = isFemale and 14 or 15, texture = 0 },
             ['4'] = { drawable = isFemale and 0 or 0, texture = 0 },
+            ['5'] = { drawable = 0, texture = 0 },
             ['6'] = { drawable = 1, texture = 0 },
+            ['7'] = { drawable = 0, texture = 0 },
             ['8'] = { drawable = 15, texture = 0 },
             ['11'] = { drawable = 15, texture = 0 },
+        },
+        props = {
+            ['0'] = { drawable = -1, texture = 0 },
+            ['1'] = { drawable = -1, texture = 0 },
+            ['2'] = { drawable = -1, texture = 0 },
         },
     }
 end
@@ -151,6 +161,17 @@ function SunsetAppearance.normalize(raw, gender)
                 if out.components[k] and type(v) == 'table' then
                     out.components[k].drawable = v.drawable or out.components[k].drawable
                     out.components[k].texture = v.texture or 0
+                elseif type(v) == 'table' then
+                    out.components[k] = { drawable = v.drawable or 0, texture = v.texture or 0 }
+                end
+            end
+        end
+        if raw.props then
+            for k, v in pairs(raw.props) do
+                if type(v) == 'table' then
+                    out.props[k] = out.props[k] or {}
+                    out.props[k].drawable = v.drawable ~= nil and v.drawable or (out.props[k].drawable or -1)
+                    out.props[k].texture = v.texture or 0
                 end
             end
         end
@@ -188,6 +209,11 @@ end
 
 function SunsetAppearance.applyClothes(ped, appearance, gender)
     local c = appearance.components
+
+    if c['1'] then
+        local d, t = setComponentSafe(ped, 1, c['1'].drawable or 0, c['1'].texture or 0)
+        c['1'].drawable, c['1'].texture = d, t
+    end
 
     local d, t = setComponentSafe(ped, 4, math.max(1, c['4'].drawable or 1))
     c['4'].drawable, c['4'].texture = d, t

@@ -3,6 +3,9 @@ const Hud = {
     lastSpeed: null,
     lastGear: null,
     wasInVehicle: false,
+    _lastStreet: null,
+    _locationHideTimer: null,
+    locationShowMs: 4500,
     hintTimers: {},
     hintState: {
         engine: { label: 'ENGINE OFF', key: '2', ok: false },
@@ -194,6 +197,44 @@ const Hud = {
         return html;
     },
 
+    revealLocationPanel(panel) {
+        if (!panel) return;
+        panel.classList.add('is-visible');
+        this.retrigger(panel, 'location-pulse');
+        if (this._locationHideTimer) window.clearTimeout(this._locationHideTimer);
+        this._locationHideTimer = window.setTimeout(() => {
+            panel.classList.remove('is-visible');
+            this._locationHideTimer = null;
+        }, this.locationShowMs);
+    },
+
+    updateLocation(data = {}) {
+        const panel = document.querySelector('.location-panel');
+        if (!panel) return;
+
+        const street = data.street != null ? String(data.street) : null;
+        const zone = data.zone != null ? String(data.zone) : null;
+        const heading = data.heading != null ? String(data.heading) : null;
+
+        if (street != null) $('#hud-street').textContent = street;
+        if (zone != null) {
+            const zoneText = $('#hud-zone-text');
+            if (zoneText) zoneText.textContent = zone;
+        }
+        if (heading != null && panel.classList.contains('is-visible')) {
+            $('#hud-heading').textContent = heading;
+        }
+
+        if (street == null || street === '' || street === '—') return;
+
+        const streetChanged = street !== this._lastStreet;
+        if (!streetChanged) return;
+
+        this._lastStreet = street;
+        if (heading != null) $('#hud-heading').textContent = heading;
+        this.revealLocationPanel(panel);
+    },
+
     update(data) {
         if (!data) return;
         this.init();
@@ -212,12 +253,9 @@ const Hud = {
         if (data.bank !== undefined) $('#hud-bank').textContent = formatMoney(data.bank);
         if (data.time) $('#hud-time').textContent = data.time;
         if (data.date) this.updateDateDisplay(data.date);
-        if (data.street) $('#hud-street').textContent = data.street;
-        if (data.zone) {
-            const zoneText = $('#hud-zone-text');
-            if (zoneText) zoneText.textContent = data.zone;
+        if (data.street !== undefined || data.zone !== undefined || data.heading !== undefined) {
+            this.updateLocation(data);
         }
-        if (data.heading) $('#hud-heading').textContent = data.heading;
 
         if (data.voiceTalking !== undefined || data.voiceRange !== undefined) {
             this.updateVoice(data);

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forza Style - Hotbar & Emote Wheel</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent: #00ffcc; /* Cyan Neon */
+            --danger: #ff3366; 
+            
+            --shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
+            --shadow-glow: 0 0 20px rgba(0, 255, 204, 0.4);
+            
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover; overflow: hidden; user-select: none;
+        }
+
+        /* Overlay de gameplay test */
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.5) 100%); z-index: 0; }
+
+        /* DEV TOOLS */
+        .dev-tools { position: absolute; top: 30px; left: 30px; z-index: 100; display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .dev-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+        .dev-desc { font-size: 11px; color: var(--text-main); margin-bottom: 5px; }
+
+        /* ==========================================================
+           1. QUICK ACCESS HOTBAR (1-5)
+           ========================================================== */
+        .hotbar-container {
+            position: absolute; bottom: 40px; right: 50px; z-index: 10;
+            display: flex; gap: 8px;
+            transform: skewX(-5deg); /* Forza Incline */
+            filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.8));
+        }
+
+        .slot {
+            width: 70px; height: 70px;
+            background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; transition: all 0.2s var(--transition-snappy);
+        }
+
+        /* Tasta din colt */
+        .slot-key {
+            position: absolute; top: -10px; left: -10px;
+            background: var(--text-main); color: #000;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 900; font-style: italic;
+            box-shadow: 0 4px 0 #9ca3af, 0 5px 10px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+
+        .slot-icon { font-size: 32px; color: var(--text-muted); transform: skewX(5deg); transition: 0.2s; }
+        .slot-qty { position: absolute; bottom: 4px; right: 6px; font-size: 11px; font-weight: 800; color: var(--text-muted); transform: skewX(5deg); }
+
+        /* Starea ECHIPAT / ACTIV */
+        .slot.active {
+            transform: translateY(-15px); /* Sare in sus */
+            border-color: var(--accent); background: rgba(0, 255, 204, 0.1);
+            box-shadow: 0 10px 20px rgba(0, 255, 204, 0.2), inset 0 0 15px rgba(0, 255, 204, 0.1);
+        }
+        .slot.active .slot-icon { color: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); transform: skewX(5deg) scale(1.1); }
+        .slot.active .slot-key { background: var(--accent); box-shadow: 0 4px 0 #00b38f, 0 5px 10px rgba(0,255,204,0.5); }
+        .slot.active .slot-qty { color: var(--text-main); }
+
+
+        /* ==========================================================
+           2. EMOTE WHEEL (Radial Menu)
+           ========================================================== */
+        .wheel-overlay {
+            position: absolute; inset: 0; z-index: 50;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+
+        .wheel-overlay.active { opacity: 1; pointer-events: all; }
+
+        .wheel-container {
+            position: relative; width: 600px; height: 600px;
+            /* Aplicam un 3D skew subtil ca sa nu fie un cerc perfect plat */
+            transform: skewX(-5deg) scale(0.8);
+            transition: transform 0.4s var(--transition-snappy);
+        }
+
+        .wheel-overlay.active .wheel-container { transform: skewX(-5deg) scale(1); }
+
+        /* Centrul Roatei (Informatia) */
+        .wheel-center {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 200px; height: 200px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,255,204,0.1) 0%, transparent 70%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; border: 2px solid rgba(0, 255, 204, 0.2);
+            box-shadow: 0 0 50px rgba(0,255,204,0.1);
+        }
+
+        .center-title {
+            font-size: 28px; font-weight: 900; font-style: italic; color: var(--text-main);
+            text-transform: uppercase; letter-spacing: 1px; text-shadow: var(--shadow-text);
+            transform: skewX(5deg);
+        }
+        .center-desc { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; transform: skewX(5deg); margin-top: 5px; }
+
+        /* Elementele din Roata */
+        .wheel-item {
+            position: absolute; width: 80px; height: 80px;
+            top: 50%; left: 50%; margin: -40px 0 0 -40px; /* Centrare fixa inainte de translate */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-muted); transition: all 0.2s;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
+        }
+
+        .wheel-item i { font-size: 42px; transform: skewX(5deg); transition: 0.2s; }
+        .wheel-item-label { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-top: 8px; transform: skewX(5deg); opacity: 0; transition: 0.2s; }
+
+        /* Highlight aplicat prin JS pe baza pozitiei mouse-ului */
+        .wheel-item.hovered { color: var(--text-main); transform: scale(1.2) !important; }
+        .wheel-item.hovered i { color: var(--accent); filter: drop-shadow(0 0 10px var(--accent)); }
+        .wheel-item.hovered .wheel-item-label { opacity: 1; color: var(--accent); }
+
+        /* Cursor Hint */
+        .wheel-hint { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="overlay"></div>
+
+    <div class="dev-tools">
+        <div class="dev-title">Controale Test</div>
+        <div class="dev-desc">Apasă tastele 1, 2, 3, 4, 5.</div>
+        <div class="dev-desc">Ține apăsat tasta X pentru Emotes.</div>
+    </div>
+
+    <!-- ==========================================================
+         QUICK ACCESS HOTBAR
+         ========================================================== -->
+    <div class="hotbar-container" id="hotbar">
+        <!-- Generat prin JS pentru a fi clean -->
+    </div>
+
+    <!-- ==========================================================
+         EMOTE WHEEL
+         ========================================================== -->
+    <div class="wheel-overlay" id="emote-wheel">
+        <div class="wheel-container" id="wheel-container">
+            
+            <div class="wheel-center">
+                <div class="center-title" id="wheel-title">Emotes</div>
+                <div class="center-desc" id="wheel-desc">Selectează</div>
+            </div>
+
+            <!-- Segmentele sunt generate prin JS (Matematica cercului) -->
+
+        </div>
+        <div class="wheel-hint">Eliberează [X] pentru a folosi</div>
+    </div>
+
+    <script>
+        // ==========================================================
+        // LOGICA HOTBAR (1-5)
+        // ==========================================================
+        const inventorySlots = [
+            { id: 1, icon: 'ph-device-mobile', name: 'Telefon', qty: '' },
+            { id: 2, icon: 'ph-first-aid', name: 'Bandaj', qty: '3x' },
+            { id: 3, icon: 'ph-drop', name: 'Apă', qty: '1x' },
+            { id: 4, icon: 'ph-key', name: 'Chei Auto', qty: '' },
+            { id: 5, icon: 'ph-crosshair', name: 'Glock 19', qty: '12/48' }
+        ];
+
+        const hotbarContainer = document.getElementById('hotbar');
+
+        // Renderizare Sloturi
+        inventorySlots.forEach(slot => {
+            const div = document.createElement('div');
+            div.className = 'slot';
+            div.id = `slot-${slot.id}`;
+            div.innerHTML = `
+                <div class="slot-key">${slot.id}</div>
+                <i class="ph-fill ${slot.icon} slot-icon"></i>
+                <div class="slot-qty">${slot.qty}</div>
+            `;
+            hotbarContainer.appendChild(div);
+        });
+
+        // Echipare / dezechipare
+        let activeSlot = null;
+        function toggleSlot(id) {
+            // Daca apesi pe ala deja activ, il dezechipezi
+            if (activeSlot === id) {
+                document.getElementById(`slot-${id}`).classList.remove('active');
+                activeSlot = null;
+                // window.postMessage({ action: 'unequipItem' }); // LUA
+                return;
+            }
+
+            // Stergem activul curent
+            if (activeSlot !== null) {
+                document.getElementById(`slot-${activeSlot}`).classList.remove('active');
+            }
+
+            // Activam noul
+            document.getElementById(`slot-${id}`).classList.add('active');
+            activeSlot = id;
+            // window.postMessage({ action: 'equipItem', slot: id }); // LUA
+        }
+
+        // Ascultam tastele 1-5
+        document.addEventListener('keydown', (e) => {
+            const num = parseInt(e.key);
+            if (num >= 1 && num <= 5 && !e.repeat) {
+                toggleSlot(num);
+            }
+        });
+
+
+        // ==========================================================
+        // LOGICA EMOTE WHEEL (Matematica Radială)
+        // ==========================================================
+        const emotes = [
+            { label: 'Salut', icon: 'ph-hand-waving' },
+            { label: 'Predare', icon: 'ph-hands-praying' },
+            { label: 'Dans', icon: 'ph-music-notes' },
+            { label: 'Așezare', icon: 'ph-armchair' },
+            { label: 'Fumat', icon: 'ph-cigarette' },
+            { label: 'Dezamăgire', icon: 'ph-smiley-sad' },
+            { label: 'Musculi', icon: 'ph-barbell' },
+            { label: 'Telefon', icon: 'ph-device-mobile-camera' }
+        ];
+
+        const wheelOverlay = document.getElementById('emote-wheel');
+        const wheelContainer = document.getElementById('wheel-container');
+        const centerTitle = document.getElementById('wheel-title');
+        const centerDesc = document.getElementById('wheel-desc');
+        
+        let wheelOpen = false;
+        let selectedEmoteIndex = -1;
+        const wheelRadius = 200; // Distanta de la centru
+        const wheelItems = [];
+
+        // Generam Roata in HTML
+        emotes.forEach((emote, index) => {
+            const angle = (index / emotes.length) * (2 * Math.PI) - (Math.PI / 2); // -90deg pentru a incepe de sus
+            
+            // Calculam X si Y pe baza razei si unghiului
+            const x = Math.cos(angle) * wheelRadius;
+            const y = Math.sin(angle) * wheelRadius;
+
+            const div = document.createElement('div');
+            div.className = 'wheel-item';
+            
+            // IMPORTANT: Dupa ce setam top:50% si left:50% in CSS, aplicam transformarea
+            // Aplicam skewX inversat subtil ca icoanele sa nu fie prea deformate
+            div.style.transform = `translate(${x}px, ${y}px)`; 
+            // Salvam pozitia de baza in atribut pentru a o refolosi cand dam hover
+            div.setAttribute('data-transform', `translate(${x}px, ${y}px)`);
+
+            div.innerHTML = `
+                <i class="ph-fill ${emote.icon}"></i>
+                <div class="wheel-item-label">${emote.label}</div>
+            `;
+            
+            wheelContainer.appendChild(div);
+            wheelItems.push(div);
+        });
+
+        // ----------------------------------------------------------
+        // MAGIC MATH: Detectare Directie Mouse
+        // ----------------------------------------------------------
+        document.addEventListener('mousemove', (e) => {
+            if (!wheelOpen) return;
+
+            // Centrul ecranului
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+
+            // Distanta de la centru
+            const dx = e.clientX - centerX;
+            const dy = e.clientY - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Daca mouse-ul e prea aproape de centru, nu selectam nimic (Deadzone)
+            if (distance < 50) {
+                clearWheelSelection();
+                return;
+            }
+
+            // Calculam unghiul mouse-ului fata de centru in radiani
+            let mouseAngle = Math.atan2(dy, dx);
+            
+            // Normalizam unghiul sa fie intre 0 si 2PI, incepand de SUS (shift cu -90deg / PI/2)
+            mouseAngle = mouseAngle + (Math.PI / 2);
+            if (mouseAngle < 0) mouseAngle += 2 * Math.PI;
+
+            // Gasim sectiunea (impartim 360 grade la numarul de emotii)
+            const sliceSize = (2 * Math.PI) / emotes.length;
+            
+            // Adaugam jumatate de felie (slice) pt ca sectiunea 0 (TOP) sa fie centrata pe axa Y, nu sa inceapa de la axa Y.
+            let index = Math.floor((mouseAngle + sliceSize / 2) / sliceSize);
+            
+            // Daca index-ul depaseste (ex: a trecut de 360 grade), il resetam la 0
+            if (index >= emotes.length) index = 0;
+
+            selectWheelItem(index);
+        });
+
+        function selectWheelItem(index) {
+            if (selectedEmoteIndex === index) return;
+            selectedEmoteIndex = index;
+
+            // Curatam restul
+            wheelItems.forEach((el, i) => {
+                const baseTransform = el.getAttribute('data-transform');
+                if (i === index) {
+                    el.classList.add('hovered');
+                    // Cand e hover, adaugam scale peste transform-ul de baza
+                    el.style.transform = `${baseTransform} scale(1.2)`;
+                } else {
+                    el.classList.remove('hovered');
+                    el.style.transform = baseTransform; // Revenim la normal
+                }
+            });
+
+            // Update text centru
+            centerTitle.innerText = emotes[index].label;
+            centerDesc.innerText = "Selectat";
+        }
+
+        function clearWheelSelection() {
+            if (selectedEmoteIndex === -1) return;
+            selectedEmoteIndex = -1;
+            wheelItems.forEach((el) => {
+                el.classList.remove('hovered');
+                el.style.transform = el.getAttribute('data-transform');
+            });
+            centerTitle.innerText = "Emotes";
+            centerDesc.innerText = "Alege o acțiune";
+        }
+
+        // ----------------------------------------------------------
+        // TRIGGER (Deschidere / Inchidere pe Tasta X)
+        // ----------------------------------------------------------
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'x' && !e.repeat && !wheelOpen) {
+                wheelOpen = true;
+                wheelOverlay.classList.add('active');
+                // Trimitem NUI Callback sa afiseze cursorul in LUA (SetNuiFocus)
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'x' && wheelOpen) {
+                wheelOpen = false;
+                wheelOverlay.classList.remove('active');
+                
+                // Daca avea ceva selectat, trimitem executia catre joc
+                if (selectedEmoteIndex !== -1) {
+                    console.log(`[LUA TRIGGER]: Executing Emote -> ${emotes[selectedEmoteIndex].label}`);
+                    // window.postMessage({ action: 'playEmote', emoteId: selectedEmoteIndex });
+                }
+                
+                // Trimitem NUI Callback sa ascunda cursorul
+                clearWheelSelection();
+            }
+        });
+
+    </script>
+</body>
+</html>

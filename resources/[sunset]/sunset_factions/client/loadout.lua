@@ -1,5 +1,18 @@
 local dutyWeapons = {}
 
+local WEAPON_LABELS = {
+    WEAPON_NIGHTSTICK = 'Nightstick',
+    WEAPON_FLASHLIGHT = 'Flashlight',
+    WEAPON_STUNGUN = 'Stun Gun',
+    WEAPON_COMBATPISTOL = 'Combat Pistol',
+    WEAPON_CARBINERIFLE = 'Carbine Rifle',
+    WEAPON_PUMPSHOTGUN = 'Pump Shotgun',
+    WEAPON_SMG = 'SMG',
+    WEAPON_PISTOL = 'Pistol',
+    WEAPON_MICROSMG = 'Micro SMG',
+    WEAPON_ASSAULTRIFLE = 'Assault Rifle',
+}
+
 local FREEMODE_MALE = `mp_m_freemode_01`
 local FREEMODE_FEMALE = `mp_f_freemode_01`
 
@@ -149,7 +162,11 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
                 ped = PlayerPedId()
                 applySavedAppearance(ped, char, gender)
             end
-            applyOutfitComponents(ped, outfit)
+            if exports.sunset_appearance and exports.sunset_appearance.ApplyFactionOutfit then
+                exports.sunset_appearance:ApplyFactionOutfit(ped, outfit, gender, char.appearance)
+            else
+                applyOutfitComponents(ped, outfit)
+            end
         elseif Sunset.ResolveFactionSkin then
             local targetSkin = Sunset.ResolveFactionSkin(factionId, grade, gender)
             if targetSkin then
@@ -303,8 +320,31 @@ CreateThread(function()
     })
 end)
 
+local function getDutyWeaponsForUi()
+    local list = {}
+    local ped = PlayerPedId()
+    for weapon in pairs(dutyWeapons) do
+        local hash = joaat(weapon)
+        local ammo = 0
+        if HasPedGotWeapon(ped, hash, false) then
+            ammo = GetAmmoInPedWeapon(ped, hash)
+        end
+        list[#list + 1] = {
+            kind = 'duty_weapon',
+            weapon = weapon,
+            label = WEAPON_LABELS[weapon] or weapon:gsub('^WEAPON_', ''):gsub('_', ' '),
+            ammo = ammo,
+            icon = 'weapon_trigger',
+            id = 'duty:' .. weapon,
+        }
+    end
+    table.sort(list, function(a, b) return a.label < b.label end)
+    return list
+end
+
 exports('ApplyFactionLoadout', ApplyFactionLoadout)
 exports('ClearFactionLoadout', ClearFactionLoadout)
+exports('GetDutyWeaponsForUi', getDutyWeaponsForUi)
 exports('GetFactionSkinOptions', function(factionId, grade, gender)
     return Sunset.GetFactionSkinOptions(factionId, grade, gender)
 end)

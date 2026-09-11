@@ -26,6 +26,9 @@ local function openInventory()
         return exports.sunset_ui:Notify(err or 'Inventory could not be loaded. Your character may still be loading; try again in a moment.', 'error')
     end
     inventoryOpen = true
+    if exports.sunset_inventory and exports.sunset_inventory.EnrichInventoryPayload then
+        data = exports.sunset_inventory:EnrichInventoryPayload(data)
+    end
     exports.sunset_ui:SetFocus(true, true)
     exports.sunset_ui:Send('inventoryShow', data)
 end
@@ -49,7 +52,11 @@ RegisterNetEvent('sunset:client:inventoryUpdate', function(items, weight, cash)
             local char = exports.sunset_core:GetCharacter()
             currentCash = (char and tonumber(char.cash)) or 0
         end
-        exports.sunset_ui:Send('inventoryUpdate', { items = items, weight = weight, maxWeight = Sunset.Config.MaxWeight, cash = currentCash })
+        local payload = { items = items, weight = weight, maxWeight = Sunset.Config.MaxWeight, cash = currentCash }
+        if exports.sunset_inventory and exports.sunset_inventory.EnrichInventoryPayload then
+            payload = exports.sunset_inventory:EnrichInventoryPayload(payload)
+        end
+        exports.sunset_ui:Send('inventoryUpdate', payload)
     end
 end)
 

@@ -16,6 +16,7 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/quickslots.lua',
     'server/trade.lua',
 }
 
@@ -23,10 +24,16 @@ client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/main.lua',
     'client/weapons.lua',
+    'client/quickslots.lua',
 }
 
 server_exports {
     'GetInventory', 'AddItem', 'RemoveItem', 'HasItem', 'UseItem',
     'SetItemMetadata', 'GetGasCanLiters', 'CountItem', 'TakeAllItems',
     'TryAddItem', 'RemoveItemById', 'ReloadInventory',
+}
+
+client_exports {
+    'EquipHotbarWeapon', 'HolsterHotbarWeapon', 'GetHotbarEquippedHash',
+    'EnrichInventoryPayload', 'GetHotbarSlots', 'RefreshHotbar',
 }

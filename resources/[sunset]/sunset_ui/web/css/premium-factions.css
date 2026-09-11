@@ -1408,6 +1408,36 @@ body.business-panels-open { overflow: hidden; }
 
 .business-owner-total-stat { margin-top: 8px; }
 
+.business-owner-empty {
+    padding: 20px 22px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    border-radius: var(--pf-radius-md);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--pf-text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.business-owner-empty strong {
+    display: block;
+    color: var(--pf-text-main);
+    font-size: 15px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.business-owner-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.business-owner-card__actions .premium-clan__btn {
+    flex: 1 1 140px;
+}
+
 .premium-clan__empty {
     color: var(--pf-text-muted);
     font-size: 13px;

@@ -21,9 +21,9 @@
         };
     </script>
     <link rel="stylesheet" href="css/fonts.css?v=3">
-    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/style.css?v=12">
     <link rel="stylesheet" href="css/hud.css?v=11">
-    <link rel="stylesheet" href="css/premium-hud.css?v=10">
+    <link rel="stylesheet" href="css/premium-hud.css?v=11">
     <link rel="stylesheet" href="css/scoreboard.css?v=2">
     <link rel="stylesheet" href="css/chat.css?v=19">
     <link rel="stylesheet" href="css/premium-wanted.css?v=1">
@@ -53,6 +53,7 @@
     <link rel="stylesheet" href="css/redesign.css?v=14">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap">
     <link rel="stylesheet" href="css/dealership-forza.css?v=4">
+    <link rel="stylesheet" href="css/wardrobe-forza.css?v=1">
     <link rel="stylesheet" href="css/premium-factions.css?v=2">
     <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
     <link rel="stylesheet" href="css/premium-menu.css?v=5">
@@ -60,6 +61,8 @@
     <link rel="stylesheet" href="css/premium-auth.css?v=1">
     <link rel="stylesheet" href="css/premium-properties.css?v=6">
     <link rel="stylesheet" href="css/premium-chat.css?v=13">
+    <link rel="stylesheet" href="css/quick-hotbar.css?v=1">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -861,6 +864,14 @@
                     </div>
                 </header>
                 <div class="premium-inventory-grid" id="inventory-list"></div>
+                <div class="premium-inventory-duty hidden" id="inventory-duty-wrap">
+                    <div class="premium-inventory-duty__label">DUTY WEAPONS — DRAG TO QUICK SLOT</div>
+                    <div class="premium-inventory-duty__grid" id="inventory-duty-list"></div>
+                </div>
+                <div class="premium-inventory-hotbar">
+                    <div class="premium-inventory-hotbar__label">QUICK SLOTS — DRAG ITEMS HERE</div>
+                    <div class="hotbar-container hotbar-container--inventory" id="inventory-hotbar"></div>
+                </div>
                 <div class="premium-item-actions">
                     <span id="inventory-selected-label">SELECT AN ITEM</span>
                     <button type="button" id="inventory-use-selected" disabled>USE</button>
@@ -2609,7 +2620,7 @@
         </div>
     </div>
 
-    <!-- CLOTHING -->
+    <!-- CLOTHING (barber legacy panel) -->
     <div id="clothing" class="overlay-panel hidden">
         <div class="overlay-panel__box">
             <h2 id="clothing-title">Clothing</h2>
@@ -2617,6 +2628,63 @@
             <div id="clothing-options" class="clothing-options"></div>
             <button type="button" class="panel-close" id="clothing-close">Close</button>
         </div>
+    </div>
+
+    <!-- WARDROBE (Forza clothing store) -->
+    <div id="wardrobe" class="wardrobe-forza hidden" aria-hidden="true">
+        <div class="wr-vignette"></div>
+        <div class="wr-ui-layer">
+            <div class="wr-categories-panel">
+                <div class="wr-section-title">Wardrobe</div>
+                <div class="wr-cat-list" id="wardrobe-cat-list"></div>
+            </div>
+            <div class="wr-selection-panel">
+                <div>
+                    <div class="wr-section-title" style="margin-bottom:10px;color:var(--wr-text-muted);">Current Category</div>
+                    <div class="wr-active-cat-name" id="wardrobe-active-cat">Shirt / Jacket</div>
+                </div>
+                <div class="wr-slider-group">
+                    <div class="wr-slider-header"><span>Item Model</span><span style="color:var(--wr-accent);">Item ID</span></div>
+                    <div class="wr-slider-controls">
+                        <button type="button" class="wr-slider-btn" id="wardrobe-model-dec"><i class="ph-bold ph-caret-left"></i></button>
+                        <div class="wr-slider-value">
+                            <span id="wardrobe-val-model">0</span>
+                            <span class="wr-slider-max">/ <span id="wardrobe-max-model">0</span></span>
+                        </div>
+                        <button type="button" class="wr-slider-btn" id="wardrobe-model-inc"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                    <div class="wr-slider-track"><div class="wr-slider-fill" id="wardrobe-track-model"></div></div>
+                </div>
+                <div class="wr-slider-group">
+                    <div class="wr-slider-header"><span>Color Variant</span><span style="color:var(--wr-accent);">Texture</span></div>
+                    <div class="wr-slider-controls">
+                        <button type="button" class="wr-slider-btn" id="wardrobe-texture-dec"><i class="ph-bold ph-caret-left"></i></button>
+                        <div class="wr-slider-value">
+                            <span id="wardrobe-val-texture">0</span>
+                            <span class="wr-slider-max">/ <span id="wardrobe-max-texture">0</span></span>
+                        </div>
+                        <button type="button" class="wr-slider-btn" id="wardrobe-texture-inc"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                    <div class="wr-slider-track"><div class="wr-slider-fill" id="wardrobe-track-texture"></div></div>
+                </div>
+                <div class="wr-cart-summary">
+                    <span class="wr-price-label">Cart Total</span>
+                    <span class="wr-price-value" id="wardrobe-cart-price">$50</span>
+                    <button type="button" class="wr-btn-hold" id="wardrobe-buy" disabled>
+                        <div class="wr-btn-progress" id="wardrobe-buy-progress"></div>
+                        <div class="wr-btn-text" id="wardrobe-buy-text">
+                            <span class="wr-key-hint">ENTER</span> Pay
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="wr-cam-controls">
+            <div class="wr-cam-btn"><div class="wr-key">Q</div> / <div class="wr-key">E</div> Rotate</div>
+            <div class="wr-cam-btn"><div class="wr-key">SCROLL</div> Zoom</div>
+            <div class="wr-cam-btn"><div class="wr-key">ESC</div> Close</div>
+        </div>
+        <div class="wr-close-hint">Press ESC to close</div>
     </div>
 
     <!-- iPHONE -->
@@ -3218,6 +3286,18 @@
         </div>
     </div>
 
+    <div id="hotbar-hud" class="hotbar-container hidden" aria-label="Quick slots"></div>
+
+    <div id="emote-wheel" class="wheel-overlay hidden" aria-hidden="true">
+        <div class="wheel-container" id="wheel-container">
+            <div class="wheel-center">
+                <div class="wheel-center-title" id="wheel-title">Emotes</div>
+                <div class="wheel-center-desc" id="wheel-desc">Select one</div>
+            </div>
+        </div>
+        <div class="wheel-hint">Release [X] to use</div>
+    </div>
+
     <div id="damage-indicators" class="damage-indicators hidden" aria-hidden="true">
         <div class="dmg-screen-flash" id="dmg-screen-flash"></div>
         <div class="dmg-hit-marker-container">
@@ -3229,10 +3309,10 @@
         <div class="dmg-container" id="dmg-container"></div>
     </div>
 
-    <script src="js/app.js?v=22"></script>
+    <script src="js/app.js?v=23"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>
-    <script src="js/hud.js?v=8"></script>
+    <script src="js/hud.js?v=9"></script>
     <script src="js/hud_editor.js"></script>
     <script src="js/player_identity.js?v=3"></script>
     <script src="js/scoreboard.js?v=2"></script>
@@ -3244,7 +3324,8 @@
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=5"></script>
     <script src="js/dealership.js?v=3"></script>
-    <script src="js/panels.js?v=15"></script>
+    <script src="js/hotbar.js?v=1"></script>
+    <script src="js/panels.js?v=16"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=6"></script>
     <script src="js/auth_email.js?v=1"></script>
@@ -3259,7 +3340,8 @@
     <script src="js/radar.js"></script>
     <script src="js/factions.js?v=11"></script>
     <script src="js/clans.js?v=13"></script>
-    <script src="js/businesses.js?v=3"></script>
+    <script src="js/businesses.js?v=5"></script>
+    <script src="js/wardrobe.js?v=1"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
     <script src="js/player_interaction.js?v=5"></script>
     <script src="js/atm.js?v=1"></script>

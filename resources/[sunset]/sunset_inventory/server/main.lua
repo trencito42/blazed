@@ -466,6 +466,7 @@ exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
         maxWeight = Sunset.Config.MaxWeight,
         cash = (char and tonumber(char.cash)) or 0,
         nearbyPlayers = nearbyPlayers,
+        quickslots = BuildHotbarView(source),
     }
 end)
 

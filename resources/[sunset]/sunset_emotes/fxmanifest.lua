@@ -9,3 +9,5 @@ version '1.0.0'
 dependencies { 'sunset_ui' }
 
 client_scripts { 'client/main.lua' }
+
+client_exports { 'PlayEmote', 'StopEmote', 'IsPlaying', 'GetEmoteWheelList' }

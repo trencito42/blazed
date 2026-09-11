@@ -152,7 +152,7 @@ RegisterCommand('handsup', function()
     end
 end, false)
 
-RegisterKeyMapping('handsup', 'Hands Up', 'keyboard', 'X')
+-- X is handled by sunset_inventory quickslots (tap = hands up, hold = emote wheel)
 
 local function detentionCmd(name, callbackName, usage)
     RegisterCommand(name, function(_, args)

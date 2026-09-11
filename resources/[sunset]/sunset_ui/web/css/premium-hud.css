@@ -378,6 +378,34 @@
     margin-left: 0;
     max-width: min(520px, 46vw);
     pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1),
+        visibility 0.35s ease;
+}
+
+.location-panel.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.location-panel.location-pulse {
+    animation: locationHudPulse 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+
+@keyframes locationHudPulse {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .location-line {

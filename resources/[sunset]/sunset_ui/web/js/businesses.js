@@ -22,13 +22,23 @@ const BusinessPanels = {
         });
 
         $('#business-owner-list')?.addEventListener('click', (event) => {
-            const btn = event.target.closest('[data-business-withdraw]');
-            if (!btn) return;
-            post('businessManage', {
-                mode: 'owner',
-                action: 'withdraw',
-                businessId: Number(btn.dataset.businessWithdraw),
-            });
+            const withdrawBtn = event.target.closest('[data-business-withdraw]');
+            if (withdrawBtn) {
+                post('businessManage', {
+                    mode: 'owner',
+                    action: 'withdraw',
+                    businessId: Number(withdrawBtn.dataset.businessWithdraw),
+                });
+                return;
+            }
+            const teleportBtn = event.target.closest('[data-business-teleport]');
+            if (teleportBtn) {
+                post('businessManage', {
+                    mode: 'owner',
+                    action: 'teleport',
+                    businessId: Number(teleportBtn.dataset.businessTeleport),
+                });
+            }
         });
 
         document.addEventListener('keydown', (event) => {
@@ -46,6 +56,18 @@ const BusinessPanels = {
         document.body.classList.remove('business-panels-open');
     },
 
+    ownerRows() {
+        if (!this.dashboard) return [];
+        if (this.dashboard.mode === 'owner') return this.dashboard.businesses || [];
+        return this.dashboard.ownedBusinesses || [];
+    },
+
+    ownerTotal() {
+        if (!this.dashboard) return 0;
+        if (this.dashboard.mode === 'owner') return this.dashboard.totalBalance;
+        return this.dashboard.ownedTotalBalance;
+    },
+
     setTab(tabId) {
         document.querySelectorAll('[data-business-tab]').forEach((tab) => {
             tab.classList.toggle('is-active', tab.dataset.businessTab === tabId);
@@ -53,6 +75,24 @@ const BusinessPanels = {
         document.querySelectorAll('[data-business-panel]').forEach((panel) => {
             panel.classList.toggle('is-active', panel.dataset.businessPanel === tabId);
         });
+
+        if (tabId === 'owner') {
+            if (this.dashboard?.mode === 'admin') {
+                post('businessOwnerRefresh');
+            } else {
+                this.renderOwnerList(this.ownerRows(), this.ownerTotal());
+            }
+            return;
+        }
+
+        if (tabId === 'admin') {
+            if (this.dashboard?.mode !== 'admin') {
+                post('businessAdminRefresh');
+            } else {
+                this.renderAdminList(this.dashboard.businesses || []);
+                this.renderAdminForm(this.dashboard.selected || null, this.dashboard.defaultProfitPercent);
+            }
+        }
     },
 
     formatMoney(amount) {
@@ -89,12 +129,36 @@ const BusinessPanels = {
         $('#business-tab-owner')?.classList.remove('hidden');
         this.setTab(isAdminView ? 'admin' : 'owner');
 
-        if (isAdmin) {
+        if (isAdminView) {
             this.renderAdminList(data.businesses || []);
             this.renderAdminForm(data.selected || null, data.defaultProfitPercent);
         } else {
             this.renderOwnerList(data.businesses || [], data.totalBalance);
         }
+    },
+
+    updateOwnerPanel(data = {}) {
+        if (!this.dashboard) this.dashboard = {};
+        this.dashboard.ownedBusinesses = data.businesses || [];
+        this.dashboard.ownedTotalBalance = data.totalBalance;
+        if (this.dashboard.mode !== 'admin') {
+            this.dashboard.businesses = data.businesses || [];
+            this.dashboard.totalBalance = data.totalBalance;
+        }
+        this.renderOwnerList(this.ownerRows(), this.ownerTotal());
+    },
+
+    updateAdminPanel(data = {}) {
+        if (!this.dashboard) this.dashboard = {};
+        this.dashboard.mode = 'admin';
+        this.dashboard.businesses = data.businesses || [];
+        this.dashboard.selected = data.selected || null;
+        this.dashboard.defaultProfitPercent = data.defaultProfitPercent ?? this.dashboard.defaultProfitPercent ?? 70;
+        this.dashboard.ownedBusinesses = data.ownedBusinesses || this.dashboard.ownedBusinesses || [];
+        this.dashboard.ownedTotalBalance = data.ownedTotalBalance ?? this.dashboard.ownedTotalBalance;
+        this.dashboard.permissions = { ...(this.dashboard.permissions || {}), admin: true };
+        this.renderAdminList(this.dashboard.businesses);
+        this.renderAdminForm(this.dashboard.selected, this.dashboard.defaultProfitPercent);
     },
 
     renderAdminList(rows) {
@@ -157,10 +221,11 @@ const BusinessPanels = {
         list.innerHTML = '';
         if (!rows.length) {
             list.innerHTML = `
-                <p class="premium-clan__empty">
-                    You do not own any businesses yet.
-                    Visit a 24/7, Ammunation, or gas station and use the interaction menu to buy one.
-                </p>
+                <div class="business-owner-empty">
+                    <strong>You do not own any businesses yet.</strong>
+                    <p>Go to a <b>24/7</b>, <b>Ammunation</b>, or <b>gas station</b>, open the interaction menu, and choose <b>Buy Business</b>.</p>
+                    <p>After purchase, your stores appear here with profit balance, teleport, and withdraw.</p>
+                </div>
             `;
             return;
         }
@@ -168,16 +233,22 @@ const BusinessPanels = {
             const card = document.createElement('article');
             card.className = 'premium-clan__card business-owner-card';
             const catalog = row.catalogKey ? ` · ${this.escape(row.catalogKey)}` : '';
+            const balance = Number(row.balance) || 0;
             card.innerHTML = `
                 <div class="business-owner-card__head">
                     <strong>${this.escape(row.label)}</strong>
                     <span>${this.escape(this.typeLabel(row.businessType))}${catalog}</span>
                 </div>
-                <p>Accumulated profit: <b>${this.formatMoney(row.balance)}</b></p>
-                <p>Owner share: <b>${Number(row.profitPercent || 0)}%</b> of sales</p>
-                <button type="button" class="premium-clan__btn premium-clan__btn--primary" data-business-withdraw="${row.id}" ${row.balance > 0 ? '' : 'disabled'}>
-                    WITHDRAW TO BANK
-                </button>
+                <p>Accumulated profit: <b>${this.formatMoney(balance)}</b></p>
+                <p>Your share: <b>${Number(row.profitPercent || 0)}%</b> of customer sales</p>
+                <div class="business-owner-card__actions">
+                    <button type="button" class="premium-clan__btn premium-clan__btn--secondary" data-business-teleport="${row.id}">
+                        GO TO LOCATION
+                    </button>
+                    <button type="button" class="premium-clan__btn premium-clan__btn--primary" data-business-withdraw="${row.id}" ${balance > 0 ? '' : 'disabled'}>
+                        WITHDRAW TO BANK
+                    </button>
+                </div>
             `;
             list.appendChild(card);
         });
