@@ -326,6 +326,7 @@
         renderAll();
         if (state.admin && getSelected()) fillAdmin(getSelected());
         $('#dealership')?.classList.remove('hidden');
+        document.body.classList.add('dealership-open', 'hud-chrome-hidden');
         if (opening && state.selected) post('dealershipSelect', { model: state.selected });
     };
 
@@ -334,6 +335,7 @@
     const hide = () => {
         stopBuy(true);
         $('#dealership')?.classList.add('hidden');
+        document.body.classList.remove('dealership-open', 'hud-chrome-hidden');
         state.selected = null;
     };
 

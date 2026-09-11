@@ -186,16 +186,27 @@ const FactionPanels = {
         });
     },
 
+    _memberById(characterId) {
+        return (this.dashboard?.members || []).find(
+            (member) => Number(member.characterId) === Number(characterId)
+        );
+    },
+
+    _kickModeForMember(member) {
+        return member?.online ? 'online' : 'offline';
+    },
+
     manageSelected(action, payload) {
         const select = $('#faction-manage-select');
         const characterId = Number(select?.value);
         if (!characterId) {
-            return notify('Te rog selectează un membru mai întâi!', 'error');
+            return notify('Selectează un membru mai întâi.', 'error');
         }
         if (action === 'rankDelta') {
             this.postAction('rankDelta', { characterId, delta: payload });
         } else if (action === 'kick') {
-            this.postAction('kick', { characterId, mode: payload });
+            const member = this._memberById(characterId);
+            this.postAction('kick', { characterId, mode: this._kickModeForMember(member) });
         }
     },
 
@@ -262,8 +273,11 @@ const FactionPanels = {
                 kick.type = 'button';
                 kick.className = 'premium-faction__btn premium-faction__btn--danger';
                 kick.textContent = 'Kick';
-                kick.disabled = !member.online;
-                kick.addEventListener('click', () => this.postAction('kick', { characterId: member.characterId, mode: 'online' }));
+                kick.disabled = !canKick;
+                kick.addEventListener('click', () => this.postAction('kick', {
+                    characterId: member.characterId,
+                    mode: this._kickModeForMember(member),
+                }));
                 actions.append(kick);
             }
             if (manageable && canWarn && lowerRank && member.online) {

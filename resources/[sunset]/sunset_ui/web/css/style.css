@@ -172,7 +172,24 @@ body.store-open .hotbar-container,
 body.emote-wheel-open #chat,
 body.emote-wheel-open #chat-backdrop,
 body.emote-wheel-open .hud-tr,
-body.emote-wheel-open .hud-bl {
+body.emote-wheel-open .hud-bl,
+body.dealership-open #hud,
+body.dealership-open #job-objective,
+body.dealership-open #courier-panel,
+body.dealership-open #fishing-panel,
+body.dealership-open #license-test-panel,
+body.dealership-open #radar-panel,
+body.dealership-open #fuel-pump,
+body.dealership-open #chat,
+body.dealership-open #chat-backdrop,
+body.dealership-open #taxi-meter,
+body.dealership-open #server-announce,
+body.dealership-open #police-order,
+body.dealership-open #notifications,
+body.dealership-open #progress,
+body.dealership-open .hud-tr,
+body.dealership-open .hud-bl,
+body.dealership-open .hotbar-container {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;

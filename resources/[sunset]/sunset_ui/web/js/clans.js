@@ -31,14 +31,10 @@ const ClanPanels = {
         $('#clan-manage-demote')?.addEventListener('click', () => this.manageSelected('rankDown'));
         $('#clan-manage-kick')?.addEventListener('click', () => this.manageSelected('kick'));
         $('#clan-btn-leave')?.addEventListener('click', () => {
-            if (confirm('Ești sigur că vrei să părăsești clanul?')) {
-                post('clanManage', { action: 'leave' });
-            }
+            post('clanManage', { action: 'leave' });
         });
         $('#clan-btn-dissolve')?.addEventListener('click', () => {
-            if (confirm('ATENȚIE: Ești sigur că vrei să desființezi clanul? Acțiunea este ireversibilă!')) {
-                post('clanManage', { action: 'dissolve' });
-            }
+            post('clanManage', { action: 'dissolve' });
         });
 
         // Directory Modal Close
@@ -293,6 +289,7 @@ const ClanPanels = {
 
             // Show Leave / Dissolve
             $('#clan-btn-dissolve')?.classList.toggle('hidden', !perms.dissolve);
+            $('#clan-btn-leave')?.classList.toggle('hidden', !!perms.dissolve);
 
             this.setTab('overview');
         } else {
@@ -393,13 +390,8 @@ const ClanPanels = {
         const select = $('#clan-manage-select');
         const targetCharacterId = Number(select?.value);
         if (!targetCharacterId) {
-            alert('Te rog selectează un membru din listă!');
+            notify('Selectează un membru din listă.', 'error');
             return;
-        }
-
-        const label = select?.selectedOptions?.[0]?.textContent || 'acest membru';
-        if (action === 'kick') {
-            if (!confirm(`Ești sigur că vrei să concediezi ${label}?`)) return;
         }
 
         post('clanManage', { action, targetCharacterId });
@@ -570,7 +562,7 @@ const ClanPanels = {
             payload.targetCharacterId = Number(warnSelect?.value);
             payload.reason = form.querySelector('[name="reason"]')?.value || '';
             if (!payload.targetCharacterId) {
-                alert('Te rog selectează un membru pentru avertisment!');
+                notify('Selectează un membru pentru avertisment.', 'error');
                 return;
             }
         } else {
