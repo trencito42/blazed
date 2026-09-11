@@ -30,16 +30,19 @@ local function inFishZone(source, cfg)
 end
 
 -- ── Rod / Bait tables ─────────────────────────────────────────
--- catchBonus = bonus procentual la sansa de prindere (adaos mic, max +5%)
+-- rarityLevel = offset aplicat nivelului la selectia raritati pestelui
+--   Mk1=+0, Mk2=+1, Mk3=+1, Mk4=+2, Mk5=+2 (cap la 5)
+--   => un jucator nivel 1 cu Mk5 prinde pesti ca la nivelul 3
 local ROD_TIERS = {
-    { item = 'fishing_rod_5', valueMult = 1.75, delayReduction = 2000, windowBonus = 600, catchBonus = 5 },
-    { item = 'fishing_rod_4', valueMult = 1.50, delayReduction = 1500, windowBonus = 400, catchBonus = 4 },
-    { item = 'fishing_rod_3', valueMult = 1.30, delayReduction = 1000, windowBonus = 200, catchBonus = 3 },
-    { item = 'fishing_rod_2', valueMult = 1.15, delayReduction = 500,  windowBonus = 0,   catchBonus = 2 },
-    { item = 'fishing_rod_1', valueMult = 1.05, delayReduction = 0,    windowBonus = 0,   catchBonus = 1 },
+    { item = 'fishing_rod_5', valueMult = 1.75, delayReduction = 2000, windowBonus = 600, rarityLevel = 2 },
+    { item = 'fishing_rod_4', valueMult = 1.50, delayReduction = 1500, windowBonus = 400, rarityLevel = 2 },
+    { item = 'fishing_rod_3', valueMult = 1.30, delayReduction = 1000, windowBonus = 200, rarityLevel = 1 },
+    { item = 'fishing_rod_2', valueMult = 1.15, delayReduction = 500,  windowBonus = 0,   rarityLevel = 1 },
+    { item = 'fishing_rod_1', valueMult = 1.05, delayReduction = 0,    windowBonus = 0,   rarityLevel = 0 },
 }
 
--- Bonus catch% per nivel (nivel 1 = 0%, nivel 5 = 4%)
+-- Bonus catch% per nivel de skill (nivel 1=+0%, nivel 5=+4%)
+-- Recompenseaza grinding-ul cu mai putine rate, nu cu over-powered chances
 local LEVEL_CATCH_BONUS = { [1] = 0, [2] = 1, [3] = 2, [4] = 3, [5] = 4 }
 
 -- baitTier: 0 = no bait, 1 = worm, 2 = lure, 3 = premium
@@ -83,7 +86,7 @@ local function getEquippedRod(source)
             return rod
         end
     end
-    return { valueMult = 1.0, delayReduction = 0, windowBonus = 0 }
+    return { valueMult = 1.0, delayReduction = 0, windowBonus = 0, rarityLevel = 0 }
 end
 
 local function consumeBestBait(source)
@@ -97,12 +100,14 @@ local function consumeBestBait(source)
 end
 
 -- Selectie pondere a tipului de peste
-local function pickFishType(baitTier, level)
+-- rarityLvl = nivel efectiv de raritate (skill + rod offset, cap 5)
+local function pickFishType(baitTier, level, rodRarityOffset)
+    local rarityLvl = math.min(5, (level or 1) + (rodRarityOffset or 0))
     local pool = {}
     local totalW = 0
     for _, fish in ipairs(ALL_FISH) do
         if baitTier >= fish.minBait then
-            local w = fish.w[level] or 0
+            local w = fish.w[rarityLvl] or 0
             if w > 0 then
                 pool[#pool + 1] = { fish = fish, w = w }
                 totalW = totalW + w
@@ -227,14 +232,14 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
     local token  = ('%d-%d-%d'):format(source, session.id, math.random(100000, 999999))
 
     session.data.fishingChallenge = {
-        token         = token,
-        spotIndex     = spotIndex,
-        biteAt        = now + delay,
-        expiresAt     = now + delay + window,
-        rodValueMult  = rod.valueMult,
-        rodCatchBonus = rod.catchBonus or 0,
-        baitTier      = baitTier,
-        level         = session.data.level,
+        token          = token,
+        spotIndex      = spotIndex,
+        biteAt         = now + delay,
+        expiresAt      = now + delay + window,
+        rodValueMult   = rod.valueMult,
+        rodRarityLevel = rod.rarityLevel or 0,
+        baitTier       = baitTier,
+        level          = session.data.level,
     }
     if session.state == 'STARTING' then SunsetJobs_SetState(source, 'ACTIVE') end
 
@@ -270,23 +275,24 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
     if now < challenge.biteAt    then return nil, 'Too early — the fish escaped' end
     if now > challenge.expiresAt then return nil, 'Too late — the fish escaped' end
 
-    local rodValueMult  = challenge.rodValueMult  or 1.0
-    local rodCatchBonus = challenge.rodCatchBonus or 0
-    local baitTier      = challenge.baitTier      or 0
-    local level         = challenge.level         or 1
+    local rodValueMult   = challenge.rodValueMult   or 1.0
+    local rodRarityLevel = challenge.rodRarityLevel or 0
+    local baitTier       = challenge.baitTier       or 0
+    local level          = challenge.level          or 1
 
-    -- Sansa de prindere: baza (momeala) + bonus undita + bonus nivel, cap 98%
+    -- Sansa de prindere: baza (momeala) + bonus nivel skill, cap 98%
+    -- Undita NU afecteaza catch chance — afecteaza raritatea pestelui prins
     local baseChance  = CATCH_CHANCE[baitTier] or 35
     local levelBonus  = LEVEL_CATCH_BONUS[level] or 0
-    local catchChance = math.min(98, baseChance + rodCatchBonus + levelBonus)
+    local catchChance = math.min(98, baseChance + levelBonus)
     local catchRoll   = math.random(1, 100)
     if catchRoll > catchChance then
         -- Rata — nimic prins
         return nil, 'The fish got away... try again!'
     end
 
-    -- Selectie tip peste si greutate aleatoare
-    local fishType = pickFishType(baitTier, level)
+    -- Selectie tip peste: undita creste nivelul efectiv de raritate
+    local fishType = pickFishType(baitTier, level, rodRarityLevel)
     local fishKg   = math.random(math.floor(fishType.minKg * 10), math.floor(fishType.maxKg * 10)) / 10
     local value    = math.floor(fishKg * fishType.pricePerKg * rodValueMult)
     local fishItem = fishType.item
