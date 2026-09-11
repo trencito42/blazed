@@ -8,6 +8,7 @@ version '1.0.0'
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
+    '@sunset_clans/shared/ranks.lua',
     'shared/config.lua',
 }
 
@@ -25,5 +26,11 @@ dependencies {
     'sunset_core',
     'sunset_clans',
     'sunset_ui',
+    'sunset_chat',
     'oxmysql',
+}
+
+exports {
+    'RunChatCommand',
+    'ExecutePlayerCommand',
 }

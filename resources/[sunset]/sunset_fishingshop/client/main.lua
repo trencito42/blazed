@@ -469,7 +469,7 @@ CreateThread(function()
                         end
                         SetTimeout(1500, function() inCooldown = false end)
                     end)
-
+                end
             end
             Wait(0)
         else

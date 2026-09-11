@@ -135,13 +135,21 @@ const WardrobeUI = {
             ? (Math.max(0, this.state.texture) / this.state.maxTexture) * 100
             : 0;
 
-        this._$('#wardrobe-val-model')?.textContent = String(this.state.drawable);
-        this._$('#wardrobe-max-model')?.textContent = String(this.state.maxDrawable);
-        this._$('#wardrobe-val-texture')?.textContent = String(this.state.texture);
-        this._$('#wardrobe-max-texture')?.textContent = String(this.state.maxTexture);
-        this._$('#wardrobe-track-model')?.style.width = `${pctModel}%`;
-        this._$('#wardrobe-track-texture')?.style.width = `${pctTexture}%`;
-        this._$('#wardrobe-cart-price')?.textContent = `$${Number(this.state.cartTotal || 0).toLocaleString('en-US')}`;
+        const modelValue = this._$('#wardrobe-val-model');
+        const modelMax = this._$('#wardrobe-max-model');
+        const textureValue = this._$('#wardrobe-val-texture');
+        const textureMax = this._$('#wardrobe-max-texture');
+        const modelTrack = this._$('#wardrobe-track-model');
+        const textureTrack = this._$('#wardrobe-track-texture');
+        const cartPrice = this._$('#wardrobe-cart-price');
+
+        if (modelValue) modelValue.textContent = String(this.state.drawable);
+        if (modelMax) modelMax.textContent = String(this.state.maxDrawable);
+        if (textureValue) textureValue.textContent = String(this.state.texture);
+        if (textureMax) textureMax.textContent = String(this.state.maxTexture);
+        if (modelTrack) modelTrack.style.width = `${pctModel}%`;
+        if (textureTrack) textureTrack.style.width = `${pctTexture}%`;
+        if (cartPrice) cartPrice.textContent = `$${Number(this.state.cartTotal || 0).toLocaleString('en-US')}`;
 
         const buyBtn = this._$('#wardrobe-buy');
         if (buyBtn) buyBtn.disabled = !this.state.hasChanges;

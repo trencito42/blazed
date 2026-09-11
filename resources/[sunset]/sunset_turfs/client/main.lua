@@ -165,3 +165,17 @@ RegisterNetEvent('sunset:turfs:teleport', function(coords)
     SetEntityCoords(ped, coords.x + 0.0, coords.y + 0.0, coords.z + 0.5, false, false, false, false)
 end)
 
+CreateThread(function()
+    Wait(1500)
+    TriggerEvent('chat:addSuggestion', '/attackturf', 'Ataca teritoriul in care te afli (rank 5+ in clan)')
+    TriggerEvent('chat:addSuggestion', '/atac', 'Alias pentru /attackturf')
+    TriggerEvent('chat:addSuggestion', '/turflist', 'Lista teritorii + status razboi (admin)')
+    TriggerEvent('chat:addSuggestion', '/gototurf', 'Teleport la un teritoriu (admin)', { { name = 'id', help = '1-16' } })
+    TriggerEvent('chat:addSuggestion', '/forceturf', 'Porneste razboi fortat (admin)', {
+        { name = 'turfId', help = '1-16' },
+        { name = 'clanId', help = 'optional' },
+    })
+    TriggerEvent('chat:addSuggestion', '/stopwar', 'Opreste razboiul activ (admin)', { { name = 'turfId', help = '1-16' } })
+    TriggerEvent('chat:addSuggestion', '/resetturfcd', 'Reset cooldown teritoriu (admin)', { { name = 'id|all' } })
+end)
+

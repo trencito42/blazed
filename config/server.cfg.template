@@ -47,6 +47,7 @@ ensure sunset_chat
 ensure sunset_world
 ensure sunset_factions
 ensure sunset_clans
+ensure sunset_turfs
 ensure sunset_dispatch
 ensure sunset_crafting
 ensure sunset_auth

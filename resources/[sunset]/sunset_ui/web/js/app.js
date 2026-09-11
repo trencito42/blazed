@@ -25,7 +25,7 @@ const ENTRY_BACKGROUNDS = {
     auth: ENTRY_SUNSET_BG,
     handoff: ENTRY_SUNSET_BG,
     loading: ENTRY_SUNSET_BG,
-    spawn: 'assets/bg_loading.webp?v=8',
+    spawn: ENTRY_SUNSET_BG,
     default: ENTRY_SUNSET_BG,
 };
 let entryBackgroundRequest = 0;
@@ -104,6 +104,7 @@ async function setEntryBackground(screenName) {
 function preloadEntryBackgrounds() {
     warmEntryBackground(ENTRY_BACKGROUNDS.auth);
     warmEntryBackground(ENTRY_BACKGROUNDS.handoff);
+    warmEntryBackground(ENTRY_BACKGROUNDS.spawn);
 }
 
 function setBrandLogo(img) {
@@ -112,10 +113,18 @@ function setBrandLogo(img) {
 }
 
 function showScreen(name) {
-    $$('.screen').forEach(s => s.classList.add('hidden'));
+    $$('.screen').forEach((candidate) => {
+        candidate.classList.remove('screen--entering');
+        candidate.classList.add('hidden');
+        candidate.setAttribute('aria-hidden', 'true');
+    });
     const screen = $(`#screen-${name}`);
     if (screen) {
         screen.classList.remove('hidden');
+        screen.setAttribute('aria-hidden', 'false');
+        // The shared background stays mounted while only the stage content fades.
+        void screen.offsetWidth;
+        screen.classList.add('screen--entering');
         App.currentScreen = name;
         const app = $('#app');
         if (app) app.dataset.screen = name;

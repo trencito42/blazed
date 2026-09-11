@@ -4,7 +4,6 @@ const AuthForza = {
     openLogin() {
         if (document.getElementById('screen-auth')?.classList.contains('hidden')) return;
         this.started = true;
-        document.getElementById('auth-intro')?.classList.add('hidden');
         document.getElementById('auth-panel')?.classList.add('active');
         window.setTimeout(() => {
             const active = document.activeElement;

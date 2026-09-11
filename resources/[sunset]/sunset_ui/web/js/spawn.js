@@ -67,6 +67,9 @@ const SpawnSelector = {
     show(data = {}) {
         this.dismissible = data.dismissible === true;
         this.reset();
+        const ui = document.getElementById('spawn-main-ui');
+        ui?.classList.remove('is-ready');
+        requestAnimationFrame(() => requestAnimationFrame(() => ui?.classList.add('is-ready')));
 
         const last = document.querySelector('.spawn-loc-item[data-spawn="last"]');
         if (last) {
@@ -119,13 +122,13 @@ const SpawnSelector = {
         document.querySelectorAll('.spawn-loc-item').forEach((item) => { item.disabled = true; });
 
         ui?.classList.add('exit');
-        setTimeout(() => fade?.classList.add('active'), 300);
+        setTimeout(() => fade?.classList.add('active'), 180);
         setTimeout(() => {
             post('spawnSelect', {
                 location,
                 propertyId: Number(target.dataset.propertyId || 0) || null,
             });
-        }, 420);
+        }, 520);
     },
 
     close() {

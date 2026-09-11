@@ -91,6 +91,7 @@ local RESOURCE_COMMAND_EXPORTS = {
     'sunset_economy',
     'sunset_businesses',
     'sunset_clans',
+    'sunset_turfs',
 }
 
 local function tryRunResourceCommand(src, cmd, args)
@@ -167,6 +168,15 @@ local function tryRunServerChatCommand(src, cmd, args)
 
     ok, handled = pcall(function()
         return exports.sunset_clans:RunChatCommand(src, cmd, args)
+    end)
+    if not ok then
+        chatSystem(src, ('/%s failed on the server: %s'):format(cmd, tostring(handled)), 'error')
+        return true
+    end
+    if handled then return true end
+
+    ok, handled = pcall(function()
+        return exports.sunset_turfs:RunChatCommand(src, cmd, args)
     end)
     if not ok then
         chatSystem(src, ('/%s failed on the server: %s'):format(cmd, tostring(handled)), 'error')

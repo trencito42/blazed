@@ -21,8 +21,8 @@
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: #050508 url('../assets/sunset.png?v=1') center / cover no-repeat;
-    animation: nuiLoadPan 40s linear infinite alternate;
+    background: transparent;
+    animation: none;
 }
 
 @keyframes nuiLoadPan {

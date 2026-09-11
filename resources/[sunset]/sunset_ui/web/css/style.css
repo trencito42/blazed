@@ -264,6 +264,19 @@ body.dealership-open .hotbar-container {
     height: 100%;
 }
 
+.screen.screen--entering {
+    animation: entryStageReveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes entryStageReveal {
+    from { opacity: 0; transform: translateY(8px) scale(1.008); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .screen.screen--entering { animation-duration: 1ms; }
+}
+
 /* ═══ PANEL ═══ */
 .panel {
     position: absolute;

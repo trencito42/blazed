@@ -11,6 +11,55 @@ local function log(msg)
     print(('[sunset_turfs] %s'):format(msg))
 end
 
+local function refreshChatCommands()
+    if GetResourceState('sunset_chat') ~= 'started' then return end
+    pcall(function()
+        exports.sunset_chat:RefreshCommandList()
+    end)
+end
+
+local function ensureTurfsSchema()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `turfs` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `name` VARCHAR(64) NOT NULL,
+            `x` FLOAT NOT NULL,
+            `y` FLOAT NOT NULL,
+            `z` FLOAT NOT NULL,
+            `radius` FLOAT NOT NULL DEFAULT 110.0,
+            `owner_clan_id` INT DEFAULT NULL,
+            `payout` INT UNSIGNED NOT NULL DEFAULT 1500,
+            `respect_payout` INT UNSIGNED NOT NULL DEFAULT 2,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            KEY `idx_owner_clan` (`owner_clan_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]])
+
+    local count = tonumber(MySQL.scalar.await('SELECT COUNT(*) FROM turfs')) or 0
+    if count > 0 then return end
+
+    MySQL.query.await([[
+        INSERT IGNORE INTO `turfs` (`id`, `name`, `x`, `y`, `z`, `radius`, `payout`, `respect_payout`) VALUES
+        (1, 'Grove Street', 105.21, -1941.42, 20.80, 120.0, 2000, 3),
+        (2, 'Ballas Glen Park', 382.60, -1597.20, 29.29, 110.0, 1800, 2),
+        (3, 'Vagos Rancho', 337.80, -2043.10, 21.05, 115.0, 1750, 2),
+        (4, 'Chamberlain Hills', -178.40, -1612.30, 33.60, 110.0, 1600, 2),
+        (5, 'Strawberry Projects', 290.15, -1350.20, 31.85, 110.0, 1700, 2),
+        (6, 'Davis Mega Mall', 124.50, -1550.40, 29.20, 105.0, 1900, 3),
+        (7, 'Cypress Flats Industrial', 835.40, -2105.30, 29.80, 130.0, 1650, 2),
+        (8, 'El Burro Heights', 1335.20, -1580.40, 54.20, 120.0, 1600, 2),
+        (9, 'East Los Santos Motel', 980.20, -1250.50, 25.50, 105.0, 1750, 2),
+        (10, 'Mirror Park Lakes', 1045.30, -680.20, 56.80, 125.0, 1850, 3),
+        (11, 'Vespucci Beach Boardwalk', -1220.50, -1450.20, 4.30, 115.0, 1800, 2),
+        (12, 'Del Perro Pier Plaza', -1540.20, -1080.40, 13.00, 110.0, 1950, 3),
+        (13, 'Little Seoul Commercial', -685.20, -820.40, 24.80, 110.0, 1900, 3),
+        (14, 'Vinewood Downtown', 320.40, -220.50, 54.00, 115.0, 2200, 4),
+        (15, 'Port of Los Santos Docks', 160.20, -3150.40, 5.80, 140.0, 2100, 3),
+        (16, 'La Puerta Scrapyard', -480.20, -1720.50, 18.50, 110.0, 1700, 2)
+    ]])
+    log('Seeded default turf grid (16 territories).')
+end
+
 local function getPlayerClan(src)
     local char = exports.sunset_core:GetCharacter(src)
     if not char then return nil end
@@ -52,7 +101,20 @@ end
 
 CreateThread(function()
     Wait(500)
-    pcall(loadTurfsFromDb)
+    local ok, err = pcall(function()
+        ensureTurfsSchema()
+        loadTurfsFromDb()
+    end)
+    if not ok then
+        print(('^1[sunset_turfs]^7 startup failed: %s'):format(tostring(err)))
+    else
+        refreshChatCommands()
+    end
+end)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    SetTimeout(1000, refreshChatCommands)
 end)
 
 local function syncTurfsToClient(src)
@@ -85,7 +147,7 @@ local function getClanMembersInTurf(clanId, turf)
             local ped = GetPlayerPed(src)
             if ped and ped ~= 0 and #(GetEntityCoords(ped) - turf.coords) <= turf.radius then
                 local pClan = getPlayerClan(src)
-                if pClan and pClan.clan_id == clanId then
+                if pClan and tonumber(pClan.clan_id) == tonumber(clanId) then
                     count = count + 1
                     table.insert(peds, src)
                 end
@@ -198,8 +260,17 @@ local function startWar(turf, attackerClan, defenderClan)
     end)
 end
 
--- Attack command
-RegisterCommand('attackturf', function(source)
+local function canDeclareTurfAttack(rank)
+    rank = SunsetClans and SunsetClans.normalizeRank(rank) or math.floor(tonumber(rank) or 0)
+    return rank >= 5
+end
+
+local function runAttackTurf(source)
+    if source == 0 then
+        print('[sunset_turfs] /attackturf must be used in-game.')
+        return
+    end
+
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return end
 
@@ -209,19 +280,19 @@ RegisterCommand('attackturf', function(source)
         return
     end
 
-    if (tonumber(pClan.rank) or 0) < 2 then
-        TriggerClientEvent('sunset:client:notify', source, 'Doar liderul sau ofiterii de clan pot declara un atac de teritoriu.', 'error')
+    if not canDeclareTurfAttack(pClan.rank) then
+        TriggerClientEvent('sunset:client:notify', source, 'Doar ofiterii si liderii de clan (rank 5+) pot declara un atac.', 'error')
         return
     end
 
     local pCoords = GetEntityCoords(ped)
     local turf = findTurfAtCoords(pCoords)
     if not turf then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu te afli in interiorul niciunui teritoriu.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'Nu te afli in interiorul niciunui teritoriu. Vezi blip-urile de pe harta.', 'error')
         return
     end
 
-    if turf.ownerClanId and turf.ownerClanId == pClan.clan_id then
+    if turf.ownerClanId and tonumber(turf.ownerClanId) == tonumber(pClan.clan_id) then
         TriggerClientEvent('sunset:client:notify', source, 'Acest teritoriu este deja controlat de clanul tau!', 'info')
         return
     end
@@ -238,9 +309,9 @@ RegisterCommand('attackturf', function(source)
         return
     end
 
-    -- Check if clan is already fighting elsewhere
     for _, activeWar in pairs(ActiveWars) do
-        if activeWar.attackerClanId == pClan.clan_id or activeWar.defenderClanId == pClan.clan_id then
+        if tonumber(activeWar.attackerClanId) == tonumber(pClan.clan_id)
+            or tonumber(activeWar.defenderClanId) == tonumber(pClan.clan_id) then
             TriggerClientEvent('sunset:client:notify', source, 'Clanul tau este deja angajat intr-un razboi pe alt teritoriu!', 'error')
             return
         end
@@ -252,9 +323,16 @@ RegisterCommand('attackturf', function(source)
     end
 
     startWar(turf, pClan, defenderClan)
+    log(('attackturf src=%s clan=%s turf=%s'):format(source, tostring(pClan.clan_id), tostring(turf.id)))
+end
+
+RegisterCommand('attackturf', function(source)
+    runAttackTurf(source)
 end, false)
 
-TriggerEvent('chat:addSuggestion', '/attackturf', 'Ataca teritoriul in care te afli pentru a porni un razboi de clan')
+RegisterCommand('atac', function(source)
+    runAttackTurf(source)
+end, false)
 
 -- Kill hook inside turf wars
 AddEventHandler('sunset:death:recordAttacker', function(victimSrc, attackerSrc)
@@ -307,9 +385,9 @@ AddEventHandler('sunset:payday:processed', function(source)
     end
 
     if count > 0 and totalPayout > 0 then
-        MySQL.update.await('UPDATE clans SET balance = balance + ? WHERE id = ?', { totalPayout, pClan.clan_id })
+        exports.sunset_core:AddMoney(source, 'bank', totalPayout, 'turf_payout')
         TriggerClientEvent('sunset:client:notify', source,
-            ('Clanul tau a incasat $%s din cele %d teritorii controlate!'):format(
+            ('Clanul tau a incasat $%s din cele %d teritorii controlate (virat in banca ta).'):format(
                 string.format('%\'d', totalPayout):gsub('\'', ','), count
             ), 'success', 10000)
     end
@@ -327,8 +405,7 @@ local function checkAdmin(source, minLevel)
     return IsPlayerAceAllowed(source, 'command')
 end
 
--- /turflist - lists all territories and status
-RegisterCommand('turflist', function(source)
+local function runTurflist(source)
     if not checkAdmin(source, 1) then
         TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
         return
@@ -344,10 +421,13 @@ RegisterCommand('turflist', function(source)
             TriggerClientEvent('chat:addMessage', source, { color = { 0, 255, 204 }, args = { 'TURFS', msg } })
         end
     end
+end
+
+RegisterCommand('turflist', function(source)
+    runTurflist(source)
 end, false)
 
--- /gototurf [turfId] - teleports admin to territory
-RegisterCommand('gototurf', function(source, args)
+local function runGototurf(source, args)
     if source == 0 then print('Comanda doar in joc.'); return end
     if not checkAdmin(source, 2) then
         TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
@@ -363,10 +443,13 @@ RegisterCommand('gototurf', function(source, args)
 
     TriggerClientEvent('sunset:turfs:teleport', source, turf.coords)
     TriggerClientEvent('sunset:client:notify', source, ('Te-ai teleportat la teritoriul #%d (%s)'):format(turf.id, turf.name), 'success')
+end
+
+RegisterCommand('gototurf', function(source, args)
+    runGototurf(source, args)
 end, false)
 
--- /forceturf [turfId] [optional attackerClanId] - starts war instantly (bypasses cooldown and distance)
-RegisterCommand('forceturf', function(source, args)
+local function runForceturf(source, args)
     if not checkAdmin(source, 2) then
         TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
         return
@@ -420,10 +503,13 @@ RegisterCommand('forceturf', function(source, args)
         turf.id, turf.name, attackerClan.tag, attackerClan.name
     )
     if source == 0 then print(note) else TriggerClientEvent('sunset:client:notify', source, note, 'success') end
+end
+
+RegisterCommand('forceturf', function(source, args)
+    runForceturf(source, args)
 end, false)
 
--- /stopwar [turfId] - terminates war immediately
-RegisterCommand('stopwar', function(source, args)
+local function runStopwar(source, args)
     if not checkAdmin(source, 2) then
         TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
         return
@@ -439,10 +525,13 @@ RegisterCommand('stopwar', function(source, args)
     endWar(turfId, 'admin_force_stop')
     local note = ('[ADMIN] Razboiul pentru teritoriul #%d a fost oprit fortat.'):format(turfId)
     if source == 0 then print(note) else TriggerClientEvent('sunset:client:notify', source, note, 'info') end
+end
+
+RegisterCommand('stopwar', function(source, args)
+    runStopwar(source, args)
 end, false)
 
--- /resetturfcd [turfId or "all"]
-RegisterCommand('resetturfcd', function(source, args)
+local function runResetturfcd(source, args)
     if not checkAdmin(source, 2) then
         TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
         return
@@ -464,4 +553,47 @@ RegisterCommand('resetturfcd', function(source, args)
             if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'warning') end
         end
     end
+end
+
+RegisterCommand('resetturfcd', function(source, args)
+    runResetturfcd(source, args)
 end, false)
+
+function RunChatCommand(source, name, args)
+    if source == 0 then return false end
+    name = string.lower(tostring(name or ''))
+    args = args or {}
+    if name == 'attackturf' or name == 'atac' or name == 'attack' then
+        runAttackTurf(source)
+        return true
+    end
+    return false
+end
+exports('RunChatCommand', RunChatCommand)
+
+function ExecutePlayerCommand(source, name, args)
+    name = string.lower(tostring(name or ''))
+    args = args or {}
+    if name == 'turflist' then
+        runTurflist(source)
+        return true
+    end
+    if name == 'gototurf' then
+        runGototurf(source, args)
+        return true
+    end
+    if name == 'forceturf' then
+        runForceturf(source, args)
+        return true
+    end
+    if name == 'stopwar' then
+        runStopwar(source, args)
+        return true
+    end
+    if name == 'resetturfcd' then
+        runResetturfcd(source, args)
+        return true
+    end
+    return false
+end
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

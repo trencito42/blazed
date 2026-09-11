@@ -136,6 +136,8 @@ function createForzaLoadUI(screenId) {
             if (!data.force && (this._interval || this._finishTimer || this._progress > 5)) return;
             this.reset();
             this._ensureSegments();
+            // This is a new phase, not a client restart: avoid the jarring 100 -> 0 flash.
+            this._setProgress(Math.max(3, Number(data.startAt) || 0), data.startText);
 
             const steps = data.steps;
             if (steps && steps.length) {
@@ -247,7 +249,9 @@ const AuthLoading = {
         document.getElementById('auth-panel')?.classList.add('is-hidden');
         if (typeof showScreen === 'function') showScreen('loading');
         LoadingScreen.start({
-            duration: 8000,
+            duration: 5200,
+            startAt: 4,
+            startText: 'Securing account session...',
             holdAt: 92,
             holdText: 'Authenticating account...',
         });
