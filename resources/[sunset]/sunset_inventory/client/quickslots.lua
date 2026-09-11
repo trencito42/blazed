@@ -263,6 +263,7 @@ local function openEmoteWheel()
     if emoteWheelOpen or blocked() then return end
     emoteWheelOpen = true
     clearHandsUpAnim(PlayerPedId())
+    exports.sunset_ui:SetFocus(true, true, true, 'emote_wheel')
     exports.sunset_ui:Send('emoteWheelShow', {
         emotes = GetResourceState('sunset_emotes') == 'started' and exports.sunset_emotes:GetEmoteWheelList() or {},
     })
@@ -271,6 +272,8 @@ end
 local function closeEmoteWheel(playSelection)
     if not emoteWheelOpen then return end
     emoteWheelOpen = false
+    xWheelHeld = false
+    exports.sunset_ui:SetFocus(false, false, false, 'emote_wheel')
     exports.sunset_ui:Send('emoteWheelHide', {})
     if playSelection and playSelection ~= '' and GetResourceState('sunset_emotes') == 'started' then
         exports.sunset_emotes:PlayEmote(playSelection)
@@ -495,6 +498,11 @@ CreateThread(function()
             end
         end
     end
+end)
+
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    if emoteWheelOpen then closeEmoteWheel() end
 end)
 
 exports('GetHotbarSlots', function() return hotbarSlots end)

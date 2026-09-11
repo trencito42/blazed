@@ -27,12 +27,23 @@
 
 .fuel-pump-forza .fp-info-panel,
 .fuel-pump-forza .fp-action-panel,
-.world-tooltip-3d .wt-body,
-.wheel-overlay {
+.world-tooltip-3d .wt-body {
     background: var(--gameplay-glass) !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     box-shadow: var(--gameplay-shadow) !important;
+}
+
+/* Emote wheel: keep the fullscreen layer transparent so the game stays visible. */
+#emote-wheel.wheel-overlay {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.wheel-center,
+.wheel-item {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 
 /* FiveM CEF composites backdrop-filter as opaque black — never use blur in gameplay HUD. */
@@ -40,8 +51,8 @@
 #fuel-pump.fuel-pump-forza *,
 #world-tooltip-layer,
 #world-tooltip-layer *,
-.wheel-overlay,
-.wheel-overlay * {
+#emote-wheel.wheel-overlay,
+#emote-wheel.wheel-overlay * {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
 }

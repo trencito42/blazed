@@ -319,7 +319,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     position: fixed;
     inset: 0;
     z-index: 500;
-    background: rgba(0, 0, 0, 0.42);
+    background: transparent;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     display: flex;
@@ -327,12 +327,12 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     justify-content: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
+    transition: opacity 0.2s ease;
 }
 
 .wheel-overlay.active {
     opacity: 1;
-    pointer-events: all;
+    pointer-events: none;
 }
 
 .wheel-overlay.hidden {
@@ -345,6 +345,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     height: 600px;
     transform: skewX(-5deg) scale(0.8);
     transition: transform 0.4s var(--hotbar-transition);
+    pointer-events: auto;
 }
 
 .wheel-overlay.active .wheel-container {
@@ -359,14 +360,14 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     width: 200px;
     height: 200px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 255, 204, 0.1) 0%, transparent 70%);
+    background: linear-gradient(145deg, rgba(10, 9, 8, 0.88), rgba(6, 6, 6, 0.82));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    border: 2px solid rgba(0, 255, 204, 0.2);
-    box-shadow: 0 0 50px rgba(0, 255, 204, 0.1);
+    border: 2px solid rgba(0, 255, 204, 0.28);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
 }
 
 .wheel-center-title {
@@ -405,7 +406,10 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     justify-content: center;
     color: var(--hotbar-text-muted);
     transition: all 0.2s;
-    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.8));
+    background: rgba(8, 7, 6, 0.82);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
 }
 
 .wheel-item i {

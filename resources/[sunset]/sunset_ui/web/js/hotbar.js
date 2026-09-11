@@ -17,8 +17,15 @@ const HotbarUI = {
 
     _bindMessages() {
         window.addEventListener('message', (event) => {
-            const type = event.data?.type;
-            if (type === 'emoteWheelRelease') this._releaseWheel();
+            const action = event.data?.action;
+            if (action === 'emoteWheelRelease') this._releaseWheel();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (!this.wheelOpen || !this.emotes.length) return;
+            const num = Number(e.key);
+            if (num >= 1 && num <= 9 && num <= this.emotes.length) {
+                this._selectWheelItem(num - 1);
+            }
         });
     },
 
@@ -212,20 +219,18 @@ const HotbarUI = {
         });
 
         document.body.classList.add('emote-wheel-open');
-        document.body.classList.add('hud-chrome-hidden');
         overlay.classList.remove('hidden');
         overlay.classList.add('active');
-        this._setWheelCenter('Emotes', 'Select one');
+        const hint = count
+            ? 'Move mouse / 1-9 · release [X]'
+            : 'No emotes loaded';
+        this._setWheelCenter('Emotes', hint);
     },
 
     hideEmoteWheel() {
         this.wheelOpen = false;
         this.selectedEmoteIndex = -1;
         document.body.classList.remove('emote-wheel-open');
-        if (!document.body.classList.contains('inventory-open')
-            && !document.body.classList.contains('tuning-ui-open')) {
-            document.body.classList.remove('hud-chrome-hidden');
-        }
         const overlay = $('#emote-wheel');
         overlay?.classList.remove('active');
         overlay?.classList.add('hidden');
