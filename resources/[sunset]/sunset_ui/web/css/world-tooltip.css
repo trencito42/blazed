@@ -42,9 +42,10 @@
 .world-tooltip-3d .wt-badge.ammo { background: #ff3366; color: #000; }
 
 .world-tooltip-3d .wt-body {
-    background: rgba(0, 0, 0, 0.7);
+    background: linear-gradient(145deg, rgba(10, 9, 8, 0.9), rgba(6, 6, 6, 0.86));
     border-left: 3px solid var(--wt-accent, #00ffcc);
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     padding: 10px 15px;
     display: flex;
     align-items: center;

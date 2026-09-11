@@ -26,11 +26,24 @@
 }
 
 .fuel-pump-forza .fp-info-panel,
-.fuel-pump-forza .fp-action-panel {
+.fuel-pump-forza .fp-action-panel,
+.world-tooltip-3d .wt-body,
+.wheel-overlay {
     background: var(--gameplay-glass) !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     box-shadow: var(--gameplay-shadow) !important;
+}
+
+/* FiveM CEF composites backdrop-filter as opaque black — never use blur in gameplay HUD. */
+#fuel-pump.fuel-pump-forza,
+#fuel-pump.fuel-pump-forza *,
+#world-tooltip-layer,
+#world-tooltip-layer *,
+.wheel-overlay,
+.wheel-overlay * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 
 /* Primary shells: edge definition without a black slab. */

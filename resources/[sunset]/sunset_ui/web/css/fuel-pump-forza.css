@@ -42,12 +42,12 @@
     border: 2px solid var(--fp-border);
     border-left: 4px solid var(--fp-accent);
     padding: 20px 30px;
-    backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
     gap: 15px;
     width: 280px;
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
 
@@ -132,11 +132,11 @@
     background: var(--fp-bg-panel);
     border: 2px solid var(--fp-border);
     padding: 30px;
-    backdrop-filter: blur(10px);
     display: flex;
     gap: 30px;
     align-items: center;
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
 
