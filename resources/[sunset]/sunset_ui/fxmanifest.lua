@@ -62,6 +62,7 @@ exports {
     'Hide',
     'Send',
     'IsOpen',
+    'MarkGameplayEntered',
     'Notify',
     'ProgressBar',
     'SetFocus',

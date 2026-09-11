@@ -9,3 +9,10 @@ function SunsetWorld.tryInteract()
     SunsetWorld._interactFrame = frame
     return true
 end
+
+function SunsetWorld.canInteract()
+    if SunsetWorld.tryInteract then
+        return SunsetWorld.tryInteract()
+    end
+    return true
+end

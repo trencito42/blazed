@@ -5,6 +5,7 @@ local previewAppearance = nil
 local activeCategory = 'top'
 local cartTotal = 0
 local hasChanges = false
+local lastWardrobeOpenAt = 0
 
 local function notify(msg, kind)
     exports.sunset_ui:Notify(msg, kind or 'info')
@@ -66,13 +67,22 @@ local function closeShop()
     exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:ShowHudChrome()
     exports.sunset_ui:Send('wardrobeHide', {})
+    TriggerEvent('sunset:world:uiModalClose')
 end
 
 local function openWardrobe()
     if inShop then return end
 
+    local now = GetGameTimer()
+    if now - lastWardrobeOpenAt < 500 then return end
+
     if IsNuiFocused() then
         exports.sunset_ui:SetFocus(false, false)
+        Wait(50)
+    end
+
+    if exports.sunset_ui:IsOpen() then
+        exports.sunset_ui:Hide()
         Wait(50)
     end
 
@@ -84,23 +94,23 @@ local function openWardrobe()
 
     local ok, err = pcall(function()
         previewAppearance = SunsetClothing.syncFromPed(savedSnapshot.appearance, PlayerPedId(), savedSnapshot.gender)
-        inShop = true
-        shopType = 'clothing'
         activeCategory = 'top'
-        cartTotal = SunsetClothing.buildCatalog(PlayerPedId(), previewAppearance, savedSnapshot.gender, activeCategory).pricePerItem or 50
+        local ped = PlayerPedId()
+        local catalog = SunsetClothing.buildCatalog(ped, previewAppearance, savedSnapshot.gender, activeCategory)
+        cartTotal = catalog.pricePerItem or 50
         hasChanges = false
 
-        local ped = PlayerPedId()
-        WardrobeShop.startCamera(ped, 'full')
-        applyPreviewToPed()
-
-        local catalog = SunsetClothing.buildCatalog(ped, previewAppearance, savedSnapshot.gender, activeCategory)
-        catalog.cartTotal = cartTotal
-        catalog.hasChanges = hasChanges
+        inShop = true
+        shopType = 'clothing'
+        lastWardrobeOpenAt = now
 
         exports.sunset_ui:HideHudChrome()
         exports.sunset_ui:Send('wardrobeShow', catalog)
-        Wait(0)
+        TriggerEvent('sunset:world:uiModalOpen')
+        Wait(100)
+
+        applyPreviewToPed()
+        WardrobeShop.startCamera(ped, 'full')
         exports.sunset_ui:SetFocus(true, true)
     end)
 
@@ -115,6 +125,7 @@ local function openWardrobe()
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:ShowHudChrome()
         exports.sunset_ui:Send('wardrobeHide', {})
+        TriggerEvent('sunset:world:uiModalClose')
     end
 end
 

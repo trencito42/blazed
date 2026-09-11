@@ -82,11 +82,19 @@ local function pumpBrand(station)
     return 'XODO FUEL INC.'
 end
 
+local function worldTooltips()
+    if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld or not SunsetWorld.Tooltips then
+        return nil
+    end
+    return SunsetWorld.Tooltips
+end
+
 local function clearAllPumpTooltips()
-    if GetResourceState('sunset_world') ~= 'started' then return end
+    local tooltips = worldTooltips()
+    if not tooltips then return end
     for si, station in ipairs(Sunset.GasStations or {}) do
         for pi in ipairs(station.pumps or {}) do
-            SunsetWorld.Tooltips.clear(('pump_%d_%d'):format(si, pi))
+            tooltips.clear(('pump_%d_%d'):format(si, pi))
         end
     end
 end
@@ -173,7 +181,8 @@ local function getCachedCanLiters()
 end
 
 local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestSi, nearestPi, nearestDist)
-    if GetResourceState('sunset_world') ~= 'started' then return end
+    local tooltips = worldTooltips()
+    if not tooltips then return end
     local veh = getDriverVehicle()
     local onFoot = not IsPedInAnyVehicle(PlayerPedId(), false)
 
@@ -194,7 +203,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                         desc = 'Umple Bidonul'
                     end
                 end
-                SunsetWorld.Tooltips.set(id, {
+                tooltips.set(id, {
                     coords = pumpTooltipCoords(pump),
                     badge = pumpBrand(station),
                     badgeClass = 'gas',
@@ -205,7 +214,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                     key = isActive and key or '',
                 })
             else
-                SunsetWorld.Tooltips.clear(id)
+                tooltips.clear(id)
             end
         end
     end

@@ -94,6 +94,7 @@ local function spawnPlayer(char, spawnPosition)
     TriggerServerEvent('sunset:server:characterSpawned', char.id)
 
     exports.sunset_ui:Send('enterGameplay', { duration = 500 })
+    exports.sunset_ui:MarkGameplayEntered()
     Wait(100)
     DoScreenFadeIn(800)
     Wait(800)

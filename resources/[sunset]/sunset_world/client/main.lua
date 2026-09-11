@@ -339,7 +339,7 @@ CreateThread(function()
                 activeZone = closest.id
                 if not closest.floating then showHint(closest.hint) end
             end
-            if IsControlJustReleased(0, 38) and not IsNuiFocused() and SunsetWorld.tryInteract() then
+            if IsControlJustReleased(0, 38) and not IsNuiFocused() and (SunsetWorld == nil or SunsetWorld.canInteract()) then
                 if closest.onInteract then closest.onInteract() end
             end
             Wait(0)

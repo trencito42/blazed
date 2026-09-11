@@ -78,6 +78,12 @@ function IsOpen()
 end
 exports('IsOpen', IsOpen)
 
+function MarkGameplayEntered()
+    isOpen = false
+    currentScreen = nil
+end
+exports('MarkGameplayEntered', MarkGameplayEntered)
+
 local FRIENDLY_ERRORS = {
     ['nil'] = 'That action could not be completed. Please try again; if it repeats, report what you clicked.',
     ['error'] = 'That action stopped unexpectedly. Try again once; if it repeats, report the command or button you used.',
