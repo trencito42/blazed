@@ -10,8 +10,8 @@ local TurfBlips = {}
 local WarPlayerBlips = {}
 local WarBlipPulse = false
 
+local BLIP_DISPLAY_PAUSE_MAP = 3 -- pause map (M) only — never minimap
 local BLIP_DISPLAY_BOTH = 2
-local BLIP_SPRITE_AREA = 9
 local BLIP_SPRITE_PLAYER = 1
 
 local function hexToBlipColour(hex)
@@ -81,21 +81,6 @@ local function applyTurfBlipStyle(turf, row, atWar)
         SetBlipFlashes(row.area, atWar)
     end
 
-    if row.label and DoesBlipExist(row.label) then
-        SetBlipSprite(row.label, 1)
-        SetBlipDisplay(row.label, BLIP_DISPLAY_BOTH)
-        SetBlipScale(row.label, 0.55)
-        SetBlipColour(row.label, areaColour)
-        SetBlipAlpha(row.label, atWar and 255 or 190)
-        SetBlipAsShortRange(row.label, true)
-        SetBlipFlashes(row.label, atWar)
-        BeginTextCommandSetBlipName('STRING')
-        local suffix = atWar and ' | RAZBOI' or ''
-        AddTextComponentSubstringPlayerName(('Turf #%d: %s [%s]%s'):format(
-            turf.id, turf.name, turf.ownerTag or 'LIBER', suffix
-        ))
-        EndTextCommandSetBlipName(row.label)
-    end
 end
 
 local function refreshBlips()
@@ -105,9 +90,7 @@ local function refreshBlips()
         local atWar = turfAtWar(id)
         local map = SunsetTurfs.GetMapZone(id, t)
         local areaBlip = AddBlipForArea(t.coords.x, t.coords.y, t.coords.z, map.width, map.height)
-        local labelBlip = AddBlipForCoord(t.coords.x, t.coords.y, t.coords.z)
-
-        TurfBlips[id] = { area = areaBlip, label = labelBlip }
+        TurfBlips[id] = { area = areaBlip }
         applyTurfBlipStyle(t, TurfBlips[id], atWar)
         ::continue::
     end
