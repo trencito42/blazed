@@ -210,7 +210,7 @@ const Menu = {
                 <span class="menu-vcard__ecu-pill">TUNED</span>
                 <span class="menu-vcard__ecu-summary">${this.escape(ecu.summary || 'Custom map')}</span>
                 ${dyno ? `<span class="menu-vcard__ecu-dyno">${this.escape(dyno.value)}</span>` : ''}
-                <button type="button" class="menu-vcard__ecu-toggle" data-ecu-toggle="${vid}" aria-label="Detalii ECU">⋯</button>
+                <button type="button" class="menu-vcard__ecu-toggle" data-ecu-toggle="${vid}" aria-label="ECU details">⋯</button>
             </div>
             <div class="menu-vcard__ecu-chips">${chipHtml}</div>
             <div class="menu-vcard__ecu-detail hidden" data-ecu-detail="${vid}">${detailLines}</div>
@@ -251,14 +251,42 @@ const Menu = {
         </div>`;
     },
 
+    vmenuStatBar(label, pct, kind) {
+        const value = Math.max(0, Math.min(100, Math.round(pct)));
+        let color = 'var(--vmenu-accent)';
+        if (kind === 'fuel') {
+            color = value < 20 ? 'var(--vmenu-warning)' : 'var(--vmenu-text-main)';
+        } else if (value < 30) {
+            color = 'var(--vmenu-danger)';
+        }
+        return `<div class="stat-box">
+            <div class="stat-label"><span>${label}</span><span>${value}%</span></div>
+            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${value}%;background:${color}"></div></div>
+        </div>`;
+    },
+
+    vmenuStatusBadge(key) {
+        if (key === 'garage') return 'status-garage';
+        if (key === 'out' || key === 'parked') return 'status-out';
+        return 'status-impound';
+    },
+
+    vmenuStatusColor(key) {
+        if (key === 'garage') return 'var(--vmenu-accent)';
+        if (key === 'out' || key === 'parked') return 'var(--vmenu-warning)';
+        return 'var(--vmenu-danger)';
+    },
+
     renderVehicles(data) {
         const grid = $('#menu-vehicle-grid');
         if (!grid) return;
         const vehicles = data.vehicles || [];
 
+        grid.className = 'vmenu-wrapper visible';
+
         if (!vehicles.length) {
             this.selectedVehicleId = null;
-            grid.innerHTML = `<div class="premium-vmenu__empty"><strong>NO VEHICLES</strong><span>Your purchased vehicles will appear here.</span></div>`;
+            grid.innerHTML = `<div class="vmenu-empty"><strong>NO VEHICLES</strong><span>Your purchased vehicles will appear here.</span></div>`;
             return;
         }
 
@@ -283,10 +311,10 @@ const Menu = {
             const model = this.escape((v.model || 'Vehicle').toUpperCase());
             const plate = this.escape(v.plate || '—');
             const isSelected = String(v.id) === String(this.selectedVehicleId);
-            return `<button type="button" class="premium-vmenu__item ${isSelected ? 'is-selected' : ''}" data-v-select="${Number(v.id) || 0}">
-                <span class="premium-vmenu__model">${model}</span>
-                <span class="premium-vmenu__plate">${plate}</span>
-                <i class="premium-vmenu__dot premium-vmenu__dot--${status.key}" aria-label="${status.label}"></i>
+            return `<button type="button" class="vehicle-item ${isSelected ? 'selected' : ''}" data-v-select="${Number(v.id) || 0}">
+                <div class="v-model">${model}</div>
+                <div class="v-plate">${plate}</div>
+                <div class="v-status-badge ${this.vmenuStatusBadge(status.key)}" aria-label="${this.escape(status.label)}"></div>
             </button>`;
         }).join('');
 
@@ -297,51 +325,66 @@ const Menu = {
         const engine = Math.max(0, Math.min(100, Math.round((Number(selected.engine) || 0) / 10)));
         const body = Math.max(0, Math.min(100, Math.round((Number(selected.body) || 0) / 10)));
         const odometer = Math.max(0, Number(selected.odometer) || 0);
-        let actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}">SET GPS</button>`;
+        const insurancePts = selected.insurancePoints != null ? selected.insurancePoints : 5;
+        const statusColor = this.vmenuStatusColor(status.key);
+
+        let actions = `<button type="button" class="btn btn-secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}">SET GPS</button>`;
         if (status.isDestroyed) {
             const points = selected.insurancePoints != null ? Number(selected.insurancePoints) : 5;
             const claimCost = selected.claimCost != null ? Number(selected.claimCost) : 250;
             const renewCost = selected.renewCost != null ? Number(selected.renewCost) : 750;
             if (points > 0) {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">FILE INSURANCE CLAIM (${formatMoney(claimCost)})</button>`;
+                actions = `<button type="button" class="btn btn-danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">FILE INSURANCE CLAIM (${formatMoney(claimCost)})</button>`;
             } else {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">NO POINTS — RENEW COVERAGE (${formatMoney(renewCost)})</button>`;
+                actions = `<button type="button" class="btn btn-warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">RENEW COVERAGE (${formatMoney(renewCost)})</button>`;
             }
         } else if (status.stored) {
-            actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">SPAWN VEHICLE</button>${actions}`;
+            actions = `<button type="button" class="btn btn-primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">SPAWN VEHICLE</button>${actions}`;
             if ((selected.insurancePoints || 0) < 5) {
-                actions += `<button type="button" class="premium-vmenu__btn" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 POINTS (${formatMoney(selected.renewCost || 750)})</button>`;
+                actions += `<button type="button" class="btn btn-secondary" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 POINTS (${formatMoney(selected.renewCost || 750)})</button>`;
             }
         } else if (status.inWorld) {
             if (selected.isCurrentVehicle) {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="park" data-v-id="${Number(selected.id) || 0}">PARK HERE</button>${actions}`;
+                actions = `<button type="button" class="btn btn-primary" data-v-action="park" data-v-id="${Number(selected.id) || 0}">PARK HERE</button>${actions}`;
             } else {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="store" data-v-id="${Number(selected.id) || 0}">STORE VEHICLE</button>${actions}`;
+                actions = `<button type="button" class="btn btn-primary" data-v-action="store" data-v-id="${Number(selected.id) || 0}">STORE VEHICLE</button>${actions}`;
             }
         } else {
-            actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">RESPAWN HERE</button>${actions}`;
+            actions = `<button type="button" class="btn btn-primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">RESPAWN HERE</button>${actions}`;
         }
 
-        grid.innerHTML = `<aside class="premium-vmenu__sidebar">
-                <header><h3>PERSONAL GARAGE</h3><p>Select a vehicle for details</p></header>
-                <div class="premium-vmenu__list">${listHtml}</div>
-            </aside>
-            <section class="premium-vmenu__detail">
-                <div class="premium-vmenu__detail-body">
-                    <div class="premium-vmenu__class">PERSONAL VEHICLE</div>
-                    <h2>${model}</h2>
-                    <div class="premium-vmenu__status premium-vmenu__status--${status.key}"><i></i>${this.escape(status.label)}</div>
-                    <div class="premium-vmenu__stats">
-                        ${this.vitalsRow('ENGINE HEALTH', engine)}
-                        ${this.vitalsRow('FUEL', fuel)}
-                        ${this.vitalsRow('BODY', body)}
-                        <div class="premium-vmenu__odo"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
-                        <div class="premium-vmenu__insurance-info"><span>INSURANCE</span><strong>${selected.insurancePoints != null ? selected.insurancePoints : 5} PTS · TIER ${selected.insuranceLevel || 1}/11 · CLAIM: ${formatMoney(selected.claimCost || 250)}</strong></div>
-                    </div>
-                    ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
+        grid.innerHTML = `<div class="vmenu-sidebar">
+                <div class="sidebar-header">
+                    <h1>PERSONAL GARAGE</h1>
+                    <p>Select a vehicle for details</p>
                 </div>
-                <div class="premium-vmenu__actions">${actions}</div>
-            </section>`;
+                <div class="vehicle-list">${listHtml}</div>
+            </div>
+            <div class="vmenu-content">
+                <div class="vmenu-detail-panel">
+                    <div class="detail-header">
+                        <div class="detail-class">PERSONAL VEHICLE</div>
+                        <h2 class="detail-name">${model}</h2>
+                        <div class="detail-status-text">
+                            <span style="color:${statusColor}">●</span>
+                            <span>${this.escape(status.label)}</span>
+                        </div>
+                    </div>
+                    <div class="vmenu-detail-scroll">
+                        <div class="stats-grid">
+                            ${this.vmenuStatBar('ENGINE HEALTH', engine)}
+                            ${this.vmenuStatBar('FUEL', fuel, 'fuel')}
+                            ${this.vmenuStatBar('BODY', body)}
+                            <div class="stat-box stat-box--meta">
+                                <div class="stat-label"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
+                                <div class="stat-label"><span>INSURANCE</span><strong>${insurancePts} PTS · TIER ${selected.insuranceLevel || 1}/11 · CLAIM ${formatMoney(selected.claimCost || 250)}</strong></div>
+                            </div>
+                        </div>
+                        ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
+                    </div>
+                    <div class="action-buttons">${actions}</div>
+                </div>
+            </div>`;
 
 
         this.bindEcuToggles(grid);

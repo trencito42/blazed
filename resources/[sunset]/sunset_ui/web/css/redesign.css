@@ -1535,7 +1535,7 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
     top: 50% !important;
     bottom: auto !important;
     width: min(850px, calc(100vw - 80px)) !important;
-    height: min(620px, calc(100vh - 80px)) !important;
+    height: min(580px, calc(100vh - 80px)) !important;
     max-height: calc(100vh - 80px) !important;
     padding: 0 !important;
     overflow: hidden !important;
@@ -1590,130 +1590,10 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
     text-align: center;
 }
 
-.menu-vehicle-grid {
-    grid-template-columns: 38% 62% !important;
+#menu.menu--solo-vehicle #menu-vehicle-grid.vmenu-wrapper {
     width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    background: var(--premium-bg) !important;
-    border: 1px solid var(--premium-border) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 20px 50px rgba(0,0,0,.5) !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    animation: premium-vehicle-in .4s cubic-bezier(.175,.885,.32,1.275) both;
-}
-
-#menu.menu--solo-vehicle .premium-vmenu__sidebar {
-    min-height: 0 !important;
-    height: 100% !important;
-    overflow: hidden !important;
-}
-
-#menu.menu--solo-vehicle .premium-vmenu__list {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 255, 204, 0.45) rgba(255, 255, 255, 0.08);
-}
-
-#menu.menu--solo-vehicle .premium-vmenu__list::-webkit-scrollbar { width: 6px; }
-#menu.menu--solo-vehicle .premium-vmenu__list::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 204, 0.4);
-    border-radius: 4px;
-}
-
-#menu.menu--solo-vehicle .premium-vmenu__detail {
-    min-height: 0 !important;
-    height: 100% !important;
-    overflow: hidden !important;
-}
-
-#menu.menu--solo-vehicle .premium-vmenu__detail-body {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-}
-
-#menu.menu--solo-vehicle .premium-vmenu__actions {
-    flex-shrink: 0 !important;
-}
-
-@keyframes premium-vehicle-in {
-    from { opacity: 0; transform: scale(.95) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.premium-vmenu__item.is-selected {
-    background: rgba(0,255,204,.05) !important;
-    border-color: rgba(0,255,204,.3) !important;
-}
-
-.premium-vmenu__item.is-selected::before { background: var(--premium-accent) !important; }
-.premium-vmenu__plate,
-.premium-vmenu__insurance-info strong { color: var(--premium-accent) !important; background-color: rgba(0,255,204,.1) !important; }
-.premium-vmenu__stats .menu-vcard__vital i b { background: var(--premium-accent) !important; }
-.premium-vmenu__btn--primary { color: #000 !important; background: var(--premium-accent) !important; }
-.premium-vmenu__btn--primary:hover { box-shadow: 0 0 15px rgba(0,255,204,.3) !important; }
-
-/* Vehicle ECU state belongs to the detail language, not to the old orange HUD. */
-.premium-vmenu__detail .menu-vcard__ecu-strip {
-    padding: 11px 13px !important;
-    background: var(--premium-panel) !important;
-    border: 1px solid var(--premium-border) !important;
-    border-radius: 8px !important;
-    box-shadow: none !important;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-strip:not(.menu-vcard__ecu-strip--stock) {
-    background: rgba(0, 255, 204, .045) !important;
-    border-color: rgba(0, 255, 204, .24) !important;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-pill {
-    color: var(--premium-accent) !important;
-    background: rgba(0, 255, 204, .1) !important;
-    border: 1px solid rgba(0, 255, 204, .18) !important;
-    border-radius: 4px !important;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-strip--stock .menu-vcard__ecu-pill {
-    color: var(--premium-muted) !important;
-    background: rgba(255, 255, 255, .05) !important;
-    border-color: var(--premium-border) !important;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-summary {
-    color: rgba(255, 255, 255, .72) !important;
-    font-weight: 700 !important;
-    letter-spacing: .04em !important;
-    text-transform: uppercase;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-dyno,
-.premium-vmenu__detail .menu-vcard__ecu-chip {
-    color: var(--premium-accent) !important;
-    background: rgba(0, 255, 204, .08) !important;
-    border: 1px solid rgba(0, 255, 204, .14) !important;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-toggle {
-    color: var(--premium-muted) !important;
-    background: rgba(255, 255, 255, .03) !important;
-    border-color: var(--premium-border) !important;
-}
-
-.premium-vmenu__detail .menu-vcard__ecu-toggle:hover,
-.premium-vmenu__detail .menu-vcard__ecu-toggle.is-open {
-    color: var(--premium-accent) !important;
-    background: rgba(0, 255, 204, .08) !important;
-    border-color: rgba(0, 255, 204, .3) !important;
+    height: 550px !important;
+    max-height: calc(100vh - 120px) !important;
 }
 
 /* The supplied references use rounded glass rectangles, never legacy cut corners. */
