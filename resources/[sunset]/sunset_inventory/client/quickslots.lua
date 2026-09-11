@@ -1,6 +1,8 @@
 local HOTBAR_SLOTS = 5
 local HOTBAR_PEEK_MS = 3500
+local AMMO_HUD_HOLD_MS = 4000
 local activeHotbarSlot = nil
+local ammoHudUntil = 0
 local hotbarSlots = {}
 local hotbarPeekUntil = 0
 local emoteWheelOpen = false
@@ -84,6 +86,31 @@ end
 local function isHotbarHudVisible()
     if blocked() then return false end
     return hotbarPeekUntil > 0 and GetGameTimer() < hotbarPeekUntil
+end
+
+local function isFiringWeapon(ped)
+    if IsPedShooting(ped) then return true end
+    if IsControlPressed(0, 24) or IsDisabledControlPressed(0, 24) then return true end
+    if IsControlPressed(0, 257) or IsDisabledControlPressed(0, 257) then return true end
+    return false
+end
+
+local function touchAmmoHudPeek(ped)
+    if not ped or ped == 0 then return end
+    local weapon = GetSelectedPedWeapon(ped)
+    if weapon == UNARMED or weapon == 0 then return end
+    if isFiringWeapon(ped) or IsPlayerFreeAiming(PlayerId()) then
+        ammoHudUntil = GetGameTimer() + AMMO_HUD_HOLD_MS
+    end
+end
+
+local function shouldShowAmmoHud(ped)
+    if blocked() then return false end
+    touchAmmoHudPeek(ped)
+    if isHotbarHudVisible() then return true end
+    if activeHotbarSlot then return true end
+    if GetGameTimer() < ammoHudUntil then return true end
+    return false
 end
 
 local function peekHotbarHud()
@@ -212,6 +239,7 @@ local function equipHotbarSlotLocally(slot, slotData)
         local hash = joaat(slotData.weapon)
         if exports.sunset_inventory:EquipHotbarWeapon(hash) then
             activeHotbarSlot = slot
+            ammoHudUntil = GetGameTimer() + AMMO_HUD_HOLD_MS
             pushHotbarUpdate()
             return true
         end
@@ -244,6 +272,7 @@ local function equipHotbarSlotLocally(slot, slotData)
         local hash = joaat(slotData.weapon)
         if exports.sunset_inventory:EquipHotbarWeapon(hash) then
             activeHotbarSlot = slot
+            ammoHudUntil = GetGameTimer() + AMMO_HUD_HOLD_MS
             pushHotbarUpdate()
             return true
         end
@@ -543,7 +572,7 @@ CreateThread(function()
                 local ammo = weaponAmmoForHash(ped, weapon)
                 if ammo then
                     exports.sunset_ui:Send('weaponAmmoUpdate', {
-                        visible = IsPedShooting(ped),
+                        visible = shouldShowAmmoHud(ped),
                         clip = ammo.clip,
                         total = ammo.total,
                     })
@@ -578,7 +607,7 @@ CreateThread(function()
             else
                 local ammo = weaponAmmoForHash(ped, weapon)
                 if ammo then
-                    local showAmmo = isHotbarHudVisible() or IsPedShooting(ped)
+                    local showAmmo = shouldShowAmmoHud(ped)
                     if ammo.clip ~= lastClip or ammo.total ~= lastTotal or showAmmo ~= lastAmmoVisible then
                         lastClip, lastTotal = ammo.clip, ammo.total
                         lastAmmoVisible = showAmmo
@@ -598,7 +627,7 @@ CreateThread(function()
                         end
                     end
                 end
-                Wait(IsPedShooting(ped) and 0 or 35)
+                Wait(isFiringWeapon(ped) and 0 or 35)
             end
         end
     end

@@ -53,6 +53,84 @@ local function turfAtWar(turfId)
     return ActiveWar and tonumber(ActiveWar.turfId) == tonumber(turfId)
 end
 
+local function turfBoundaryColour(turf, atWar)
+    if atWar then
+        return WarBlipPulse and 255 or 235, WarBlipPulse and 70 or 45, 45, WarBlipPulse and 210 or 170
+    end
+    if turf.ownerClanId then
+        local colour = hexToBlipColour(turf.ownerColor)
+        if colour == 1 then return 255, 70, 70, 175 end
+        if colour == 2 then return 70, 220, 110, 175 end
+        if colour == 3 then return 80, 140, 255, 175 end
+        return 0, 220, 190, 175
+    end
+    return 120, 170, 255, 150
+end
+
+local function drawDottedTurfRing(coords, radius, r, g, b, a)
+    local segments = SunsetTurfs.BoundarySegments or 56
+    local dotEvery = math.max(1, SunsetTurfs.BoundaryDotEvery or 2)
+    local step = (math.pi * 2) / segments
+    local z = coords.z + 0.35
+
+    for i = 0, segments - 1, dotEvery do
+        local angle = i * step
+        local x = coords.x + math.cos(angle) * radius
+        local y = coords.y + math.sin(angle) * radius
+        DrawMarker(
+            2,
+            x, y, z,
+            0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.42, 0.42, 0.42,
+            r, g, b, a,
+            false, false, 2, false, nil, nil, false
+        )
+    end
+
+    for i = 0, 3 do
+        local angle = (math.pi * 0.5) * i
+        local x = coords.x + math.cos(angle) * radius
+        local y = coords.y + math.sin(angle) * radius
+        DrawMarker(
+            2,
+            x, y, z + 0.15,
+            0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            0.62, 0.62, 0.62,
+            r, g, b, math.min(255, a + 35),
+            false, false, 2, false, nil, nil, false
+        )
+    end
+end
+
+local function drawNearbyTurfBoundaries(pos)
+    local drawDistance = SunsetTurfs.BoundaryDrawDistance or 220.0
+    for id, turf in pairs(LocalTurfs) do
+        if not turf.coords then goto continue end
+        local radius = turf.radius or 110.0
+        local dist = #(pos - turf.coords)
+        if dist > radius + drawDistance then goto continue end
+
+        local atWar = turfAtWar(id)
+        local r, g, b, a = turfBoundaryColour(turf, atWar)
+        drawDottedTurfRing(turf.coords, radius, r, g, b, a)
+
+        if dist <= radius + 4.0 then
+            SetTextFont(4)
+            SetTextScale(0.32, 0.32)
+            SetTextColour(r, g, b, 235)
+            SetTextCentre(true)
+            SetTextOutline()
+            SetTextEntry('STRING')
+            AddTextComponentString(('ZONA TURF — raza %.0fm'):format(radius))
+            DrawText(0.5, 0.915)
+        end
+
+        ::continue::
+    end
+end
+
 local function applyTurfBlipStyle(turf, row, atWar)
     local ownerColour = hexToBlipColour(turf.ownerColor)
     local radiusAlpha = SunsetTurfs.TurfBlipAlpha or 110
@@ -292,23 +370,42 @@ CreateThread(function()
     end
 end)
 
--- Zone ring on ground during active war (visible in world + helps read radius)
+-- Dotted turf boundary + war fill (visible in world so radius is readable)
 CreateThread(function()
     while true do
-        if ActiveWar and ActiveWar.coords then
-            Wait(0)
-            local c = ActiveWar.coords
-            local r = ActiveWar.radius or 110.0
-            local pulse = WarBlipPulse and 90 or 55
-            DrawMarker(
-                1,
-                c.x, c.y, c.z - 1.0,
-                0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0,
-                r * 2.0, r * 2.0, 2.5,
-                255, 60, 60, pulse,
-                false, false, 2, false, nil, nil, false
-            )
+        local ped = PlayerPedId()
+        if ped and ped ~= 0 then
+            local pos = GetEntityCoords(ped)
+            local nearTurf = false
+            local drawDistance = SunsetTurfs.BoundaryDrawDistance or 220.0
+            for _, turf in pairs(LocalTurfs) do
+                if turf.coords and #(pos - turf.coords) <= (turf.radius or 110.0) + drawDistance then
+                    nearTurf = true
+                    break
+                end
+            end
+
+            if nearTurf or ActiveWar then
+                Wait(0)
+                drawNearbyTurfBoundaries(pos)
+
+                if ActiveWar and ActiveWar.coords then
+                    local c = ActiveWar.coords
+                    local r = ActiveWar.radius or 110.0
+                    local pulse = WarBlipPulse and 90 or 55
+                    DrawMarker(
+                        1,
+                        c.x, c.y, c.z - 1.0,
+                        0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0,
+                        r * 2.0, r * 2.0, 2.5,
+                        255, 60, 60, pulse,
+                        false, false, 2, false, nil, nil, false
+                    )
+                end
+            else
+                Wait(800)
+            end
         else
             Wait(800)
         end

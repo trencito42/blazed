@@ -6,8 +6,11 @@ SunsetTurfs.ScorePerSecond = 1
 SunsetTurfs.ScorePerKill = 10
 SunsetTurfs.TurfCooldownSec = 1800 -- 30 minutes cooldown after a war
 SunsetTurfs.MinMembersToAttack = 1
-SunsetTurfs.TurfBlipAlpha = 110
-SunsetTurfs.TurfBlipAlphaWar = 155
+SunsetTurfs.TurfBlipAlpha = 130
+SunsetTurfs.TurfBlipAlphaWar = 165
+SunsetTurfs.BoundaryDrawDistance = 220.0
+SunsetTurfs.BoundarySegments = 56
+SunsetTurfs.BoundaryDotEvery = 2
 
 SunsetTurfs.WeaponBlacklist = {
     [`WEAPON_RPG`] = true,
