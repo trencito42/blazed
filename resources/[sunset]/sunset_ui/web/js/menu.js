@@ -731,6 +731,7 @@ const Menu = {
         }
 
         document.body.classList.add('menu-open');
+        document.body.classList.toggle('menu--solo-vehicle-active', this.soloMode === 'vehicle');
         menu.classList.remove('hidden');
         this.clearAlert();
         this.update(data);
@@ -750,7 +751,7 @@ const Menu = {
         const closeBtn = $('#menu-close-btn');
         if (closeBtn && this._closeHtml) closeBtn.innerHTML = this._closeHtml;
 
-        document.body.classList.remove('menu-open');
+        document.body.classList.remove('menu-open', 'menu--solo-vehicle-active');
         this.clearAlert();
     },
 
