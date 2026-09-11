@@ -522,6 +522,7 @@ CreateThread(function()
 
             if not nearStation then
                 if uiVisible and not refueling and not fillingCan then hidePumpUi() end
+                clearAllPumpTooltips()
                 Wait(1000)
             else
                 local veh = getDriverVehicle()

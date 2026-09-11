@@ -131,6 +131,14 @@ body.faction-panels-open #progress {
     transition: opacity 220ms ease, filter 220ms ease, visibility 220ms ease;
 }
 
+/* World tooltips must stay visible during gameplay (3D prompts above NPCs/pumps). */
+#world-tooltip-layer {
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    pointer-events: none !important;
+}
+
 body.fuel-pump-open #courier-panel,
 body.fuel-pump-open #fishing-panel,
 body.fuel-pump-open #license-test-panel,

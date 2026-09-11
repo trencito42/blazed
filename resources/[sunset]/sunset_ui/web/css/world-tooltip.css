@@ -1,9 +1,9 @@
 #world-tooltip-layer {
     position: fixed;
     inset: 0;
-    z-index: 8500;
+    z-index: 9600;
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .world-tooltip-3d {

@@ -3,24 +3,31 @@ SunsetWorld.Tooltips = SunsetWorld.Tooltips or {}
 
 local active = {}
 
-local function sendSync()
-    local list = {}
-    for id, row in pairs(active) do
-        list[#list + 1] = row
-        if not row.visible then
-            active[id] = nil
-        end
-    end
-    exports.sunset_ui:Send('worldTooltipsSync', list)
+local function sendSync(list)
+    exports.sunset_ui:Send('worldTooltipsSync', list or {})
+end
+
+local function rowPayload(id, row, sx, sy)
+    return {
+        id = id,
+        visible = true,
+        x = sx * 100.0,
+        y = sy * 100.0,
+        badge = row.badge or '',
+        badgeClass = row.badgeClass or '',
+        bodyClass = row.bodyClass or row.badgeClass or '',
+        icon = row.icon or 'ph-circle',
+        title = row.title or '',
+        desc = row.desc or '',
+        meta = row.meta or '',
+        key = row.key or 'E',
+    }
 end
 
 function SunsetWorld.Tooltips.set(id, data)
     if not id then return end
     if not data or data.visible == false then
-        if active[id] then
-            active[id] = { id = id, visible = false }
-            sendSync()
-        end
+        SunsetWorld.Tooltips.clear(id)
         return
     end
 
@@ -30,20 +37,8 @@ function SunsetWorld.Tooltips.set(id, data)
         return
     end
 
-    local onScreen, sx, sy = World3dToScreen2d(coords.x, coords.y, coords.z)
-    if not onScreen then
-        if active[id] then
-            active[id] = { id = id, visible = false }
-            sendSync()
-        end
-        return
-    end
-
     active[id] = {
-        id = id,
-        visible = true,
-        x = sx * 100.0,
-        y = sy * 100.0,
+        coords = coords,
         badge = data.badge or '',
         badgeClass = data.badgeClass or '',
         bodyClass = data.bodyClass or data.badgeClass or '',
@@ -53,19 +48,17 @@ function SunsetWorld.Tooltips.set(id, data)
         meta = data.meta or '',
         key = data.key or 'E',
     }
-    sendSync()
 end
 
 function SunsetWorld.Tooltips.clear(id)
     if id then
         if active[id] then
-            active[id] = { id = id, visible = false }
-            sendSync()
+            active[id] = nil
         end
         return
     end
     active = {}
-    exports.sunset_ui:Send('worldTooltipsSync', {})
+    sendSync({})
 end
 
 function SunsetWorld.Tooltips.coordsFromEntity(entity, offsetZ)
@@ -81,3 +74,25 @@ function SunsetWorld.Tooltips.coordsFromVector3(vec, offsetZ)
     if not vec then return nil end
     return vector3(vec.x, vec.y, vec.z + (offsetZ or 1.05))
 end
+
+CreateThread(function()
+    while true do
+        local hasActive = next(active) ~= nil
+        if hasActive then
+            local list = {}
+            for id, row in pairs(active) do
+                local coords = row.coords
+                if coords then
+                    local onScreen, sx, sy = World3dToScreen2d(coords.x, coords.y, coords.z)
+                    if onScreen then
+                        list[#list + 1] = rowPayload(id, row, sx, sy)
+                    end
+                end
+            end
+            sendSync(list)
+            Wait(0)
+        else
+            Wait(250)
+        end
+    end
+end)
