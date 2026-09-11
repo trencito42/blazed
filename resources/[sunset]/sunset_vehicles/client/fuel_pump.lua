@@ -20,6 +20,10 @@ local PUMP_REACH = 4.2
 local PUMP_KEY_VEHICLE = 47 -- G
 local PUMP_KEY_CAN = 38 -- E
 local PUMP_KEY_FLOW = 22 -- SPACE
+local PUMP_KEY_CHECKOUT = 191 -- ENTER / frontend accept
+local cachedOwnerLabel = nil
+local cachedOwnerKey = nil
+local cachedOwnerAt = 0
 
 local function notify(msg, typ)
     exports.sunset_ui:Notify(msg, typ or 'info')
@@ -122,12 +126,42 @@ local function pumpTooltipCoords(pump)
     return vector3(pump.x, pump.y, pump.z + 1.15)
 end
 
+local function getOwnerLabel(station)
+    local key = station and (station.label or '') or ''
+    local now = GetGameTimer()
+    if cachedOwnerKey == key and cachedOwnerLabel and (now - cachedOwnerAt) < 8000 then
+        return cachedOwnerLabel
+    end
+
+    local label = 'Stat'
+    if GetResourceState('sunset_businesses') == 'started' then
+        local ctx = Sunset.AwaitCallback('sunset:getGasBusinessContext')
+        if ctx and ctx.business then
+            local biz = ctx.business
+            if biz.ownerName and biz.ownerName ~= '' then
+                label = biz.ownerName
+            elseif biz.ownerCharacterId then
+                label = ('Jucător #%d'):format(biz.ownerCharacterId)
+            elseif biz.forSale then
+                label = 'De vânzare'
+            end
+        end
+    end
+
+    cachedOwnerKey = key
+    cachedOwnerLabel = label
+    cachedOwnerAt = now
+    return label
+end
+
 local function buildUiPayload(mode, extra)
     extra = extra or {}
-    local stationLabel = sessionStation and (sessionStation.label or 'Gas Station') or (extra.station or 'Gas Station')
+    local stationRef = sessionStation or extra.stationRef
+    local stationLabel = stationRef and (stationRef.label or 'Gas Station') or (extra.station or 'Gas Station')
     local payload = {
         mode = mode,
         station = stationLabel,
+        ownerName = extra.ownerName or getOwnerLabel(stationRef),
         fuelType = fillingCan and 'Gas Can Fill' or 'Premium Gasoline 99',
         pricePerLiter = pricePerLiter(),
         sessionLiters = extra.sessionLiters or sessionAddedLiters or 0,
@@ -203,6 +237,13 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                         desc = 'Umple Bidonul'
                     end
                 end
+                local ownerHint = ''
+                if isActive then
+                    ownerHint = getOwnerLabel(station)
+                    if ownerHint and ownerHint ~= '' then
+                        ownerHint = ' · ' .. ownerHint
+                    end
+                end
                 tooltips.set(id, {
                     coords = pumpTooltipCoords(pump),
                     badge = pumpBrand(station),
@@ -210,7 +251,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                     bodyClass = 'gas',
                     icon = 'ph-gas-pump',
                     title = ('Pompă Benzina #%02d'):format(globalId),
-                    desc = desc,
+                    desc = desc .. ownerHint,
                     key = isActive and key or '',
                 })
             else
@@ -296,6 +337,22 @@ local function finishCanFill()
     sessionAddedLiters = 0
     Wait(900)
     hidePumpUi()
+end
+
+local function tryCheckout()
+    if not (refueling or fillingCan) then return end
+    if isPumping then return end
+    if sessionAddedLiters <= 0.05 then return end
+    if refueling then
+        local veh = sessionVeh
+        if veh ~= 0 and DoesEntityExist(veh) then
+            finishRefuel(veh)
+        else
+            cancelRefuel()
+        end
+    elseif fillingCan then
+        finishCanFill()
+    end
 end
 
 local function startRefuel(station, pumpIndex, stationIndex)
@@ -456,6 +513,7 @@ CreateThread(function()
                     if not uiVisible then
                         showPumpUi('ready', {
                             station = station.label,
+                            stationRef = station,
                             vehicleName = vehicleDisplayName(veh),
                             tankPct = current,
                             sessionLiters = 0,
@@ -475,6 +533,7 @@ CreateThread(function()
                     if not uiVisible then
                         showPumpUi('ready', {
                             station = station.label,
+                            stationRef = station,
                             vehicleName = 'Gas Can',
                             tankPct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0,
                             sessionLiters = 0,
@@ -522,6 +581,15 @@ CreateThread(function()
                     })
                 end
             end
+
+            if sessionAddedLiters > 0.05 and not isPumping then
+                if IsControlJustPressed(0, PUMP_KEY_CHECKOUT)
+                    or IsDisabledControlJustPressed(0, PUMP_KEY_CHECKOUT)
+                    or IsControlJustPressed(0, 201)
+                    or IsDisabledControlJustPressed(0, 201) then
+                    tryCheckout()
+                end
+            end
             Wait(0)
         else
             Wait(250)
@@ -530,16 +598,7 @@ CreateThread(function()
 end)
 
 AddEventHandler('sunset:nui:fuelPumpCheckout', function()
-    if refueling then
-        local veh = sessionVeh
-        if veh ~= 0 and DoesEntityExist(veh) then
-            finishRefuel(veh)
-        else
-            cancelRefuel()
-        end
-    elseif fillingCan then
-        finishCanFill()
-    end
+    tryCheckout()
 end)
 
 AddEventHandler('sunset:nui:fuelPumpPumpStart', function()

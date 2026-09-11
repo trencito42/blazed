@@ -77,6 +77,16 @@ const FuelPump = (() => {
             if (!root()?.classList.contains('is-visible')) return;
             if (event.code === 'Space') post('fuelPumpPumpStop');
         });
+        document.addEventListener('keydown', (event) => {
+            if (!root()?.classList.contains('is-visible')) return;
+            if (event.repeat) return;
+            const mode = state?.mode;
+            const liters = Number(state?.sessionLiters) || 0;
+            if ((event.code === 'Enter' || event.code === 'NumpadEnter') && mode === 'pumping' && liters > 0) {
+                event.preventDefault();
+                post('fuelPumpCheckout');
+            }
+        });
     }
 
     function update(data = {}) {
@@ -100,6 +110,9 @@ const FuelPump = (() => {
         }
         if (data.pricePerLiter !== undefined && get('fp-price-line')) {
             get('fp-price-line').textContent = `$${formatMoney(data.pricePerLiter)} / Liter`;
+        }
+        if (data.ownerName !== undefined && get('fp-owner-name')) {
+            get('fp-owner-name').textContent = `Proprietar: ${data.ownerName || 'Stat'}`;
         }
         if (data.sessionLiters !== undefined && get('fp-val-liters')) {
             get('fp-val-liters').textContent = formatLiters(data.sessionLiters);

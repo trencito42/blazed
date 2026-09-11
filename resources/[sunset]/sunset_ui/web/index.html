@@ -32,7 +32,7 @@
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css?v=2">
-    <link rel="stylesheet" href="css/fuel-pump-forza.css?v=1">
+    <link rel="stylesheet" href="css/fuel-pump-forza.css?v=2">
     <link rel="stylesheet" href="css/world-tooltip.css?v=2">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap">
     <link rel="stylesheet" href="css/theme.css?v=9">
@@ -239,6 +239,10 @@
                 <i class="ph-fill ph-wallet" style="color:var(--fp-accent);font-size:18px;"></i>
                 <span id="fp-price-line">$2.45 / Liter</span>
             </div>
+            <div class="fp-type fp-owner-line">
+                <i class="ph-fill ph-user-circle" style="color:var(--fp-text-muted);font-size:18px;"></i>
+                <span id="fp-owner-name">Proprietar: Stat</span>
+            </div>
         </div>
         <div class="fp-counter-panel">
             <div class="fp-counter-group">
@@ -266,7 +270,7 @@
                 <button type="button" class="fp-btn-pump" id="fp-btn-pump" disabled>
                     <div class="fp-pump-text"><span class="fp-key-hint">SPACE</span> Press Pump</div>
                 </button>
-                <button type="button" class="fp-btn-checkout" id="fp-btn-checkout" disabled>Pay &amp; Close</button>
+                <button type="button" class="fp-btn-checkout" id="fp-btn-checkout" disabled><span class="fp-key-hint">ENTER</span> Pay &amp; Close</button>
             </div>
         </div>
     </div>
@@ -3482,7 +3486,7 @@
     <script src="js/spawn.js?v=5"></script>
     <script src="js/damage-indicators.js?v=1"></script>
     <script src="js/world-tooltip.js?v=2"></script>
-    <script src="js/fuel_pump.js?v=2"></script>
+    <script src="js/fuel_pump.js?v=3"></script>
     <script src="js/job_icons.js?v=1"></script>
     <script src="js/fishing.js?v=6"></script>
     <script src="js/license_test.js?v=7"></script>

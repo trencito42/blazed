@@ -249,6 +249,15 @@
     font-weight: 900;
 }
 
+.fuel-pump-forza .fp-owner-line {
+    margin-top: -4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--fp-text-muted);
+}
+
 .fuel-pump-forza .fp-btn-checkout {
     background: var(--fp-text-main);
     color: #000;
@@ -261,6 +270,10 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .fuel-pump-forza .fp-btn-checkout:hover:not(:disabled) {
