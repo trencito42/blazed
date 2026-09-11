@@ -251,30 +251,33 @@ const Menu = {
         </div>`;
     },
 
-    vmenuStatBar(label, pct, kind) {
-        const value = Math.max(0, Math.min(100, Math.round(pct)));
-        let color = 'var(--vmenu-accent)';
-        if (kind === 'fuel') {
-            color = value < 20 ? 'var(--vmenu-warning)' : 'var(--vmenu-text-main)';
-        } else if (value < 30) {
-            color = 'var(--vmenu-danger)';
+    vmenuStatClass(val) {
+        const value = Math.max(0, Math.min(100, Math.round(val)));
+        if (value >= 80) return 'ok';
+        if (value >= 40) return 'warn';
+        return 'bad';
+    },
+
+    vmenuStatusTag(key) {
+        if (key === 'garage') return { cls: 'garage', label: 'Garaj' };
+        if (key === 'out' || key === 'parked') return { cls: 'out', label: key === 'parked' ? 'Parcat' : 'Stradă' };
+        return { cls: 'impound', label: 'Confiscat' };
+    },
+
+    vmenuTuningList(ecuInfo) {
+        const ecu = ecuInfo || {};
+        if (ecu.stock) {
+            return '<div class="tuning-item" style="color:rgba(255,255,255,0.4)">Fără modificări</div>';
         }
-        return `<div class="stat-box">
-            <div class="stat-label"><span>${label}</span><span>${value}%</span></div>
-            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${value}%;background:${color}"></div></div>
-        </div>`;
-    },
-
-    vmenuStatusBadge(key) {
-        if (key === 'garage') return 'status-garage';
-        if (key === 'out' || key === 'parked') return 'status-out';
-        return 'status-impound';
-    },
-
-    vmenuStatusColor(key) {
-        if (key === 'garage') return 'var(--vmenu-accent)';
-        if (key === 'out' || key === 'parked') return 'var(--vmenu-warning)';
-        return 'var(--vmenu-danger)';
+        const lines = (ecu.lines || []).slice(0, 6);
+        if (!lines.length) {
+            const chips = (ecu.chips || []).slice(0, 6);
+            if (!chips.length) {
+                return `<div class="tuning-item">ECU: <span>${this.escape(ecu.summary || 'Custom')}</span></div>`;
+            }
+            return chips.map((chip) => `<div class="tuning-item">Chip: <span>${this.escape(chip)}</span></div>`).join('');
+        }
+        return lines.map((line) => `<div class="tuning-item">${this.escape(line.label || 'Mod')}: <span>${this.escape(line.value || '—')}</span></div>`).join('');
     },
 
     vehicleSnapshotKey(vehicles, selectedId, openEcuId) {
@@ -288,131 +291,203 @@ const Menu = {
         return JSON.stringify({ selectedId, openEcuId, list });
     },
 
+    _vehicleStateOf(v) {
+        const isDestroyed = v.destroyed === true || v.destroyed === 1 || v.destroyed === '1';
+        const stored = !isDestroyed && (v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1);
+        const inWorld = !isDestroyed && v.inWorld === true;
+        const hasPark = Number.isFinite(Number(v.parked_x)) && Number.isFinite(Number(v.parked_y));
+        if (isDestroyed) return { key: 'impound', label: 'Confiscat / Asigurare', stored: false, inWorld: false, isDestroyed: true };
+        if (stored) return { key: 'garage', label: `Garaj · ${v.garage || 'Central'}`, stored, inWorld };
+        if (inWorld) return { key: 'out', label: v.garage || 'Stradă', stored, inWorld };
+        if (hasPark) return { key: 'parked', label: 'Parcat', stored, inWorld };
+        return { key: 'impound', label: 'Indisponibil', stored, inWorld };
+    },
+
+    _bindVehicleImpoundHold(root, vehicleId, claimCost) {
+        const hold = root.querySelector('[data-v-impound-hold]');
+        if (!hold) return;
+        let prog = 0;
+        let frame = null;
+        const reset = () => {
+            cancelAnimationFrame(frame);
+            frame = null;
+            prog = 0;
+            const bar = hold.querySelector('.bh-progress');
+            if (bar) bar.style.width = '0%';
+        };
+        const tick = () => {
+            prog += 2.5;
+            const bar = hold.querySelector('.bh-progress');
+            if (bar) bar.style.width = `${Math.min(100, prog)}%`;
+            if (prog >= 100) {
+                reset();
+                post('menuVehicleAction', { action: 'claim_insurance', vehicleId });
+                return;
+            }
+            frame = requestAnimationFrame(tick);
+        };
+        hold.onpointerdown = (e) => { e.preventDefault(); reset(); frame = requestAnimationFrame(tick); };
+        hold.onpointerup = reset;
+        hold.onpointerleave = reset;
+        const label = hold.querySelector('.bh-text');
+        if (label) label.innerHTML = `<span class="key">ENTER</span> Achită Cauțiunea (${formatMoney(claimCost)})`;
+    },
+
     renderVehicles(data) {
         const grid = $('#menu-vehicle-grid');
         if (!grid) return;
         const vehicles = data.vehicles || [];
+        const query = String(this._vehicleSearch || '').trim().toLowerCase();
 
-        const snapKey = this.vehicleSnapshotKey(vehicles, this.selectedVehicleId, this.openEcuVehicleId);
-        if (snapKey === this._vehicleSnapKey && grid.classList.contains('vmenu-wrapper')) {
+        const snapKey = this.vehicleSnapshotKey(vehicles, this.selectedVehicleId, this.openEcuVehicleId) + '|' + query;
+        if (snapKey === this._vehicleSnapKey && grid.classList.contains('v-menu-forza')) {
             return;
         }
         this._vehicleSnapKey = snapKey;
 
-        grid.className = 'vmenu-wrapper visible';
+        grid.className = 'v-menu-forza visible';
 
         if (!vehicles.length) {
             this.selectedVehicleId = null;
-            grid.innerHTML = `<div class="vmenu-empty"><strong>NO VEHICLES</strong><span>Your purchased vehicles will appear here.</span></div>`;
+            grid.innerHTML = '<div class="vmenu-empty"><strong>Fără Vehicule</strong><span>Mașinile tale vor apărea aici.</span></div>';
             return;
         }
 
-        const selectedExists = vehicles.some((v) => String(v.id) === String(this.selectedVehicleId));
-        if (!selectedExists) this.selectedVehicleId = vehicles[0].id;
-        const selected = vehicles.find((v) => String(v.id) === String(this.selectedVehicleId)) || vehicles[0];
+        const filtered = query
+            ? vehicles.filter((v) => {
+                const model = String(v.model || '').toLowerCase();
+                const plate = String(v.plate || '').toLowerCase();
+                return model.includes(query) || plate.includes(query);
+            })
+            : vehicles;
 
-        const stateOf = (v) => {
-            const isDestroyed = v.destroyed === true || v.destroyed === 1 || v.destroyed === '1';
-            const stored = !isDestroyed && (v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1);
-            const inWorld = !isDestroyed && v.inWorld === true;
-            const hasPark = Number.isFinite(Number(v.parked_x)) && Number.isFinite(Number(v.parked_y));
-            if (isDestroyed) return { key: 'destroyed', label: 'Totaled (Insurance)', stored: false, inWorld: false, isDestroyed: true };
-            if (stored) return { key: 'garage', label: `In garage · ${v.garage || 'Legion'}`, stored, inWorld };
-            if (inWorld) return { key: 'out', label: 'Active in world', stored, inWorld };
-            if (hasPark) return { key: 'parked', label: 'Parked outside', stored, inWorld };
-            return { key: 'missing', label: 'Location unavailable', stored, inWorld };
-        };
+        const selectedExists = filtered.some((v) => String(v.id) === String(this.selectedVehicleId));
+        if (!selectedExists) this.selectedVehicleId = (filtered[0] || vehicles[0]).id;
+        const selected = filtered.find((v) => String(v.id) === String(this.selectedVehicleId))
+            || vehicles.find((v) => String(v.id) === String(this.selectedVehicleId))
+            || vehicles[0];
 
-        const listHtml = vehicles.map((v) => {
-            const status = stateOf(v);
-            const model = this.escape((v.model || 'Vehicle').toUpperCase());
+        const listHtml = (filtered.length ? filtered : vehicles).map((v) => {
+            const status = this._vehicleStateOf(v);
+            const tag = this.vmenuStatusTag(status.key);
+            const name = this.escape((v.label || v.model || 'Vehicle').toUpperCase());
             const plate = this.escape(v.plate || '—');
             const isSelected = String(v.id) === String(this.selectedVehicleId);
-            return `<button type="button" class="vehicle-item ${isSelected ? 'selected' : ''}" data-v-select="${Number(v.id) || 0}">
-                <div class="v-model">${model}</div>
-                <div class="v-plate">${plate}</div>
-                <div class="v-status-badge ${this.vmenuStatusBadge(status.key)}" aria-label="${this.escape(status.label)}"></div>
+            return `<button type="button" class="v-item ${isSelected ? 'active' : ''}" data-v-select="${Number(v.id) || 0}">
+                <i class="ph-fill ph-car-profile vi-icon"></i>
+                <div class="vi-info">
+                    <div class="vi-name">${name}</div>
+                    <div class="vi-plate">${plate}</div>
+                </div>
+                <div class="vi-status ${tag.cls}">${tag.label}</div>
             </button>`;
         }).join('');
 
-        const status = stateOf(selected);
-        const model = this.escape((selected.model || 'Vehicle').toUpperCase());
+        const status = this._vehicleStateOf(selected);
+        const displayName = this.escape((selected.label || selected.model || 'Vehicle').toUpperCase());
         const plate = this.escape(selected.plate || '—');
         const fuel = Math.max(0, Math.min(100, Math.round(Number(selected.fuel) || 0)));
         const engine = Math.max(0, Math.min(100, Math.round((Number(selected.engine) || 0) / 10)));
         const body = Math.max(0, Math.min(100, Math.round((Number(selected.body) || 0) / 10)));
         const odometer = Math.max(0, Number(selected.odometer) || 0);
-        const insurancePts = selected.insurancePoints != null ? selected.insurancePoints : 5;
-        const statusColor = this.vmenuStatusColor(status.key);
+        const claimCost = selected.claimCost != null ? Number(selected.claimCost) : 250;
+        const renewCost = selected.renewCost != null ? Number(selected.renewCost) : 750;
+        const insurancePts = selected.insurancePoints != null ? Number(selected.insurancePoints) : 5;
 
-        let actions = `<button type="button" class="btn btn-secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}">SET GPS</button>`;
+        let mainAction = '';
+        let gpsAction = `<button type="button" class="btn-action secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-crosshair"></i> GPS</button>`;
+        let impoundHold = `<div class="btn-hold hidden" data-v-impound-hold data-v-id="${Number(selected.id) || 0}"><div class="bh-progress"></div><div class="bh-text"><span class="key">ENTER</span> Achită Cauțiunea</div></div>`;
+
         if (status.isDestroyed) {
-            const points = selected.insurancePoints != null ? Number(selected.insurancePoints) : 5;
-            const claimCost = selected.claimCost != null ? Number(selected.claimCost) : 250;
-            const renewCost = selected.renewCost != null ? Number(selected.renewCost) : 750;
-            if (points > 0) {
-                actions = `<button type="button" class="btn btn-danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">FILE INSURANCE CLAIM (${formatMoney(claimCost)})</button>`;
+            mainAction = '';
+            gpsAction = '';
+            if (insurancePts > 0) {
+                impoundHold = `<div class="btn-hold" data-v-impound-hold data-v-id="${Number(selected.id) || 0}"><div class="bh-progress"></div><div class="bh-text"><span class="key">ENTER</span> Achită Cauțiunea (${formatMoney(claimCost)})</div></div>`;
             } else {
-                actions = `<button type="button" class="btn btn-warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">RENEW COVERAGE (${formatMoney(renewCost)})</button>`;
+                mainAction = `<button type="button" class="btn-action" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-shield-check"></i> Reînnoiește Asigurarea (${formatMoney(renewCost)})</button>`;
+                impoundHold = '';
             }
         } else if (status.stored) {
-            actions = `<button type="button" class="btn btn-primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">SPAWN VEHICLE</button>${actions}`;
-            if ((selected.insurancePoints || 0) < 5) {
-                actions += `<button type="button" class="btn btn-secondary" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 POINTS (${formatMoney(selected.renewCost || 750)})</button>`;
-            }
+            mainAction = `<button type="button" class="btn-action" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-key"></i> Solicită Valet</button>`;
+            gpsAction = '';
         } else if (status.inWorld) {
-            if (selected.isCurrentVehicle) {
-                actions = `<button type="button" class="btn btn-primary" data-v-action="park" data-v-id="${Number(selected.id) || 0}">PARK HERE</button>${actions}`;
-            } else {
-                actions = `<button type="button" class="btn btn-primary" data-v-action="store" data-v-id="${Number(selected.id) || 0}">STORE VEHICLE</button>${actions}`;
-            }
+            const parkAction = selected.isCurrentVehicle ? 'park' : 'store';
+            const parkLabel = selected.isCurrentVehicle ? 'Park / Garaj' : 'Trimite în Garaj';
+            mainAction = `<button type="button" class="btn-action" data-v-action="${parkAction}" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-car"></i> ${parkLabel}</button>`;
+            gpsAction = `<button type="button" class="btn-action secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-crosshair"></i> GPS (${this.escape(status.label)})</button>`;
         } else {
-            actions = `<button type="button" class="btn btn-primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">RESPAWN HERE</button>${actions}`;
+            mainAction = `<button type="button" class="btn-action" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-key"></i> Respawn Aici</button>`;
         }
 
-        grid.innerHTML = `<div class="vmenu-sidebar">
-                <div class="sidebar-header">
-                    <h1>PERSONAL GARAGE</h1>
-                    <p>Select a vehicle for details</p>
+        grid.innerHTML = `<div class="v-sidebar">
+                <div class="v-header">
+                    <h2 class="vh-title"><i class="ph-bold ph-steering-wheel"></i> Vehiculele Tale</h2>
+                    <div class="v-search">
+                        <i class="ph-bold ph-magnifying-glass"></i>
+                        <input type="text" id="v-menu-search" placeholder="Caută model sau număr..." value="${this.escape(query)}">
+                    </div>
                 </div>
-                <div class="vehicle-list">${listHtml}</div>
+                <div class="v-list">${listHtml || '<div class="vmenu-empty" style="transform:skewX(5deg);border:none;background:transparent"><span>Niciun rezultat</span></div>'}</div>
             </div>
-            <div class="vmenu-content">
-                <div class="vmenu-detail-panel">
-                    <div class="detail-header">
-                        <div class="detail-class">PERSONAL VEHICLE</div>
-                        <h2 class="detail-name">${model}</h2>
-                        <div class="detail-status-text">
-                            <span style="color:${statusColor}">●</span>
-                            <span>${this.escape(status.label)}</span>
+            <div class="v-details">
+                <i class="ph-fill ph-car-profile vd-watermark"></i>
+                <div class="vd-header">
+                    <div class="vd-title-box">
+                        <div class="vd-class">${this.escape(selected.vehicleClass || 'Personal Vehicle')}</div>
+                        <h2 class="vd-name">${displayName}</h2>
+                    </div>
+                    <div class="vd-plate-box">
+                        <div class="vd-plate-state">San Andreas</div>
+                        <div class="vd-plate-text">${plate}</div>
+                    </div>
+                </div>
+                <div class="vd-body">
+                    <div class="vd-status-grid">
+                        <div class="status-box ${this.vmenuStatClass(engine)}">
+                            <div class="sb-label"><i class="ph-fill ph-engine"></i> Motor</div>
+                            <div class="sb-val">${engine}%</div>
+                        </div>
+                        <div class="status-box ${this.vmenuStatClass(body)}">
+                            <div class="sb-label"><i class="ph-fill ph-car"></i> Caroserie</div>
+                            <div class="sb-val">${body}%</div>
+                        </div>
+                        <div class="status-box ${this.vmenuStatClass(fuel)}">
+                            <div class="sb-label"><i class="ph-fill ph-gas-pump"></i> Benzină</div>
+                            <div class="sb-val">${fuel}%</div>
                         </div>
                     </div>
-                    <div class="vmenu-detail-scroll">
-                        <div class="stats-grid">
-                            ${this.vmenuStatBar('ENGINE HEALTH', engine)}
-                            ${this.vmenuStatBar('FUEL', fuel, 'fuel')}
-                            ${this.vmenuStatBar('BODY', body)}
-                            <div class="stat-box stat-box--meta">
-                                <div class="stat-label"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
-                                <div class="stat-label"><span>INSURANCE</span><strong>${insurancePts} PTS · TIER ${selected.insuranceLevel || 1}/11 · CLAIM ${formatMoney(selected.claimCost || 250)}</strong></div>
-                            </div>
+                    <div class="vd-extra-grid">
+                        <div class="vd-card">
+                            <div class="vc-title"><i class="ph-fill ph-gauge"></i> Kilometraj (Odo)</div>
+                            <div class="odometer-val">${odometer.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KM</div>
                         </div>
-                        ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
+                        <div class="vd-card">
+                            <div class="vc-title"><i class="ph-fill ph-cpu"></i> Tuning Instalat</div>
+                            <div class="tuning-list">${this.vmenuTuningList(selected.ecuInfo)}</div>
+                        </div>
                     </div>
-                    <div class="action-buttons">${actions}</div>
+                </div>
+                <div class="vd-actions">
+                    ${gpsAction}
+                    ${mainAction}
+                    ${impoundHold}
                 </div>
             </div>`;
 
-
-        this.bindEcuToggles(grid);
+        const searchInput = grid.querySelector('#v-menu-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                this._vehicleSearch = searchInput.value;
+                this._vehicleSnapKey = null;
+                this.renderVehicles(data);
+            });
+            searchInput.addEventListener('keydown', (e) => e.stopPropagation());
+        }
 
         grid.querySelectorAll('[data-v-select]').forEach((button) => {
             button.addEventListener('click', () => {
-                const nextId = Number(button.dataset.vSelect);
-                if (String(nextId) !== String(this.selectedVehicleId)) {
-                    this.openEcuVehicleId = null;
-                }
-                this.selectedVehicleId = nextId;
+                this.selectedVehicleId = Number(button.dataset.vSelect);
+                this._vehicleSnapKey = null;
                 this.renderVehicles(data);
             });
         });
@@ -426,6 +501,10 @@ const Menu = {
                 });
             });
         });
+
+        if (status.isDestroyed && insurancePts > 0) {
+            this._bindVehicleImpoundHold(grid, Number(selected.id) || 0, claimCost);
+        }
     },
 
     renderProperties(data) {

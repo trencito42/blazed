@@ -154,15 +154,13 @@ hideBillyRayPrompt = function()
     billyPromptVisible = false
     billyHoldStart = nil
     billyHoldVisual = false
-    exports.sunset_ui:Send('playerInteractionPrompt', { visible = false, holding = false })
+    if GetResourceState('sunset_world') == 'started' and SunsetWorld and SunsetWorld.Npc then
+        SunsetWorld.Npc.hideTooltip('fisherman_billy')
+    end
 end
 
-sendBillyHoldState = function(active)
-    active = active == true
-    if billyHoldVisual == active then return end
-    billyHoldVisual = active
-    if not billyPromptVisible then return end
-    exports.sunset_ui:Send('playerInteractionPrompt', { holding = active })
+sendBillyHoldState = function(_active)
+    -- Hold feedback handled in-game; world tooltip stays visible.
 end
 
 local function sendBillyRayPrompt()
@@ -171,26 +169,17 @@ local function sendBillyRayPrompt()
         hideBillyRayPrompt()
         return
     end
-
-    local headCoords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
-    if headCoords.x == 0.0 and headCoords.y == 0.0 and headCoords.z == 0.0 then
-        headCoords = GetEntityCoords(ped) + vector3(0.0, 0.0, 0.85)
-    else
-        headCoords = headCoords + vector3(0.0, 0.0, 0.40)
-    end
-
-    local visible, screenX, screenY = World3dToScreen2d(headCoords.x, headCoords.y, headCoords.z)
-    if not visible then
-        hideBillyRayPrompt()
+    if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld or not SunsetWorld.Npc then
         return
     end
-
     billyPromptVisible = true
-    exports.sunset_ui:Send('playerInteractionPrompt', {
-        visible = true,
-        x = screenX * 100.0,
-        y = screenY * 100.0,
-        name = 'Billy Ray',
+    SunsetWorld.Npc.showTooltip('fisherman_billy', ped, {
+        badge = 'JOB PESCAR',
+        badgeClass = 'fishing',
+        bodyClass = 'fishing',
+        icon = 'ph-fish',
+        title = 'Billy Ray',
+        desc = 'Interacțiune / Job Pescuit',
         key = 'E',
     })
 end

@@ -87,6 +87,11 @@ const FuelPump = (() => {
         if (data.station !== undefined && get('fp-station-label')) {
             get('fp-station-label').textContent = data.station || 'Gas Station';
         }
+        const pumpLabel = get('fp-pump-label');
+        if (pumpLabel) {
+            pumpLabel.textContent = data.pumpLabel || '';
+            pumpLabel.style.display = data.pumpLabel ? 'flex' : 'none';
+        }
         if (data.vehicleName !== undefined && get('fp-vehicle-name')) {
             get('fp-vehicle-name').textContent = data.vehicleName || 'Vehicle';
         }

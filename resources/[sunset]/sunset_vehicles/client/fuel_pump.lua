@@ -6,6 +6,8 @@ local canSessionStartLiters = 0.0
 local canCurrentLiters = 0.0
 local sessionStation = nil
 local sessionPumpIndex = 0
+local sessionPumpGlobalId = 0
+local PUMP_TOOLTIP_DIST = 14.0
 local sessionVeh = 0
 local uiVisible = false
 local isPumping = false
@@ -61,9 +63,37 @@ local function vehicleDisplayName(veh)
     return 'Vehicle'
 end
 
+local function pumpGlobalId(stationIndex, pumpIndex)
+    local total = 0
+    for si = 1, (stationIndex or 1) - 1 do
+        local station = Sunset.GasStations[si]
+        if station and station.pumps then
+            total = total + #station.pumps
+        end
+    end
+    return total + (pumpIndex or 1)
+end
+
+local function pumpBrand(station)
+    local label = station and station.label or ''
+    if label:find('LTD', 1, true) then return 'LTD GASOLINE' end
+    if label:find('Ron', 1, true) then return 'RON GAS' end
+    if label:find('Xero', 1, true) then return 'XERO GAS' end
+    return 'XODO FUEL INC.'
+end
+
+local function clearAllPumpTooltips()
+    if GetResourceState('sunset_world') ~= 'started' then return end
+    for si, station in ipairs(Sunset.GasStations or {}) do
+        for pi in ipairs(station.pumps or {}) do
+            SunsetWorld.Tooltips.clear(('pump_%d_%d'):format(si, pi))
+        end
+    end
+end
+
 local function findNearestPump(coords)
-    local bestStation, bestPump, bestIndex, bestDist = nil, nil, 0, PUMP_REACH + 1.0
-    for _, station in ipairs(Sunset.GasStations or {}) do
+    local bestStation, bestPump, bestIndex, bestStationIndex, bestDist = nil, nil, 0, 0, PUMP_REACH + 1.0
+    for si, station in ipairs(Sunset.GasStations or {}) do
         for index, pump in ipairs(station.pumps or {}) do
             local px, py, pz = pump.x, pump.y, pump.z
             local dist = #(coords - vector3(px, py, pz))
@@ -72,11 +102,12 @@ local function findNearestPump(coords)
                 bestStation = station
                 bestPump = pump
                 bestIndex = index
+                bestStationIndex = si
             end
         end
     end
-    if bestStation then return bestStation, bestPump, bestIndex, bestDist end
-    return nil, nil, 0, 999.0
+    if bestStation then return bestStation, bestPump, bestIndex, bestStationIndex, bestDist end
+    return nil, nil, 0, 0, 999.0
 end
 
 local function pumpTooltipCoords(pump)
@@ -97,6 +128,7 @@ local function buildUiPayload(mode, extra)
         interactive = mode == 'pumping',
         canPump = extra.canPump ~= false,
         pumping = isPumping,
+        pumpLabel = extra.pumpLabel,
     }
 
     if fillingCan then
@@ -129,9 +161,6 @@ end
 local function hidePumpUi()
     uiVisible = false
     exports.sunset_ui:Send('fuelPumpHide', {})
-    if GetResourceState('sunset_world') == 'started' then
-        SunsetWorld.Tooltips.clear('fuel_pump')
-    end
 end
 
 local function getCachedCanLiters()
@@ -143,16 +172,43 @@ local function getCachedCanLiters()
     return cachedCanLiters
 end
 
-local function updatePumpTooltip(station, pump, pumpIndex, key, desc)
-    if GetResourceState('sunset_world') ~= 'started' or not station or not pump then return end
-    SunsetWorld.Tooltips.set('fuel_pump', {
-        coords = pumpTooltipCoords(pump),
-        badge = 'XODO FUEL INC.',
-        icon = 'ph-gas-pump',
-        title = ('Pompă Benzina #%02d'):format(pumpIndex or 1),
-        desc = desc or 'Alimentați Vehiculul',
-        key = key or 'G',
-    })
+local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestSi, nearestPi, nearestDist)
+    if GetResourceState('sunset_world') ~= 'started' then return end
+    local veh = getDriverVehicle()
+    local onFoot = not IsPedInAnyVehicle(PlayerPedId(), false)
+
+    for si, station in ipairs(Sunset.GasStations or {}) do
+        for pi, pump in ipairs(station.pumps or {}) do
+            local id = ('pump_%d_%d'):format(si, pi)
+            local dist = #(playerPos - vector3(pump.x, pump.y, pump.z))
+            if dist <= PUMP_TOOLTIP_DIST then
+                local globalId = pumpGlobalId(si, pi)
+                local isActive = si == nearestSi and pi == nearestPi and dist <= PUMP_REACH
+                local key = 'G'
+                local desc = 'Pompă Activă'
+                if isActive then
+                    if veh ~= 0 then
+                        desc = 'Alimentați Vehiculul'
+                    elseif onFoot then
+                        key = 'E'
+                        desc = 'Umple Bidonul'
+                    end
+                end
+                SunsetWorld.Tooltips.set(id, {
+                    coords = pumpTooltipCoords(pump),
+                    badge = pumpBrand(station),
+                    badgeClass = 'gas',
+                    bodyClass = 'gas',
+                    icon = 'ph-gas-pump',
+                    title = ('Pompă Benzina #%02d'):format(globalId),
+                    desc = desc,
+                    key = isActive and key or '',
+                })
+            else
+                SunsetWorld.Tooltips.clear(id)
+            end
+        end
+    end
 end
 
 local function cancelRefuel()
@@ -233,7 +289,7 @@ local function finishCanFill()
     hidePumpUi()
 end
 
-local function startRefuel(station, pumpIndex)
+local function startRefuel(station, pumpIndex, stationIndex)
     local veh = getDriverVehicle()
     if veh == 0 then return end
 
@@ -255,15 +311,21 @@ local function startRefuel(station, pumpIndex)
     sessionStartFuel = current
     sessionStation = station
     sessionPumpIndex = pumpIndex or 1
+    sessionPumpGlobalId = pumpGlobalId(stationIndex or 1, pumpIndex or 1)
     sessionVeh = veh
     sessionAddedLiters = 0
     isPumping = false
     pumpSpeed = 0.02
-    showPumpUi('pumping', { tankPct = current, sessionLiters = 0, cost = 0 })
+    showPumpUi('pumping', {
+        tankPct = current,
+        sessionLiters = 0,
+        cost = 0,
+        pumpLabel = ('Pompă #%02d'):format(sessionPumpGlobalId),
+    })
     SetVehicleEngineOn(veh, false, true, true)
 end
 
-local function startCanFill(station, pumpIndex)
+local function startCanFill(station, pumpIndex, stationIndex)
     local currentLiters = Sunset.AwaitCallback('sunset:getGasCanLiters') or 0
     local maxLiters = maxCanLiters()
     if currentLiters >= maxLiters - 0.05 then
@@ -278,11 +340,17 @@ local function startCanFill(station, pumpIndex)
     canCurrentLiters = currentLiters
     sessionStation = station
     sessionPumpIndex = pumpIndex or 1
+    sessionPumpGlobalId = pumpGlobalId(stationIndex or 1, pumpIndex or 1)
     sessionAddedLiters = 0
     isPumping = false
     pumpSpeed = 0.02
     local pct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0
-    showPumpUi('pumping', { tankPct = pct, sessionLiters = 0, cost = 0 })
+    showPumpUi('pumping', {
+        tankPct = pct,
+        sessionLiters = 0,
+        cost = 0,
+        pumpLabel = ('Pompă #%02d'):format(sessionPumpGlobalId),
+    })
 end
 
 local function pumpTick()
@@ -369,12 +437,13 @@ CreateThread(function()
             local ped = PlayerPedId()
             local pos = GetEntityCoords(ped)
             local veh = getDriverVehicle()
-            local station, pump, pumpIndex, dist = findNearestPump(pos)
+            local station, pump, pumpIndex, stationIndex, dist = findNearestPump(pos)
+            syncPumpTooltips(pos, station, pump, stationIndex, pumpIndex, dist)
 
             if station and pump and dist <= PUMP_REACH then
+                local globalId = pumpGlobalId(stationIndex, pumpIndex)
                 if veh ~= 0 then
                     local current = getFuelLevel()
-                    updatePumpTooltip(station, pump, pumpIndex, 'G', 'Alimentați Vehiculul')
                     if not uiVisible then
                         showPumpUi('ready', {
                             station = station.label,
@@ -382,16 +451,16 @@ CreateThread(function()
                             tankPct = current,
                             sessionLiters = 0,
                             cost = 0,
+                            pumpLabel = ('Pompă #%02d'):format(globalId),
                         })
                     end
 
                     if not IsControlPressed(0, PUMP_KEY_VEHICLE) then
                         waitForStartRelease = false
                     elseif not waitForStartRelease and current < 99.9 then
-                        startRefuel(station, pumpIndex)
+                        startRefuel(station, pumpIndex, stationIndex)
                     end
                 elseif not IsPedInAnyVehicle(ped, false) then
-                    updatePumpTooltip(station, pump, pumpIndex, 'E', 'Umple Bidonul')
                     local currentLiters = getCachedCanLiters()
                     local maxLiters = maxCanLiters()
                     if not uiVisible then
@@ -401,6 +470,7 @@ CreateThread(function()
                             tankPct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0,
                             sessionLiters = 0,
                             cost = 0,
+                            pumpLabel = ('Pompă #%02d'):format(globalId),
                         })
                     end
 
@@ -409,7 +479,7 @@ CreateThread(function()
                     elseif not waitForStartRelease then
                         local hasCan = Sunset.AwaitCallback('sunset:inventoryHasItem', 'gas_can')
                         if hasCan then
-                            startCanFill(station, pumpIndex)
+                            startCanFill(station, pumpIndex, stationIndex)
                         else
                             notify('Buy a gas can at a 24/7 store first', 'error')
                             waitForStartRelease = true
@@ -419,9 +489,6 @@ CreateThread(function()
                 Wait(0)
             else
                 if uiVisible and not refueling and not fillingCan then hidePumpUi() end
-                if GetResourceState('sunset_world') == 'started' then
-                    SunsetWorld.Tooltips.clear('fuel_pump')
-                end
                 Wait(350)
             end
         end
@@ -487,5 +554,6 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
+    clearAllPumpTooltips()
     if refueling then cancelRefuel() elseif fillingCan then fillingCan = false hidePumpUi() else hidePumpUi() end
 end)

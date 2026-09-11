@@ -15,9 +15,6 @@ files {
     'index.html',
     'style.css',
     'script.js',
-    'assets/bg.png',
-    'assets/bg.webp',
-    'assets/bg_loading.webp',
-    'assets/bg_login.png',
+    'assets/sunset.png',
     'assets/logoblaze.svg',
 }

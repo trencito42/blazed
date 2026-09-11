@@ -17,8 +17,11 @@ const WorldTooltipLayer = {
     },
 
     renderNode(row) {
-        const badgeClass = row.badgeClass === 'npc' ? ' npc' : '';
-        const bodyClass = row.bodyClass === 'npc' ? ' npc' : '';
+        const theme = ['npc', 'gas', 'fishing', 'trucker', 'ammo'].includes(row.badgeClass)
+            ? row.badgeClass
+            : (['npc', 'gas', 'fishing', 'trucker', 'ammo'].includes(row.bodyClass) ? row.bodyClass : '');
+        const badgeClass = theme ? ` ${theme}` : '';
+        const bodyClass = theme ? ` ${theme}` : '';
         const icon = row.icon ? `ph-fill ${this.escape(row.icon)}` : 'ph-fill ph-circle';
         const key = row.key ? `<span class="wt-key">${this.escape(row.key)}</span>` : '';
         const desc = row.desc ? `${key}${this.escape(row.desc)}` : '';

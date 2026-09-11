@@ -20,12 +20,13 @@ function post(action, data = {}) {
 }
 window.post = post;
 
+const ENTRY_SUNSET_BG = 'assets/sunset.png?v=1';
 const ENTRY_BACKGROUNDS = {
-    auth: 'assets/bg_login.webp?v=7',
-    handoff: 'assets/bg_loading.webp?v=8',
-    loading: 'assets/bg_loading.webp?v=8',
+    auth: ENTRY_SUNSET_BG,
+    handoff: ENTRY_SUNSET_BG,
+    loading: ENTRY_SUNSET_BG,
     spawn: 'assets/bg_loading.webp?v=8',
-    default: 'assets/bg_loading.webp?v=8',
+    default: ENTRY_SUNSET_BG,
 };
 let entryBackgroundRequest = 0;
 const entryBackgroundCache = new Map();

@@ -41,7 +41,7 @@ const AuthAccounts = {
         this.mode = 'form';
         const hasAccounts = this.accounts.length > 0;
         $('#auth-panel')?.classList.toggle('has-saved-accounts', hasAccounts);
-        $('#auth-login-stack')?.classList.remove('hidden');
+        $('#form-slider')?.classList.remove('hidden');
         $('#screen-auth .auth-tabs')?.classList.remove('hidden');
     },
 
@@ -51,7 +51,7 @@ const AuthAccounts = {
         list.innerHTML = '';
 
         if (this.accounts.length === 0) {
-            list.innerHTML = '<div class="auth-identities-empty">No saved accounts yet.</div>';
+            list.innerHTML = '<div class="auth-identities-empty">Niciun cont salvat încă.</div>';
             this.setMode();
             return;
         }

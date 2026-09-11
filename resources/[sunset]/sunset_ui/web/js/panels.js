@@ -45,6 +45,13 @@ const Panels = {
         $('#btn-login')?.addEventListener('click', handleLoginTab);
         $('#auth-tab-register')?.addEventListener('click', handleRegisterTab);
         $('#btn-register')?.addEventListener('click', handleRegisterTab);
+        $('#auth-go-register')?.addEventListener('click', handleRegisterTab);
+        $('#auth-go-login')?.addEventListener('click', handleLoginTab);
+        $('#auth-forgot-pass')?.addEventListener('click', () => {
+            console.warn('[Auth] Password reset — contact staff on Discord.');
+        });
+        window.AuthForza?.bind?.();
+        window.TradeForza?.bind?.();
 
         $('#auth-login-btn')?.addEventListener('click', () => {
             if (window.AuthLoading) AuthLoading.beginSubmit();
@@ -199,6 +206,8 @@ const Panels = {
         });
         const loginForm = $('#auth-form-login') || $('#form-login');
         const regForm = $('#auth-form-register') || $('#form-register');
+        const slider = $('#form-slider');
+        const title = $('#auth-main-title');
         if (loginForm) {
             loginForm.classList.toggle('is-active', tab === 'login');
             loginForm.classList.toggle('active', tab === 'login');
@@ -209,6 +218,8 @@ const Panels = {
             regForm.classList.toggle('active', tab === 'register');
             regForm.classList.toggle('hidden', tab !== 'register');
         }
+        if (slider) slider.classList.toggle('show-register', tab === 'register');
+        if (title) title.textContent = tab === 'register' ? 'Creează Cont' : 'Loghează-te';
     },
 
     showAuth(data = {}) {
@@ -220,6 +231,12 @@ const Panels = {
         }
         this.setAuthTab('login');
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
+        if (window.AuthForza && !window.AuthLoading?._pending) AuthForza.reset();
+        const status = $('#auth-server-status');
+        if (status && data.playersOnline != null) {
+            const max = data.playersMax || 256;
+            status.innerHTML = `<i class="ph-fill ph-circle"></i> Server Online (${data.playersOnline}/${max})`;
+        }
         if (window.LoadingScreen) LoadingScreen.reset();
     },
 
@@ -720,62 +737,34 @@ const Panels = {
     },
 
     showTradeInvite(data = {}) {
-        const modal = $('#trade-invite-modal');
-        if (!modal) return;
-        const nameEl = $('#trade-invite-name');
-        if (nameEl) nameEl.textContent = `${data.requesterName || 'Nearby Player'} (ID #${data.requesterId || '?'})`;
-
-        modal.classList.remove('hidden');
-        modal.setAttribute('aria-hidden', 'false');
+        if (window.TradeForza) {
+            TradeForza.showInvite(data);
+        }
         this.setTradeInviteHold({ key: 'accept', progress: 0, release: true });
         this.setTradeInviteHold({ key: 'decline', progress: 0, release: true });
-
-        const bar = $('#trade-invite-timer-bar');
-        if (bar) {
-            bar.style.transition = 'none';
-            bar.style.width = '100%';
-            void bar.offsetWidth;
-            const duration = (data.timeout || 30);
-            bar.style.transition = `width ${duration}s linear`;
-            bar.style.width = '0%';
-        }
 
         if (this._tradeInviteTimer) clearTimeout(this._tradeInviteTimer);
         this._tradeInviteTimer = setTimeout(() => {
             post('inventoryTradeDecline');
             this.hideTradeInvite();
         }, (data.timeout || 30) * 1000);
-
-        $('#trade-invite-accept').onclick = () => {
-            post('inventoryTradeAccept');
-            this.hideTradeInvite();
-        };
-        $('#trade-invite-decline').onclick = () => {
-            post('inventoryTradeDecline');
-            this.hideTradeInvite();
-        };
     },
 
     setTradeInviteHold(data = {}) {
         const key = data.key === 'decline' ? 'decline' : 'accept';
-        const btn = $(`#trade-invite-${key}`);
+        if (window.TradeForza) {
+            TradeForza.setInviteHold(key, data.progress, data.release);
+            return;
+        }
         const fill = $(`#trade-invite-${key}-hold`);
-        if (!btn || !fill) return;
+        if (!fill) return;
         const progress = Math.max(0, Math.min(100, Number(data.progress) || 0));
         fill.style.width = `${progress}%`;
-        btn.classList.toggle('is-holding', !data.release && progress > 0 && progress < 100);
-        if (data.release || progress >= 100) {
-            fill.style.width = '0%';
-            btn.classList.remove('is-holding');
-        }
+        if (data.release || progress >= 100) fill.style.width = '0%';
     },
 
     hideTradeInvite() {
-        const modal = $('#trade-invite-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.setAttribute('aria-hidden', 'true');
-        }
+        window.TradeForza?.hideInvite?.();
         if (this._tradeInviteTimer) {
             clearTimeout(this._tradeInviteTimer);
             this._tradeInviteTimer = null;
@@ -823,65 +812,20 @@ const Panels = {
     },
 
     hideTradeAssetPicker() {
+        window.TradeForza?.hideSelector?.();
         const modal = $('#inventory-trade-asset-modal');
         modal?.classList.add('hidden');
         modal?.setAttribute('aria-hidden', 'true');
     },
 
     showTradeAssetPicker(catalog = {}) {
-        const modal = $('#inventory-trade-asset-modal');
-        const list = $('#inventory-trade-asset-list');
-        if (!modal || !list) return;
-
-        const sections = [
-            { title: 'VEHICLES (GARAGE STORED)', items: catalog.vehicles || [] },
-            { title: 'HOUSES', items: catalog.properties || [] },
-            { title: 'BUSINESSES', items: catalog.businesses || [] },
-        ];
-
-        list.innerHTML = '';
-        let hasItems = false;
-        sections.forEach((section) => {
-            if (!section.items.length) return;
-            hasItems = true;
-            const heading = document.createElement('div');
-            heading.className = 'premium-trade-asset-section';
-            heading.textContent = section.title;
-            list.appendChild(heading);
-            section.items.forEach((asset) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'premium-trade-asset-option';
-                const type = document.createElement('span');
-                type.className = 'premium-trade-asset-option__type';
-                type.textContent = this._tradeAssetTypeLabel(asset.assetType);
-                const main = document.createElement('strong');
-                main.textContent = asset.label || 'Asset';
-                const detail = document.createElement('small');
-                detail.textContent = asset.detail || '';
-                btn.appendChild(type);
-                btn.appendChild(main);
-                if (detail.textContent) btn.appendChild(detail);
-                btn.addEventListener('click', () => {
-                    this.hideTradeAssetPicker();
-                    post('inventoryTradeOfferAsset', {
-                        assetType: asset.assetType,
-                        id: asset.id,
-                    });
-                });
-                list.appendChild(btn);
-            });
-        });
-
-        if (!hasItems) {
-            const empty = document.createElement('p');
-            empty.className = 'premium-trade-asset-empty';
-            empty.textContent = 'You have no tradeable houses, vehicles, or businesses right now.';
-            list.appendChild(empty);
+        if (window.TradeForza) {
+            TradeForza.openSelector(catalog, this._inventoryItems || [], this._inventoryCash || 0);
+            return;
         }
-
-        modal.classList.remove('hidden');
-        modal.setAttribute('aria-hidden', 'false');
+        const modal = $('#inventory-trade-asset-modal');
+        modal?.classList.remove('hidden');
+        modal?.setAttribute('aria-hidden', 'false');
     },
 
     _renderTradeAssets(selector, rows, removable) {
@@ -923,8 +867,10 @@ const Panels = {
         this._inventoryTrade = data.active ? data : null;
         $('#inventory-nearby-panel')?.classList.toggle('hidden', data.active === true);
         $('#inventory-trade-panel')?.classList.toggle('hidden', data.active !== true);
+        window.TradeForza?.syncTradeState?.(data);
         if (!data.active) {
             this.hideTradeAssetPicker();
+            window.TradeForza?.hideTrade?.();
             return;
         }
         const dropBtn = $('#inventory-drop-selected');
@@ -1009,9 +955,11 @@ const Panels = {
     hideInventoryTrade() {
         this._inventoryTrade = null;
         this.hideTradeAssetPicker();
+        window.TradeForza?.hideTrade?.();
         $('#inventory-cash-badge')?.classList.remove('is-trade-draggable', 'is-dragging', 'is-dragover');
         $('#inventory-trade-panel')?.classList.add('hidden');
         $('#inventory-nearby-panel')?.classList.remove('hidden');
+        document.body.classList.remove('trade-forza-active');
         const dropBtn = $('#inventory-drop-selected');
         if (dropBtn) {
             dropBtn.textContent = 'DROP';

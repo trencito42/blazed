@@ -3,401 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Login & Identity Selector</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+    <title>XODO RP - Authentication</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+    <style>
         :root {
-            /* Design System Colors */
-            --bg-base: rgba(10, 10, 15, 0.95); 
-            --bg-panel: rgba(255, 255, 255, 0.03);
-            --bg-hover: rgba(255, 255, 255, 0.08);
-            --bg-input: rgba(0, 0, 0, 0.5);
-            
             --text-main: #ffffff;
             --text-muted: rgba(255, 255, 255, 0.4);
-            
-            /* Daca vrei fix portocaliul din poza ta, schimba aici in #ff6600 */
             --accent: #00ffcc; 
-            --danger: #ff3366;
+            --danger: #ff3366; 
+            --success: #10b981;
             
-            --border: rgba(255, 255, 255, 0.1);
-            --radius-lg: 16px;
-            --radius-md: 8px;
-            --transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --bg-panel: rgba(5, 5, 8, 0.95);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            
+            --shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
+            --shadow-glow: 0 0 25px rgba(0, 255, 204, 0.4);
+            
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        * { box-sizing: border-box; }
 
         body, html {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            font-family: 'Montserrat', sans-serif;
-            background: url('https://placehold.co/1920x1080/1a1a24/1a1a24?text=Los+Santos+Background') no-repeat center center;
-            background-size: cover;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden; user-select: none;
+            margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif;
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover; overflow: hidden; user-select: none;
         }
 
-        /* Fundal Intunecat pentru focus pe centru */
-        .overlay {
-            position: absolute; inset: 0;
-            background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            z-index: 1;
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.9) 100%); z-index: 0; }
+
+        /* ==========================================================
+           1. INTRO SCREEN ("PRESS ANY KEY")
+           ========================================================== */
+        .intro-screen {
+            position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: opacity 0.5s ease, transform 0.5s ease;
         }
+        .intro-screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.05); }
 
-        /* Cutia Principala Modal */
-        .auth-wrapper {
-            position: relative; z-index: 10;
-            width: 480px;
-            background: var(--bg-base);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 45px 50px;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
-            
-            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.9) translateY(20px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        /* --- HEADER / LOGO --- */
-        .auth-header {
-            text-align: center; margin-bottom: 35px;
-        }
-
-        .auth-logo {
-            width: 70px; height: 70px;
-            margin: 0 auto 15px auto;
-            color: var(--text-main);
-        }
-        .auth-logo svg { width: 100%; height: 100%; fill: currentColor; }
-
-        .auth-title {
-            font-size: 11px; font-weight: 800; color: var(--accent);
-            text-transform: uppercase; letter-spacing: 3px; margin-bottom: 8px;
-        }
-
-        .auth-subtitle {
-            font-size: 11px; font-weight: 500; color: var(--text-muted);
-        }
-
-        /* --- TABS --- */
-        .auth-tabs {
-            display: flex; border-bottom: 1px solid var(--border);
-            margin-bottom: 25px;
-        }
-
-        .tab-btn {
-            flex: 1; background: none; border: none;
-            padding: 15px 0; color: var(--text-muted);
-            font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 800;
-            text-transform: uppercase; letter-spacing: 2px;
-            cursor: pointer; transition: var(--transition);
-            border-bottom: 2px solid transparent; margin-bottom: -1px;
-        }
-
-        .tab-btn:hover { color: var(--text-main); }
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-        /* --- FORMS --- */
-        .form-section { display: none; flex-direction: column; gap: 20px; animation: fadeIn 0.4s ease; }
-        .form-section.active { display: flex; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .input-group { display: flex; flex-direction: column; gap: 8px; }
-        .input-label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+        .brand-massive { font-size: 140px; font-weight: 900; font-style: italic; color: var(--text-main); text-transform: uppercase; letter-spacing: -5px; line-height: 0.8; text-shadow: var(--shadow-text); transform: skewX(-5deg); margin-bottom: 40px; }
+        .brand-massive span { color: var(--accent); }
         
-        .form-input {
-            width: 100%; background: var(--bg-input);
-            border: none; border-bottom: 2px solid var(--border);
-            color: var(--text-main); padding: 14px 15px;
-            font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600;
-            outline: none; transition: var(--transition);
-        }
-        .form-input:focus { border-bottom-color: var(--accent); background: rgba(0,0,0,0.8); }
+        .press-key { font-size: 16px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 4px; transform: skewX(-5deg); animation: pulse 2s infinite; display: flex; align-items: center; gap: 10px; }
+        .press-key .key-btn { background: var(--text-main); color: #000; padding: 4px 10px; border-radius: 4px; font-weight: 900; font-style: normal; }
 
-        /* Checkbox Custom */
-        .checkbox-group {
-            display: flex; align-items: center; gap: 10px; margin-top: 5px; cursor: pointer;
-        }
-        .checkbox-group input { display: none; }
-        .checkbox-custom {
-            width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 4px;
-            display: flex; align-items: center; justify-content: center; transition: var(--transition);
-        }
-        .checkbox-group input:checked + .checkbox-custom { background: var(--accent); border-color: var(--accent); }
-        .checkbox-custom svg { width: 10px; height: 10px; stroke: #000; stroke-width: 3; fill: none; opacity: 0; transition: var(--transition); }
-        .checkbox-group input:checked + .checkbox-custom svg { opacity: 1; }
-        .checkbox-label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
-
-        /* Buton Principal */
-        .btn-main {
-            width: 100%; background: var(--accent); color: #000;
-            border: none; border-radius: var(--radius-md); padding: 16px;
-            font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 900;
-            text-transform: uppercase; letter-spacing: 2px;
-            cursor: pointer; transition: var(--transition);
-            margin-top: 10px;
-        }
-        .btn-main:hover { box-shadow: 0 0 25px rgba(0, 255, 204, 0.4); transform: translateY(-2px); }
-
-        /* --- SAVED IDENTITIES --- */
-        .divider {
-            position: relative; text-align: center; margin: 35px 0 25px 0;
-        }
-        .divider::before {
-            content: ''; position: absolute; top: 50%; left: 0; right: 0;
-            height: 1px; background: var(--border); z-index: 1;
-        }
-        .divider span {
-            position: relative; z-index: 2; background: var(--bg-base);
-            padding: 0 15px; font-size: 9px; font-weight: 800; color: var(--text-muted);
-            text-transform: uppercase; letter-spacing: 2px;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
 
-        .identities-list {
-            display: flex; flex-direction: column; gap: 10px;
-            max-height: 160px; overflow-y: auto; padding-right: 5px;
+        /* ==========================================================
+           2. AUTH PANEL (SIDEBAR)
+           ========================================================== */
+        .auth-container {
+            position: absolute; top: 0; bottom: 0; left: -600px; /* Ascuns in stanga initial */
+            width: 500px; background: var(--bg-panel); border-right: 2px solid var(--border-glass);
+            z-index: 100; transform: skewX(-5deg) translateX(-50px);
+            display: flex; flex-direction: column; padding: 60px 80px; box-sizing: border-box;
+            box-shadow: 20px 0 50px rgba(0,0,0,0.9); transition: all 0.6s var(--transition-snappy);
         }
 
-        .identities-list::-webkit-scrollbar { width: 4px; }
-        .identities-list::-webkit-scrollbar-track { background: transparent; }
-        .identities-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        /* Dupa ce apesi tasta, panoul intra in scena */
+        .auth-container.active { left: -30px; transform: skewX(-5deg) translateX(0); }
 
-        .id-card {
-            background: var(--bg-panel); border: 1px solid var(--border);
-            border-radius: var(--radius-md); padding: 12px;
-            display: flex; align-items: center; gap: 15px;
-            cursor: pointer; transition: var(--transition);
-            position: relative; overflow: hidden;
+        .auth-header { margin-bottom: 50px; display: flex; flex-direction: column; gap: 5px; }
+        .auth-title { font-size: 42px; font-weight: 900; font-style: italic; color: var(--text-main); text-transform: uppercase; letter-spacing: -1px; text-shadow: var(--shadow-text); display: flex; align-items: center; gap: 10px; }
+        .auth-subtitle { font-size: 12px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; }
+
+        /* Container pentru formulare (Slide trick) */
+        .form-slider { position: relative; flex: 1; width: 100%; overflow: hidden; }
+        .form-section {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; gap: 30px;
+            transition: transform 0.4s var(--transition-snappy), opacity 0.3s ease;
         }
+        
+        /* Stari Formulare */
+        #form-login { transform: translateX(0); opacity: 1; pointer-events: all; }
+        #form-register { transform: translateX(100%); opacity: 0; pointer-events: none; }
+        
+        .show-register #form-login { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+        .show-register #form-register { transform: translateX(0); opacity: 1; pointer-events: all; }
 
-        .id-card:hover { background: var(--bg-hover); border-color: rgba(0, 255, 204, 0.3); transform: translateX(5px); }
-
-        .id-avatar {
-            width: 40px; height: 40px; border-radius: 6px;
-            background: var(--bg-input); background-size: cover; background-position: center;
+        /* ==========================================================
+           3. INPUTS & FORMS
+           ========================================================== */
+        .input-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .input-label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; }
+        
+        .input-field {
+            background: rgba(255,255,255,0.02); border: none; border-bottom: 2px solid var(--border-glass);
+            padding: 15px; color: var(--text-main); font-family: 'JetBrains Mono', monospace; font-size: 16px;
+            font-weight: 700; outline: none; transition: 0.3s;
+            /* Anti-skew pe input pentru text drept, desi containerul e inclinat */
+            transform: skewX(5deg); width: 90%; 
         }
+        .input-field::placeholder { color: rgba(255,255,255,0.15); font-style: italic; font-family: 'Montserrat'; }
+        
+        .input-field:focus { border-bottom-color: var(--accent); background: rgba(0, 255, 204, 0.05); }
+        
+        /* Iconita inauntrul inputului */
+        .input-icon { position: absolute; right: 10px; top: 35px; font-size: 20px; color: var(--text-muted); transform: skewX(5deg); transition: 0.3s;}
+        .input-field:focus ~ .input-icon { color: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); }
 
-        .id-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-        .id-name { font-size: 13px; font-weight: 800; color: var(--text-main); }
-        .id-stats { font-size: 10px; font-weight: 700; color: var(--text-muted); display: flex; gap: 10px;}
-        .id-stats span { color: var(--accent); }
-
-        .id-delete {
-            width: 24px; height: 24px; border-radius: 4px;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-muted); transition: var(--transition);
+        /* ==========================================================
+           4. BUTOANE & LINKURI
+           ========================================================== */
+        .btn-submit {
+            background: var(--text-main); color: #000; border: none; padding: 18px;
+            font-family: inherit; font-size: 16px; font-weight: 900; font-style: italic;
+            text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+            transition: 0.2s; margin-top: 10px; position: relative; overflow: hidden;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
         }
-        .id-delete:hover { background: var(--danger); color: #fff; }
-        .id-delete svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+        .btn-submit span { transform: skewX(5deg); display: flex; align-items: center; gap: 10px; }
+        .btn-submit:hover { background: var(--accent); box-shadow: var(--shadow-glow); }
+        .btn-submit:active { transform: scale(0.95); }
 
-        /* Footer Server */
+        .auth-links { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .auth-link {
+            background: none; border: none; color: var(--text-muted); font-family: inherit;
+            font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; transition: 0.2s; text-align: left; padding: 0;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .auth-link:hover { color: var(--text-main); }
+        .auth-link.highlight { color: var(--accent); }
+        .auth-link.highlight:hover { color: #fff; text-shadow: 0 0 10px var(--accent); }
+
+        /* ==========================================================
+           5. FOOTER & SERVER INFO
+           ========================================================== */
         .auth-footer {
-            margin-top: 30px; text-align: center;
-            font-size: 9px; font-weight: 800; color: var(--text-muted);
-            text-transform: uppercase; letter-spacing: 2px;
+            margin-top: auto; display: flex; flex-direction: column; gap: 5px;
+            border-top: 1px solid var(--border-glass); padding-top: 20px;
         }
+        .server-status { font-size: 10px; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 6px; }
+        .server-status i { font-size: 14px; animation: blink 2s infinite; }
+        .build-version { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--text-muted); }
 
-        /* Notificare */
-        #notify {
-            position: absolute; top: 30px; right: 30px; background: var(--accent); color: #000;
-            padding: 15px 25px; border-radius: var(--radius-md); font-size: 12px; font-weight: 800; text-transform: uppercase;
-            box-shadow: 0 10px 25px rgba(0,255,204,0.4); transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
-        }
-        #notify.show { transform: translateX(0); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
     </style>
 </head>
 <body>
 
     <div class="overlay"></div>
 
-    <div id="notify">Autentificare reușită!</div>
+    <!-- 1. INTRO SCREEN -->
+    <div class="intro-screen" id="intro-screen">
+        <div class="brand-massive">XODO <span>RP</span></div>
+        <div class="press-key">
+            Apasă <span class="key-btn">ENTER</span> pentru a începe
+        </div>
+    </div>
 
-    <div class="auth-wrapper">
+    <!-- 2. AUTH SIDEBAR -->
+    <div class="auth-container" id="auth-container">
         
-        <!-- Header / Logo -->
         <div class="auth-header">
-            <div class="auth-logo">
-                <!-- SVG Crown/Logo - inlocuieste cu logo-ul tau -->
-                <svg viewBox="0 0 24 24"><path d="M2 22h20M7 21v-4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4M22 7l-4.5 4L12 2 6.5 11 2 7l2 11h16z"></path></svg>
-            </div>
-            <div class="auth-title">Welcome to Los Santos</div>
-            <div class="auth-subtitle">Enter the city. Your story starts here.</div>
+            <div class="auth-subtitle">Securitate XODO</div>
+            <div class="auth-title" id="main-title">Loghează-te</div>
         </div>
 
-        <!-- Tab Controls -->
-        <div class="auth-tabs">
-            <button class="tab-btn active" id="btn-login" onclick="switchTab('login')">Login</button>
-            <button class="tab-btn" id="btn-register" onclick="switchTab('register')">Register</button>
-        </div>
-
-        <!-- Login Form -->
-        <form id="form-login" class="form-section active" onsubmit="handleAuth(event, 'login')">
-            <div class="input-group">
-                <label class="input-label">Username</label>
-                <input type="text" class="form-input" id="log-user" required autocomplete="off">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Password</label>
-                <input type="password" class="form-input" id="log-pass" required>
-            </div>
+        <div class="form-slider" id="form-slider">
             
-            <label class="checkbox-group">
-                <input type="checkbox" id="save-acc" checked>
-                <div class="checkbox-custom">
-                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <!-- FORMULAR LOGIN -->
+            <div class="form-section" id="form-login">
+                <div class="input-group">
+                    <div class="input-label">Nume Jucător</div>
+                    <input type="text" class="input-field" placeholder="Ex: Ștefan" id="login-user">
+                    <i class="ph-bold ph-user input-icon"></i>
                 </div>
-                <span class="checkbox-label">Save this account for quick login</span>
-            </label>
+                
+                <div class="input-group">
+                    <div class="input-label">Parolă Acces</div>
+                    <input type="password" class="input-field" placeholder="••••••••" id="login-pass">
+                    <i class="ph-bold ph-lock-key input-icon"></i>
+                </div>
 
-            <button type="submit" class="btn-main">Enter City</button>
-        </form>
+                <button class="btn-submit" onclick="simulateLogin(this)">
+                    <span><i class="ph-bold ph-sign-in"></i> Conectare</span>
+                </button>
 
-        <!-- Register Form -->
-        <form id="form-register" class="form-section" onsubmit="handleAuth(event, 'register')">
-            <div class="input-group">
-                <label class="input-label">New Username</label>
-                <input type="text" class="form-input" required autocomplete="off">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Email Address</label>
-                <input type="email" class="form-input" required autocomplete="off">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Password</label>
-                <input type="password" class="form-input" required>
+                <div class="auth-links">
+                    <button class="auth-link" onclick="alert('Contactează staff-ul pe Discord pentru resetare.')">Ai uitat parola?</button>
+                    <button class="auth-link highlight" onclick="toggleView('register')">Nu ai cont? Creează unul <i class="ph-bold ph-arrow-right"></i></button>
+                </div>
             </div>
 
-            <button type="submit" class="btn-main">Create Account</button>
-        </form>
+            <!-- FORMULAR REGISTER -->
+            <div class="form-section" id="form-register">
+                <div class="input-group">
+                    <div class="input-label">Nume Dorit</div>
+                    <input type="text" class="input-field" placeholder="Alege un username">
+                    <i class="ph-bold ph-identification-badge input-icon"></i>
+                </div>
 
-        <!-- Saved Identities Section -->
-        <div class="divider">
-            <span>Saved Identities — Select to Enter</span>
+                <div class="input-group">
+                    <div class="input-label">Adresa Email</div>
+                    <input type="email" class="input-field" placeholder="adresa@email.com">
+                    <i class="ph-bold ph-envelope-simple input-icon"></i>
+                </div>
+                
+                <div class="input-group">
+                    <div class="input-label">Parolă Secură</div>
+                    <input type="password" class="input-field" placeholder="••••••••">
+                    <i class="ph-bold ph-shield-check input-icon"></i>
+                </div>
+
+                <button class="btn-submit" onclick="simulateLogin(this)">
+                    <span><i class="ph-bold ph-user-plus"></i> Înregistrare</span>
+                </button>
+
+                <div class="auth-links">
+                    <button class="auth-link highlight" onclick="toggleView('login')"><i class="ph-bold ph-arrow-left"></i> Înapoi la Autentificare</button>
+                </div>
+            </div>
+
         </div>
 
-        <div class="identities-list" id="saved-list">
-            <!-- Injectat prin JS -->
-        </div>
-
-        <!-- Footer -->
         <div class="auth-footer">
-            XODO STUDIO — FiveM Roleplay
+            <div class="server-status"><i class="ph-fill ph-circle"></i> Server Online (142/256)</div>
+            <div class="build-version">Build: v2.0 - Core Edition (2026)</div>
         </div>
 
     </div>
 
     <script>
-        // --- Date Simulate (Acestea ar veni din KVP / LocalStorage in FiveM) ---
-        let savedAccounts = [
-            { id: 1, username: "trencito", level: 32, funds: "1,999,073,585", avatar: "https://placehold.co/100x100/1e1e1e/00ffcc?text=T" },
-            { id: 2, username: "xodo_steve", level: 14, funds: "245,000", avatar: "https://placehold.co/100x100/1e1e1e/00ffcc?text=X" }
-        ];
+        // ==========================================================
+        // LOGICA DE INTRO & TOGGLE
+        // ==========================================================
+        let isStarted = false;
 
-        // --- Logică Tab-uri ---
-        function switchTab(tab) {
-            document.getElementById('btn-login').classList.remove('active');
-            document.getElementById('btn-register').classList.remove('active');
-            document.getElementById('form-login').classList.remove('active');
-            document.getElementById('form-register').classList.remove('active');
-
-            document.getElementById('btn-' + tab).classList.add('active');
-            document.getElementById('form-' + tab).classList.add('active');
-        }
-
-        // --- Logică Salvare/Login Formular ---
-        function handleAuth(e, type) {
-            e.preventDefault();
-            
-            if (type === 'login') {
-                const user = document.getElementById('log-user').value;
-                showNotify(`Conectare în curs pentru ${user}...`);
-                // Aici faci fetch catre client.lua pentru verificare parola
-            } else {
-                showNotify("Cont creat cu succes!");
-                setTimeout(() => switchTab('login'), 1500);
-            }
-        }
-
-        // --- Randare Conturi Salvate ---
-        function renderSavedAccounts() {
-            const list = document.getElementById('saved-list');
-            list.innerHTML = '';
-
-            if (savedAccounts.length === 0) {
-                list.innerHTML = `<div style="text-align:center; font-size:11px; color:var(--text-muted); padding:10px;">Nu ai niciun cont salvat.</div>`;
-                return;
-            }
-
-            savedAccounts.forEach(acc => {
-                const el = document.createElement('div');
-                el.className = 'id-card';
-                // Click pe tot cardul pentru auto-login
-                el.onclick = (e) => {
-                    if(!e.target.closest('.id-delete')) {
-                        autoLogin(acc);
-                    }
-                };
-
-                el.innerHTML = `
-                    <div class="id-avatar" style="background-image: url('${acc.avatar}')"></div>
-                    <div class="id-info">
-                        <div class="id-name">${acc.username}</div>
-                        <div class="id-stats">LVL ${acc.level} <span>FUNDS $${acc.funds}</span></div>
-                    </div>
-                    <div class="id-delete" title="Șterge cont salvat" onclick="removeAccount(${acc.id})">
-                        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </div>
-                `;
-                list.appendChild(el);
-            });
-        }
-
-        // --- Actiuni Conturi Salvate ---
-        function autoLogin(acc) {
-            document.getElementById('log-user').value = acc.username;
-            // De obicei aici trimiti direct request de login la server fara sa ii mai ceri parola daca are token-ul valid
-            showNotify(`Auto-Login pentru ${acc.username}...`);
-        }
-
-        function removeAccount(id) {
-            savedAccounts = savedAccounts.filter(x => x.id !== id);
-            renderSavedAccounts();
-            // Aici trimiti catre Lua sa stearga KVP-ul / Token-ul din cache
-        }
-
-        // --- Notificari ---
-        function showNotify(msg) {
-            const el = document.getElementById('notify');
-            el.innerText = msg;
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 3000);
-        }
-
-        // --- Initializare ---
-        window.onload = () => {
-            renderSavedAccounts();
-        };
-
-        // --- Integrare LUA (Optional) ---
-        window.addEventListener('message', (event) => {
-            if (event.data.action === "openAuth") {
-                // Preia caracterele salvate din local storage/KVP
-                savedAccounts = event.data.accounts || [];
-                renderSavedAccounts();
+        // Asculta orice tasta pentru a trece de Intro Screen
+        document.addEventListener('keydown', (e) => {
+            if (!isStarted) {
+                isStarted = true;
+                document.getElementById('intro-screen').classList.add('hidden');
+                
+                // Trage panoul de auth in ecran dupa o fractiune de secunda
+                setTimeout(() => {
+                    document.getElementById('auth-container').classList.add('active');
+                    document.getElementById('login-user').focus();
+                }, 300);
             }
         });
+
+        // Schimbarea intre Login si Register
+        function toggleView(view) {
+            const slider = document.getElementById('form-slider');
+            const title = document.getElementById('main-title');
+
+            if (view === 'register') {
+                slider.classList.add('show-register');
+                title.innerText = "Creează Cont";
+            } else {
+                slider.classList.remove('show-register');
+                title.innerText = "Loghează-te";
+            }
+        }
+
+        // ==========================================================
+        // SIMULARE LOGIN (Pentru Demo)
+        // ==========================================================
+        function simulateLogin(btn) {
+            const originalContent = btn.innerHTML;
+            
+            // Stare de Loading
+            btn.innerHTML = `<span><i class="ph-bold ph-spinner" style="animation: spin 1s linear infinite;"></i> Se conectează...</span>`;
+            btn.style.pointerEvents = 'none';
+
+            // Simulam raspunsul serverului dupa 1.5s
+            setTimeout(() => {
+                btn.style.background = 'var(--success)';
+                btn.style.color = '#000';
+                btn.innerHTML = `<span><i class="ph-bold ph-check"></i> Succes!</span>`;
+                
+                // Aici trimiti NUI Message catre clientul de FiveM:
+                // window.postMessage({ action: 'submitAuth', data: { ... } });
+
+                // Ascundem panoul ca si cum ar incepe jocul
+                setTimeout(() => {
+                    document.getElementById('auth-container').classList.remove('active');
+                }, 1000);
+
+            }, 1500);
+        }
+
     </script>
 </body>
 </html>

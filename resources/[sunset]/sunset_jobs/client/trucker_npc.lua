@@ -58,7 +58,6 @@ local function armGrace(ms)
     npcHoldStart = nil
     if npcHoldVisual then
         npcHoldVisual = false
-        exports.sunset_ui:Send('playerInteractionPrompt', { holding = false })
     end
 end
 
@@ -67,15 +66,13 @@ local function hideNpcPrompt()
     npcPromptVisible = false
     npcHoldStart = nil
     npcHoldVisual = false
-    exports.sunset_ui:Send('playerInteractionPrompt', { visible = false, holding = false })
+    if SunsetWorld and SunsetWorld.Npc then
+        SunsetWorld.Npc.hideTooltip('trucker_horia')
+    end
 end
 
-local function sendHoldState(active)
-    active = active == true
-    if npcHoldVisual == active then return end
-    npcHoldVisual = active
-    if not npcPromptVisible then return end
-    exports.sunset_ui:Send('playerInteractionPrompt', { holding = active })
+local function sendHoldState(_active)
+    -- Hold feedback handled in-game; world tooltip stays visible.
 end
 
 local function showNpcPrompt()
@@ -84,21 +81,15 @@ local function showNpcPrompt()
         hideNpcPrompt()
         return
     end
-    local headCoords = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
-    if headCoords.x == 0.0 and headCoords.y == 0.0 then
-        headCoords = GetEntityCoords(ped) + vector3(0.0, 0.0, 0.85)
-    else
-        headCoords = headCoords + vector3(0.0, 0.0, 0.40)
-    end
-    local visible, sx, sy = World3dToScreen2d(headCoords.x, headCoords.y, headCoords.z)
-    if not visible then hideNpcPrompt() return end
     npcPromptVisible = true
-    exports.sunset_ui:Send('playerInteractionPrompt', {
-        visible = true,
-        x = sx * 100.0,
-        y = sy * 100.0,
-        name = 'Dispecer Trucker',
-        key  = 'E',
+    SunsetWorld.Npc.showTooltip('trucker_horia', ped, {
+        badge = 'JOB TRUCKER',
+        badgeClass = 'trucker',
+        bodyClass = 'trucker',
+        icon = 'ph-truck',
+        title = 'Horia (Dispecer)',
+        desc = 'Interacțiune / Tura Trucker',
+        key = 'E',
     })
 end
 
@@ -130,7 +121,7 @@ local function openNpcMenu()
         return
     end
     exports.sunset_ui:Send('playerInteractionShow', {
-        target  = { name = 'Dispecer Trucker', id = '' },
+        target  = { name = 'Horia (Dispecer)', id = '' },
         actions = actions,
     })
     exports.sunset_ui:SetFocus(true, true)
@@ -219,7 +210,7 @@ CreateThread(function()
     SetBlipScale(blip, 0.85)
     SetBlipAsShortRange(blip, true)
     BeginTextCommandSetBlipName('STRING')
-    AddTextComponentString('Dispecer Trucker')
+    AddTextComponentString('Horia — Dispecer Trucker')
     EndTextCommandSetBlipName(blip)
 end)
 

@@ -198,33 +198,9 @@ local function openGasBusinessMenu()
     end)
 end
 
-CreateThread(function()
-    while true do
-        local ped = PlayerPedId()
-        local pos = GetEntityCoords(ped)
-        local nearGas = false
-        for _, station in ipairs(Sunset.GasStations or {}) do
-            if station.coords and #(pos - station.coords) < GAS_INTERACT_DIST then
-                nearGas = true
-                break
-            end
-        end
-
-        if nearGas and not gasMenuOpen and not gasCooldown and not IsNuiFocused() and not IsPedInAnyVehicle(ped, false) then
-            BeginTextCommandDisplayHelp('STRING')
-            AddTextComponentSubstringPlayerName('Press ~INPUT_CONTEXT~ for gas station business')
-            EndTextCommandDisplayHelp(0, false, true, -1)
-            if IsControlJustPressed(0, 38) then
-                openGasBusinessMenu()
-            end
-            Wait(0)
-        else
-            if gasMenuOpen and not nearGas then
-                closeGasMenu()
-            end
-            Wait(nearGas and 0 or 400)
-        end
-    end
+RegisterNetEvent('sunset:businesses:openGasMenu', function()
+    if gasCooldown or gasMenuOpen or IsNuiFocused() then return end
+    openGasBusinessMenu()
 end)
 
 AddEventHandler('sunset:nui:playerInteractionClose', function()

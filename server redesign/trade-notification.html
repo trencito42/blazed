@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XODO RP - Ultimate Trade System</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent: #00ffcc; 
+            --danger: #ff3366; 
+            --warning: #f59e0b;
+            --success: #10b981;
+            
+            --bg-panel: rgba(10, 10, 15, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            
+            --shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
+            --shadow-glow: 0 0 25px rgba(0, 255, 204, 0.3);
+            
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif;
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover; overflow: hidden; user-select: none;
+        }
+
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.9) 100%); z-index: 0; }
+
+        .dev-tools { position: absolute; top: 30px; left: 30px; z-index: 100; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; color: white; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-glass);}
+        .dev-btn { background: var(--text-main); color: #000; border: none; padding: 8px 12px; border-radius: 4px; font-family: inherit; font-weight: 900; cursor: pointer; font-size: 11px; text-transform: uppercase; transition: 0.2s;}
+        .dev-btn:hover { background: var(--accent); }
+
+        /* ==========================================================
+           1. INVENTORY HEADER (Cu Bani Cash adaugati)
+           ========================================================== */
+        .inv-demo { position: absolute; top: 30px; right: 30px; z-index: 10; width: 400px; transform: skewX(-5deg); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8)); }
+        
+        .inv-header {
+            background: var(--bg-panel); border: 2px solid var(--border-glass); padding: 20px 25px;
+            backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 15px;
+            border-bottom: 4px solid var(--accent);
+        }
+
+        .inv-title { display: flex; justify-content: space-between; align-items: flex-end; }
+        .inv-name { font-size: 24px; font-weight: 900; font-style: italic; color: var(--text-main); text-transform: uppercase; letter-spacing: 1px; text-shadow: var(--shadow-text); display: flex; align-items: center; gap: 10px; }
+        .inv-weight-text { font-size: 12px; font-weight: 800; color: var(--text-muted); }
+        
+        /* Zona de Cash adaugata */
+        .inv-finances { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px 15px; border: 1px solid var(--border-glass); margin-bottom: 5px; }
+        .inv-cash-label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 6px; transform: skewX(5deg);}
+        .inv-cash-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: var(--success); transform: skewX(5deg); display: flex; align-items: center; gap: 4px; text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);}
+
+        .weight-bar-container { display: flex; gap: 3px; width: 100%; height: 8px; }
+        .weight-segment { flex: 1; background: rgba(255,255,255,0.1); transform: skewX(-15deg); }
+        .weight-segment.fill { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+
+        /* ==========================================================
+           2. TRADE NOTIFICATION (Hold Y / N)
+           ========================================================== */
+        .trade-notif-wrapper {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%) skewX(-5deg);
+            z-index: 90; display: flex; flex-direction: column; align-items: center; gap: 15px;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .trade-notif-wrapper.active { opacity: 1; pointer-events: all; }
+
+        .trade-notif-box {
+            background: var(--bg-panel); border: 2px solid var(--accent); border-top: 4px solid var(--accent);
+            padding: 20px 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(0,255,204,0.2);
+            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+        }
+        
+        .tn-title { font-size: 12px; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; transform: skewX(5deg); }
+        .tn-desc { font-size: 18px; font-weight: 800; color: var(--text-main); transform: skewX(5deg); }
+        .tn-desc span { font-style: italic; color: var(--warning); }
+
+        .tn-actions { display: flex; gap: 20px; margin-top: 10px; }
+        
+        .btn-hold {
+            position: relative; width: 180px; height: 45px; background: rgba(0,0,0,0.8); border: 2px solid var(--border-glass);
+            display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; font-style: italic;
+            text-transform: uppercase; letter-spacing: 2px; cursor: pointer; overflow: hidden;
+        }
+        .btn-hold.accept { border-color: var(--accent); color: var(--accent); }
+        .btn-hold.decline { border-color: var(--danger); color: var(--danger); }
+        
+        .bh-progress { position: absolute; top: 0; left: 0; bottom: 0; width: 0%; z-index: 0; transition: width 0.1s linear; }
+        .btn-hold.accept .bh-progress { background: var(--accent); }
+        .btn-hold.decline .bh-progress { background: var(--danger); }
+        
+        .bh-text { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; transform: skewX(5deg); transition: color 0.1s; }
+        .btn-hold .key { background: var(--text-main); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 12px; font-style: normal; }
+
+
+        /* ==========================================================
+           3. SECURE TRADE MODAL
+           ========================================================== */
+        .trade-modal {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .trade-modal.active { opacity: 1; pointer-events: all; }
+
+        .trade-container { display: flex; gap: 40px; transform: skewX(-5deg); position: relative; }
+
+        /* Panel Config */
+        .tp-panel { width: 420px; background: var(--bg-panel); border: 2px solid var(--border-glass); display: flex; flex-direction: column; transition: border-color 0.3s, box-shadow 0.3s; }
+        .tp-panel.locked { border-color: var(--accent); box-shadow: 0 0 40px rgba(0,255,204,0.15); }
+        .tp-panel.locked-his { border-color: var(--success); box-shadow: 0 0 40px rgba(16,185,129,0.15); }
+
+        .tp-header { padding: 20px 25px; border-bottom: 2px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+        .tp-title { font-size: 20px; font-weight: 900; font-style: italic; color: var(--text-main); text-transform: uppercase; transform: skewX(5deg); display: flex; align-items: center; gap: 10px;}
+        .tp-status { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; padding: 6px 10px; background: var(--warning); color: #000; transform: skewX(5deg); transition: 0.3s; }
+        .tp-panel.locked .tp-status { background: var(--accent); }
+        .tp-panel.locked-his .tp-status { background: var(--success); }
+
+        /* Oferte Listate */
+        .tp-content { padding: 20px; display: flex; flex-direction: column; gap: 10px; min-height: 350px; overflow-y: auto; }
+        .tp-content::-webkit-scrollbar { width: 0; }
+
+        .offer-item {
+            background: rgba(0,0,0,0.6); border: 1px solid var(--border-glass); padding: 12px 15px;
+            display: flex; align-items: center; gap: 15px; transition: 0.2s;
+        }
+        .offer-item:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
+        
+        .oi-icon { font-size: 24px; color: var(--text-muted); transform: skewX(5deg); display: flex; justify-content: center; width: 30px; }
+        .oi-icon.cash { color: var(--success); }
+        .oi-icon.car { color: var(--accent); }
+        .oi-icon.house { color: var(--warning); }
+        .oi-icon.biz { color: var(--danger); }
+
+        .oi-details { display: flex; flex-direction: column; transform: skewX(5deg); flex: 1; }
+        .oi-name { font-size: 13px; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
+        .oi-sub { font-size: 10px; font-weight: 600; color: var(--text-muted); font-family: 'JetBrains Mono'; margin-top: 2px;}
+
+        /* Butoane Actiune */
+        .tp-actions { padding: 20px; border-top: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.4); }
+        .btn-add { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-main); padding: 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transform: skewX(5deg); transition: 0.2s;}
+        .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+        .btn-lock { background: var(--bg-panel); border: 2px solid var(--text-muted); color: var(--text-main); padding: 16px; font-family: inherit; font-size: 14px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;}
+        .btn-lock:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--shadow-glow); }
+        .btn-lock.locked { background: var(--accent); border-color: var(--accent); color: #000; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
+
+        /* ==========================================================
+           COUNTDOWN OVERLAY (5 SECONDS)
+           ========================================================== */
+        .countdown-overlay {
+            position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.95) 100%);
+            z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .countdown-overlay.active { opacity: 1; pointer-events: all; }
+
+        .cd-number {
+            font-family: 'JetBrains Mono'; font-size: 200px; font-weight: 800; font-style: italic;
+            color: var(--accent); line-height: 1; text-shadow: 0 0 50px rgba(0,255,204,0.5);
+            transform: skewX(-10deg); animation: pulse 1s infinite;
+        }
+        .cd-text { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 10px; color: var(--text-main); margin-top: 20px; transform: skewX(-5deg); }
+        .cd-hint { font-size: 11px; font-weight: 700; color: var(--danger); margin-top: 30px; text-transform: uppercase; letter-spacing: 2px; }
+
+        @keyframes pulse {
+            0% { transform: skewX(-10deg) scale(0.9); opacity: 0.8; }
+            50% { transform: skewX(-10deg) scale(1.1); opacity: 1; text-shadow: 0 0 100px rgba(0,255,204,0.8); }
+            100% { transform: skewX(-10deg) scale(0.9); opacity: 0.8; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="overlay"></div>
+
+    <!-- Meniu Teste -->
+    <div class="dev-tools">
+        <div style="font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase;">Simulare Flow</div>
+        <button class="dev-btn" onclick="triggerNotification()">1. Primești Trade</button>
+        <button class="dev-btn" onclick="simulateOpponentLock()">2. Celălalt Blochează (În Trade)</button>
+        <div style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">*Ține apăsat Y sau N pe notificare.</div>
+    </div>
+
+    <!-- 1. HEADER INVENTAR (Demonstratie Cash) -->
+
+
+    <!-- 2. NOTIFICARE TRADE -->
+    <div class="trade-notif-wrapper" id="trade-notif">
+        <div class="trade-notif-box">
+            <div class="tn-desc">Jucătorul <span>AlexTheDon</span> (ID: 22)<br>vrea să inițieze un Trade.</div>
+            
+            <div class="tn-actions">
+                <!-- Buton Accept Y -->
+                <div class="btn-hold accept" id="btn-accept">
+                    <div class="bh-progress" id="prog-accept"></div>
+                    <div class="bh-text" id="text-accept"><span class="key">Y</span> Acceptă</div>
+                </div>
+                <!-- Buton Decline N -->
+                <div class="btn-hold decline" id="btn-decline">
+                    <div class="bh-progress" id="prog-decline"></div>
+                    <div class="bh-text" id="text-decline"><span class="key">N</span> Refuză</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TRADE MODAL SECURE -->
+    <div class="trade-modal" id="trade-window">
+        <div class="trade-container">
+            
+            <!-- OFERTA TA -->
+            <div class="tp-panel" id="panel-mine">
+                <div class="tp-header">
+                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-up" style="color: var(--accent);"></i> Oferta Ta</div>
+                    <div class="tp-status" id="status-mine">Modificare...</div>
+                </div>
+                
+                <div class="tp-content">
+                    <div class="offer-item">
+                        <i class="ph-fill ph-currency-dollar oi-icon cash"></i>
+                        <div class="oi-details">
+                            <div class="oi-name">Bani Cash</div>
+                            <div class="oi-sub">$50,000.00 USD</div>
+                        </div>
+                    </div>
+                    <div class="offer-item">
+                        <i class="ph-fill ph-car-profile oi-icon car"></i>
+                        <div class="oi-details">
+                            <div class="oi-name">Elegy Retro Custom</div>
+                            <div class="oi-sub">Nr: LSCN-992 | Full Tune</div>
+                        </div>
+                    </div>
+                    <button class="btn-add" id="btn-add-offer"><i class="ph-bold ph-plus"></i> Adaugă din Inventar / Proprietăți</button>
+                </div>
+
+                <div class="tp-actions">
+                    <button class="btn-lock" id="btn-lock-mine" onclick="toggleMyLock()">
+                        <i class="ph-bold ph-lock-key"></i> Blochează Oferta
+                    </button>
+                    <button class="btn-add" style="border-color: transparent; color: var(--danger);" onclick="closeTrade()">
+                        <i class="ph-bold ph-x"></i> Anulează Trade
+                    </button>
+                </div>
+            </div>
+
+            <!-- OFERTA LUI -->
+            <div class="tp-panel" id="panel-his">
+                <div class="tp-header" style="border-bottom-color: rgba(255,255,255,0.05);">
+                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-down" style="color: var(--text-muted);"></i> AlexTheDon</div>
+                    <div class="tp-status" id="status-his" style="background: var(--text-muted);">În Modificare</div>
+                </div>
+                
+                <div class="tp-content">
+                    <div class="offer-item">
+                        <i class="ph-fill ph-house oi-icon house"></i>
+                        <div class="oi-details">
+                            <div class="oi-name">Eclipse Towers, Apt 3</div>
+                            <div class="oi-sub">Proprietate de Lux | Stash Inclus</div>
+                        </div>
+                    </div>
+                    <div class="offer-item">
+                        <i class="ph-fill ph-briefcase oi-icon biz"></i>
+                        <div class="oi-details">
+                            <div class="oi-name">Los Santos Customs (Central)</div>
+                            <div class="oi-sub">Afacere Nivel 3 | Trezorerie: $12k</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tp-actions" style="justify-content: center; align-items: center; padding: 30px;">
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; text-align: center; transform: skewX(5deg);">
+                        Așteaptă ca celălalt jucător<br>să își confirme oferta.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 4. COUNTDOWN OVERLAY -->
+    <div class="countdown-overlay" id="countdown-screen">
+        <div class="cd-number" id="cd-timer">5</div>
+        <div class="cd-text">Finalizare Tranzacție</div>
+        <div class="cd-hint">Orice jucător poate anula tranzacția în acest timp.</div>
+    </div>
+
+    <script>
+        // ==========================================================
+        // LOGICA DE NOTIFICARE (HOLD Y / N)
+        // ==========================================================
+        let holdTimerY, holdTimerN;
+        let progY = 0, progN = 0;
+        let isTradeOpen = false;
+
+        function triggerNotification() {
+            document.getElementById('trade-notif').classList.add('active');
+            progY = 0; progN = 0;
+            document.getElementById('prog-accept').style.width = '0%';
+            document.getElementById('prog-decline').style.width = '0%';
+            document.getElementById('text-accept').style.color = '#fff';
+            document.getElementById('text-decline').style.color = '#fff';
+        }
+
+        function updateHold(key) {
+            if (key === 'y') {
+                progY += 3; // Viteza
+                document.getElementById('prog-accept').style.width = progY + '%';
+                if (progY >= 100) {
+                    progY = 100;
+                    document.getElementById('text-accept').style.color = '#000';
+                    finishHold('accept');
+                } else {
+                    holdTimerY = requestAnimationFrame(() => updateHold('y'));
+                }
+            } else if (key === 'n') {
+                progN += 4; // Refuzul e mai rapid
+                document.getElementById('prog-decline').style.width = progN + '%';
+                if (progN >= 100) {
+                    progN = 100;
+                    document.getElementById('text-decline').style.color = '#000';
+                    finishHold('decline');
+                } else {
+                    holdTimerN = requestAnimationFrame(() => updateHold('n'));
+                }
+            }
+        }
+
+        function finishHold(action) {
+            cancelAnimationFrame(holdTimerY); cancelAnimationFrame(holdTimerN);
+            document.getElementById('trade-notif').classList.remove('active');
+            
+            setTimeout(() => {
+                if (action === 'accept') {
+                    openTradeWindow();
+                } else {
+                    alert('Ai refuzat Trade-ul.');
+                }
+            }, 300);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('trade-notif').classList.contains('active') || e.repeat) return;
+            if (e.key.toLowerCase() === 'y') holdTimerY = requestAnimationFrame(() => updateHold('y'));
+            if (e.key.toLowerCase() === 'n') holdTimerN = requestAnimationFrame(() => updateHold('n'));
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'y') { cancelAnimationFrame(holdTimerY); progY = 0; document.getElementById('prog-accept').style.width = '0%'; }
+            if (e.key.toLowerCase() === 'n') { cancelAnimationFrame(holdTimerN); progN = 0; document.getElementById('prog-decline').style.width = '0%'; }
+        });
+
+
+        // ==========================================================
+        // LOGICA TERMINALULUI DE TRADE
+        // ==========================================================
+        let myOfferLocked = false;
+        let hisOfferLocked = false;
+        let countdownInterval = null;
+
+        function openTradeWindow() {
+            document.getElementById('trade-window').classList.add('active');
+            isTradeOpen = true;
+            resetTradeState();
+        }
+
+        function closeTrade() {
+            document.getElementById('trade-window').classList.remove('active');
+            document.getElementById('countdown-screen').classList.remove('active');
+            isTradeOpen = false;
+            clearInterval(countdownInterval);
+        }
+
+        function resetTradeState() {
+            myOfferLocked = false; hisOfferLocked = false;
+            clearInterval(countdownInterval);
+            
+            // Reset My Panel
+            const myPanel = document.getElementById('panel-mine');
+            const myBtn = document.getElementById('btn-lock-mine');
+            myPanel.classList.remove('locked');
+            myBtn.classList.remove('locked');
+            myBtn.innerHTML = `<i class="ph-bold ph-lock-key"></i> Blochează Oferta`;
+            document.getElementById('status-mine').innerText = "Modificare...";
+            document.getElementById('btn-add-offer').style.opacity = '1';
+            document.getElementById('btn-add-offer').style.pointerEvents = 'all';
+
+            // Reset His Panel
+            const hisPanel = document.getElementById('panel-his');
+            hisPanel.classList.remove('locked-his');
+            document.getElementById('status-his').innerText = "În Modificare";
+            document.getElementById('status-his').style.background = "var(--text-muted)";
+        }
+
+        function toggleMyLock() {
+            if(!isTradeOpen) return;
+            myOfferLocked = !myOfferLocked;
+            
+            const myPanel = document.getElementById('panel-mine');
+            const myBtn = document.getElementById('btn-lock-mine');
+            const status = document.getElementById('status-mine');
+            const addBtn = document.getElementById('btn-add-offer');
+
+            if (myOfferLocked) {
+                myPanel.classList.add('locked');
+                myBtn.classList.add('locked');
+                myBtn.innerHTML = `<i class="ph-bold ph-lock-key-open"></i> Deblochează`;
+                status.innerText = "Pregătit";
+                addBtn.style.opacity = '0.3'; addBtn.style.pointerEvents = 'none';
+            } else {
+                myPanel.classList.remove('locked');
+                myBtn.classList.remove('locked');
+                myBtn.innerHTML = `<i class="ph-bold ph-lock-key"></i> Blochează Oferta`;
+                status.innerText = "Modificare...";
+                addBtn.style.opacity = '1'; addBtn.style.pointerEvents = 'all';
+                cancelCountdown(); // Daca dau unlock, se opreste countdown-ul
+            }
+
+            checkBothLocked();
+        }
+
+        // Simulare din butonul de DEV
+        function simulateOpponentLock() {
+            if(!isTradeOpen) return alert("Deschide Trade-ul mai intai!");
+            hisOfferLocked = true;
+            
+            const hisPanel = document.getElementById('panel-his');
+            hisPanel.classList.add('locked-his');
+            document.getElementById('status-his').innerText = "Ofertă Blocată";
+            document.getElementById('status-his').style.background = "var(--success)";
+            
+            checkBothLocked();
+        }
+
+        // ==========================================================
+        // COUNTDOWN FINAL (5 SECUNDE)
+        // ==========================================================
+        function checkBothLocked() {
+            if (myOfferLocked && hisOfferLocked) {
+                startCountdown();
+            }
+        }
+
+        function startCountdown() {
+            const cdScreen = document.getElementById('countdown-screen');
+            const timerEl = document.getElementById('cd-timer');
+            cdScreen.classList.add('active');
+            
+            let time = 5;
+            timerEl.innerText = time;
+
+            countdownInterval = setInterval(() => {
+                time--;
+                if (time > 0) {
+                    timerEl.innerText = time;
+                } else {
+                    clearInterval(countdownInterval);
+                    timerEl.innerText = "OK";
+                    setTimeout(() => {
+                        alert("TRANZACȚIE FINALIZATĂ CU SUCCES!");
+                        closeTrade();
+                    }, 500);
+                }
+            }, 1000);
+        }
+
+        function cancelCountdown() {
+            if (document.getElementById('countdown-screen').classList.contains('active')) {
+                clearInterval(countdownInterval);
+                document.getElementById('countdown-screen').classList.remove('active');
+                
+                // Fortam si deblocarea celuilalt jucator ca sistem de siguranta
+                hisOfferLocked = false;
+                const hisPanel = document.getElementById('panel-his');
+                hisPanel.classList.remove('locked-his');
+                document.getElementById('status-his').innerText = "În Modificare";
+                document.getElementById('status-his').style.background = "var(--text-muted)";
+            }
+        }
+
+    </script>
+</body>
+</html>

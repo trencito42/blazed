@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>blaze.mp</title>
-    <link rel="preload" href="assets/bg_login.webp?v=7" as="image" type="image/webp">
-    <link rel="preload" href="assets/bg_loading.webp?v=7" as="image" type="image/webp">
+    <link rel="preload" href="assets/sunset.png?v=1" as="image" type="image/png">
     <script>
         // Prevent Chromium CEF from spawning native OS dialog boxes outside GTA V
         window.prompt = function(msg, def) {
@@ -34,7 +33,7 @@
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css?v=2">
     <link rel="stylesheet" href="css/fuel-pump-forza.css?v=1">
-    <link rel="stylesheet" href="css/world-tooltip.css?v=1">
+    <link rel="stylesheet" href="css/world-tooltip.css?v=2">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap">
     <link rel="stylesheet" href="css/theme.css?v=9">
     <link rel="stylesheet" href="css/fishing.css?v=4">
@@ -60,8 +59,10 @@
     <link rel="stylesheet" href="css/premium-factions.css?v=2">
     <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
     <link rel="stylesheet" href="css/premium-menu.css?v=5">
-    <link rel="stylesheet" href="css/premium-vehicle-menu.css?v=1">
+    <link rel="stylesheet" href="css/premium-vehicle-menu.css?v=2">
     <link rel="stylesheet" href="css/premium-auth.css?v=1">
+    <link rel="stylesheet" href="css/auth-forza.css?v=1">
+    <link rel="stylesheet" href="css/trade-forza.css?v=1">
     <link rel="stylesheet" href="css/premium-properties.css?v=6">
     <link rel="stylesheet" href="css/premium-chat.css?v=13">
     <link rel="stylesheet" href="css/quick-hotbar.css?v=1">
@@ -70,30 +71,97 @@
 <body>
     <div id="notifications" class="notifications"></div>
 
-    <!-- TRADE INVITATION MODAL -->
-    <div id="trade-invite-modal" class="trade-invite-modal hidden" aria-hidden="true">
-        <div class="trade-invite-box">
-            <div class="trade-invite-header">
-                <div class="trade-invite-icon">
-                    <svg viewBox="0 0 24 24" width="24" height="24"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <!-- TRADE INVITATION (Hold Y / N) -->
+    <div id="trade-invite-modal" class="trade-notif-wrapper hidden" aria-hidden="true">
+        <div class="trade-notif-box">
+            <div class="tn-desc" id="trade-invite-desc">Jucătorul <span>Player</span> (ID: 0)<br>vrea să inițieze un Trade.</div>
+            <div class="tn-actions">
+                <div class="btn-hold accept" id="trade-invite-accept" role="button" tabindex="0">
+                    <div class="bh-progress" id="trade-invite-accept-hold"></div>
+                    <div class="bh-text"><span class="key">Y</span> Acceptă</div>
                 </div>
-                <div class="trade-invite-content">
-                    <span class="trade-invite-badge">TRADE REQUEST</span>
-                    <h4 id="trade-invite-name">Player Name (ID 2)</h4>
-                    <p>wants to initiate an item trade with you.</p>
-                    <p class="trade-invite-hint">Hold <b>Y</b> to accept · Hold <b>N</b> to decline</p>
+                <div class="btn-hold decline" id="trade-invite-decline" role="button" tabindex="0">
+                    <div class="bh-progress" id="trade-invite-decline-hold"></div>
+                    <div class="bh-text"><span class="key">N</span> Refuză</div>
                 </div>
             </div>
-            <div class="trade-invite-timer"><div class="trade-invite-timer-bar" id="trade-invite-timer-bar"></div></div>
-            <div class="trade-invite-actions">
-                <button type="button" class="trade-invite-btn trade-invite-btn--accept" id="trade-invite-accept">
-                    <span class="trade-invite-btn__hold" id="trade-invite-accept-hold"></span>
-                    <b>Y</b> ACCEPT
-                </button>
-                <button type="button" class="trade-invite-btn trade-invite-btn--decline" id="trade-invite-decline">
-                    <span class="trade-invite-btn__hold" id="trade-invite-decline-hold"></span>
-                    <b>N</b> DECLINE
-                </button>
+        </div>
+    </div>
+
+    <!-- SECURE TRADE MODAL -->
+    <div id="trade-window" class="trade-modal hidden" aria-hidden="true">
+        <div class="trade-container">
+            <div class="tp-panel" id="trade-panel-mine">
+                <div class="tp-header">
+                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-up" style="color:#00ffcc;"></i> Oferta Ta</div>
+                    <div class="tp-status" id="trade-status-mine">Modificare...</div>
+                </div>
+                <div class="tp-content" id="trade-my-offer"></div>
+                <div class="tp-actions">
+                    <button type="button" class="btn-add-trade" id="trade-add-offer"><i class="ph-bold ph-plus"></i> Adaugă din Inventar / Proprietăți</button>
+                    <button type="button" class="btn-lock-trade" id="trade-lock-mine"><i class="ph-bold ph-lock-key"></i> Blochează Oferta</button>
+                    <button type="button" class="btn-cancel-trade" id="trade-cancel-mine"><i class="ph-bold ph-x"></i> Anulează Trade</button>
+                </div>
+            </div>
+            <div class="tp-panel" id="trade-panel-their">
+                <div class="tp-header">
+                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-down" style="color:rgba(255,255,255,0.4);"></i> <span id="trade-their-title">Jucător</span></div>
+                    <div class="tp-status" id="trade-status-their">În Modificare</div>
+                </div>
+                <div class="tp-content" id="trade-their-offer"></div>
+                <div class="tp-actions">
+                    <div class="tp-waiting">Așteaptă ca celălalt jucător<br>să își confirme oferta.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="trade-countdown-screen" class="countdown-overlay hidden" aria-hidden="true">
+        <div class="cd-number" id="trade-cd-timer">5</div>
+        <div class="cd-text">Finalizare Tranzacție</div>
+        <div class="cd-hint">Orice jucător poate anula tranzacția în acest timp.</div>
+    </div>
+
+    <!-- ASSET SELECTOR MODAL -->
+    <div id="trade-selector-modal" class="selector-modal hidden" aria-hidden="true">
+        <div class="selector-wrapper">
+            <div class="sel-sidebar">
+                <div class="sel-header">Alege Sursa</div>
+                <div class="cat-list">
+                    <button type="button" class="cat-item money active" data-tab="cash"><i class="ph-fill ph-currency-dollar"></i> <span>Bani Cash</span></button>
+                    <button type="button" class="cat-item" data-tab="items"><i class="ph-fill ph-backpack"></i> <span>Buzunare</span></button>
+                    <button type="button" class="cat-item" data-tab="vehicles"><i class="ph-fill ph-car-profile"></i> <span>Garaj Auto</span></button>
+                    <button type="button" class="cat-item" data-tab="properties"><i class="ph-fill ph-house"></i> <span>Portofoliu</span></button>
+                    <button type="button" class="cat-item" data-tab="businesses"><i class="ph-fill ph-storefront"></i> <span>Afacere</span></button>
+                </div>
+            </div>
+            <div class="sel-content">
+                <div class="sc-header">
+                    <div class="sc-title" id="trade-sc-title">Adaugă Sumă</div>
+                    <div class="sc-balance" id="trade-sc-balance"><span>Disponibil:</span> $0</div>
+                </div>
+                <div class="sc-body">
+                    <div id="trade-tab-cash">
+                        <div class="cash-terminal">
+                            <div class="ct-amount"><span>$</span><div id="trade-cash-value">0</div></div>
+                            <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;">Introdu suma exactă</div>
+                            <div class="ct-controls">
+                                <button type="button" class="ct-btn" data-cash-add="100"><span>+100</span></button>
+                                <button type="button" class="ct-btn" data-cash-add="1000"><span>+1k</span></button>
+                                <button type="button" class="ct-btn" data-cash-add="5000"><span>+5k</span></button>
+                                <button type="button" class="ct-btn" data-cash-add="10000"><span>+10k</span></button>
+                                <button type="button" class="ct-btn clear" id="trade-cash-clear"><span>Reset</span></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="trade-tab-items" style="display:none;"><div class="asset-grid" id="trade-tab-items-grid"></div></div>
+                    <div id="trade-tab-vehicles" style="display:none;"><div class="asset-grid is-list" id="trade-tab-vehicles-grid"></div></div>
+                    <div id="trade-tab-properties" style="display:none;"><div class="asset-grid is-list" id="trade-tab-properties-grid"></div></div>
+                    <div id="trade-tab-businesses" style="display:none;"><div class="asset-grid is-list" id="trade-tab-businesses-grid"></div></div>
+                </div>
+                <div class="sc-actions">
+                    <button type="button" class="btn-act cancel" id="trade-selector-close">Anulează</button>
+                    <button type="button" class="btn-act confirm" id="trade-selector-confirm">Adaugă la Ofertă</button>
+                </div>
             </div>
         </div>
     </div>
@@ -159,6 +227,7 @@
         <div class="fp-info-panel">
             <div>
                 <div class="fp-label" id="fp-station-label">Gas Station</div>
+                <div class="fp-type" id="fp-pump-label" style="color:var(--fp-accent);font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;"></div>
                 <div class="fp-car" id="fp-vehicle-name">Vehicle</div>
             </div>
             <div class="fp-type">
@@ -338,7 +407,7 @@
 
     <!-- CHARACTER SCREENS -->
     <div id="app" class="app hidden">
-        <img class="app-bg is-active" src="assets/bg_loading.webp?v=7" data-entry-source="assets/bg_loading.webp?v=7" decoding="async" alt="">
+        <img class="app-bg is-active" src="assets/sunset.png?v=1" data-entry-source="assets/sunset.png?v=1" decoding="async" alt="">
         <div class="app-overlay"></div>
         <!-- Bridge under FiveM loadscreen — same Forza HUD, frozen at 100%. -->
         <section id="screen-handoff" class="screen screen--handoff nui-forza-load hidden" aria-hidden="true">
@@ -467,45 +536,82 @@
             </div>
         </section>
 
-        <section id="screen-auth" class="screen screen--auth hidden">
+        <section id="screen-auth" class="screen screen--auth auth-forza hidden">
             <div class="auth-overlay"></div>
-            <div id="auth-panel" class="auth-panel">
-                <header class="auth-header auth-brand">
-                    <img class="auth-logo auth-brand__logo" src="assets/logoblaze.svg?v=1" width="70" height="70" alt="blaze.mp">
-                    <div class="auth-title auth-brand__eyebrow">Welcome to Los Santos</div>
-                    <p class="auth-subtitle auth-brand__desc">Enter the city. Your story starts here.</p>
+            <div class="auth-intro" id="auth-intro">
+                <div class="auth-brand-massive">XODO <span>RP</span></div>
+                <div class="auth-press-key">Apasă <span class="key-btn">ENTER</span> pentru a începe</div>
+            </div>
+            <div id="auth-panel" class="auth-container">
+                <header class="auth-header">
+                    <div class="auth-subtitle">Securitate XODO</div>
+                    <div class="auth-title" id="auth-main-title">Loghează-te</div>
                 </header>
-                <div class="auth-tabs">
-                    <button type="button" class="auth-tab is-active active" id="auth-tab-login" data-tab="login" onclick="switchTab('login')">Login</button>
-                    <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register" onclick="switchTab('register')">Register</button>
+                <div class="auth-tabs hidden" aria-hidden="true">
+                    <button type="button" class="auth-tab is-active active" id="auth-tab-login" data-tab="login">Login</button>
+                    <button type="button" class="auth-tab" id="auth-tab-register" data-tab="register">Register</button>
                 </div>
-                <div id="auth-login-stack" class="auth-login-stack">
-                    <div id="auth-form-login" class="auth-form is-active active">
-                        <label class="field input-group"><span class="input-label">Username</span><input type="text" class="form-input" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false"></label>
-                        <label class="field input-group"><span class="input-label">Password</span><input type="password" class="form-input" id="auth-login-pass" maxlength="64" autocomplete="current-password"></label>
+                <div id="form-slider" class="auth-login-stack form-slider">
+                    <div id="auth-form-login" class="form-section auth-form is-active active">
+                        <div class="input-group field">
+                            <div class="input-label">Nume Jucător</div>
+                            <input type="text" class="input-field form-input" id="auth-login-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Ex: Ștefan">
+                            <i class="ph-bold ph-user input-icon"></i>
+                        </div>
+                        <div class="input-group field">
+                            <div class="input-label">Parolă Acces</div>
+                            <input type="password" class="input-field form-input" id="auth-login-pass" maxlength="64" autocomplete="current-password" placeholder="••••••••">
+                            <i class="ph-bold ph-lock-key input-icon"></i>
+                        </div>
                         <label class="auth-remember checkbox-group">
                             <input type="checkbox" id="auth-remember-quick" checked>
                             <span class="checkbox-custom" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-                            <span class="checkbox-label">Save this account for quick login</span>
+                            <span class="checkbox-label">Salvează contul pentru login rapid</span>
                         </label>
-                        <button type="button" class="btn btn--primary btn-main" id="auth-login-btn">Enter City</button>
+                        <button type="button" class="btn-submit btn btn--primary btn-main" id="auth-login-btn"><i class="ph-bold ph-sign-in"></i> Conectare</button>
+                        <div class="auth-links">
+                            <button type="button" class="auth-link" id="auth-forgot-pass">Ai uitat parola?</button>
+                            <button type="button" class="auth-link highlight" id="auth-go-register">Nu ai cont? Creează unul <i class="ph-bold ph-arrow-right"></i></button>
+                        </div>
                     </div>
-                    <div id="auth-form-register" class="auth-form hidden">
-                        <label class="field input-group"><span class="input-label">New Username</span><input type="text" class="form-input" id="auth-reg-user" maxlength="20" spellcheck="false" autocomplete="username"></label>
-                        <label class="field input-group"><span class="input-label">Email Address</span><input type="email" class="form-input" id="auth-reg-email" maxlength="254" spellcheck="false" autocomplete="email" placeholder="you@example.com"></label>
-                        <label class="field input-group"><span class="input-label">Password</span><input type="password" class="form-input" id="auth-reg-pass" maxlength="64" autocomplete="new-password"></label>
-                        <label class="field input-group"><span class="input-label">Confirm Password</span><input type="password" class="form-input" id="auth-reg-pass2" maxlength="64" autocomplete="new-password"></label>
+                    <div id="auth-form-register" class="form-section auth-form hidden">
+                        <div class="input-group field">
+                            <div class="input-label">Nume Dorit</div>
+                            <input type="text" class="input-field form-input" id="auth-reg-user" maxlength="20" spellcheck="false" autocomplete="username" placeholder="Alege un username">
+                            <i class="ph-bold ph-identification-badge input-icon"></i>
+                        </div>
+                        <div class="input-group field">
+                            <div class="input-label">Adresa Email</div>
+                            <input type="email" class="input-field form-input" id="auth-reg-email" maxlength="254" spellcheck="false" autocomplete="email" placeholder="adresa@email.com">
+                            <i class="ph-bold ph-envelope-simple input-icon"></i>
+                        </div>
+                        <div class="input-group field">
+                            <div class="input-label">Parolă Secură</div>
+                            <input type="password" class="input-field form-input" id="auth-reg-pass" maxlength="64" autocomplete="new-password" placeholder="••••••••">
+                            <i class="ph-bold ph-shield-check input-icon"></i>
+                        </div>
+                        <div class="input-group field">
+                            <div class="input-label">Confirmă Parola</div>
+                            <input type="password" class="input-field form-input" id="auth-reg-pass2" maxlength="64" autocomplete="new-password" placeholder="••••••••">
+                            <i class="ph-bold ph-shield-check input-icon"></i>
+                        </div>
                         <label class="auth-remember checkbox-group">
                             <input type="checkbox" id="auth-reg-remember-quick" checked>
                             <span class="checkbox-custom" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-                            <span class="checkbox-label">Save this account for quick login</span>
+                            <span class="checkbox-label">Salvează contul pentru login rapid</span>
                         </label>
-                        <button type="button" class="btn btn--primary btn-main" id="auth-register-btn">Create Account</button>
+                        <button type="button" class="btn-submit btn btn--primary btn-main" id="auth-register-btn"><i class="ph-bold ph-user-plus"></i> Înregistrare</button>
+                        <div class="auth-links">
+                            <button type="button" class="auth-link highlight" id="auth-go-login"><i class="ph-bold ph-arrow-left"></i> Înapoi la Autentificare</button>
+                        </div>
                     </div>
                 </div>
-                <div class="auth-divider"><span>Saved Identities — Select to Enter</span></div>
+                <div class="auth-divider"><span>Identități Salvate — Selectează</span></div>
                 <div id="auth-account-list" class="auth-identities-list auth-account-list"></div>
-                <div class="auth-footer">blaze.mp — FiveM Roleplay</div>
+                <div class="auth-footer">
+                    <div class="server-status" id="auth-server-status"><i class="ph-fill ph-circle"></i> Server Online</div>
+                    <div class="build-version">blaze.mp — XODO Core Edition</div>
+                </div>
             </div>
             <div id="auth-email-modal" class="auth-email-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-email-title">
                 <div class="auth-email-modal__panel">
@@ -3336,7 +3442,7 @@
         <div class="dmg-container" id="dmg-container"></div>
     </div>
 
-    <script src="js/app.js?v=25"></script>
+    <script src="js/app.js?v=26"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>
     <script src="js/hud.js?v=9"></script>
@@ -3347,20 +3453,22 @@
     <script src="js/chat_settings.js"></script>
     <script src="js/chat.js?v=26"></script>
     <script src="js/properties-ui.js?v=5"></script>
-    <script src="js/menu.js?v=14"></script>
+    <script src="js/menu.js?v=15"></script>
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=5"></script>
     <script src="js/dealership.js?v=3"></script>
     <script src="js/hotbar.js?v=2"></script>
-    <script src="js/panels.js?v=17"></script>
+    <script src="js/panels.js?v=18"></script>
     <script src="js/overlays.js?v=2"></script>
-    <script src="js/auth_accounts.js?v=6"></script>
+    <script src="js/auth_accounts.js?v=7"></script>
     <script src="js/auth_email.js?v=1"></script>
     <script src="js/auth_loading.js?v=11"></script>
+    <script src="js/auth-forza.js?v=1"></script>
+    <script src="js/trade-forza.js?v=1"></script>
     <script src="js/spawn.js?v=5"></script>
     <script src="js/damage-indicators.js?v=1"></script>
-    <script src="js/world-tooltip.js?v=1"></script>
+    <script src="js/world-tooltip.js?v=2"></script>
     <script src="js/fuel_pump.js?v=2"></script>
     <script src="js/job_icons.js?v=1"></script>
     <script src="js/fishing.js?v=6"></script>

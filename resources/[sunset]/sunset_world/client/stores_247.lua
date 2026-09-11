@@ -27,42 +27,41 @@ local function formatMoney(amount)
     return '$' .. formatted
 end
 
-local function loadModel(model)
-    local hash = joaat(model)
-    if not IsModelInCdimage(hash) then return nil end
-    RequestModel(hash)
-    local timeout = GetGameTimer() + 5000
-    while not HasModelLoaded(hash) do
-        if GetGameTimer() > timeout then return nil end
-        Wait(0)
-    end
-    return hash
-end
+local SHIRT_BY_STORE = {
+    legion = 2,
+    strawberry = 4,
+    littleseoul = 1,
+    mirrorpark = 3,
+    vinewood = 5,
+    rockford = 0,
+    sandy = 6,
+    paleto = 7,
+}
 
-local function spawnCashier(store)
+local function spawnCashier(store, index)
     local pos = store.cashier
     if not pos then return end
-    local hash = loadModel(CASHIER_MODEL)
-    if not hash then return end
 
-    local ped = CreatePed(4, hash, pos.x, pos.y, pos.z - 1.0, pos.w or 0.0, false, true)
-    if not ped or ped == 0 then return end
-
-    SetEntityAsMissionEntity(ped, true, true)
-    SetBlockingOfNonTemporaryEvents(ped, true)
-    SetEntityInvincible(ped, true)
-    FreezeEntityPosition(ped, true)
-    SetPedCanRagdoll(ped, false)
-    SetPedFleeAttributes(ped, 0, false)
-    SetPedCombatAttributes(ped, 46, true)
-    TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_STAND_IMPATIENT', 0, true)
+    local shirt = SHIRT_BY_STORE[store.id] or ((index or 1) % 8)
+    local ped = SunsetWorld.Npc.spawn({
+        model = CASHIER_MODEL,
+        coords = pos,
+        scenario = 'WORLD_HUMAN_STAND_IMPATIENT',
+        components = {
+            { 3, 0, 0 },
+            { 4, 0, 0 },
+            { 6, 1, 0 },
+            { 8, 15, 0 },
+            { 11, 13, shirt },
+        },
+    })
+    if not ped then return end
 
     cashiers[#cashiers + 1] = {
         ped = ped,
         store = store,
         promptId = ('cashier_%s'):format(store.id or #cashiers),
     }
-    SetModelAsNoLongerNeeded(hash)
 end
 
 local function buildStoreActions(ctx)
@@ -132,8 +131,8 @@ end
 
 CreateThread(function()
     Wait(1500)
-    for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
-        spawnCashier(store)
+    for index, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+        spawnCashier(store, index)
     end
 end)
 
@@ -141,10 +140,8 @@ CreateThread(function()
     while true do
         local row, dist = nearestCashier(PROMPT_DIST)
         if row and dist < PROMPT_DIST and not menuOpen and not shopOpen and not IsNuiFocused() then
-            local coords = SunsetWorld.Tooltips.coordsFromEntity(row.ped, 0.42)
-            SunsetWorld.Tooltips.set(row.promptId, {
-                coords = coords,
-                badge = 'BUSINESS 24/7',
+            SunsetWorld.Npc.showTooltip(row.promptId, row.ped, {
+                badge = row.store.label or 'BUSINESS 24/7',
                 badgeClass = 'npc',
                 bodyClass = 'npc',
                 icon = 'ph-storefront',
@@ -167,7 +164,7 @@ CreateThread(function()
             Wait(0)
         else
             if promptId then
-                SunsetWorld.Tooltips.clear(promptId)
+                SunsetWorld.Npc.hideTooltip(promptId)
                 promptId = nil
             end
             Wait(250)
