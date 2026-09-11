@@ -8,6 +8,7 @@ version '1.0.0'
 
 shared_scripts {
     '@sunset_core/shared/config.lua',
+    '@sunset_clans/shared/config.lua',
     '@sunset_clans/shared/ranks.lua',
     'shared/config.lua',
 }

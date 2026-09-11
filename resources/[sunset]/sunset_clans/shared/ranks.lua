@@ -1,3 +1,5 @@
+SunsetClans = SunsetClans or {}
+
 SunsetClans.MaxRank = 7
 SunsetClans.MaxWarns = 3
 
