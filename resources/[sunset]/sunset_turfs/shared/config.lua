@@ -1,10 +1,13 @@
 SunsetTurfs = SunsetTurfs or {}
 
-SunsetTurfs.WarDurationSec = 600 -- 10 minutes war
+SunsetTurfs.WarDurationSec = 600 -- 10 minutes contested war
+SunsetTurfs.NeutralCaptureSec = 180 -- 3 minutes solo hold to capture a free turf
 SunsetTurfs.ScorePerSecond = 1
 SunsetTurfs.ScorePerKill = 10
 SunsetTurfs.TurfCooldownSec = 1800 -- 30 minutes cooldown after a war
 SunsetTurfs.MinMembersToAttack = 1
+SunsetTurfs.TurfBlipAlpha = 110
+SunsetTurfs.TurfBlipAlphaWar = 155
 
 SunsetTurfs.WeaponBlacklist = {
     [`WEAPON_RPG`] = true,

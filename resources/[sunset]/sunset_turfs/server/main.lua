@@ -122,7 +122,12 @@ local function endWar(turfId, reason)
     TurfCooldowns[turfId] = os.time() + SunsetTurfs.TurfCooldownSec
 
     local turf = Turfs[turfId]
-    local attackerWon = war.attackerScore > war.defenderScore
+    local attackerWon
+    if war.isNeutralCapture then
+        attackerWon = war.attackerScore >= (war.captureTarget or SunsetTurfs.NeutralCaptureSec or 180)
+    else
+        attackerWon = war.attackerScore > war.defenderScore
+    end
 
     local winnerClanId = attackerWon and war.attackerClanId or war.defenderClanId
     local winnerClanName = attackerWon and war.attackerName or war.defenderName
@@ -158,6 +163,13 @@ end
 
 local function startWar(turf, attackerClan, defenderClan)
     local turfId = turf.id
+    local isNeutralCapture = not defenderClan
+    local captureTarget = isNeutralCapture and (SunsetTurfs.NeutralCaptureSec or 180) or nil
+    local durationSec = SunsetTurfs.WarDurationSec
+    if isNeutralCapture then
+        durationSec = math.min(SunsetTurfs.WarDurationSec, (captureTarget or 180) + 90)
+    end
+
     local warData = {
         turfId = turfId,
         turfName = turf.name,
@@ -169,12 +181,14 @@ local function startWar(turf, attackerClan, defenderClan)
         attackerColor = attackerClan.tag_color or '#00ffcc',
         attackerScore = 0,
         defenderClanId = defenderClan and defenderClan.id or nil,
-        defenderName = defenderClan and defenderClan.name or 'Nimanui (Liber)',
-        defenderTag = defenderClan and defenderClan.tag or 'FREE',
+        defenderName = defenderClan and defenderClan.name or 'Liber (neocupat)',
+        defenderTag = defenderClan and defenderClan.tag or 'LIBER',
         defenderColor = defenderClan and defenderClan.tag_color or '#555555',
         defenderScore = 0,
+        isNeutralCapture = isNeutralCapture,
+        captureTarget = captureTarget,
         startedAt = os.time(),
-        expiresAt = os.time() + SunsetTurfs.WarDurationSec,
+        expiresAt = os.time() + durationSec,
     }
 
     ActiveWars[turfId] = warData
@@ -204,8 +218,14 @@ local function startWar(turf, attackerClan, defenderClan)
             if attCount > 0 then
                 current.attackerScore = current.attackerScore + (attCount * SunsetTurfs.ScorePerSecond)
             end
-            if defCount > 0 then
+            if current.defenderClanId and defCount > 0 then
                 current.defenderScore = current.defenderScore + (defCount * SunsetTurfs.ScorePerSecond)
+            end
+
+            if current.isNeutralCapture and attCount > 0
+                and current.attackerScore >= (current.captureTarget or SunsetTurfs.NeutralCaptureSec or 180) then
+                endWar(turfId, 'neutral_captured')
+                break
             end
 
             current.attackerCount = attCount
