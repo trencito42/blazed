@@ -6,14 +6,66 @@
 
 .hotbar-container {
     position: fixed;
-    bottom: 40px;
-    right: 50px;
+    left: 50%;
+    bottom: 48px;
     z-index: 120;
     display: flex;
     gap: 8px;
-    transform: skewX(-5deg);
+    transform: translateX(-50%) skewX(-5deg);
     filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.8));
     pointer-events: none;
+}
+
+body.in-vehicle #hotbar-hud {
+    bottom: 56px;
+}
+
+.weapon-ammo-hud {
+    position: fixed;
+    left: 50%;
+    bottom: 128px;
+    z-index: 121;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    transform: translateX(-50%) skewX(-5deg);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    font-style: italic;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    letter-spacing: 0.5px;
+}
+
+body.in-vehicle .weapon-ammo-hud {
+    bottom: 136px;
+}
+
+.weapon-ammo-hud.hidden {
+    display: none !important;
+}
+
+.wah-clip {
+    color: #fff;
+}
+
+.wah-sep,
+.hotbar-slot-qty .ammo-sep {
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 700;
+    margin: 0 1px;
+}
+
+.wah-total,
+.hotbar-slot-qty .ammo-total {
+    color: rgba(255, 255, 255, 0.42);
+    font-weight: 800;
+}
+
+.hotbar-slot-qty .ammo-clip {
+    color: #fff;
 }
 
 .hotbar-container--inventory {
@@ -331,5 +383,11 @@ body.inventory-open #hotbar-hud {
 
 body.menu-open #hotbar-hud,
 body.game-paused #hotbar-hud {
+    display: none !important;
+}
+
+body.inventory-open .weapon-ammo-hud,
+body.menu-open .weapon-ammo-hud,
+body.game-paused .weapon-ammo-hud {
     display: none !important;
 }

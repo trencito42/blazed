@@ -268,6 +268,8 @@ const Hud = {
             this.updateWantedDisplay(data);
         }
 
+        document.body.classList.toggle('in-vehicle', !!data.inVehicle);
+
         const speedo = $('#hud-speedo');
         if (!speedo) return;
         if (!data.inVehicle) {

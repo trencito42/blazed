@@ -21,11 +21,20 @@ const HotbarUI = {
         });
     },
 
-    _slotQtyText(slot) {
+    _slotAmmoHtml(slot) {
         if (!slot) return '';
-        if (slot.kind === 'item' && slot.count > 1) return `${slot.count}x`;
+        if (slot.ammoClip != null && slot.ammoTotal != null) {
+            return `<span class="ammo-clip">${slot.ammoClip}</span><span class="ammo-sep">|</span><span class="ammo-total">${slot.ammoTotal}</span>`;
+        }
         if (slot.kind === 'duty_weapon' && slot.ammo != null) return String(slot.ammo);
         if (slot.kind === 'item' && slot.weapon && slot.ammo != null) return String(slot.ammo);
+        return '';
+    },
+
+    _slotQtyText(slot) {
+        if (!slot) return '';
+        if (this._slotAmmoHtml(slot)) return '';
+        if (slot.kind === 'item' && slot.count > 1) return `${slot.count}x`;
         return '';
     },
 
@@ -48,7 +57,7 @@ const HotbarUI = {
         el.innerHTML = `
             <div class="hotbar-slot-key">${slotIndex}</div>
             <div class="hotbar-slot-icon">${this._slotIconHtml(slot)}</div>
-            <div class="hotbar-slot-qty">${this._slotQtyText(slot)}</div>
+            <div class="hotbar-slot-qty">${this._slotAmmoHtml(slot) || this._slotQtyText(slot)}</div>
         `;
         if (interactive) {
             el.title = slot ? `${slot.label || 'Quick slot'} — double-click to clear` : `Quick slot ${slotIndex}`;
@@ -58,6 +67,32 @@ const HotbarUI = {
         }
         container.appendChild(el);
         return el;
+    },
+
+    renderWeaponAmmo(data = {}) {
+        this.init();
+        const hud = $('#weapon-ammo-hud');
+        if (!hud) return;
+
+        if (data.visible === false) {
+            hud.classList.add('hidden');
+            hud.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const clip = Number(data.clip);
+        const total = Number(data.total);
+        if (!Number.isFinite(clip) || !Number.isFinite(total)) {
+            hud.classList.add('hidden');
+            return;
+        }
+
+        hud.classList.remove('hidden');
+        hud.setAttribute('aria-hidden', 'false');
+        const clipEl = $('#wah-clip');
+        const totalEl = $('#wah-total');
+        if (clipEl) clipEl.textContent = String(clip);
+        if (totalEl) totalEl.textContent = String(total);
     },
 
     renderHud(data = {}) {

@@ -36,15 +36,39 @@ local function enrichInventoryPayload(data)
     return data
 end
 
+local function weaponAmmoForHash(ped, hash)
+    if not hash or hash == 0 or hash == UNARMED then return nil end
+    if not HasPedGotWeapon(ped, hash, false) then return nil end
+    local _, clip = GetAmmoInClip(ped, hash)
+    local total = GetAmmoInPedWeapon(ped, hash)
+    return {
+        clip = math.max(0, tonumber(clip) or 0),
+        total = math.max(0, tonumber(total) or 0),
+    }
+end
+
 local function enrichSlotsWithAmmo(slots)
     local ped = PlayerPedId()
     for _, slot in pairs(slots or {}) do
-        if type(slot) == 'table' and slot.kind == 'duty_weapon' and slot.weapon then
-            local hash = joaat(slot.weapon)
-            if HasPedGotWeapon(ped, hash, false) then
-                slot.ammo = GetAmmoInPedWeapon(ped, hash)
+        if type(slot) ~= 'table' then goto continue end
+        local hash = nil
+        if slot.kind == 'duty_weapon' and slot.weapon then
+            hash = joaat(slot.weapon)
+        elseif slot.kind == 'item' and slot.weapon then
+            hash = joaat(slot.weapon)
+        elseif slot.item then
+            local def = Sunset.Items[slot.item]
+            if def and def.weapon then hash = joaat(def.weapon) end
+        end
+        if hash then
+            local ammo = weaponAmmoForHash(ped, hash)
+            if ammo then
+                slot.ammoClip = ammo.clip
+                slot.ammoTotal = ammo.total
+                slot.ammo = ammo.clip
             end
         end
+        ::continue::
     end
     return slots
 end
@@ -256,6 +280,48 @@ end)
 CreateThread(function()
     Wait(4000)
     refreshHotbarFromServer()
+end)
+
+CreateThread(function()
+    local lastClip, lastTotal = -1, -1
+    while true do
+        if blocked() then
+            if lastClip ~= -1 then
+                exports.sunset_ui:Send('weaponAmmoUpdate', { visible = false })
+                lastClip, lastTotal = -1, -1
+            end
+            Wait(250)
+        else
+            local ped = PlayerPedId()
+            local weapon = GetSelectedPedWeapon(ped)
+            if weapon == UNARMED or weapon == 0 then
+                if lastClip ~= -1 then
+                    exports.sunset_ui:Send('weaponAmmoUpdate', { visible = false })
+                    lastClip, lastTotal = -1, -1
+                end
+                Wait(200)
+            else
+                local ammo = weaponAmmoForHash(ped, weapon)
+                if ammo then
+                    if ammo.clip ~= lastClip or ammo.total ~= lastTotal then
+                        lastClip, lastTotal = ammo.clip, ammo.total
+                        exports.sunset_ui:Send('weaponAmmoUpdate', {
+                            visible = true,
+                            clip = ammo.clip,
+                            total = ammo.total,
+                        })
+                        enrichSlotsWithAmmo(hotbarSlots)
+                        exports.sunset_ui:Send('hotbarUpdate', {
+                            slots = hotbarSlots,
+                            activeSlot = activeHotbarSlot,
+                            visible = true,
+                        })
+                    end
+                end
+                Wait(IsPedShooting(ped) and 0 or 35)
+            end
+        end
+    end
 end)
 
 exports('GetHotbarSlots', function() return hotbarSlots end)

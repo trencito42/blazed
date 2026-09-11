@@ -843,6 +843,9 @@ window.addEventListener('message', (event) => {
         case 'hotbarUpdate':
             if (window.HotbarUI) HotbarUI.renderHud(data || event.data.data);
             break;
+        case 'weaponAmmoUpdate':
+            if (window.HotbarUI) HotbarUI.renderWeaponAmmo(data || event.data.data);
+            break;
         case 'emoteWheelShow':
             if (window.HotbarUI) HotbarUI.showEmoteWheel((data || event.data.data)?.emotes || []);
             break;

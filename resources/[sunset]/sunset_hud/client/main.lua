@@ -247,8 +247,15 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local minimap = RequestScaleformMovie('minimap')
+    while not HasScaleformMovieLoaded(minimap) do
+        Wait(0)
+    end
     while true do
         if hudActive then
+            BeginScaleformMovieMethod(minimap, 'SETUP_HEALTH_ARMOUR')
+            ScaleformMovieMethodAddParamInt(0)
+            EndScaleformMovieMethod()
             HideHudComponentThisFrame(1)
             HideHudComponentThisFrame(2)
             HideHudComponentThisFrame(3)
