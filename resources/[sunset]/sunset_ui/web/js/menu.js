@@ -305,12 +305,12 @@ const Menu = {
             if (points > 0) {
                 actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--danger" data-v-action="claim_insurance" data-v-id="${Number(selected.id) || 0}">FILE INSURANCE CLAIM (${formatMoney(claimCost)})</button>`;
             } else {
-                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">FĂRĂ PUNCTE — REÎNNOIEȘTE (${formatMoney(renewCost)})</button>`;
+                actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--warning" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">NO POINTS — RENEW COVERAGE (${formatMoney(renewCost)})</button>`;
             }
         } else if (status.stored) {
             actions = `<button type="button" class="premium-vmenu__btn premium-vmenu__btn--primary" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}">SPAWN VEHICLE</button>${actions}`;
             if ((selected.insurancePoints || 0) < 5) {
-                actions += `<button type="button" class="premium-vmenu__btn" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 PUNCTE (${formatMoney(selected.renewCost || 750)})</button>`;
+                actions += `<button type="button" class="premium-vmenu__btn" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}">+5 POINTS (${formatMoney(selected.renewCost || 750)})</button>`;
             }
         } else if (status.inWorld) {
             if (selected.isCurrentVehicle) {
@@ -327,17 +327,19 @@ const Menu = {
                 <div class="premium-vmenu__list">${listHtml}</div>
             </aside>
             <section class="premium-vmenu__detail">
-                <div class="premium-vmenu__class">PERSONAL VEHICLE</div>
-                <h2>${model}</h2>
-                <div class="premium-vmenu__status premium-vmenu__status--${status.key}"><i></i>${this.escape(status.label)}</div>
-                <div class="premium-vmenu__stats">
-                    ${this.vitalsRow('ENGINE HEALTH', engine)}
-                    ${this.vitalsRow('FUEL', fuel)}
-                    ${this.vitalsRow('BODY', body)}
-                    <div class="premium-vmenu__odo"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
-                    <div class="premium-vmenu__insurance-info"><span>INSURANCE</span><strong>${selected.insurancePoints != null ? selected.insurancePoints : 5} PTS · TIER ${selected.insuranceLevel || 1}/11 · CLAIM: ${formatMoney(selected.claimCost || 250)}</strong></div>
+                <div class="premium-vmenu__detail-body">
+                    <div class="premium-vmenu__class">PERSONAL VEHICLE</div>
+                    <h2>${model}</h2>
+                    <div class="premium-vmenu__status premium-vmenu__status--${status.key}"><i></i>${this.escape(status.label)}</div>
+                    <div class="premium-vmenu__stats">
+                        ${this.vitalsRow('ENGINE HEALTH', engine)}
+                        ${this.vitalsRow('FUEL', fuel)}
+                        ${this.vitalsRow('BODY', body)}
+                        <div class="premium-vmenu__odo"><span>ODOMETER</span><strong>${odometer.toFixed(1)} KM</strong></div>
+                        <div class="premium-vmenu__insurance-info"><span>INSURANCE</span><strong>${selected.insurancePoints != null ? selected.insurancePoints : 5} PTS · TIER ${selected.insuranceLevel || 1}/11 · CLAIM: ${formatMoney(selected.claimCost || 250)}</strong></div>
+                    </div>
+                    ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
                 </div>
-                ${this.formatEcuBlock(selected.ecuInfo, selected.id)}
                 <div class="premium-vmenu__actions">${actions}</div>
             </section>`;
 

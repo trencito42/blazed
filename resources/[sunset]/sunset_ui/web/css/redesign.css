@@ -1525,18 +1525,20 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
 /* Vehicle menu — exact premium_vehicle_menu.html geometry and accent. */
 .menu-mgmt--vehicles {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;
+    height: 100%;
+    min-height: 0;
 }
 
 #menu.menu--solo-vehicle .menu-wrap {
     top: 50% !important;
     bottom: auto !important;
     width: min(850px, calc(100vw - 80px)) !important;
-    height: min(550px, calc(100vh - 100px)) !important;
-    max-height: none !important;
+    height: min(620px, calc(100vh - 80px)) !important;
+    max-height: calc(100vh - 80px) !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     background: transparent !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -1589,11 +1591,11 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
 }
 
 .menu-vehicle-grid {
-    grid-template-columns: 40% 60% !important;
-    width: min(850px, 100%) !important;
-    height: min(550px, 100%) !important;
+    grid-template-columns: 38% 62% !important;
+    width: 100% !important;
+    height: 100% !important;
     min-height: 0 !important;
-    max-height: min(550px, calc(100vh - 120px)) !important;
+    max-height: 100% !important;
     overflow: hidden !important;
     background: var(--premium-bg) !important;
     border: 1px solid var(--premium-border) !important;
@@ -1628,9 +1630,19 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
 
 #menu.menu--solo-vehicle .premium-vmenu__detail {
     min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+#menu.menu--solo-vehicle .premium-vmenu__detail-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    overscroll-behavior: contain;
+}
+
+#menu.menu--solo-vehicle .premium-vmenu__actions {
+    flex-shrink: 0 !important;
 }
 
 @keyframes premium-vehicle-in {
