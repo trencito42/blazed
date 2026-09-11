@@ -50,6 +50,7 @@ function SunsetWorld.Tooltips.set(id, data)
         icon = data.icon or 'ph-circle',
         title = data.title or '',
         desc = data.desc or '',
+        meta = data.meta or '',
         key = data.key or 'E',
     }
     sendSync()

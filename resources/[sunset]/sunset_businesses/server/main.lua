@@ -294,12 +294,32 @@ exports.sunset_core:RegisterCallback('sunset:getStoreContext', function(source)
     }
 end)
 
+local function gasBusinessViewFromStationLabel(stationLabel)
+    stationLabel = tostring(stationLabel or '')
+    if stationLabel == '' then return nil end
+    local shopKey = 'gas_' .. slugify(stationLabel)
+    local row = MySQL.single.await([[
+        SELECT b.*, CONCAT_WS(' ', c.firstname, c.lastname) AS owner_name
+        FROM player_businesses b
+        LEFT JOIN characters c ON c.id = b.owner_character_id
+        WHERE b.enabled = 1 AND b.business_type = 'gas' AND (b.shop_key = ? OR b.label = ?)
+        LIMIT 1
+    ]], { shopKey, stationLabel })
+    return rowToView(row)
+end
+
+exports.sunset_core:RegisterCallback('sunset:getGasBusinessByStation', function(_, stationLabel)
+    local view = gasBusinessViewFromStationLabel(stationLabel)
+    if not view then return nil end
+    return { business = view }
+end)
+
 exports.sunset_core:RegisterCallback('sunset:getGasBusinessContext', function(source)
     local char = character(source)
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil end
     local coords = GetEntityCoords(ped)
-    local row = findNearestBusiness(coords, 'gas', 8.0)
+    local row = findNearestBusiness(coords, 'gas', 25.0)
     if not row then return nil end
 
     local view = rowToView(row)

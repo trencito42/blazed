@@ -126,6 +126,20 @@ local function pumpTooltipCoords(pump)
     return vector3(pump.x, pump.y, pump.z + 1.15)
 end
 
+local function ownerLabelFromBusiness(biz)
+    if not biz then return 'Stat' end
+    if biz.ownerName and biz.ownerName ~= '' then
+        return biz.ownerName
+    end
+    if biz.ownerCharacterId then
+        return ('Jucător #%d'):format(biz.ownerCharacterId)
+    end
+    if biz.forSale then
+        return 'De vânzare'
+    end
+    return 'Stat'
+end
+
 local function getOwnerLabel(station)
     local key = station and (station.label or '') or ''
     local now = GetGameTimer()
@@ -135,17 +149,16 @@ local function getOwnerLabel(station)
 
     local label = 'Stat'
     if GetResourceState('sunset_businesses') == 'started' then
-        local ctx = Sunset.AwaitCallback('sunset:getGasBusinessContext')
-        if ctx and ctx.business then
-            local biz = ctx.business
-            if biz.ownerName and biz.ownerName ~= '' then
-                label = biz.ownerName
-            elseif biz.ownerCharacterId then
-                label = ('Jucător #%d'):format(biz.ownerCharacterId)
-            elseif biz.forSale then
-                label = 'De vânzare'
-            end
+        local biz
+        if key ~= '' then
+            local ctx = Sunset.AwaitCallback('sunset:getGasBusinessByStation', key)
+            biz = ctx and ctx.business
         end
+        if not biz then
+            local ctx = Sunset.AwaitCallback('sunset:getGasBusinessContext')
+            biz = ctx and ctx.business
+        end
+        label = ownerLabelFromBusiness(biz)
     end
 
     cachedOwnerKey = key
@@ -237,13 +250,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                         desc = 'Umple Bidonul'
                     end
                 end
-                local ownerHint = ''
-                if isActive then
-                    ownerHint = getOwnerLabel(station)
-                    if ownerHint and ownerHint ~= '' then
-                        ownerHint = ' · ' .. ownerHint
-                    end
-                end
+                local ownerLabel = getOwnerLabel(station)
                 tooltips.set(id, {
                     coords = pumpTooltipCoords(pump),
                     badge = pumpBrand(station),
@@ -251,7 +258,8 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                     bodyClass = 'gas',
                     icon = 'ph-gas-pump',
                     title = ('Pompă Benzina #%02d'):format(globalId),
-                    desc = desc .. ownerHint,
+                    desc = desc,
+                    meta = ('Proprietar: %s'):format(ownerLabel),
                     key = isActive and key or '',
                 })
             else

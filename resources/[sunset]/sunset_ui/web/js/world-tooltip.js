@@ -25,12 +25,14 @@ const WorldTooltipLayer = {
         const icon = row.icon ? `ph-fill ${this.escape(row.icon)}` : 'ph-fill ph-circle';
         const key = row.key ? `<span class="wt-key">${this.escape(row.key)}</span>` : '';
         const desc = row.desc ? `${key}${this.escape(row.desc)}` : '';
+        const meta = row.meta ? `<div class="wt-meta">${this.escape(row.meta)}</div>` : '';
         return `
             <div class="wt-badge${badgeClass}">${this.escape(row.badge || '')}</div>
             <div class="wt-body${bodyClass}">
                 <i class="${icon} wt-icon"></i>
                 <div class="wt-info">
                     <div class="wt-title">${this.escape(row.title || '')}</div>
+                    ${meta}
                     ${desc ? `<div class="wt-desc">${desc}</div>` : ''}
                 </div>
             </div>

@@ -79,6 +79,15 @@
     letter-spacing: 1px;
 }
 
+.world-tooltip-3d .wt-meta {
+    font-size: 10px;
+    font-weight: 800;
+    color: #00ffcc;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 2px;
+}
+
 .world-tooltip-3d .wt-desc {
     font-size: 10px;
     font-weight: 700;
