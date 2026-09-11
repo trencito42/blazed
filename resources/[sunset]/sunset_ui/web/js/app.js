@@ -20,7 +20,7 @@ function post(action, data = {}) {
 }
 window.post = post;
 
-const ENTRY_SUNSET_BG = 'assets/sunset.png?v=1';
+const ENTRY_SUNSET_BG = 'assets/bg_loading.webp?v=8';
 const ENTRY_BACKGROUNDS = {
     auth: ENTRY_SUNSET_BG,
     handoff: ENTRY_SUNSET_BG,

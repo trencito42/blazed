@@ -54,8 +54,8 @@
     width: min(420px, 92vw);
     padding: 44px 38px 36px;
     background: var(--screen-glass, linear-gradient(180deg, rgba(24, 20, 18, 0.55), rgba(9, 8, 8, 0.62)));
-    backdrop-filter: blur(12px) saturate(0.9);
-    -webkit-backdrop-filter: blur(12px) saturate(0.9);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     border: none;
     border-top: 2px solid rgba(255, 137, 20, 0.45);
     clip-path: none;
@@ -68,14 +68,13 @@
 }
 
 @keyframes authPanelIn {
-    from { opacity: 0; transform: translateY(22px) scale(0.965); filter: blur(8px); }
-    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    from { opacity: 0; transform: translateY(22px) scale(0.965); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .auth-panel.is-hidden {
     transform: scale(0.92) translateY(-18px);
     opacity: 0;
-    filter: blur(10px);
     pointer-events: none;
 }
 

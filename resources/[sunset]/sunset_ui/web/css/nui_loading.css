@@ -56,7 +56,6 @@
 #screen-handoff.nui-forza-load.is-fading .hud-wrapper,
 #screen-loading.nui-forza-load.is-fading .hud-wrapper {
     opacity: 0;
-    filter: blur(6px);
     transform: skewX(-6deg) translateY(12px);
 }
 
@@ -65,7 +64,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    filter: drop-shadow(var(--nui-load-shadow-text));
+    text-shadow: var(--nui-load-shadow-text);
 }
 
 #screen-handoff.nui-forza-load .brand-title,
@@ -110,7 +109,7 @@
 #screen-handoff.nui-forza-load .tips-container,
 #screen-loading.nui-forza-load .tips-container {
     max-width: 450px;
-    filter: drop-shadow(var(--nui-load-shadow-text));
+    text-shadow: var(--nui-load-shadow-text);
 }
 
 #screen-handoff.nui-forza-load .tips-header,
@@ -135,13 +134,6 @@
     height: 12px;
     background: var(--nui-load-accent);
     border-radius: 50%;
-    animation: nuiLoadPulseGlow 2s infinite;
-}
-
-@keyframes nuiLoadPulseGlow {
-    0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.6); }
-    70% { box-shadow: 0 0 0 10px rgba(0, 255, 204, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); }
 }
 
 #screen-handoff.nui-forza-load .tips-text,
@@ -161,13 +153,12 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    filter: drop-shadow(var(--nui-load-shadow-heavy));
 }
 
 #screen-handoff.nui-forza-load .massive-pct,
 #screen-loading.nui-forza-load .massive-pct {
     font-family: 'Montserrat', sans-serif;
-    font-size: 180px;
+    font-size: 140px;
     font-weight: 900;
     font-style: italic;
     color: var(--nui-load-text);

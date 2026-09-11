@@ -39,7 +39,7 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: #070504 url('../assets/bg_loading.webp?v=7') center / cover no-repeat;
+    background: #070504 url('../assets/bg_loading.webp?v=8') center / cover no-repeat;
     opacity: 1;
     filter: blur(0);
     transform: scale(1);
@@ -50,8 +50,7 @@ html, body {
 
 .app.app--enter-game {
     opacity: 0;
-    filter: blur(8px);
-    transform: scale(1.025);
+    transform: scale(1.02);
     pointer-events: none;
 }
 
@@ -210,10 +209,8 @@ body.dealership-open .hotbar-container {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    filter: blur(0);
     transform: scale(1);
-    transition: filter 700ms ease, transform 900ms ease, opacity 650ms ease;
-    will-change: opacity, filter, transform;
+    transition: opacity 450ms ease, transform 700ms ease;
 }
 
 .app-bg.is-active {
@@ -227,19 +224,15 @@ body.dealership-open .hotbar-container {
     transition: background 700ms ease, opacity 650ms ease;
 }
 
-.app[data-screen="loading"] .app-bg { filter: blur(0); transform: scale(1); }
+.app[data-screen="loading"] .app-bg { transform: scale(1); }
 .app[data-screen="loading"] .app-overlay { background: rgba(0, 0, 0, .14); }
-.app[data-screen="handoff"] .app-bg { filter: blur(0); transform: scale(1); }
+.app[data-screen="handoff"] .app-bg { transform: scale(1); }
 .app[data-screen="handoff"] .app-overlay { background: transparent; }
-.app[data-screen="auth"] .app-bg { filter: blur(11px); transform: scale(1.045); animation: authBgIn 750ms ease both; }
-.app[data-screen="auth"] .app-overlay { background: rgba(0, 0, 0, .56); }
-.app[data-screen="spawn"] .app-bg { filter: blur(5px); transform: scale(1.022); }
-.app[data-screen="spawn"] .app-overlay { background: rgba(0, 0, 0, .38); }
-
-@keyframes authBgIn {
-    from { filter: blur(0); transform: scale(1); }
-    to { filter: blur(11px); transform: scale(1.045); }
-}
+/* FiveM CEF: full-screen CSS blur on backgrounds freezes weak GPUs — use overlay only. */
+.app[data-screen="auth"] .app-bg { transform: scale(1.02); }
+.app[data-screen="auth"] .app-overlay { background: rgba(0, 0, 0, .62); }
+.app[data-screen="spawn"] .app-bg { transform: scale(1.01); }
+.app[data-screen="spawn"] .app-overlay { background: rgba(0, 0, 0, .42); }
 
 .screen--handoff { overflow: hidden; }
 

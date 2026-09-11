@@ -24,6 +24,7 @@ function createForzaLoadUI(screenId) {
         _finishTimer: null,
         _tipTimer: null,
         _progress: 0,
+        _lastRenderedPct: -1,
         _segments: [],
         _tipIdx: 0,
 
@@ -79,6 +80,8 @@ function createForzaLoadUI(screenId) {
             const { pct, status, files } = this._els();
             this._progress = Math.max(0, Math.min(100, value));
             const floor = Math.floor(this._progress);
+            if (floor === this._lastRenderedPct && !statusText) return;
+            this._lastRenderedPct = floor;
             if (pct) pct.innerHTML = `${floor}<span>%</span>`;
             if (status) status.textContent = statusText || this._taskLabel(this._progress);
             if (files) files.textContent = this._fileLabel(this._progress);
@@ -114,6 +117,7 @@ function createForzaLoadUI(screenId) {
             this._interval = null;
             this._finishTimer = null;
             this._progress = 0;
+            this._lastRenderedPct = -1;
             this._segments = [];
             root()?.classList.remove('is-fading');
             this._setProgress(0, 'Initializing session...');
@@ -155,13 +159,12 @@ function createForzaLoadUI(screenId) {
 
             this._startTips();
             const totalMs = Math.max(2000, Number(data.duration) || 5000);
-            const tickMs = 50;
+            const tickMs = 180;
             const increment = 100 / (totalMs / tickMs);
             const holdAt = data.holdAt == null ? 92 : Number(data.holdAt);
 
             this._interval = setInterval(() => {
                 let next = this._progress + increment;
-                if (Math.random() > 0.82) next -= increment * 0.5;
                 if (next >= holdAt) {
                     next = holdAt;
                     clearInterval(this._interval);
@@ -249,7 +252,7 @@ const AuthLoading = {
         document.getElementById('auth-panel')?.classList.add('is-hidden');
         if (typeof showScreen === 'function') showScreen('loading');
         LoadingScreen.start({
-            duration: 5200,
+            duration: 3200,
             startAt: 4,
             startText: 'Securing account session...',
             holdAt: 92,
