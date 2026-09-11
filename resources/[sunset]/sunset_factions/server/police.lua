@@ -984,7 +984,7 @@ end)
 
 local fixedRadarCooldowns = {}
 
-RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex, speedKmh, plate, modelName)
+RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex)
     local source = source
     local char = FactionCore.getChar(source)
     if not char then return end
@@ -994,6 +994,8 @@ RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex, speedKm
 
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return end
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    if not vehicle or vehicle == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then return end
     local playerPos = GetEntityCoords(ped)
     local dist = #(playerPos - radar.coords)
     if dist > (radar.radius + 20.0) then return end
@@ -1015,7 +1017,7 @@ RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex, speedKm
     end
 
     local limit = radar.limitKmh or math.floor((radar.limitMph or 50) * 1.60934)
-    speedKmh = tonumber(speedKmh) or 0
+    local speedKmh = math.floor(GetEntitySpeed(vehicle) * 3.6 + 0.5)
     if speedKmh <= limit then return end
 
     local over = speedKmh - limit

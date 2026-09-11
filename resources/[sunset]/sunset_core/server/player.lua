@@ -198,9 +198,12 @@ function Sunset.AddMoney(source, account, amount, reason)
 
     local changed = MySQL.update.await(('UPDATE characters SET %s = %s + ? WHERE id = ?'):format(field, field), { amount, char.id })
     if not changed or changed < 1 then return false end
-    char[field] = (tonumber(char[field]) or 0) + amount
+    local row = MySQL.single.await(('SELECT cash, bank, %s AS balance FROM characters WHERE id = ? LIMIT 1'):format(field), { char.id })
+    if not row then return false end
+    char.cash = tonumber(row.cash) or 0
+    char.bank = tonumber(row.bank) or 0
 
-    Sunset.LogMoneyTransaction(char.id, field, 'in', amount, reason, char[field])
+    Sunset.LogMoneyTransaction(char.id, field, 'in', amount, reason, tonumber(row.balance) or char[field])
     TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
@@ -239,9 +242,12 @@ function Sunset.RemoveMoney(source, account, amount, reason)
         { amount, char.id, amount }
     )
     if not changed or changed < 1 then return false end
-    char[field] = (tonumber(char[field]) or 0) - amount
+    local row = MySQL.single.await(('SELECT cash, bank, %s AS balance FROM characters WHERE id = ? LIMIT 1'):format(field), { char.id })
+    if not row then return false end
+    char.cash = tonumber(row.cash) or 0
+    char.bank = tonumber(row.bank) or 0
 
-    Sunset.LogMoneyTransaction(char.id, field, 'out', amount, reason, char[field])
+    Sunset.LogMoneyTransaction(char.id, field, 'out', amount, reason, tonumber(row.balance) or char[field])
     TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
@@ -253,6 +259,60 @@ function Sunset.GetMoney(source, account)
     return account == 'bank' and (char.bank or 0) or (char.cash or 0)
 end
 
+function Sunset.MoveMoney(source, fromAccount, toAccount, amount, reason)
+    local char = Sunset.GetCharacter(source)
+    amount = math.floor(tonumber(amount) or 0)
+    if not char or amount <= 0 or fromAccount == toAccount then return false end
+    if (fromAccount ~= 'cash' and fromAccount ~= 'bank') or (toAccount ~= 'cash' and toAccount ~= 'bank') then
+        return false
+    end
+    local changed = MySQL.update.await(([[
+        UPDATE characters
+        SET %s = %s - ?, %s = %s + ?
+        WHERE id = ? AND %s >= ?
+    ]]):format(fromAccount, fromAccount, toAccount, toAccount, fromAccount), {
+        amount, amount, char.id, amount,
+    })
+    if not changed or changed < 1 then
+        Sunset.RefreshMoney(source)
+        return false
+    end
+    Sunset.RefreshMoney(source)
+    Sunset.LogMoneyTransaction(char.id, fromAccount, 'out', amount, reason, char[fromAccount])
+    Sunset.LogMoneyTransaction(char.id, toAccount, 'in', amount, reason, char[toAccount])
+    return true
+end
+
+function Sunset.TransferMoney(source, targetSource, account, amount, reason)
+    local fromChar, toChar = Sunset.GetCharacter(source), Sunset.GetCharacter(targetSource)
+    amount = math.floor(tonumber(amount) or 0)
+    if not fromChar or not toChar or source == targetSource or amount <= 0 then return false end
+    if account ~= 'cash' and account ~= 'bank' then return false end
+
+    -- The guard subquery makes this a single all-or-nothing SQL statement: if
+    -- the sender lacks funds, neither row is updated.
+    local changed = MySQL.update.await(([[
+        UPDATE characters AS c
+        JOIN (SELECT id FROM characters WHERE id = ? AND %s >= ?) AS allowed ON 1 = 1
+        SET c.%s = CASE WHEN c.id = ? THEN c.%s - ? ELSE c.%s + ? END
+        WHERE c.id IN (?, ?)
+    ]]):format(account, account, account, account), {
+        fromChar.id, amount,
+        fromChar.id, amount, amount,
+        fromChar.id, toChar.id,
+    })
+    if not changed or changed < 2 then
+        Sunset.RefreshMoney(source)
+        Sunset.RefreshMoney(targetSource)
+        return false
+    end
+    Sunset.RefreshMoney(source)
+    Sunset.RefreshMoney(targetSource)
+    Sunset.LogMoneyTransaction(fromChar.id, account, 'out', amount, reason, fromChar[account])
+    Sunset.LogMoneyTransaction(toChar.id, account, 'in', amount, reason, toChar[account])
+    return true
+end
+
 function Sunset.SetJob(source, job, grade)
     local char = Sunset.GetCharacter(source)
     if not char then return false end
@@ -260,23 +320,11 @@ function Sunset.SetJob(source, job, grade)
 
     grade = tonumber(grade) or 0
 
-    local isCreatorJob = false
-    if GetResourceState('sunset_jobcreator') == 'started' then
-        pcall(function()
-            exports.sunset_jobcreator:EnsureCivilianJobsRegistered()
-        end)
-        pcall(function()
-            if exports.sunset_jobcreator:IsCreatorJob(job) then
-                isCreatorJob = true
-            end
-        end)
-    end
-
-    if not isCreatorJob and not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then
+    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[job]) then
         return false
     end
 
-    if not isCreatorJob and (not Sunset.CivilianJobs[job].grades or not Sunset.CivilianJobs[job].grades[grade]) then
+    if not Sunset.CivilianJobs[job].grades or not Sunset.CivilianJobs[job].grades[grade] then
         return false
     end
 
@@ -383,8 +431,11 @@ function Sunset.AddXP(source, amount)
     local char = Sunset.GetCharacter(source)
     if not char or not amount or amount <= 0 then return false end
 
-    char.xp = (char.xp or 0) + amount
-    MySQL.update.await('UPDATE characters SET xp = ? WHERE id = ?', { char.xp, char.id })
+    amount = math.floor(tonumber(amount) or 0)
+    if amount <= 0 then return false end
+    local changed = MySQL.update.await('UPDATE characters SET xp = xp + ? WHERE id = ?', { amount, char.id })
+    if not changed or changed < 1 then return false end
+    char.xp = tonumber(MySQL.scalar.await('SELECT xp FROM characters WHERE id = ?', { char.id })) or char.xp or 0
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
 end
@@ -393,11 +444,15 @@ function Sunset.AddRespectPoints(source, amount)
     local char = Sunset.GetCharacter(source)
     amount = math.floor(tonumber(amount) or 0)
     if not char or amount <= 0 then return false end
-    char.respect_points = (tonumber(char.respect_points) or 0) + amount
-    char.paydays_received = (tonumber(char.paydays_received) or 0) + 1
-    MySQL.update.await('UPDATE characters SET respect_points=?, paydays_received=? WHERE id=?', {
-        char.respect_points, char.paydays_received, char.id
-    })
+    local changed = MySQL.update.await(
+        'UPDATE characters SET respect_points = respect_points + ?, paydays_received = paydays_received + 1 WHERE id = ?',
+        { amount, char.id }
+    )
+    if not changed or changed < 1 then return false end
+    local row = MySQL.single.await('SELECT respect_points, paydays_received FROM characters WHERE id = ?', { char.id })
+    if not row then return false end
+    char.respect_points = tonumber(row.respect_points) or 0
+    char.paydays_received = tonumber(row.paydays_received) or 0
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
 end
@@ -425,15 +480,27 @@ local function buyLevel(source)
         BuyLevelLocks[source] = nil
         return false, ('Level %d costs $%d. Keep the full amount in bank or cash.'):format((char.level or 1) + 1, moneyCost)
     end
-    if not Sunset.RemoveMoney(source, account, moneyCost, 'buy_level') then
-        BuyLevelLocks[source] = nil
-        return false, 'The payment could not be completed. No level was purchased.'
-    end
-    char.respect_points = char.respect_points - rpCost
-    char.level = (char.level or 1) + 1
-    MySQL.update.await('UPDATE characters SET level=?, respect_points=? WHERE id=?', {
-        char.level, char.respect_points, char.id
+    local changed = MySQL.update.await(([[
+        UPDATE characters
+        SET level = level + 1, respect_points = respect_points - ?, %s = %s - ?
+        WHERE id = ? AND level = ? AND respect_points >= ? AND %s >= ?
+    ]]):format(account, account, account), {
+        rpCost, moneyCost, char.id, char.level, rpCost, moneyCost,
     })
+    if not changed or changed < 1 then
+        Sunset.RefreshMoney(source)
+        BuyLevelLocks[source] = nil
+        return false, 'Your money or RP changed while processing. Nothing was charged; try once more.'
+    end
+    local row = MySQL.single.await('SELECT cash, bank, level, respect_points FROM characters WHERE id = ?', { char.id })
+    if not row then
+        BuyLevelLocks[source] = nil
+        return false, 'Level was saved, but the updated profile could not be reloaded. Reopen the menu.'
+    end
+    char.cash, char.bank = tonumber(row.cash) or 0, tonumber(row.bank) or 0
+    char.level, char.respect_points = tonumber(row.level) or char.level, tonumber(row.respect_points) or 0
+    Sunset.LogMoneyTransaction(char.id, account, 'out', moneyCost, 'buy_level', char[account])
+    TriggerClientEvent('sunset:client:updateMoney', source, char.cash, char.bank)
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     BuyLevelLocks[source] = nil
     return true, ('Level purchased! You are now level %d. Paid %d RP and $%d; %d RP remain.'):format(char.level, rpCost, moneyCost, char.respect_points)

@@ -25,8 +25,11 @@ end
 
 local function buildVehicleEcuInfo(props)
     props = type(props) == 'table' and props or {}
-    if SunsetTuning and SunsetTuning.BuildVehicleInfo then
-        return SunsetTuning.BuildVehicleInfo(props.ecu)
+    if GetResourceState('sunset_tuning') == 'started' then
+        local ok, info = pcall(function()
+            return exports.sunset_tuning:FormatVehicleInfo(props.ecu)
+        end)
+        if ok and type(info) == 'table' then return info end
     end
     if props.ecu then
         return {
@@ -47,19 +50,6 @@ local function buildVehicleEcuInfo(props)
         tune = nil,
     }
 end
-
-CreateThread(function()
-    Wait(500)
-    pcall(function()
-        MySQL.query.await([[
-            ALTER TABLE `vehicles`
-                ADD COLUMN IF NOT EXISTS `insurance_points` INT NOT NULL DEFAULT 5 AFTER `garage`,
-                ADD COLUMN IF NOT EXISTS `insurance_level` INT NOT NULL DEFAULT 1 AFTER `insurance_points`,
-                ADD COLUMN IF NOT EXISTS `destroyed` TINYINT(1) NOT NULL DEFAULT 0 AFTER `insurance_level`,
-                ADD COLUMN IF NOT EXISTS `insurance_cost` INT NOT NULL DEFAULT 250 AFTER `destroyed`;
-        ]])
-    end)
-end)
 
 local ModelPriceCache = {}
 
@@ -621,37 +611,43 @@ exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(sou
         return nil, 'You must be at a gas station pump to refuel'
     end
 
-    fromFuel = tonumber(fromFuel) or 0
-    toFuel = tonumber(toFuel) or 0
-    if toFuel <= fromFuel + 0.05 then return nil, 'Nothing to pay for' end
-    if toFuel > 100 then toFuel = 100 end
-
-    local added = toFuel - fromFuel
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    if not vehicle or vehicle == 0 or GetPedInVehicleSeat(vehicle, -1) ~= ped then
+        return nil, 'Sit in the driver seat beside the pump while paying for fuel.'
+    end
+    local actualPlate = normalizePlate(GetVehicleNumberPlateText(vehicle))
+    if actualPlate == '' or actualPlate ~= normalizePlate(plate) then
+        return nil, 'The active vehicle does not match this refuel session. Reopen the pump.'
+    end
+    local owned = findOwnedVehicle(char.id, actualPlate)
+    if not owned then return nil, 'Only your personal vehicle can be refuelled from this menu.' end
+    local currentFuel = math.max(0, math.min(100, tonumber(owned.fuel) or 0))
+    local requestedFuel = math.max(0, math.min(100, tonumber(toFuel) or currentFuel))
+    if requestedFuel <= currentFuel + 0.05 then return nil, 'The tank did not receive fuel; no payment was taken.' end
+    local added = requestedFuel - currentFuel
     local pricePer = Sunset.Config.FuelPricePerPercent or 1.75
     local cost = math.ceil(added * pricePer)
-    if cost < 1 then return nil, 'Amount too small' end
-
-    if not exports.sunset_core:RemoveMoney(source, 'cash', cost, 'fuel') then
-        if not exports.sunset_core:RemoveMoney(source, 'bank', cost, 'fuel') then
-            return nil, ('Not enough money ($%s needed)'):format(cost)
-        end
-    end
-
-    plate = (plate or ''):gsub('%s+', ''):upper()
-    if plate ~= '' then
-        pcall(function()
-            MySQL.update.await(
-                'UPDATE vehicles SET fuel = ? WHERE plate = ? AND character_id = ?',
-                { toFuel, plate, char.id }
-            )
-        end)
-    end
+    if cost < 1 then return nil, 'The fuel amount is too small to bill.' end
+    local account = (tonumber(char.cash) or 0) >= cost and 'cash'
+        or ((tonumber(char.bank) or 0) >= cost and 'bank' or nil)
+    if not account then return nil, ('You need $%s in cash or bank for this fuel.'):format(cost) end
+    local committed = MySQL.startTransaction(function(query)
+        local charged = query.await(
+            ('UPDATE characters SET %s=%s-? WHERE id=? AND %s>=?'):format(account, account, account),
+            { cost, char.id, cost })
+        if tonumber(charged) ~= 1 then return false end
+        local saved = query.await([[UPDATE vehicles SET fuel=? WHERE id=? AND character_id=?
+            AND fuel <= ?]], { requestedFuel, owned.id, char.id, currentFuel + 0.01 })
+        return tonumber(saved) == 1
+    end)
+    if not committed then return nil, 'Fuel checkout was cancelled because the balance or tank changed. No payment was taken.' end
+    exports.sunset_core:RefreshMoney(source)
 
     if GetResourceState('sunset_businesses') == 'started' then
         exports.sunset_businesses:RecordSaleAtCoords(GetEntityCoords(ped), 'gas', cost)
     end
 
-    return { newFuel = toFuel, cost = cost, liters = added }
+    return { newFuel = requestedFuel, cost = cost, liters = added }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targetLiters)
@@ -676,16 +672,25 @@ exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targe
 
     local pricePer = Sunset.Config.FuelPricePerLiter or 2.92
     local cost = math.ceil(added * pricePer)
-    if not exports.sunset_core:RemoveMoney(source, 'cash', cost, 'gas_can_fill') then
-        if not exports.sunset_core:RemoveMoney(source, 'bank', cost, 'gas_can_fill') then
-            return nil, ('Not enough money ($%s needed)'):format(cost)
-        end
-    end
-
-    if not exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { liters = targetLiters }) then
-        exports.sunset_core:AddMoney(source, 'cash', cost, 'gas_can_refund')
-        return nil, 'Could not fill gas can'
-    end
+    local account = (tonumber(char.cash) or 0) >= cost and 'cash'
+        or ((tonumber(char.bank) or 0) >= cost and 'bank' or nil)
+    if not account then return nil, ('You need $%s in cash or bank to fill the gas can.'):format(cost) end
+    local gasRow = MySQL.single.await([[SELECT id,metadata FROM character_inventory
+        WHERE character_id=? AND item='gas_can' AND count>0 ORDER BY id LIMIT 1]], { char.id })
+    if not gasRow then return nil, 'The gas can is no longer in your inventory.' end
+    local committed = MySQL.startTransaction(function(query)
+        local charged = query.await(
+            ('UPDATE characters SET %s=%s-? WHERE id=? AND %s>=?'):format(account, account, account),
+            { cost, char.id, cost })
+        if tonumber(charged) ~= 1 then return false end
+        local saved = query.await([[UPDATE character_inventory SET metadata=?
+            WHERE id=? AND character_id=? AND item='gas_can' AND count>0]],
+            { json.encode({ liters = targetLiters }), gasRow.id, char.id })
+        return tonumber(saved) == 1
+    end)
+    if not committed then return nil, 'Gas-can checkout was cancelled because the item or balance changed. No payment was taken.' end
+    exports.sunset_core:RefreshMoney(source)
+    exports.sunset_inventory:ReloadInventory(source)
 
     if GetResourceState('sunset_businesses') == 'started' then
         exports.sunset_businesses:RecordSaleAtCoords(GetEntityCoords(ped), 'gas', cost)
@@ -694,7 +699,7 @@ exports.sunset_core:RegisterCallback('sunset:fillGasCan', function(source, targe
     return { liters = targetLiters, maxLiters = maxLiters, cost = cost, added = added }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(source, plate, tankLiters, vehicleClass)
+exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(source, plate)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
     if not exports.sunset_inventory:HasItem(source, 'gas_can', 1) then
@@ -707,15 +712,24 @@ exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(sourc
     local owned = findOwnedVehicle(char.id, plate)
     if not owned then return nil, 'This is not your vehicle' end
 
+    local vehicle = findVehicleEntityByPlate(plate)
+    local ped = GetPlayerPed(source)
+    if not vehicle or not DoesEntityExist(vehicle) or not ped or ped == 0
+        or #(GetEntityCoords(ped) - GetEntityCoords(vehicle)) > 4.5 then
+        return nil, 'Stand beside your vehicle before using the gas can.'
+    end
+
     local canLiters = exports.sunset_inventory:GetGasCanLiters(source) or 0
     local maxCanLiters = Sunset.GetGasCanMaxLiters()
     if canLiters <= 0.05 then return nil, 'Gas can is empty — fill it at a pump' end
 
-    vehicleClass = tonumber(vehicleClass) or 1
+    local vehicleClass = GetVehicleClass(vehicle)
     local tankCapacity = Sunset.GetVehicleTankCapacityLiters(vehicleClass)
     if tankCapacity <= 0 then return nil, 'This vehicle has no fuel tank' end
 
-    local currentTankLiters = math.max(0, math.min(tankCapacity, tonumber(tankLiters) or 0))
+    local currentFuelPercent = math.max(0, math.min(100, tonumber(owned.fuel) or 0))
+    local currentTankLiters = Sunset.PercentToTankLiters and Sunset.PercentToTankLiters(currentFuelPercent, vehicleClass)
+        or (currentFuelPercent / 100.0) * tankCapacity
     if currentTankLiters >= tankCapacity - 0.05 then
         return nil, 'Vehicle tank is already full'
     end
@@ -729,18 +743,26 @@ exports.sunset_core:RegisterCallback('sunset:useGasCanOnVehicle', function(sourc
     local newCanLiters = canLiters - transferLiters
     local vehicleFuelPercent = Sunset.TankLitersToPercent(newTankLiters, vehicleClass)
 
-    pcall(function()
-        MySQL.update.await(
-            'UPDATE vehicles SET fuel = ? WHERE id = ? AND character_id = ?',
-            { vehicleFuelPercent, owned.id, char.id }
-        )
+    local gasRow = MySQL.single.await([[SELECT id,count FROM character_inventory
+        WHERE character_id=? AND item='gas_can' AND count>0 ORDER BY id LIMIT 1]], { char.id })
+    if not gasRow then return nil, 'The gas can is no longer in your inventory.' end
+    local committed = MySQL.startTransaction(function(query)
+        local saved = query.await([[UPDATE vehicles SET fuel=? WHERE id=? AND character_id=? AND fuel=?]],
+            { vehicleFuelPercent, owned.id, char.id, owned.fuel })
+        if tonumber(saved) ~= 1 then return false end
+        local changed
+        if newCanLiters <= 0.1 and tonumber(gasRow.count) <= 1 then
+            changed = query.await("DELETE FROM character_inventory WHERE id=? AND character_id=? AND item='gas_can'", { gasRow.id, char.id })
+        elseif newCanLiters <= 0.1 then
+            changed = query.await("UPDATE character_inventory SET count=count-1 WHERE id=? AND character_id=? AND item='gas_can' AND count>1", { gasRow.id, char.id })
+        else
+            changed = query.await("UPDATE character_inventory SET metadata=? WHERE id=? AND character_id=? AND item='gas_can' AND count>0",
+                { json.encode({ liters = newCanLiters }), gasRow.id, char.id })
+        end
+        return tonumber(changed) == 1
     end)
-
-    if newCanLiters <= 0.1 then
-        exports.sunset_inventory:RemoveItem(source, 'gas_can', 1)
-    else
-        exports.sunset_inventory:SetItemMetadata(source, 'gas_can', { liters = newCanLiters })
-    end
+    if not committed then return nil, 'Fuel transfer was cancelled because the vehicle or gas can changed. Nothing was consumed.' end
+    exports.sunset_inventory:ReloadInventory(source)
 
     return {
         vehicleFuel = vehicleFuelPercent,

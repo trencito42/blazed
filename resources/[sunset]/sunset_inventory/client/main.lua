@@ -155,13 +155,14 @@ end)
 
 RegisterNetEvent('sunset:inventory:tradeState', function(data)
     tradeActive = data and data.active == true
-    if tradeActive and not inventoryOpen then
-        local invData, err = Sunset.AwaitCallback('sunset:getInventory')
-        if invData then
-            inventoryOpen = true
-            exports.sunset_ui:SetFocus(true, true)
-            exports.sunset_ui:Send('inventoryShow', invData)
+    if tradeActive then
+        -- Trade owns its own inventory catalogue. Never stack the standalone I
+        -- inventory above it; that produced two competing modals and focus traps.
+        if inventoryOpen then
+            inventoryOpen = false
+            exports.sunset_ui:Send('inventoryHide', {})
         end
+        exports.sunset_ui:SetFocus(true, true)
     end
     exports.sunset_ui:Send('inventoryTradeState', data or {})
 end)
@@ -170,13 +171,6 @@ RegisterNetEvent('sunset:inventory:tradeEnded', function(message, kind)
     tradeActive = false
     exports.sunset_ui:Send('inventoryTradeEnded', {})
     if message then exports.sunset_ui:Notify(message, kind or 'info') end
-    if inventoryOpen then
-        CreateThread(function()
-            Wait(100)
-            local invData = Sunset.AwaitCallback('sunset:getInventory')
-            if invData and inventoryOpen then exports.sunset_ui:Send('inventoryShow', invData) end
-        end)
-    end
 end)
 
 RegisterNetEvent('sunset:inventory:tradeInvite', function(requesterId, requesterName)

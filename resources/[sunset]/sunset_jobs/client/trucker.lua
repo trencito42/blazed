@@ -34,66 +34,6 @@ local function inWorkTruck()
 end
 
 local function recoverTrailer()
-    if GetResourceState('sunset_jobcreator') == 'started' then
-        local jcRecovery, jcErr = Sunset.AwaitCallback('sunset:jobcreator:recoverTrailer')
-        if jcRecovery then
-            if jcRecovery.respawn then
-                local truck = NetworkGetEntityFromNetworkId(jcRecovery.truckNetId or 0)
-                if truck == 0 or not DoesEntityExist(truck) then
-                    truck = JC.vehicles[1]
-                end
-                if GetResourceState('sunset_jobcreator') == 'started' then
-                    TriggerEvent('sunset:jobcreator:trailerRespawn', {
-                        truckNetId = jcRecovery.truckNetId,
-                        trailerModel = jcRecovery.trailerModel,
-                        remaining = jcRecovery.remaining,
-                        trailerSpawn = jcRecovery.trailerSpawn,
-                    })
-                end
-                return
-            end
-
-            local truck = NetworkGetEntityFromNetworkId(jcRecovery.truckNetId or 0)
-            local trailer = NetworkGetEntityFromNetworkId(jcRecovery.trailerNetId or 0)
-            if truck == 0 or trailer == 0 or not DoesEntityExist(truck) or not DoesEntityExist(trailer) then
-                return JC.notify('Could not find your assigned truck or trailer', 'error')
-            end
-            if not requestControl(trailer) then
-                return JC.notify('Could not take control of the trailer — try again', 'error')
-            end
-
-            SetVehicleHandbrake(truck, true)
-            SetEntityVelocity(trailer, 0.0, 0.0, 0.0)
-            DetachVehicleFromTrailer(truck)
-            Wait(150)
-
-            local target = GetOffsetFromEntityInWorldCoords(truck, 0.0, -10.5, 1.0)
-            local heading = GetEntityHeading(truck)
-            SetEntityCoordsNoOffset(trailer, target.x, target.y, target.z, false, false, false)
-            SetEntityRotation(trailer, 0.0, 0.0, heading, 2, true)
-            SetEntityHeading(trailer, heading)
-            SetVehicleOnGroundProperly(trailer)
-            Wait(250)
-            AttachVehicleToTrailer(truck, trailer, 1.0)
-            SetVehicleHandbrake(truck, false)
-
-            Wait(250)
-            local isAttached = IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true
-            local attached, attachedEntity = GetVehicleTrailerVehicle(truck)
-            local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
-            local recovered = isAttached or (attached and (attachedEntity == trailer or dist <= 20.0)) or dist <= 16.0
-            if not recovered then
-                return JC.notify('Trailer is upright but could not attach automatically — reverse into it', 'warning')
-            end
-            TriggerServerEvent('sunset:jobs:syncTrailerStatus', true)
-            return JC.notify(('Trailer recovered and attached. %d recoveries remain this shift.'):format(
-                jcRecovery.remaining or 0), 'success')
-        end
-        if jcErr and not jcErr:find('Nu ai') then
-            return JC.notify(jcErr, 'error')
-        end
-    end
-
     local recovery, err = Sunset.AwaitCallback('sunset:jobs:recoverTrailer')
     if not recovery then
         return JC.notify(err or 'Trailer recovery is not available', 'error')

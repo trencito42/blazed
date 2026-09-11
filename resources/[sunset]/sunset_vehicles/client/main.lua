@@ -573,16 +573,10 @@ function GetVehicleState()
 
     local plate = isTrackedOwnedVehicle(veh) and plateOf(veh) or nil
     local ecuInfo = nil
-    if vehicleProps and vehicleProps.ecu then
-        if SunsetTuning and SunsetTuning.BuildVehicleInfo then
-            ecuInfo = SunsetTuning.BuildVehicleInfo(vehicleProps.ecu)
-        end
-    elseif plate and GetResourceState('sunset_tuning') == 'started' then
+    if GetResourceState('sunset_tuning') == 'started' then
         pcall(function()
-            local tune = exports.sunset_tuning:GetTuneForPlate(plate)
-            if tune and SunsetTuning and SunsetTuning.BuildVehicleInfo then
-                ecuInfo = SunsetTuning.BuildVehicleInfo(tune)
-            end
+            local tune = vehicleProps and vehicleProps.ecu or (plate and exports.sunset_tuning:GetTuneForPlate(plate))
+            ecuInfo = exports.sunset_tuning:FormatVehicleInfo(tune)
         end)
     end
 

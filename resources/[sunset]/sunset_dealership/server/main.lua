@@ -147,51 +147,49 @@ exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(sour
             price, char.bank or 0, char.cash or 0))
     end
 
-    local reserved = MySQL.update.await([[
-        UPDATE dealership_vehicles SET stock = stock - 1
-        WHERE model = ? AND available = 1 AND stock > 0
-    ]], { model })
-    if not reserved or reserved < 1 then
-        return finish(nil, 'This vehicle just sold out. The catalog has been refreshed.')
-    end
-
-    if not exports.sunset_core:RemoveMoney(source, account, price, 'dealership_purchase') then
-        MySQL.update.await('UPDATE dealership_vehicles SET stock = stock + 1 WHERE model = ?', { model })
-        return finish(nil, 'Your balance changed before checkout. No money was charged.')
-    end
-
     local plate = generatePlate()
     if not plate then
-        exports.sunset_core:AddMoney(source, account, price, 'dealership_refund')
-        MySQL.update.await('UPDATE dealership_vehicles SET stock = stock + 1 WHERE model = ?', { model })
-        return finish(nil, 'A unique license plate could not be generated. Your money was returned.')
+        return finish(nil, 'A unique license plate could not be generated. No money was charged.')
     end
 
     local insuranceCost = math.max(250, math.min(15000, math.floor(price * 0.015)))
-    local ok, vehicleId = pcall(function()
-        return MySQL.insert.await([[
+    local colorId = math.max(0, math.min(160, math.floor(tonumber(color) or 0)))
+    local vehicleId
+    local callOk, committed = pcall(function()
+        return MySQL.startTransaction(function(query)
+            local reserved = query.await([[
+                UPDATE dealership_vehicles SET stock = stock - 1
+                WHERE model = ? AND available = 1 AND stock > 0
+            ]], { model })
+            if tonumber(reserved) ~= 1 then return false end
+
+            local charged = query.await(
+                ('UPDATE characters SET %s = %s - ? WHERE id = ? AND %s >= ?'):format(account, account, account),
+                { price, char.id, price })
+            if tonumber(charged) ~= 1 then return false end
+
+            vehicleId = query.await([[
             INSERT INTO vehicles (character_id, plate, model, stored, garage, fuel, engine, body, insurance_points, insurance_level, destroyed, insurance_cost)
             VALUES (?, ?, ?, 1, ?, 100, 1000, 1000, 5, 1, 0, ?)
-        ]], { char.id, plate, model, Sunset.Dealership.purchaseGarage or 'legion', insuranceCost })
-    end)
-    if not ok or not vehicleId then
-        exports.sunset_core:AddMoney(source, account, price, 'dealership_refund')
-        MySQL.update.await('UPDATE dealership_vehicles SET stock = stock + 1 WHERE model = ?', { model })
-        return finish(nil, 'The purchase could not be saved. Your money and dealership stock were restored.')
-    end
-    pcall(function()
-        local colorId = math.max(0, math.min(160, math.floor(tonumber(color) or 0)))
-        MySQL.update.await('UPDATE vehicles SET props = ?, engine = 1000, body = 1000, fuel = 100 WHERE id = ?', {
-            json.encode({ color1 = colorId, color2 = colorId }), vehicleId
-        })
-    end)
+            ]], { char.id, plate, model, Sunset.Dealership.purchaseGarage or 'legion', insuranceCost })
+            if not vehicleId then return false end
 
-    pcall(function()
-        MySQL.insert.await([[
-            INSERT INTO dealership_sales (character_id, vehicle_id, model, plate, price, payment_account)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ]], { char.id, vehicleId, model, plate, price, account })
+            local propsSaved = query.await('UPDATE vehicles SET props = ? WHERE id = ? AND character_id = ?', {
+                json.encode({ color1 = colorId, color2 = colorId }), vehicleId, char.id
+            })
+            if tonumber(propsSaved) ~= 1 then return false end
+
+            query.await([[
+                INSERT INTO dealership_sales (character_id, vehicle_id, model, plate, price, payment_account)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ]], { char.id, vehicleId, model, plate, price, account })
+            return true
+        end)
     end)
+    if not callOk or not committed or not vehicleId then
+        return finish(nil, 'Purchase could not be completed because the stock or balance changed. No money was charged and no vehicle was created.')
+    end
+    exports.sunset_core:RefreshMoney(source)
 
     return finish({ id = vehicleId, model = model, label = row.label, plate = plate, price = price })
 end)

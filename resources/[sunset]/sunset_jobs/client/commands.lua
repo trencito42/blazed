@@ -1,21 +1,5 @@
 local JC = Sunset.JobClient
 
--- Keep in sync with sunset_jobcreator/shared/migrations.lua (no client export needed).
-local CREATOR_MIGRATIONS = {
-    trucker = 'jc_tpl_route',
-    courier = 'jc_tpl_courier',
-    garbage = 'jc_tpl_garbage',
-    fisherman = 'jc_tpl_gather',
-    lumberjack = 'jc_tpl_lumber',
-}
-
-local function jobcreatorCall(fn)
-    if GetResourceState('sunset_jobcreator') ~= 'started' then return nil end
-    local ok, result = pcall(fn)
-    if ok then return result end
-    return nil
-end
-
 local LEGACY_STARTERS = {
     trucker = function() Sunset.Jobs.StartTrucker() end,
     garbage = function() Sunset.Jobs.StartGarbage() end,
@@ -24,29 +8,12 @@ local LEGACY_STARTERS = {
     mechanic = function() Sunset.Jobs.StartMechanic() end,
 }
 
-local function startCreatorWork(jobId)
-    if GetResourceState('sunset_jobcreator') ~= 'started' then return false end
-    local target = CREATOR_MIGRATIONS[jobId] or jobId
-    if jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(target) end) then
-        jobcreatorCall(function() exports.sunset_jobcreator:StartWork() end)
-        return true
-    end
-    return false
-end
-
-local function starterFor(jobId)
-    if startCreatorWork(jobId) then
-        return function() end
-    end
-    return LEGACY_STARTERS[jobId]
-end
-
 local STARTERS = {
-    trucker = function() starterFor('trucker')() end,
-    garbage = function() starterFor('garbage')() end,
-    courier = function() starterFor('courier')() end,
-    fisherman = function() starterFor('fisherman')() end,
-    mechanic = function() LEGACY_STARTERS.mechanic() end,
+    trucker = LEGACY_STARTERS.trucker,
+    garbage = LEGACY_STARTERS.garbage,
+    courier = LEGACY_STARTERS.courier,
+    fisherman = LEGACY_STARTERS.fisherman,
+    mechanic = LEGACY_STARTERS.mechanic,
 }
 
 local function openJobsPanel()
@@ -102,11 +69,6 @@ local function startWork()
     end
 
     local starter = STARTERS[jobId]
-    if not starter and jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(jobId) end) then
-        starter = function()
-            jobcreatorCall(function() exports.sunset_jobcreator:StartWork() end)
-        end
-    end
     if not starter then
         JC.workFeedback('No work loop for your job yet', 'error')
         return
@@ -129,23 +91,8 @@ end, false)
 RegisterCommand('work', function(_, args)
     local sub = args[1] and string.lower(args[1])
     if sub == 'cancel' or sub == 'stop' then
-        local cancelled = jobcreatorCall(function()
-            if exports.sunset_jobcreator:IsSessionActive() then
-                exports.sunset_jobcreator:CancelWork()
-                return true
-            end
-            return false
-        end)
-        if cancelled then
-            JC.cleanup()
-            JC.hideObjective()
-            JC.workFeedback('Shift cancelled', 'info')
-            return
-        end
         local charJob = JC.getCharacterJob()
-        if charJob and jobcreatorCall(function() return exports.sunset_jobcreator:IsCreatorJob(charJob) end) then
-            jobcreatorCall(function() exports.sunset_jobcreator:CancelWork() end)
-        elseif JC.jobId == 'mechanic' and JC.state ~= 'IDLE' then
+        if JC.jobId == 'mechanic' and JC.state ~= 'IDLE' then
             Sunset.Jobs.EndMechanic()
         else
             Sunset.AwaitCallback('sunset:jobs:cancelWork')

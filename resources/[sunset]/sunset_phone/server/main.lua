@@ -1,37 +1,3 @@
-CreateThread(function()
-    Wait(500)
-    pcall(function()
-        MySQL.query.await([[
-            ALTER TABLE `characters`
-                ADD COLUMN IF NOT EXISTS `phone_number` VARCHAR(32) NULL AFTER `nationality`;
-        ]])
-    end)
-    pcall(function()
-        MySQL.query.await([[
-            CREATE TABLE IF NOT EXISTS `phone_contacts` (
-                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `character_id` INT UNSIGNED NOT NULL,
-                `contact_name` VARCHAR(64) NOT NULL,
-                `phone_number` VARCHAR(32) NOT NULL,
-                `contact_character_id` INT UNSIGNED DEFAULT NULL,
-                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`),
-                UNIQUE KEY `unique_char_contact_phone` (`character_id`, `phone_number`),
-                KEY `idx_phone_contacts_char` (`character_id`),
-                KEY `idx_phone_contacts_phone` (`phone_number`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ]])
-    end)
-    -- Populate any existing characters missing phone numbers
-    pcall(function()
-        MySQL.query.await([[
-            UPDATE `characters`
-            SET `phone_number` = CONCAT('555-', LPAD(id, 4, '0'))
-            WHERE `phone_number` IS NULL OR `phone_number` = '';
-        ]])
-    end)
-end)
-
 local function formatPhone(raw)
     if not raw then return nil end
     local str = tostring(raw):gsub('%s+', '')

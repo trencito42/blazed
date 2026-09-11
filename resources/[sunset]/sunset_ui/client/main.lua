@@ -1,12 +1,15 @@
 local isOpen = false
 local currentScreen = nil
+local focusOwner = nil
 
 function Show(screen, data)
     isOpen = true
     currentScreen = screen
     if screen ~= 'loading' and screen ~= 'handoff' then
+        focusOwner = 'entry'
         SetNuiFocus(true, true)
     else
+        focusOwner = nil
         SetNuiFocus(false, false)
         SetNuiFocusKeepInput(false)
     end
@@ -21,17 +24,29 @@ exports('Show', Show)
 function Hide()
     isOpen = false
     currentScreen = nil
+    focusOwner = nil
     SetNuiFocus(false, false)
     SetNuiFocusKeepInput(false)
     SendNUIMessage({ action = 'hide' })
 end
 exports('Hide', Hide)
 
-function SetFocus(hasFocus, hasCursor, keepInput)
+function SetFocus(hasFocus, hasCursor, keepInput, owner)
+    owner = type(owner) == 'string' and owner ~= '' and owner or 'legacy'
+    if not hasFocus and focusOwner and focusOwner ~= owner and owner ~= 'force' then
+        return false
+    end
+    focusOwner = hasFocus and owner or nil
     SetNuiFocus(hasFocus, hasCursor == true)
     SetNuiFocusKeepInput(keepInput == true)
+    return true
 end
 exports('SetFocus', SetFocus)
+
+function GetFocusOwner()
+    return focusOwner
+end
+exports('GetFocusOwner', GetFocusOwner)
 
 local function modalStillOpen()
     if GetResourceState('sunset_menu') == 'started' then
@@ -49,9 +64,9 @@ local function modalStillOpen()
     return false
 end
 
-function ReleaseFocusUnlessModal()
+function ReleaseFocusUnlessModal(owner)
     if modalStillOpen() then return end
-    SetFocus(false, false)
+    SetFocus(false, false, false, owner or 'legacy')
 end
 exports('ReleaseFocusUnlessModal', ReleaseFocusUnlessModal)
 
@@ -81,6 +96,7 @@ exports('IsOpen', IsOpen)
 function MarkGameplayEntered()
     isOpen = false
     currentScreen = nil
+    focusOwner = nil
 end
 exports('MarkGameplayEntered', MarkGameplayEntered)
 
@@ -169,6 +185,7 @@ RegisterCommand('fixnui', function()
     SetNuiFocusKeepInput(false)
     isOpen = false
     currentScreen = nil
+    focusOwner = nil
     SendNUIMessage({ action = 'hide' })
     if GetResourceState('sunset_auth') == 'started' then
         TriggerEvent('sunset:auth:openLogin')
@@ -179,6 +196,7 @@ end, false)
 RegisterCommand('cursor', function()
     SetNuiFocus(false, false)
     SetNuiFocusKeepInput(false)
+    focusOwner = nil
     Notify('Cursorul a fost resetat.', 'info')
 end, false)
 

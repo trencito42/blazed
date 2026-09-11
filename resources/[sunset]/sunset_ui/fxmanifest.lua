@@ -25,7 +25,6 @@ files {
     'web/css/fishing.css',
     'web/css/license_test.css',
     'web/css/license_quiz.css',
-    'web/css/job_creator.css',
     'web/css/radar.css',
     'web/css/courier.css',
     'web/css/factions.css',

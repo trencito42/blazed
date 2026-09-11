@@ -86,7 +86,6 @@ local RESOURCE_COMMAND_EXPORTS = {
     'sunset_properties',
     'sunset_licenses',
     'sunset_jobs',
-    'sunset_jobcreator',
     'sunset_pass',
     'sunset_economy',
     'sunset_businesses',

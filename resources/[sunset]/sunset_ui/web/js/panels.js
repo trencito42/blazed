@@ -833,6 +833,12 @@ const Panels = {
         $('#inventory-nearby-panel')?.classList.toggle('hidden', data.active === true);
         document.body.classList.toggle('inventory-trade-open', data.active === true);
         if (window.TradeForza) {
+            if (data.active === true) {
+                const inventory = $('#inventory');
+                inventory?.classList.add('hidden');
+                inventory?.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('inventory-open');
+            }
             $('#inventory-trade-panel')?.classList.add('hidden');
             window.TradeForza.syncTradeState?.(data);
         } else {

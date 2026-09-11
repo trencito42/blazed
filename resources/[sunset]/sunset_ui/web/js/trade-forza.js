@@ -46,6 +46,10 @@ const TradeForza = {
     },
 
     showTrade() {
+        const inventory = document.getElementById('inventory');
+        inventory?.classList.add('hidden');
+        inventory?.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('inventory-open');
         document.getElementById('trade-window')?.classList.remove('hidden');
         document.body.classList.add('trade-forza-active');
     },

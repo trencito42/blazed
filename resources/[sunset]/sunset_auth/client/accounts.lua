@@ -20,6 +20,11 @@ local function normalizeStore(data)
     if type(data.accounts) ~= 'table' then
         data.accounts = {}
     end
+    -- Remove credentials written by legacy builds. Only opaque revocable tokens
+    -- are allowed in client KVP from this point forward.
+    for _, row in ipairs(data.accounts) do
+        row.password = nil
+    end
     return data
 end
 
@@ -73,7 +78,7 @@ function Accounts.publicList(store)
         if username ~= '' then
             out[#out + 1] = {
                 username = username,
-                hasPassword = type(row.password) == 'string' and row.password ~= '',
+                hasPassword = type(row.token) == 'string' and row.token ~= '',
                 lastLogin = tonumber(row.lastLogin) or 0,
                 avatar = type(row.avatar) == 'string' and row.avatar or nil,
                 characterName = type(row.characterName) == 'string' and row.characterName or nil,
@@ -114,11 +119,11 @@ function Accounts.setQuickLogin(license, enabled)
     return store, Accounts.save(license, store)
 end
 
-function Accounts.upsert(license, username, password, quickLogin)
+function Accounts.upsert(license, username, token, quickLogin)
     local store = Accounts.load(license)
     local name = tostring(username or '')
-    local pass = tostring(password or '')
-    if name == '' or pass == '' then
+    local savedToken = tostring(token or '')
+    if name == '' or savedToken == '' then
         return store, Accounts.save(license, store)
     end
 
@@ -141,7 +146,7 @@ function Accounts.upsert(license, username, password, quickLogin)
         if string.lower(tostring(row.username or '')) == target then
             store.accounts[index] = {
                 username = name,
-                password = pass,
+                token = savedToken,
                 lastLogin = now,
                 avatar = row.avatar,
                 characterName = row.characterName,
@@ -157,7 +162,7 @@ function Accounts.upsert(license, username, password, quickLogin)
     if not found then
         table.insert(store.accounts, 1, {
             username = name,
-            password = pass,
+            token = savedToken,
             lastLogin = now,
         })
     end

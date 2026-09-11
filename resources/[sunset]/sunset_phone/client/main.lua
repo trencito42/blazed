@@ -107,7 +107,7 @@ local function openPhone()
         playPhoneSound('open')
         playPhoneAnim(true)
         exports.sunset_ui:Send('phoneShow', data)
-        exports.sunset_ui:SetFocus(true, true, false)
+        exports.sunset_ui:SetFocus(true, true, false, 'phone')
     end)
 end
 
@@ -123,7 +123,7 @@ local function closePhone()
     else
         removePhoneProp()
     end
-    exports.sunset_ui:SetFocus(false, false, false)
+    exports.sunset_ui:SetFocus(false, false, false, 'phone')
     exports.sunset_ui:Send('phoneHide', {})
 end
 
@@ -148,10 +148,11 @@ CreateThread(function()
     while true do
         if phoneOpen and IsPauseMenuActive() then
             closePhone()
-        elseif phoneOpen and not IsNuiFocused() then
+        elseif phoneOpen and not IsNuiFocused()
+            and exports.sunset_ui:GetFocusOwner() == 'phone' then
             -- A late close acknowledgement from another NUI modal must not
             -- leave the visible phone without its cursor or keyboard focus.
-            exports.sunset_ui:SetFocus(true, true, false)
+            exports.sunset_ui:SetFocus(true, true, false, 'phone')
         end
         Wait(phoneOpen and 50 or 250)
     end
@@ -174,6 +175,10 @@ end)
 
 AddEventHandler('sunset:nui:phoneClose', function()
     closePhone()
+end)
+
+AddEventHandler('sunset:phone:forceClose', function()
+    if phoneOpen or phoneOpening then closePhone() end
 end)
 
 AddEventHandler('sunset:nui:phoneSend', function(data)

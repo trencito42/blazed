@@ -1,6 +1,4 @@
-CreateThread(function()
-    Wait(2000)
-    exports.sunset_core:RegisterCallback('sunset:getScoreboard', function(source)
+exports.sunset_core:RegisterCallback('sunset:getScoreboard', function(source)
         local list = {}
         local maxClients = GetConvarInt('sv_maxclients', 48)
 
@@ -90,5 +88,4 @@ CreateThread(function()
             serverName = Sunset.Config.ServerName,
             stats = stats,
         }
-    end)
 end)

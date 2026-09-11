@@ -924,50 +924,8 @@ RegisterCommand('clans', function(source)
     TriggerClientEvent('sunset:clans:openDirectory', source)
 end, false)
 
-local function ensureClanSchema()
-    local hasRankLabels = MySQL.scalar.await([[
-        SELECT COUNT(*) FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clans' AND COLUMN_NAME = 'rank_labels'
-    ]])
-    if tonumber(hasRankLabels) == 0 then
-        MySQL.query.await('ALTER TABLE `clans` ADD COLUMN `rank_labels` JSON NULL')
-    end
-
-    local hasWarns = MySQL.scalar.await([[
-        SELECT COUNT(*) FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clan_members' AND COLUMN_NAME = 'warns'
-    ]])
-    if tonumber(hasWarns) == 0 then
-        MySQL.query.await('ALTER TABLE `clan_members` ADD COLUMN `warns` TINYINT UNSIGNED NOT NULL DEFAULT 0')
-    end
-
-    local rankType = MySQL.scalar.await([[
-        SELECT COLUMN_TYPE FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clan_members' AND COLUMN_NAME = 'rank'
-        LIMIT 1
-    ]])
-    if type(rankType) == 'string' and rankType:lower():find('enum', 1, true) then
-        MySQL.query.await('ALTER TABLE `clan_members` ADD COLUMN `rank_num` TINYINT UNSIGNED NOT NULL DEFAULT 1')
-        MySQL.query.await([[UPDATE `clan_members` SET `rank_num` = CASE `rank`
-            WHEN 'leader' THEN 7 WHEN 'officer' THEN 5 ELSE 1 END]])
-        MySQL.query.await('ALTER TABLE `clan_members` DROP COLUMN `rank`')
-        MySQL.query.await('ALTER TABLE `clan_members` CHANGE COLUMN `rank_num` `rank` TINYINT UNSIGNED NOT NULL DEFAULT 1')
-    end
-end
-
-local function safeEnsureClanSchema()
-    local ok, err = pcall(ensureClanSchema)
-    if not ok then
-        print(('^3[sunset_clans]^7 schema migration skipped: %s'):format(tostring(err)))
-    end
-end
-
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
-    CreateThread(function()
-        Wait(1500)
-        safeEnsureClanSchema()
-    end)
     if GetResourceState('sunset_chat') == 'started' then
         pcall(function() exports.sunset_chat:RefreshCommandList() end)
     end

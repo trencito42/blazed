@@ -2,7 +2,18 @@ local Players = {}
 local Callbacks = {}
 local Sessions = {}
 local CallbackRate = {}
+local CallbackNameRate = {}
 local FlowTraceRate = {}
+local EXPENSIVE_CALLBACK_LIMITS = {
+    ['sunset:getInventory'] = 4,
+    ['sunset:getPhoneData'] = 3,
+    ['sunset:getScoreboard'] = 4,
+    ['sunset:trade:commit'] = 2,
+    ['sunset:craftItem'] = 3,
+    ['sunset:dealership:purchase'] = 2,
+    ['sunset:propertyBuy'] = 2,
+    ['sunset:propertyRent'] = 2,
+}
 
 RegisterNetEvent('sunset:server:flowTrace', function(stage, detail)
     local source = source
@@ -40,6 +51,21 @@ if type(name) ~= 'string' or #name > 80 or type(requestId) ~= 'number' then retu
     if rate.count > 30 then
         print(('^3[blaze.mp]^7 Callback flood blocked from %s'):format(source))
         TriggerClientEvent('sunset:client:callbackResponse', source, requestId, { __cb = true, result = nil, err = 'Too many requests — wait a moment' })
+        return
+    end
+    CallbackNameRate[source] = CallbackNameRate[source] or {}
+    local named = CallbackNameRate[source][name]
+    if not named or now - named.window >= 1000 then
+        named = { window = now, count = 0 }
+        CallbackNameRate[source][name] = named
+    end
+    named.count = named.count + 1
+    local namedLimit = EXPENSIVE_CALLBACK_LIMITS[name] or 12
+    if named.count > namedLimit then
+        TriggerClientEvent('sunset:client:callbackResponse', source, requestId, {
+            __cb = true, result = nil,
+            err = 'That action is being requested too quickly. Wait a second and try again.'
+        })
         return
     end
     if not Callbacks[name] then
@@ -106,6 +132,16 @@ local function completeAuthentication(source, accountId, username)
     for otherSrc, otherPlayer in pairs(Players) do
         if otherSrc ~= source and otherPlayer.account_id == accountId then
             Sunset.Warn(('Account %s (#%d) re-logged from source %s; dropping old source %s'):format(username, accountId, source, otherSrc))
+            if otherPlayer.character then
+                Sunset.SaveCharacter(otherSrc)
+            end
+            if otherPlayer.sessionStart then
+                local mins = math.max(0, math.floor((os.time() - otherPlayer.sessionStart) / 60))
+                if mins > 0 then
+                    MySQL.update.await('UPDATE players SET playtime = playtime + ? WHERE id = ?', { mins, otherPlayer.id })
+                end
+                otherPlayer.sessionStart = nil
+            end
             DropPlayer(otherSrc, 'Your account was logged in from another session.')
             Players[otherSrc] = nil
             Sessions[otherSrc] = nil
@@ -339,6 +375,7 @@ AddEventHandler('playerDropped', function()
     Players[source] = nil
     Sessions[source] = nil
     CallbackRate[source] = nil
+    CallbackNameRate[source] = nil
 end)
 
 -- ═══ CHARACTER CALLBACKS ═══

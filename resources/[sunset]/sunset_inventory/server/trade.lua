@@ -416,66 +416,80 @@ local function completeTrade(trade)
 
     local aChar, bChar = character(trade.a), character(trade.b)
     if not aChar or not bChar then return nil, 'Both characters must remain loaded.' end
-    local queries = {}
-    local function transfer(rows, fromCharId, toCharId, slots)
+    -- All offered value is committed on one database connection. Returning false
+    -- rolls the complete exchange back; no compensation chain can leave half a
+    -- trade behind after a query failure or disconnect.
+    local function transferRows(query, rows, fromCharId, toCharId, slots)
         for index, row in ipairs(rows) do
-            queries[#queries + 1] = {
-                query = 'UPDATE character_inventory SET count = count - ? WHERE id = ? AND character_id = ? AND item = ? AND count >= ?',
-                values = { row.count, row.id, fromCharId, row.item, row.count },
-            }
-            queries[#queries + 1] = {
-                query = 'DELETE FROM character_inventory WHERE id = ? AND character_id = ? AND count <= 0',
-                values = { row.id, fromCharId },
-            }
-            queries[#queries + 1] = {
-                query = 'INSERT INTO character_inventory (character_id, item, count, slot, metadata) VALUES (?, ?, ?, ?, ?)',
-                values = { toCharId, row.item, row.count, slots[index], row.metadata and json.encode(row.metadata) or nil },
-            }
-        end
-    end
-    transfer(aOut, aChar.id, bChar.id, bSlots)
-    transfer(bOut, bChar.id, aChar.id, aSlots)
-    local ok = MySQL.transaction.await(queries)
-    if not ok then return nil, 'The database rejected the exchange. No items were moved.' end
-
-    local function moveCash(fromSrc, toSrc, amount, fromLabel, toLabel)
-        amount = math.floor(tonumber(amount) or 0)
-        if amount <= 0 then return true end
-        if not exports.sunset_core:RemoveMoney(fromSrc, 'cash', amount, 'player_trade') then
-            return nil, ('%s could not pay $%s cash.'):format(fromLabel, amount)
-        end
-        if not exports.sunset_core:AddMoney(toSrc, 'cash', amount, 'player_trade') then
-            exports.sunset_core:AddMoney(fromSrc, 'cash', amount, 'player_trade_rollback')
-            return nil, ('%s could not receive $%s cash.'):format(toLabel, amount)
+            local changed = query.await(
+                'UPDATE character_inventory SET count = count - ? WHERE id = ? AND character_id = ? AND item = ? AND count >= ?',
+                { row.count, row.id, fromCharId, row.item, row.count })
+            if tonumber(changed) ~= 1 then return false end
+            query.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ? AND count <= 0',
+                { row.id, fromCharId })
+            local inserted = query.await(
+                'INSERT INTO character_inventory (character_id, item, count, slot, metadata) VALUES (?, ?, ?, ?, ?)',
+                { toCharId, row.item, row.count, slots[index], row.metadata and json.encode(row.metadata) or nil })
+            if not inserted then return false end
         end
         return true
     end
 
-    local movedA = false
-    if aCash > 0 then
-        local okCash, cashErr = moveCash(trade.a, trade.b, aCash, displayName(trade.a), displayName(trade.b))
-        if not okCash then return nil, cashErr end
-        movedA = true
-    end
-    if bCash > 0 then
-        local okCash, cashErr = moveCash(trade.b, trade.a, bCash, displayName(trade.b), displayName(trade.a))
-        if not okCash then
-            if movedA then moveCash(trade.b, trade.a, aCash, displayName(trade.b), displayName(trade.a)) end
-            return nil, cashErr
+    local function transferAssets(query, rows, fromCharId, toCharId)
+        for _, asset in ipairs(rows) do
+            local changed
+            if asset.assetType == 'vehicle' then
+                changed = query.await([[UPDATE vehicles SET character_id = ?, stored = 1
+                    WHERE id = ? AND character_id = ? AND stored = 1 AND (destroyed IS NULL OR destroyed = 0)]],
+                    { toCharId, asset.id, fromCharId })
+            elseif asset.assetType == 'property' then
+                changed = query.await('UPDATE properties SET owner_character_id = ? WHERE id = ? AND owner_character_id = ? AND enabled = 1',
+                    { toCharId, asset.id, fromCharId })
+                if tonumber(changed) == 1 then
+                    query.await('UPDATE property_rentals SET active = 0 WHERE property_id = ?', { asset.id })
+                    query.await('UPDATE characters SET home_property_id = NULL WHERE home_property_id = ?', { asset.id })
+                end
+            elseif asset.assetType == 'business' then
+                changed = query.await('UPDATE player_businesses SET owner_character_id = ?, for_sale = 0 WHERE id = ? AND owner_character_id = ?',
+                    { toCharId, asset.id, fromCharId })
+            end
+            if tonumber(changed) ~= 1 then return false end
         end
+        return true
     end
 
-    for _, asset in ipairs(bAssets) do
-        local moved, moveErr = transferTradeAsset(trade.b, trade.a, asset)
-        if not moved then return nil, moveErr end
-    end
-    for _, asset in ipairs(aAssets) do
-        local moved, moveErr = transferTradeAsset(trade.a, trade.b, asset)
-        if not moved then return nil, moveErr end
+    local transactionOk = MySQL.startTransaction(function(query)
+        if not transferRows(query, aOut, aChar.id, bChar.id, bSlots) then return false end
+        if not transferRows(query, bOut, bChar.id, aChar.id, aSlots) then return false end
+
+        local aDelta, bDelta = bCash - aCash, aCash - bCash
+        if aDelta ~= 0 then
+            local changed = query.await('UPDATE characters SET cash = cash + ? WHERE id = ? AND cash + ? >= 0',
+                { aDelta, aChar.id, aDelta })
+            if tonumber(changed) ~= 1 then return false end
+        end
+        if bDelta ~= 0 then
+            local changed = query.await('UPDATE characters SET cash = cash + ? WHERE id = ? AND cash + ? >= 0',
+                { bDelta, bChar.id, bDelta })
+            if tonumber(changed) ~= 1 then return false end
+        end
+
+        if not transferAssets(query, aAssets, aChar.id, bChar.id) then return false end
+        if not transferAssets(query, bAssets, bChar.id, aChar.id) then return false end
+        return true
+    end)
+    if not transactionOk then
+        return nil, 'Trade could not be committed because an offer changed. Nothing was moved; review both offers and retry.'
     end
 
     ReloadInventory(trade.a)
     ReloadInventory(trade.b)
+    exports.sunset_core:RefreshMoney(trade.a)
+    exports.sunset_core:RefreshMoney(trade.b)
+    if #aAssets + #bAssets > 0 then
+        TriggerClientEvent('sunset:client:propertiesChanged', -1)
+        TriggerClientEvent('sunset:client:businessesChanged', -1)
+    end
     return true
 end
 

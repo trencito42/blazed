@@ -226,23 +226,32 @@ exports.sunset_core:RegisterCallback('sunset:buyProperty', function(source,id)
     local price=tonumber(prop.price) or 0
     local bank, cash = exports.sunset_core:GetMoney(source,'bank'), exports.sunset_core:GetMoney(source,'cash')
     if bank<price and cash<price then return nil,('Purchase blocked: the house costs $%d. You have $%d in bank and $%d cash; the full price must be in one account. No money was charged.'):format(price,bank,cash) end
+    local paidFrom = bank >= price and 'bank' or 'cash'
     local defaultRent = math.floor(tonumber(SunsetProperties.DefaultRentPrice) or 500)
-    local claimed=MySQL.update.await(
-        'UPDATE properties SET owner_character_id=?, locked=1, rent_enabled=1, rent_price=? WHERE id=? AND owner_character_id IS NULL',
-        { char.id, defaultRent, prop.id }
-    )
-    if claimed~=1 then return nil,'Another player bought this house first.' end
-    local paidFrom = charge(source,price,'house_purchase')
-    if not paidFrom then
-        MySQL.update.await('UPDATE properties SET owner_character_id=NULL WHERE id=? AND owner_character_id=?',{prop.id,char.id})
-        return nil,'Payment failed; ownership was rolled back and you were not charged.'
+    local callOk, committed = pcall(function()
+        return MySQL.startTransaction(function(query)
+            local ownedNow = tonumber(query.await(
+                'SELECT COUNT(*) AS total FROM properties WHERE owner_character_id = ?', { char.id })[1].total) or 0
+            if maxOwned > 0 and ownedNow >= maxOwned then return false end
+            local claimed = query.await([[UPDATE properties
+                SET owner_character_id=?, locked=1, rent_enabled=1, rent_price=?
+                WHERE id=? AND enabled=1 AND for_sale=1 AND owner_character_id IS NULL]],
+                { char.id, defaultRent, prop.id })
+            if tonumber(claimed) ~= 1 then return false end
+            local charged = query.await(
+                ('UPDATE characters SET %s=%s-? WHERE id=? AND %s>=?'):format(paidFrom, paidFrom, paidFrom),
+                { price, char.id, price })
+            if tonumber(charged) ~= 1 then return false end
+            query.await('UPDATE property_rentals SET active=0 WHERE character_id=?', { char.id })
+            local homeSaved = query.await('UPDATE characters SET home_property_id=? WHERE id=?', { prop.id, char.id })
+            return tonumber(homeSaved) == 1
+        end)
+    end)
+    if not callOk or not committed then
+        return nil,'Purchase was cancelled because the house, ownership limit, or balance changed. No money was charged.'
     end
-    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=?',{char.id})
-    if not exports.sunset_core:SetHomeProperty(source, prop.id) then
-        MySQL.update.await('UPDATE properties SET owner_character_id=NULL WHERE id=? AND owner_character_id=?',{prop.id,char.id})
-        exports.sunset_core:AddMoney(source,paidFrom,price,'house_purchase_rollback')
-        return nil,'The house could not be saved to your character. Ownership was rolled back and the full payment was refunded.'
-    end
+    exports.sunset_core:RefreshMoney(source)
+    exports.sunset_core:SetHomeProperty(source, prop.id)
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,('You bought %s for $%d. Rent is open at $%d/payday — change it in Owner settings or /houserent.'):format(prop.label,price,defaultRent)
 end)
@@ -258,21 +267,43 @@ exports.sunset_core:RegisterCallback('sunset:rentProperty', function(source,id)
     if tonumber(prop.renter_count)>=tonumber(prop.max_renters) then return nil,'This house has no free rental slots.' end
     if activeRental(char.id,prop.id) then return nil,'You already rent this house.' end
     local price=tonumber(prop.rent_price) or 0
-    if exports.sunset_core:GetMoney(source,'bank')<price and exports.sunset_core:GetMoney(source,'cash')<price then return nil,('You need $%d in bank or cash for the first rent payment.'):format(price) end
-    MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=?',{char.id})
-    MySQL.query.await([[INSERT INTO property_rentals(property_id,character_id,rent_price,active,last_paid_at)
-      VALUES(?,?,?,1,NOW()) ON DUPLICATE KEY UPDATE property_id=VALUES(property_id),rent_price=VALUES(rent_price),active=1,started_at=NOW(),last_paid_at=NOW()]],{prop.id,char.id,price})
-    local paidFrom = charge(source,price,'house_rent')
-    if not paidFrom then
-        MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=? AND property_id=?',{char.id,prop.id})
-        return nil,'Rent payment failed; the agreement was cancelled and you were not charged.'
+    local bank, cash = exports.sunset_core:GetMoney(source,'bank'), exports.sunset_core:GetMoney(source,'cash')
+    if bank<price and cash<price then return nil,('You need $%d in bank or cash for the first rent payment.'):format(price) end
+    local paidFrom = bank >= price and 'bank' or 'cash'
+    local ownerId = tonumber(prop.owner_character_id)
+    local callOk, committed = pcall(function()
+        return MySQL.startTransaction(function(query)
+            local locked = query.await([[SELECT owner_character_id, rent_enabled, max_renters,
+                (SELECT COUNT(*) FROM property_rentals r WHERE r.property_id=properties.id AND r.active=1) AS renter_count
+                FROM properties WHERE id=? AND enabled=1 FOR UPDATE]], { prop.id })
+            local current = locked and locked[1]
+            if not current or tonumber(current.owner_character_id) ~= ownerId
+                or not dbBool(current.rent_enabled)
+                or tonumber(current.renter_count or 0) >= tonumber(current.max_renters or 0) then return false end
+            local charged = query.await(
+                ('UPDATE characters SET %s=%s-? WHERE id=? AND %s>=?'):format(paidFrom, paidFrom, paidFrom),
+                { price, char.id, price })
+            if tonumber(charged) ~= 1 then return false end
+            query.await('UPDATE property_rentals SET active=0 WHERE character_id=?', { char.id })
+            query.await([[INSERT INTO property_rentals(property_id,character_id,rent_price,active,last_paid_at)
+                VALUES(?,?,?,1,NOW()) ON DUPLICATE KEY UPDATE property_id=VALUES(property_id),rent_price=VALUES(rent_price),
+                active=1,started_at=NOW(),last_paid_at=NOW()]], { prop.id,char.id,price })
+            local homeSaved = query.await('UPDATE characters SET home_property_id=? WHERE id=?', { prop.id, char.id })
+            if tonumber(homeSaved) ~= 1 then return false end
+            local ownerPaid = query.await('UPDATE characters SET bank=bank+? WHERE id=?', { price, ownerId })
+            return tonumber(ownerPaid) == 1
+        end)
+    end)
+    if not callOk or not committed then
+        return nil,'Rent could not be completed because availability or a balance changed. No money was charged.'
     end
-    if not exports.sunset_core:SetHomeProperty(source, prop.id) then
-        MySQL.update.await('UPDATE property_rentals SET active=0 WHERE character_id=? AND property_id=?',{char.id,prop.id})
-        exports.sunset_core:AddMoney(source,paidFrom,price,'house_rent_rollback')
-        return nil,'The rental could not be saved. The agreement was cancelled and the payment was refunded.'
+    exports.sunset_core:RefreshMoney(source)
+    exports.sunset_core:SetHomeProperty(source, prop.id)
+    for _, playerId in ipairs(GetPlayers()) do
+        local ownerSource = tonumber(playerId)
+        local online = exports.sunset_core:GetCharacter(ownerSource)
+        if online and tonumber(online.id) == ownerId then exports.sunset_core:RefreshMoney(ownerSource) break end
     end
-    creditOwner(prop.owner_character_id,price)
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
     return true,('You now rent %s for $%d each payday.'):format(prop.label,price)
 end)

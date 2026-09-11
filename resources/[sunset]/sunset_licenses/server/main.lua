@@ -98,6 +98,32 @@ local function rowValid(row, paydays)
     return paydays < exp
 end
 
+local function loadLicenseCache(source)
+    local cid = charId(source)
+    if not cid then ServerLicenseCache[source] = nil return nil end
+    local paydays = currentPaydays(source)
+    local cache = { characterId = cid, paydays = paydays, licenses = {} }
+    for _, row in ipairs(loadLicenseRows(cid)) do
+        cache.licenses[tostring(row.license_type)] = rowValid(row, paydays)
+    end
+    ServerLicenseCache[source] = cache
+    return cache
+end
+
+local function licenseCache(source)
+    local cid = charId(source)
+    if not cid then return nil end
+    local cache = ServerLicenseCache[source]
+    if not cache or cache.characterId ~= cid or cache.paydays ~= currentPaydays(source) then
+        cache = loadLicenseCache(source)
+    end
+    return cache
+end
+
+AddEventHandler('sunset:server:characterSelected', function(source)
+    loadLicenseCache(tonumber(source))
+end)
+
 function GetLicenseRows(source)
     local cid = charId(source)
     if not cid then return {} end
@@ -116,18 +142,10 @@ function HasLicense(source, licenseType)
             return true, 'test'
         end
     end
-    local cid = charId(source)
-    if not cid then return false, 'Character not loaded.' end
-    local paydays = currentPaydays(source)
-    local row = MySQL.single.await(
-        'SELECT * FROM character_licenses WHERE character_id = ? AND license_type = ? LIMIT 1',
-        { cid, licenseType }
-    )
-    if not row then
+    local cache = licenseCache(source)
+    if not cache then return false, 'Character not loaded.' end
+    if cache.licenses[licenseType] ~= true then
         return false, ('You need a valid %s. Visit the %s.'):format(def.label, def.label)
-    end
-    if not rowValid(row, paydays) then
-        return false, ('Your %s expired. Retake the test at the school.'):format(def.label)
     end
     return true
 end
@@ -137,13 +155,8 @@ local function cachedHasLicense(source, licenseType)
     local session = TestSessions[source]
     if session and session.licenseType == licenseType
         and (session.phase == 'practical' or session.phase == 'validated') then return true end
-    local now = os.time()
-    ServerLicenseCache[source] = ServerLicenseCache[source] or {}
-    local cached = ServerLicenseCache[source][licenseType]
-    if cached and now - cached.at < 10 then return cached.value end
-    local allowed = HasLicense(source, licenseType) == true
-    ServerLicenseCache[source][licenseType] = { value = allowed, at = now }
-    return allowed
+    local cache = licenseCache(source)
+    return cache and cache.licenses[licenseType] == true or false
 end
 
 local meleeHashes = {}
@@ -174,7 +187,7 @@ end
 local function canDealWeaponDamage(source)
     if IsInLicenseTest(source) then return true end
     if isLawEnforcementOnDuty(source) then return true end
-    if HasLicense(source, 'weapon') == true then return true end
+    if cachedHasLicense(source, 'weapon') then return true end
     return false
 end
 
@@ -236,7 +249,7 @@ function GrantLicense(source, licenseType, issuedByCharacterId)
     notify(source, ('%s issued — valid until payday #%d.'):format(
         SunsetLicenses.Types[licenseType].label, expires), 'success')
     TriggerClientEvent('sunset:licenses:refresh', source)
-    ServerLicenseCache[source] = nil
+    loadLicenseCache(source)
     return true
 end
 exports('GrantLicense', GrantLicense)
@@ -257,7 +270,7 @@ function RevokeLicense(source, licenseType)
         { cid, licenseType }
     )
     TriggerClientEvent('sunset:licenses:refresh', source)
-    ServerLicenseCache[source] = nil
+    loadLicenseCache(source)
     return true
 end
 exports('RevokeLicense', RevokeLicense)
@@ -274,7 +287,7 @@ function RevokeLicenseByCharacterId(cid, licenseType)
     for src, cache in pairs(ServerLicenseCache) do
         local c = exports.sunset_core:GetCharacter(src)
         if c and tonumber(c.id) == cid then
-            ServerLicenseCache[src] = nil
+            loadLicenseCache(src)
             TriggerClientEvent('sunset:licenses:refresh', src)
             break
         end
@@ -601,7 +614,7 @@ AddEventHandler('sunset:payday:processed', function(source)
             notify(source, ('Your %s expired after %d paydays.'):format(
                 def and def.label or row.license_type, SunsetLicenses.PaydayExpiry or 150), 'warning')
             TriggerClientEvent('sunset:licenses:refresh', source)
-            ServerLicenseCache[source] = nil
+            loadLicenseCache(source)
         end
     end
 end)

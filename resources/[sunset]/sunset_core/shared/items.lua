@@ -214,7 +214,6 @@ Sunset.JobCenters = {
         label = 'Job Center',
         coords = vector3(-265.04, -963.62, 31.22),
         blip = { sprite = 407, color = 2, scale = 0.85 },
-        -- Creator jobs are injected at runtime from sunset_jobcreator (published templates).
         jobs = {
             { id = 'unemployed', label = 'Unemployed' },
             { id = 'fisherman', label = 'Fisherman' },

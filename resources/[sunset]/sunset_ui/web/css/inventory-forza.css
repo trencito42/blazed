@@ -3,7 +3,7 @@
     --inv-text-muted: rgba(255, 255, 255, 0.4);
     --inv-accent: #00ffcc;
     --inv-danger: #ff3366;
-    --inv-bg-panel: rgba(10, 10, 15, 0.85);
+    --inv-bg-panel: rgba(9, 11, 16, 0.72);
     --inv-border-glass: rgba(255, 255, 255, 0.1);
     --inv-shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
     --inv-shadow-glow: 0 0 20px rgba(0, 255, 204, 0.3);
@@ -20,7 +20,7 @@
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.9) 100%);
+    background: linear-gradient(0deg, rgba(3, 5, 9, 0.62) 0%, rgba(3, 5, 9, 0.20) 58%, rgba(3, 5, 9, 0.08) 100%);
     pointer-events: none;
 }
 
@@ -32,6 +32,7 @@
     justify-content: center;
     align-items: center;
     gap: 40px;
+    padding: clamp(20px, 4vh, 48px);
     box-sizing: border-box;
 }
 
@@ -44,6 +45,7 @@
     gap: 15px;
     transform: skewX(-5deg);
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
+    max-height: calc(100vh - 80px);
 }
 
 .inventory-forza .inv-header {
@@ -169,6 +171,8 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .inventory-forza .quick-picks-container {
@@ -201,7 +205,10 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
     align-content: start;
-    min-height: 250px;
+    min-height: 0;
+    max-height: min(42vh, 410px);
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .inventory-forza .inv-slot {
@@ -213,6 +220,8 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 0;
+    min-height: 0;
 }
 
 .inventory-forza .inv-slot:hover { border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); }
@@ -464,8 +473,9 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     background: var(--inv-bg-panel);
     border: 2px solid var(--inv-border-glass);
     padding: 12px 16px;
-    display: flex;
-    flex-wrap: wrap;
+    display: block;
+    max-height: 104px;
+    overflow-y: auto;
     gap: 8px;
 }
 
@@ -482,6 +492,36 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     font-size: 10px;
     font-weight: 800;
     color: var(--inv-text-main);
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.inventory-forza #inventory-duty-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.inventory-forza .inv-duty-chip img,
+.inventory-forza .inv-duty-chip .item-icon {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    object-fit: contain;
+}
+
+@media (max-height: 820px) {
+    .inventory-forza-wrapper { padding: 18px; }
+    .inventory-forza .inv-panel { gap: 8px; }
+    .inventory-forza .inv-header { padding: 12px 18px; gap: 8px; }
+    .inventory-forza .equipment-row { padding: 8px 18px; }
+    .inventory-forza .equip-slot { width: 46px; height: 46px; }
+    .inventory-forza .inv-grid-wrapper { padding: 14px; gap: 10px; }
+    .inventory-forza .inv-grid { max-height: 36vh; gap: 7px; }
+    .inventory-forza .quick-picks-container { gap: 7px; }
+    .inventory-forza .inv-duty-row { max-height: 72px; padding: 8px 12px; }
 }
 
 .inventory-forza .inv-close-hint {

@@ -17,25 +17,6 @@ local LastNumber = nil
 CreateThread(function()
     Wait(500)
     pcall(function()
-        MySQL.query.await([[
-            CREATE TABLE IF NOT EXISTS `lottery_state` (
-                `id` INT PRIMARY KEY DEFAULT 1,
-                `jackpot` INT UNSIGNED NOT NULL DEFAULT 15000,
-                `last_winner_name` VARCHAR(64) DEFAULT NULL,
-                `last_winner_prize` INT UNSIGNED DEFAULT 0,
-                `last_winning_number` INT DEFAULT NULL,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            );
-        ]])
-        MySQL.query.await([[
-            CREATE TABLE IF NOT EXISTS `lottery_tickets` (
-                `id` INT AUTO_INCREMENT PRIMARY KEY,
-                `character_id` INT NOT NULL,
-                `number` INT NOT NULL,
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                KEY `idx_char_ticket` (`character_id`)
-            );
-        ]])
         local state = MySQL.single.await('SELECT * FROM `lottery_state` WHERE `id` = 1')
         if state then
             CurrentJackpot = math.max(SunsetLottery.StartingJackpot, tonumber(state.jackpot) or SunsetLottery.StartingJackpot)
@@ -73,29 +54,38 @@ function SunsetLottery.BuyTicket(source, number)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return false, 'Caracterul nu este incarcat.' end
 
-    local existing = MySQL.scalar.await(
-        'SELECT COUNT(*) FROM `lottery_tickets` WHERE `character_id` = ?',
-        { char.id }
-    )
-    if tonumber(existing) >= SunsetLottery.MaxTicketsPerPlayer then
-        return false, ('Ai atins limita maxima de %d bilete pe runda.'):format(SunsetLottery.MaxTicketsPerPlayer)
-    end
-
     local cost = SunsetLottery.TicketPrice
-    if not exports.sunset_core:RemoveMoney(source, 'cash', cost, 'lottery_ticket') then
-        if not exports.sunset_core:RemoveMoney(source, 'bank', cost, 'lottery_ticket') then
-            return false, ('Ai nevoie de $%s pentru a cumpara un bilet.'):format(cost)
-        end
-    end
-
     local prizeCut = math.floor(cost * (1 - SunsetLottery.TaxBurnRate))
-    CurrentJackpot = CurrentJackpot + prizeCut
-    saveState()
-
-    MySQL.insert.await(
-        'INSERT INTO `lottery_tickets` (`character_id`, `number`) VALUES (?, ?)',
-        { char.id, number }
-    )
+    local account = (tonumber(char.cash) or 0) >= cost and 'cash'
+        or ((tonumber(char.bank) or 0) >= cost and 'bank' or nil)
+    if not account then return false, ('Ai nevoie de $%s pentru a cumpara un bilet.'):format(cost) end
+    local newJackpot
+    local callOk, committed = pcall(function()
+        return MySQL.startTransaction(function(query)
+            local stateRows = query.await('SELECT jackpot FROM lottery_state WHERE id=1 FOR UPDATE')
+            local state = stateRows and stateRows[1]
+            if not state then return false end
+            local countRows = query.await('SELECT COUNT(*) AS total FROM lottery_tickets WHERE character_id=?', { char.id })
+            if tonumber(countRows and countRows[1] and countRows[1].total) >= SunsetLottery.MaxTicketsPerPlayer then
+                return false
+            end
+            local charged = query.await(
+                ('UPDATE characters SET %s=%s-? WHERE id=? AND %s>=?'):format(account, account, account),
+                { cost, char.id, cost })
+            if tonumber(charged) ~= 1 then return false end
+            local ticketId = query.await('INSERT INTO lottery_tickets(character_id,number) VALUES(?,?)', { char.id, number })
+            if not ticketId then return false end
+            newJackpot = (tonumber(state.jackpot) or SunsetLottery.StartingJackpot) + prizeCut
+            local saved = query.await('UPDATE lottery_state SET jackpot=? WHERE id=1', { newJackpot })
+            return tonumber(saved) == 1
+        end)
+    end)
+    if not callOk or not committed then
+        return false, ('Biletul nu a fost cumparat: ai nevoie de $%d si poti avea maximum %d bilete pe runda. Nu ai fost taxat.'):format(
+            cost, SunsetLottery.MaxTicketsPerPlayer)
+    end
+    CurrentJackpot = newJackpot
+    exports.sunset_core:RefreshMoney(source)
 
     TriggerClientEvent('sunset:client:notify', source,
         ('Ai cumparat biletul cu numarul #%d pentru $%d! Potul actual: $%s.'):format(
@@ -106,56 +96,70 @@ function SunsetLottery.BuyTicket(source, number)
 end
 
 function SunsetLottery.Draw()
+    local periodKey = os.date('%Y%m%d%H')
+    if MySQL.scalar.await('SELECT 1 FROM lottery_draws WHERE period_key=? LIMIT 1', { periodKey }) then return false end
     local winningNumber = math.random(1, 100)
+    local draw = { tickets = {}, total = 0, jackpot = CurrentJackpot, share = 0 }
+    local callOk, committed = pcall(function()
+        return MySQL.startTransaction(function(query)
+            local stateRows = query.await('SELECT jackpot FROM lottery_state WHERE id=1 FOR UPDATE')
+            local state = stateRows and stateRows[1]
+            if not state then return false end
+            draw.jackpot = tonumber(state.jackpot) or SunsetLottery.StartingJackpot
+            draw.tickets = query.await([[SELECT lt.character_id,c.firstname,c.lastname FROM lottery_tickets lt
+                JOIN characters c ON c.id=lt.character_id WHERE lt.number=?]], { winningNumber }) or {}
+            local totals = query.await('SELECT COUNT(*) AS total FROM lottery_tickets')
+            draw.total = tonumber(totals and totals[1] and totals[1].total) or 0
+            draw.share = #draw.tickets > 0 and math.floor(draw.jackpot / #draw.tickets) or 0
+            local names = {}
+            for _, winner in ipairs(draw.tickets) do
+                local paid = query.await('UPDATE characters SET bank=bank+? WHERE id=?', { draw.share, winner.character_id })
+                if tonumber(paid) ~= 1 then return false end
+                names[#names + 1] = ((winner.firstname or '') .. ' ' .. (winner.lastname or '')):gsub('^%s+',''):gsub('%s+$','')
+            end
+            local nextJackpot = #draw.tickets > 0 and SunsetLottery.StartingJackpot or draw.jackpot
+            query.await('DELETE FROM lottery_tickets')
+            local stateSaved = query.await([[UPDATE lottery_state SET jackpot=?,last_winner_name=?,
+                last_winner_prize=?,last_winning_number=? WHERE id=1]],
+                { nextJackpot, #names > 0 and table.concat(names, ', ') or nil,
+                    #names > 0 and draw.jackpot or 0, winningNumber })
+            if tonumber(stateSaved) ~= 1 then return false end
+            query.await([[INSERT INTO lottery_draws(period_key,winning_number,prize,total_tickets,winners_json)
+                VALUES(?,?,?,?,?)]], { periodKey, winningNumber, #names > 0 and draw.jackpot or 0,
+                    draw.total, json.encode(names) })
+            draw.names = names
+            draw.nextJackpot = nextJackpot
+            return true
+        end)
+    end)
+    if not callOk or not committed then
+        print(('^1[sunset_lottery]^7 draw %s failed safely; tickets and jackpot were kept'):format(periodKey))
+        return false
+    end
     LastNumber = winningNumber
+    CurrentJackpot = draw.nextJackpot
 
-    local tickets = MySQL.query.await([[
-        SELECT lt.character_id, c.firstname, c.lastname
-        FROM `lottery_tickets` lt
-        JOIN `characters` c ON c.id = lt.character_id
-        WHERE lt.number = ?
-    ]], { winningNumber }) or {}
-
-    local totalTickets = MySQL.scalar.await('SELECT COUNT(*) FROM `lottery_tickets`') or 0
-
-    if #tickets > 0 then
-        local share = math.floor(CurrentJackpot / #tickets)
-        local winnerNames = {}
-
-        for _, winner in ipairs(tickets) do
-            local fullName = (winner.firstname or '') .. ' ' .. (winner.lastname or '')
-            table.insert(winnerNames, fullName)
-
-            local onlineSrc = nil
+    if #draw.tickets > 0 then
+        for _, winner in ipairs(draw.tickets) do
             for _, pid in ipairs(GetPlayers()) do
-                local s = tonumber(pid)
-                local pChar = exports.sunset_core:GetCharacter(s)
-                if pChar and pChar.id == winner.character_id then
-                    onlineSrc = s
+                local onlineSrc = tonumber(pid)
+                local online = exports.sunset_core:GetCharacter(onlineSrc)
+                if online and tonumber(online.id) == tonumber(winner.character_id) then
+                    exports.sunset_core:RefreshMoney(onlineSrc)
+                    TriggerClientEvent('sunset:client:notify', onlineSrc,
+                        ('AI CASTIGAT LA LOTERIE! Ai incasat $%s in contul bancar!'):format(
+                            string.format('%\'d', draw.share):gsub('\'', ',')), 'success', 15000)
                     break
                 end
             end
-
-            if onlineSrc then
-                exports.sunset_core:AddMoney(onlineSrc, 'bank', share, 'lottery_jackpot')
-                TriggerClientEvent('sunset:client:notify', onlineSrc,
-                    ('AI CASTIGAT LA LOTERIE! Ai incasat $%s in contul bancar!'):format(
-                        string.format('%\'d', share):gsub('\'', ',')
-                    ), 'success', 15000)
-            else
-                MySQL.update.await('UPDATE `characters` SET `bank` = `bank` + ? WHERE `id` = ?', {
-                    share, winner.character_id
-                })
-            end
         end
-
-        local namesStr = table.concat(winnerNames, ', ')
+        local namesStr = table.concat(draw.names, ', ')
         LastWinner = namesStr
-        LastPrize = CurrentJackpot
+        LastPrize = draw.jackpot
 
         -- Server broadcast
         local msg = ('^2[LOTTO] ^7Numarul extras: ^3#%d^7! Felicitari castigatorilor: ^2%s^7! Premiu total: ^2$%s^7!'):format(
-            winningNumber, namesStr, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
+            winningNumber, namesStr, string.format('%\'d', draw.jackpot):gsub('\'', ',')
         )
         TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTERIE', msg } })
 
@@ -166,18 +170,16 @@ function SunsetLottery.Draw()
 
         -- Roll-over
         local msg = ('^3[LOTTO] ^7Numarul extras a fost ^3#%d^7 (%d bilete jucate). Niciun castigator! Potul de ^2$%s^7 se reporteaza pentru ora urmatoare!'):format(
-            winningNumber, totalTickets, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
+            winningNumber, draw.total, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
         )
         TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTERIE', msg } })
     end
 
-    -- Clear round tickets
-    MySQL.query.await('TRUNCATE TABLE `lottery_tickets`')
-    saveState()
+    return true
 end
 
 -- Commands
-RegisterCommand('loto', function(source, args)
+local function runLotteryCommand(source, args)
     local sub = args[1] and string.lower(args[1])
     if sub == 'info' then
         local tickets = 0
@@ -212,10 +214,12 @@ RegisterCommand('loto', function(source, args)
     if not ok and err then
         TriggerClientEvent('sunset:client:notify', source, err, 'error')
     end
-end, false)
+end
+
+RegisterCommand('loto', runLotteryCommand, false)
 
 RegisterCommand('lottery', function(source, args)
-    ExecuteCommand(('loto %s'):format(table.concat(args, ' ')))
+    runLotteryCommand(source, args or {})
 end, false)
 
 TriggerEvent('chat:addSuggestion', '/loto', 'Cumpara un bilet la loteria orara sau vezi potul', {

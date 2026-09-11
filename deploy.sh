@@ -132,8 +132,8 @@ fi
 : "${MARIADB_PASSWORD:?MARIADB_PASSWORD must be set in .env before deployment}"
 
 chmod -R a+rX config docker resources sql
-sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
-chmod +x docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh
+sed -i 's/\r$//' docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh scripts/apply-migrations.sh scripts/vps-restart-all.sh
+chmod +x docker/fivem/entrypoint.sh deploy.sh scripts/install-deps.sh scripts/apply-migrations.sh scripts/vps-restart-all.sh
 
 # ox_lib must exist (with web/build) before the FiveM container copies resources
 if [ -f scripts/install-deps.sh ]; then
@@ -156,24 +156,8 @@ until [ -n "$mariadb_container" ] && [ "$(docker inspect -f '{{.State.Health.Sta
   sleep 2
 done
 
-# Run SQL migrations (idempotent where possible)
 echo "[deploy] applying SQL migrations..."
-for migration in sql/[0-9][0-9]-*.sql; do
-  [ -f "$migration" ] || continue
-  base="$(basename "$migration")"
-  case "$base" in
-    01-sunset.sql) continue ;;
-  esac
-  echo "[deploy] -> $base"
-  if ! docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < "$migration"; then
-    if [ "${DEPLOY_IGNORE_MIGRATION_ERRORS:-0}" = "1" ]; then
-      echo "[deploy] warning: $base returned errors (DEPLOY_IGNORE_MIGRATION_ERRORS=1)" >&2
-    else
-      echo "[deploy] ERROR: migration $base failed. Fix schema or set DEPLOY_IGNORE_MIGRATION_ERRORS=1 only if already applied." >&2
-      exit 1
-    fi
-  fi
-done
+sh scripts/apply-migrations.sh "$DIR"
 
 docker compose up -d --remove-orphans
 docker compose up -d --force-recreate fivem

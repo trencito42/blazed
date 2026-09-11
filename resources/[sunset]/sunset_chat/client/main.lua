@@ -17,11 +17,12 @@ end
 
 local function openChat()
     if chatOpen then return end
+    TriggerEvent('sunset:phone:forceClose')
     chatOpen = true
     TriggerEvent('sunset:client:chatFocusChanged', true)
     local myId = GetPlayerServerId(PlayerId())
     local myName = LocalPlayer.state.sunsetName or GetPlayerName(PlayerId()) or 'Player'
-    exports.sunset_ui:SetFocus(true, true)
+    exports.sunset_ui:SetFocus(true, true, false, 'chat')
     exports.sunset_ui:Send('chatToggle', {
         open = true,
         playerId = myId,
@@ -30,7 +31,7 @@ local function openChat()
     })
     exports.sunset_chat:SyncChatSuggestions()
     SetTimeout(75, function()
-        if chatOpen then exports.sunset_ui:SetFocus(true, true) end
+        if chatOpen then exports.sunset_ui:SetFocus(true, true, false, 'chat') end
     end)
 end
 
@@ -38,11 +39,7 @@ local function closeChat()
     if not chatOpen then return end
     chatOpen = false
     TriggerEvent('sunset:client:chatFocusChanged', false)
-    if exports.sunset_ui and exports.sunset_ui:IsOpen() then
-        exports.sunset_ui:SetFocus(true, true)
-    else
-        exports.sunset_ui:SetFocus(false, false)
-    end
+    exports.sunset_ui:SetFocus(false, false, false, 'chat')
     exports.sunset_ui:Send('chatToggle', { open = false })
 end
 

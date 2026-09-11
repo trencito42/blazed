@@ -256,9 +256,66 @@ function formatMoney(amount) {
     return '$' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+// All gameplay modals live in one shared NUI document. Keep exactly one modal
+// root visible so a stale close/update message cannot leave two full-screen
+// backdrops stacked (inventory + trade, M + garage, phone + another panel).
+const GAMEPLAY_MODAL_ROOTS = [
+    '#menu', '#inventory', '#trade-window', '#store-forza', '#fishing-shop',
+    '#jobcenter', '#atm-modal', '#mdc', '#dispatch-112-modal', '#ticket',
+    '#ticket-receive', '#servicecalls', '#jobs-panel', '#skills', '#help',
+    '#faction-panel', '#faction-directory', '#clan-panel', '#clan-directory',
+    '#business-panel', '#garage', '#fleet-garage', '#properties', '#emotes',
+    '#clothing', '#wardrobe', '#phone-device', '#documents', '#dealership',
+    '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal',
+    '#license-quiz-panel',
+];
+
+const MODAL_ACTION_ROOT = {
+    menuShow: '#menu', garageShow: '#menu', inventoryShow: '#inventory',
+    shopShow: '#store-forza', fishingShopShow: '#fishing-shop',
+    jobCenterShow: '#jobcenter', atmShow: '#atm-modal', mdcShow: '#mdc',
+    dispatch112Show: '#dispatch-112-modal', ticketShow: '#ticket',
+    ticketReceiveShow: '#ticket-receive', serviceCallsShow: '#servicecalls',
+    jobsShow: '#jobs-panel', skillsShow: '#skills', helpShow: '#help',
+    factionPanelShow: '#faction-panel', factionDirectoryShow: '#faction-directory',
+    clanPanelShow: '#clan-panel', clanDirectoryShow: '#clan-directory',
+    clanProfileShow: '#clan-directory', businessPanelShow: '#business-panel',
+    fleetGarageShow: '#fleet-garage', propertiesShow: '#properties',
+    emotesShow: '#emotes', clothingShow: '#clothing', wardrobeShow: '#wardrobe',
+    phoneShow: '#phone-device', documentsShow: '#documents',
+    dealershipShow: '#dealership', playerInteractionShow: '#player-interaction',
+    craftingShow: '#crafting', appearanceShow: '#appearance-studio',
+    battlepassShow: '#battlepass-modal', licenseQuizShow: '#license-quiz-panel',
+};
+
+const MODAL_BODY_CLASSES = [
+    'menu-open', 'menu--solo-vehicle-active', 'inventory-open',
+    'inventory-trade-open', 'trade-forza-active', 'store-open',
+    'wardrobe-open', 'dealership-open', 'faction-panels-open',
+    'clan-panels-open', 'business-panels-open', 'player-interaction-open',
+];
+
+function activateGameplayModal(action, payload) {
+    let next = MODAL_ACTION_ROOT[action];
+    if (action === 'inventoryTradeState' && payload?.active === true) next = '#trade-window';
+    if (!next) return;
+
+    for (const selector of GAMEPLAY_MODAL_ROOTS) {
+        if (selector === next) continue;
+        const root = $(selector);
+        if (!root || root.classList.contains('hidden')) continue;
+        root.classList.add('hidden');
+        root.setAttribute('aria-hidden', 'true');
+    }
+    for (const className of MODAL_BODY_CLASSES) {
+        document.body.classList.remove(className);
+    }
+}
+
 // NUI message handler
 window.addEventListener('message', (event) => {
     const { action, screen, data, message, type, duration, label } = event.data;
+    activateGameplayModal(action, data || event.data.data || {});
 
     switch (action) {
         case 'show':
@@ -763,18 +820,6 @@ window.addEventListener('message', (event) => {
             break;
         case 'licenseQuizHide':
             if (window.LicenseQuiz) LicenseQuiz.hide();
-            break;
-        case 'jobCreatorShow':
-            if (window.JobCreator) JobCreator.show(data || event.data.data);
-            break;
-        case 'jobCreatorUpdate':
-            if (window.JobCreator) JobCreator.update(data || event.data.data);
-            break;
-        case 'jobCreatorHide':
-            if (window.JobCreator) JobCreator.hide();
-            break;
-        case 'jobCreatorPlacement':
-            if (window.JobCreator) JobCreator.onPlacement((data || event.data.data)?.point);
             break;
         case 'jobShiftShow':
             if (window.JobShift) JobShift.show(data || event.data.data);

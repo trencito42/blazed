@@ -351,20 +351,47 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:sell', function(sour
 
     SellLocks[source] = true
 
-    -- Rimuovi tutti i tipi di pesce
-    for _, fi in ipairs(ALL_FISH_ITEMS) do
-        local c = exports.sunset_inventory:CountItem(source, fi) or 0
-        if c > 0 then
-            exports.sunset_inventory:RemoveItem(source, fi, c)
-        end
-    end
-
     local bonus = math.floor(pending * (cfg.sellBonusMultiplier or 1.0))
-    local payOk, paid = pcall(SunsetJobs_PayReward, source, 'fisherman', bonus, 'fisherman_sell', true)
-    if not payOk or not paid then
+    local fishSet = {}
+    for _, item in ipairs(ALL_FISH_ITEMS) do fishSet[item] = true end
+    local committed = MySQL.startTransaction(function()
+        local rows = MySQL.query.await(
+            'SELECT id, item, count, metadata FROM character_inventory WHERE character_id = ? FOR UPDATE',
+            { char.id }) or {}
+        local lockedCount, lockedValue, ids = 0, 0, {}
+        for _, row in ipairs(rows) do
+            if fishSet[row.item] then
+                local metadata = row.metadata
+                if type(metadata) == 'string' then
+                    local ok, decoded = pcall(json.decode, metadata)
+                    metadata = ok and decoded or nil
+                end
+                local rowCount = tonumber(row.count) or 0
+                local rowValue = tonumber(metadata and metadata.value) or FISH_BASE_VALUES[row.item] or 0
+                lockedCount = lockedCount + rowCount
+                lockedValue = lockedValue + rowValue * rowCount
+                ids[#ids + 1] = tonumber(row.id)
+            end
+        end
+        if lockedCount < 1 or lockedValue <= 0 then error('fish_changed') end
+        bonus = math.floor(lockedValue * (cfg.sellBonusMultiplier or 1.0))
+        for _, id in ipairs(ids) do
+            if MySQL.update.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ?', { id, char.id }) ~= 1 then error('fish_changed') end
+        end
+        if MySQL.update.await('UPDATE characters SET cash = cash + ? WHERE id = ?', { bonus, char.id }) ~= 1 then error('payment_failed') end
+        MySQL.insert.await([[INSERT INTO money_transactions
+            (character_id, account, direction, amount, reason, balance_after)
+            SELECT id, 'cash', 'in', ?, 'fisherman_sell', cash FROM characters WHERE id = ?]], { bonus, char.id })
+        count = lockedCount
+    end)
+    if not committed then
         SellLocks[source] = nil
-        return nil, 'Payment failed.'
+        exports.sunset_inventory:ReloadInventory(source)
+        return nil, 'The fish sale was cancelled safely because your inventory changed. No fish or money was lost.'
     end
+    exports.sunset_inventory:ReloadInventory(source)
+    exports.sunset_core:RefreshMoney(source)
+    SunsetJobs_AddJobProgress(source, 'fisherman', math.max(5, math.floor(bonus / 10)), 1, bonus)
 
     local session = SunsetJobs_GetSession(source)
     if session and session.jobId == 'fisherman' then

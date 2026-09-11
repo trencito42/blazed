@@ -315,13 +315,6 @@ function JobClient.clearWorkHud()
     exports.sunset_ui:Send('fishingHide', {})
     exports.sunset_ui:Send('jobShiftHide', {})
     exports.sunset_ui:Send('jobSkillHide', {})
-    if GetResourceState('sunset_jobcreator') == 'started' then
-        pcall(function()
-            if exports.sunset_jobcreator:IsSessionActive() then
-                exports.sunset_jobcreator:CancelWork()
-            end
-        end)
-    end
 end
 
 function JobClient.cleanup(options)

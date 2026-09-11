@@ -49,17 +49,17 @@ local function scheduleAuthWatchdog()
     end)
 end
 
-local function persistLogin(username, password, rememberQuickLogin)
+local function persistLogin(username, token, rememberQuickLogin)
     local license = activeLicense()
     if not license then return false end
-    local _, saved = SunsetAuthAccounts.upsert(license, username, password, isEnabled(rememberQuickLogin))
+    local _, saved = SunsetAuthAccounts.upsert(license, username, token, isEnabled(rememberQuickLogin))
     return saved == true
 end
 
-local function completeAuthentication(username, password, rememberQuickLogin)
+local function completeAuthentication(username, quickToken, rememberQuickLogin)
     local saved = true
-    if password and username then
-        saved = persistLogin(username, password, rememberQuickLogin)
+    if quickToken and username then
+        saved = persistLogin(username, quickToken, rememberQuickLogin)
     end
     pendingAuth = nil
     authenticated = true
@@ -87,7 +87,7 @@ local function handleAuthResult(result, username, password, rememberQuickLogin)
         promptEmailSync(result.username or username, password, rememberQuickLogin)
         return false
     end
-    completeAuthentication(username, password, rememberQuickLogin)
+    completeAuthentication(username, result and result.quickToken, rememberQuickLogin)
     return true
 end
 
@@ -104,7 +104,7 @@ local function performLogin(username, password, rememberQuickLogin)
         promptEmailSync(result.username or username, password, rememberQuickLogin)
         return false
     end
-    completeAuthentication(username, password, rememberQuickLogin)
+    completeAuthentication(username, result.quickToken, rememberQuickLogin)
     return true
 end
 
@@ -170,7 +170,7 @@ AddEventHandler('sunset:nui:authSetEmail', function(data)
     exports.sunset_ui:Send('authEmailSaved', {})
     completeAuthentication(
         pending.username or result.username,
-        pending.password,
+        result.quickToken,
         pending.rememberQuickLogin
     )
 end)
@@ -192,17 +192,26 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
         return
     end
 
-    if type(row.password) == 'string' and row.password ~= '' then
+    if type(row.token) == 'string' and row.token ~= '' then
         CreateThread(function()
             exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
-            performLogin(row.username, row.password, store.quickLogin ~= false)
+            local result, err = Sunset.AwaitCallback('sunset:authQuickLogin', row.username, row.token)
+            if result and result.needsEmail then
+                promptEmailSync(row.username, nil, true)
+            elseif result then
+                completeAuthentication(row.username, result.quickToken, store.quickLogin ~= false)
+            else
+                SunsetAuthAccounts.remove(license, row.username)
+                exports.sunset_ui:Send('authError', { message = err or 'Saved login expired. Enter your password again.' })
+                pushAuthAccounts()
+            end
         end)
         return
     end
 
     exports.sunset_ui:Send('authAccountFill', {
         username = row.username,
-        password = row.password or '',
+        password = '',
     })
 end)
 

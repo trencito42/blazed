@@ -1,36 +1,3 @@
-local function isLegacyMigrated(jobId)
-    if GetResourceState('sunset_jobcreator') ~= 'started' then return false end
-    local mig = exports.sunset_jobcreator:GetMigrationTarget(jobId)
-    return mig and exports.sunset_jobcreator:IsCreatorJob(mig)
-end
-
-local function ensureCreatorJobsRegistered()
-    if GetResourceState('sunset_jobcreator') ~= 'started' then return end
-    pcall(function()
-        exports.sunset_jobcreator:EnsureCivilianJobsRegistered()
-    end)
-end
-
-local function resolveHireJobId(jobId)
-    ensureCreatorJobsRegistered()
-    if GetResourceState('sunset_jobcreator') ~= 'started' then return jobId end
-    local legacy = exports.sunset_jobcreator:GetLegacyJobId(jobId)
-    if legacy then return legacy end
-    return jobId
-end
-
-local function resolveCreatorJobId(jobId)
-    if GetResourceState('sunset_jobcreator') ~= 'started' then return nil end
-    if exports.sunset_jobcreator:IsCreatorJob(jobId) then
-        return jobId
-    end
-    local mig = exports.sunset_jobcreator:GetMigrationTarget(jobId)
-    if mig and exports.sunset_jobcreator:IsCreatorJob(mig) then
-        return mig
-    end
-    return nil
-end
-
 local function buildJobCenterJobs(center)
     local jobs = {}
     local seen = {}
@@ -41,31 +8,22 @@ local function buildJobCenterJobs(center)
         jobs[#jobs + 1] = job
     end
 
-    -- Published creator jobs first
-    if GetResourceState('sunset_jobcreator') == 'started' then
-        for _, j in ipairs(exports.sunset_jobcreator:GetPublishedForHire()) do
-            if j.id ~= 'unemployed' then add(j) end
-        end
-    end
-
-    -- All civilian jobs (type == 'civilian') from global config, excluding unemployed/criminal
+    -- The classic civilian jobs are the only authoritative job catalogue.
     for jobId, def in pairs(Sunset.CivilianJobs or {}) do
         if jobId ~= 'unemployed' and (def.type == 'civilian' or not def.type) and not seen[jobId] then
-            if not isLegacyMigrated(jobId) then
-                add({
-                    id = jobId,
-                    label = def.label or jobId,
-                    description = def.description or '',
-                    salary = def.grades and def.grades[0] and def.grades[0].salary,
-                    npcCoords = def.npcCoords,
-                })
-            end
+            add({
+                id = jobId,
+                label = def.label or jobId,
+                description = def.description or '',
+                salary = def.grades and def.grades[0] and def.grades[0].salary,
+                npcCoords = def.npcCoords,
+            })
         end
     end
 
     -- Any extra jobs explicitly listed in the center's jobs array
     for _, j in ipairs(center.jobs or {}) do
-        if j.id == 'unemployed' or seen[j.id] or isLegacyMigrated(j.id) then goto continue end
+        if j.id == 'unemployed' or seen[j.id] then goto continue end
         local def = Sunset.CivilianJobs[j.id]
         if def and def.type == 'civilian' then
             add({
@@ -99,9 +57,6 @@ local function quitCivilianJob(source, reason)
     if SunsetJobs_ClearSession then
         SunsetJobs_ClearSession(source, 'CANCELLED', reason or 'Civilian job resigned')
     end
-    if GetResourceState('sunset_jobcreator') == 'started' then
-        pcall(function() exports.sunset_jobcreator:CancelJob(source) end)
-    end
     TriggerClientEvent('sunset:jobs:forceClearHud', source)
     if not exports.sunset_core:SetJob(source, 'unemployed', 0) then
         return nil, 'Could not clear your civilian job — try again after ending your current shift.'
@@ -124,16 +79,12 @@ local function hireCivilianJob(source, jobId)
         return nil, 'Your character is not loaded. Reconnect and select it again.'
     end
 
-    local requestedJob = jobId
-    jobId = resolveHireJobId(jobId)
+    jobId = tostring(jobId or ''):lower()
     local currentJob = select(1, Sunset.GetCharacterJob(char))
-    print(('[sunset:hireJob] src=%s request=%s resolved=%s current=%s charId=%s'):format(
-        source, tostring(requestedJob), tostring(jobId), tostring(currentJob), tostring(char.id)))
-    ensureCreatorJobsRegistered()
+    print(('[sunset:hireJob] src=%s job=%s current=%s charId=%s'):format(
+        source, tostring(jobId), tostring(currentJob), tostring(char.id)))
 
-    local creatorId = resolveCreatorJobId(jobId)
-    local isCreator = creatorId ~= nil or (GetResourceState('sunset_jobcreator') == 'started' and exports.sunset_jobcreator:IsCreatorJob(jobId))
-    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[jobId]) and not isCreator then
+    if not (Sunset.CivilianJobs and Sunset.CivilianJobs[jobId]) then
         return nil, 'That is not a valid civilian job. Factions require a leader invitation.'
     end
 
@@ -141,7 +92,7 @@ local function hireCivilianJob(source, jobId)
         return quitCivilianJob(source, 'Resigned at Job Center')
     end
 
-    if currentJob == jobId or resolveHireJobId(currentJob) == jobId then
+    if currentJob == jobId then
         local label = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
         return nil, ('You already work as %s.'):format(label)
     end
@@ -149,9 +100,6 @@ local function hireCivilianJob(source, jobId)
     if currentJob ~= 'unemployed' then
         if SunsetJobs_ClearSession then
             SunsetJobs_ClearSession(source, 'CANCELLED', 'Changed civilian job')
-        end
-        if GetResourceState('sunset_jobcreator') == 'started' then
-            pcall(function() exports.sunset_jobcreator:CancelJob(source) end)
         end
         TriggerClientEvent('sunset:jobs:forceClearHud', source)
         local current = Sunset.CivilianJobs[currentJob]
@@ -169,13 +117,7 @@ local function hireCivilianJob(source, jobId)
     local hiredLabel = Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId
     exports.sunset_core:CommandReply(source,
         ('Hired as %s. Use /work to start.'):format(hiredLabel), 'success')
-    local coords = nil
-    if creatorId then
-        coords = exports.sunset_jobcreator:GetJobWorkCoords(creatorId)
-    elseif GetResourceState('sunset_jobcreator') == 'started' then
-        coords = exports.sunset_jobcreator:GetJobWorkCoords(jobId)
-    end
-    TriggerClientEvent('sunset:jobs:waypointToWork', source, jobId, coords)
+    TriggerClientEvent('sunset:jobs:waypointToWork', source, jobId)
     return true
 end
 
@@ -262,11 +204,7 @@ local function runSetJob(source, args)
         return
     end
 
-    ensureCreatorJobsRegistered()
-    jobId = resolveHireJobId(jobId)
-
-    local isCreator = resolveCreatorJobId(jobId) ~= nil
-    if not Sunset.CivilianJobs[jobId] and not isCreator then
+    if not Sunset.CivilianJobs[jobId] then
         reply(source,
             ('Unknown civilian job "%s". Valid jobs: %s'):format(jobId, listCivilianJobs()),
             'error')

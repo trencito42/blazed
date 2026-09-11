@@ -61,6 +61,8 @@ server_exports {
     'AddMoney',
     'RefreshMoney',
     'RemoveMoney',
+    'MoveMoney',
+    'TransferMoney',
     'GetMoney',
     'SetPersistentStat',
     'RefreshBlazePoints',
