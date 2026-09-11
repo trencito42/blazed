@@ -1,4 +1,4 @@
-/* Forza / NFS dealership UI — 1:1 from dealership-tuning.html */
+/* Forza / NFS dealership — 1:1 from server redesign/dealership-tuning.html */
 
 .dealership-forza {
     --dl-text-main: #ffffff;
@@ -8,13 +8,15 @@
     --dl-shadow-text: 0 4px 12px rgba(0, 0, 0, 0.9);
     --dl-shadow-glow: 0 0 20px rgba(0, 255, 204, 0.4);
     --dl-transition: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
     position: fixed;
     inset: 0;
     z-index: 82;
-    font-family: 'Montserrat', sans-serif;
+    font-family: Montserrat, sans-serif;
     color: var(--dl-text-main);
     pointer-events: none;
     user-select: none;
+    background: transparent !important;
 }
 
 .dealership-forza.hidden { display: none; }
@@ -27,34 +29,24 @@
     pointer-events: none;
 }
 
+/* Master skewed layer — matches .ui-layer */
 .dealership-forza .dl-ui-layer {
     position: absolute;
     inset: 0;
     z-index: 10;
-    padding: 80px 100px 100px;
+    padding: 80px 100px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: stretch;
     transform: skewX(-5deg);
     transition: opacity 0.4s ease, transform 0.4s var(--dl-transition);
     opacity: 1;
     pointer-events: none;
 }
 
-/* Only real panels capture clicks — center/right preview stays free */
-.dealership-forza .dl-ui-col {
+.dealership-forza .dl-catalog-col,
+.dealership-forza .dl-stats-panel {
     pointer-events: auto;
-    transform: skewX(5deg);
-    position: relative;
-    z-index: 2;
-}
-
-.dealership-forza .dl-ui-col--right {
-    align-self: flex-start;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: calc(100vh - 200px);
 }
 
 .dealership-forza .dl-section-title {
@@ -68,6 +60,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .dealership-forza .dl-section-title::before {
@@ -77,35 +70,29 @@
     background: var(--dl-accent);
 }
 
-.dealership-forza .dl-ui-col--left {
-    max-height: calc(100vh - 200px);
+.dealership-forza .dl-section-title--compact {
+    margin-bottom: 15px;
+}
+
+.dealership-forza .dl-catalog-col {
+    display: flex;
+    flex-direction: column;
     min-height: 0;
+    max-width: 420px;
 }
 
 .dealership-forza .dl-item-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    overflow-x: hidden;
     overflow-y: auto;
+    max-height: 70vh;
+    padding-right: 20px;
     flex: 1;
     min-height: 0;
-    max-height: calc(100vh - 260px);
-    padding-right: 12px;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 255, 204, 0.45) rgba(255, 255, 255, 0.06);
 }
 
-.dealership-forza .dl-item-list::-webkit-scrollbar { width: 6px; }
-.dealership-forza .dl-item-list::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 204, 0.4);
-    border-radius: 4px;
-}
-.dealership-forza .dl-item-list::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 4px;
-}
+.dealership-forza .dl-item-list::-webkit-scrollbar { width: 0; }
 
 .dealership-forza .dl-list-item {
     font-size: 32px;
@@ -115,7 +102,7 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     cursor: pointer;
-    padding-left: 0;
+    padding: 0 0 0 0;
     border: 0;
     border-left: 0 solid transparent;
     background: transparent;
@@ -150,37 +137,26 @@
 .dealership-forza .dl-list-item:hover .dl-item-price,
 .dealership-forza .dl-list-item.active .dl-item-price { color: var(--dl-text-main); }
 
+/* Right stats panel — matches .stats-panel */
 .dealership-forza .dl-stats-panel {
     display: flex;
     flex-direction: column;
     gap: 15px;
     width: 350px;
-    flex: 1;
-    min-height: 0;
-    max-height: calc(100vh - 200px);
-    overflow-x: hidden;
-    overflow-y: auto;
+    flex-shrink: 0;
     background: rgba(0, 0, 0, 0.4);
     padding: 30px;
     border-left: 2px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(5px);
-    pointer-events: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 255, 204, 0.45) rgba(255, 255, 255, 0.06);
+    -webkit-backdrop-filter: blur(5px);
 }
 
-.dealership-forza .dl-stats-panel::-webkit-scrollbar { width: 6px; }
-.dealership-forza .dl-stats-panel::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 204, 0.4);
-    border-radius: 4px;
+.dealership-forza .dl-stat-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
 }
-.dealership-forza .dl-stats-panel::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 4px;
-}
-
-.dealership-forza .dl-stat-row { display: flex; flex-direction: column; gap: 8px; }
 
 .dealership-forza .dl-stat-header {
     display: flex;
@@ -198,7 +174,12 @@
     font-variant-numeric: tabular-nums;
 }
 
-.dealership-forza .dl-stat-track { display: flex; gap: 3px; width: 100%; height: 12px; }
+.dealership-forza .dl-stat-track {
+    display: flex;
+    gap: 3px;
+    width: 100%;
+    height: 12px;
+}
 
 .dealership-forza .dl-stat-segment {
     flex: 1;
@@ -217,6 +198,7 @@
     display: flex;
     flex-direction: column;
     gap: 5px;
+    flex-shrink: 0;
 }
 
 .dealership-forza .dl-price-label {
@@ -241,31 +223,31 @@
 .dealership-forza .dl-btn-hold {
     margin-top: 20px;
     position: relative;
-    z-index: 3;
     width: 100%;
-    min-height: 50px;
     height: 50px;
     flex-shrink: 0;
-    background: rgba(0, 0, 0, 0.8);
-    border: 2px solid var(--dl-text-muted);
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 2px solid var(--dl-text-muted) !important;
+    border-radius: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
     font-weight: 900;
     font-style: italic;
-    color: var(--dl-text-main);
+    color: var(--dl-text-main) !important;
     text-transform: uppercase;
     letter-spacing: 2px;
     cursor: pointer;
     overflow: hidden;
     transition: 0.2s;
     font-family: inherit;
+    padding: 0;
 }
 
 .dealership-forza .dl-btn-hold:hover:not(:disabled) {
-    border-color: var(--dl-accent);
-    color: var(--dl-accent);
+    border-color: var(--dl-accent) !important;
+    color: var(--dl-accent) !important;
     text-shadow: var(--dl-shadow-glow);
 }
 
@@ -303,36 +285,27 @@
     transform: skewX(5deg);
 }
 
-.dealership-forza .dl-btn-secondary {
-    margin-top: 10px;
-    width: 100%;
-    min-height: 42px;
-    height: 42px;
-    flex-shrink: 0;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: var(--dl-text-main);
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: 0.2s;
-}
+/* Hidden legacy nodes kept for JS */
+.dealership-forza .dl-stock-note,
+.dealership-forza .dl-balance { display: none !important; }
 
-.dealership-forza .dl-btn-secondary:hover:not(:disabled) {
-    border-color: var(--dl-accent);
-    color: var(--dl-accent);
+/* Bottom game controls — minimal, outside main panels */
+.dealership-forza .dl-bottom-tools {
+    pointer-events: auto;
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 20;
+    transform: translateX(-50%) skewX(-5deg);
+    display: flex;
+    align-items: center;
+    gap: 18px;
 }
-
-.dealership-forza .dl-btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .dealership-forza .dl-color-row {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 12px;
+    align-items: center;
+    gap: 8px;
 }
 
 .dealership-forza .dl-color-row label {
@@ -344,89 +317,80 @@
 }
 
 .dealership-forza .dl-color-row select {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: #fff;
-    padding: 8px 10px;
+    padding: 6px 10px;
     font-family: inherit;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.dealership-forza .dl-balance {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--dl-text-muted);
-    margin-bottom: 8px;
-    text-transform: uppercase;
 }
 
-.dealership-forza .dl-stock-note {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--dl-text-muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-.dealership-forza .dl-stock-note.out { color: var(--dl-danger); }
-
-.dealership-forza .dl-preview-controls {
-    pointer-events: auto;
-    position: fixed;
-    right: 8vw;
-    bottom: 5vh;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    background: rgba(0, 0, 0, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+.dealership-forza .dl-btn-test {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 0 !important;
+    color: var(--dl-text-main) !important;
+    padding: 8px 14px;
+    font-family: inherit;
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 2px;
     text-transform: uppercase;
-    transform: skewX(-5deg);
+    cursor: pointer;
+}
+
+.dealership-forza .dl-btn-test:hover:not(:disabled) {
+    border-color: var(--dl-accent) !important;
+    color: var(--dl-accent) !important;
+}
+
+.dealership-forza .dl-btn-test:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.dealership-forza .dl-preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dl-text-muted);
 }
 
 .dealership-forza .dl-preview-controls button {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: #fff;
-    padding: 6px 12px;
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 0 !important;
+    color: #fff !important;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     font-family: inherit;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font-size: 12px;
     cursor: pointer;
 }
 
 .dealership-forza .dl-preview-controls button:hover {
-    border-color: var(--dl-accent);
-    color: var(--dl-accent);
+    border-color: var(--dl-accent) !important;
+    color: var(--dl-accent) !important;
 }
 
-.dealership-forza .dl-close {
-    pointer-events: auto;
+.dealership-forza .dl-close-hint {
     position: fixed;
-    top: 28px;
-    right: 36px;
-    z-index: 30;
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    width: 40px;
-    height: 40px;
-    font-size: 22px;
-    cursor: pointer;
-    transform: skewX(-5deg);
-}
-
-.dealership-forza .dl-close:hover {
-    border-color: var(--dl-accent);
-    color: var(--dl-accent);
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    pointer-events: none;
 }
 
 .dealership-forza .dl-admin-toggle {
@@ -452,11 +416,10 @@
     pointer-events: auto;
     position: fixed;
     left: 36px;
-    right: auto;
-    bottom: 24px;
+    bottom: 56px;
     width: min(560px, 46vw);
     z-index: 40;
-    max-height: 38vh;
+    max-height: 34vh;
     overflow-y: auto;
     background: rgba(0, 0, 0, 0.88);
     border: 1px solid rgba(0, 255, 204, 0.35);
@@ -464,7 +427,8 @@
     transform: skewX(-5deg);
 }
 
-.dealership-forza .dl-admin-panel.hidden { display: none; }
+.dealership-forza .dl-admin-panel.hidden,
+.dealership-forza .dl-bottom-tools.hidden { display: none; }
 
 .dealership-forza .dl-admin-head {
     display: flex;
@@ -480,15 +444,16 @@
 }
 
 .dealership-forza .dl-admin-head button {
-    background: var(--dl-accent);
-    border: 0;
-    color: #000;
+    background: var(--dl-accent) !important;
+    border: 0 !important;
+    color: #000 !important;
     padding: 8px 12px;
     font-family: inherit;
     font-size: 10px;
     font-weight: 900;
     letter-spacing: 1px;
     cursor: pointer;
+    border-radius: 0 !important;
 }
 
 .dealership-forza .dl-admin-grid {
@@ -535,20 +500,21 @@
 .dealership-forza .dl-admin-actions button {
     flex: 1;
     padding: 12px;
-    border: 0;
-    background: var(--dl-accent);
-    color: #000;
+    border: 0 !important;
+    background: var(--dl-accent) !important;
+    color: #000 !important;
     font-family: inherit;
     font-size: 11px;
     font-weight: 900;
     letter-spacing: 1px;
     cursor: pointer;
+    border-radius: 0 !important;
 }
 
 .dealership-forza .dl-admin-actions button.danger {
-    background: transparent;
-    border: 1px solid var(--dl-danger);
-    color: var(--dl-danger);
+    background: transparent !important;
+    border: 1px solid var(--dl-danger) !important;
+    color: var(--dl-danger) !important;
 }
 
 @media (max-width: 1200px) {

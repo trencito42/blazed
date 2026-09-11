@@ -52,7 +52,7 @@
     <link rel="stylesheet" href="css/battlepass.css?v=2">
     <link rel="stylesheet" href="css/redesign.css?v=14">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap">
-    <link rel="stylesheet" href="css/dealership-forza.css?v=3">
+    <link rel="stylesheet" href="css/dealership-forza.css?v=4">
     <link rel="stylesheet" href="css/premium-factions.css?v=2">
     <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
     <link rel="stylesheet" href="css/premium-menu.css?v=5">
@@ -2907,18 +2907,16 @@
     <!-- VEHICLE DEALERSHIP (Forza / NFS style — dealership-tuning.html) -->
     <div id="dealership" class="dealership-forza hidden" aria-hidden="true">
         <div class="dl-vignette"></div>
-        <button type="button" class="dl-close" id="dealership-close" title="Close">×</button>
         <button type="button" class="dl-admin-toggle hidden" id="dl-admin-toggle">Admin Panel</button>
 
         <div class="dl-ui-layer">
-            <div class="dl-ui-col dl-ui-col--left" style="display:flex;flex-direction:column;">
+            <div class="dl-catalog-col">
                 <div class="dl-section-title" id="dl-category-title">Catalog</div>
                 <div class="dl-item-list" id="dl-vehicle-list"></div>
             </div>
 
-            <div class="dl-ui-col dl-ui-col--right dl-stats-panel">
-                <div class="dl-section-title" style="margin-bottom:15px;">Stock Performance</div>
-                <div class="dl-balance" id="dl-balance">Select a vehicle to inspect</div>
+            <div class="dl-stats-panel">
+                <div class="dl-section-title dl-section-title--compact">Stock Performance</div>
 
                 <div class="dl-stat-row">
                     <div class="dl-stat-header"><span>Top Speed</span><span class="dl-stat-val" id="dl-stat-speed-val">—</span></div>
@@ -2933,24 +2931,11 @@
                     <div class="dl-stat-track" id="dl-stat-handling"></div>
                 </div>
 
-                <p class="dl-stock-note" id="dl-stock-note"></p>
-
-                <div class="dl-color-row" id="dl-color-row">
-                    <label for="dl-color">Paint</label>
-                    <select id="dl-color">
-                        <option value="0">Black</option>
-                        <option value="111">White</option>
-                        <option value="27">Red</option>
-                        <option value="64">Blue</option>
-                        <option value="53">Green</option>
-                        <option value="88">Yellow</option>
-                        <option value="38">Orange</option>
-                        <option value="147">Carbon</option>
-                    </select>
-                </div>
+                <p class="dl-stock-note" id="dl-stock-note" aria-hidden="true"></p>
+                <div class="dl-balance" id="dl-balance" aria-hidden="true"></div>
 
                 <div class="dl-price-display">
-                    <span class="dl-price-label">Purchase Price</span>
+                    <span class="dl-price-label" id="dl-price-label">Purchase Price</span>
                     <span class="dl-price-value" id="dl-price">—</span>
                 </div>
 
@@ -2958,15 +2943,31 @@
                     <div class="dl-btn-progress" id="dl-buy-progress"></div>
                     <div class="dl-btn-text" id="dl-buy-text"><span class="dl-key-hint">ENTER</span> Hold to Purchase</div>
                 </button>
-                <button type="button" class="dl-btn-secondary" id="dl-btn-test">Test Drive</button>
             </div>
         </div>
 
-        <div class="dl-preview-controls">
-            <button type="button" id="dealership-rotate-left">◀ Rotate</button>
-            <span>Live 3D Preview</span>
-            <button type="button" id="dealership-rotate-right">Rotate ▶</button>
+        <div class="dl-bottom-tools">
+            <div class="dl-color-row" id="dl-color-row">
+                <label for="dl-color">Paint</label>
+                <select id="dl-color">
+                    <option value="0">Black</option>
+                    <option value="111">White</option>
+                    <option value="27">Red</option>
+                    <option value="64">Blue</option>
+                    <option value="53">Green</option>
+                    <option value="88">Yellow</option>
+                    <option value="38">Orange</option>
+                    <option value="147">Carbon</option>
+                </select>
+            </div>
+            <button type="button" class="dl-btn-test" id="dl-btn-test">Test Drive</button>
+            <div class="dl-preview-controls">
+                <button type="button" id="dealership-rotate-left" title="Rotate left">◀</button>
+                <span>Rotate</span>
+                <button type="button" id="dealership-rotate-right" title="Rotate right">▶</button>
+            </div>
         </div>
+        <p class="dl-close-hint">Press ESC to close</p>
 
         <section class="dl-admin-panel hidden" id="dl-admin-panel">
             <div class="dl-admin-head">
@@ -3242,7 +3243,7 @@
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=5"></script>
-    <script src="js/dealership.js?v=2"></script>
+    <script src="js/dealership.js?v=3"></script>
     <script src="js/panels.js?v=15"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=6"></script>

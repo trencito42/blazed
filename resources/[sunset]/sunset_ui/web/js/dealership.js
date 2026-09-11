@@ -172,25 +172,24 @@
         if (accelLbl) accelLbl.textContent = labels.accel;
         if (handLbl) handLbl.textContent = labels.handling;
         const priceEl = $('#dl-price');
-        if (priceEl) priceEl.textContent = vehicle ? formatMoney(vehicle.price).replace('$', '') : '—';
-        const stockEl = $('#dl-stock-note');
-        if (stockEl) {
-            if (!vehicle) stockEl.textContent = '';
+        if (priceEl) {
+            priceEl.textContent = vehicle
+                ? Number(vehicle.price || 0).toLocaleString('en-US')
+                : '—';
+        }
+        const priceLabel = $('#dl-price-label');
+        if (priceLabel) {
+            if (!vehicle) priceLabel.textContent = 'Purchase Price';
             else if (Number(vehicle.stock) > 0) {
-                stockEl.textContent = `${vehicle.stock} in stock`;
-                stockEl.classList.remove('out');
+                priceLabel.textContent = `Purchase Price · ${vehicle.stock} in stock`;
             } else {
-                stockEl.textContent = 'Sold out';
-                stockEl.classList.add('out');
+                priceLabel.textContent = 'Purchase Price · Sold out';
             }
         }
+        const stockEl = $('#dl-stock-note');
+        if (stockEl) stockEl.textContent = '';
         const balance = $('#dl-balance');
-        if (balance) {
-            if (state.admin) balance.textContent = 'Admin catalog — changes are audited';
-            else if (state.money) {
-                balance.textContent = `Bank ${formatMoney(state.money.bank)} · Cash ${formatMoney(state.money.cash)}`;
-            } else balance.textContent = 'Select a vehicle to inspect';
-        }
+        if (balance) balance.textContent = '';
         const buyBtn = $('#dl-btn-buy');
         const testBtn = $('#dl-btn-test');
         const inStock = vehicle && Number(vehicle.stock) > 0;
@@ -261,7 +260,6 @@
     };
 
     const bindStatic = () => {
-        $('#dealership-close')?.addEventListener('click', () => post('dealershipClose'));
         $('#dealership-rotate-left')?.addEventListener('click', () => post('dealershipRotate', { direction: -1 }));
         $('#dealership-rotate-right')?.addEventListener('click', () => post('dealershipRotate', { direction: 1 }));
         const buyBtn = $('#dl-btn-buy');
@@ -323,7 +321,7 @@
         $('#dl-admin-toggle')?.classList.toggle('hidden', !state.admin);
         $('#dl-admin-panel')?.classList.toggle('hidden', !state.admin || !adminPanelOpen);
         $('#dl-btn-buy')?.classList.toggle('hidden', state.admin);
-        $('#dl-btn-test')?.classList.toggle('hidden', state.admin);
+        document.querySelector('.dl-bottom-tools')?.classList.toggle('hidden', state.admin);
         $('#dl-color-row')?.classList.toggle('hidden', state.admin);
         renderAll();
         if (state.admin && getSelected()) fillAdmin(getSelected());
