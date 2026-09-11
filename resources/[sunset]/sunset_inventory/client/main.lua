@@ -189,8 +189,6 @@ RegisterNetEvent('sunset:inventory:tradeInvite', function(requesterId, requester
         timeout = 30,
         holdMs = TRADE_HOLD_MS,
     })
-    exports.sunset_ui:Notify(('%s (#%d) wants to trade. Hold Y to accept or N to decline.'):format(
-        requesterName or 'A nearby player', tonumber(requesterId) or 0), 'info', 10000)
 end)
 
 RegisterCommand('accepttrade', function()

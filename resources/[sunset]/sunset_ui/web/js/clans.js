@@ -359,35 +359,50 @@ const ClanPanels = {
         }
     },
 
-    fillManageSelect(members, viewerCharacterId) {
-        const select = $('#clan-manage-select');
+    fillMemberSelect(select, members, viewerCharacterId, placeholder) {
         if (!select) return;
-        select.innerHTML = '<option value="" disabled selected>Alege un membru online...</option>';
-
+        select.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
         const viewerId = Number(viewerCharacterId) || 0;
         (members || []).forEach((m) => {
-            if (Number(m.characterId) !== viewerId && m.serverId) {
-                const opt = document.createElement('option');
-                opt.value = m.serverId;
-                opt.textContent = `${m.name} (ID: ${m.serverId}) — ${m.rankLabel || 'Membru'}`;
-                select.appendChild(opt);
-            }
+            if (Number(m.characterId) === viewerId) return;
+            const opt = document.createElement('option');
+            opt.value = String(m.characterId);
+            const online = m.online && m.serverId ? `online · ID ${m.serverId}` : 'offline';
+            const warns = Number(m.warns) > 0 ? ` · ${m.warns}/3 warn` : '';
+            opt.textContent = `${m.name} (${online}) — ${m.rankLabel || 'Membru'}${warns}`;
+            select.appendChild(opt);
         });
+    },
+
+    fillManageSelect(members, viewerCharacterId) {
+        this.fillMemberSelect(
+            $('#clan-manage-select'),
+            members,
+            viewerCharacterId,
+            'Alege un membru...'
+        );
+        this.fillMemberSelect(
+            $('#clan-warn-select'),
+            members,
+            viewerCharacterId,
+            'Alege un membru...'
+        );
     },
 
     manageSelected(action) {
         const select = $('#clan-manage-select');
-        const targetId = Number(select?.value);
-        if (!targetId) {
+        const targetCharacterId = Number(select?.value);
+        if (!targetCharacterId) {
             alert('Te rog selectează un membru din listă!');
             return;
         }
 
+        const label = select?.selectedOptions?.[0]?.textContent || 'acest membru';
         if (action === 'kick') {
-            if (!confirm(`Ești sigur că vrei să concediezi acest membru (ID ${targetId})?`)) return;
+            if (!confirm(`Ești sigur că vrei să concediezi ${label}?`)) return;
         }
 
-        post('clanManage', { action, targetId });
+        post('clanManage', { action, targetCharacterId });
     },
 
     renderRankLabelEditor(labels) {
@@ -550,9 +565,17 @@ const ClanPanels = {
                 labels[field.dataset.rankLabel] = field.value;
             });
             payload.labels = labels;
+        } else if (action === 'warn') {
+            const warnSelect = form.querySelector('#clan-warn-select');
+            payload.targetCharacterId = Number(warnSelect?.value);
+            payload.reason = form.querySelector('[name="reason"]')?.value || '';
+            if (!payload.targetCharacterId) {
+                alert('Te rog selectează un membru pentru avertisment!');
+                return;
+            }
         } else {
             form.querySelectorAll('input, textarea, select').forEach((field) => {
-                if (!field.name) return;
+                if (!field.name || field.id === 'clan-warn-select') return;
                 payload[field.name] = field.value;
             });
         }

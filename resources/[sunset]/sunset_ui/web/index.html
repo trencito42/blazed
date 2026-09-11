@@ -64,7 +64,7 @@
     <link rel="stylesheet" href="css/premium-properties.css?v=6">
     <link rel="stylesheet" href="css/premium-chat.css?v=13">
     <link rel="stylesheet" href="css/quick-hotbar.css?v=8">
-    <link rel="stylesheet" href="css/inventory-forza.css?v=1">
+    <link rel="stylesheet" href="css/inventory-forza.css?v=2">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -2532,7 +2532,7 @@
                             <div class="premium-clan__panel-title">Disciplină / Avertisment</div>
                             <form data-clan-action="warn">
                                 <div class="premium-clan__btn-group" style="flex-direction:column;">
-                                    <input class="premium-clan__form-control" type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                    <select class="premium-clan__form-control" id="clan-warn-select" required></select>
                                     <input class="premium-clan__form-control" type="text" name="reason" maxlength="128" placeholder="Motiv">
                                     <button type="submit" class="premium-clan__btn premium-clan__btn--warn">Acordă Strike (Warn)</button>
                                 </div>

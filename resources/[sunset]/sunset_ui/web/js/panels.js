@@ -278,7 +278,7 @@ const Panels = {
             onQuickPointerDown: () => {},
         };
 
-        inv.renderMainGrid(items, hooks, Math.max(30, ...items.map((r, i) => Number(r.slot) || i + 1), 0));
+        inv.renderMainGrid(items, hooks, 20);
         inv.renderQuickSlots(data.quickslots || {}, hooks);
         inv.updateWeight(Number(data.weight) || 0, Number(data.maxWeight) || 30);
         inv.renderNearby(Array.isArray(data.nearbyPlayers) ? data.nearbyPlayers : (this._inventoryNearby || []));
@@ -785,13 +785,20 @@ const Panels = {
     showInventoryTrade(data = {}) {
         this._inventoryTrade = data.active ? data : null;
         $('#inventory-nearby-panel')?.classList.toggle('hidden', data.active === true);
-        $('#inventory-trade-panel')?.classList.toggle('hidden', data.active !== true);
-        window.TradeForza?.syncTradeState?.(data);
+        document.body.classList.toggle('inventory-trade-open', data.active === true);
+        if (window.TradeForza) {
+            $('#inventory-trade-panel')?.classList.add('hidden');
+            window.TradeForza.syncTradeState?.(data);
+        } else {
+            $('#inventory-trade-panel')?.classList.toggle('hidden', data.active !== true);
+        }
         if (!data.active) {
             this.hideTradeAssetPicker();
             window.TradeForza?.hideTrade?.();
+            document.body.classList.remove('inventory-trade-open');
             return;
         }
+        if (window.TradeForza) return;
         const dropBtn = $('#inventory-drop-selected');
         if (dropBtn) {
             dropBtn.textContent = 'OFFER';

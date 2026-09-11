@@ -624,18 +624,42 @@ local function handleClanManage(source, payload)
         return clanManageDashboard(source, cid)
     end
 
+    local function resolveClanMember(payload, requireOnline)
+        local targetCid = tonumber(payload.targetCharacterId)
+        local targetId = tonumber(payload.targetId)
+
+        if targetCid then
+            local targetRow = ClanDisplay.getMembership(targetCid)
+            if not targetRow or tonumber(targetRow.clan_id) ~= tonumber(row.clan_id) then
+                return nil, nil, nil, 'That player is not in your clan.'
+            end
+            local src = sourceForChar(targetCid)
+            if requireOnline and not src then
+                return nil, nil, nil, 'That clan member must be online for this action.'
+            end
+            return src, targetCid, targetRow
+        end
+
+        if targetId and GetPlayerName(targetId) then
+            local resolvedCid = charId(targetId)
+            if not resolvedCid then return nil, nil, nil, 'That player has not loaded a character yet.' end
+            local targetRow = ClanDisplay.getMembership(resolvedCid)
+            if not targetRow or tonumber(targetRow.clan_id) ~= tonumber(row.clan_id) then
+                return nil, nil, nil, 'That player is not in your clan.'
+            end
+            return targetId, resolvedCid, targetRow
+        end
+
+        if targetId then
+            return nil, nil, nil, ('Player ID %s is not online.'):format(tostring(targetId))
+        end
+        return nil, nil, nil, 'Select a clan member.'
+    end
+
     if action == 'kick' then
         if not row or not isOfficer(row, cid) then return nil, 'Only clan leaders and officers can remove members.' end
-        local targetId = tonumber(payload.targetId)
-        if not targetId or not GetPlayerName(targetId) then
-            return nil, ('Player ID %s is not online.'):format(tostring(payload.targetId or '?'))
-        end
-        local targetCid = charId(targetId)
-        if not targetCid then return nil, 'That player has not loaded a character yet.' end
-        local targetRow = ClanDisplay.getMembership(targetCid)
-        if not targetRow or tonumber(targetRow.clan_id) ~= tonumber(row.clan_id) then
-            return nil, 'That player is not in your clan.'
-        end
+        local targetId, targetCid, targetRow, err = resolveClanMember(payload, false)
+        if not targetCid then return nil, err end
         if not canManageMember(row, targetRow, cid) then
             return nil, 'You cannot remove that member.'
         end
@@ -645,30 +669,18 @@ local function handleClanManage(source, payload)
         safeBroadcast(row.clan_id, source,
             ('removed %s from the clan.'):format(playerName(targetCid)))
         MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { row.clan_id, targetCid })
-        ClanDisplay.sync(targetId)
-        notify(targetId, ('You were removed from %s.'):format(row.name), 'warning')
+        if targetId then
+            ClanDisplay.sync(targetId)
+            notify(targetId, ('You were removed from %s.'):format(row.name), 'warning')
+        end
         safeAudit(row.clan_id, cid, 'kick', { targetCharacterId = targetCid })
         return clanManageDashboard(source, cid)
     end
 
-    local function resolveTarget(payload)
-        local targetId = tonumber(payload.targetId)
-        if not targetId or not GetPlayerName(targetId) then
-            return nil, nil, nil, ('Player ID %s is not online.'):format(tostring(payload.targetId or '?'))
-        end
-        local targetCid = charId(targetId)
-        if not targetCid then return nil, nil, nil, 'That player has not loaded a character yet.' end
-        local targetRow = ClanDisplay.getMembership(targetCid)
-        if not targetRow or tonumber(targetRow.clan_id) ~= tonumber(row.clan_id) then
-            return nil, nil, nil, 'That player is not in your clan.'
-        end
-        return targetId, targetCid, targetRow
-    end
-
     if action == 'rankUp' or action == 'rankDown' then
         if not row or not isOfficer(row, cid) then return nil, 'Only clan officers and leaders can change ranks.' end
-        local targetId, targetCid, targetRow, err = resolveTarget(payload)
-        if not targetId then return nil, err end
+        local targetId, targetCid, targetRow, err = resolveClanMember(payload, true)
+        if not targetCid then return nil, err end
         if not canManageMember(row, targetRow, cid) then
             return nil, 'You cannot change that member\'s rank.'
         end
@@ -692,8 +704,10 @@ local function handleClanManage(source, payload)
             nextRank, row.clan_id, targetCid,
         })
         local labels = clanRankLabels(row)
-        notify(targetId, ('Your clan rank is now %s (rank %d).'):format(
-            SunsetClans.getRankLabel(labels, nextRank), nextRank), 'info')
+        if targetId then
+            notify(targetId, ('Your clan rank is now %s (rank %d).'):format(
+                SunsetClans.getRankLabel(labels, nextRank), nextRank), 'info')
+        end
         safeAudit(row.clan_id, cid, action, { targetCharacterId = targetCid, rank = nextRank })
         local verb = action == 'rankUp' and 'promoted' or 'demoted'
         safeBroadcast(row.clan_id, source,
@@ -705,8 +719,8 @@ local function handleClanManage(source, payload)
 
     if action == 'warn' then
         if not row or not isOfficer(row, cid) then return nil, 'Only clan officers and leaders can issue warnings.' end
-        local targetId, targetCid, targetRow, err = resolveTarget(payload)
-        if not targetId then return nil, err end
+        local targetId, targetCid, targetRow, err = resolveClanMember(payload, false)
+        if not targetCid then return nil, err end
         if not canManageMember(row, targetRow, cid) then
             return nil, 'You cannot warn that member.'
         end
@@ -723,14 +737,18 @@ local function handleClanManage(source, payload)
             MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', {
                 row.clan_id, targetCid,
             })
-            ClanDisplay.sync(targetId)
-            notify(targetId, ('Clan warning 3/3 — removed from %s: %s'):format(row.name, reason), 'error', 10000)
+            if targetId then
+                ClanDisplay.sync(targetId)
+                notify(targetId, ('Clan warning 3/3 — removed from %s: %s'):format(row.name, reason), 'error', 10000)
+            end
             safeAudit(row.clan_id, cid, 'warn_kick', { targetCharacterId = targetCid, reason = reason })
         else
             MySQL.update.await('UPDATE clan_members SET warns = ? WHERE clan_id = ? AND character_id = ?', {
                 nextWarns, row.clan_id, targetCid,
             })
-            notify(targetId, ('Clan warning %d/3: %s'):format(nextWarns, reason), 'warning', 8000)
+            if targetId then
+                notify(targetId, ('Clan warning %d/3: %s'):format(nextWarns, reason), 'warning', 8000)
+            end
             safeAudit(row.clan_id, cid, 'warn', { targetCharacterId = targetCid, reason = reason, warns = nextWarns })
             safeBroadcast(row.clan_id, source,
                 ('issued a clan warning (%d/3) to %s: %s'):format(nextWarns, playerName(targetCid), reason))
