@@ -152,7 +152,7 @@ RegisterCommand('handsup', function()
     end
 end, false)
 
--- X is handled by sunset_inventory quickslots (tap = hands up, hold = emote wheel)
+-- X hold = emote wheel (sunset_inventory quickslots). Use /handsup for hands up.
 
 local function detentionCmd(name, callbackName, usage)
     RegisterCommand(name, function(_, args)

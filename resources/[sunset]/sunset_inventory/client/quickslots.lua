@@ -2,8 +2,8 @@ local HOTBAR_SLOTS = 5
 local activeHotbarSlot = nil
 local hotbarSlots = {}
 local emoteWheelOpen = false
-local xHoldStart = nil
-local X_HOLD_MS = 250
+local xHoldToken = 0
+local X_HOLD_MS = 320
 
 local UNARMED = `WEAPON_UNARMED`
 
@@ -167,39 +167,37 @@ for i = 1, HOTBAR_SLOTS do
     RegisterKeyMapping(('sunset_hotbar_%d'):format(i), ('Quick slot %d'):format(i), 'keyboard', tostring(i))
 end
 
-RegisterCommand('sunset_emote_wheel', function()
-    -- Bound via hold detection thread; command exists for key rebinding if needed.
+RegisterCommand('+sunset_emote_wheel', function()
+    if blocked() or emoteWheelOpen then return end
+    local token = xHoldToken + 1
+    xHoldToken = token
+    CreateThread(function()
+        Wait(X_HOLD_MS)
+        if xHoldToken ~= token then return end
+        if blocked() or emoteWheelOpen then return end
+        openEmoteWheel()
+    end)
 end, false)
+
+RegisterCommand('-sunset_emote_wheel', function()
+    xHoldToken = xHoldToken + 1
+    if emoteWheelOpen then
+        exports.sunset_ui:Send('emoteWheelRelease', {})
+    end
+end, false)
+
+RegisterKeyMapping('+sunset_emote_wheel', 'Hold for emote wheel', 'keyboard', 'X')
 
 CreateThread(function()
     while true do
-        if not blocked() and not emoteWheelOpen then
-            if IsControlJustPressed(0, 73) or IsDisabledControlJustPressed(0, 73) then -- X
-                xHoldStart = GetGameTimer()
+        if not IsPauseMenuActive() then
+            for control = 157, 164 do
+                DisableControlAction(0, control, true)
             end
-
-            if xHoldStart and (IsControlPressed(0, 73) or IsDisabledControlPressed(0, 73)) then
-                if GetGameTimer() - xHoldStart >= X_HOLD_MS then
-                    openEmoteWheel()
-                    xHoldStart = nil
-                end
+            DisableControlAction(0, 37, true)
+            if not emoteWheelOpen then
+                DisableControlAction(0, 73, true)
             end
-
-            if xHoldStart and not (IsControlPressed(0, 73) or IsDisabledControlPressed(0, 73)) then
-                local held = GetGameTimer() - xHoldStart
-                xHoldStart = nil
-                if held < X_HOLD_MS then
-                    if GetResourceState('sunset_emotes') == 'started' and exports.sunset_emotes:IsPlaying() then
-                        exports.sunset_emotes:StopEmote()
-                    else
-                        ExecuteCommand('handsup')
-                    end
-                end
-            end
-        elseif emoteWheelOpen and (IsControlJustReleased(0, 73) or IsDisabledControlJustReleased(0, 73)) then
-            exports.sunset_ui:Send('emoteWheelRelease', {})
-        else
-            xHoldStart = nil
         end
         Wait(0)
     end
@@ -235,17 +233,8 @@ AddEventHandler('sunset:client:playerSpawned', function()
     end)
 end)
 
-AddEventHandler('sunset:client:updateCharacter', function()
+RegisterNetEvent('sunset:client:updateCharacter', function()
     pushHotbarUpdate()
-end)
-
-CreateThread(function()
-    while true do
-        if not IsPauseMenuActive() then
-            pushHotbarUpdate()
-        end
-        Wait(1500)
-    end
 end)
 
 RegisterNetEvent('sunset:client:inventoryUpdate', function()
@@ -262,6 +251,11 @@ RegisterNetEvent('sunset:client:dutyState', function()
         Wait(300)
         refreshHotbarFromServer()
     end)
+end)
+
+CreateThread(function()
+    Wait(4000)
+    refreshHotbarFromServer()
 end)
 
 exports('GetHotbarSlots', function() return hotbarSlots end)

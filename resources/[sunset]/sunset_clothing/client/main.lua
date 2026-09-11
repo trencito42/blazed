@@ -16,9 +16,14 @@ end
 
 local function captureSnapshot()
     local char = getCharacter()
-    if not char or not char.appearance then return nil end
+    if not char then return nil end
+    local appearance = char.appearance
+    if not appearance and SunsetAppearance and SunsetAppearance.default then
+        appearance = SunsetAppearance.default(char.gender or 0)
+    end
+    if not appearance then return nil end
     return {
-        appearance = SunsetClothing.normalizeWardrobe(char.appearance, char.gender or 0),
+        appearance = SunsetClothing.normalizeWardrobe(appearance, char.gender or 0),
         gender = char.gender or 0,
         purchased = false,
     }
@@ -48,44 +53,8 @@ local function applyPreviewToPed()
     previewAppearance = SunsetClothing.preview(ped, previewAppearance, char.gender or 0)
 end
 
-local function openWardrobe()
-    savedSnapshot = captureSnapshot()
-    if not savedSnapshot then
-        notify('Character not loaded.', 'error')
-        return
-    end
-    previewAppearance = SunsetClothing.syncFromPed(savedSnapshot.appearance, PlayerPedId(), savedSnapshot.gender)
-    inShop = true
-    shopType = 'clothing'
-    activeCategory = 'top'
-    cartTotal = SunsetClothing.buildCatalog(PlayerPedId(), previewAppearance, savedSnapshot.gender, activeCategory).pricePerItem or 50
-    hasChanges = false
-
-    local ped = PlayerPedId()
-    WardrobeShop.startCamera(ped, 'full')
-    applyPreviewToPed()
-
-    local catalog = SunsetClothing.buildCatalog(ped, previewAppearance, savedSnapshot.gender, activeCategory)
-    catalog.cartTotal = cartTotal
-    catalog.hasChanges = hasChanges
-    exports.sunset_ui:Send('wardrobeShow', catalog)
-    exports.sunset_ui:SetFocus(true, true)
-end
-
-local function openBarber()
-    savedSnapshot = captureSnapshot()
-    if not savedSnapshot then
-        notify('Character not loaded.', 'error')
-        return
-    end
-    inShop = true
-    shopType = 'barber'
-    local hair = savedSnapshot.appearance.hair and savedSnapshot.appearance.hair.drawable or 0
-    exports.sunset_ui:Send('clothingShow', { type = 'barber', hair = hair })
-    exports.sunset_ui:SetFocus(true, true)
-end
-
 local function closeShop()
+    if not inShop then return end
     restoreSnapshot()
     WardrobeShop.stopCamera()
     inShop = false
@@ -95,15 +64,81 @@ local function closeShop()
     cartTotal = 0
     hasChanges = false
     exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:ShowHudChrome()
     exports.sunset_ui:Send('wardrobeHide', {})
+end
+
+local function openWardrobe()
+    if inShop then return end
+
+    if IsNuiFocused() then
+        exports.sunset_ui:SetFocus(false, false)
+        Wait(50)
+    end
+
+    savedSnapshot = captureSnapshot()
+    if not savedSnapshot then
+        notify('Character not loaded.', 'error')
+        return
+    end
+
+    local ok, err = pcall(function()
+        previewAppearance = SunsetClothing.syncFromPed(savedSnapshot.appearance, PlayerPedId(), savedSnapshot.gender)
+        inShop = true
+        shopType = 'clothing'
+        activeCategory = 'top'
+        cartTotal = SunsetClothing.buildCatalog(PlayerPedId(), previewAppearance, savedSnapshot.gender, activeCategory).pricePerItem or 50
+        hasChanges = false
+
+        local ped = PlayerPedId()
+        WardrobeShop.startCamera(ped, 'full')
+        applyPreviewToPed()
+
+        local catalog = SunsetClothing.buildCatalog(ped, previewAppearance, savedSnapshot.gender, activeCategory)
+        catalog.cartTotal = cartTotal
+        catalog.hasChanges = hasChanges
+
+        exports.sunset_ui:HideHudChrome()
+        exports.sunset_ui:Send('wardrobeShow', catalog)
+        Wait(0)
+        exports.sunset_ui:SetFocus(true, true)
+    end)
+
+    if not ok then
+        print(('[sunset_clothing] openWardrobe failed: %s'):format(tostring(err)))
+        notify('Could not open clothing store.', 'error')
+        inShop = false
+        shopType = nil
+        savedSnapshot = nil
+        previewAppearance = nil
+        WardrobeShop.stopCamera()
+        exports.sunset_ui:SetFocus(false, false)
+        exports.sunset_ui:ShowHudChrome()
+        exports.sunset_ui:Send('wardrobeHide', {})
+    end
+end
+
+local function openBarber()
+    if inShop then return end
+    savedSnapshot = captureSnapshot()
+    if not savedSnapshot then
+        notify('Character not loaded.', 'error')
+        return
+    end
+    inShop = true
+    shopType = 'barber'
+    local hair = savedSnapshot.appearance.hair and savedSnapshot.appearance.hair.drawable or 0
+    exports.sunset_ui:HideHudChrome()
+    exports.sunset_ui:Send('clothingShow', { type = 'barber', hair = hair })
+    exports.sunset_ui:SetFocus(true, true)
 end
 
 local function persistWardrobe()
     local char = getCharacter()
     if not char or not previewAppearance then return false, 'No preview state.' end
 
-    local ok, err = Sunset.AwaitCallback('sunset:saveAppearance', previewAppearance, char.gender, char.id)
-    if not ok then return false, err end
+    local saved, err = Sunset.AwaitCallback('sunset:saveAppearance', previewAppearance, char.gender, char.id)
+    if not saved then return false, err end
 
     if savedSnapshot then
         savedSnapshot.purchased = true
@@ -117,12 +152,10 @@ local function persistWardrobe()
 end
 
 AddEventHandler('sunset:world:openClothing', function()
-    if IsNuiFocused() then return end
     openWardrobe()
 end)
 
 AddEventHandler('sunset:world:openBarber', function()
-    if IsNuiFocused() then return end
     openBarber()
 end)
 
@@ -226,8 +259,37 @@ AddEventHandler('sunset:nui:clothingClose', function()
         shopType = nil
         savedSnapshot = nil
         exports.sunset_ui:SetFocus(false, false)
+        exports.sunset_ui:ShowHudChrome()
         exports.sunset_ui:Send('clothingHide', {})
         return
     end
     closeShop()
 end)
+
+CreateThread(function()
+    while true do
+        if inShop then
+            DisableControlAction(0, 200, true)
+            if IsDisabledControlJustReleased(0, 200) then
+                if shopType == 'barber' then
+                    restoreSnapshot()
+                    inShop = false
+                    shopType = nil
+                    savedSnapshot = nil
+                    exports.sunset_ui:SetFocus(false, false)
+                    exports.sunset_ui:ShowHudChrome()
+                    exports.sunset_ui:Send('clothingHide', {})
+                else
+                    closeShop()
+                end
+            end
+            Wait(0)
+        else
+            Wait(400)
+        end
+    end
+end)
+
+RegisterCommand('closewardrobe', function()
+    if inShop then closeShop() end
+end, false)

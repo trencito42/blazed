@@ -1,4 +1,19 @@
 const WardrobeUI = {
+    _post(action, data = {}) {
+        if (typeof post === 'function') return post(action, data);
+        const resource = typeof GetParentResourceName === 'function' ? GetParentResourceName() : '';
+        if (!resource) return Promise.resolve();
+        return fetch(`https://${resource}/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }).catch(() => {});
+    },
+
+    _$(sel) {
+        if (typeof $ === 'function') return $(sel);
+        return document.querySelector(sel);
+    },
     state: null,
     buyProgress: 0,
     buyRaf: null,
@@ -9,33 +24,33 @@ const WardrobeUI = {
         if (this.ready) return;
         this.ready = true;
 
-        $('#wardrobe-cat-list')?.addEventListener('click', (event) => {
+        this._$('#wardrobe-cat-list')?.addEventListener('click', (event) => {
             const btn = event.target.closest('[data-wardrobe-cat]');
             if (!btn) return;
             this.selectCategory(btn.dataset.wardrobeCat);
         });
 
-        $('#wardrobe-model-dec')?.addEventListener('click', () => this.changeItem('model', -1));
-        $('#wardrobe-model-inc')?.addEventListener('click', () => this.changeItem('model', 1));
-        $('#wardrobe-texture-dec')?.addEventListener('click', () => this.changeItem('texture', -1));
-        $('#wardrobe-texture-inc')?.addEventListener('click', () => this.changeItem('texture', 1));
+        this._$('#wardrobe-model-dec')?.addEventListener('click', () => this.changeItem('model', -1));
+        this._$('#wardrobe-model-inc')?.addEventListener('click', () => this.changeItem('model', 1));
+        this._$('#wardrobe-texture-dec')?.addEventListener('click', () => this.changeItem('texture', -1));
+        this._$('#wardrobe-texture-inc')?.addEventListener('click', () => this.changeItem('texture', 1));
 
-        const buyBtn = $('#wardrobe-buy');
+        const buyBtn = this._$('#wardrobe-buy');
         buyBtn?.addEventListener('mousedown', () => this.startBuy());
         buyBtn?.addEventListener('mouseup', () => this.stopBuy());
         buyBtn?.addEventListener('mouseleave', () => this.stopBuy());
 
         document.addEventListener('keydown', (event) => {
-            if ($('#wardrobe')?.classList.contains('hidden')) return;
+            if (WardrobeUI._$('#wardrobe')?.classList.contains('hidden')) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
-                post('wardrobeClose');
+                WardrobeUI._post('wardrobeClose');
                 return;
             }
             if (event.key === 'Enter' && !event.repeat) this.startBuy();
         });
         document.addEventListener('keyup', (event) => {
-            if ($('#wardrobe')?.classList.contains('hidden')) return;
+            if (WardrobeUI._$('#wardrobe')?.classList.contains('hidden')) return;
             if (event.key === 'Enter') this.stopBuy();
         });
     },
@@ -55,7 +70,7 @@ const WardrobeUI = {
             camera: data.camera || 'full',
             isProp: data.isProp === true,
         };
-        const panel = $('#wardrobe');
+        const panel = this._$('#wardrobe');
         panel?.classList.remove('hidden');
         panel?.setAttribute('aria-hidden', 'false');
         document.body.classList.add('wardrobe-open');
@@ -83,14 +98,14 @@ const WardrobeUI = {
 
     hide() {
         this.stopBuy(true);
-        $('#wardrobe')?.classList.add('hidden');
-        $('#wardrobe')?.setAttribute('aria-hidden', 'true');
+        this._$('#wardrobe')?.classList.add('hidden');
+        this._$('#wardrobe')?.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('wardrobe-open');
         this.state = null;
     },
 
     renderCategories() {
-        const list = $('#wardrobe-cat-list');
+        const list = this._$('#wardrobe-cat-list');
         if (!list || !this.state) return;
         list.innerHTML = '';
         (this.state.categories || []).forEach((cat) => {
@@ -101,7 +116,7 @@ const WardrobeUI = {
             btn.innerHTML = `<i class="ph-fill ${cat.icon || 'ph-t-shirt'}"></i> <span>${cat.label}</span>`;
             list.appendChild(btn);
         });
-        const title = $('#wardrobe-active-cat');
+        const title = this._$('#wardrobe-active-cat');
         if (title) title.textContent = this.state.activeDisplay || 'Clothing';
     },
 
@@ -114,15 +129,15 @@ const WardrobeUI = {
             ? (Math.max(0, this.state.texture) / this.state.maxTexture) * 100
             : 0;
 
-        $('#wardrobe-val-model')?.textContent = String(this.state.drawable);
-        $('#wardrobe-max-model')?.textContent = String(this.state.maxDrawable);
-        $('#wardrobe-val-texture')?.textContent = String(this.state.texture);
-        $('#wardrobe-max-texture')?.textContent = String(this.state.maxTexture);
-        $('#wardrobe-track-model')?.style.width = `${pctModel}%`;
-        $('#wardrobe-track-texture')?.style.width = `${pctTexture}%`;
-        $('#wardrobe-cart-price')?.textContent = `$${Number(this.state.cartTotal || 0).toLocaleString('en-US')}`;
+        this._$('#wardrobe-val-model')?.textContent = String(this.state.drawable);
+        this._$('#wardrobe-max-model')?.textContent = String(this.state.maxDrawable);
+        this._$('#wardrobe-val-texture')?.textContent = String(this.state.texture);
+        this._$('#wardrobe-max-texture')?.textContent = String(this.state.maxTexture);
+        this._$('#wardrobe-track-model')?.style.width = `${pctModel}%`;
+        this._$('#wardrobe-track-texture')?.style.width = `${pctTexture}%`;
+        this._$('#wardrobe-cart-price')?.textContent = `$${Number(this.state.cartTotal || 0).toLocaleString('en-US')}`;
 
-        const buyBtn = $('#wardrobe-buy');
+        const buyBtn = this._$('#wardrobe-buy');
         if (buyBtn) buyBtn.disabled = !this.state.hasChanges;
     },
 
@@ -131,7 +146,7 @@ const WardrobeUI = {
         this.state.activeCategory = categoryId;
         const cat = (this.state.categories || []).find((row) => row.id === categoryId);
         if (cat) this.state.activeDisplay = cat.display || cat.label;
-        post('wardrobeCategory', { categoryId, camera: this.state.camera });
+        this._post('wardrobeCategory', { categoryId, camera: this.state.camera });
     },
 
     changeItem(type, direction) {
@@ -151,7 +166,7 @@ const WardrobeUI = {
             if (next > max) next = 0;
             this.state.texture = next;
         }
-        post('wardrobePreview', {
+        this._post('wardrobePreview', {
             categoryId: this.state.activeCategory,
             drawable: this.state.drawable,
             texture: this.state.texture,
@@ -163,18 +178,18 @@ const WardrobeUI = {
         if (this.buyRaf) cancelAnimationFrame(this.buyRaf);
         const tick = () => {
             this.buyProgress += 2.5;
-            const bar = $('#wardrobe-buy-progress');
+            const bar = this._$('#wardrobe-buy-progress');
             if (bar) bar.style.width = `${this.buyProgress}%`;
             if (this.buyProgress >= 100) {
                 this.buyComplete = true;
-                const text = $('#wardrobe-buy-text');
+                const text = this._$('#wardrobe-buy-text');
                 if (text) {
                     text.innerHTML = 'Payment Confirmed!';
                     text.style.color = '#000';
                 }
-                const btn = $('#wardrobe-buy');
+                const btn = this._$('#wardrobe-buy');
                 if (btn) btn.style.background = 'var(--wr-accent)';
-                post('wardrobePurchase', { total: this.state.cartTotal });
+                this._post('wardrobePurchase', { total: this.state.cartTotal });
                 setTimeout(() => this.resetBuyUi(), 1500);
                 return;
             }
@@ -186,14 +201,14 @@ const WardrobeUI = {
     resetBuyUi() {
         this.buyProgress = 0;
         this.buyComplete = false;
-        const bar = $('#wardrobe-buy-progress');
+        const bar = this._$('#wardrobe-buy-progress');
         if (bar) bar.style.width = '0%';
-        const text = $('#wardrobe-buy-text');
+        const text = this._$('#wardrobe-buy-text');
         if (text) {
             text.innerHTML = '<span class="wr-key-hint">ENTER</span> Pay';
             text.style.color = '';
         }
-        const btn = $('#wardrobe-buy');
+        const btn = this._$('#wardrobe-buy');
         if (btn) btn.style.background = '';
     },
 

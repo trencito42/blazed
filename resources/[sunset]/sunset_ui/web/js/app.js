@@ -6,6 +6,8 @@ window.App = App;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+window.$ = $;
+window.$$ = $$;
 
 function post(action, data = {}) {
     const resource = typeof GetParentResourceName === 'function' ? GetParentResourceName() : '';
@@ -16,6 +18,7 @@ function post(action, data = {}) {
         body: JSON.stringify(data),
     });
 }
+window.post = post;
 
 const ENTRY_BACKGROUNDS = {
     auth: 'assets/bg_login.webp?v=7',
