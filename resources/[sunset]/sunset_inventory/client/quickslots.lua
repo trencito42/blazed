@@ -7,6 +7,10 @@ local hotbarSlots = {}
 local hotbarPeekUntil = 0
 local emoteWheelOpen = false
 local xWheelHeld = false
+local wheelSteerX, wheelSteerY = 0.0, 0.0
+local wheelEmoteCount = 0
+local lastWheelEmoteIndex = -1
+local WHEEL_STEER_MIN = 0.18
 local hotbarConsumeBusy = false
 
 local UNARMED = `WEAPON_UNARMED`
@@ -394,21 +398,45 @@ local function clearHandsUpAnim(ped)
     end
 end
 
+local function wheelEmoteIndexFromSteer(count)
+    count = tonumber(count) or 0
+    if count < 1 then return -1 end
+    local mag = math.sqrt(wheelSteerX * wheelSteerX + wheelSteerY * wheelSteerY)
+    if mag < WHEEL_STEER_MIN then return -1 end
+    local angle = math.atan(wheelSteerX, -wheelSteerY)
+    if angle < 0 then angle = angle + (2 * math.pi) end
+    local slice = (2 * math.pi) / count
+    local index = math.floor((angle + slice / 2) / slice)
+    if index >= count then index = 0 end
+    return index
+end
+
+local function pushWheelSelection()
+    local index = wheelEmoteIndexFromSteer(wheelEmoteCount)
+    if index == lastWheelEmoteIndex then return end
+    lastWheelEmoteIndex = index
+    exports.sunset_ui:Send('emoteWheelSelect', { index = index })
+end
+
 local function openEmoteWheel()
     if emoteWheelOpen or blocked() then return end
+    local emotes = GetResourceState('sunset_emotes') == 'started' and exports.sunset_emotes:GetEmoteWheelList() or {}
     emoteWheelOpen = true
+    wheelSteerX, wheelSteerY = 0.0, 0.0
+    wheelEmoteCount = type(emotes) == 'table' and #emotes or 0
+    lastWheelEmoteIndex = -1
     clearHandsUpAnim(PlayerPedId())
-    exports.sunset_ui:SetFocus(true, true, true, 'emote_wheel')
-    exports.sunset_ui:Send('emoteWheelShow', {
-        emotes = GetResourceState('sunset_emotes') == 'started' and exports.sunset_emotes:GetEmoteWheelList() or {},
-    })
+    exports.sunset_ui:Send('emoteWheelShow', { emotes = emotes })
+    pushWheelSelection()
 end
 
 local function closeEmoteWheel(playSelection)
     if not emoteWheelOpen then return end
     emoteWheelOpen = false
     xWheelHeld = false
-    exports.sunset_ui:SetFocus(false, false, false, 'emote_wheel')
+    wheelSteerX, wheelSteerY = 0.0, 0.0
+    wheelEmoteCount = 0
+    lastWheelEmoteIndex = -1
     exports.sunset_ui:Send('emoteWheelHide', {})
     if playSelection and playSelection ~= '' and GetResourceState('sunset_emotes') == 'started' then
         exports.sunset_emotes:PlayEmote(playSelection)
@@ -450,6 +478,39 @@ RegisterCommand('-sunset_emote_wheel', function()
 end, false)
 
 RegisterKeyMapping('+sunset_emote_wheel', 'Hold for emote wheel', 'keyboard', 'X')
+
+CreateThread(function()
+    while true do
+        if emoteWheelOpen then
+            DisableControlAction(0, 1, true)
+            DisableControlAction(0, 2, true)
+            DisableControlAction(1, 1, true)
+            DisableControlAction(1, 2, true)
+            DisableControlAction(2, 1, true)
+            DisableControlAction(2, 2, true)
+            DisableControlAction(0, 24, true)
+            DisableControlAction(0, 25, true)
+            DisableControlAction(0, 106, true)
+            blockDefaultXControls()
+
+            local lookX = GetDisabledControlNormal(0, 1)
+            local lookY = GetDisabledControlNormal(0, 2)
+            if math.abs(lookX) > 0.02 or math.abs(lookY) > 0.02 then
+                wheelSteerX = wheelSteerX + lookX * 0.42
+                wheelSteerY = wheelSteerY + lookY * 0.42
+                local mag = math.sqrt(wheelSteerX * wheelSteerX + wheelSteerY * wheelSteerY)
+                if mag > 1.0 then
+                    wheelSteerX = wheelSteerX / mag
+                    wheelSteerY = wheelSteerY / mag
+                end
+                pushWheelSelection()
+            end
+            Wait(0)
+        else
+            Wait(200)
+        end
+    end
+end)
 
 -- Physical X fallback (control 73) — same hold-to-show pattern as Z player list.
 CreateThread(function()

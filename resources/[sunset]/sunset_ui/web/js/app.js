@@ -909,6 +909,9 @@ window.addEventListener('message', (event) => {
         case 'emoteWheelRelease':
             if (window.HotbarUI) HotbarUI._releaseWheel();
             break;
+        case 'emoteWheelSelect':
+            if (window.HotbarUI) HotbarUI.selectWheelFromGame(Number((data || event.data.data)?.index));
+            break;
         case 'clothingShow':
             if (window.Panels) Panels.showClothing(data || event.data.data);
             break;

@@ -11,7 +11,6 @@ const HotbarUI = {
     init() {
         if (this._ready) return;
         this._ready = true;
-        this._bindWheelMouse();
         this._bindMessages();
     },
 
@@ -194,7 +193,7 @@ const HotbarUI = {
             container.insertAdjacentHTML('afterbegin', `
                 <div class="wheel-center">
                     <div class="wheel-center-title" id="wheel-title">Emotes</div>
-                    <div class="wheel-center-desc" id="wheel-desc">Select one</div>
+                    <div class="wheel-center-desc" id="wheel-desc">Selectează</div>
                 </div>
             `);
         }
@@ -222,9 +221,18 @@ const HotbarUI = {
         overlay.classList.remove('hidden');
         overlay.classList.add('active');
         const hint = count
-            ? 'Move mouse / 1-9 · release [X]'
-            : 'No emotes loaded';
+            ? 'Mișcă privirea / 1-9 · eliberează [X]'
+            : 'Niciun emote încărcat';
         this._setWheelCenter('Emotes', hint);
+    },
+
+    selectWheelFromGame(index) {
+        if (!this.wheelOpen) return;
+        if (!Number.isFinite(index) || index < 0) {
+            this._clearWheelSelection();
+            return;
+        }
+        this._selectWheelItem(index);
     },
 
     hideEmoteWheel() {
@@ -261,7 +269,7 @@ const HotbarUI = {
             }
         });
         const emote = this.emotes[index];
-        if (emote) this._setWheelCenter(emote.label || emote.name, 'Selected');
+        if (emote) this._setWheelCenter(emote.label || emote.name, 'Selectat');
     },
 
     _clearWheelSelection() {
@@ -271,31 +279,7 @@ const HotbarUI = {
             el.classList.remove('hovered');
             el.style.transform = el.getAttribute('data-transform') || '';
         });
-        this._setWheelCenter('Emotes', 'Select one');
-    },
-
-    _bindWheelMouse() {
-        document.addEventListener('mousemove', (e) => {
-            if (!this.wheelOpen || !this.emotes.length) return;
-
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            const dx = e.clientX - centerX;
-            const dy = e.clientY - centerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < 50) {
-                this._clearWheelSelection();
-                return;
-            }
-
-            let mouseAngle = Math.atan2(dy, dx) + (Math.PI / 2);
-            if (mouseAngle < 0) mouseAngle += 2 * Math.PI;
-
-            const sliceSize = (2 * Math.PI) / this.emotes.length;
-            let index = Math.floor((mouseAngle + sliceSize / 2) / sliceSize);
-            if (index >= this.emotes.length) index = 0;
-            this._selectWheelItem(index);
-        });
+        this._setWheelCenter('Emotes', 'Selectează');
     },
 
     _releaseWheel() {

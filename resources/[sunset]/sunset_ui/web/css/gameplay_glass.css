@@ -34,9 +34,9 @@
     box-shadow: var(--gameplay-shadow) !important;
 }
 
-/* Emote wheel: keep the fullscreen layer transparent so the game stays visible. */
+/* Emote wheel: dim overlay without blur (CEF turns backdrop-filter into black slabs). */
 #emote-wheel.wheel-overlay {
-    background: transparent !important;
+    background: rgba(0, 0, 0, 0.6) !important;
     box-shadow: none !important;
 }
 
