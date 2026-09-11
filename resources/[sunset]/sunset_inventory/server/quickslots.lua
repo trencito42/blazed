@@ -79,30 +79,35 @@ local function resolveBinding(binding, inv)
     return nil
 end
 
-function BuildHotbarView(source)
+function BuildHotbarView(source, sanitize)
     local inv = GetInventory(source)
     local raw = getRawQuickslots(source)
-    local slots = {}
-    local dirty = false
 
-    for i = 1, HOTBAR_SLOTS do
-        local key = tostring(i)
-        local binding = raw[key] or raw[i]
-        local resolved = resolveBinding(binding, inv)
-        slots[key] = resolved
-        if binding and not resolved then
-            raw[key] = nil
-            raw[i] = nil
-            dirty = true
+    if sanitize then
+        local dirty = false
+        for i = 1, HOTBAR_SLOTS do
+            local key = tostring(i)
+            local binding = raw[key] or raw[i]
+            if binding and not resolveBinding(binding, inv) then
+                raw[key] = nil
+                raw[i] = nil
+                dirty = true
+            end
+        end
+        if dirty then
+            local char, meta = getCharMeta(source)
+            if char then
+                meta.quickslots = raw
+                saveMeta(char.id, meta)
+            end
         end
     end
 
-    if dirty then
-        local char, meta = getCharMeta(source)
-        if char then
-            meta.quickslots = raw
-            saveMeta(char.id, meta)
-        end
+    local slots = {}
+    for i = 1, HOTBAR_SLOTS do
+        local key = tostring(i)
+        local binding = raw[key] or raw[i]
+        slots[key] = resolveBinding(binding, inv)
     end
 
     return slots
@@ -122,7 +127,7 @@ local function assignQuickslot(source, slot, binding)
     if not binding then
         meta.quickslots[key] = nil
         saveMeta(char.id, meta)
-        return { slots = BuildHotbarView(source) }
+        return { slots = BuildHotbarView(source, true) }
     end
 
     if binding.kind == 'item' then
@@ -155,11 +160,11 @@ local function assignQuickslot(source, slot, binding)
     end
 
     saveMeta(char.id, meta)
-    return { slots = BuildHotbarView(source) }
+    return { slots = BuildHotbarView(source, true) }
 end
 
 exports.sunset_core:RegisterCallback('sunset:hotbar:get', function(source)
-    return { slots = BuildHotbarView(source) }
+    return { slots = BuildHotbarView(source, false) }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:hotbar:assign', function(source, data)
@@ -192,8 +197,7 @@ exports.sunset_core:RegisterCallback('sunset:hotbar:use', function(source, data)
     local inv = GetInventory(source)
     local resolved = resolveBinding(binding, inv)
     if not resolved then
-        assignQuickslot(source, slot, nil)
-        return { action = 'empty' }
+        return nil, 'That quick slot item is no longer available.'
     end
 
     if resolved.kind == 'item' then
@@ -209,7 +213,7 @@ exports.sunset_core:RegisterCallback('sunset:hotbar:use', function(source, data)
             end
             local used, reason = UseItem(source, resolved.item)
             if not used then return nil, reason or 'Cannot use this item.' end
-            return { action = 'used_item', slot = slot, slots = BuildHotbarView(source) }
+            return { action = 'used_item', slot = slot, slots = BuildHotbarView(source, true) }
         end
         if def.weapon then
             return { action = 'equip_weapon', slot = slot, item = resolved.item, weapon = def.weapon }

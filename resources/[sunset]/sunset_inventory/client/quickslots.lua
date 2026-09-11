@@ -5,6 +5,7 @@ local hotbarSlots = {}
 local hotbarPeekUntil = 0
 local emoteWheelOpen = false
 local xWheelHeld = false
+local hotbarConsumeBusy = false
 
 local UNARMED = `WEAPON_UNARMED`
 
@@ -27,15 +28,6 @@ local function getDutyWeaponsForUi()
         return exports.sunset_factions:GetDutyWeaponsForUi()
     end)
     return ok and list or {}
-end
-
-local function enrichInventoryPayload(data)
-    data = data or {}
-    data.dutyWeapons = getDutyWeaponsForUi()
-    data.quickslots = hotbarSlots
-    data.activeHotbarSlot = activeHotbarSlot
-    data.driverReservesSlot2 = isDriverInVehicle()
-    return data
 end
 
 local function weaponAmmoForHash(ped, hash)
@@ -73,6 +65,20 @@ local function enrichSlotsWithAmmo(slots)
         ::continue::
     end
     return slots
+end
+
+local function enrichInventoryPayload(data)
+    data = data or {}
+    data.dutyWeapons = getDutyWeaponsForUi()
+    if type(data.quickslots) == 'table' then
+        hotbarSlots = data.quickslots
+    else
+        data.quickslots = hotbarSlots
+    end
+    enrichSlotsWithAmmo(data.quickslots)
+    data.activeHotbarSlot = activeHotbarSlot
+    data.driverReservesSlot2 = isDriverInVehicle()
+    return data
 end
 
 local function isHotbarHudVisible()
@@ -132,6 +138,7 @@ local function executeHotbarResult(result, slot)
     peekHotbarHud()
 
     if result.action == 'empty' then
+        refreshHotbarFromServer()
         exports.sunset_ui:Notify('Quick slot is empty.', 'info')
         return
     end
@@ -197,6 +204,85 @@ local function executeHotbarResult(result, slot)
     end
 end
 
+local function equipHotbarSlotLocally(slot, slotData)
+    if type(slotData) ~= 'table' then return false end
+    peekHotbarHud()
+
+    if slotData.kind == 'duty_weapon' and slotData.weapon then
+        local hash = joaat(slotData.weapon)
+        if exports.sunset_inventory:EquipHotbarWeapon(hash) then
+            activeHotbarSlot = slot
+            pushHotbarUpdate()
+            return true
+        end
+        exports.sunset_ui:Notify('You do not have that duty weapon equipped.', 'error')
+        return true
+    end
+
+    if slotData.kind == 'emote' and slotData.name then
+        exports.sunset_inventory:HolsterHotbarProp()
+        exports.sunset_inventory:HolsterHotbarWeapon()
+        if GetResourceState('sunset_emotes') == 'started' then
+            exports.sunset_emotes:PlayEmote(slotData.name)
+        end
+        activeHotbarSlot = slot
+        pushHotbarUpdate()
+        return true
+    end
+
+    if slotData.kind ~= 'item' then return false end
+
+    if slotData.usable then
+        exports.sunset_inventory:HolsterHotbarWeapon()
+        exports.sunset_inventory:HolsterHotbarProp()
+        activeHotbarSlot = slot
+        pushHotbarUpdate()
+        return true
+    end
+
+    if slotData.weapon then
+        local hash = joaat(slotData.weapon)
+        if exports.sunset_inventory:EquipHotbarWeapon(hash) then
+            activeHotbarSlot = slot
+            pushHotbarUpdate()
+            return true
+        end
+        refreshHotbarFromServer()
+        exports.sunset_ui:Notify('Weapon not available.', 'error')
+        return true
+    end
+
+    local def = Sunset.Items[slotData.item] or {}
+    if def.equipProp then
+        if exports.sunset_inventory:EquipHotbarProp(slotData.item) then
+            activeHotbarSlot = slot
+            pushHotbarUpdate()
+            return true
+        end
+        exports.sunset_ui:Notify('Could not equip that item.', 'error')
+        return true
+    end
+
+    return false
+end
+
+local function requestHotbarConsume(slot)
+    if hotbarConsumeBusy then return end
+    hotbarConsumeBusy = true
+    CreateThread(function()
+        local result, err = Sunset.AwaitCallback('sunset:hotbar:use', {
+            slot = slot,
+            consume = true,
+        })
+        hotbarConsumeBusy = false
+        if not result then
+            if err then exports.sunset_ui:Notify(err, 'error') end
+            return
+        end
+        executeHotbarResult(result, slot)
+    end)
+end
+
 local function requestHotbarSlot(slot, consume)
     if blocked() then return end
     slot = tonumber(slot)
@@ -214,9 +300,13 @@ local function requestHotbarSlot(slot, consume)
             return
         end
         if not isUsableHotbarSlot(slotData) then return end
-    elseif activeHotbarSlot == slot then
+        requestHotbarConsume(slot)
+        return
+    end
+
+    if activeHotbarSlot == slot then
         if isUsableHotbarSlot(slotData) then
-            requestHotbarSlot(slot, true)
+            requestHotbarConsume(slot)
             return
         end
         holsterActiveItem()
@@ -224,15 +314,31 @@ local function requestHotbarSlot(slot, consume)
             exports.sunset_emotes:StopEmote()
         end
         return
-    elseif activeHotbarSlot then
+    end
+
+    if not slotData then
+        CreateThread(function()
+            refreshHotbarFromServer()
+            if getSlotData(slot) then
+                requestHotbarSlot(slot, false)
+            else
+                exports.sunset_ui:Notify('Quick slot is empty.', 'info')
+            end
+        end)
+        return
+    end
+
+    if activeHotbarSlot then
         exports.sunset_inventory:HolsterHotbarWeapon()
         exports.sunset_inventory:HolsterHotbarProp()
     end
 
+    if equipHotbarSlotLocally(slot, slotData) then return end
+
     CreateThread(function()
         local result, err = Sunset.AwaitCallback('sunset:hotbar:use', {
             slot = slot,
-            consume = consume == true,
+            consume = false,
         })
         if not result then
             if err then exports.sunset_ui:Notify(err, 'error') end
@@ -397,10 +503,8 @@ end)
 
 RegisterNetEvent('sunset:client:inventoryUpdate', function()
     if activeHotbarSlot then
-        CreateThread(function()
-            Wait(100)
-            refreshHotbarFromServer()
-        end)
+        enrichSlotsWithAmmo(hotbarSlots)
+        pushHotbarUpdate()
     end
 end)
 
