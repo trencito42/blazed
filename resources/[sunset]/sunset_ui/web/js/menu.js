@@ -277,10 +277,27 @@ const Menu = {
         return 'var(--vmenu-danger)';
     },
 
+    vehicleSnapshotKey(vehicles, selectedId, openEcuId) {
+        const list = (vehicles || []).map((v) => [
+            v.id, v.model, v.plate, v.stored, v.inWorld, v.destroyed,
+            v.fuel, v.engine, v.body, v.odometer,
+            v.insurancePoints, v.insuranceLevel, v.claimCost, v.renewCost,
+            v.isCurrentVehicle, v.garage, v.parked_x, v.parked_y,
+            JSON.stringify(v.ecuInfo || null),
+        ].join('|'));
+        return JSON.stringify({ selectedId, openEcuId, list });
+    },
+
     renderVehicles(data) {
         const grid = $('#menu-vehicle-grid');
         if (!grid) return;
         const vehicles = data.vehicles || [];
+
+        const snapKey = this.vehicleSnapshotKey(vehicles, this.selectedVehicleId, this.openEcuVehicleId);
+        if (snapKey === this._vehicleSnapKey && grid.classList.contains('vmenu-wrapper')) {
+            return;
+        }
+        this._vehicleSnapKey = snapKey;
 
         grid.className = 'vmenu-wrapper visible';
 
@@ -520,6 +537,11 @@ const Menu = {
         if (!data) return;
         this.init();
 
+        if (this.soloMode === 'vehicle') {
+            this.renderVehicles(data);
+            return;
+        }
+
         $('#menu-name').textContent = (data.name || '—').toUpperCase();
         $('#menu-id').textContent = String(Number(data.id) || 0);
         const jobLabel = $('#menu-job-label');
@@ -641,6 +663,7 @@ const Menu = {
         menu.classList.add('hidden');
         menu.classList.remove('menu--solo-vehicle', 'menu--solo-inventory');
         this.soloMode = null;
+        this._vehicleSnapKey = null;
 
         const brandTitle = $('.menu-brand > div');
         if (brandTitle && this._brandHtml) brandTitle.innerHTML = this._brandHtml;

@@ -479,8 +479,11 @@ end)
 CreateThread(function()
     while true do
         if menuOpen then
-            local ok, data = pcall(buildMenuData)
-            if ok and data then exports.sunset_ui:Send('menuUpdate', data) end
+            -- Solo /v garage does not need 1 Hz polling (causes visible NUI flicker).
+            if menuSoloMode ~= 'vehicle' then
+                local ok, data = pcall(buildMenuData)
+                if ok and data then exports.sunset_ui:Send('menuUpdate', data) end
+            end
             Wait(1000)
         else
             Wait(500)
