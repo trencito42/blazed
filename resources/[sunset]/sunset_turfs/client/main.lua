@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Turf Wars Client
---  Map/minimap zones, war HUD, clan-colored enemy blips
+--  SAMP-style map zones, war HUD, clan-colored enemy blips
 -- ═══════════════════════════════════════════════════════════════
 
 local LocalTurfs = {}
@@ -11,7 +11,7 @@ local WarPlayerBlips = {}
 local WarBlipPulse = false
 
 local BLIP_DISPLAY_BOTH = 2
-local BLIP_SPRITE_TURF = 437
+local BLIP_SPRITE_AREA = 9
 local BLIP_SPRITE_PLAYER = 1
 
 local function hexToBlipColour(hex)
@@ -36,8 +36,7 @@ end
 
 local function clearTurfBlips()
     for _, row in pairs(TurfBlips) do
-        removeBlipHandle(row.radius)
-        removeBlipHandle(row.center)
+        removeBlipHandle(row.area)
     end
     TurfBlips = {}
 end
@@ -53,128 +52,64 @@ local function turfAtWar(turfId)
     return ActiveWar and tonumber(ActiveWar.turfId) == tonumber(turfId)
 end
 
-local function turfBoundaryColour(turf, atWar)
+local function turfAreaColour(turf, atWar)
     if atWar then
-        return WarBlipPulse and 255 or 235, WarBlipPulse and 70 or 45, 45, WarBlipPulse and 210 or 170
+        return WarBlipPulse and 1 or 17
     end
     if turf.ownerClanId then
-        local colour = hexToBlipColour(turf.ownerColor)
-        if colour == 1 then return 255, 70, 70, 175 end
-        if colour == 2 then return 70, 220, 110, 175 end
-        if colour == 3 then return 80, 140, 255, 175 end
-        return 0, 220, 190, 175
+        return hexToBlipColour(turf.ownerColor)
     end
-    return 120, 170, 255, 150
-end
-
-local function drawDottedTurfRing(coords, radius, r, g, b, a)
-    local segments = SunsetTurfs.BoundarySegments or 56
-    local dotEvery = math.max(1, SunsetTurfs.BoundaryDotEvery or 2)
-    local step = (math.pi * 2) / segments
-    local z = coords.z + 0.35
-
-    for i = 0, segments - 1, dotEvery do
-        local angle = i * step
-        local x = coords.x + math.cos(angle) * radius
-        local y = coords.y + math.sin(angle) * radius
-        DrawMarker(
-            2,
-            x, y, z,
-            0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.42, 0.42, 0.42,
-            r, g, b, a,
-            false, false, 2, false, nil, nil, false
-        )
-    end
-
-    for i = 0, 3 do
-        local angle = (math.pi * 0.5) * i
-        local x = coords.x + math.cos(angle) * radius
-        local y = coords.y + math.sin(angle) * radius
-        DrawMarker(
-            2,
-            x, y, z + 0.15,
-            0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.62, 0.62, 0.62,
-            r, g, b, math.min(255, a + 35),
-            false, false, 2, false, nil, nil, false
-        )
-    end
-end
-
-local function drawNearbyTurfBoundaries(pos)
-    local drawDistance = SunsetTurfs.BoundaryDrawDistance or 220.0
-    for id, turf in pairs(LocalTurfs) do
-        if not turf.coords then goto continue end
-        local radius = turf.radius or 110.0
-        local dist = #(pos - turf.coords)
-        if dist > radius + drawDistance then goto continue end
-
-        local atWar = turfAtWar(id)
-        local r, g, b, a = turfBoundaryColour(turf, atWar)
-        drawDottedTurfRing(turf.coords, radius, r, g, b, a)
-
-        if dist <= radius + 4.0 then
-            SetTextFont(4)
-            SetTextScale(0.32, 0.32)
-            SetTextColour(r, g, b, 235)
-            SetTextCentre(true)
-            SetTextOutline()
-            SetTextEntry('STRING')
-            AddTextComponentString(('ZONA TURF — raza %.0fm'):format(radius))
-            DrawText(0.5, 0.915)
-        end
-
-        ::continue::
-    end
+    return SunsetTurfs.FreeTurfBlipColour or 27
 end
 
 local function applyTurfBlipStyle(turf, row, atWar)
-    local ownerColour = hexToBlipColour(turf.ownerColor)
-    local radiusAlpha = SunsetTurfs.TurfBlipAlpha or 110
-    local radiusColour = turf.ownerClanId and ownerColour or 4
+    local map = SunsetTurfs.GetMapZone(turf.id, turf)
+    local areaAlpha = SunsetTurfs.TurfBlipAlpha or 95
+    local areaColour = turfAreaColour(turf, atWar)
 
     if atWar then
-        radiusAlpha = SunsetTurfs.TurfBlipAlphaWar or 155
-        radiusColour = WarBlipPulse and 1 or 17
+        areaAlpha = SunsetTurfs.TurfBlipAlphaWar or 140
     end
 
-    if row.radius and DoesBlipExist(row.radius) then
-        SetBlipDisplay(row.radius, BLIP_DISPLAY_BOTH)
-        SetBlipAlpha(row.radius, radiusAlpha)
-        SetBlipColour(row.radius, radiusColour)
-        SetBlipAsShortRange(row.radius, false)
+    if row.area and DoesBlipExist(row.area) then
+        SetBlipSprite(row.area, BLIP_SPRITE_AREA)
+        SetBlipDisplay(row.area, BLIP_DISPLAY_BOTH)
+        SetBlipAlpha(row.area, areaAlpha)
+        SetBlipColour(row.area, areaColour)
+        SetBlipRotation(row.area, map.rotation or 0.0)
+        SetBlipAsShortRange(row.area, false)
+        SetBlipFlashes(row.area, atWar)
     end
 
-    if row.center and DoesBlipExist(row.center) then
-        SetBlipDisplay(row.center, BLIP_DISPLAY_BOTH)
-        SetBlipSprite(row.center, BLIP_SPRITE_TURF)
-        SetBlipScale(row.center, atWar and 0.9 or 0.75)
-        local centerColour = radiusColour
-        if atWar then centerColour = WarBlipPulse and 1 or 17 end
-        SetBlipColour(row.center, centerColour)
-        SetBlipAsShortRange(row.center, false)
-        SetBlipFlashes(row.center, atWar)
+    if row.label and DoesBlipExist(row.label) then
+        SetBlipSprite(row.label, 1)
+        SetBlipDisplay(row.label, BLIP_DISPLAY_BOTH)
+        SetBlipScale(row.label, 0.55)
+        SetBlipColour(row.label, areaColour)
+        SetBlipAlpha(row.label, atWar and 255 or 190)
+        SetBlipAsShortRange(row.label, true)
+        SetBlipFlashes(row.label, atWar)
         BeginTextCommandSetBlipName('STRING')
-        local suffix = atWar and ' | RAZBOI ACTIV' or ''
-        AddTextComponentSubstringPlayerName(('Turf #%d: %s [%s]%s (r=%.0fm)'):format(
-            turf.id, turf.name, turf.ownerTag or 'LIBER', suffix, turf.radius or 110
+        local suffix = atWar and ' | RAZBOI' or ''
+        AddTextComponentSubstringPlayerName(('Turf #%d: %s [%s]%s'):format(
+            turf.id, turf.name, turf.ownerTag or 'LIBER', suffix
         ))
-        EndTextCommandSetBlipName(row.center)
+        EndTextCommandSetBlipName(row.label)
     end
 end
 
 local function refreshBlips()
     clearTurfBlips()
     for id, t in pairs(LocalTurfs) do
+        if not t.coords then goto continue end
         local atWar = turfAtWar(id)
-        local radiusBlip = AddBlipForRadius(t.coords.x, t.coords.y, t.coords.z, t.radius or 110.0)
-        local centerBlip = AddBlipForCoord(t.coords.x, t.coords.y, t.coords.z)
+        local map = SunsetTurfs.GetMapZone(id, t)
+        local areaBlip = AddBlipForArea(t.coords.x, t.coords.y, t.coords.z, map.width, map.height)
+        local labelBlip = AddBlipForCoord(t.coords.x, t.coords.y, t.coords.z)
 
-        TurfBlips[id] = { radius = radiusBlip, center = centerBlip }
+        TurfBlips[id] = { area = areaBlip, label = labelBlip }
         applyTurfBlipStyle(t, TurfBlips[id], atWar)
+        ::continue::
     end
 end
 
@@ -335,7 +270,7 @@ CreateThread(function()
                     and ('[%s] %s'):format(insideAny.ownerTag, insideAny.ownerName)
                     or 'Liber'
                 exports.sunset_ui:Notify(
-                    ('Teritoriu: %s (%s) — raza %.0fm'):format(insideAny.name, ownerStr, insideAny.radius or 110),
+                    ('Teritoriu: %s (%s)'):format(insideAny.name, ownerStr),
                     'info',
                     4500
                 )
@@ -366,48 +301,6 @@ CreateThread(function()
         else
             clearWarPlayerBlips()
             Wait(1000)
-        end
-    end
-end)
-
--- Dotted turf boundary + war fill (visible in world so radius is readable)
-CreateThread(function()
-    while true do
-        local ped = PlayerPedId()
-        if ped and ped ~= 0 then
-            local pos = GetEntityCoords(ped)
-            local nearTurf = false
-            local drawDistance = SunsetTurfs.BoundaryDrawDistance or 220.0
-            for _, turf in pairs(LocalTurfs) do
-                if turf.coords and #(pos - turf.coords) <= (turf.radius or 110.0) + drawDistance then
-                    nearTurf = true
-                    break
-                end
-            end
-
-            if nearTurf or ActiveWar then
-                Wait(0)
-                drawNearbyTurfBoundaries(pos)
-
-                if ActiveWar and ActiveWar.coords then
-                    local c = ActiveWar.coords
-                    local r = ActiveWar.radius or 110.0
-                    local pulse = WarBlipPulse and 90 or 55
-                    DrawMarker(
-                        1,
-                        c.x, c.y, c.z - 1.0,
-                        0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0,
-                        r * 2.0, r * 2.0, 2.5,
-                        255, 60, 60, pulse,
-                        false, false, 2, false, nil, nil, false
-                    )
-                end
-            else
-                Wait(800)
-            end
-        else
-            Wait(800)
         end
     end
 end)
