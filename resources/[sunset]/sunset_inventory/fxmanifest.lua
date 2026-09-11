@@ -24,6 +24,7 @@ client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/main.lua',
     'client/weapons.lua',
+    'client/props.lua',
     'client/quickslots.lua',
 }
 
@@ -35,5 +36,7 @@ server_exports {
 
 client_exports {
     'EquipHotbarWeapon', 'HolsterHotbarWeapon', 'GetHotbarEquippedHash',
+    'EquipHotbarProp', 'HolsterHotbarProp', 'GetHotbarEquippedPropItem',
+    'GetHotbarPropEntity', 'IsHotbarPropEntity',
     'EnrichInventoryPayload', 'GetHotbarSlots', 'RefreshHotbar',
 }

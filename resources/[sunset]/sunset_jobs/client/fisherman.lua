@@ -121,12 +121,28 @@ local function atFishingSpot()
 end
 
 local function removeRod()
-    if rod and DoesEntityExist(rod) then DeleteEntity(rod) end
+    local keepRod = false
+    if rod and GetResourceState('sunset_inventory') == 'started' then
+        keepRod = exports.sunset_inventory:IsHotbarPropEntity(rod) == true
+    end
+    if rod and not keepRod and DoesEntityExist(rod) then
+        DeleteEntity(rod)
+    end
     rod = nil
-    ClearPedTasks(PlayerPedId())
+    if not keepRod then
+        ClearPedTasks(PlayerPedId())
+    end
 end
 
 local function equipRod()
+    if GetResourceState('sunset_inventory') == 'started' then
+        local existing = exports.sunset_inventory:GetHotbarPropEntity('prop_fishing_rod_01')
+        if existing and DoesEntityExist(existing) then
+            rod = existing
+            return true
+        end
+    end
+
     local model = joaat('prop_fishing_rod_01')
     RequestModel(model)
     local timeout = GetGameTimer() + 5000

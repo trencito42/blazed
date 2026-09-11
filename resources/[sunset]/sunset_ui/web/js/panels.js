@@ -231,7 +231,7 @@ const Panels = {
         }
         this.setAuthTab('login');
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
-        if (window.AuthForza && !window.AuthLoading?._pending) AuthForza.reset();
+        if (window.AuthForza && !window.AuthLoading?._pending) AuthForza.openLogin();
         const status = $('#auth-server-status');
         if (status && data.playersOnline != null) {
             const max = data.playersMax || 256;

@@ -7,13 +7,25 @@
 .hotbar-container {
     position: fixed;
     left: 50%;
-    bottom: 48px;
+    bottom: 52px;
     z-index: 120;
     display: flex;
-    gap: 8px;
+    gap: 14px;
+    padding: 0 6px;
     transform: translateX(-50%) skewX(-5deg);
     filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.8));
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.hotbar-container.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) skewX(-5deg) translateY(0);
+}
+
+.hotbar-container:not(.is-visible) {
+    transform: translateX(-50%) skewX(-5deg) translateY(12px);
 }
 
 body.in-vehicle #hotbar-hud {
@@ -23,8 +35,8 @@ body.in-vehicle #hotbar-hud {
 .weapon-ammo-hud {
     position: fixed;
     left: 50%;
-    bottom: 128px;
-    z-index: 121;
+    bottom: 148px;
+    z-index: 119;
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -40,7 +52,7 @@ body.in-vehicle #hotbar-hud {
 }
 
 body.in-vehicle .weapon-ammo-hud {
-    bottom: 136px;
+    bottom: 156px;
 }
 
 .weapon-ammo-hud.hidden {
@@ -97,7 +109,8 @@ body.in-vehicle .weapon-ammo-hud {
 }
 
 .hotbar-slot.active {
-    transform: translateY(-15px);
+    transform: translateY(-6px);
+    z-index: 2;
     border-color: var(--hotbar-accent);
     background: rgba(0, 255, 204, 0.1);
     box-shadow: 0 10px 20px rgba(0, 255, 204, 0.2), inset 0 0 15px rgba(0, 255, 204, 0.1);
@@ -105,26 +118,27 @@ body.in-vehicle .weapon-ammo-hud {
 
 .hotbar-slot-key {
     position: absolute;
-    top: -10px;
-    left: -10px;
+    top: 3px;
+    left: 3px;
+    z-index: 2;
     background: #fff;
     color: #000;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 900;
     font-style: italic;
     font-family: 'Montserrat', sans-serif;
-    box-shadow: 0 4px 0 #9ca3af, 0 5px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 0 #9ca3af, 0 3px 8px rgba(0, 0, 0, 0.45);
     transition: all 0.2s;
 }
 
 .hotbar-slot.active .hotbar-slot-key {
     background: var(--hotbar-accent);
-    box-shadow: 0 4px 0 #00b38f, 0 5px 10px rgba(0, 255, 204, 0.5);
+    box-shadow: 0 2px 0 #00b38f, 0 3px 8px rgba(0, 255, 204, 0.45);
 }
 
 .hotbar-slot-icon {
@@ -165,6 +179,39 @@ body.in-vehicle .weapon-ammo-hud {
 
 .hotbar-slot.active .hotbar-slot-qty {
     color: #fff;
+}
+
+.hotbar-slot.is-usable {
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.hotbar-slot.is-usable.is-ready {
+    border-color: rgba(0, 255, 204, 0.75);
+    box-shadow: 0 0 18px rgba(0, 255, 204, 0.28), inset 0 0 12px rgba(0, 255, 204, 0.12);
+}
+
+.hotbar-slot.is-usable.is-ready::after {
+    content: 'USE';
+    position: absolute;
+    right: 4px;
+    bottom: 3px;
+    left: auto;
+    top: auto;
+    transform: skewX(5deg);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: var(--hotbar-accent);
+    opacity: 0.95;
+    pointer-events: none;
+}
+
+.hotbar-slot.is-usable.is-ready .hotbar-slot-qty {
+    left: 6px;
+    right: auto;
+    bottom: 3px;
 }
 
 .premium-inventory-hotbar {
@@ -238,6 +285,7 @@ body.in-vehicle .weapon-ammo-hud {
 
 #hotbar-hud.hidden {
     display: none !important;
+    opacity: 0 !important;
 }
 
 .wheel-overlay {

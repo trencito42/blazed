@@ -1,6 +1,8 @@
 local HOTBAR_SLOTS = 5
+local HOTBAR_PEEK_MS = 3500
 local activeHotbarSlot = nil
 local hotbarSlots = {}
+local hotbarPeekUntil = 0
 local emoteWheelOpen = false
 local xHoldToken = 0
 local X_HOLD_MS = 320
@@ -73,12 +75,21 @@ local function enrichSlotsWithAmmo(slots)
     return slots
 end
 
+local function isHotbarHudVisible()
+    if blocked() then return false end
+    return hotbarPeekUntil > 0 and GetGameTimer() < hotbarPeekUntil
+end
+
+local function peekHotbarHud()
+    hotbarPeekUntil = GetGameTimer() + HOTBAR_PEEK_MS
+end
+
 local function pushHotbarUpdate()
     enrichSlotsWithAmmo(hotbarSlots)
     exports.sunset_ui:Send('hotbarUpdate', {
         slots = hotbarSlots,
         activeSlot = activeHotbarSlot,
-        visible = not blocked(),
+        visible = isHotbarHudVisible(),
     })
 end
 
@@ -86,18 +97,38 @@ local function refreshHotbarFromServer()
     local data = Sunset.AwaitCallback('sunset:hotbar:get')
     if data and data.slots then
         hotbarSlots = data.slots
+        if activeHotbarSlot then
+            local slotData = hotbarSlots[tostring(activeHotbarSlot)] or hotbarSlots[activeHotbarSlot]
+            if not slotData then
+                activeHotbarSlot = nil
+                exports.sunset_inventory:HolsterHotbarWeapon()
+                exports.sunset_inventory:HolsterHotbarProp()
+            end
+        end
         pushHotbarUpdate()
     end
 end
 
-local function holsterActiveWeapon()
+local function holsterActiveItem()
     activeHotbarSlot = nil
     exports.sunset_inventory:HolsterHotbarWeapon()
+    exports.sunset_inventory:HolsterHotbarProp()
     pushHotbarUpdate()
+end
+
+local function getSlotData(slot)
+    return hotbarSlots[tostring(slot)] or hotbarSlots[slot]
+end
+
+local function isUsableHotbarSlot(slotData)
+    return type(slotData) == 'table'
+        and slotData.kind == 'item'
+        and slotData.usable == true
 end
 
 local function executeHotbarResult(result, slot)
     if not result or not result.action then return end
+    peekHotbarHud()
 
     if result.action == 'empty' then
         exports.sunset_ui:Notify('Quick slot is empty.', 'info')
@@ -106,6 +137,19 @@ local function executeHotbarResult(result, slot)
 
     if result.action == 'used_item' then
         if result.slots then hotbarSlots = result.slots end
+        local slotData = getSlotData(slot)
+        if slotData then
+            activeHotbarSlot = slot
+        else
+            activeHotbarSlot = nil
+        end
+        pushHotbarUpdate()
+        return
+    end
+
+    if result.action == 'equip_usable' then
+        exports.sunset_inventory:HolsterHotbarWeapon()
+        exports.sunset_inventory:HolsterHotbarProp()
         activeHotbarSlot = slot
         pushHotbarUpdate()
         return
@@ -131,7 +175,19 @@ local function executeHotbarResult(result, slot)
         return
     end
 
+    if result.action == 'equip_prop' then
+        if exports.sunset_inventory:EquipHotbarProp(result.item) then
+            activeHotbarSlot = slot
+            pushHotbarUpdate()
+        else
+            exports.sunset_ui:Notify('Could not equip that item.', 'error')
+        end
+        return
+    end
+
     if result.action == 'play_emote' then
+        exports.sunset_inventory:HolsterHotbarProp()
+        exports.sunset_inventory:HolsterHotbarWeapon()
         if GetResourceState('sunset_emotes') == 'started' then
             exports.sunset_emotes:PlayEmote(result.name)
         end
@@ -140,29 +196,54 @@ local function executeHotbarResult(result, slot)
     end
 end
 
-local function activateHotbarSlot(slot)
+local function requestHotbarSlot(slot, consume)
     if blocked() then return end
     slot = tonumber(slot)
     if not slot or slot < 1 or slot > HOTBAR_SLOTS then return end
 
+    peekHotbarHud()
+    pushHotbarUpdate()
+
     if slot == 2 and isDriverInVehicle() then return end
 
-    if activeHotbarSlot == slot then
-        holsterActiveWeapon()
+    local slotData = getSlotData(slot)
+
+    if consume then
+        if activeHotbarSlot ~= slot then
+            exports.sunset_ui:Notify('Select the quick slot first, then use it again.', 'info')
+            return
+        end
+        if not isUsableHotbarSlot(slotData) then return end
+    elseif activeHotbarSlot == slot then
+        if isUsableHotbarSlot(slotData) then
+            requestHotbarSlot(slot, true)
+            return
+        end
+        holsterActiveItem()
         if GetResourceState('sunset_emotes') == 'started' then
             exports.sunset_emotes:StopEmote()
         end
         return
+    elseif activeHotbarSlot then
+        exports.sunset_inventory:HolsterHotbarWeapon()
+        exports.sunset_inventory:HolsterHotbarProp()
     end
 
     CreateThread(function()
-        local result, err = Sunset.AwaitCallback('sunset:hotbar:use', { slot = slot })
+        local result, err = Sunset.AwaitCallback('sunset:hotbar:use', {
+            slot = slot,
+            consume = consume == true,
+        })
         if not result then
             if err then exports.sunset_ui:Notify(err, 'error') end
             return
         end
         executeHotbarResult(result, slot)
     end)
+end
+
+local function activateHotbarSlot(slot)
+    requestHotbarSlot(slot, false)
 end
 
 local function openEmoteWheel()
@@ -227,6 +308,13 @@ CreateThread(function()
     end
 end)
 
+AddEventHandler('sunset:nui:hotbarUse', function(data)
+    data = type(data) == 'table' and data or {}
+    local slot = tonumber(data.slot)
+    if not slot then return end
+    requestHotbarSlot(slot, data.consume == true)
+end)
+
 AddEventHandler('sunset:nui:hotbarAssign', function(data)
     CreateThread(function()
         local result, err = Sunset.AwaitCallback('sunset:hotbar:assign', data or {})
@@ -283,39 +371,68 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    while true do
+        if hotbarPeekUntil > 0 and GetGameTimer() >= hotbarPeekUntil then
+            hotbarPeekUntil = 0
+            pushHotbarUpdate()
+            local ped = PlayerPedId()
+            local weapon = GetSelectedPedWeapon(ped)
+            if weapon ~= UNARMED and weapon ~= 0 then
+                local ammo = weaponAmmoForHash(ped, weapon)
+                if ammo then
+                    exports.sunset_ui:Send('weaponAmmoUpdate', {
+                        visible = IsPedShooting(ped),
+                        clip = ammo.clip,
+                        total = ammo.total,
+                    })
+                end
+            end
+        end
+        Wait(150)
+    end
+end)
+
+CreateThread(function()
     local lastClip, lastTotal = -1, -1
+    local lastAmmoVisible = false
     while true do
         if blocked() then
-            if lastClip ~= -1 then
+            if lastClip ~= -1 or lastAmmoVisible then
                 exports.sunset_ui:Send('weaponAmmoUpdate', { visible = false })
                 lastClip, lastTotal = -1, -1
+                lastAmmoVisible = false
             end
             Wait(250)
         else
             local ped = PlayerPedId()
             local weapon = GetSelectedPedWeapon(ped)
             if weapon == UNARMED or weapon == 0 then
-                if lastClip ~= -1 then
+                if lastClip ~= -1 or lastAmmoVisible then
                     exports.sunset_ui:Send('weaponAmmoUpdate', { visible = false })
                     lastClip, lastTotal = -1, -1
+                    lastAmmoVisible = false
                 end
                 Wait(200)
             else
                 local ammo = weaponAmmoForHash(ped, weapon)
                 if ammo then
-                    if ammo.clip ~= lastClip or ammo.total ~= lastTotal then
+                    local showAmmo = isHotbarHudVisible() or IsPedShooting(ped)
+                    if ammo.clip ~= lastClip or ammo.total ~= lastTotal or showAmmo ~= lastAmmoVisible then
                         lastClip, lastTotal = ammo.clip, ammo.total
+                        lastAmmoVisible = showAmmo
                         exports.sunset_ui:Send('weaponAmmoUpdate', {
-                            visible = true,
+                            visible = showAmmo,
                             clip = ammo.clip,
                             total = ammo.total,
                         })
-                        enrichSlotsWithAmmo(hotbarSlots)
-                        exports.sunset_ui:Send('hotbarUpdate', {
-                            slots = hotbarSlots,
-                            activeSlot = activeHotbarSlot,
-                            visible = true,
-                        })
+                        if isHotbarHudVisible() then
+                            enrichSlotsWithAmmo(hotbarSlots)
+                            exports.sunset_ui:Send('hotbarUpdate', {
+                                slots = hotbarSlots,
+                                activeSlot = activeHotbarSlot,
+                                visible = true,
+                            })
+                        end
                     end
                 end
                 Wait(IsPedShooting(ped) and 0 or 35)

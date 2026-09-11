@@ -51,18 +51,30 @@ const HotbarUI = {
     },
 
     _renderSlot(container, slotIndex, slot, interactive) {
+        const isActive = Number(this.activeSlot) === slotIndex;
+        const isUsable = !!(slot && slot.usable);
         const el = document.createElement('div');
-        el.className = `hotbar-slot${Number(this.activeSlot) === slotIndex ? ' active' : ''}${slot ? ' has-item' : ''}`;
+        el.className = `hotbar-slot${isActive ? ' active' : ''}${slot ? ' has-item' : ''}${isUsable ? ' is-usable' : ''}${isActive && isUsable ? ' is-ready' : ''}`;
         el.dataset.hotbarSlot = String(slotIndex);
         el.innerHTML = `
             <div class="hotbar-slot-key">${slotIndex}</div>
             <div class="hotbar-slot-icon">${this._slotIconHtml(slot)}</div>
             <div class="hotbar-slot-qty">${this._slotAmmoHtml(slot) || this._slotQtyText(slot)}</div>
         `;
-        if (interactive) {
+        if (interactive === true) {
             el.title = slot ? `${slot.label || 'Quick slot'} — double-click to clear` : `Quick slot ${slotIndex}`;
             el.addEventListener('dblclick', () => {
                 post('hotbarAssign', { slot: slotIndex, clear: true, fromInventory: true });
+            });
+        } else if (interactive === 'hud' && isUsable) {
+            el.title = isActive
+                ? `${slot.label} — click or press ${slotIndex} to use`
+                : `${slot.label} — press ${slotIndex} to equip`;
+            el.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const activeNow = Number(HotbarUI.activeSlot) === slotIndex;
+                post('hotbarUse', { slot: slotIndex, consume: activeNow });
             });
         }
         container.appendChild(el);
@@ -104,14 +116,19 @@ const HotbarUI = {
         if (!hud) return;
 
         if (data.visible === false) {
-            hud.classList.add('hidden');
+            hud.classList.remove('is-visible');
+            window.setTimeout(() => {
+                if (!hud.classList.contains('is-visible')) hud.classList.add('hidden');
+            }, 220);
             return;
         }
         hud.classList.remove('hidden');
         hud.innerHTML = '';
         for (let i = 1; i <= 5; i += 1) {
-            this._renderSlot(hud, i, this.slots[String(i)] || this.slots[i], false);
+            const slot = this.slots[String(i)] || this.slots[i];
+            this._renderSlot(hud, i, slot, slot?.usable ? 'hud' : false);
         }
+        requestAnimationFrame(() => hud.classList.add('is-visible'));
     },
 
     renderInventory(data = {}) {

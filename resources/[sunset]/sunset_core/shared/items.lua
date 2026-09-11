@@ -1,5 +1,10 @@
 Sunset = Sunset or {}
 
+local FISHING_ROD_EQUIP = {
+    model = 'prop_fishing_rod_01',
+    anim = { dict = 'amb@world_human_stand_fishing@idle_a', name = 'idle_c', flag = 49 },
+}
+
 Sunset.Items = {
     -- `icon` is a basename from sunset_ui/web/assets/items (never an emoji).
     water = { label = 'Water Bottle', weight = 0.2, usable = true, hunger = 0, thirst = 25, category = 'drinks', icon = 'water_bottle' },
@@ -32,11 +37,11 @@ Sunset.Items = {
     bait_lure    = { label = 'Artificial Lure',   weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
     bait_premium = { label = 'Premium Bait',      weight = 0.05, usable = false, category = 'fishing', icon = 'fishing_license' },
     -- Undita (upgrade sequential prin NPC, tradeable)
-    fishing_rod_1 = { label = 'Fishing Rod Mk1', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_2 = { label = 'Fishing Rod Mk2', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_3 = { label = 'Fishing Rod Mk3', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_4 = { label = 'Fishing Rod Mk4', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
-    fishing_rod_5 = { label = 'Fishing Rod Mk5', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod' },
+    fishing_rod_1 = { label = 'Fishing Rod Mk1', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod', equipProp = FISHING_ROD_EQUIP },
+    fishing_rod_2 = { label = 'Fishing Rod Mk2', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod', equipProp = FISHING_ROD_EQUIP },
+    fishing_rod_3 = { label = 'Fishing Rod Mk3', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod', equipProp = FISHING_ROD_EQUIP },
+    fishing_rod_4 = { label = 'Fishing Rod Mk4', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod', equipProp = FISHING_ROD_EQUIP },
+    fishing_rod_5 = { label = 'Fishing Rod Mk5', weight = 1.5,  usable = false, category = 'fishing', icon = 'fishing_rod', equipProp = FISHING_ROD_EQUIP },
     ammo_9mm = { label = '9mm Ammo', weight = 0.25, usable = false, category = 'ammo', icon = 'pistol_ammo' },
     stolen_silver_watch = { label = 'Stolen Silver Watch', weight = 0.4, usable = false, category = 'misc', icon = 'backpack' },
     stolen_luxury_watch = { label = 'Stolen Luxury Watch', weight = 0.45, usable = false, category = 'misc', icon = 'backpack' },

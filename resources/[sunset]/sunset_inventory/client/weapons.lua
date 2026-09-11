@@ -122,6 +122,7 @@ local function equipHotbarWeapon(hash)
     if not hash or hash == UNARMED then return false end
     local ped = PlayerPedId()
     if not HasPedGotWeapon(ped, hash, false) then return false end
+    exports.sunset_inventory:HolsterHotbarProp()
     SetCurrentPedWeapon(ped, hash, true)
     hotbarEquippedHash = hash
     return true

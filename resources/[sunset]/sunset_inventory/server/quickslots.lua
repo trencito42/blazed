@@ -50,6 +50,7 @@ local function resolveBinding(binding, inv)
             count = row.count,
             usable = def.usable == true,
             weapon = def.weapon,
+            equipProp = def.equipProp ~= nil,
         }
     end
 
@@ -179,6 +180,7 @@ end)
 exports.sunset_core:RegisterCallback('sunset:hotbar:use', function(source, data)
     data = type(data) == 'table' and data or {}
     local slot = tonumber(data.slot)
+    local consume = data.consume == true
     if not slot or slot < 1 or slot > HOTBAR_SLOTS then
         return nil, 'Invalid quick slot.'
     end
@@ -197,12 +199,23 @@ exports.sunset_core:RegisterCallback('sunset:hotbar:use', function(source, data)
     if resolved.kind == 'item' then
         local def = Sunset.Items[resolved.item] or {}
         if def.usable then
+            if not consume then
+                return {
+                    action = 'equip_usable',
+                    slot = slot,
+                    item = resolved.item,
+                    label = def.label or resolved.item,
+                }
+            end
             local used, reason = UseItem(source, resolved.item)
             if not used then return nil, reason or 'Cannot use this item.' end
             return { action = 'used_item', slot = slot, slots = BuildHotbarView(source) }
         end
         if def.weapon then
             return { action = 'equip_weapon', slot = slot, item = resolved.item, weapon = def.weapon }
+        end
+        if def.equipProp then
+            return { action = 'equip_prop', slot = slot, item = resolved.item }
         end
         return nil, ('%s cannot be used from a quick slot.'):format(def.label or resolved.item)
     end
