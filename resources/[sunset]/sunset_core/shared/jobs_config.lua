@@ -96,15 +96,24 @@ Sunset.JobsConfig = {
     fisherman = {
         label = 'Fisherman',
         help = 'Fish in the Paleto Bay area near Billy Ray, then sell your catch at any 24/7 store.',
-        -- Zona unica de 50m in jurul pontoon-ului Billy Ray; fara blip (nu vrem marker pe harta)
+        -- Poligon de pescuit: zona exacta Paleto Bay (pontoon + dig)
+        -- Punctele se conecteaza in ordine; Z ignorat la polygon check
         spots = {
-            { coords = vector3(-1593.23, 5207.74, 3.31) },
+            { coords = vector3(-1593.23, 5207.74, 3.31) }, -- pastrat pentru compatibilitate
         },
+        fishZone = {
+            { x = -1615.83, y = 5261.21 },
+            { x = -1607.67, y = 5264.90 },
+            { x = -1586.00, y = 5212.45 },
+            { x = -1592.73, y = 5211.15 },
+        },
+        fishZoneMinZ = -5.0,   -- include barca pe apa
+        fishZoneMaxZ = 12.0,   -- include pontoon/dig ridicat
         biteDelayMinMs = 2500,
         biteDelayMaxMs = 6500,
         reactionWindowMs = 1500,
-        catchRadius    = 50.0,   -- zona de 50m in jurul lui Billy Ray
-        catchZTolerance = 8.0,   -- toleranta verticala mare (pontoon, dig, mal)
+        catchRadius    = 50.0,   -- fallback daca fishZone lipseste
+        catchZTolerance = 8.0,   -- fallback Z tolerance
         markerSize     = 0,      -- fara marker vizibil
         markerDrawRadius = 0,    -- nu desena nimic
         sellRadius = 5.0,

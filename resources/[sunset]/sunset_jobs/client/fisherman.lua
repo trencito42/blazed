@@ -88,12 +88,36 @@ local function nearestSpotIndex()
     return best, bestDist
 end
 
+-- Point-in-polygon client-side (ray casting) pentru zona de pescuit
 local function atFishingSpot()
-    local spotIndex, distance = nearestSpotIndex()
     local cfg = Sunset.GetJobConfig('fisherman')
-    local spot = cfg and cfg.spots and cfg.spots[spotIndex]
-    local zDistance = spot and verticalDist(GetEntityCoords(PlayerPedId()), spot.coords) or math.huge
-    return distance <= catchRadius(cfg) and zDistance <= (cfg.catchZTolerance or 0.75), distance, cfg, zDistance
+    local zone = cfg and cfg.fishZone
+    local pos  = GetEntityCoords(PlayerPedId())
+
+    if not zone or #zone < 3 then
+        -- fallback la radius
+        local spotIndex, distance = nearestSpotIndex()
+        local spot = cfg and cfg.spots and cfg.spots[spotIndex]
+        local zDistance = spot and verticalDist(pos, spot.coords) or math.huge
+        return distance <= catchRadius(cfg) and zDistance <= (cfg.catchZTolerance or 0.75)
+    end
+
+    local minZ = cfg.fishZoneMinZ or -5.0
+    local maxZ = cfg.fishZoneMaxZ or 12.0
+    if pos.z < minZ or pos.z > maxZ then return false end
+
+    local inside = false
+    local j = #zone
+    for i = 1, #zone do
+        local xi, yi = zone[i].x, zone[i].y
+        local xj, yj = zone[j].x, zone[j].y
+        if ((yi > pos.y) ~= (yj > pos.y)) and
+           (pos.x < (xj - xi) * (pos.y - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    return inside
 end
 
 local function removeRod()
@@ -190,11 +214,8 @@ local function attemptFish()
     if not isFishermanShift() then
         return JC.notify('Start a fisherman shift with /work first', 'error')
     end
-    local spotIdx, spotDist = nearestSpotIndex()
-    local cfg = Sunset.GetJobConfig('fisherman')
-    local spot = cfg.spots and cfg.spots[spotIdx]
-    local spotZDist = spot and verticalDist(GetEntityCoords(PlayerPedId()), spot.coords) or math.huge
-    if spotDist > catchRadius(cfg) or spotZDist > (cfg.catchZTolerance or 0.75) then
+    local spotIdx = nearestSpotIndex()
+    if not atFishingSpot() then
         return JC.notify('Nu esti in zona de pescuit Paleto Bay.', 'error')
     end
 

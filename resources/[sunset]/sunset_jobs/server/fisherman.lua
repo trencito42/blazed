@@ -1,5 +1,34 @@
 local SellLocks = {}
 
+-- Point-in-polygon (ray casting) pentru zona de pescuit
+local function inFishZone(source, cfg)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return false end
+    local pos = GetEntityCoords(ped)
+    local zone = cfg and cfg.fishZone
+    if not zone or #zone < 3 then
+        -- fallback la radius daca nu exista polygon
+        local spot = cfg and cfg.spots and cfg.spots[1]
+        if not spot then return false end
+        return SunsetJobs_ValidateCoordsCylinder(source, spot.coords, cfg.catchRadius or 50.0, cfg.catchZTolerance or 8.0)
+    end
+    local minZ = cfg.fishZoneMinZ or -5.0
+    local maxZ = cfg.fishZoneMaxZ or 12.0
+    if pos.z < minZ or pos.z > maxZ then return false end
+    local inside = false
+    local j = #zone
+    for i = 1, #zone do
+        local xi, yi = zone[i].x, zone[i].y
+        local xj, yj = zone[j].x, zone[j].y
+        if ((yi > pos.y) ~= (yj > pos.y)) and
+           (pos.x < (xj - xi) * (pos.y - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    return inside
+end
+
 -- ── Rod / Bait tables ─────────────────────────────────────────
 local ROD_TIERS = {
     { item = 'fishing_rod_5', valueMult = 1.75, delayReduction = 2000, windowBonus = 600 },
@@ -150,10 +179,7 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:catch', function(sou
     local session, err = SunsetJobs_RequireSession(source, 'fisherman', { 'ACTIVE', 'STARTING' })
     if not session then return nil, err end
     local cfg = Sunset.GetJobConfig('fisherman')
-    local spot = cfg.spots[tonumber(spotIndex) or 1]
-    if not spot then return nil, 'Invalid fishing spot' end
-    if not SunsetJobs_ValidateCoordsCylinder(source, spot.coords,
-        cfg.catchRadius or 1.6, cfg.catchZTolerance or 0.75) then
+    if not inFishZone(source, cfg) then
         return nil, 'Not at a fishing spot'
     end
     return nil, 'Cast first with /fish'
@@ -165,10 +191,8 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:cast', function(sour
 
     local cfg = Sunset.GetJobConfig('fisherman')
     spotIndex = tonumber(spotIndex) or 1
-    local spot = cfg.spots[spotIndex]
-    if not spot or not SunsetJobs_ValidateCoordsCylinder(source, spot.coords,
-        cfg.catchRadius or 1.6, cfg.catchZTolerance or 0.75) then
-        return nil, 'Stand inside a fishing marker'
+    if not inFishZone(source, cfg) then
+        return nil, 'Nu esti in zona de pescuit'
     end
 
     session.data.level = fishLevel(source)
@@ -226,11 +250,9 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:reel', function(sour
 
     local cfg = Sunset.GetJobConfig('fisherman')
     spotIndex = tonumber(spotIndex) or 1
-    local spot = cfg.spots[spotIndex]
-    if not spot or not SunsetJobs_ValidateCoordsCylinder(source, spot.coords,
-        cfg.catchRadius or 1.6, cfg.catchZTolerance or 0.75) then
+    if not inFishZone(source, cfg) then
         session.data.fishingChallenge = nil
-        return nil, 'You moved away from the fishing spot'
+        return nil, 'Ai iesit din zona de pescuit'
     end
 
     local challenge = session.data.fishingChallenge
