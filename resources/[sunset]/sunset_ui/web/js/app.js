@@ -858,8 +858,10 @@ window.addEventListener('message', (event) => {
             if (window.Panels) Panels.hideCrafting();
             break;
         case 'dealershipShow':
-        case 'dealershipUpdate':
             if (window.Panels) Panels.showDealership(data || event.data.data);
+            break;
+        case 'dealershipUpdate':
+            if (window.Panels) Panels.updateDealership(data || event.data.data);
             break;
         case 'dealershipHide':
             if (window.Panels) Panels.hideDealership();

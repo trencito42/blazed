@@ -195,7 +195,19 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
 
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil, 'Invalid player ped' end
-    if shop.coords and #(GetEntityCoords(ped) - shop.coords) > 15.0 then
+    local playerCoords = GetEntityCoords(ped)
+    if shopId == 'twentyfour7' then
+        local nearStore = false
+        for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+            if store.coords and #(playerCoords - store.coords) <= 4.0 then
+                nearStore = true
+                break
+            end
+        end
+        if not nearStore then
+            return nil, 'You must be at a 24/7 store to buy items'
+        end
+    elseif shop.coords and #(playerCoords - shop.coords) > 15.0 then
         return nil, 'You must be at the shop location to buy items'
     end
 

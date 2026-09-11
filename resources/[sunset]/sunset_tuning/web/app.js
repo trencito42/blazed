@@ -1,16 +1,22 @@
 const app = document.getElementById('app');
-const rail = document.getElementById('rail');
-const panels = document.getElementById('panels');
+const tuneCategories = document.getElementById('tuneCategories');
+const tunePartsList = document.getElementById('tunePartsList');
+const tunePartsTitle = document.getElementById('tunePartsTitle');
+const tuneDetail = document.getElementById('tuneDetail');
 const shopLabel = document.getElementById('shopLabel');
 const plateLabel = document.getElementById('plateLabel');
 const ecuStatus = document.getElementById('ecuStatus');
 const btnCancel = document.getElementById('btnCancel');
 const btnSave = document.getElementById('btnSave');
+const installCostEl = document.getElementById('tune-install-cost');
+
+const TOTAL_SEGMENTS = 10;
 
 let tune = null;
 let cosmetics = null;
 let costs = { save: 750, flash: 150, dyno: 250 };
-let activeTab = 'overview';
+let activeTab = 'powertrain';
+let activePartId = null;
 let hasSavedMap = false;
 let previewDirty = false;
 let hardwareAvailability = {};
@@ -19,36 +25,53 @@ let hardwareSlots = {};
 let featureCosts = {};
 let installedTune = null;
 let installedCosmetics = null;
+let vehicleCapabilities = null;
 
-const tabs = [
-    { group: 'BUILD', items: [{ id: 'overview', label: 'SETUP RAPID' }] },
-    { group: 'PERFORMANȚĂ', items: [
-        { id: 'powertrain', label: 'MOTOR & TURBO' },
-        { id: 'chassis', label: 'ȘASIU' },
-        { id: 'handling', label: 'HANDLING' },
-    ]},
-    { group: 'EVACUARE', items: [
-        { id: 'exhaust_pop', label: 'POP & BANG' },
-        { id: 'exhaust_flames', label: 'FLAMMEN' },
-        { id: 'exhaust_diesel', label: 'DIESEL' },
-        { id: 'exhaust_extra', label: 'EXTRA' },
-        { id: 'antilag', label: 'ANTI-LAG' },
-    ]},
-    { group: 'VIZUAL', items: [{ id: 'visual', label: 'CULORI' }] },
-    { group: 'DYNO', items: [
-        { id: 'dyno_power', label: 'PUTERE' },
-        { id: 'dyno_rank', label: 'CLASAMENT' },
-        { id: 'dyno_stand', label: 'STAND' },
-    ]},
-    { group: 'SPECIAL', items: [{ id: 'drift', label: 'DRIFT' }, { id: 'hud', label: 'HUD' }] },
+const categories = [
+    { id: 'overview', label: 'Quick Setup', icon: 'ph-grid-four' },
+    { id: 'powertrain', label: 'Engine', icon: 'ph-fill ph-engine' },
+    { id: 'transmission', label: 'Transmission', icon: 'ph-bold ph-faders' },
+    { id: 'brakes', label: 'Brakes', icon: 'ph-fill ph-stop-circle' },
+    { id: 'suspension', label: 'Suspension', icon: 'ph-fill ph-car-profile' },
+    { id: 'turbo', label: 'Turbo & ECU', icon: 'ph-fill ph-wind' },
+    { id: 'handling', label: 'Handling', icon: 'ph-bold ph-steering-wheel' },
+    { id: 'exhaust', label: 'Exhaust', icon: 'ph-bold ph-speaker-high' },
+    { id: 'visual', label: 'Visual', icon: 'ph-bold ph-palette' },
+    { id: 'dyno', label: 'Dyno', icon: 'ph-bold ph-gauge' },
+    { id: 'special', label: 'Special', icon: 'ph-bold ph-fire' },
 ];
 
-const exhaustMeta = {
-    exhaust_pop: { title: 'POP & BANG', subtitle: 'Configurează pop-uri la decelerare' },
-    exhaust_flames: { title: 'FLAMMEN', subtitle: 'Flăcări la evacuare + pop-uri' },
-    exhaust_diesel: { title: 'DIESEL', subtitle: 'Sunet și comportament diesel' },
-    exhaust_extra: { title: 'EXTRA LOUD', subtitle: 'Evacuare agresivă + flăcări' },
+const categoryTitles = {
+    overview: 'Quick Setup',
+    powertrain: 'Engine Upgrades',
+    transmission: 'Transmission',
+    brakes: 'Brake Upgrades',
+    suspension: 'Suspension',
+    turbo: 'Turbo & ECU Map',
+    handling: 'Handling Tuning',
+    exhaust: 'Exhaust Profile',
+    visual: 'Paint & Plate',
+    dyno: 'Dyno',
+    special: 'Special Features',
 };
+
+function cap(key) {
+    return vehicleCapabilities && vehicleCapabilities[key] === true;
+}
+
+function powerLimit() {
+    return (vehicleCapabilities && vehicleCapabilities.limits && vehicleCapabilities.limits.power) || 65;
+}
+
+function tabAllowed(itemId) {
+    if (!vehicleCapabilities) return true;
+    if (itemId === 'overview' || itemId === 'visual' || itemId === 'dyno') return true;
+    if (itemId === 'powertrain' || itemId === 'transmission' || itemId === 'turbo') return cap('power') || cap('hardware');
+    if (itemId === 'brakes' || itemId === 'suspension' || itemId === 'handling') return cap('hardware') || cap('tractionControl');
+    if (itemId === 'exhaust') return cap('exhaustModes');
+    if (itemId === 'special') return cap('antiLag') || cap('drift') || cap('hud');
+    return true;
+}
 
 function post(name, data = {}) {
     return fetch(`https://${GetParentResourceName()}/${name}`, {
@@ -60,9 +83,14 @@ function post(name, data = {}) {
 
 function stockTune() {
     return {
+        profileVersion: 2,
         stage: 'civil',
-        power: 100,
-        torque: 100,
+        power: 0,
+        torque: 0,
+        throttleResponse: 0,
+        topSpeed: 0,
+        shiftSpeed: 0,
+        regenBraking: 0,
         exhaust: 'pop_bang',
         pop: { enabled: false, rpmMax: 88, durationMs: 100, secondBurst: false, burstStage: 'civil' },
         flames: { enabled: false, color: { r: 255, g: 120, b: 40 } },
@@ -135,7 +163,9 @@ function installQuote() {
         ['hud', next.hud.enabled, old.hud.enabled]].forEach(([key, enabled, wasEnabled]) => {
         if (enabled && !wasEnabled) total += Number(featureCosts[key] || 0);
     });
-    if (next.stage !== old.stage) total += Number(next.stage === 'race' ? featureCosts.raceMap : next.stage === 'sport' ? featureCosts.sportMap : 0);
+    if (next.stage !== old.stage) {
+        total += Number(next.stage === 'race' ? featureCosts.raceMap : next.stage === 'sport' ? featureCosts.sportMap : 0);
+    }
     const tuningKeys = [['power'], ['torque'], ['handling', 'steering'], ['handling', 'brakePower'], ['handling', 'suspension'], ['handling', 'traction']];
     tuningKeys.forEach((path) => {
         const get = (obj) => path.reduce((value, key) => value?.[key], obj);
@@ -149,17 +179,70 @@ function installQuote() {
     return Math.max(0, Math.floor(total));
 }
 
+function computePerfStats(tuneObj) {
+    const t = ensureTune(tuneObj);
+    const accel = Math.min(10, 3 + (t.hardware.engine || 0) * 0.8 + (t.hardware.turbo ? 1.2 : 0)
+        + Math.floor((t.power || 0) / 22) + (t.stage === 'race' ? 1.5 : t.stage === 'sport' ? 0.8 : 0));
+    const speed = Math.min(10, 3 + (t.hardware.engine || 0) * 0.6 + Math.floor((t.topSpeed || 0) / 12)
+        + (t.stage === 'race' ? 1.2 : t.stage === 'sport' ? 0.6 : 0));
+    const hand = Math.min(10, Math.max(1, 5 + (t.hardware.suspension || 0) * 0.4
+        - Math.floor((t.power || 0) / 35) + ((t.handling.traction || 100) - 100) / 25));
+    return { accel: Math.round(accel), speed: Math.round(speed), hand: Math.round(hand) };
+}
+
+function renderStatBar(containerId, value, previewDelta = 0) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    const base = Math.max(0, Math.min(TOTAL_SEGMENTS, Number(value) || 0));
+    const preview = Number(previewDelta) || 0;
+    for (let i = 1; i <= TOTAL_SEGMENTS; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'stat-segment';
+        if (i <= base) seg.classList.add('fill');
+        else if (preview > 0 && i <= base + preview) seg.classList.add('fill-accent');
+        else if (preview < 0 && i > base + preview && i <= base) seg.classList.add('fill-danger');
+        container.appendChild(seg);
+    }
+}
+
+function updateTuneLabel(elementId, base, delta) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (delta > 0) el.innerHTML = `${base} <span class="delta up">+${delta}</span>`;
+    else if (delta < 0) el.innerHTML = `${base} <span class="delta down">${delta}</span>`;
+    else el.textContent = String(base);
+}
+
+function renderStatsPanel() {
+    const base = computePerfStats(installedTune || tune);
+    const next = computePerfStats(tune);
+    const delta = {
+        accel: next.accel - base.accel,
+        speed: next.speed - base.speed,
+        hand: next.hand - base.hand,
+    };
+    renderStatBar('stat-accel-tune', base.accel, delta.accel);
+    renderStatBar('stat-speed-tune', base.speed, delta.speed);
+    renderStatBar('stat-hand-tune', base.hand, delta.hand);
+    updateTuneLabel('tune-accel-val', base.accel, delta.accel);
+    updateTuneLabel('tune-speed-val', base.speed, delta.speed);
+    updateTuneLabel('tune-hand-val', base.hand, delta.hand);
+    if (installCostEl) installCostEl.textContent = `$${installQuote().toLocaleString('en-US')}`;
+}
+
 function updateInstallButton() {
-    if (btnSave) btnSave.textContent = `INSTALEAZĂ & FLASH — $${installQuote().toLocaleString('en-US')}`;
+    if (btnSave) btnSave.textContent = `Install Part — $${installQuote().toLocaleString('en-US')}`;
+    if (installCostEl) installCostEl.textContent = `$${installQuote().toLocaleString('en-US')}`;
 }
 
 function updateStatusBanner() {
     if (!ecuStatus) return;
     if (previewDirty) {
-        ecuStatus.textContent = 'PREVIEW — NESALVAT';
+        ecuStatus.textContent = 'PREVIEW — UNSAVED';
         ecuStatus.className = 'ecu-status ecu-status--preview';
     } else if (hasSavedMap) {
-        ecuStatus.textContent = 'MAPA SALVATA';
+        ecuStatus.textContent = 'MAP SAVED';
         ecuStatus.className = 'ecu-status ecu-status--saved';
     } else {
         ecuStatus.textContent = 'FACTORY MAP';
@@ -167,61 +250,16 @@ function updateStatusBanner() {
     }
 }
 
-function labelId(key) {
-    return `lbl-${String(key).replace(/[^a-z0-9_-]/gi, '_')}`;
-}
-
-function exhaustForTab(tab) {
-    if (tab === 'exhaust_flames') return 'flames';
-    if (tab === 'exhaust_diesel') return 'diesel';
-    if (tab === 'exhaust_extra') return 'extra';
-    return 'pop_bang';
-}
-
 function preview() {
     if (!tune) return;
     previewDirty = true;
     updateStatusBanner();
     updateInstallButton();
+    renderStatsPanel();
     window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => {
         post('tuningPreview', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics) });
     }, 70);
-}
-
-function renderRail() {
-    if (!rail) return;
-    rail.innerHTML = '';
-    tabs.forEach((group) => {
-        const wrap = document.createElement('div');
-        wrap.className = 'rail-group';
-        const title = document.createElement('div');
-        title.className = 'rail-group__title';
-        title.textContent = group.group;
-        wrap.appendChild(title);
-        group.items.forEach((item) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'rail-btn' + (activeTab === item.id ? ' is-active' : '');
-            btn.textContent = item.label;
-            btn.addEventListener('click', () => {
-                activeTab = item.id;
-                if (item.id.startsWith('exhaust_')) {
-                    tune.exhaust = exhaustForTab(item.id);
-                    if (item.id === 'exhaust_pop') tune.pop.enabled = true;
-                    if (item.id === 'exhaust_flames' || item.id === 'exhaust_extra') {
-                        tune.flames.enabled = true;
-                        tune.pop.enabled = true;
-                    }
-                    if (item.id === 'exhaust_diesel') tune.pop.enabled = true;
-                    preview();
-                }
-                renderAll();
-            });
-            wrap.appendChild(btn);
-        });
-        rail.appendChild(wrap);
-    });
 }
 
 function getTuneValue(key) {
@@ -238,12 +276,230 @@ function setTuneValue(key, value) {
     ref[parts[parts.length - 1]] = value;
 }
 
+function hwMax(key, configuredMax) {
+    const available = Number(hardwareAvailability[key]);
+    return Number.isFinite(available) ? Math.max(0, Math.min(configuredMax, available)) : configuredMax;
+}
+
+function hwUnitCost(key) {
+    return Number(hardwareSlots[key]?.unitCost || 0);
+}
+
+function formatPartPrice(amount) {
+    if (!amount || amount === 'Installed') return 'Installed';
+    if (typeof amount === 'string') return amount;
+    return `$${Number(amount).toLocaleString('en-US')}`;
+}
+
+function createListItem(part, onSelect) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'list-item' + (activePartId === part.id ? ' active' : '');
+    const name = document.createElement('span');
+    name.textContent = part.label;
+    const price = document.createElement('span');
+    price.className = 'item-price';
+    price.textContent = formatPartPrice(part.price);
+    btn.append(name, price);
+    btn.addEventListener('click', () => {
+        activePartId = part.id;
+        if (onSelect) onSelect(part);
+        renderAll();
+    });
+    btn.addEventListener('mouseenter', () => {
+        if (part.preview) part.preview();
+    });
+    return btn;
+}
+
+function hardwareParts(key, label, configuredMax) {
+    const max = hwMax(key, configuredMax);
+    const parts = [];
+    for (let level = 0; level <= max; level++) {
+        parts.push({
+            id: `${key}_${level}`,
+            label: level === 0 ? `Stock ${label}` : `${label} Level ${level}`,
+            price: level === 0 ? 'Installed' : hwUnitCost(key) * level,
+            preview: () => {},
+            apply: () => { tune.hardware[key] = level; preview(); },
+            isActive: () => Number(tune.hardware[key] || 0) === level,
+        });
+    }
+    return parts;
+}
+
+function toggleParts(id, label, key, cost) {
+    return [
+        {
+            id: `${id}_off`,
+            label: `${label} — Off`,
+            price: 'Installed',
+            apply: () => { setTuneValue(key, false); preview(); },
+            isActive: () => !getTuneValue(key),
+        },
+        {
+            id: `${id}_on`,
+            label: `${label} — On`,
+            price: cost,
+            apply: () => { setTuneValue(key, true); preview(); },
+            isActive: () => !!getTuneValue(key),
+        },
+    ];
+}
+
+function applyPreset(name) {
+    const dyno = { ...(tune.dyno || {}) };
+    const presets = {
+        stock: stockTune(),
+        street: {
+            ...stockTune(), stage: 'sport', power: 105, torque: 106,
+            hardware: { ...stockTune().hardware, engine: 2, brakes: 1, transmission: 1, suspension: 1, turbo: true },
+            handling: { steering: 104, brakePower: 110, suspension: 105, traction: 104 },
+        },
+        track: {
+            ...stockTune(), stage: 'race', power: 112, torque: 110,
+            hardware: { engine: 4, brakes: 3, transmission: 3, suspension: 3, armor: 1, turbo: true, launchControl: true },
+            handling: { steering: 110, brakePower: 130, suspension: 118, traction: 112 },
+            pop: { ...stockTune().pop, enabled: true, rpmMax: 84, secondBurst: true },
+            flames: { ...stockTune().flames, enabled: true },
+        },
+        drift: {
+            ...stockTune(), stage: 'sport', power: 108, torque: 112,
+            hardware: { engine: 3, brakes: 2, transmission: 2, suspension: 2, armor: 0, turbo: true, launchControl: true },
+            handling: { steering: 116, brakePower: 112, suspension: 108, traction: 84 },
+            drift: { enabled: true, grip: 38 },
+            pop: { ...stockTune().pop, enabled: true, rpmMax: 82 },
+        },
+    };
+    tune = ensureTune(presets[name] || presets.stock);
+    tune.dyno = dyno;
+    preview();
+    renderAll();
+}
+
+function buildPartsForCategory() {
+    const parts = [];
+    if (activeTab === 'overview') {
+        [
+            ['stock', 'Factory Setup', 'Stock map'],
+            ['street', 'Street Setup', 'Daily driver'],
+            ['track', 'Track Setup', 'Maximum grip'],
+            ['drift', 'Drift Setup', 'Reduced grip'],
+        ].forEach(([id, label, sub]) => {
+            parts.push({
+                id: `preset_${id}`,
+                label,
+                price: sub,
+                apply: () => applyPreset(id),
+                isActive: () => false,
+            });
+        });
+        return parts;
+    }
+    if (activeTab === 'powertrain') {
+        if (cap('presets')) {
+            ['civil', 'sport', 'race'].forEach((stage) => {
+                const labels = { civil: 'Factory ECU Map', sport: 'Sport ECU Map', race: 'Race ECU Map' };
+                parts.push({
+                    id: `stage_${stage}`,
+                    label: labels[stage],
+                    price: stage === 'civil' ? 'Installed' : (stage === 'race' ? featureCosts.raceMap : featureCosts.sportMap),
+                    apply: () => { tune.stage = stage; preview(); },
+                    isActive: () => tune.stage === stage,
+                });
+            });
+        }
+        if (cap('hardware')) parts.push(...hardwareParts('engine', 'Engine', 4));
+        return parts;
+    }
+    if (activeTab === 'transmission' && cap('hardware')) return hardwareParts('transmission', 'Transmission', 3);
+    if (activeTab === 'brakes' && cap('hardware')) return hardwareParts('brakes', 'Brakes', 3);
+    if (activeTab === 'suspension' && cap('hardware')) {
+        parts.push(...hardwareParts('suspension', 'Suspension', 4));
+        parts.push(...hardwareParts('armor', 'Armor', 5));
+        return parts;
+    }
+    if (activeTab === 'turbo') {
+        if (cap('turboBoost')) parts.push(...toggleParts('turbo', 'Turbo', 'hardware.turbo', featureCosts.turbo));
+        if (cap('launchControl')) parts.push(...toggleParts('lc', 'Launch Control', 'hardware.launchControl', featureCosts.launchControl));
+        if (cap('power')) {
+            const maxP = powerLimit();
+            [0, Math.floor(maxP * 0.33), Math.floor(maxP * 0.66), maxP].forEach((val, idx) => {
+                parts.push({
+                    id: `power_${val}`,
+                    label: val === 0 ? 'Stock Power' : `Power Boost ${idx}`,
+                    price: val === 0 ? 'Installed' : featureCosts.customMapStep * val,
+                    apply: () => { tune.power = val; preview(); },
+                    isActive: () => Number(tune.power) === val,
+                });
+            });
+        }
+        return parts;
+    }
+    if (activeTab === 'exhaust' && cap('exhaustModes')) {
+        [
+            ['pop_bang', 'Pop & Bang'],
+            ['flames', 'Flames'],
+            ['diesel', 'Diesel'],
+            ['extra', 'Extra Loud'],
+        ].forEach(([mode, label]) => {
+            parts.push({
+                id: `exhaust_${mode}`,
+                label,
+                price: 'Installed',
+                apply: () => {
+                    tune.exhaust = mode;
+                    if (mode === 'pop_bang' || mode === 'extra' || mode === 'diesel') tune.pop.enabled = true;
+                    if (mode === 'flames' || mode === 'extra') tune.flames.enabled = true;
+                    preview();
+                },
+                isActive: () => tune.exhaust === mode,
+            });
+        });
+        return parts;
+    }
+    if (activeTab === 'dyno') {
+        parts.push({
+            id: 'dyno_run',
+            label: 'Start Dyno Run',
+            price: costs.dyno,
+            apply: () => post('tuningDyno'),
+            isActive: () => false,
+        });
+        parts.push({
+            id: 'dyno_view',
+            label: 'Last Run Results',
+            price: `${tune?.dyno?.lastHp || 0} HP`,
+            apply: () => {},
+            isActive: () => true,
+        });
+        return parts;
+    }
+    if (activeTab === 'special') {
+        if (cap('antiLag')) parts.push(...toggleParts('antilag', 'Anti-Lag', 'antiLag.enabled', featureCosts.antiLag));
+        if (cap('drift')) parts.push(...toggleParts('drift', 'Drift Mode', 'drift.enabled', featureCosts.drift));
+        if (cap('hud')) parts.push(...toggleParts('hud', 'ECU HUD', 'hud.enabled', featureCosts.hud));
+        return parts;
+    }
+    if (activeTab === 'handling' || activeTab === 'visual') {
+        parts.push({
+            id: `${activeTab}_custom`,
+            label: activeTab === 'handling' ? 'Fine-Tune Handling' : 'Customize Paint',
+            price: 'Adjust below',
+            apply: () => {},
+            isActive: () => true,
+        });
+        return parts;
+    }
+    return parts;
+}
+
 function sliderField(label, key, min, max, suffix) {
     const field = document.createElement('div');
     field.className = 'field';
     const val = getTuneValue(key);
     const safeVal = Number.isFinite(Number(val)) ? Number(val) : min;
-    const id = labelId(key);
+    const id = `lbl-${String(key).replace(/[^a-z0-9_-]/gi, '_')}`;
     const lbl = document.createElement('label');
     lbl.innerHTML = `<span>${label}</span><span id="${id}">${safeVal}${suffix || ''}</span>`;
     const input = document.createElement('input');
@@ -283,178 +539,6 @@ function toggleRow(label, key) {
     row.appendChild(span);
     row.appendChild(sw);
     return row;
-}
-
-function hardwareField(label, key, configuredMax) {
-    const available = Number(hardwareAvailability[key]);
-    const max = Number.isFinite(available) ? Math.max(0, Math.min(configuredMax, available)) : configuredMax;
-    const field = sliderField(label, `hardware.${key}`, 0, max, `/${max}`);
-    if (max === 0) {
-        field.classList.add('is-unavailable');
-        const input = field.querySelector('input');
-        if (input) input.disabled = true;
-    }
-    return field;
-}
-
-function applyPreset(name) {
-    const dyno = { ...(tune.dyno || {}) };
-    const presets = {
-        stock: stockTune(),
-        street: {
-            ...stockTune(), stage: 'sport', power: 105, torque: 106,
-            hardware: { ...stockTune().hardware, engine: 2, brakes: 1, transmission: 1, suspension: 1, turbo: true },
-            handling: { steering: 104, brakePower: 110, suspension: 105, traction: 104 },
-        },
-        track: {
-            ...stockTune(), stage: 'race', power: 112, torque: 110,
-            hardware: { engine: 4, brakes: 3, transmission: 3, suspension: 3, armor: 1, turbo: true, launchControl: true },
-            handling: { steering: 110, brakePower: 130, suspension: 118, traction: 112 },
-            pop: { ...stockTune().pop, enabled: true, rpmMax: 84, secondBurst: true },
-            flames: { ...stockTune().flames, enabled: true },
-        },
-        drift: {
-            ...stockTune(), stage: 'sport', power: 108, torque: 112,
-            hardware: { engine: 3, brakes: 2, transmission: 2, suspension: 2, armor: 0, turbo: true, launchControl: true },
-            handling: { steering: 116, brakePower: 112, suspension: 108, traction: 84 },
-            drift: { enabled: true, grip: 38 },
-            pop: { ...stockTune().pop, enabled: true, rpmMax: 82 },
-        },
-    };
-    tune = ensureTune(presets[name] || presets.stock);
-    tune.dyno = dyno;
-    preview();
-    renderAll();
-}
-
-function panelOverview() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>BUILD SETUP</h2><p class="subtitle">Alege o bază NFS-style, apoi reglează fiecare componentă separat.</p>';
-    const grid = document.createElement('div');
-    grid.className = 'build-grid';
-    [
-        ['stock', 'FACTORY', 'Comportament original, fără efecte'],
-        ['street', 'STREET', 'Daily rapid, controlabil și discret'],
-        ['track', 'TRACK', 'Grip, frânare și răspuns maxim'],
-        ['drift', 'DRIFT', 'Cuplu, steering și aderență redusă'],
-    ].forEach(([id, title, desc]) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'build-card';
-        button.innerHTML = `<strong>${title}</strong><span>${desc}</span><em>APLICĂ SETUP →</em>`;
-        button.addEventListener('click', () => applyPreset(id));
-        grid.appendChild(button);
-    });
-    el.appendChild(grid);
-    return el;
-}
-
-function panelPowertrain() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>MOTOR & TURBO</h2><p class="subtitle">Piese GTA reale plus calibrare ECU fină.</p>';
-    el.appendChild(stageCards('stage', 'MAPĂ ECU'));
-    el.appendChild(hardwareField('UPGRADE MOTOR', 'engine', 4));
-    el.appendChild(hardwareField('TRANSMISIE', 'transmission', 3));
-    el.appendChild(toggleRow('TURBO', 'hardware.turbo'));
-    el.appendChild(toggleRow('LAUNCH CONTROL / 2-STEP', 'hardware.launchControl'));
-    el.appendChild(sliderField('PUTERE ECU', 'power', 85, 120, '%'));
-    el.appendChild(sliderField('CUPLU ECU', 'torque', 85, 120, '%'));
-    return el;
-}
-
-function panelChassis() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>ȘASIU</h2><p class="subtitle">Frâne, suspensie și protecție — nivelurile disponibile depind de mașină.</p>';
-    el.appendChild(hardwareField('FRÂNE', 'brakes', 3));
-    el.appendChild(hardwareField('SUSPENSIE', 'suspension', 4));
-    el.appendChild(hardwareField('ARMURĂ', 'armor', 5));
-    return el;
-}
-
-function panelHandling() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>HANDLING</h2><p class="subtitle">Reglaj fin; 100% reprezintă geometria originală a vehiculului.</p>';
-    el.appendChild(sliderField('UNGHI DIRECȚIE', 'handling.steering', 85, 120, '%'));
-    el.appendChild(sliderField('PUTERE FRÂNARE', 'handling.brakePower', 85, 140, '%'));
-    el.appendChild(sliderField('RIGIDITATE SUSPENSIE', 'handling.suspension', 80, 130, '%'));
-    el.appendChild(sliderField('ADERENȚĂ', 'handling.traction', 75, 120, '%'));
-    return el;
-}
-
-function stageCards(key, title) {
-    const wrap = document.createElement('div');
-    wrap.className = 'field';
-    const h = document.createElement('label');
-    h.innerHTML = `<span>${title}</span>`;
-    wrap.appendChild(h);
-    const grid = document.createElement('div');
-    grid.className = 'stage-grid';
-    const stages = [
-        { id: 'civil', title: 'SILENȚIOS', sub: '(CIVIL)' },
-        { id: 'sport', title: 'NORMAL', sub: '(SPORT)' },
-        { id: 'race', title: 'AGRESIV', sub: '(RACE)' },
-    ];
-    stages.forEach((s) => {
-        const card = document.createElement('div');
-        card.className = 'stage-card' + (getTuneValue(key) === s.id ? ' is-active' : '');
-        card.innerHTML = `<h3>${s.title}</h3><p>${s.sub}</p>`;
-        card.addEventListener('click', () => {
-            setTuneValue(key, s.id);
-            if (key === 'stage') preview();
-            renderPanels();
-        });
-        grid.appendChild(card);
-    });
-    wrap.appendChild(grid);
-    return wrap;
-}
-
-function colorRgbField(label, key) {
-    const field = document.createElement('div');
-    field.className = 'field color-field';
-    const parts = String(key).split('.');
-    const getColor = () => {
-        let ref = tune;
-        for (const p of parts) ref = ref && ref[p];
-        return ref || { r: 255, g: 120, b: 40 };
-    };
-    const setChannel = (ch, val) => {
-        let ref = tune;
-        for (let i = 0; i < parts.length - 1; i++) {
-            if (!ref[parts[i]]) ref[parts[i]] = {};
-            ref = ref[parts[i]];
-        }
-        if (!ref[parts[parts.length - 1]]) ref[parts[parts.length - 1]] = { r: 255, g: 120, b: 40 };
-        ref[parts[parts.length - 1]][ch] = Number(val);
-        preview();
-    };
-    const c = getColor();
-    const lbl = document.createElement('label');
-    lbl.innerHTML = `<span>${label}</span><span class="color-swatch" style="background:rgb(${c.r},${c.g},${c.b})"></span>`;
-    field.appendChild(lbl);
-    ['r', 'g', 'b'].forEach((ch) => {
-        const row = document.createElement('div');
-        row.className = 'color-row';
-        row.innerHTML = `<span>${ch.toUpperCase()}</span>`;
-        const input = document.createElement('input');
-        input.type = 'range';
-        input.min = 0;
-        input.max = 255;
-        input.value = c[ch] || 0;
-        input.addEventListener('input', () => {
-            setChannel(ch, input.value);
-            const col = getColor();
-            const sw = lbl.querySelector('.color-swatch');
-            if (sw) sw.style.background = `rgb(${col.r},${col.g},${col.b})`;
-        });
-        row.appendChild(input);
-        field.appendChild(row);
-    });
-    return field;
 }
 
 function cosmeticsColorField(label, key) {
@@ -502,251 +586,137 @@ function cosmeticsColorField(label, key) {
     return field;
 }
 
-function panelExhaust() {
-    const meta = exhaustMeta[activeTab] || exhaustMeta.exhaust_pop;
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = `<h2>${meta.title}</h2><p class="subtitle">${meta.subtitle}</p>`;
-    el.appendChild(toggleRow('EVACUARE ACTIVĂ', 'pop.enabled'));
-    if (activeTab === 'exhaust_pop' || activeTab === 'exhaust_extra') {
-        el.appendChild(sliderField('RPM MAX', 'pop.rpmMax', 70, 100, '%'));
-        el.appendChild(sliderField('DURATĂ POP', 'pop.durationMs', 40, 250, 'ms'));
-        el.appendChild(toggleRow('AL DOILEA INTERVAL POP & BANG', 'pop.secondBurst'));
-        el.appendChild(stageCards('pop.burstStage', 'STAGE POP'));
+function renderDetailPanel() {
+    if (!tuneDetail) return;
+    tuneDetail.innerHTML = '';
+    if (activeTab === 'handling') {
+        tuneDetail.appendChild(sliderField('Steering Angle', 'handling.steering', 85, 120, '%'));
+        tuneDetail.appendChild(sliderField('Brake Power', 'handling.brakePower', 85, 140, '%'));
+        tuneDetail.appendChild(sliderField('Suspension Stiffness', 'handling.suspension', 80, 130, '%'));
+        tuneDetail.appendChild(sliderField('Traction', 'handling.traction', 75, 120, '%'));
     }
-    if (activeTab === 'exhaust_flames' || activeTab === 'exhaust_extra') {
-        el.appendChild(toggleRow('FLĂCĂRI LA EVACUARE', 'flames.enabled'));
-        el.appendChild(colorRgbField('CULOARE FLĂCĂRI', 'flames.color'));
-        const presets = document.createElement('div');
-        presets.className = 'flame-presets';
-        const presetList = [
-            { name: 'Portocaliu', r: 255, g: 120, b: 40 },
-            { name: 'Albastru', r: 80, g: 160, b: 255 },
-            { name: 'Violet', r: 180, g: 60, b: 255 },
-            { name: 'Verde', r: 80, g: 255, b: 120 },
-            { name: 'Roșu', r: 255, g: 40, b: 40 },
-            { name: 'Alb', r: 255, g: 255, b: 255 },
-        ];
-        presetList.forEach((p) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'preset-btn';
-            btn.style.background = `rgb(${p.r},${p.g},${p.b})`;
-            btn.title = p.name;
-            btn.addEventListener('click', () => {
-                tune.flames.color = { r: p.r, g: p.g, b: p.b };
-                preview();
-                renderPanels();
-            });
-            presets.appendChild(btn);
+    if (activeTab === 'visual') {
+        tuneDetail.appendChild(cosmeticsColorField('Primary Color', 'primary'));
+        tuneDetail.appendChild(cosmeticsColorField('Secondary Color', 'secondary'));
+        const plateField = document.createElement('div');
+        plateField.className = 'field';
+        plateField.innerHTML = '<label><span>License Plate (max 8)</span></label>';
+        const plateInput = document.createElement('input');
+        plateInput.type = 'text';
+        plateInput.maxLength = 8;
+        plateInput.value = (cosmetics && cosmetics.plateText) || '';
+        plateInput.addEventListener('input', () => {
+            cosmetics = ensureCosmetics(cosmetics);
+            cosmetics.plateText = plateInput.value.replace(/\s+/g, '').toUpperCase();
+            preview();
         });
-        el.appendChild(presets);
-        const testBtn = document.createElement('button');
-        testBtn.type = 'button';
-        testBtn.className = 'btn btn-secondary';
-        testBtn.textContent = 'TEST FLĂCĂRI';
-        testBtn.addEventListener('click', () => post('tuningTestFlame'));
-        el.appendChild(testBtn);
+        plateField.appendChild(plateInput);
+        tuneDetail.appendChild(plateField);
     }
-    if (activeTab === 'exhaust_diesel') {
-        el.appendChild(sliderField('INTENSITATE DIESEL', 'pop.rpmMax', 25, 80, '%'));
-    }
-    return el;
-}
-
-function panelVisual() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>CULORI & PLĂCUȚĂ</h2><p class="subtitle">Vopsea custom și număr de înmatriculare</p>';
-    el.appendChild(cosmeticsColorField('CULOARE PRIMARĂ', 'primary'));
-    el.appendChild(cosmeticsColorField('CULOARE SECUNDARĂ', 'secondary'));
-    const plateField = document.createElement('div');
-    plateField.className = 'field';
-    plateField.innerHTML = '<label><span>PLĂCUȚĂ (max 8)</span></label>';
-    const plateInput = document.createElement('input');
-    plateInput.type = 'text';
-    plateInput.maxLength = 8;
-    plateInput.className = 'plate-input';
-    plateInput.value = (cosmetics && cosmetics.plateText) || '';
-    plateInput.addEventListener('input', () => {
-        cosmetics = ensureCosmetics(cosmetics);
-        cosmetics.plateText = plateInput.value.replace(/\s+/g, '').toUpperCase();
-        preview();
-    });
-    plateField.appendChild(plateInput);
-    el.appendChild(plateField);
-    return el;
-}
-
-function panelTuning() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>TUNING</h2><p class="subtitle">Mapă ECU — putere și cuplu</p>';
-    el.appendChild(stageCards('stage', 'STAGE ECU'));
-    el.appendChild(sliderField('PUTERE', 'power', 85, 120, '%'));
-    el.appendChild(sliderField('CUPLU', 'torque', 85, 120, '%'));
-    return el;
-}
-
-function panelDynoPower() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>DYNO — PUTERE</h2><p class="subtitle">Ultima rulare salvată pe vehicul</p>';
-    const dyno = tune.dyno || stockTune().dyno;
-    const stats = document.createElement('div');
-    stats.className = 'dyno-stats';
-    stats.innerHTML = `
-        <div class="stat-box"><div class="val">${dyno.lastHp || 0}</div><div class="lbl">CP</div></div>
-        <div class="stat-box"><div class="val">${dyno.lastTorque || 0}</div><div class="lbl">NM</div></div>
-        <div class="stat-box"><div class="val">$${costs.dyno}</div><div class="lbl">COST RUN</div></div>`;
-    el.appendChild(stats);
-    return el;
-}
-
-function panelDynoRank() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>CLASAMENT DYNO</h2><p class="subtitle">Top 15 vehicule pe server</p>';
-    const table = document.createElement('table');
-    table.className = 'leaderboard';
-    table.innerHTML = '<thead><tr><th>#</th><th>PLATE</th><th>MODEL</th><th>CP</th><th>NM</th></tr></thead><tbody><tr><td colspan="5">Se încarcă...</td></tr></tbody>';
-    el.appendChild(table);
-    post('tuningLeaderboard').then((res) => {
-        const body = table.querySelector('tbody');
-        if (!body) return;
-        const rows = res.rows || [];
-        if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="5">Nicio rulare încă</td></tr>';
-            return;
+    if (activeTab === 'exhaust') {
+        tuneDetail.appendChild(toggleRow('Exhaust Active', 'pop.enabled'));
+        tuneDetail.appendChild(sliderField('Max RPM Pop', 'pop.rpmMax', 70, 100, '%'));
+        if (tune.exhaust === 'flames' || tune.exhaust === 'extra') {
+            tuneDetail.appendChild(toggleRow('Exhaust Flames', 'flames.enabled'));
         }
-        body.innerHTML = rows.map((r, i) => `<tr><td>${i + 1}</td><td>${r.plate || '—'}</td><td>${r.model || '—'}</td><td>${r.hp}</td><td>${r.torque}</td></tr>`).join('');
+    }
+    if (activeTab === 'special' && cap('drift')) {
+        tuneDetail.appendChild(sliderField('Drift Grip', 'drift.grip', 20, 80, '%'));
+    }
+    if (activeTab === 'special' && cap('antiLag')) {
+        tuneDetail.appendChild(sliderField('Anti-Lag Intensity', 'antiLag.intensity', 0, 100, '%'));
+    }
+    if (activeTab === 'dyno') {
+        const dyno = tune.dyno || stockTune().dyno;
+        const stats = document.createElement('div');
+        stats.className = 'dyno-stats';
+        stats.innerHTML = `
+            <div class="stat-box"><div class="val">${dyno.lastHp || 0}</div><div class="lbl">HP</div></div>
+            <div class="stat-box"><div class="val">${dyno.lastTorque || 0}</div><div class="lbl">NM</div></div>
+            <div class="stat-box"><div class="val">$${costs.dyno}</div><div class="lbl">RUN COST</div></div>`;
+        tuneDetail.appendChild(stats);
+    }
+}
+
+function renderCategories() {
+    if (!tuneCategories) return;
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.textContent = 'Components';
+    tuneCategories.innerHTML = '';
+    tuneCategories.appendChild(title);
+    categories.forEach((cat) => {
+        if (!tabAllowed(cat.id)) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cat-item' + (activeTab === cat.id ? ' active' : '');
+        btn.innerHTML = `<i class="${cat.icon}"></i> ${cat.label}`;
+        btn.addEventListener('click', () => {
+            activeTab = cat.id;
+            activePartId = null;
+            renderAll();
+        });
+        tuneCategories.appendChild(btn);
     });
-    return el;
 }
 
-function panelDynoStand() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = `
-        <h2>STAND DYNO</h2>
-        <p class="subtitle">Testul se face pe loc — masina nu se muta.</p>
-        <div class="dyno-steps">
-            <p><strong>1.</strong> Apasă START — mașina se blochează pe loc (în garaj)</p>
-            <p><strong>2.</strong> Meniul se închide temporar (normal)</p>
-            <p><strong>3.</strong> Countdown 3…2…1</p>
-            <p><strong>4.</strong> Ține <strong>W</strong> apăsat 10 secunde</p>
-            <p><strong>5.</strong> Mașina rămâne pe loc — doar dai gaz</p>
-        </div>`;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn btn-secondary';
-    btn.textContent = `START DYNO ($${costs.dyno})`;
-    btn.addEventListener('click', () => post('tuningDyno'));
-    el.appendChild(btn);
-    return el;
-}
-
-function panelDrift() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>DRIFT</h2><p class="subtitle">Reduce aderența pentru slide controlat</p>';
-    el.appendChild(toggleRow('DRIFT MODE', 'drift.enabled'));
-    el.appendChild(sliderField('ADERENȚĂ', 'drift.grip', 20, 80, '%'));
-    return el;
-}
-
-function panelAntilag() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>ANTI-LAG</h2><p class="subtitle">Pop-uri la accelerație în regim mediu</p>';
-    el.appendChild(toggleRow('ANTI-LAG ACTIV', 'antiLag.enabled'));
-    el.appendChild(toggleRow('TURBO', 'hardware.turbo'));
-    el.appendChild(sliderField('INTENSITATE', 'antiLag.intensity', 0, 100, '%'));
-    return el;
-}
-
-function panelHud() {
-    const el = document.createElement('div');
-    el.className = 'panel';
-    el.innerHTML = '<h2>HUD ECU</h2><p class="subtitle">Overlay RPM / boost în stil Sunset</p>';
-    el.appendChild(toggleRow('HUD ECU ACTIV', 'hud.enabled'));
-    return el;
-}
-
-function renderPanels() {
-    if (!panels || !tune) return;
-    panels.innerHTML = '';
-    const map = {
-        overview: panelOverview,
-        powertrain: panelPowertrain,
-        chassis: panelChassis,
-        handling: panelHandling,
-        exhaust_pop: panelExhaust,
-        exhaust_flames: panelExhaust,
-        exhaust_diesel: panelExhaust,
-        exhaust_extra: panelExhaust,
-        tuning: panelTuning,
-        visual: panelVisual,
-        dyno_power: panelDynoPower,
-        dyno_rank: panelDynoRank,
-        dyno_stand: panelDynoStand,
-        drift: panelDrift,
-        antilag: panelAntilag,
-        hud: panelHud,
-    };
-    const builder = map[activeTab] || panelTuning;
-    panels.appendChild(builder());
+function renderPartList() {
+    if (!tunePartsList) return;
+    if (tunePartsTitle) tunePartsTitle.textContent = categoryTitles[activeTab] || 'Upgrades';
+    tunePartsList.innerHTML = '';
+    const parts = buildPartsForCategory();
+    if (!parts.length) {
+        const empty = document.createElement('p');
+        empty.className = 'item-price';
+        empty.textContent = 'No upgrades available for this vehicle.';
+        tunePartsList.appendChild(empty);
+        return;
+    }
+    if (!activePartId) {
+        const active = parts.find((p) => p.isActive && p.isActive());
+        activePartId = active ? active.id : parts[0].id;
+    }
+    parts.forEach((part) => {
+        if (part.isActive && part.isActive()) activePartId = part.id;
+        tunePartsList.appendChild(createListItem(part, () => {
+            if (part.apply) part.apply();
+        }));
+    });
 }
 
 function renderAll() {
     tune = ensureTune(tune);
     updateStatusBanner();
-    renderRail();
-    renderPanels();
+    renderCategories();
+    renderPartList();
+    renderDetailPanel();
+    renderStatsPanel();
+    updateInstallButton();
 }
 
 if (btnCancel) btnCancel.addEventListener('click', () => post('tuningClose'));
 if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: true }));
 
 document.addEventListener('keydown', (e) => {
+    if (!app || app.classList.contains('hidden')) return;
     if (e.key === 'Escape') {
-        if (lscApp && !lscApp.classList.contains('hidden')) post('lscClose');
-        else post('tuningClose');
+        e.preventDefault();
+        post('tuningClose');
+    }
+    if (e.key === 'Enter' && !e.repeat) {
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: true });
     }
 });
-
-const lscApp = document.getElementById('lsc-app');
-const lscTitle = document.getElementById('lscTitle');
-const lscSub = document.getElementById('lscSub');
-const lscRepair = document.getElementById('lscRepair');
-const lscTune = document.getElementById('lscTune');
-const lscCancel = document.getElementById('lscCancel');
-
-if (lscRepair) lscRepair.addEventListener('click', () => post('lscRepair'));
-if (lscTune) lscTune.addEventListener('click', () => post('lscTune'));
-if (lscCancel) lscCancel.addEventListener('click', () => post('lscClose'));
 
 window.addEventListener('message', (event) => {
     const payload = event.data || {};
     const action = payload.action;
     const data = payload.data || payload;
 
-    if (action === 'lscOpen' && lscApp) {
-        if (lscTitle) lscTitle.textContent = data.title || 'LS CUSTOMS';
-        if (lscSub) lscSub.textContent = data.shopLabel || 'Alege serviciul dorit';
-        if (lscRepair) {
-            lscRepair.style.display = data.repairAvailable ? 'block' : 'none';
-            lscRepair.textContent = `Reparație vehicul — $${data.repairPrice || 250}`;
-        }
-        lscApp.classList.remove('hidden');
-        if (app) app.classList.add('hidden');
-    }
-    if (action === 'lscClose' && lscApp) {
-        lscApp.classList.add('hidden');
-    }
-
     if (action === 'open') {
-        if (lscApp) lscApp.classList.add('hidden');
         tune = ensureTune(data.tune);
         cosmetics = ensureCosmetics(data.cosmetics);
         hasSavedMap = data.saved === true;
@@ -759,7 +729,13 @@ window.addEventListener('message', (event) => {
         if (shopLabel) shopLabel.textContent = data.shop || 'ECU Bay';
         if (plateLabel) plateLabel.textContent = data.plate || cosmetics.plateText || '—';
         hardwareAvailability = data.hardwareAvailability || {};
+        vehicleCapabilities = data.capabilities || null;
+        const drivetrainLabel = document.getElementById('drivetrainLabel');
+        if (drivetrainLabel) {
+            drivetrainLabel.textContent = data.drivetrainLabel || (vehicleCapabilities && vehicleCapabilities.propulsion) || 'PETROL';
+        }
         activeTab = 'overview';
+        activePartId = null;
         if (app) app.classList.remove('hidden');
         renderAll();
     }
@@ -789,7 +765,7 @@ window.addEventListener('message', (event) => {
         tune.dyno = { ...tune.dyno, ...data.dyno };
         hasSavedMap = true;
         previewDirty = false;
-        activeTab = 'dyno_power';
+        activeTab = 'dyno';
         if (app) app.classList.remove('hidden');
         renderAll();
     }
@@ -813,7 +789,10 @@ if (new URLSearchParams(window.location.search).get('qa') === 'tuning') {
                 engine: { unitCost: 1800 }, brakes: { unitCost: 1200 }, transmission: { unitCost: 1600 },
                 suspension: { unitCost: 1100 }, armor: { unitCost: 1500 },
             },
-            featureCosts: { turbo: 4500, launchControl: 2200, pop: 950, flames: 800, antiLag: 2400, drift: 1400, hud: 350, sportMap: 2200, raceMap: 5200, customMapStep: 55, cosmetics: 600, vanityPlate: 1800 },
+            featureCosts: {
+                turbo: 4500, launchControl: 2200, pop: 950, flames: 800, antiLag: 2400, drift: 1400,
+                hud: 350, sportMap: 2200, raceMap: 5200, customMapStep: 55, cosmetics: 600, vanityPlate: 1800,
+            },
         },
     }, '*');
 }

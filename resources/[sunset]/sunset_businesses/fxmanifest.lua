@@ -31,4 +31,6 @@ server_exports {
     'GetMaxOwnedPerCharacter',
     'RecordSale',
     'RecordSaleAtCoords',
+    'IsNearTwentyFourSeven',
+    'ExecutePlayerCommand',
 }

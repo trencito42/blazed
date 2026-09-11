@@ -832,10 +832,11 @@ local function spawnOwnedVehicleEntity(vehData, spawnOpts)
 
     local props = decodeVehicleProps(vehData.props)
     resetOdometerTracking(vehData.plate, props and props.odometer or 0, props)
-    if props and props.ecu and GetResourceState('sunset_tuning') == 'started' then
+    if GetResourceState('sunset_tuning') == 'started' then
         pcall(function()
-            if not exports.sunset_tuning:FormatVehicleInfo(props.ecu).stock then
-                exports.sunset_tuning:ApplyTune(vehicle, props.ecu, false)
+            exports.sunset_tuning:CaptureModelBaseline(vehicle)
+            if props and props.ecu and not exports.sunset_tuning:FormatVehicleInfo(props.ecu).stock then
+                exports.sunset_tuning:ApplyTune(vehicle, props.ecu, false, vehData.model)
             end
         end)
     end

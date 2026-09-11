@@ -219,6 +219,12 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(sou
     end
     if total == 0 then return nil, 'Nothing sold.' end
     exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_247')
+    if GetResourceState('sunset_businesses') == 'started' then
+        local ped = GetPlayerPed(source)
+        if ped and ped ~= 0 then
+            exports.sunset_businesses:RecordSaleAtCoords(GetEntityCoords(ped), 'shop', total, 'twentyfour7')
+        end
+    end
     return ('Sold! +$%d (%s)'):format(total, table.concat(sold, ', '))
 end)
 
@@ -249,6 +255,12 @@ exports.sunset_core:RegisterCallback('sunset:fishingshop:sellFish247', function(
     end
 
     exports.sunset_core:AddMoney(source, 'cash', total, 'fish_sell_legacy')
+    if GetResourceState('sunset_businesses') == 'started' then
+        local ped = GetPlayerPed(source)
+        if ped and ped ~= 0 then
+            exports.sunset_businesses:RecordSaleAtCoords(GetEntityCoords(ped), 'shop', total, 'twentyfour7')
+        end
+    end
     return ('Fish sold! +$%d cash (%s)'):format(total, table.concat(sold, ', '))
 end)
 

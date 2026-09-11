@@ -9,17 +9,13 @@ local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
 local BAIT_SHOP_DIST   = 2.5
 local SELL_DIST        = 2.5
 
--- Toate magazinele 24/7 unde se poate vinde pestele
-local SELL_ZONES = {
-    vector3(25.74,    -1347.32,  29.50),   -- Legion Square
-    vector3(-46.06,   -1757.88,  29.42),   -- Strawberry
-    vector3(-707.12,   -913.43,  19.22),   -- Little Seoul
-    vector3(1164.44,   -322.49,  69.21),   -- Mirror Park
-    vector3(548.46,   2671.72,   42.16),   -- Vinewood Hills
-    vector3(-3038.24,   584.19,   7.91),   -- Rockford Hills
-    vector3(2678.55,  3279.25,   55.24),   -- Sandy Shores
-    vector3(-54.37,   6244.70,   31.09),   -- Paleto Bay (langa Billy Ray)
-}
+local function getSellZones()
+    local zones = {}
+    for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+        if store.coords then zones[#zones + 1] = store.coords end
+    end
+    return zones
+end
 
 local hillbillyPed   = nil
 local nearNpc        = false
@@ -410,7 +406,7 @@ end)
 
 -- ── Proximitate checker ───────────────────────────────────────
 local function nearAnyStoreZone(pos)
-    for _, coords in ipairs(SELL_ZONES) do
+    for _, coords in ipairs(getSellZones()) do
         if #(pos - coords) < SELL_DIST then return true end
     end
     return false

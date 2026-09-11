@@ -35,27 +35,14 @@ local function getGameTime()
     return serverTimeLabel
 end
 
-local VOICE_RANGE_LABELS = {
-    [1] = 'Whisper',
-    [2] = 'Normal',
-    [3] = 'Shout',
-}
-
 local function getVoiceRangeLabel()
-    local prox = LocalPlayer.state.proximity
-    if type(prox) == 'table' then
-        local idx = tonumber(prox.index) or tonumber(prox.mode)
-        if idx and VOICE_RANGE_LABELS[idx] then
-            return VOICE_RANGE_LABELS[idx]
-        end
-        if type(prox.mode) == 'string' and prox.mode ~= '' then
-            return prox.mode:sub(1, 1):upper() .. prox.mode:sub(2):lower()
-        end
-    elseif type(prox) == 'number' then
-        if prox <= 1.5 then return 'Whisper' end
-        if prox >= 3.0 then return 'Shout' end
+    local ok, data = pcall(function()
+        return exports.sunset_hud:GetVoiceHudData()
+    end)
+    if ok and type(data) == 'table' and data.voiceRangeDisplay then
+        return data.voiceRangeDisplay
     end
-    return 'Normal'
+    return 'Normal · 3.0m'
 end
 
 local function formatPayday()

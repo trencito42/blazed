@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forza Style Damage Informer</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --text-main: #ffffff;
+            --accent: #00ffcc; 
+            
+            /* Damage Colors */
+            --dmg-health: #ff3366; /* Rosu Sângeriu Neon */
+            --dmg-armor: #3b82f6;  /* Albastru Kevlar */
+            --dmg-crit: #f59e0b;   /* Auriu Headshot */
+            
+            --shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            overflow: hidden; user-select: none;
+        }
+
+        /* Fundal pt test */
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.5) 100%); z-index: 0; }
+
+        /* ==========================================================
+           0. PANOU DE TEST (Doar pentru browser)
+           ========================================================== */
+        .dev-tools {
+            position: absolute; top: 30px; left: 30px; z-index: 100;
+            display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.5);
+            padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .dev-title { font-size: 11px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .dev-row { display: flex; gap: 10px; }
+        .dev-btn {
+            background: rgba(0,0,0,0.6); color: var(--text-main); border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 12px; border-radius: 4px; font-family: inherit; font-weight: 700;
+            cursor: pointer; transition: 0.2s; font-size: 11px; text-transform: uppercase;
+        }
+        .dev-btn:hover { background: var(--text-main); color: #000; }
+        .btn-red:hover { background: var(--dmg-health); border-color: var(--dmg-health); }
+        .btn-blue:hover { background: var(--dmg-armor); border-color: var(--dmg-armor); }
+        .btn-gold:hover { background: var(--dmg-crit); border-color: var(--dmg-crit); }
+
+        /* ==========================================================
+           1. SCREEN FLASH (Vignette)
+           ========================================================== */
+        .screen-flash {
+            position: absolute; inset: 0; z-index: 1; pointer-events: none;
+            /* Incepe invizibil */
+            box-shadow: inset 0 0 0px rgba(255, 51, 102, 0);
+            transition: box-shadow 0.1s ease-out;
+        }
+        
+        .screen-flash.health { box-shadow: inset 0 0 150px rgba(255, 51, 102, 0.6); }
+        .screen-flash.armor { box-shadow: inset 0 0 150px rgba(59, 130, 246, 0.5); }
+        .screen-flash.crit { box-shadow: inset 0 0 200px rgba(245, 158, 11, 0.6); }
+
+        /* ==========================================================
+           2. HIT MARKERS (Directionale pe centru)
+           ========================================================== */
+        .center-crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 4px; height: 4px; background: rgba(255,255,255,0.5); border-radius: 50%; z-index: 5;
+        }
+
+        .hit-marker-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100px; height: 100px; pointer-events: none; z-index: 5;
+        }
+
+        .hit-arc {
+            position: absolute; inset: 0;
+            fill: none; stroke-width: 4; stroke-linecap: round;
+            opacity: 0; transform-origin: center;
+            transition: opacity 0.1s ease-out;
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        /* Pozitiile arcelor */
+        .arc-top { transform: rotate(0deg); }
+        .arc-right { transform: rotate(90deg); }
+        .arc-bottom { transform: rotate(180deg); }
+        .arc-left { transform: rotate(270deg); }
+
+        /* Animatia de aprindere a directionalului */
+        @keyframes flashMarker {
+            0% { opacity: 1; transform: scale(0.8); }
+            100% { opacity: 0; transform: scale(1.2); }
+        }
+
+        .hit-arc.active { animation: flashMarker 0.4s ease-out forwards; }
+
+
+        /* ==========================================================
+           3. FLOATING DAMAGE NUMBERS
+           ========================================================== */
+        .dmg-container {
+            position: absolute; top: 50%; left: 50%; pointer-events: none; z-index: 10;
+        }
+
+        .dmg-number {
+            position: absolute;
+            font-size: 32px; font-style: italic; font-weight: 900;
+            text-transform: uppercase; letter-spacing: -1px;
+            text-shadow: var(--shadow-text);
+            /* Animatia principala definita aici, setata din JS */
+            animation: floatDamage 0.8s var(--transition-snappy) forwards;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        .dmg-number i { font-size: 20px; }
+
+        /* Culori in functie de tipul de damage */
+        .type-health { color: var(--dmg-health); text-shadow: 0 0 10px rgba(255, 51, 102, 0.4), var(--shadow-text); }
+        .type-armor { color: var(--dmg-armor); text-shadow: 0 0 10px rgba(59, 130, 246, 0.4), var(--shadow-text); }
+        .type-crit { 
+            color: var(--dmg-crit); font-size: 42px; 
+            text-shadow: 0 0 15px rgba(245, 158, 11, 0.5), var(--shadow-text); 
+        }
+
+        /* Forza Style Skew + Animatie plutire si scale */
+        @keyframes floatDamage {
+            0% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) skewX(-5deg) scale(0.5); 
+            }
+            20% { 
+                opacity: 1; 
+                transform: translate(-50%, calc(-50% - 30px)) skewX(-5deg) scale(1.1); 
+            }
+            100% { 
+                opacity: 0; 
+                transform: translate(-50%, calc(-50% - 100px)) skewX(-5deg) scale(0.9); 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay"></div>
+    <div class="screen-flash" id="screen-flash"></div>
+    
+    <!-- Crosshair pt test -->
+    <div class="center-crosshair"></div>
+
+    <!-- Directional Hit Markers -->
+    <div class="hit-marker-container">
+        <!-- Generam 4 arce (Sus, Dreapta, Jos, Stanga) -->
+        <svg class="hit-arc arc-top" id="marker-top" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+        <svg class="hit-arc arc-right" id="marker-right" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+        <svg class="hit-arc arc-bottom" id="marker-bottom" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+        <svg class="hit-arc arc-left" id="marker-left" viewBox="0 0 100 100"><path d="M 30 20 Q 50 10 70 20"></path></svg>
+    </div>
+
+    <!-- Containerul unde generam numerele -->
+    <div class="dmg-container" id="dmg-container"></div>
+
+    <!-- PANOU DEV -->
+    <div class="dev-tools">
+        <div class="dev-title">Simulare Damage Primit</div>
+        <div class="dev-row">
+            <button class="dev-btn btn-red" onclick="takeDamage(15, 'health', 'left')">Glonț (Viață)</button>
+            <button class="dev-btn btn-blue" onclick="takeDamage(22, 'armor', 'right')">Glonț (Armură)</button>
+        </div>
+        <div class="dev-row">
+            <button class="dev-btn btn-gold" onclick="takeDamage(85, 'crit', 'top')">Headshot!</button>
+            <button class="dev-btn btn-red" onclick="takeDamage(5, 'health', 'bottom')">Foc / Căzătură</button>
+        </div>
+    </div>
+
+    <script>
+        const dmgContainer = document.getElementById('dmg-container');
+        const screenFlash = document.getElementById('screen-flash');
+        
+        let flashTimeout;
+
+        /**
+         * Functia principala de luat damage
+         * @param {number} amount - Cantitatea de damage (ex: 15)
+         * @param {string} type - 'health', 'armor', 'crit'
+         * @param {string} direction - 'top', 'right', 'bottom', 'left' (optional)
+         */
+        function takeDamage(amount, type = 'health', direction = null) {
+            
+            // 1. GENERAM NUMARUL PLUTITOR
+            const dmgEl = document.createElement('div');
+            
+            // Adaugam clasele necesare
+            dmgEl.className = `dmg-number type-${type}`;
+            
+            // Iconita in functie de tip
+            let iconHtml = '';
+            if (type === 'armor') iconHtml = '<i class="ph-fill ph-shield"></i>';
+            else if (type === 'crit') iconHtml = '<i class="ph-fill ph-crosshair"></i>';
+            else iconHtml = '<i class="ph-fill ph-drop"></i>'; // health
+
+            dmgEl.innerHTML = `-${amount} ${iconHtml}`;
+
+            // Adaugam un mic "jitter" (random offset) ca sa nu apara numerele unul perfect peste altul
+            const randomX = (Math.random() - 0.5) * 60; // intre -30px si +30px
+            const randomY = (Math.random() - 0.5) * 40; // intre -20px si +20px
+            
+            // Aplicam pozitia fixa in containerul central
+            dmgEl.style.left = `${randomX}px`;
+            dmgEl.style.top = `${randomY}px`;
+
+            // Adaugam in DOM
+            dmgContainer.appendChild(dmgEl);
+
+            // Stergem elementul dupa terminarea animatiei (0.8s) pentru a pastra DOM-ul curat
+            setTimeout(() => {
+                dmgEl.remove();
+            }, 800);
+
+
+            // 2. SCREEN VIGNETTE FLASH
+            // Resetam flash-ul anterior daca exista
+            clearTimeout(flashTimeout);
+            screenFlash.className = `screen-flash ${type}`;
+            
+            // Revenim la starea invizibila dupa 150ms
+            flashTimeout = setTimeout(() => {
+                screenFlash.className = 'screen-flash';
+            }, 150);
+
+
+            // 3. HIT MARKER DIRECTIONAL
+            if (direction) {
+                const markerId = `marker-${direction}`;
+                const marker = document.getElementById(markerId);
+                
+                if (marker) {
+                    // Culoarea markerului se adapteaza la tipul de damage
+                    if (type === 'armor') marker.style.stroke = 'var(--dmg-armor)';
+                    else if (type === 'crit') marker.style.stroke = 'var(--dmg-crit)';
+                    else marker.style.stroke = 'var(--dmg-health)';
+
+                    // Resetam animatia prin clona rapida
+                    marker.classList.remove('active');
+                    void marker.offsetWidth; // trigger reflow
+                    marker.classList.add('active');
+                }
+            }
+        }
+
+        // ==========================================================
+        // CUM INTEGREZI ASTA IN FIVEM (LUA)
+        // ==========================================================
+        /*
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            if (data.action === "takeDamage") {
+                // data.amount = 25
+                // data.type = "armor"
+                // data.direction = "left"
+                
+                takeDamage(data.amount, data.type, data.direction);
+            }
+        });
+        */
+    </script>
+</body>
+</html>

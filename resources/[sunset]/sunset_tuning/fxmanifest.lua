@@ -11,10 +11,15 @@ ui_page 'web/index.html'
 shared_scripts {
     '@sunset_core/shared/config.lua',
     'shared/config.lua',
+    'shared/vehicle_profiles.lua',
+    'shared/profile_resolver.lua',
+    'shared/tune_calculator.lua',
+    'shared/tune_validator.lua',
 }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
+    'client/baseline.lua',
     'client/apply.lua',
     'client/exhaust_ptfx.lua',
     'client/cosmetics.lua',
@@ -23,6 +28,7 @@ client_scripts {
     'client/bootstrap.lua',
     'client/lsc_menu.lua',
     'client/main.lua',
+    'client/diagnostics.lua',
 }
 
 server_scripts {
@@ -41,14 +47,17 @@ dependencies {
     'sunset_ui',
     'sunset_vehicles',
     'sunset_factions',
+    'sunset_admin',
 }
 
 exports {
     'ApplyTune',
+    'CaptureModelBaseline',
     'GetTuneForPlate',
     'ExportTuneForStore',
     'OpenTuningPanel',
     'OpenLsCustomsMenu',
     'FormatVehicleInfo',
     'GetVehicleTuningInfo',
+    'GetVehicleCapabilities',
 }

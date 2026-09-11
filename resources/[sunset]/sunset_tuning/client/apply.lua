@@ -1,9 +1,12 @@
 SunsetTuningClient = SunsetTuningClient or {}
 local STC = SunsetTuningClient
+local TC = SunsetTuning.TuneCalculator
+local PR = SunsetTuning.ProfileResolver
 
-STC.appliedVehicles = {}
-STC.plateTunes = {}
-STC.persistedPlates = {}
+STC.appliedVehicles = STC.appliedVehicles or {}
+STC.plateTunes = STC.plateTunes or {}
+STC.persistedPlates = STC.persistedPlates or {}
+STC.plateModels = STC.plateModels or {}
 
 function STC.normalizePlate(plate)
     return (plate or ''):gsub('%s+', ''):upper()
@@ -16,8 +19,8 @@ end
 
 function STC.getStageMultipliers(tune)
     local stage = SunsetTuning.Stages[tune.stage] or SunsetTuning.Stages.civil
-    local powerPct = (tonumber(tune.power) or 100) / 100.0
-    local torquePct = (tonumber(tune.torque) or 100) / 100.0
+    local powerPct = 1.0 + ((tonumber(tune.power) or 0) / 100.0) * 0.14
+    local torquePct = 1.0 + ((tonumber(tune.torque) or 0) / 100.0) * 0.12
     return {
         power = stage.power * powerPct,
         torque = stage.torque * torquePct,
@@ -26,134 +29,78 @@ function STC.getStageMultipliers(tune)
     }
 end
 
-local function cacheOriginalHandling(veh)
-    local state = STC.appliedVehicles[veh]
-    if state and state.base then return state.base end
-    local base = {
-        driveForce = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fInitialDriveForce'),
-        driveInertia = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fDriveInertia'),
-        maxVel = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fInitialDriveMaxFlatVel'),
-        tractionMax = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fTractionCurveMax'),
-        tractionMin = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fTractionCurveMin'),
-        tractionLat = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fTractionCurveLateral'),
-        brakeForce = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fBrakeForce'),
-        steeringLock = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fSteeringLock'),
-        suspensionForce = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fSuspensionForce'),
-        suspensionRebound = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fSuspensionReboundDamp'),
-        lowSpeedTractionLoss = GetVehicleHandlingFloat(veh, 'CHandlingData', 'fLowSpeedTractionLossMult'),
-        mods = {},
-        turbo = IsToggleModOn(veh, 18),
-    }
-    SetVehicleModKit(veh, 0)
-    for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
-        base.mods[key] = GetVehicleMod(veh, slot.modType)
-    end
-    STC.appliedVehicles[veh] = STC.appliedVehicles[veh] or {}
-    STC.appliedVehicles[veh].base = base
-    return base
-end
-
-local function setHandlingFloat(veh, field, value)
-    if value and value > 0 then
-        SetVehicleHandlingFloat(veh, 'CHandlingData', field, value)
-    end
-end
-
-local function restoreBaseHandling(veh)
-    local state = STC.appliedVehicles[veh]
-    local base = state and state.base
-    if not base then return end
-    setHandlingFloat(veh, 'fInitialDriveForce', base.driveForce)
-    setHandlingFloat(veh, 'fDriveInertia', base.driveInertia)
-    setHandlingFloat(veh, 'fInitialDriveMaxFlatVel', base.maxVel)
-    setHandlingFloat(veh, 'fTractionCurveMax', base.tractionMax)
-    setHandlingFloat(veh, 'fTractionCurveMin', base.tractionMin)
-    setHandlingFloat(veh, 'fTractionCurveLateral', base.tractionLat)
-    setHandlingFloat(veh, 'fBrakeForce', base.brakeForce)
-    setHandlingFloat(veh, 'fSteeringLock', base.steeringLock)
-    setHandlingFloat(veh, 'fSuspensionForce', base.suspensionForce)
-    setHandlingFloat(veh, 'fSuspensionReboundDamp', base.suspensionRebound)
-    setHandlingFloat(veh, 'fLowSpeedTractionLossMult', base.lowSpeedTractionLoss)
-    SetVehicleModKit(veh, 0)
-    for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
-        SetVehicleMod(veh, slot.modType, base.mods[key] or -1, false)
-    end
-    ToggleVehicleMod(veh, 18, base.turbo == true)
-    SetVehicleEnginePowerMultiplier(veh, 0.0)
-    SetVehicleEngineTorqueMultiplier(veh, 1.0)
-    ModifyVehicleTopSpeed(veh, 0.0)
-    SetVehicleTurboPressure(veh, 0.0)
-    pcall(function() EnableVehicleExhaustPops(veh, false) end)
-end
-
-local function applyHardware(veh, tune)
+local function applyHardware(veh, tune, baseline, caps)
+    if not caps or not caps.hardware then return end
     SetVehicleModKit(veh, 0)
     for key, slot in pairs(SunsetTuning.HardwareSlots or {}) do
         local count = math.max(0, GetNumVehicleMods(veh, slot.modType))
         local level = math.max(0, math.min(tonumber(tune.hardware[key]) or 0, count))
         SetVehicleMod(veh, slot.modType, level > 0 and (level - 1) or -1, false)
     end
-    ToggleVehicleMod(veh, 18, tune.hardware.turbo == true)
+    if caps.turboBoost or caps.factoryTurbo then
+        ToggleVehicleMod(veh, 18, tune.hardware.turbo == true)
+    else
+        ToggleVehicleMod(veh, 18, baseline.turbo == true)
+    end
 end
 
-function ApplyTune(veh, tune, persist)
+local function applyCalculated(veh, calculated)
+    local handling = calculated.handling or {}
+    for field, value in pairs(handling) do
+        if type(value) == 'number' and value > 0 then
+            SetVehicleHandlingFloat(veh, 'CHandlingData', field, value)
+        end
+    end
+    SetVehicleEnginePowerMultiplier(veh, calculated.enginePowerMult or 0.0)
+    SetVehicleEngineTorqueMultiplier(veh, calculated.engineTorqueMult or 1.0)
+    ModifyVehicleTopSpeed(veh, calculated.topSpeedMod or 0.0)
+    SetVehicleTurboPressure(veh, calculated.turboPressure or 0.0)
+    pcall(function() EnableVehicleExhaustPops(veh, calculated.exhaustPops == true) end)
+end
+
+function ApplyTune(veh, tune, persist, modelName)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return false end
-    tune = SunsetTuning.SanitizeTune(tune)
-    local mult = STC.getStageMultipliers(tune)
-    local base = cacheOriginalHandling(veh)
-    local isStock = not SunsetTuning.HasPerformanceChanges(tune)
 
-    if isStock then
-        restoreBaseHandling(veh)
-    else
-        applyHardware(veh, tune)
-        setHandlingFloat(veh, 'fInitialDriveForce', base.driveForce * mult.power)
-        setHandlingFloat(veh, 'fDriveInertia', base.driveInertia * (0.92 + (mult.torque * 0.08)))
-        setHandlingFloat(veh, 'fInitialDriveMaxFlatVel', base.maxVel * (0.98 + (mult.power * 0.04)))
-
-        local gripMult = mult.grip
-        if tune.drift.enabled then
-            local driftGrip = (tonumber(tune.drift.grip) or 45) / 100.0
-            gripMult = gripMult * (0.55 + driftGrip * 0.45)
-        end
-
-        setHandlingFloat(veh, 'fTractionCurveMax', base.tractionMax * gripMult)
-        setHandlingFloat(veh, 'fTractionCurveMin', base.tractionMin * gripMult)
-        setHandlingFloat(veh, 'fTractionCurveLateral', base.tractionLat * (gripMult * 0.96))
-
-        local handling = tune.handling or {}
-        setHandlingFloat(veh, 'fBrakeForce', base.brakeForce * ((handling.brakePower or 100) / 100.0))
-        setHandlingFloat(veh, 'fSteeringLock', base.steeringLock * ((handling.steering or 100) / 100.0))
-        setHandlingFloat(veh, 'fSuspensionForce', base.suspensionForce * ((handling.suspension or 100) / 100.0))
-        setHandlingFloat(veh, 'fSuspensionReboundDamp', base.suspensionRebound * (0.9 + ((handling.suspension or 100) / 1000.0)))
-        setHandlingFloat(veh, 'fLowSpeedTractionLossMult', base.lowSpeedTractionLoss * math.max(0.55, 2.0 - ((handling.traction or 100) / 100.0)))
-
-        -- This native expects percentage added above stock (0.0 = factory), not a 1.x factor.
-        SetVehicleEnginePowerMultiplier(veh, (mult.power - 1.0) * 100.0)
-        SetVehicleEngineTorqueMultiplier(veh, mult.torque)
-        ModifyVehicleTopSpeed(veh, math.floor((mult.power - 1.0) * 22.0))
-
-        if tune.antiLag.enabled then
-            SetVehicleTurboPressure(veh, 0.65 + ((tonumber(tune.antiLag.intensity) or 55) / 180.0))
-        else
-            SetVehicleTurboPressure(veh, 0.0)
-        end
-
-        local popsOn = (tune.pop and tune.pop.enabled) or (tune.stage and tune.stage ~= 'stock' and tune.stage ~= 'civil')
-        pcall(function() EnableVehicleExhaustPops(veh, popsOn == true) end)
+    local classId = GetVehicleClass(veh)
+    if not modelName or modelName == '' then
+        modelName = GetDisplayNameFromVehicleModel(GetEntityModel(veh))
+        if modelName then modelName = modelName:lower() end
     end
 
+    local caps = SunsetTuning.ProfileResolver.Resolve(modelName, classId)
+    if not caps.supported then return false end
+
+    tune = SunsetTuning.SanitizeTune(tune, caps)
+    local baseline = STC.captureModelBaseline(veh)
+    if not baseline then return false end
+
+    -- Idempotent: always restore stock baseline before applying tune
+    STC.restoreBaselineHandling(veh, baseline)
+
+    local calculated = TC.Compute(baseline, tune, caps)
+    if not calculated.isStock then
+        applyHardware(veh, tune, baseline, caps)
+        applyCalculated(veh, calculated)
+    end
+
+    local mult = STC.getStageMultipliers(tune)
     local plate = STC.plateOf(veh)
-    STC.appliedVehicles[veh] = STC.appliedVehicles[veh] or {}
-    STC.appliedVehicles[veh].tune = tune
-    STC.appliedVehicles[veh].mult = mult
+    STC.appliedVehicles[veh] = {
+        tune = tune,
+        mult = mult,
+        caps = caps,
+        baseline = baseline,
+        calculated = calculated,
+        model = modelName,
+    }
 
     if plate ~= '' then
         STC.plateTunes[plate] = tune
+        STC.plateModels[plate] = modelName
         if persist then
             STC.persistedPlates[plate] = true
             if GetResourceState('sunset_vehicles') == 'started' then
-                if isStock then
+                if calculated.isStock then
                     pcall(function() exports.sunset_vehicles:SetVehicleProp('ecu', nil) end)
                 else
                     pcall(function() exports.sunset_vehicles:SetVehicleProp('ecu', tune) end)
@@ -187,31 +134,38 @@ exports('ExportTuneForStore', ExportTuneForStore)
 exports('FormatVehicleInfo', function(ecu)
     return SunsetTuning.BuildVehicleInfo(ecu)
 end)
+exports('GetVehicleCapabilities', function(veh)
+    if not veh or veh == 0 then return nil end
+    return STC.getVehicleCapabilities(veh)
+end)
 
-RegisterNetEvent('sunset:tuning:client:applyByPlate', function(plate, tune)
+RegisterNetEvent('sunset:tuning:client:applyByPlate', function(plate, tune, modelName)
     plate = STC.normalizePlate(plate)
     if type(tune) == 'table' then
         tune = SunsetTuning.SanitizeTune(tune)
         STC.plateTunes[plate] = tune
         STC.persistedPlates[plate] = true
+        if modelName then STC.plateModels[plate] = modelName end
     end
     local activeTune = STC.plateTunes[plate]
     if not activeTune then return end
     for _, veh in ipairs(GetGamePool('CVehicle')) do
         if STC.plateOf(veh) == plate then
-            ApplyTune(veh, activeTune, STC.persistedPlates[plate] == true)
+            ApplyTune(veh, activeTune, false, STC.plateModels[plate])
         end
     end
 end)
 
-RegisterNetEvent('sunset:tuning:client:loadPlateTune', function(plate, tune, persisted)
+RegisterNetEvent('sunset:tuning:client:loadPlateTune', function(plate, tune, persisted, modelName)
     plate = STC.normalizePlate(plate)
     if persisted and tune then
         STC.plateTunes[plate] = SunsetTuning.SanitizeTune(tune)
         STC.persistedPlates[plate] = true
+        if modelName then STC.plateModels[plate] = modelName end
     else
         STC.plateTunes[plate] = nil
         STC.persistedPlates[plate] = nil
+        STC.plateModels[plate] = nil
     end
 end)
 
@@ -228,7 +182,7 @@ CreateThread(function()
         if veh == 0 or STC.appliedVehicles[veh] then goto continue end
         local plate = STC.plateOf(veh)
         if plate ~= '' and STC.persistedPlates[plate] and STC.plateTunes[plate] then
-            ApplyTune(veh, STC.plateTunes[plate], false)
+            ApplyTune(veh, STC.plateTunes[plate], false, STC.plateModels[plate])
         end
         ::continue::
     end

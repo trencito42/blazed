@@ -1,9 +1,10 @@
 -- Proximity voice HUD bridge for pma-voice.
--- Do not call Mumble natives here — pma-voice owns voice targets and range.
+-- Z is bound only in pma-voice (voice_defaultCycle). Do not duplicate the keybind here.
 
 local currentModeIndex = 2
 local voiceModeCount = 3
 local lastTalking = false
+local voiceModeTable = {}
 
 local function isPmaVoiceStarted()
     return GetResourceState('pma-voice') == 'started'
@@ -17,31 +18,65 @@ local function isPlayerTalkingNow()
     return NetworkIsPlayerTalking(myId) == 1 or NetworkIsPlayerTalking(myId) == true
 end
 
-local function getProximityLabel()
+local function normalizeLabel(text)
+    text = tostring(text or '')
+    if text == '' then return 'Normal' end
+    return text:sub(1, 1):upper() .. text:sub(2):lower()
+end
+
+local function getProximityState()
     local prox = LocalPlayer.state.proximity
-    if type(prox) == 'table' then
-        if type(prox.mode) == 'string' and prox.mode ~= '' then
-            return prox.mode
-        end
-        local idx = tonumber(prox.index)
-        if idx == 1 then return 'Whisper' end
-        if idx == 3 then return 'Shout' end
+    if type(prox) ~= 'table' then return nil end
+    return prox
+end
+
+local function getProximityLabel()
+    local prox = getProximityState()
+    if not prox then return 'Normal' end
+    if type(prox.mode) == 'string' and prox.mode ~= '' then
+        return normalizeLabel(prox.mode)
     end
+    local idx = tonumber(prox.index)
+    if idx and voiceModeTable[idx] and voiceModeTable[idx].label then
+        return voiceModeTable[idx].label
+    end
+    if idx == 1 then return 'Whisper' end
+    if idx == 3 then return 'Shout' end
     return 'Normal'
 end
 
-local function pushVoiceHud()
+local function getProximityDistance()
+    local prox = getProximityState()
+    local dist = prox and tonumber(prox.distance)
+    if dist and dist > 0 then return dist end
+    local idx = tonumber(prox and prox.index) or currentModeIndex
+    if voiceModeTable[idx] and voiceModeTable[idx].distance then
+        return voiceModeTable[idx].distance
+    end
+    if idx == 1 then return 1.5 end
+    if idx == 3 then return 6.0 end
+    return 3.0
+end
+
+local function getProximityHudText()
+    return ('%s · %.1fm'):format(getProximityLabel(), getProximityDistance())
+end
+
+local function pushVoiceHud(highlight)
     pcall(function()
         exports.sunset_ui:Send('updateVoice', {
             voiceRange = getProximityLabel(),
+            voiceRangeMeters = getProximityDistance(),
+            voiceRangeDisplay = getProximityHudText(),
             voiceTalking = isPlayerTalkingNow(),
+            voiceChanged = highlight == true,
         })
     end)
 end
 
 local function syncModeFromState()
-    local prox = LocalPlayer.state.proximity
-    if type(prox) == 'table' and prox.index then
+    local prox = getProximityState()
+    if prox and prox.index then
         currentModeIndex = tonumber(prox.index) or currentModeIndex
     end
 end
@@ -49,56 +84,43 @@ end
 local function loadPmaVoiceSettings()
     if not isPmaVoiceStarted() then return end
     TriggerEvent('pma-voice:settingsCallback', function(settings)
+        voiceModeTable = {}
         if type(settings) == 'table' and type(settings.voiceModes) == 'table' then
             voiceModeCount = math.max(1, #settings.voiceModes)
+            for i, mode in ipairs(settings.voiceModes) do
+                voiceModeTable[i] = {
+                    distance = tonumber(mode[1]) or 3.0,
+                    label = normalizeLabel(mode[2]),
+                }
+            end
         end
         syncModeFromState()
-        pushVoiceHud()
+        pushVoiceHud(false)
     end)
 end
 
-local function notifyCurrentRange()
-    local prox = LocalPlayer.state.proximity
-    if type(prox) == 'table' and prox.mode and prox.distance then
-        exports.sunset_ui:Notify(('Voice range: %s (%.1fm)'):format(prox.mode, prox.distance), 'info')
-        return
-    end
-    exports.sunset_ui:Notify(('Voice range: %s'):format(getProximityLabel()), 'info')
-end
-
-local function cycleVoiceProximity(notify)
+local function cycleVoiceProximity()
     if not isPmaVoiceStarted() then
-        if notify then
-            pcall(function()
-                exports.sunset_ui:Notify('Voice chat is unavailable.', 'error')
-            end)
-        end
+        pcall(function()
+            exports.sunset_ui:Notify('Voice chat is unavailable.', 'error')
+        end)
         return
     end
-
     ExecuteCommand('cycleproximity')
-    SetTimeout(60, function()
-        syncModeFromState()
-        pushVoiceHud()
-        if notify then notifyCurrentRange() end
-    end)
 end
 
-local function setVoiceModeIndex(targetIndex, notify)
+local function setVoiceModeIndex(targetIndex)
     if not isPmaVoiceStarted() then
-        if notify then
-            pcall(function()
-                exports.sunset_ui:Notify('Voice chat is unavailable.', 'error')
-            end)
-        end
+        pcall(function()
+            exports.sunset_ui:Notify('Voice chat is unavailable.', 'error')
+        end)
         return
     end
 
     syncModeFromState()
     targetIndex = math.max(1, math.min(voiceModeCount, tonumber(targetIndex) or currentModeIndex))
     if targetIndex == currentModeIndex then
-        pushVoiceHud()
-        if notify then notifyCurrentRange() end
+        pushVoiceHud(true)
         return
     end
 
@@ -110,37 +132,25 @@ local function setVoiceModeIndex(targetIndex, notify)
             ExecuteCommand('cycleproximity')
             Wait(80)
         end
-        syncModeFromState()
-        pushVoiceHud()
-        if notify then notifyCurrentRange() end
     end)
 end
-
-RegisterCommand('+sunset_cycleproximity', function()
-    cycleVoiceProximity(true)
-end, false)
-
-RegisterCommand('-sunset_cycleproximity', function()
-end, false)
-
-RegisterKeyMapping('+sunset_cycleproximity', 'Cycle Voice Range (Whisper/Normal/Shout)', 'keyboard', 'Z')
 
 RegisterCommand('proximity', function(_, args)
     local query = tostring(args[1] or ''):lower()
     if query == '1' or query == 'whisper' or query == 'w' or query == 'low' then
-        setVoiceModeIndex(1, true)
+        setVoiceModeIndex(1)
     elseif query == '2' or query == 'normal' or query == 'n' or query == 'med' then
-        setVoiceModeIndex(2, true)
+        setVoiceModeIndex(2)
     elseif query == '3' or query == 'shout' or query == 's' or query == 'high' or query == 'loud' then
-        setVoiceModeIndex(3, true)
+        setVoiceModeIndex(3)
     else
-        cycleVoiceProximity(true)
+        cycleVoiceProximity()
     end
 end, false)
 
 AddEventHandler('pma-voice:setTalkingMode', function(mode)
     currentModeIndex = tonumber(mode) or currentModeIndex
-    pushVoiceHud()
+    pushVoiceHud(true)
 end)
 
 AddStateBagChangeHandler('proximity', nil, function(bagName, _, value)
@@ -149,7 +159,7 @@ AddStateBagChangeHandler('proximity', nil, function(bagName, _, value)
     if value.index then
         currentModeIndex = tonumber(value.index) or currentModeIndex
     end
-    pushVoiceHud()
+    pushVoiceHud(true)
 end)
 
 CreateThread(function()
@@ -157,9 +167,9 @@ CreateThread(function()
         local talking = isPlayerTalkingNow()
         if talking ~= lastTalking then
             lastTalking = talking
-            pushVoiceHud()
+            pushVoiceHud(false)
         end
-        Wait(talking and 40 or 80)
+        Wait(talking and 40 or 120)
     end
 end)
 
@@ -176,13 +186,11 @@ AddEventHandler('onResourceStart', function(resource)
     SetTimeout(500, loadPmaVoiceSettings)
 end)
 
-exports('CycleVoiceProximity', function()
-    return cycleVoiceProximity(true)
-end)
+exports('CycleVoiceProximity', cycleVoiceProximity)
 
-exports('SetVoiceProximity', function(idx, notify)
-    setVoiceModeIndex(idx, notify ~= false)
-    return getProximityLabel()
+exports('SetVoiceProximity', function(idx)
+    setVoiceModeIndex(idx)
+    return getProximityHudText()
 end)
 
 exports('GetVoiceProximity', function()
@@ -190,6 +198,15 @@ exports('GetVoiceProximity', function()
     return currentModeIndex, {
         index = currentModeIndex,
         label = getProximityLabel(),
-        distance = type(LocalPlayer.state.proximity) == 'table' and LocalPlayer.state.proximity.distance or nil,
+        distance = getProximityDistance(),
+        display = getProximityHudText(),
+    }
+end)
+
+exports('GetVoiceHudData', function()
+    return {
+        voiceRange = getProximityLabel(),
+        voiceRangeMeters = getProximityDistance(),
+        voiceRangeDisplay = getProximityHudText(),
     }
 end)

@@ -108,12 +108,28 @@ const Hud = {
     updateVoice(data = {}) {
         const icon = $('#hud-voice-icon');
         const range = $('#hud-voice-range');
+        const container = document.querySelector('.voice-container');
         if (!icon || !range) return;
-        if (data.voiceRange !== undefined) {
-            range.textContent = String(data.voiceRange || 'Normal');
-        }
+
+        const display = data.voiceRangeDisplay
+            || (data.voiceRangeMeters != null
+                ? `${data.voiceRange || 'Normal'} · ${Number(data.voiceRangeMeters).toFixed(1)}m`
+                : String(data.voiceRange || 'Normal · 3.0m'));
+        range.textContent = display;
+        range.title = `Voice range: ${display}`;
+
         if (data.voiceTalking !== undefined) {
             icon.classList.toggle('talking', data.voiceTalking === true);
+        }
+
+        if (data.voiceChanged && container) {
+            container.classList.remove('voice-changed');
+            void container.offsetWidth;
+            container.classList.add('voice-changed');
+            window.clearTimeout(this._voiceChangedTimer);
+            this._voiceChangedTimer = window.setTimeout(() => {
+                container?.classList.remove('voice-changed');
+            }, 1400);
         }
     },
 

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forza/NFS Style - Dealership & Tuning</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent: #00ffcc; /* Cyan Neon */
+            --danger: #ff3366; /* Rosu agresiv pt stats care scad */
+            --success: #10b981;
+            
+            --shadow-text: 0 4px 12px rgba(0, 0, 0, 0.9);
+            --shadow-glow: 0 0 20px rgba(0, 255, 204, 0.4);
+            
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #050508; overflow: hidden; user-select: none;
+        }
+
+        /* Fundal pt testare (simuleaza camera din LSC sau Dealership) */
+        .bg-cam {
+            position: absolute; inset: 0; z-index: 0;
+            background: url('https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            filter: brightness(0.4) contrast(1.2);
+            transition: background-image 0.5s ease;
+        }
+        
+        .vignette {
+            position: absolute; inset: 0; z-index: 1;
+            background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.8) 100%);
+            pointer-events: none;
+        }
+
+        /* PANOU DEV */
+        .dev-tools { position: absolute; top: 30px; left: 30px; z-index: 100; display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        .dev-btn { background: transparent; color: var(--text-main); border: 1px solid var(--text-muted); padding: 8px 12px; border-radius: 4px; font-family: inherit; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 11px; text-transform: uppercase; }
+        .dev-btn:hover, .dev-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        /* ==========================================================
+           1. MASTER UI WRAPPER (SKEWED)
+           ========================================================== */
+        .ui-layer {
+            position: absolute; inset: 0; z-index: 10;
+            padding: 80px 100px;
+            display: flex; justify-content: space-between; align-items: stretch;
+            transform: skewX(-5deg); /* Baza designului Forza */
+            transition: opacity 0.4s ease, transform 0.4s var(--transition-snappy);
+            opacity: 0; pointer-events: none;
+        }
+        .ui-layer.active { opacity: 1; pointer-events: all; }
+
+        /* Structuri Comune: Titluri si Liste */
+        .section-title {
+            font-size: 13px; font-weight: 900; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 4px;
+            margin-bottom: 25px; text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title::before { content: ''; width: 24px; height: 2px; background: var(--accent); }
+
+        .item-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 70vh; padding-right: 20px; }
+        .item-list::-webkit-scrollbar { width: 0px; } /* Hide scrollbar for clean look */
+
+        .list-item {
+            font-size: 32px; font-weight: 900; font-style: italic; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+            padding-left: 0; border-left: 0px solid transparent;
+            text-shadow: var(--shadow-text);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; justify-content: space-between; align-items: center;
+            width: 380px;
+        }
+        .list-item:hover, .list-item.active {
+            color: var(--text-main); padding-left: 20px; border-left: 6px solid var(--accent);
+            text-shadow: var(--shadow-glow), var(--shadow-text); transform: translateX(10px);
+        }
+        .list-item.active { color: var(--accent); }
+
+        .item-price { font-size: 18px; font-family: 'Montserrat'; font-style: normal; color: var(--text-muted); transition: 0.2s; }
+        .list-item:hover .item-price, .list-item.active .item-price { color: var(--text-main); }
+
+        /* ==========================================================
+           2. STATS & PERFORMANCE BARS (Segmentate)
+           ========================================================== */
+        .stats-panel {
+            display: flex; flex-direction: column; gap: 15px; width: 350px;
+            background: rgba(0,0,0,0.4); padding: 30px; border-left: 2px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-row { display: flex; flex-direction: column; gap: 8px; }
+        .stat-header {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            font-size: 11px; font-weight: 900; color: var(--text-main);
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+        
+        /* NFS Style Delta Numbers (+15 / -5) */
+        .stat-val { font-size: 14px; font-family: 'Montserrat'; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 5px; }
+        .delta { font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 3px; background: rgba(0,0,0,0.6); }
+        .delta.up { color: var(--accent); }
+        .delta.down { color: var(--danger); }
+
+        .stat-track { display: flex; gap: 3px; width: 100%; height: 12px; }
+        .stat-segment {
+            flex: 1; background: rgba(255,255,255,0.1);
+            transform: skewX(-15deg); /* Tăieturi în interiorul barei */
+            transition: all 0.3s;
+        }
+        .stat-segment.fill { background: var(--text-main); box-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        .stat-segment.fill-accent { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        .stat-segment.fill-danger { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+        /* ==========================================================
+           3. DEALERSHIP UI SPECIFICS
+           ========================================================== */
+        .price-display {
+            margin-top: auto; display: flex; flex-direction: column; gap: 5px;
+        }
+        .price-label { font-size: 14px; font-weight: 800; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+        .price-value {
+            font-size: 64px; font-weight: 900; font-style: italic; color: var(--text-main);
+            line-height: 0.9; letter-spacing: -2px; font-variant-numeric: tabular-nums;
+            text-shadow: var(--shadow-text);
+        }
+
+        /* Hold to Buy Button */
+        .btn-hold {
+            margin-top: 20px; position: relative; width: 100%; height: 50px;
+            background: rgba(0,0,0,0.8); border: 2px solid var(--text-muted);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 900; font-style: italic; color: var(--text-main);
+            text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+            overflow: hidden; transition: 0.2s;
+        }
+        .btn-hold:hover { border-color: var(--accent); color: var(--accent); text-shadow: var(--shadow-glow); }
+        
+        .btn-progress {
+            position: absolute; top: 0; left: 0; bottom: 0; width: 0%;
+            background: var(--accent); z-index: 0; transition: width 0.1s linear;
+        }
+        .btn-text { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
+        .key-hint { background: var(--text-main); color: #000; padding: 2px 8px; border-radius: 3px; font-size: 14px; font-style: normal; transform: skewX(5deg); }
+
+        /* ==========================================================
+           4. TUNING UI SPECIFICS (NFS Heat Style)
+           ========================================================== */
+        .tuning-wrapper { display: flex; gap: 40px; }
+        
+        /* Categoriile pe stanga, Piesele in mijloc */
+        .tune-categories { display: flex; flex-direction: column; gap: 5px; width: 250px; }
+        .cat-item {
+            font-size: 18px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;
+            padding: 10px 15px; cursor: pointer; transition: 0.2s; border-left: 2px solid transparent;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .cat-item:hover, .cat-item.active { color: var(--text-main); border-left-color: var(--accent); background: linear-gradient(90deg, rgba(0,255,204,0.1) 0%, transparent 100%); }
+        .cat-item i { font-size: 24px; color: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-cam" id="bg-cam"></div>
+    <div class="vignette"></div>
+
+    <!-- DEV MENU -->
+    <div class="dev-tools">
+        <button class="dev-btn active" onclick="switchUI('dealership')">Dealership UI</button>
+        <button class="dev-btn" onclick="switchUI('tuning')">LSC / Tuning UI</button>
+    </div>
+
+    <!-- ==========================================================
+         DEALERSHIP INTERFACE
+         ========================================================== -->
+    <div class="ui-layer active" id="ui-dealership">
+        
+        <!-- STANGA: Lista Masini -->
+        <div style="display: flex; flex-direction: column;">
+            <div class="section-title">Sports Classics</div>
+            <div class="item-list">
+                <div class="list-item active" onclick="selectCar(this, 'Elegy Retro Custom', 125000, 8, 7, 6, 5)">
+                    <span>Elegy Retro</span> <span class="item-price">€125k</span>
+                </div>
+                <div class="list-item" onclick="selectCar(this, 'Comet Safari', 85000, 7, 8, 5, 6)">
+                    <span>Comet Safari</span> <span class="item-price">€85k</span>
+                </div>
+                <div class="list-item" onclick="selectCar(this, 'Turismo Classic', 210000, 9, 8, 8, 7)">
+                    <span>Turismo Classic</span> <span class="item-price">€210k</span>
+                </div>
+                <div class="list-item" onclick="selectCar(this, 'Jester Classic', 165000, 8, 6, 7, 6)">
+                    <span>Jester Classic</span> <span class="item-price">€165k</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- DREAPTA: Stats & Cumparare -->
+        <div class="stats-panel">
+            <div class="section-title" style="margin-bottom: 15px;">Performanță Stock</div>
+            
+            <div class="stat-row">
+                <div class="stat-header"><span>Top Speed</span> <span class="stat-val">210 KM/H</span></div>
+                <div class="stat-track" id="stat-speed-dl">
+                    <!-- Generate via JS -->
+                </div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-header"><span>Accelerație</span> <span class="stat-val">3.2s</span></div>
+                <div class="stat-track" id="stat-accel-dl"></div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-header"><span>Manevrabilitate</span> <span class="stat-val">G 1.2</span></div>
+                <div class="stat-track" id="stat-hand-dl"></div>
+            </div>
+
+            <div class="price-display">
+                <span class="price-label">Preț Achiziție</span>
+                <span class="price-value" id="dl-price">125,000</span>
+            </div>
+
+            <div class="btn-hold" id="btn-buy" onmousedown="startBuy()" onmouseup="stopBuy()" onmouseleave="stopBuy()">
+                <div class="btn-progress" id="buy-progress"></div>
+                <div class="btn-text">
+                    <span class="key-hint">ENTER</span> Ține Apăsat Cumpără
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================================
+         LSC / TUNING INTERFACE (NFS Style)
+         ========================================================== -->
+    <div class="ui-layer" id="ui-tuning">
+        
+        <div class="tuning-wrapper">
+            <!-- STANGA: Categoriile principale -->
+            <div class="tune-categories">
+                <div class="section-title">Componente</div>
+                <div class="cat-item active"><i class="ph-fill ph-engine"></i> Motor</div>
+                <div class="cat-item"><i class="ph-bold ph-faders"></i> Transmisie</div>
+                <div class="cat-item"><i class="ph-fill ph-stop-circle"></i> Frâne</div>
+                <div class="cat-item"><i class="ph-fill ph-car-profile"></i> Suspensie</div>
+                <div class="cat-item"><i class="ph-fill ph-wind"></i> Turbo</div>
+            </div>
+
+            <!-- MIJLOC: Piesele din categorie -->
+            <div style="display: flex; flex-direction: column;">
+                <div class="section-title" style="color: var(--text-muted);">Upgrade Motor</div>
+                <div class="item-list">
+                    <div class="list-item" onmouseover="previewTune(0)">
+                        <span>Stock Engine</span> <span class="item-price">Instalat</span>
+                    </div>
+                    <div class="list-item" onmouseover="previewTune(1)">
+                        <span>EMS Upgrade LVL 1</span> <span class="item-price">€8,500</span>
+                    </div>
+                    <div class="list-item active" onmouseover="previewTune(2)">
+                        <span>EMS Upgrade LVL 2</span> <span class="item-price">€12,000</span>
+                    </div>
+                    <div class="list-item" onmouseover="previewTune(3)">
+                        <span>EMS Upgrade LVL 3</span> <span class="item-price">€18,000</span>
+                    </div>
+                    <div class="list-item" onmouseover="previewTune(4)">
+                        <span>EMS Upgrade MAX</span> <span class="item-price">€25,000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DREAPTA: Impact Performanta (NFS Style Deltas) -->
+        <div class="stats-panel">
+            <div class="section-title" style="margin-bottom: 15px;">Impact Performanță</div>
+            
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>Accelerație</span> 
+                    <span class="stat-val" id="tune-accel-val">
+                        6.5 <span class="delta up">+1.2</span>
+                    </span>
+                </div>
+                <div class="stat-track" id="stat-accel-tune"></div>
+            </div>
+            
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>Top Speed</span> 
+                    <span class="stat-val" id="tune-speed-val">
+                        8.0 <span class="delta up">+0.5</span>
+                    </span>
+                </div>
+                <div class="stat-track" id="stat-speed-tune"></div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>Manevrabilitate</span> 
+                    <span class="stat-val" id="tune-hand-val">
+                        5.0 <span class="delta down">-0.2</span>
+                    </span>
+                </div>
+                <div class="stat-track" id="stat-hand-tune"></div>
+            </div>
+
+            <div class="price-display" style="margin-top: 40px;">
+                <span class="price-label">Cost Instalare</span>
+                <span class="price-value">12,000</span>
+            </div>
+
+            <button class="dev-btn" style="margin-top: 20px; padding: 15px; font-size: 16px; background: var(--text-main); color: #000;">
+                Instalează Piesă (ENTER)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================================
+        // UTILITARE BARE DE STATS (Segmentate)
+        // ==========================================================
+        const TOTAL_SEGMENTS = 10;
+
+        // Genereaza segmentele (ex: 6 pline, 4 goale)
+        function renderStatBar(containerId, value, previewValue = 0) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            for(let i = 1; i <= TOTAL_SEGMENTS; i++) {
+                const seg = document.createElement('div');
+                seg.className = 'stat-segment';
+                
+                if (i <= value) {
+                    seg.classList.add('fill'); // Baza plina
+                } 
+                else if (i <= value + previewValue && previewValue > 0) {
+                    seg.classList.add('fill-accent'); // Preview Upgrade (+)
+                }
+                else if (i > value + previewValue && i <= value && previewValue < 0) {
+                    seg.classList.remove('fill');
+                    seg.classList.add('fill-danger'); // Preview Downgrade (-)
+                }
+                
+                container.appendChild(seg);
+            }
+        }
+
+        // ==========================================================
+        // LOGICA DEALERSHIP
+        // ==========================================================
+        function selectCar(element, name, price, speed, accel, hand, brakes) {
+            // Update Active Class
+            document.querySelectorAll('#ui-dealership .list-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            // Format Price
+            document.getElementById('dl-price').innerText = price.toLocaleString('en-US');
+
+            // Render Bars
+            renderStatBar('stat-speed-dl', speed);
+            renderStatBar('stat-accel-dl', accel);
+            renderStatBar('stat-hand-dl', hand);
+        }
+
+        // Initialize Dealer default car
+        selectCar(document.querySelector('#ui-dealership .list-item.active'), 'Elegy', 125000, 8, 7, 6, 5);
+
+        // Hold to Buy Mechanic
+        let buyTimer;
+        let buyProgress = 0;
+        const buyBar = document.getElementById('buy-progress');
+        const buyBtnText = document.querySelector('#btn-buy .btn-text');
+
+        function updateBuy() {
+            buyProgress += 2; // Viteza de umplere
+            buyBar.style.width = buyProgress + '%';
+            
+            if (buyProgress >= 100) {
+                buyBar.style.width = '100%';
+                buyBtnText.innerHTML = "Achiziționat!";
+                buyBtnText.style.color = '#000';
+                document.getElementById('btn-buy').style.background = 'var(--accent)';
+                // window.postMessage({ action: 'buyVehicle' });
+            } else {
+                buyTimer = requestAnimationFrame(updateBuy);
+            }
+        }
+
+        function startBuy() {
+            cancelAnimationFrame(buyTimer);
+            buyTimer = requestAnimationFrame(updateBuy);
+        }
+
+        function stopBuy() {
+            cancelAnimationFrame(buyTimer);
+            if (buyProgress < 100) {
+                buyProgress = 0;
+                buyBar.style.width = '0%';
+            }
+        }
+
+        // Simulare din taste (ENTER)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.getElementById('ui-dealership').classList.contains('active') && !e.repeat) {
+                startBuy();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') stopBuy();
+        });
+
+
+        // ==========================================================
+        // LOGICA TUNING / LSC (NFS Deltas)
+        // ==========================================================
+        
+        // Baza masinii curente in LSC
+        const baseStats = { speed: 6, accel: 5, hand: 6 };
+
+        function previewTune(level) {
+            // Daca level 0 e stock, level 1 aduce +1 accel, etc.
+            let preview = { speed: 0, accel: 0, hand: 0 };
+            
+            if (level === 1) { preview.accel = 1; preview.speed = 0; }
+            if (level === 2) { preview.accel = 2; preview.speed = 1; }
+            if (level === 3) { preview.accel = 3; preview.speed = 1; preview.hand = -1; } // Prea multa putere scade handling-ul
+            if (level === 4) { preview.accel = 4; preview.speed = 2; preview.hand = -1; }
+
+            // Render Bars cu Preview
+            renderStatBar('stat-accel-tune', baseStats.accel, preview.accel);
+            renderStatBar('stat-speed-tune', baseStats.speed, preview.speed);
+            renderStatBar('stat-hand-tune', baseStats.hand, preview.hand);
+
+            // Update Labels
+            updateTuneLabel('tune-accel-val', baseStats.accel, preview.accel);
+            updateTuneLabel('tune-speed-val', baseStats.speed, preview.speed);
+            updateTuneLabel('tune-hand-val', baseStats.hand, preview.hand);
+
+            // Update List UI
+            const items = document.querySelectorAll('#ui-tuning .list-item');
+            items.forEach(el => el.classList.remove('active'));
+            items[level].classList.add('active');
+        }
+
+        function updateTuneLabel(elementId, base, delta) {
+            const el = document.getElementById(elementId);
+            if (delta > 0) {
+                el.innerHTML = `${base} <span class="delta up">+${delta}</span>`;
+            } else if (delta < 0) {
+                el.innerHTML = `${base} <span class="delta down">${delta}</span>`;
+            } else {
+                el.innerHTML = `${base}`; // Fara delta daca e 0
+            }
+        }
+
+        // Init Tuning
+        previewTune(2);
+
+
+        // ==========================================================
+        // SCHIMBARE INTRE INTERFETE
+        // ==========================================================
+        function switchUI(target) {
+            document.querySelectorAll('.ui-layer').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.dev-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('ui-' + target).classList.add('active');
+            event.target.classList.add('active');
+
+            // Schimbam fundalul pt feeling diferit
+            const bg = document.getElementById('bg-cam');
+            if (target === 'tuning') {
+                bg.style.backgroundImage = "url('https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?q=80&w=1920&auto=format&fit=crop')";
+            } else {
+                bg.style.backgroundImage = "url('https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=1920&auto=format&fit=crop')";
+            }
+        }
+
+    </script>
+</body>
+</html>

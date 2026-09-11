@@ -450,13 +450,41 @@
 
 .overlay-panel__box--garage {
     max-width: 920px;
+    max-height: min(82vh, 720px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.overlay-panel__box--garage .garage-hint {
+    flex-shrink: 0;
+}
+
+.overlay-panel__box--garage #garage-list {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .overlay-panel__box--garage .menu-vehicle-grid {
     grid-template-columns: 1fr;
-    max-height: 55vh;
+    max-height: none;
+    height: 100%;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 6px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 140, 0, 0.45) rgba(255, 255, 255, 0.06);
+}
+
+.overlay-panel__box--garage .menu-vehicle-grid::-webkit-scrollbar { width: 6px; }
+.overlay-panel__box--garage .menu-vehicle-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 140, 0, 0.4);
+    border-radius: 4px;
+}
+
+.overlay-panel__box--garage .panel-close {
+    flex-shrink: 0;
 }
 
 .overlay-panel__box--garage .menu-vcard {

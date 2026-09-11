@@ -49,9 +49,42 @@ local function fetchRow(businessId)
     ]], { tonumber(businessId) })
 end
 
+local function migrateLegacyLocations()
+    MySQL.update.await([[
+        UPDATE player_businesses
+        SET shop_key = 'shop_247_legion'
+        WHERE shop_key = 'shop_twentyfour7'
+    ]])
+end
+
 local function bootstrapLocations()
+    migrateLegacyLocations()
+
+    for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+        if store.coords and store.id then
+            MySQL.insert.await([[
+                INSERT INTO player_businesses
+                    (shop_key, business_type, label, catalog_key, price, coords_x, coords_y, coords_z, profit_percent, for_sale, enabled)
+                VALUES (?, 'shop', ?, 'twentyfour7', ?, ?, ?, ?, ?, 1, 1)
+                ON DUPLICATE KEY UPDATE
+                    business_type = VALUES(business_type),
+                    label = VALUES(label),
+                    catalog_key = VALUES(catalog_key),
+                    coords_x = VALUES(coords_x),
+                    coords_y = VALUES(coords_y),
+                    coords_z = VALUES(coords_z)
+            ]], {
+                'shop_247_' .. store.id,
+                store.label or '24/7 Store',
+                tonumber(SunsetBusinesses.DefaultShopPrice) or 175000,
+                store.coords.x, store.coords.y, store.coords.z,
+                tonumber(SunsetBusinesses.DefaultProfitPercent) or 70,
+            })
+        end
+    end
+
     for catalogKey, shop in pairs(Sunset.Shops or {}) do
-        if shop.coords then
+        if catalogKey ~= 'twentyfour7' and shop.coords then
             MySQL.insert.await([[
                 INSERT INTO player_businesses
                     (shop_key, business_type, label, catalog_key, price, coords_x, coords_y, coords_z, profit_percent, for_sale, enabled)
@@ -103,12 +136,20 @@ AddEventHandler('onResourceStart', function(resource)
     bootstrapLocations()
 end)
 
-local function findNearestBusiness(coords, businessType, maxDistance)
-    maxDistance = maxDistance or 18.0
-    local rows = MySQL.query.await(
-        'SELECT * FROM player_businesses WHERE enabled = 1 AND business_type = ?',
-        { businessType }
-    ) or {}
+local function findNearestBusiness(coords, businessType, maxDistance, catalogKey)
+    maxDistance = maxDistance or (SunsetBusinesses.NearbyBusinessRadius or 18.0)
+    local rows
+    if catalogKey and catalogKey ~= '' then
+        rows = MySQL.query.await(
+            'SELECT * FROM player_businesses WHERE enabled = 1 AND business_type = ? AND catalog_key = ?',
+            { businessType, catalogKey }
+        ) or {}
+    else
+        rows = MySQL.query.await(
+            'SELECT * FROM player_businesses WHERE enabled = 1 AND business_type = ?',
+            { businessType }
+        ) or {}
+    end
     local best, bestDist
     for _, row in ipairs(rows) do
         local pos = vector3(tonumber(row.coords_x) or 0, tonumber(row.coords_y) or 0, tonumber(row.coords_z) or 0)
@@ -120,6 +161,17 @@ local function findNearestBusiness(coords, businessType, maxDistance)
     end
     return best
 end
+
+local function isNearTwentyFourSeven(coords, maxDistance)
+    maxDistance = maxDistance or (SunsetBusinesses.StoreInteractRadius or 4.0)
+    for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+        if store.coords and #(coords - store.coords) <= maxDistance then
+            return true
+        end
+    end
+    return false
+end
+exports('IsNearTwentyFourSeven', isNearTwentyFourSeven)
 
 function RecordSale(businessId, grossAmount)
     businessId = tonumber(businessId)
@@ -140,12 +192,12 @@ function RecordSale(businessId, grossAmount)
 end
 exports('RecordSale', RecordSale)
 
-function RecordSaleAtCoords(coords, businessType, grossAmount)
+function RecordSaleAtCoords(coords, businessType, grossAmount, catalogKey)
     if type(coords) ~= 'vector3' then
         coords = vector3(tonumber(coords.x) or 0, tonumber(coords.y) or 0, tonumber(coords.z) or 0)
     end
-    local radius = businessType == 'gas' and 25.0 or 18.0
-    local row = findNearestBusiness(coords, businessType, radius)
+    local radius = businessType == 'gas' and 25.0 or (SunsetBusinesses.NearbyBusinessRadius or 18.0)
+    local row = findNearestBusiness(coords, businessType, radius, catalogKey)
     if row then RecordSale(row.id, grossAmount) end
 end
 exports('RecordSaleAtCoords', RecordSaleAtCoords)
@@ -219,15 +271,12 @@ exports.sunset_core:RegisterCallback('sunset:getStoreContext', function(source)
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil end
     local coords = GetEntityCoords(ped)
-    local row = findNearestBusiness(coords, 'shop', 4.0)
+    local interactRadius = SunsetBusinesses.StoreInteractRadius or 4.0
+    if not isNearTwentyFourSeven(coords, interactRadius) then return nil end
+
+    local row = findNearestBusiness(coords, 'shop', interactRadius, 'twentyfour7')
     local shopId = 'twentyfour7'
-    local shopLabel = '24/7 Store'
-    if row and row.catalog_key and Sunset.Shops[row.catalog_key] then
-        shopId = row.catalog_key
-        shopLabel = row.label or Sunset.Shops[shopId].label or shopLabel
-    elseif Sunset.Shops.twentyfour7 then
-        shopLabel = Sunset.Shops.twentyfour7.label or shopLabel
-    end
+    local shopLabel = (Sunset.Shops.twentyfour7 and Sunset.Shops.twentyfour7.label) or '24/7 Store'
 
     local business = nil
     if row then
@@ -245,12 +294,43 @@ exports.sunset_core:RegisterCallback('sunset:getStoreContext', function(source)
     }
 end)
 
-exports.sunset_core:RegisterCallback('sunset:getBusinessForShop', function(source, shopId)
-    local shop = Sunset.Shops[shopId]
-    if not shop or not shop.coords then return nil end
+exports.sunset_core:RegisterCallback('sunset:getGasBusinessContext', function(source)
+    local char = character(source)
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil end
-    local row = findNearestBusiness(GetEntityCoords(ped), 'shop', 15.0)
+    local coords = GetEntityCoords(ped)
+    local row = findNearestBusiness(coords, 'gas', 8.0)
+    if not row then return nil end
+
+    local view = rowToView(row)
+    view.owned = view.ownerCharacterId ~= nil
+    view.mine = char and view.ownerCharacterId == tonumber(char.id)
+
+    return {
+        stationLabel = view.label or 'Gas Station',
+        business = view,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:getBusinessForShop', function(source, shopId)
+    shopId = tostring(shopId or '')
+    if shopId == '' or not Sunset.Shops[shopId] then return nil end
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil end
+    local coords = GetEntityCoords(ped)
+
+    if shopId == 'twentyfour7' then
+        if not isNearTwentyFourSeven(coords, SunsetBusinesses.StoreInteractRadius or 4.0) then
+            return nil
+        end
+    else
+        local shop = Sunset.Shops[shopId]
+        if not shop.coords or #(coords - shop.coords) > 15.0 then
+            return nil
+        end
+    end
+
+    local row = findNearestBusiness(coords, 'shop', SunsetBusinesses.NearbyBusinessRadius or 18.0, shopId)
     if not row or row.catalog_key ~= shopId then return nil end
     return tonumber(row.id)
 end)
@@ -312,6 +392,7 @@ local function ownerDashboard(source)
         businesses = owned,
         totalBalance = totalBalance,
         defaultProfitPercent = SunsetBusinesses.DefaultProfitPercent or 70,
+        permissions = { admin = isAdmin(source) },
     }
 end
 
@@ -424,3 +505,51 @@ exports.sunset_core:RegisterCallback('sunset:businessManage', function(source, p
 
     return nil, 'Unknown action.'
 end)
+
+local BUSINESS_OWNER_COMMANDS = {
+    mybusiness = true,
+    mybiz = true,
+    businesses = true,
+    biz = true,
+}
+
+local BUSINESS_ADMIN_COMMANDS = {
+    abusiness = true,
+    abiz = true,
+    bizadmin = true,
+}
+
+function ExecutePlayerCommand(source, name, args)
+    name = string.lower(tostring(name or ''))
+    args = args or {}
+
+    if BUSINESS_ADMIN_COMMANDS[name] then
+        TriggerClientEvent('sunset:businesses:openPanel', source, 'admin')
+        return true
+    end
+
+    if name == 'bizhelp' then
+        TriggerClientEvent('sunset:businesses:openPanel', source, 'help')
+        return true
+    end
+
+    if BUSINESS_OWNER_COMMANDS[name] then
+        if name == 'biz' then
+            local sub = args[1] and string.lower(tostring(args[1])) or ''
+            if sub == 'admin' or sub == 'a' then
+                TriggerClientEvent('sunset:businesses:openPanel', source, 'admin')
+                return true
+            end
+            if sub == 'help' or sub == '?' then
+                TriggerClientEvent('sunset:businesses:openPanel', source, 'help')
+                return true
+            end
+        end
+        TriggerClientEvent('sunset:businesses:openPanel', source, 'owner')
+        return true
+    end
+
+    return false
+end
+
+exports('ExecutePlayerCommand', ExecutePlayerCommand)

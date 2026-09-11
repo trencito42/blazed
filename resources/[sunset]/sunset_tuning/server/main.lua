@@ -80,7 +80,7 @@ local function saveTuneToVehicle(charId, plate, tune, cosmetics)
     return true, nil, newPlate
 end
 
-exports.sunset_core:RegisterCallback('sunset:tuning:getTune', function(source, plate)
+exports.sunset_core:RegisterCallback('sunset:tuning:getTune', function(source, plate, modelName)
     local char = getCharacter(source)
     if not char then return nil, 'No character' end
     plate = normalizePlate(plate)
@@ -91,19 +91,30 @@ exports.sunset_core:RegisterCallback('sunset:tuning:getTune', function(source, p
     local row = getOwnedVehicleRow(char.id, plate)
     if not row then return nil, 'Not your vehicle' end
 
+    modelName = tostring(modelName or row.model or ''):lower()
+    local caps = SunsetTuning.ProfileResolver.Resolve(modelName, nil)
+    if not caps.supported then
+        return nil, 'ECU tuning is not supported for this vehicle.'
+    end
+
     local props = decodeProps(row.props)
     local cosmetics = props.cosmetics and SunsetTuning.SanitizeCosmetics(props.cosmetics) or nil
     if props.ecu and not SunsetTuning.IsStockTune(props.ecu) then
+        local tune = SunsetTuning.SanitizeTune(props.ecu, caps)
         return {
-            tune = SunsetTuning.SanitizeTune(props.ecu),
+            tune = tune,
             saved = true,
             cosmetics = cosmetics,
+            model = modelName,
+            capabilities = caps,
         }
     end
     return {
-        tune = SunsetTuning.StockTune(),
+        tune = SunsetTuning.SanitizeTune(SunsetTuning.StockTune(), caps),
         saved = false,
         cosmetics = cosmetics,
+        model = modelName,
+        capabilities = caps,
     }
 end)
 
@@ -118,9 +129,14 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
     local row = getOwnedVehicleRow(char.id, plate)
     if not row then return nil, 'Not your vehicle' end
 
+    local modelName = tostring(row.model or ''):lower()
+    local caps = SunsetTuning.ProfileResolver.Resolve(modelName, nil)
+
     local sanitized
     if type(tune) == 'table' then
-        sanitized = SunsetTuning.SanitizeTune(tune)
+        sanitized = SunsetTuning.SanitizeTune(tune, caps)
+        local valid, err = SunsetTuning.TuneValidator.Validate(sanitized, caps)
+        if not valid then return nil, err end
     else
         return nil, 'Invalid tune data'
     end
@@ -140,8 +156,8 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
         return nil, callOk and (err or 'Save failed') or 'Database error while saving; your money was refunded'
     end
 
-    TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, newPlate or plate, sanitized)
-    return { tune = sanitized, cost = cost, plate = newPlate or plate, cosmetics = sanitizedCosmetics }
+    TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, newPlate or plate, sanitized, modelName)
+    return { tune = sanitized, cost = cost, plate = newPlate or plate, cosmetics = sanitizedCosmetics, model = modelName }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:tuning:beginDyno', function(source, plate)

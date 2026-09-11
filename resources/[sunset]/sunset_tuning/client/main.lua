@@ -63,10 +63,11 @@ local function closePanel(restoreStock)
         if savedCosmetics then
             ApplyCosmetics(currentVeh, savedCosmetics)
         end
+        local modelName = STC.appliedVehicles[currentVeh] and STC.appliedVehicles[currentVeh].model
         if hasSavedTune and STC.plateTunes[currentPlate] then
-            ApplyTune(currentVeh, STC.plateTunes[currentPlate], false)
+            ApplyTune(currentVeh, STC.plateTunes[currentPlate], false, modelName)
         else
-            ApplyTune(currentVeh, SunsetTuning.StockTune(), false)
+            ApplyTune(currentVeh, SunsetTuning.StockTune(), false, modelName)
         end
     end
 end
@@ -86,14 +87,28 @@ local function openPanel(shop)
         return
     end
 
-    local payload, err = Sunset.AwaitCallback('sunset:tuning:getTune', currentPlate)
+    local modelName = GetEntityArchetypeName(veh)
+    if not modelName or modelName == '' then
+        modelName = GetDisplayNameFromVehicleModel(GetEntityModel(veh))
+    end
+    if modelName then modelName = modelName:lower() end
+
+    local caps = SunsetTuning.ProfileResolver.Resolve(modelName, GetVehicleClass(veh))
+    if not caps.supported then
+        notify('ECU tuning is not available for this vehicle type.', 'error')
+        return
+    end
+
+    CaptureModelBaseline(veh)
+
+    local payload, err = Sunset.AwaitCallback('sunset:tuning:getTune', currentPlate, modelName)
     if not payload then
         notify(err or 'Nu pot incarca ECU pentru aceasta masina', 'error')
         return
     end
 
     if type(payload) == 'table' and payload.tune then
-        draftTune = SunsetTuning.SanitizeTune(payload.tune)
+        draftTune = SunsetTuning.SanitizeTune(payload.tune, caps)
         hasSavedTune = payload.saved == true
         draftCosmetics = SunsetTuning.SanitizeCosmetics(payload.cosmetics or ReadCosmeticsFromVehicle(veh))
     else
@@ -114,6 +129,9 @@ local function openPanel(shop)
         cosmetics = draftCosmetics,
         saved = hasSavedTune,
         plate = currentPlate,
+        model = modelName,
+        capabilities = caps,
+        drivetrainLabel = SunsetTuning.ProfileResolver.DisplayLabel(caps),
         shop = currentShop and currentShop.label or 'ECU Bay',
         costs = {
             save = SunsetTuning.SaveBaseCost,
@@ -127,8 +145,8 @@ local function openPanel(shop)
         featureCosts = SunsetTuning.FeatureCosts,
     })
 
-    ApplyTune(currentVeh, draftTune, false)
-        ApplyCosmetics(currentVeh, draftCosmetics, false)
+    ApplyTune(currentVeh, draftTune, false, modelName)
+    ApplyCosmetics(currentVeh, draftCosmetics, false)
 end
 
 function OpenTuningPanel(shop)
@@ -144,11 +162,12 @@ end)
 
 RegisterNUICallback('tuningPreview', function(data, cb)
     if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
-    draftTune = SunsetTuning.SanitizeTune(data.tune or draftTune)
+    draftTune = SunsetTuning.SanitizeTune(data.tune or draftTune, STC.appliedVehicles[currentVeh] and STC.appliedVehicles[currentVeh].caps)
     if data.cosmetics then
         draftCosmetics = SunsetTuning.SanitizeCosmetics(data.cosmetics)
     end
-    ApplyTune(currentVeh, draftTune, false)
+    local modelName = STC.appliedVehicles[currentVeh] and STC.appliedVehicles[currentVeh].model
+    ApplyTune(currentVeh, draftTune, false, modelName)
     ApplyCosmetics(currentVeh, draftCosmetics, false)
     cb({ ok = true })
 end)
@@ -293,7 +312,7 @@ RegisterNetEvent('sunset:client:spawnOwnedVehicle', function(vehData)
             STC.persistedPlates[plate] = true
             for _, veh in ipairs(GetGamePool('CVehicle')) do
                 if STC.plateOf(veh) == plate then
-                    ApplyTune(veh, tune, false)
+                    ApplyTune(veh, tune, false, vehData.model)
                     break
                 end
             end

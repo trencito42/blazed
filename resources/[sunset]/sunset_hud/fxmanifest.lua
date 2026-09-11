@@ -37,6 +37,7 @@ exports {
     'CycleVoiceProximity',
     'SetVoiceProximity',
     'GetVoiceProximity',
+    'GetVoiceHudData',
 }
 
 dependencies {

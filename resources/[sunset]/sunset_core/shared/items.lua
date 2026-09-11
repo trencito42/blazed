@@ -78,6 +78,18 @@ Sunset.Shops = {
     },
 }
 
+-- Every purchasable 24/7 location (shared catalog; each row is a separate business).
+Sunset.TwentyFourSevenStores = {
+    { id = 'legion',      label = '24/7 - Legion Square',  coords = vector3(25.74,   -1347.32, 29.50) },
+    { id = 'strawberry',  label = '24/7 - Strawberry',     coords = vector3(-46.06,  -1757.88, 29.42) },
+    { id = 'littleseoul', label = '24/7 - Little Seoul',   coords = vector3(-707.12,  -913.43,  19.22) },
+    { id = 'mirrorpark',  label = '24/7 - Mirror Park',    coords = vector3(1164.44,  -322.49,  69.21) },
+    { id = 'vinewood',    label = '24/7 - Vinewood Hills', coords = vector3(548.46,   2671.72,  42.16) },
+    { id = 'rockford',    label = '24/7 - Rockford Hills', coords = vector3(-3038.24,  584.19,   7.91) },
+    { id = 'sandy',       label = '24/7 - Sandy Shores',   coords = vector3(2678.55,  3279.25,  55.24) },
+    { id = 'paleto',      label = '24/7 - Paleto Bay',     coords = vector3(-54.37,   6244.70,  31.09) },
+}
+
 Sunset.ATMs = {
     vector3(147.58, -1035.78, 29.34),
     vector3(-386.73, 6045.95, 31.50),

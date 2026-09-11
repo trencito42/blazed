@@ -123,8 +123,9 @@ RegisterNetEvent('sunset:tuning:client:exhaustFx', function(netId, fxType, inten
     end
 end)
 
-local function tuneHasEffects(tune)
+local function tuneHasEffects(tune, caps)
     if not tune or SunsetTuning.IsStockTune(tune) then return false end
+    if caps and not caps.hasExhaust then return false end
     local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
     return tune.pop.enabled or tune.antiLag.enabled or flamesActive(tune) or mode.diesel or tune.exhaust == 'diesel'
 end
@@ -150,7 +151,8 @@ CreateThread(function()
 
         local state = STC.appliedVehicles[veh]
         local tune = state and state.tune
-        if STC.dynoActive or not tuneHasEffects(tune) then
+        local caps = state and state.caps
+        if STC.dynoActive or not tuneHasEffects(tune, caps) then
             clearOverrun()
             Wait(300)
             goto continue

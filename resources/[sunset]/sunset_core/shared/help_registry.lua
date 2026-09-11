@@ -56,7 +56,8 @@ Sunset.HelpGeneralEntries = {
     { cmd = 'I', desc = 'Inventory — select an item to use/drop it or choose a nearby player to trade' },
     { cmd = 'P', desc = 'Phone' },
     { cmd = 'F10', desc = 'Hold for player list' },
-    { cmd = 'Z / /proximity', desc = 'Cycle voice chat range (Whisper / Normal / Shout)' },
+    { cmd = 'Z', desc = 'Cycle voice range — HUD shows mode + meters (e.g. Normal · 3.0m)' },
+    { cmd = '/proximity [whisper|normal|shout]', desc = 'Set voice range directly' },
     { cmd = 'E', desc = 'Interact — shops, ATMs, faction HQ, crafting' },
     { cmd = 'G / /interact', desc = 'Context menu for a nearby player — civilian, faction and service actions' },
     { cmd = '/inventory', desc = 'Open inventory — dropped bags remain available for 5 minutes' },
@@ -216,6 +217,11 @@ Sunset.CommandUsage = {
     rob = { usage = '/rob', minArgs = 0 },
     getpos = { usage = '/getpos', minArgs = 0 },
     pos = { usage = '/pos', minArgs = 0 },
+    biz = { usage = '/biz [admin|help] — owner panel; /biz admin for staff settings', minArgs = 0 },
+    abiz = { usage = '/abiz — admin business panel (staff level 3+)', minArgs = 0 },
+    bizadmin = { usage = '/bizadmin — admin business panel (staff level 3+)', minArgs = 0 },
+    bizhelp = { usage = '/bizhelp — list business commands', minArgs = 0 },
+    ecudebug = { usage = '/ecudebug — ECU diagnostics (in vehicle, admin 2+)', minArgs = 0 },
 }
 
 Sunset.HelpDispatchEntries = {
@@ -265,7 +271,7 @@ for _, name in ipairs({
     'help', 'pass', 'missions', 'stats', 'inventory', 'accepttrade', 'declinetrade', 'phone', 'emotes', 'interact', 'interactplayer',
     'jobs', 'work', 'skills', 'fish', 'sw', 'stopwork',
     'firestart', 'firecalls', 'respawn', 'sethome', 'renthouse', 'unrent',
-    'house', 'houses', 'myhouse', 'properties', 'biz', 'mybiz', 'businesses', 'mybusiness', 'abiz', 'abusiness',
+    'house', 'houses', 'myhouse', 'properties', 'biz', 'mybiz', 'businesses', 'mybusiness', 'abiz', 'abusiness', 'bizadmin', 'bizhelp',
     'fixnui', 'cursor',
     'stabilize', 'heal', 'revive', 'rob', 'duty', 'fw', 'v', 'garage',
     'lssireviews', 'lssireview', 'lssireport', 'lssiperformance',

@@ -67,6 +67,8 @@
         start_fishing_shift: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>',
         end_fishing_shift: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
         upgrade_fishing_rod: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M12 2v20M5 7l7-5 7 5"></path></svg>',
+        lsc_repair: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>',
+        lsc_tune: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M9 9h6v6H9z"></path><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"></path></svg>',
         close: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
         default: '<svg class="pi-menu-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>',
     };
@@ -81,6 +83,7 @@
         FISHING: { title: 'Acțiuni Pescuit' },
         STORE: { title: 'Store' },
         BUSINESS: { title: 'Business' },
+        CUSTOMS: { title: 'Vehicle Services' },
     };
 
     function setProgress(progress) {

@@ -1563,7 +1563,7 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
     height: 100% !important;
     min-height: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     background: transparent !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -1593,6 +1593,8 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
     width: min(850px, 100%) !important;
     height: min(550px, 100%) !important;
     min-height: 0 !important;
+    max-height: min(550px, calc(100vh - 120px)) !important;
+    overflow: hidden !important;
     background: var(--premium-bg) !important;
     border: 1px solid var(--premium-border) !important;
     border-radius: 12px !important;
@@ -1600,6 +1602,35 @@ body.inventory-dragging .premium-item { cursor: grabbing; }
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     animation: premium-vehicle-in .4s cubic-bezier(.175,.885,.32,1.275) both;
+}
+
+#menu.menu--solo-vehicle .premium-vmenu__sidebar {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+#menu.menu--solo-vehicle .premium-vmenu__list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 204, 0.45) rgba(255, 255, 255, 0.08);
+}
+
+#menu.menu--solo-vehicle .premium-vmenu__list::-webkit-scrollbar { width: 6px; }
+#menu.menu--solo-vehicle .premium-vmenu__list::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 204, 0.4);
+    border-radius: 4px;
+}
+
+#menu.menu--solo-vehicle .premium-vmenu__detail {
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
 }
 
 @keyframes premium-vehicle-in {

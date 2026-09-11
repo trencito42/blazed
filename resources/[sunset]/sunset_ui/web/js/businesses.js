@@ -40,7 +40,9 @@ const BusinessPanels = {
     },
 
     hide() {
-        $('#business-panel')?.classList.add('hidden');
+        const panel = $('#business-panel');
+        panel?.classList.add('hidden');
+        panel?.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('business-panels-open');
     },
 
@@ -58,8 +60,8 @@ const BusinessPanels = {
     },
 
     typeLabel(type) {
-        if (type === 'gas') return 'Benzinărie';
-        if (type === 'shop') return 'Magazin';
+        if (type === 'gas') return 'Gas Station';
+        if (type === 'shop') return 'Store';
         return 'Business';
     },
 
@@ -75,15 +77,17 @@ const BusinessPanels = {
         const panel = $('#business-panel');
         if (!panel) return;
         panel.classList.remove('hidden');
+        panel.setAttribute('aria-hidden', 'false');
         document.body.classList.add('business-panels-open');
 
-        const isAdmin = data.mode === 'admin';
-        $('#business-panel-title').textContent = isAdmin ? 'ADMIN BUSINESS' : 'AFACERILE MELE';
-        $('#business-panel-type').textContent = isAdmin ? 'Management Locații' : 'Profit & Retrageri';
+        const canAdmin = data.permissions?.admin === true;
+        const isAdminView = data.mode === 'admin';
+        $('#business-panel-title').textContent = isAdminView ? 'BUSINESS ADMIN' : 'MY BUSINESSES';
+        $('#business-panel-type').textContent = isAdminView ? 'Location Management' : 'Profits & Withdrawals';
 
-        $('#business-tab-admin')?.classList.toggle('hidden', !isAdmin);
-        $('#business-tab-owner')?.classList.toggle('hidden', isAdmin);
-        this.setTab(isAdmin ? 'admin' : 'owner');
+        $('#business-tab-admin')?.classList.toggle('hidden', !canAdmin);
+        $('#business-tab-owner')?.classList.remove('hidden');
+        this.setTab(isAdminView ? 'admin' : 'owner');
 
         if (isAdmin) {
             this.renderAdminList(data.businesses || []);
@@ -98,7 +102,7 @@ const BusinessPanels = {
         if (!list) return;
         list.innerHTML = '';
         if (!rows.length) {
-            list.innerHTML = '<p class="premium-clan__empty">Nicio locație înregistrată.</p>';
+            list.innerHTML = '<p class="premium-clan__empty">No business locations registered yet. Restart sunset_businesses to bootstrap locations.</p>';
             return;
         }
         rows.forEach((row) => {
@@ -107,7 +111,7 @@ const BusinessPanels = {
             item.className = 'premium-clan__roster-item business-admin-row';
             item.dataset.businessId = String(row.id);
             if (this.dashboard?.selected?.id === row.id) item.classList.add('is-selected');
-            const owner = row.ownerName || (row.ownerCharacterId ? `CID #${row.ownerCharacterId}` : 'De vânzare');
+            const owner = row.ownerName || (row.ownerCharacterId ? `CID #${row.ownerCharacterId}` : 'For sale');
             item.innerHTML = `
                 <div>
                     <strong>${this.escape(row.label)}</strong>
@@ -137,7 +141,7 @@ const BusinessPanels = {
         $('#business-admin-balance').textContent = this.formatMoney(selected.balance);
         $('#business-admin-owner').textContent = selected.ownerName
             ? `${selected.ownerName} (#${selected.ownerCharacterId})`
-            : 'Niciun proprietar';
+            : 'No owner';
         $('#business-admin-type').textContent = this.typeLabel(selected.businessType);
         $('#business-admin-catalog').textContent = selected.catalogKey || '—';
         $('#business-admin-for-sale').checked = selected.forSale === true;
@@ -152,21 +156,27 @@ const BusinessPanels = {
         if (!list) return;
         list.innerHTML = '';
         if (!rows.length) {
-            list.innerHTML = '<p class="premium-clan__empty">Nu deții niciun business. Cumpără un 24/7, Ammunation sau benzinărie.</p>';
+            list.innerHTML = `
+                <p class="premium-clan__empty">
+                    You do not own any businesses yet.
+                    Visit a 24/7, Ammunation, or gas station and use the interaction menu to buy one.
+                </p>
+            `;
             return;
         }
         rows.forEach((row) => {
             const card = document.createElement('article');
             card.className = 'premium-clan__card business-owner-card';
+            const catalog = row.catalogKey ? ` · ${this.escape(row.catalogKey)}` : '';
             card.innerHTML = `
                 <div class="business-owner-card__head">
                     <strong>${this.escape(row.label)}</strong>
-                    <span>${this.escape(this.typeLabel(row.businessType))}</span>
+                    <span>${this.escape(this.typeLabel(row.businessType))}${catalog}</span>
                 </div>
-                <p>Profit acumulat: <b>${this.formatMoney(row.balance)}</b></p>
-                <p>Procent profit: <b>${Number(row.profitPercent || 0)}%</b> din vânzări</p>
+                <p>Accumulated profit: <b>${this.formatMoney(row.balance)}</b></p>
+                <p>Owner share: <b>${Number(row.profitPercent || 0)}%</b> of sales</p>
                 <button type="button" class="premium-clan__btn premium-clan__btn--primary" data-business-withdraw="${row.id}" ${row.balance > 0 ? '' : 'disabled'}>
-                    RETRAGE ÎN BANCĂ
+                    WITHDRAW TO BANK
                 </button>
             `;
             list.appendChild(card);
@@ -192,7 +202,7 @@ const BusinessPanels = {
     clearOwner() {
         const form = $('#business-admin-form');
         const businessId = Number(form?.dataset.businessId || 0);
-        if (!businessId || !confirm('Scoți proprietarul și pui business-ul la vânzare?')) return;
+        if (!businessId || !confirm('Remove the owner and list this business for sale again?')) return;
         post('businessManage', { mode: 'admin', action: 'clearOwner', businessId });
     },
 

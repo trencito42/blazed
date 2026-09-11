@@ -61,11 +61,18 @@ SunsetTuning.Shops = {
 }
 
 --- Factory map — nothing enabled until player saves a tune.
+SunsetTuning.ProfileVersion = 2
+
 function SunsetTuning.StockTune()
     return {
+        profileVersion = SunsetTuning.ProfileVersion,
         stage = 'civil',
-        power = 100,
-        torque = 100,
+        power = 0,
+        torque = 0,
+        throttleResponse = 0,
+        topSpeed = 0,
+        shiftSpeed = 0,
+        regenBraking = 0,
         exhaust = 'pop_bang',
         pop = {
             enabled = false,
@@ -101,9 +108,35 @@ function SunsetTuning.DefaultTune()
     return SunsetTuning.StockTune()
 end
 
-function SunsetTuning.SanitizeTune(raw)
+local function migrateLegacyTune(raw, def)
+    -- v1 tunes used power/torque 85-120 centered at 100; map to 0-100 profile scale
+    local power = tonumber(raw.power)
+    if power and power >= 85 and power <= 120 then
+        raw.power = math.max(0, math.min(100, math.floor((power - 100) * 2.5 + 50)))
+    end
+    local torque = tonumber(raw.torque)
+    if torque and torque >= 85 and torque <= 120 then
+        raw.torque = math.max(0, math.min(100, math.floor((torque - 100) * 2.5 + 50)))
+    end
+    if raw.stage == 'sport' and (raw.power or 0) < 15 then raw.power = 25 end
+    if raw.stage == 'race' and (raw.power or 0) < 25 then raw.power = 45 end
+    raw.profileVersion = SunsetTuning.ProfileVersion
+    return raw
+end
+
+function SunsetTuning.SanitizeTune(raw, caps)
     local def = SunsetTuning.StockTune()
     if type(raw) ~= 'table' then return def end
+
+    if (tonumber(raw.profileVersion) or 1) < (SunsetTuning.ProfileVersion or 2) then
+        raw = migrateLegacyTune(raw, def)
+    end
+
+    local limits = (type(caps) == 'table' and caps.limits) or {}
+    local powerMax = limits.power or 100
+    local topMax = limits.topSpeed or 100
+    local shiftMax = limits.shiftSpeed or 100
+    local regenMax = limits.regen or 100
 
     local stage = tostring(raw.stage or def.stage)
     if not SunsetTuning.Stages[stage] then stage = def.stage end
@@ -120,20 +153,28 @@ function SunsetTuning.SanitizeTune(raw)
     local hud = type(raw.hud) == 'table' and raw.hud or {}
     local dyno = type(raw.dyno) == 'table' and raw.dyno or {}
 
+    local turboAllowed = not caps or caps.turboBoost or caps.factoryTurbo
+    local hardwareTurbo = hardware.turbo == true and turboAllowed
+
     return {
+        profileVersion = SunsetTuning.ProfileVersion,
         stage = stage,
-        power = math.max(85, math.min(120, math.floor(tonumber(raw.power) or def.power))),
-        torque = math.max(85, math.min(120, math.floor(tonumber(raw.torque) or def.torque))),
+        power = math.max(0, math.min(powerMax, math.floor(tonumber(raw.power) or def.power))),
+        torque = math.max(0, math.min(powerMax, math.floor(tonumber(raw.torque) or def.torque))),
+        throttleResponse = math.max(0, math.min(100, math.floor(tonumber(raw.throttleResponse) or def.throttleResponse))),
+        topSpeed = math.max(0, math.min(topMax, math.floor(tonumber(raw.topSpeed) or def.topSpeed))),
+        shiftSpeed = math.max(0, math.min(shiftMax, math.floor(tonumber(raw.shiftSpeed) or def.shiftSpeed))),
+        regenBraking = math.max(0, math.min(regenMax, math.floor(tonumber(raw.regenBraking) or def.regenBraking))),
         exhaust = exhaust,
         pop = {
-            enabled = pop.enabled == true,
+            enabled = (caps and caps.popsAndBangs) and pop.enabled == true or false,
             rpmMax = math.max(70, math.min(100, math.floor(tonumber(pop.rpmMax) or def.pop.rpmMax))),
             durationMs = math.max(40, math.min(250, math.floor(tonumber(pop.durationMs) or def.pop.durationMs))),
             secondBurst = pop.secondBurst == true,
             burstStage = SunsetTuning.Stages[tostring(pop.burstStage or stage)] and tostring(pop.burstStage or stage) or stage,
         },
         flames = {
-            enabled = flames.enabled == true or exhaust == 'flames' or exhaust == 'extra',
+            enabled = (caps and caps.flames) and (flames.enabled == true or exhaust == 'flames' or exhaust == 'extra') or false,
             color = {
                 r = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.r) or 255))),
                 g = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.g) or 120))),
@@ -141,7 +182,7 @@ function SunsetTuning.SanitizeTune(raw)
             },
         },
         antiLag = {
-            enabled = antiLag.enabled == true,
+            enabled = (caps and caps.antiLag) and antiLag.enabled == true or false,
             intensity = math.max(0, math.min(100, math.floor(tonumber(antiLag.intensity) or def.antiLag.intensity))),
         },
         drift = {
@@ -154,7 +195,7 @@ function SunsetTuning.SanitizeTune(raw)
             transmission = math.max(0, math.min(3, math.floor(tonumber(hardware.transmission) or 0))),
             suspension = math.max(0, math.min(4, math.floor(tonumber(hardware.suspension) or 0))),
             armor = math.max(0, math.min(5, math.floor(tonumber(hardware.armor) or 0))),
-            turbo = hardware.turbo == true or antiLag.enabled == true or hardware.launchControl == true,
+            turbo = hardwareTurbo == true,
             launchControl = hardware.launchControl == true,
         },
         handling = {
@@ -175,7 +216,8 @@ end
 function SunsetTuning.IsStockTune(raw)
     if type(raw) ~= 'table' then return true end
     local tune = SunsetTuning.SanitizeTune(raw)
-    if tune.stage ~= 'civil' or tune.power ~= 100 or tune.torque ~= 100 then return false end
+    if tune.stage ~= 'civil' or tune.power ~= 0 or tune.torque ~= 0 then return false end
+    if tune.throttleResponse ~= 0 or tune.topSpeed ~= 0 or tune.shiftSpeed ~= 0 or tune.regenBraking ~= 0 then return false end
     if tune.pop.enabled or tune.antiLag.enabled or tune.drift.enabled or tune.hud.enabled then return false end
     if tune.flames.enabled then return false end
     for key in pairs(SunsetTuning.HardwareSlots) do
@@ -190,7 +232,8 @@ end
 
 function SunsetTuning.HasPerformanceChanges(raw)
     local tune = SunsetTuning.SanitizeTune(raw)
-    if tune.stage ~= 'civil' or tune.power ~= 100 or tune.torque ~= 100 or tune.drift.enabled then return true end
+    if tune.stage ~= 'civil' or tune.power ~= 0 or tune.torque ~= 0 or tune.drift.enabled then return true end
+    if tune.throttleResponse ~= 0 or tune.topSpeed ~= 0 or tune.shiftSpeed ~= 0 or tune.regenBraking ~= 0 then return true end
     for key in pairs(SunsetTuning.HardwareSlots) do
         if (tune.hardware[key] or 0) > 0 then return true end
     end
