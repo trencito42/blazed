@@ -41,16 +41,21 @@ const WardrobeUI = {
         buyBtn?.addEventListener('mouseleave', () => this.stopBuy());
 
         document.addEventListener('keydown', (event) => {
-            if (WardrobeUI._$('#wardrobe')?.classList.contains('hidden')) return;
+            const open = document.body.classList.contains('wardrobe-open')
+                || !WardrobeUI._$('#wardrobe')?.classList.contains('hidden');
+            if (!open) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
+                event.stopPropagation();
                 WardrobeUI._post('wardrobeClose');
                 return;
             }
             if (event.key === 'Enter' && !event.repeat) this.startBuy();
         });
         document.addEventListener('keyup', (event) => {
-            if (WardrobeUI._$('#wardrobe')?.classList.contains('hidden')) return;
+            const open = document.body.classList.contains('wardrobe-open')
+                || !WardrobeUI._$('#wardrobe')?.classList.contains('hidden');
+            if (!open) return;
             if (event.key === 'Enter') this.stopBuy();
         });
     },
@@ -76,6 +81,7 @@ const WardrobeUI = {
         document.body.classList.add('wardrobe-open');
         this.renderCategories();
         this.renderValues();
+        this._post('wardrobeReady');
     },
 
     update(data = {}) {

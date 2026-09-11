@@ -146,7 +146,7 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#clothing'];
+            const panels = ['#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#wardrobe', '#clothing'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
@@ -171,6 +171,7 @@ const Panels = {
                         '#emotes': 'emotesClose',
                         '#crafting': 'craftingClose',
                         '#dealership': 'dealershipClose',
+                        '#wardrobe': 'wardrobeClose',
                         '#clothing': 'clothingClose',
                     };
                     post(map[sel]);
@@ -250,60 +251,13 @@ const Panels = {
     showInventory(data) {
         this.init();
         if (Array.isArray(data.nearbyPlayers)) this._inventoryNearby = data.nearbyPlayers;
-        const list = $('#inventory-list');
-        if (!list) return;
-        list.innerHTML = '';
         const items = data.items || [];
         this._inventoryItems = items;
-        const bySlot = new Map(items.map((row, index) => [Math.max(1, Number(row.slot) || index + 1), row]));
-        const slotCount = Math.max(30, ...Array.from(bySlot.keys()), 0);
-        for (let slot = 1; slot <= slotCount; slot += 1) {
-            const row = bySlot.get(slot);
-            const cell = document.createElement('div');
-            cell.className = `premium-slot${row ? ' has-item' : ''}`;
-            cell.dataset.slot = String(slot);
-            const slotLabel = document.createElement('span');
-            slotLabel.className = 'premium-slot__number';
-            slotLabel.textContent = String(slot).padStart(2, '0');
-            cell.appendChild(slotLabel);
-            if (!row) {
-                list.appendChild(cell);
-                continue;
-            }
-            const def = row.item || 'unknown';
-            let label = row.label || def;
-            let fishMeta = null;
-            if (def === 'gas_can' && row.metadata) {
-                const maxL = 20;
-                let liters = Number(row.metadata.liters);
-                if (Number.isNaN(liters) && row.metadata.fuel != null) {
-                    liters = (Number(row.metadata.fuel) / 100) * maxL;
-                }
-                if (!Number.isNaN(liters)) {
-                    label = `Gas Can (${Math.round(liters)}/${maxL} L)`;
-                }
-            }
-            if (def === 'fresh_fish' && row.metadata) {
-                const value = Math.max(0, Number(row.metadata.value) || 0);
-                label = `${row.label || 'Fresh Fish'} ($${Math.round(value)})`;
-            }
-            const FISH_TYPES = ['fish_common','fish_uncommon','fish_rare','fish_epic','fish_legendary'];
-            if (FISH_TYPES.includes(def) && row.metadata) {
-                const kg = Number(row.metadata.fishKg) || 0;
-                const value = Math.max(0, Number(row.metadata.value) || 0);
-                const parts = [];
-                if (kg > 0) parts.push(`${kg.toFixed(1)} KG`);
-                if (value > 0) parts.push(`$${Math.round(value)}`);
-                if (parts.length) fishMeta = parts.join(' — ');
-            } else if (row.weight > 0) {
-                fishMeta = `${Number(row.weight).toFixed(2).replace(/\.?0+$/, '')} KG`;
-            }
-            const item = document.createElement('button');
-            item.className = 'premium-item';
-            item.type = 'button';
-            item.title = row.usable ? `Select ${label}; double-click to use` : `Select ${label}`;
-            item.draggable = false;
-            item.addEventListener('click', (event) => {
+        const inv = window.InventoryForza;
+        if (!inv) return;
+
+        const hooks = {
+            onClick: (row, cell, item, event) => {
                 if (this._suppressInventoryClick) {
                     this._suppressInventoryClick = false;
                     event.preventDefault();
@@ -311,70 +265,29 @@ const Panels = {
                     return;
                 }
                 this.selectInventoryItem(row, cell);
-            });
-            item.addEventListener('dblclick', () => {
+            },
+            onDblClick: (row) => {
+                const def = row.item || 'unknown';
                 if (this._inventoryTrade) this._offerInventoryRow(row);
                 else if (row.usable) post('inventoryUse', { item: def });
-            });
-            item.addEventListener('pointerdown', (event) => {
+            },
+            onPointerDown: (row, cell, item, event) => {
                 if (event.button !== 0) return;
                 this._startInventoryPointerDrag(row, cell, item, event);
-            });
-            item.appendChild(createItemArtwork(row, 'premium-item__icon'));
-            const details = document.createElement('div');
-            details.className = 'premium-item__details';
-            const name = document.createElement('strong');
-            name.textContent = label;
-            const meta = document.createElement('span');
-            meta.textContent = fishMeta ?? (row.usable ? 'CLICK TO USE' : 'STORED ITEM');
-            details.append(name, meta);
-            item.appendChild(details);
-            const count = document.createElement('span');
-            count.className = 'premium-item__count';
-            count.textContent = `x${Math.max(0, Number(row.count) || 0)}`;
-            item.appendChild(count);
-            cell.appendChild(item);
-            list.appendChild(cell);
-        }
-        const currentWeight = Number(data.weight) || 0;
-        const maxWeight = Number(data.maxWeight) || 30;
-        $('#inventory-weight').textContent = `${currentWeight.toFixed(1)} / ${maxWeight.toFixed(1)} KG`;
-        const fill = $('#inventory-weight-fill');
-        if (fill) fill.style.width = `${Math.min(100, Math.max(0, currentWeight / maxWeight * 100))}%`;
+            },
+            onQuickPointerDown: () => {},
+        };
+
+        inv.renderMainGrid(items, hooks, Math.max(30, ...items.map((r, i) => Number(r.slot) || i + 1), 0));
+        inv.renderQuickSlots(data.quickslots || {}, hooks);
+        inv.updateWeight(Number(data.weight) || 0, Number(data.maxWeight) || 30);
+        inv.renderNearby(Array.isArray(data.nearbyPlayers) ? data.nearbyPlayers : (this._inventoryNearby || []));
 
         const cash = Number(data.cash) || 0;
         this._inventoryCash = cash;
         const cashEl = $('#inventory-cash');
-        if (cashEl) cashEl.textContent = '$' + cash.toLocaleString();
+        if (cashEl) cashEl.textContent = cash.toLocaleString();
 
-        const nearbyList = $('#inventory-nearby-list');
-        if (nearbyList) {
-            nearbyList.innerHTML = '';
-            const nearby = Array.isArray(data.nearbyPlayers) ? data.nearbyPlayers : (this._inventoryNearby || []);
-            if (!nearby.length) {
-                const empty = document.createElement('div');
-                empty.className = 'premium-nearby-empty';
-                empty.innerHTML = '<strong>NO PLAYERS NEARBY</strong><span>Move within 3 metres of another player.</span>';
-                nearbyList.appendChild(empty);
-            } else {
-                nearby.forEach((player) => {
-                    const card = document.createElement('button');
-                    card.className = 'premium-player-card';
-                    card.type = 'button';
-                    card.addEventListener('click', () => post('inventoryTradeRequest', { targetId: player.id }));
-                    const copy = document.createElement('div');
-                    const name = document.createElement('strong');
-                    name.textContent = player.name || `Player #${player.id}`;
-                    const distance = document.createElement('span');
-                    distance.textContent = `${Number(player.distance || 0).toFixed(1)} M AWAY`;
-                    copy.append(name, distance);
-                    const id = document.createElement('b');
-                    id.textContent = `ID ${player.id}`;
-                    card.append(copy, id);
-                    nearbyList.appendChild(card);
-                });
-            }
-        }
         const dutyWrap = $('#inventory-duty-wrap');
         const dutyList = $('#inventory-duty-list');
         const dutyWeapons = Array.isArray(data.dutyWeapons) ? data.dutyWeapons : [];
@@ -387,16 +300,12 @@ const Panels = {
                 dutyWeapons.forEach((weaponRow) => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
-                    btn.className = 'premium-duty-weapon';
+                    btn.className = 'inv-duty-chip';
                     btn.title = `Drag to quick slot — ${weaponRow.label || weaponRow.weapon}`;
-                    btn.appendChild(createItemArtwork(weaponRow, 'premium-item__icon'));
-                    const copy = document.createElement('div');
-                    const name = document.createElement('strong');
+                    btn.appendChild(createItemArtwork(weaponRow, 'item-icon'));
+                    const name = document.createElement('span');
                     name.textContent = weaponRow.label || weaponRow.weapon;
-                    const meta = document.createElement('span');
-                    meta.textContent = weaponRow.ammo != null ? `${weaponRow.ammo} rounds` : 'On duty';
-                    copy.append(name, meta);
-                    btn.appendChild(copy);
+                    btn.appendChild(name);
                     btn.addEventListener('pointerdown', (event) => {
                         if (event.button !== 0) return;
                         this._startDutyWeaponDrag(weaponRow, btn, event);
@@ -407,15 +316,14 @@ const Panels = {
         }
 
         if (window.HotbarUI) {
-            HotbarUI.renderInventory({
-                quickslots: data.quickslots || {},
-                activeHotbarSlot: data.activeHotbarSlot,
-            });
+            HotbarUI.renderHud({ slots: data.quickslots || {}, activeSlot: data.activeHotbarSlot, visible: false });
         }
 
         document.body.classList.add('inventory-open');
         document.body.classList.add('hud-chrome-hidden');
-        $('#inventory')?.classList.remove('hidden');
+        const panel = $('#inventory');
+        panel?.classList.remove('hidden');
+        panel?.setAttribute('aria-hidden', 'false');
     },
 
     _dropInventoryRow(row, count) {
@@ -490,7 +398,7 @@ const Panels = {
             $('#inventory-my-offer')?.classList.remove('is-dragover');
             $('#inventory-cash-badge')?.classList.remove('is-dragover');
             $('#inventory-drop-selected')?.classList.remove('is-dragover');
-            $$('.premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+            $$('.inv-slot.is-drop-target, .premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
             if (window.HotbarUI) HotbarUI.clearDropTargets();
         };
 
@@ -518,11 +426,13 @@ const Panels = {
                 }, 0);
                 const stack = document.elementsFromPoint(x, y);
                 const el = stack[0] || null;
-                const hotbarSlot = stack.map((node) => node.closest?.('.hotbar-slot')).find(Boolean)
+                const hotbarSlot = stack.map((node) => node.closest?.('[data-hotbar-slot]')).find(Boolean)
+                    || el?.closest('[data-hotbar-slot]')
+                    || stack.map((node) => node.closest?.('.hotbar-slot')).find(Boolean)
                     || el?.closest('.hotbar-slot');
                 const offerZone = el?.closest('#inventory-my-offer');
                 const dropBtn = el?.closest('#inventory-drop-selected');
-                const slot = el?.closest('.premium-slot');
+                const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
 
                 if (hotbarSlot && !this._inventoryTrade) {
                     const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
@@ -555,9 +465,13 @@ const Panels = {
                         this._dropInventoryRow(state.row);
                     }
                 } else if (slot && !this._inventoryTrade) {
+                    const toGrid = slot.dataset.grid || 'grid-player';
+                    const fromGrid = state.cell?.dataset.grid || 'grid-player';
                     const toSlot = Number(slot.dataset.slot) || 0;
                     const fromSlot = Number(state.row.slot) || Number(state.cell?.dataset.slot) || 0;
-                    if (toSlot && fromSlot && toSlot !== fromSlot) {
+                    if (toGrid === 'grid-quick' && fromGrid === 'grid-player' && toSlot >= 1 && toSlot <= 5) {
+                        post('hotbarAssign', { slot: toSlot, kind: 'item', rowId: state.row.id, fromInventory: true });
+                    } else if (toGrid === 'grid-player' && fromGrid === 'grid-player' && toSlot && fromSlot && toSlot !== fromSlot) {
                         post('inventoryMoveSlot', { fromSlot, toSlot });
                     }
                 }
@@ -610,12 +524,13 @@ const Panels = {
             } else if (el?.closest('#inventory-drop-selected')) {
                 $('#inventory-drop-selected')?.classList.add('is-dragover');
             } else {
-                const hotbarSlot = el?.closest('.hotbar-slot');
+                const hotbarSlot = el?.closest('[data-hotbar-slot]') || el?.closest('.hotbar-slot');
                 if (hotbarSlot && !this._inventoryTrade) {
                     const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
                     if (window.HotbarUI) HotbarUI.markDropTarget(hotbarIndex, true);
+                    hotbarSlot.classList.add('is-drop-target');
                 } else {
-                    const slot = el?.closest('.premium-slot');
+                    const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
                     if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
                 }
             }
@@ -775,7 +690,7 @@ const Panels = {
 
     selectInventoryItem(row, cell) {
         this._inventorySelected = row || null;
-        $$('.premium-slot.is-selected').forEach((slot) => slot.classList.remove('is-selected'));
+        $$('.inv-slot.is-selected, .premium-slot.is-selected').forEach((slot) => slot.classList.remove('is-selected'));
         cell?.classList.add('is-selected');
         const label = $('#inventory-selected-label');
         if (label) {
@@ -970,7 +885,9 @@ const Panels = {
     },
 
     hideInventory() {
-        $('#inventory')?.classList.add('hidden');
+        const panel = $('#inventory');
+        panel?.classList.add('hidden');
+        panel?.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('inventory-open');
         if (!document.body.classList.contains('tuning-ui-open')
             && !document.body.classList.contains('emote-wheel-open')) {

@@ -6,7 +6,7 @@
     --wr-shadow-glow: 0 0 20px rgba(0, 255, 204, 0.4);
     position: fixed;
     inset: 0;
-    z-index: 12000;
+    z-index: 50000;
     pointer-events: auto;
     font-family: 'Montserrat', sans-serif;
 }

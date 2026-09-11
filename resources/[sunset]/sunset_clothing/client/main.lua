@@ -6,6 +6,7 @@ local activeCategory = 'top'
 local cartTotal = 0
 local hasChanges = false
 local lastWardrobeOpenAt = 0
+local wardrobePendingFocus = false
 
 local function notify(msg, kind)
     exports.sunset_ui:Notify(msg, kind or 'info')
@@ -54,8 +55,33 @@ local function applyPreviewToPed()
     previewAppearance = SunsetClothing.preview(ped, previewAppearance, char.gender or 0)
 end
 
+local function abortWardrobeOpen(err)
+    wardrobePendingFocus = false
+    print(('[sunset_clothing] openWardrobe failed: %s'):format(tostring(err or 'unknown')))
+    notify('Could not open clothing store.', 'error')
+    inShop = false
+    shopType = nil
+    savedSnapshot = nil
+    previewAppearance = nil
+    WardrobeShop.stopCamera()
+    exports.sunset_ui:SetFocus(false, false)
+    exports.sunset_ui:ShowHudChrome()
+    exports.sunset_ui:Send('wardrobeHide', {})
+    TriggerEvent('sunset:world:uiModalClose')
+end
+
+local function finishWardrobeOpen()
+    if not wardrobePendingFocus or not inShop or shopType ~= 'clothing' then return end
+    wardrobePendingFocus = false
+    local ped = PlayerPedId()
+    applyPreviewToPed()
+    WardrobeShop.startCamera(ped, 'full')
+    exports.sunset_ui:SetFocus(true, true)
+end
+
 local function closeShop()
     if not inShop then return end
+    wardrobePendingFocus = false
     restoreSnapshot()
     WardrobeShop.stopCamera()
     inShop = false
@@ -82,8 +108,7 @@ local function openWardrobe()
     end
 
     if exports.sunset_ui:IsOpen() then
-        exports.sunset_ui:Hide()
-        Wait(50)
+        exports.sunset_ui:MarkGameplayEntered()
     end
 
     savedSnapshot = captureSnapshot()
@@ -103,31 +128,29 @@ local function openWardrobe()
         inShop = true
         shopType = 'clothing'
         lastWardrobeOpenAt = now
+        wardrobePendingFocus = true
 
         exports.sunset_ui:HideHudChrome()
         exports.sunset_ui:Send('wardrobeShow', catalog)
         TriggerEvent('sunset:world:uiModalOpen')
-        Wait(100)
-
-        applyPreviewToPed()
-        WardrobeShop.startCamera(ped, 'full')
-        exports.sunset_ui:SetFocus(true, true)
     end)
 
     if not ok then
-        print(('[sunset_clothing] openWardrobe failed: %s'):format(tostring(err)))
-        notify('Could not open clothing store.', 'error')
-        inShop = false
-        shopType = nil
-        savedSnapshot = nil
-        previewAppearance = nil
-        WardrobeShop.stopCamera()
-        exports.sunset_ui:SetFocus(false, false)
-        exports.sunset_ui:ShowHudChrome()
-        exports.sunset_ui:Send('wardrobeHide', {})
-        TriggerEvent('sunset:world:uiModalClose')
+        abortWardrobeOpen(err)
+        return
     end
+
+    CreateThread(function()
+        Wait(2500)
+        if wardrobePendingFocus and inShop then
+            finishWardrobeOpen()
+        end
+    end)
 end
+
+AddEventHandler('sunset:nui:wardrobeReady', function()
+    finishWardrobeOpen()
+end)
 
 local function openBarber()
     if inShop then return end

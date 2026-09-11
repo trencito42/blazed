@@ -55,7 +55,7 @@
     <link rel="stylesheet" href="css/redesign.css?v=14">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap">
     <link rel="stylesheet" href="css/dealership-forza.css?v=4">
-    <link rel="stylesheet" href="css/wardrobe-forza.css?v=1">
+    <link rel="stylesheet" href="css/wardrobe-forza.css?v=2">
     <link rel="stylesheet" href="css/premium-factions.css?v=2">
     <link rel="stylesheet" href="css/fleeca-bank.css?v=1">
     <link rel="stylesheet" href="css/premium-menu.css?v=5">
@@ -66,6 +66,7 @@
     <link rel="stylesheet" href="css/premium-properties.css?v=6">
     <link rel="stylesheet" href="css/premium-chat.css?v=13">
     <link rel="stylesheet" href="css/quick-hotbar.css?v=6">
+    <link rel="stylesheet" href="css/inventory-forza.css?v=1">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -944,88 +945,92 @@
 
     <!-- AUTH moved to #screen-auth (cinematic) -->
 
-    <!-- INVENTORY (I) — premium_inventory_trade.html production port -->
-    <div id="inventory" class="menu menu--solo menu--solo-inventory hidden">
-        <div class="premium-inventory-shell">
-            <section class="premium-inventory-main">
-                <header class="premium-inventory-header">
-                    <h1>INVENTORY</h1>
-                    <div class="premium-inventory-stats">
-                        <div class="premium-cash-badge" id="inventory-cash-badge" title="Wallet cash — drag into trade offer">
-                            <span class="premium-cash-badge__icon">$</span>
-                            <strong id="inventory-cash">0</strong>
-                        </div>
-                        <div class="premium-weight"><span id="inventory-weight">0.0 / 30 KG</span><div class="premium-weight__track"><i id="inventory-weight-fill"></i></div></div>
+    <!-- INVENTORY (I) — iinventory.html Forza port -->
+    <div id="inventory" class="inventory-forza hidden" aria-hidden="true">
+        <div class="inv-forza-overlay"></div>
+        <div class="inventory-forza-wrapper">
+            <div class="inv-panel">
+                <div class="inv-header">
+                    <div class="inv-title">
+                        <div class="inv-name"><i class="ph-bold ph-user"></i> Inventar</div>
+                        <div class="inv-cash-badge" id="inventory-cash-badge" title="Wallet cash — drag into trade offer">$<strong id="inventory-cash">0</strong></div>
+                        <div class="inv-weight-text"><span id="weight-val-player">0.0</span> / <span id="weight-max-player">30.0</span> KG</div>
                     </div>
-                </header>
-                <div class="premium-inventory-grid" id="inventory-list"></div>
-                <div class="premium-inventory-duty hidden" id="inventory-duty-wrap">
-                    <div class="premium-inventory-duty__label">DUTY WEAPONS — DRAG TO QUICK SLOT</div>
-                    <div class="premium-inventory-duty__grid" id="inventory-duty-list"></div>
+                    <div class="weight-bar-container" id="weight-bar-player"></div>
                 </div>
-                <div class="premium-inventory-hotbar">
-                    <div class="premium-inventory-hotbar__label">QUICK SLOTS — DRAG ITEMS HERE</div>
-                    <div class="hotbar-container hotbar-container--inventory" id="inventory-hotbar"></div>
+                <div class="equipment-row" id="equip-player">
+                    <div class="equip-slot" data-slot="mask" data-grid="equip-player"><i class="ph-fill ph-mask-happy equip-ghost"></i></div>
+                    <div class="equip-slot" data-slot="hat" data-grid="equip-player"><i class="ph-fill ph-baseball-cap equip-ghost"></i></div>
+                    <div class="equip-slot" data-slot="glasses" data-grid="equip-player"><i class="ph-fill ph-sunglasses equip-ghost"></i></div>
+                    <div class="equip-slot" data-slot="armor" data-grid="equip-player"><i class="ph-fill ph-shield equip-ghost"></i></div>
+                    <div class="equip-slot" data-slot="bag" data-grid="equip-player"><i class="ph-fill ph-backpack equip-ghost"></i></div>
                 </div>
-                <div class="premium-item-actions">
+                <div class="inv-grid-wrapper">
+                    <div class="quick-picks-container" id="grid-quick"></div>
+                    <div class="inv-grid" id="grid-player"></div>
+                </div>
+                <div class="inv-duty-row hidden" id="inventory-duty-wrap">
+                    <div id="inventory-duty-list"></div>
+                </div>
+                <div class="inv-actions">
                     <span id="inventory-selected-label">SELECT AN ITEM</span>
                     <button type="button" id="inventory-use-selected" disabled>USE</button>
                     <button type="button" class="is-danger" id="inventory-drop-selected" disabled>DROP</button>
                 </div>
-            </section>
-            <aside class="premium-inventory-side">
-                <div id="inventory-nearby-panel">
-                    <div class="premium-side-heading"><h2>NEARBY PLAYERS</h2></div>
-                    <div class="premium-nearby-list" id="inventory-nearby-list"></div>
-                </div>
-                <div class="premium-trade-panel hidden" id="inventory-trade-panel">
-                    <div class="premium-side-heading">TRADE WITH <strong id="inventory-trade-target">PLAYER</strong></div>
-                    <span class="premium-trade-label">YOUR OFFER — DRAG ITEMS OR CASH HERE</span>
-                    <div class="premium-trade-zone" id="inventory-my-offer"></div>
-                    <span class="premium-trade-label">YOUR ASSETS</span>
-                    <div class="premium-trade-assets" id="inventory-my-assets"></div>
-                    <button type="button" class="premium-trade-add-asset" id="inventory-trade-add-asset">+ ADD HOUSE / VEHICLE / BUSINESS</button>
-                    <span class="premium-trade-label">THEIR OFFER</span>
-                    <div class="premium-trade-zone is-readonly" id="inventory-their-offer"></div>
-                    <span class="premium-trade-label">THEIR ASSETS</span>
-                    <div class="premium-trade-assets is-readonly" id="inventory-their-assets"></div>
-                    <button type="button" class="premium-trade-confirm" id="inventory-trade-confirm">ACCEPT TRADE</button>
-                    <button type="button" class="premium-trade-cancel" id="inventory-trade-cancel">CANCEL</button>
-                </div>
-            </aside>
-            <div class="premium-trade-asset-modal hidden" id="inventory-trade-asset-modal" aria-hidden="true">
-                <div class="premium-qty-box premium-trade-asset-box">
-                    <h3>ADD ASSET TO TRADE</h3>
-                    <p class="premium-trade-asset-hint">Only garage-stored vehicles and assets you own can be traded.</p>
-                    <div class="premium-trade-asset-list" id="inventory-trade-asset-list"></div>
-                    <div class="premium-qty-actions">
-                        <button type="button" class="premium-qty-cancel" id="inventory-trade-asset-close">CLOSE</button>
-                    </div>
-                </div>
             </div>
-            <div class="premium-qty-modal hidden" id="inventory-qty-modal" aria-hidden="true">
-                <div class="premium-qty-box">
-                    <h3 id="inventory-qty-title">SELECT AMOUNT</h3>
-                    <p class="premium-qty-item" id="inventory-qty-item-name">Item</p>
-                    <div class="premium-qty-controls">
-                        <button type="button" class="premium-qty-btn" id="inventory-qty-minus">-</button>
-                        <input type="number" id="inventory-qty-input" min="1" max="1" value="1" class="premium-qty-input">
-                        <button type="button" class="premium-qty-btn" id="inventory-qty-plus">+</button>
-                    </div>
-                    <input type="range" id="inventory-qty-slider" min="1" max="1" value="1" class="premium-qty-slider">
-                    <div class="premium-qty-quick">
-                        <button type="button" id="inventory-qty-quick-1">1</button>
-                        <button type="button" id="inventory-qty-quick-half">50%</button>
-                        <button type="button" id="inventory-qty-quick-all">ALL</button>
-                    </div>
-                    <div class="premium-qty-actions">
-                        <button type="button" class="premium-qty-cancel" id="inventory-qty-cancel">CANCEL</button>
-                        <button type="button" class="premium-qty-confirm" id="inventory-qty-confirm">CONFIRM</button>
-                    </div>
+            <div class="proximity-panel" id="inventory-nearby-panel">
+                <div class="prox-header">
+                    <div class="prox-radar-icon"></div> Jucători în zonă
                 </div>
+                <div class="prox-list" id="inventory-nearby-list"></div>
             </div>
-            <div class="premium-close-hint">PRESS ESC OR I TO CLOSE</div>
         </div>
+        <div class="premium-trade-panel hidden" id="inventory-trade-panel">
+            <div class="premium-side-heading">TRADE WITH <strong id="inventory-trade-target">PLAYER</strong></div>
+            <span class="premium-trade-label">YOUR OFFER — DRAG ITEMS OR CASH HERE</span>
+            <div class="premium-trade-zone" id="inventory-my-offer"></div>
+            <span class="premium-trade-label">YOUR ASSETS</span>
+            <div class="premium-trade-assets" id="inventory-my-assets"></div>
+            <button type="button" class="premium-trade-add-asset" id="inventory-trade-add-asset">+ ADD HOUSE / VEHICLE / BUSINESS</button>
+            <span class="premium-trade-label">THEIR OFFER</span>
+            <div class="premium-trade-zone is-readonly" id="inventory-their-offer"></div>
+            <span class="premium-trade-label">THEIR ASSETS</span>
+            <div class="premium-trade-assets is-readonly" id="inventory-their-assets"></div>
+            <button type="button" class="premium-trade-confirm" id="inventory-trade-confirm">ACCEPT TRADE</button>
+            <button type="button" class="premium-trade-cancel" id="inventory-trade-cancel">CANCEL</button>
+        </div>
+        <div class="premium-trade-asset-modal hidden" id="inventory-trade-asset-modal" aria-hidden="true">
+            <div class="premium-qty-box premium-trade-asset-box">
+                <h3>ADD ASSET TO TRADE</h3>
+                <p class="premium-trade-asset-hint">Only garage-stored vehicles and assets you own can be traded.</p>
+                <div class="premium-trade-asset-list" id="inventory-trade-asset-list"></div>
+                <div class="premium-qty-actions">
+                    <button type="button" class="premium-qty-cancel" id="inventory-trade-asset-close">CLOSE</button>
+                </div>
+            </div>
+        </div>
+        <div class="premium-qty-modal hidden" id="inventory-qty-modal" aria-hidden="true">
+            <div class="premium-qty-box">
+                <h3 id="inventory-qty-title">SELECT AMOUNT</h3>
+                <p class="premium-qty-item" id="inventory-qty-item-name">Item</p>
+                <div class="premium-qty-controls">
+                    <button type="button" class="premium-qty-btn" id="inventory-qty-minus">-</button>
+                    <input type="number" id="inventory-qty-input" min="1" max="1" value="1" class="premium-qty-input">
+                    <button type="button" class="premium-qty-btn" id="inventory-qty-plus">+</button>
+                </div>
+                <input type="range" id="inventory-qty-slider" min="1" max="1" value="1" class="premium-qty-slider">
+                <div class="premium-qty-quick">
+                    <button type="button" id="inventory-qty-quick-1">1</button>
+                    <button type="button" id="inventory-qty-quick-half">50%</button>
+                    <button type="button" id="inventory-qty-quick-all">ALL</button>
+                </div>
+                <div class="premium-qty-actions">
+                    <button type="button" class="premium-qty-cancel" id="inventory-qty-cancel">CANCEL</button>
+                    <button type="button" class="premium-qty-confirm" id="inventory-qty-confirm">CONFIRM</button>
+                </div>
+            </div>
+        </div>
+        <div class="inv-close-hint">APASĂ ESC SAU I PENTRU A ÎNCHIDE</div>
     </div>
 
     <!-- 24/7 STORE (Forza) -->
@@ -3464,7 +3469,8 @@
     <script src="js/phone.js?v=5"></script>
     <script src="js/dealership.js?v=3"></script>
     <script src="js/hotbar.js?v=5"></script>
-    <script src="js/panels.js?v=18"></script>
+    <script src="js/inventory-forza.js?v=1"></script>
+    <script src="js/panels.js?v=19"></script>
     <script src="js/overlays.js?v=2"></script>
     <script src="js/auth_accounts.js?v=7"></script>
     <script src="js/auth_email.js?v=1"></script>
@@ -3483,7 +3489,7 @@
     <script src="js/factions.js?v=11"></script>
     <script src="js/clans.js?v=13"></script>
     <script src="js/businesses.js?v=5"></script>
-    <script src="js/wardrobe.js?v=2"></script>
+    <script src="js/wardrobe.js?v=3"></script>
     <script src="js/mdc_tablet.js?v=13"></script>
     <script src="js/player_interaction.js?v=5"></script>
     <script src="js/atm.js?v=1"></script>

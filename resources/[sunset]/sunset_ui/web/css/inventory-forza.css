@@ -1,0 +1,493 @@
+.inventory-forza {
+    --inv-text-main: #ffffff;
+    --inv-text-muted: rgba(255, 255, 255, 0.4);
+    --inv-accent: #00ffcc;
+    --inv-danger: #ff3366;
+    --inv-bg-panel: rgba(10, 10, 15, 0.85);
+    --inv-border-glass: rgba(255, 255, 255, 0.1);
+    --inv-shadow-text: 0 4px 10px rgba(0, 0, 0, 0.9);
+    --inv-shadow-glow: 0 0 20px rgba(0, 255, 204, 0.3);
+    position: fixed;
+    inset: 0;
+    z-index: 11500;
+    font-family: 'Montserrat', sans-serif;
+    pointer-events: auto;
+}
+
+.inventory-forza.hidden { display: none !important; }
+
+.inventory-forza .inv-forza-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.9) 100%);
+    pointer-events: none;
+}
+
+.inventory-forza-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.inventory-forza .inv-panel {
+    width: min(480px, 92vw);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transform: skewX(-5deg);
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
+}
+
+.inventory-forza .inv-header {
+    background: var(--inv-bg-panel);
+    border: 2px solid var(--inv-border-glass);
+    padding: 20px 25px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    border-bottom: 4px solid var(--inv-accent);
+}
+
+.inventory-forza .inv-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.inventory-forza .inv-name {
+    font-size: 24px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--inv-text-main);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: var(--inv-shadow-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transform: skewX(5deg);
+}
+
+.inventory-forza .inv-cash-badge {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--inv-accent);
+    transform: skewX(5deg);
+    white-space: nowrap;
+}
+
+.inventory-forza .inv-weight-text {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--inv-text-muted);
+    font-variant-numeric: tabular-nums;
+    transform: skewX(5deg);
+}
+
+.inventory-forza .inv-weight-text span { color: var(--inv-text-main); }
+
+.inventory-forza .weight-bar-container {
+    display: flex;
+    gap: 3px;
+    width: 100%;
+    height: 12px;
+}
+
+.inventory-forza .weight-segment {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    transform: skewX(-15deg);
+    transition: all 0.3s;
+}
+
+.inventory-forza .weight-segment.fill {
+    background: var(--inv-accent);
+    box-shadow: 0 0 8px var(--inv-accent);
+}
+
+.inventory-forza .weight-segment.danger {
+    background: var(--inv-danger);
+    box-shadow: 0 0 8px var(--inv-danger);
+}
+
+.inventory-forza .equipment-row {
+    display: flex;
+    gap: 10px;
+    background: var(--inv-bg-panel);
+    border: 2px solid var(--inv-border-glass);
+    padding: 15px 25px;
+    backdrop-filter: blur(10px);
+    justify-content: space-between;
+}
+
+.inventory-forza .equip-slot {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: 0.2s;
+}
+
+.inventory-forza .equip-slot:hover { border-color: rgba(255, 255, 255, 0.2); }
+.inventory-forza .equip-slot.is-drop-target,
+.inventory-forza .inv-slot.is-drop-target {
+    border-color: var(--inv-accent);
+    background: rgba(0, 255, 204, 0.1);
+    box-shadow: inset 0 0 20px rgba(0, 255, 204, 0.2);
+}
+
+.inventory-forza .equip-ghost {
+    position: absolute;
+    font-size: 28px;
+    color: rgba(255, 255, 255, 0.1);
+    transform: skewX(5deg);
+    pointer-events: none;
+}
+
+.inventory-forza .inv-grid-wrapper {
+    background: var(--inv-bg-panel);
+    border: 2px solid var(--inv-border-glass);
+    padding: 25px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.inventory-forza .quick-picks-container {
+    padding: 10px;
+    background: rgba(0, 255, 204, 0.03);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    position: relative;
+}
+
+.inventory-forza .quick-picks-label {
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--inv-accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: #0a0a0e;
+    padding: 0 5px;
+    transform: skewX(5deg);
+}
+
+.inventory-forza .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    align-content: start;
+    min-height: 250px;
+}
+
+.inventory-forza .inv-slot {
+    aspect-ratio: 1;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inventory-forza .inv-slot:hover { border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); }
+.inventory-forza .inv-slot.is-selected { border-color: var(--inv-accent); box-shadow: 0 0 12px rgba(0, 255, 204, 0.25); }
+
+.inventory-forza .hotbar-marker {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    font-size: 11px;
+    font-weight: 900;
+    color: #000;
+    background: var(--inv-accent);
+    padding: 2px 6px;
+    transform: skewX(5deg);
+    pointer-events: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+.inventory-forza .inv-item {
+    width: 90%;
+    height: 90%;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    position: relative;
+    z-index: 5;
+    transform: skewX(5deg);
+    border: none;
+    color: inherit;
+    padding: 0;
+}
+
+.inventory-forza .inv-item:active { cursor: grabbing; }
+.inventory-forza .inv-item.is-dragging { opacity: 0.5; filter: drop-shadow(0 0 15px var(--inv-accent)); }
+
+.inventory-forza .item-icon {
+    font-size: 32px;
+    color: var(--inv-text-main);
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.8));
+    margin-bottom: 2px;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.inventory-forza .item-name {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--inv-text-muted);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 95%;
+}
+
+.inventory-forza .item-info {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 4px;
+    box-sizing: border-box;
+}
+
+.inventory-forza .item-qty { font-size: 10px; font-weight: 900; color: var(--inv-accent); }
+.inventory-forza .item-weight { font-size: 9px; font-weight: 700; color: var(--inv-text-muted); }
+
+.inventory-forza .proximity-panel {
+    width: min(260px, 88vw);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transform: skewX(-5deg) translateY(20px);
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
+}
+
+.inventory-forza .prox-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--inv-accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    padding: 0 5px;
+    transform: skewX(5deg);
+}
+
+.inventory-forza .prox-radar-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--inv-accent);
+    box-shadow: 0 0 10px var(--inv-accent);
+    animation: invRadarPulse 1.5s infinite;
+}
+
+@keyframes invRadarPulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(0, 255, 204, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); }
+}
+
+.inventory-forza .prox-list { display: flex; flex-direction: column; gap: 10px; }
+
+.inventory-forza .prox-player {
+    background: var(--inv-bg-panel);
+    border: 2px solid var(--inv-border-glass);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.inventory-forza .prox-player:hover { border-color: var(--inv-text-muted); background: rgba(255, 255, 255, 0.05); }
+.inventory-forza .prox-player.is-drag-over {
+    border-color: var(--inv-accent);
+    background: rgba(0, 255, 204, 0.15);
+    box-shadow: inset 0 0 20px rgba(0, 255, 204, 0.3);
+    transform: scale(1.05);
+}
+
+.inventory-forza .prox-id { font-size: 10px; font-weight: 900; color: var(--inv-text-muted); transform: skewX(5deg); }
+.inventory-forza .prox-name { font-size: 14px; font-weight: 800; font-style: italic; color: var(--inv-text-main); text-transform: uppercase; transform: skewX(5deg); }
+.inventory-forza .prox-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+    border-top: 1px solid var(--inv-border-glass);
+    padding-top: 8px;
+    transform: skewX(5deg);
+}
+
+.inventory-forza .prox-hint {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--inv-accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.inventory-forza .prox-empty {
+    background: var(--inv-bg-panel);
+    border: 2px dashed var(--inv-border-glass);
+    padding: 20px;
+    text-align: center;
+    color: var(--inv-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    transform: skewX(5deg);
+}
+
+.inventory-forza .inv-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--inv-bg-panel);
+    border: 2px solid var(--inv-border-glass);
+    padding: 14px 18px;
+    backdrop-filter: blur(10px);
+    transform: skewX(5deg);
+}
+
+.inventory-forza .inv-actions span {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--inv-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.inventory-forza .inv-actions button {
+    border: 1px solid var(--inv-border-glass);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--inv-text-main);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    padding: 10px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.2s;
+}
+
+.inventory-forza .inv-actions button:hover:not(:disabled) {
+    border-color: var(--inv-accent);
+    color: var(--inv-accent);
+}
+
+.inventory-forza .inv-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
+.inventory-forza .inv-actions button.is-danger { border-color: rgba(255, 51, 102, 0.4); color: #ff8fab; }
+.inventory-forza .inv-actions button.is-danger:hover:not(:disabled) { border-color: var(--inv-danger); color: var(--inv-danger); }
+
+.inventory-forza .inv-duty-row {
+    background: var(--inv-bg-panel);
+    border: 2px solid var(--inv-border-glass);
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.inventory-forza .inv-duty-row.hidden { display: none !important; }
+
+.inventory-forza .inv-duty-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--inv-border-glass);
+    background: rgba(0, 0, 0, 0.45);
+    cursor: grab;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--inv-text-main);
+}
+
+.inventory-forza .inv-close-hint {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) skewX(-5deg);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--inv-text-muted);
+    text-transform: uppercase;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.inventory-forza .premium-qty-modal,
+.inventory-forza .premium-trade-asset-modal {
+    z-index: 30;
+}
+
+body.inventory-open #hud,
+body.inventory-open #chat,
+body.inventory-open #chat-backdrop,
+body.inventory-open .hud-tr,
+body.inventory-open .hud-bl,
+body.inventory-open .hotbar-container {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+@media (max-width: 1100px) {
+    .inventory-forza-wrapper {
+        flex-direction: column;
+        overflow-y: auto;
+        align-items: stretch;
+        padding-top: 40px;
+        padding-bottom: 60px;
+    }
+    .inventory-forza .proximity-panel { transform: skewX(-5deg); width: min(480px, 92vw); margin: 0 auto; }
+}

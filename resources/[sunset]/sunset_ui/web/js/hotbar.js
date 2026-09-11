@@ -147,6 +147,7 @@ const HotbarUI = {
     markDropTarget(slotIndex, active) {
         const selector = `[data-hotbar-slot="${slotIndex}"]`;
         $$(selector).forEach((el) => el.classList.toggle('is-drop-target', active));
+        $$(`.hotbar-slot[data-hotbar-slot="${slotIndex}"]`).forEach((el) => el.classList.toggle('is-drop-target', active));
     },
 
     clearDropTargets() {
