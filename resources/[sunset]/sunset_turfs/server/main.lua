@@ -368,15 +368,44 @@ local function runTurflist(source)
         return
     end
 
-    local out = {}
+    local rows = {}
     for id, t in pairs(Turfs) do
-        local status = ActiveWars[id] and '^1[WAR ACTIV]^7' or '^2[PACE]^7'
-        local msg = ('#%02d %s | Owner: %s (%s) | %s'):format(id, t.name, t.ownerTag or '--', t.ownerName or 'Liber', status)
+        rows[#rows + 1] = {
+            id = id,
+            name = t.name,
+            ownerTag = t.ownerTag or '--',
+            ownerName = t.ownerName or 'Liber',
+            war = ActiveWars[id] ~= nil,
+        }
+    end
+
+    table.sort(rows, function(a, b) return a.id < b.id end)
+
+    if #rows == 0 then
+        local empty = 'Niciun teritoriu in DB. Verifica migrarea 34-turfs.sql.'
+        if source == 0 then
+            print(('[sunset_turfs] %s'):format(empty))
+        else
+            TriggerClientEvent('sunset:client:notify', source, empty, 'warning', 8000)
+        end
+        return
+    end
+
+    for _, row in ipairs(rows) do
+        local status = row.war and '[WAR]' or '[PACE]'
+        local msg = ('#%02d %s | Owner: %s (%s) | %s'):format(
+            row.id, row.name, row.ownerTag, row.ownerName, status
+        )
         if source == 0 then
             print(msg)
         else
-            TriggerClientEvent('chat:addMessage', source, { color = { 0, 255, 204 }, args = { 'TURFS', msg } })
+            TriggerClientEvent('sunset:chat:system', source, msg, 'info')
         end
+    end
+
+    if source ~= 0 then
+        TriggerClientEvent('sunset:client:notify', source,
+            ('%d teritorii listate in chat.'):format(#rows), 'success', 5000)
     end
 end
 

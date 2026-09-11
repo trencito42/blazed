@@ -4,9 +4,7 @@ local activeHotbarSlot = nil
 local hotbarSlots = {}
 local hotbarPeekUntil = 0
 local emoteWheelOpen = false
-local xEmoteHolding = false
-local xHoldToken = 0
-local X_HOLD_MS = 0
+local xWheelHeld = false
 
 local UNARMED = `WEAPON_UNARMED`
 
@@ -265,7 +263,6 @@ local function openEmoteWheel()
     if emoteWheelOpen or blocked() then return end
     emoteWheelOpen = true
     clearHandsUpAnim(PlayerPedId())
-    exports.sunset_ui:SetFocus(true, true)
     exports.sunset_ui:Send('emoteWheelShow', {
         emotes = GetResourceState('sunset_emotes') == 'started' and exports.sunset_emotes:GetEmoteWheelList() or {},
     })
@@ -274,10 +271,27 @@ end
 local function closeEmoteWheel(playSelection)
     if not emoteWheelOpen then return end
     emoteWheelOpen = false
-    exports.sunset_ui:SetFocus(false, false)
     exports.sunset_ui:Send('emoteWheelHide', {})
     if playSelection and playSelection ~= '' and GetResourceState('sunset_emotes') == 'started' then
         exports.sunset_emotes:PlayEmote(playSelection)
+    end
+end
+
+local function setEmoteWheelHeld(held)
+    if held then
+        if not xWheelHeld then
+            xWheelHeld = true
+            blockDefaultXControls()
+            clearHandsUpAnim(PlayerPedId())
+            openEmoteWheel()
+        end
+        return
+    end
+
+    if not xWheelHeld then return end
+    xWheelHeld = false
+    if emoteWheelOpen then
+        exports.sunset_ui:Send('emoteWheelRelease', {})
     end
 end
 
@@ -289,44 +303,40 @@ for i = 1, HOTBAR_SLOTS do
 end
 
 RegisterCommand('+sunset_emote_wheel', function()
-    if blocked() or emoteWheelOpen then return end
-    xEmoteHolding = true
-    blockDefaultXControls()
-    clearHandsUpAnim(PlayerPedId())
-
-    local token = xHoldToken + 1
-    xHoldToken = token
-
-    if X_HOLD_MS <= 0 then
-        openEmoteWheel()
-        return
-    end
-
-    CreateThread(function()
-        while xEmoteHolding and xHoldToken == token and not emoteWheelOpen do
-            blockDefaultXControls()
-            clearHandsUpAnim(PlayerPedId())
-            Wait(0)
-        end
-    end)
-
-    CreateThread(function()
-        Wait(X_HOLD_MS)
-        if xHoldToken ~= token then return end
-        if blocked() or emoteWheelOpen or not xEmoteHolding then return end
-        openEmoteWheel()
-    end)
+    if blocked() then return end
+    setEmoteWheelHeld(true)
 end, false)
 
 RegisterCommand('-sunset_emote_wheel', function()
-    xEmoteHolding = false
-    xHoldToken = xHoldToken + 1
-    if emoteWheelOpen then
-        exports.sunset_ui:Send('emoteWheelRelease', {})
-    end
+    setEmoteWheelHeld(false)
 end, false)
 
 RegisterKeyMapping('+sunset_emote_wheel', 'Hold for emote wheel', 'keyboard', 'X')
+
+-- Physical X fallback (control 73) — same hold-to-show pattern as Z player list.
+CreateThread(function()
+    local physicalXDown = false
+    while true do
+        if IsPauseMenuActive() or (IsNuiFocused() and not emoteWheelOpen) then
+            if physicalXDown then
+                physicalXDown = false
+                setEmoteWheelHeld(false)
+            end
+            Wait(100)
+        else
+            blockDefaultXControls()
+            local pressed = IsDisabledControlPressed(0, 73)
+            if pressed and not physicalXDown then
+                physicalXDown = true
+                if not blocked() then setEmoteWheelHeld(true) end
+            elseif not pressed and physicalXDown then
+                physicalXDown = false
+                setEmoteWheelHeld(false)
+            end
+            Wait(0)
+        end
+    end
+end)
 
 CreateThread(function()
     while true do

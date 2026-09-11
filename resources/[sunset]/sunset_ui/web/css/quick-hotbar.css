@@ -318,8 +318,8 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     position: fixed;
     inset: 0;
     z-index: 500;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
