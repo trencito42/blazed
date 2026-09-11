@@ -142,6 +142,16 @@ RegisterNetEvent('sunset:detention:handsUp', function(serverId, state)
 end)
 
 RegisterCommand('handsup', function()
+    -- Ignore stale local X -> /handsup mappings left behind by older builds.
+    -- /handsup typed in chat still works normally.
+    if IsControlPressed(0, 73) or IsDisabledControlPressed(0, 73) then
+        if handsUp then
+            handsUp = false
+            TriggerServerEvent('sunset:server:handsUp', false)
+            if not isCuffed then ClearPedSecondaryTask(PlayerPedId()) end
+        end
+        return
+    end
     handsUp = not handsUp
     TriggerServerEvent('sunset:server:handsUp', handsUp)
     local ped = PlayerPedId()

@@ -783,23 +783,29 @@ local function handleClanManage(source, payload)
         if isLeader(row, cid) then
             return nil, 'Leaders must dissolve the clan or transfer leadership before leaving.'
         end
-        safeAudit(row.clan_id, cid, 'leave', {})
-        safeBroadcast(row.clan_id, source, 'left the clan.')
-        MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { row.clan_id, cid })
+        local clanId = row.clan_id
+        safeAudit(clanId, cid, 'leave', {})
+        safeBroadcast(clanId, source, 'left the clan.')
+        MySQL.update.await('DELETE FROM clan_members WHERE clan_id = ? AND character_id = ?', { clanId, cid })
         ClanDisplay.sync(source)
+        print(('^2[sunset_clans]^7 leave ok src=%s cid=%s clan=%s'):format(tostring(source), tostring(cid), tostring(clanId)))
         return dashboardPayload(source, nil, cid)
     end
 
     if action == 'dissolve' then
         if not row or not isLeader(row, cid) then return nil, 'Only the clan leader can dissolve the clan.' end
-        local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { row.clan_id }) or {}
-        safeAudit(row.clan_id, cid, 'dissolve', {})
-        safeBroadcast(row.clan_id, source, 'dissolved the clan.')
-        MySQL.update.await('DELETE FROM clans WHERE id = ?', { row.clan_id })
+        local clanId = row.clan_id
+        local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { clanId }) or {}
+        safeAudit(clanId, cid, 'dissolve', {})
+        safeBroadcast(clanId, source, 'dissolved the clan.')
+        MySQL.update.await('DELETE FROM clans WHERE id = ?', { clanId })
         for _, member in ipairs(members) do
             local src = sourceForChar(member.character_id)
             if src then ClanDisplay.sync(src) end
         end
+        ClanDisplay.sync(source)
+        print(('^2[sunset_clans]^7 dissolve ok src=%s cid=%s clan=%s members=%d'):format(
+            tostring(source), tostring(cid), tostring(clanId), #members))
         return dashboardPayload(source, nil, cid)
     end
 

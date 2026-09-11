@@ -79,8 +79,49 @@ const Panels = {
             if (registerOpen) $('#auth-register-btn')?.click();
             else $('#auth-login-btn')?.click();
         };
+
+        const handleAuthTabNav = (e) => {
+            if (e.key !== 'Tab') return;
+            const id = e.target?.id;
+            if (!id) return;
+
+            if (id === 'auth-login-user' && !e.shiftKey) {
+                e.preventDefault();
+                $('#auth-login-pass')?.focus();
+            } else if (id === 'auth-login-pass' && e.shiftKey) {
+                e.preventDefault();
+                $('#auth-login-user')?.focus();
+            } else if (id === 'auth-reg-user' && !e.shiftKey) {
+                e.preventDefault();
+                $('#auth-reg-email')?.focus();
+            } else if (id === 'auth-reg-email') {
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    $('#auth-reg-pass')?.focus();
+                } else {
+                    e.preventDefault();
+                    $('#auth-reg-user')?.focus();
+                }
+            } else if (id === 'auth-reg-pass') {
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    $('#auth-reg-pass2')?.focus();
+                } else {
+                    e.preventDefault();
+                    $('#auth-reg-email')?.focus();
+                }
+            } else if (id === 'auth-reg-pass2' && e.shiftKey) {
+                e.preventDefault();
+                $('#auth-reg-pass')?.focus();
+            }
+        };
+
         ['auth-login-user', 'auth-login-pass', 'auth-reg-user', 'auth-reg-email', 'auth-reg-pass', 'auth-reg-pass2'].forEach((id) => {
-            document.getElementById(id)?.addEventListener('keydown', submitAuth);
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', submitAuth);
+                el.addEventListener('keydown', handleAuthTabNav);
+            }
         });
 
         $('#inventory-close')?.addEventListener('click', () => post('inventoryClose'));
@@ -224,15 +265,20 @@ const Panels = {
     },
 
     showAuth(data = {}) {
+        const authScreen = $('#screen-auth');
+        const isAlreadyOpen = authScreen && !authScreen.classList.contains('hidden');
+
         this.init();
         if (window.AuthEmail) AuthEmail.close();
         if (window.AuthAccounts) {
             AuthAccounts.bind();
-            AuthAccounts.init(data);
+            if (!isAlreadyOpen) AuthAccounts.init(data);
         }
-        this.setAuthTab('login');
+        if (!isAlreadyOpen) {
+            this.setAuthTab('login');
+            if (window.AuthForza && !window.AuthLoading?._pending) AuthForza.openLogin();
+        }
         document.getElementById('auth-panel')?.classList.remove('is-hidden');
-        if (window.AuthForza && !window.AuthLoading?._pending) AuthForza.openLogin();
         const status = $('#auth-server-status');
         if (status && data.playersOnline != null) {
             const max = data.playersMax || 256;

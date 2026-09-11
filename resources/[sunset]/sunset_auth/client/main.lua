@@ -41,18 +41,10 @@ exports('OpenLogin', openAuth)
 
 local function scheduleAuthWatchdog()
     CreateThread(function()
-        for attempt = 1, 6 do
-            Wait(attempt == 1 and 1200 or 2000)
-            if authenticated then return end
-            if not exports.sunset_ui:IsOpen() then
-                openAuth()
-            else
-                exports.sunset_ui:Show('auth', authPayload())
-                exports.sunset_ui:SetFocus(true, true)
-            end
-        end
-        if not authenticated then
-            exports.sunset_ui:Notify('Login did not open. Type /fixlogin in chat or F8.', 'error', 15000)
+        Wait(1500)
+        if authenticated then return end
+        if not exports.sunset_ui:IsOpen() then
+            openAuth()
         end
     end)
 end

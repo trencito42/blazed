@@ -30,11 +30,11 @@ const ClanPanels = {
         $('#clan-manage-promote')?.addEventListener('click', () => this.manageSelected('rankUp'));
         $('#clan-manage-demote')?.addEventListener('click', () => this.manageSelected('rankDown'));
         $('#clan-manage-kick')?.addEventListener('click', () => this.manageSelected('kick'));
-        $('#clan-btn-leave')?.addEventListener('click', () => {
-            post('clanManage', { action: 'leave' });
+        document.querySelectorAll('[data-clan-leave]').forEach((btn) => {
+            btn.addEventListener('click', () => this.requestLeave());
         });
-        $('#clan-btn-dissolve')?.addEventListener('click', () => {
-            post('clanManage', { action: 'dissolve' });
+        document.querySelectorAll('[data-clan-dissolve]').forEach((btn) => {
+            btn.addEventListener('click', () => this.requestDissolve());
         });
 
         // Directory Modal Close
@@ -214,7 +214,9 @@ const ClanPanels = {
             document.querySelector('[data-clan-tab="overview"]')?.classList.remove('hidden');
             document.querySelector('[data-clan-tab="roster"]')?.classList.remove('hidden');
             document.querySelector('.clan-tab--tag')?.classList.toggle('hidden', !perms.settings);
-            document.querySelector('.clan-tab--actions')?.classList.toggle('hidden', !perms.kick && !perms.promote && !perms.warn && !perms.motd && !perms.invite);
+            const hasManageTools = Boolean(perms.kick || perms.promote || perms.warn || perms.motd || perms.invite);
+            const hasMembershipActions = Boolean(perms.leave || perms.dissolve);
+            document.querySelector('.clan-tab--actions')?.classList.toggle('hidden', !hasManageTools && !hasMembershipActions);
             document.querySelector('.clan-tab--org')?.classList.toggle('hidden', !perms.rankLabels);
             document.querySelector('.clan-tab--create')?.classList.add('hidden');
 
@@ -287,12 +289,12 @@ const ClanPanels = {
             this.updateSettingsPreview();
             this.renderRankLabelEditor(payload.rankLabels);
 
-            // Show Leave / Dissolve
-            $('#clan-btn-dissolve')?.classList.toggle('hidden', !perms.dissolve);
-            $('#clan-btn-leave')?.classList.toggle('hidden', !!perms.dissolve);
+            $('#clan-overview-membership')?.classList.remove('hidden');
+            this.syncLeaveDissolveButtons(perms);
 
             this.setTab('overview');
         } else {
+            $('#clan-overview-membership')?.classList.add('hidden');
             // Guest / Registration Mode
             if (title) title.innerHTML = 'CLAN <span>ÎNREGISTRARE</span>';
             if (typeEl) typeEl.textContent = 'Înregistrează un clan';
@@ -395,6 +397,27 @@ const ClanPanels = {
         }
 
         post('clanManage', { action, targetCharacterId });
+    },
+
+    requestLeave() {
+        notify('Se procesează părăsirea clanului...', 'info', 2500);
+        post('clanManage', { action: 'leave' });
+    },
+
+    requestDissolve() {
+        notify('Se desființează clanul...', 'warning', 2500);
+        post('clanManage', { action: 'dissolve' });
+    },
+
+    syncLeaveDissolveButtons(perms = {}) {
+        const canDissolve = Boolean(perms.dissolve);
+        const canLeave = Boolean(perms.leave) && !canDissolve;
+        document.querySelectorAll('[data-clan-leave]').forEach((btn) => {
+            btn.classList.toggle('hidden', !canLeave);
+        });
+        document.querySelectorAll('[data-clan-dissolve]').forEach((btn) => {
+            btn.classList.toggle('hidden', !canDissolve);
+        });
     },
 
     renderRankLabelEditor(labels) {

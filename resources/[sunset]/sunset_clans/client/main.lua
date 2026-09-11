@@ -115,7 +115,7 @@ RegisterCommand('cw', clanWarnCommand, false)
 TriggerEvent('chat:addSuggestion', '/cwarn', 'Issue a clan warning', { { name = 'id' }, { name = 'reason' } })
 TriggerEvent('chat:addSuggestion', '/cw', 'Alias for /cwarn', { { name = 'id' }, { name = 'reason' } })
 
-AddEventHandler('sunset:nui:clanManage', function(data)
+local function handleClanManageUi(data)
     data = data or {}
     local action = data.action
     local ok, err
@@ -160,4 +160,24 @@ AddEventHandler('sunset:nui:clanManage', function(data)
         exports.sunset_ui:Notify(('Clan action failed (%s).'):format(tostring(action or 'unknown')), 'error', 8000)
     end
     print(('[sunset_clans] clanManage failed (%s): %s'):format(tostring(action or 'unknown'), tostring(err or 'nil')))
+end
+
+AddEventHandler('sunset:nui:clanManage', function(data)
+    CreateThread(function()
+        handleClanManageUi(data)
+    end)
 end)
+
+RegisterCommand('leaveclan', function()
+    CreateThread(function()
+        handleClanManageUi({ action = 'leave' })
+    end)
+end, false)
+TriggerEvent('chat:addSuggestion', '/leaveclan', 'Leave your current clan')
+
+RegisterCommand('dissolveclan', function()
+    CreateThread(function()
+        handleClanManageUi({ action = 'dissolve' })
+    end)
+end, false)
+TriggerEvent('chat:addSuggestion', '/dissolveclan', 'Dissolve your clan (leader only)')

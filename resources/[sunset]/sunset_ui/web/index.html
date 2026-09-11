@@ -33,10 +33,10 @@
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css?v=2">
     <link rel="stylesheet" href="css/fuel-pump-forza.css?v=2">
-    <link rel="stylesheet" href="css/world-tooltip.css?v=3">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700;1,800;1,900&family=JetBrains+Mono:wght@400;500;700;800&display=swap">
     <link rel="stylesheet" href="css/theme.css?v=9">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap">
     <link rel="stylesheet" href="css/fishing.css?v=4">
     <link rel="stylesheet" href="css/license_test.css?v=7">
     <link rel="stylesheet" href="css/license_quiz.css?v=2">
@@ -2447,6 +2447,16 @@
                             <p id="clan-description" style="margin-top:8px;">—</p>
                         </article>
                     </div>
+                    <article class="premium-clan__card" id="clan-overview-membership" style="margin-top:14px;">
+                        <span>MEMBRU CLAN</span>
+                        <p style="margin:8px 0 12px;font-size:12px;color:var(--pf-text-muted);">
+                            Liderii trebuie să desființeze clanul. Membrii obișnuiți pot părăsi unitatea.
+                        </p>
+                        <div class="premium-clan__btn-group">
+                            <button type="button" class="premium-clan__btn premium-clan__btn--secondary hidden" data-clan-leave>Părăsește Clanul</button>
+                            <button type="button" class="premium-clan__btn premium-clan__btn--danger hidden" data-clan-dissolve>Desființează Clanul</button>
+                        </div>
+                    </article>
                 </div>
 
                 <!-- TAB: ROSTER -->
@@ -2543,8 +2553,8 @@
                         <div class="premium-clan__panel" style="grid-column: 1 / -1;">
                             <div class="premium-clan__panel-title">Opțiuni Părăsire / Desființare</div>
                             <div class="premium-clan__btn-group">
-                                <button type="button" class="premium-clan__btn premium-clan__btn--secondary" id="clan-btn-leave">Părăsește Clanul</button>
-                                <button type="button" class="premium-clan__btn premium-clan__btn--danger" id="clan-btn-dissolve">Desființează Clanul</button>
+                                <button type="button" class="premium-clan__btn premium-clan__btn--secondary hidden" data-clan-leave>Părăsește Clanul</button>
+                                <button type="button" class="premium-clan__btn premium-clan__btn--danger hidden" data-clan-dissolve>Desființează Clanul</button>
                             </div>
                         </div>
                     </div>
@@ -3473,7 +3483,7 @@
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/phone-taxi-map.js"></script>
     <script src="js/phone.js?v=5"></script>
-    <script src="js/dealership.js?v=3"></script>
+    <script src="js/dealership.js?v=4"></script>
     <script src="js/hotbar.js?v=7"></script>
     <script src="js/inventory-forza.js?v=2"></script>
     <script src="js/panels.js?v=20"></script>
@@ -3492,8 +3502,8 @@
     <script src="js/license_test.js?v=7"></script>
     <script src="js/license_quiz.js?v=3"></script>
     <script src="js/radar.js"></script>
-    <script src="js/factions.js?v=11"></script>
-    <script src="js/clans.js?v=15"></script>
+    <script src="js/factions.js?v=12"></script>
+    <script src="js/clans.js?v=16"></script>
     <script src="js/businesses.js?v=5"></script>
     <script src="js/wardrobe.js?v=3"></script>
     <script src="js/mdc_tablet.js?v=13"></script>

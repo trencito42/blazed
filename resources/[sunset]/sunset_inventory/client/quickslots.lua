@@ -6,7 +6,7 @@ local hotbarPeekUntil = 0
 local emoteWheelOpen = false
 local xEmoteHolding = false
 local xHoldToken = 0
-local X_HOLD_MS = 280
+local X_HOLD_MS = 0
 
 local UNARMED = `WEAPON_UNARMED`
 
@@ -296,6 +296,11 @@ RegisterCommand('+sunset_emote_wheel', function()
 
     local token = xHoldToken + 1
     xHoldToken = token
+
+    if X_HOLD_MS <= 0 then
+        openEmoteWheel()
+        return
+    end
 
     CreateThread(function()
         while xEmoteHolding and xHoldToken == token and not emoteWheelOpen do
