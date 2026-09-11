@@ -69,8 +69,9 @@ AddEventHandler('sunset:world:openShop', function(shopId, shop)
     if IsNuiFocused() then return end
     local now = GetGameTimer()
     if shopOpen or (now - lastShopOpenAt) < 400 then return end
-    if GetResourceState('sunset_fishingshop') == 'started' and exports.sunset_fishingshop:IsMenuOpen() then
-        return
+    if GetResourceState('sunset_fishingshop') == 'started' then
+        local ok, fishOpen = pcall(function() return exports.sunset_fishingshop:IsMenuOpen() end)
+        if ok and fishOpen then return end
     end
     shopOpen = true
     lastShopOpenAt = now

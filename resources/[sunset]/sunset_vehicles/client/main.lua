@@ -51,6 +51,10 @@ local fuel = 100.0
 local spawnedOwnedVehicles = {}
 local protectedVehicles = {}
 
+local function normalizePlate(plate)
+    return (plate or ''):gsub('%s+', ''):upper()
+end
+
 local function isTrackedOwnedVehicle(veh)
     if not veh or veh == 0 then return false end
     for _, tracked in pairs(spawnedOwnedVehicles) do
@@ -203,10 +207,6 @@ local function showVehicleHint(id)
         lights = { label = lights[mode + 1] or 'LIGHTS OFF', key = 'H', ok = mode > 0, tone = lightTones[mode + 1] or 'off' },
     }
     exports.sunset_ui:Send('vehicleHint', { id = id, rows = rows })
-end
-
-local function normalizePlate(plate)
-    return (plate or ''):gsub('%s+', ''):upper()
 end
 
 local function resetOdometerTracking(plate, km, props)
