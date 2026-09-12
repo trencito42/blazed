@@ -49,6 +49,11 @@ end
 --   cross-resource registrations must provide onEndEvent.)
 --   reconnect: 'ABANDON' | 'SUSPEND' | 'PERSIST' (default ABANDON)
 function RegisterActivity(name, def)
+    -- [TEMP DEBUG] diagnose why cross-resource registration fails
+    print(('[sessions] RegisterActivity name=%s type(def)=%s type(onEnd)=%s type(onEndEvent)=%s'):format(
+        tostring(name), type(def),
+        type(def) == 'table' and type(def.onEnd) or 'n/a',
+        type(def) == 'table' and type(def.onEndEvent) or 'n/a'))
     if type(name) ~= 'string' or type(def) ~= 'table' then return false end
     if type(def.onEnd) ~= 'function' and type(def.onEndEvent) ~= 'string' then
         print(('[sessions] activity %s rejected: onEndEvent (or internal onEnd) is required'):format(name))
