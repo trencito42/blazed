@@ -47,27 +47,43 @@ WHERE c.`id` IS NULL;
 UPDATE `turfs` t LEFT JOIN `clans` cl ON cl.`id` = t.`owner_clan_id`
 SET t.`owner_clan_id` = NULL WHERE t.`owner_clan_id` IS NOT NULL AND cl.`id` IS NULL;
 
-ALTER TABLE `properties`
-    DROP FOREIGN KEY IF EXISTS `fk_property_owner`,
-    ADD CONSTRAINT `fk_property_owner` FOREIGN KEY (`owner_character_id`)
-    REFERENCES `characters` (`id`) ON DELETE SET NULL;
+-- FK creation must be idempotent for re-runs after interrupted deploys.
+-- MariaDB has no ADD CONSTRAINT IF NOT EXISTS, so gate each with a prepared
+-- statement that checks information_schema first.
 
-ALTER TABLE `player_businesses`
-    DROP FOREIGN KEY IF EXISTS `fk_business_owner`,
-    ADD CONSTRAINT `fk_business_owner` FOREIGN KEY (`owner_character_id`)
-    REFERENCES `characters` (`id`) ON DELETE SET NULL;
+SET @stmt = IF(
+    (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'properties'
+        AND CONSTRAINT_NAME = 'fk_property_owner') = 0,
+    'ALTER TABLE `properties` ADD CONSTRAINT `fk_property_owner` FOREIGN KEY (`owner_character_id`) REFERENCES `characters` (`id`) ON DELETE SET NULL',
+    'DO 0');
+PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @stmt = IF(
+    (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'player_businesses'
+        AND CONSTRAINT_NAME = 'fk_business_owner') = 0,
+    'ALTER TABLE `player_businesses` ADD CONSTRAINT `fk_business_owner` FOREIGN KEY (`owner_character_id`) REFERENCES `characters` (`id`) ON DELETE SET NULL',
+    'DO 0');
+PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
 
 -- lottery_tickets.character_id was signed INT while characters.id is INT
 -- UNSIGNED -> errno 150 on FK creation. Align the column type first.
 ALTER TABLE `lottery_tickets`
     MODIFY `character_id` INT UNSIGNED NOT NULL;
 
-ALTER TABLE `lottery_tickets`
-    DROP FOREIGN KEY IF EXISTS `fk_lottery_char`,
-    ADD CONSTRAINT `fk_lottery_char` FOREIGN KEY (`character_id`)
-    REFERENCES `characters` (`id`) ON DELETE CASCADE;
+SET @stmt = IF(
+    (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'lottery_tickets'
+        AND CONSTRAINT_NAME = 'fk_lottery_char') = 0,
+    'ALTER TABLE `lottery_tickets` ADD CONSTRAINT `fk_lottery_char` FOREIGN KEY (`character_id`) REFERENCES `characters` (`id`) ON DELETE CASCADE',
+    'DO 0');
+PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE `turfs`
-    DROP FOREIGN KEY IF EXISTS `fk_turf_clan`,
-    ADD CONSTRAINT `fk_turf_clan` FOREIGN KEY (`owner_clan_id`)
-    REFERENCES `clans` (`id`) ON DELETE SET NULL;
+SET @stmt = IF(
+    (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'turfs'
+        AND CONSTRAINT_NAME = 'fk_turf_clan') = 0,
+    'ALTER TABLE `turfs` ADD CONSTRAINT `fk_turf_clan` FOREIGN KEY (`owner_clan_id`) REFERENCES `clans` (`id`) ON DELETE SET NULL',
+    'DO 0');
+PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
