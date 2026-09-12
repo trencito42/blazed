@@ -35,3 +35,8 @@ dist/
 
 # Database local
 *.db
+
+# Local artifacts (not part of the server)
+funpay-setup.cjs
+server redesign/
+AGENTS.md
