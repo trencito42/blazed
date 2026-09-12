@@ -1,5 +1,8 @@
 local Downed = {}
 local LastPvPAttacker = {}
+-- [BUGFIX] Was declared at line ~225 but used by the playerDied handler above;
+-- Lua compiled it as a nil GLOBAL there -> handler crashed on every death.
+local MurderWindow = {}
 
 AddEventHandler('sunset:death:recordAttacker', function(victimSrc, attackerSrc)
     victimSrc = tonumber(victimSrc)
@@ -221,8 +224,6 @@ RegisterNetEvent('sunset:server:requestRespawn', function()
     end
     respawnPlayer(source, Sunset.Config.HospitalBill or 250)
 end)
-
-local MurderWindow = {}
 
 local function isOnDutyPolice(src)
     local onDuty = false

@@ -1,6 +1,13 @@
 local APPEARANCE_PRICE = 50
 local MAX_DISTANCE = 15.0
 
+-- [CLOTHING FIX B4] Refund ledger for the pay-then-save-failed path.
+-- MUST be declared before the callbacks that capture it: previously it was
+-- declared below payAppearance, so the compiled callback referenced a nil
+-- GLOBAL ("attempt to index a nil value (global 'PendingRefunds')") and every
+-- clothing purchase errored out after taking the money.
+local PendingRefunds = {}
+
 local function isNearAnyShop(playerCoords)
     if Sunset and Sunset.ClothingShops then
         for _, coords in ipairs(Sunset.ClothingShops) do
@@ -42,12 +49,6 @@ exports.sunset_core:RegisterCallback('sunset:payAppearance', function(source, am
 
     return false, ('Not enough money ($%s)'):format(price)
 end)
-
--- [CLOTHING FIX B4] Refund for the pay-then-save-failed path. Capped to the
--- flat appearance price and rate-limited; cannot be used as a money source
--- because it only ever returns what payAppearance took moments earlier
--- (guarded by the per-source pending flag set on payment).
-local PendingRefunds = {}
 
 exports.sunset_core:RegisterCallback('sunset:refundAppearance', function(source, amount)
     amount = math.floor(tonumber(amount) or 0)
