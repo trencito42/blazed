@@ -165,7 +165,7 @@ local function characterDisplayName(characterId)
     return full ~= '' and full or ('CID %d'):format(characterId)
 end
 
-local function clanDirectoryRow(row)
+local function clanDirectoryRow(row, turfCount)
     local online = 0
     local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { row.id }) or {}
     for _, member in ipairs(members) do
@@ -186,7 +186,24 @@ local function clanDirectoryRow(row)
         maxMembers = tonumber(row.max_members) or SunsetClans.MaxMembers,
         leader = leaderName,
         leaderCharacterId = tonumber(row.owner_character_id),
+        turfs = tonumber(turfCount) or 0,   -- [LEADERBOARD] territories held
     }
+end
+
+-- [LEADERBOARD] Count of turfs owned per clan (turfs domain, read-only join).
+local function turfCountsByClan()
+    local counts = {}
+    local ok, rows = pcall(function()
+        return MySQL.query.await(
+            'SELECT owner_clan_id, COUNT(*) AS n FROM turfs WHERE owner_clan_id IS NOT NULL GROUP BY owner_clan_id'
+        ) or {}
+    end)
+    if ok then
+        for _, r in ipairs(rows) do
+            counts[tonumber(r.owner_clan_id)] = tonumber(r.n) or 0
+        end
+    end
+    return counts
 end
 
 local function buildRoster(clanId, labels)
@@ -258,6 +275,9 @@ local function dashboardPayload(source, row, cid)
         tagColor = row and row.tag_color or '#FF8C00',
         tagStyle = row and row.tag_style or 'brackets',
         previewName = previewName,
+        -- [LEADERBOARD] territories held by this clan, shown in /clan panel.
+        turfs = row and (tonumber(MySQL.scalar.await(
+            'SELECT COUNT(*) FROM turfs WHERE owner_clan_id = ?', { row.clan_id })) or 0) or 0,
         memberCount = row and clanMemberCount(row.clan_id) or 0,
         maxMembers = row and (row.max_members or SunsetClans.MaxMembers) or SunsetClans.MaxMembers,
         members = row and buildRoster(row.clan_id, labels) or {},
@@ -445,10 +465,18 @@ exports.sunset_core:RegisterCallback('sunset:clanDirectory', function(source)
         ORDER BY c.name ASC
     ]]) or {}
 
+    local turfCounts = turfCountsByClan()
     local clans = {}
     for _, row in ipairs(rows) do
-        clans[#clans + 1] = clanDirectoryRow(row)
+        clans[#clans + 1] = clanDirectoryRow(row, turfCounts[tonumber(row.id)])
     end
+    -- [LEADERBOARD] Sort by territories held, then members, then name — so the
+    -- directory doubles as a clan turf-war leaderboard for all players.
+    table.sort(clans, function(a, b)
+        if (a.turfs or 0) ~= (b.turfs or 0) then return (a.turfs or 0) > (b.turfs or 0) end
+        if (a.total or 0) ~= (b.total or 0) then return (a.total or 0) > (b.total or 0) end
+        return (a.name or '') < (b.name or '')
+    end)
     return clans
 end)
 

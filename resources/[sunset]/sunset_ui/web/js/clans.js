@@ -257,7 +257,9 @@ const ClanPanels = {
 
             const rosterMeta = $('#clan-roster-meta');
             if (rosterMeta) {
-                rosterMeta.textContent = `${onlineCount} online · ${payload.memberCount || 0}/${payload.maxMembers || 25} membri înregistrați`;
+                // [LEADERBOARD] show territories held next to member counts.
+                const turfCount = Number(payload.turfs) || 0;
+                rosterMeta.textContent = `${onlineCount} online · ${payload.memberCount || 0}/${payload.maxMembers || 25} membri · ${turfCount} teritorii`;
             }
 
             // Management Select
@@ -459,7 +461,11 @@ const ClanPanels = {
         if (!list) return;
         list.innerHTML = '';
 
-        (clans || []).forEach((clan) => {
+        // [LEADERBOARD] Directory is sorted by territories held (server-side).
+        // Rank #1 gets a crown badge so players can see the turf-war leader.
+        const maxTurfs = (clans || []).reduce((m, c) => Math.max(m, Number(c.turfs) || 0), 0);
+
+        (clans || []).forEach((clan, idx) => {
             const card = document.createElement('div');
             card.className = 'premium-factions-dir__card premium-clans-dir__card';
 
@@ -467,6 +473,9 @@ const ClanPanels = {
             const total = Number(clan.total) || 0;
             const maxMembers = Number(clan.maxMembers) || 25;
             const isFull = total >= maxMembers;
+            const turfs = Number(clan.turfs) || 0;
+            const isLeader = idx === 0 && turfs > 0 && turfs >= maxTurfs;
+            const crown = isLeader ? ' <span title="Lider teritorii" style="color:#f59e0b;">&#9819;</span>' : '';
 
             card.innerHTML = `
                 <div class="premium-factions-dir__card-head">
@@ -474,7 +483,7 @@ const ClanPanels = {
                         <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                     </div>
                     <div>
-                        <div class="premium-factions-dir__card-name">${this.escape(clan.name || 'Clan')}</div>
+                        <div class="premium-factions-dir__card-name">${this.escape(clan.name || 'Clan')}${crown}</div>
                         <div class="premium-factions-dir__card-type" style="color:${tagColor};font-weight:800;">[${this.escape(clan.tag || '')}] · ${this.escape(clan.tagStyleLabel || 'Clan Unit')}</div>
                     </div>
                 </div>
@@ -487,6 +496,10 @@ const ClanPanels = {
                     <div class="premium-factions-dir__stat-row">
                         <span>Membri:</span>
                         <b><span class="highlight">${Number(clan.online) || 0}</span> / ${total}</b>
+                    </div>
+                    <div class="premium-factions-dir__stat-row">
+                        <span>Teritorii:</span>
+                        <b style="color:${turfs > 0 ? '#00ffcc' : 'inherit'};">${turfs} ${turfs > 0 ? '&#9873;' : ''}</b>
                     </div>
                 </div>
 
