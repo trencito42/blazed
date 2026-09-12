@@ -9,7 +9,10 @@ local function openQuests()
     if type(list) ~= 'table' then
         return exports.sunset_ui:Notify('Quest log unavailable right now.', 'error')
     end
+    -- [BUGFIX] Focus was never granted on open (only released on close):
+    -- the panel rendered without mouse cursor.
     exports.sunset_ui:Send('questLogShow', { quests = list })
+    exports.sunset_ui:SetFocus(true, true)
     panelOpen = true
 end
 

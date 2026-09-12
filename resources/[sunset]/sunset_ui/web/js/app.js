@@ -268,7 +268,7 @@ const GAMEPLAY_MODAL_ROOTS = [
     '#faction-panel', '#faction-directory', '#clan-panel', '#clan-directory',
     '#business-panel', '#garage', '#fleet-garage', '#properties', '#emotes',
     '#clothing', '#wardrobe', '#phone-device', '#documents', '#dealership',
-    '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal', '#quest-log',
+    '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal',
     '#license-quiz-panel',
 ];
 

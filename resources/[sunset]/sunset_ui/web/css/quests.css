@@ -1,0 +1,123 @@
+/* ============================================================
+   quests.css — Quest log panel, styled after
+   server redesign/quests-guides-jobs.html (forza tracker look).
+   NOTE: no skewX and no backdrop-filter — CEF clips/blacks-out
+   both (see _cef_overrides.css and the war-ui fix).
+   ============================================================ */
+:root {
+    --q-theme-info: #00ffcc;
+    --q-theme-job: #3b82f6;
+    --q-theme-success: #10b981;
+    --q-theme-warning: #f59e0b;
+    --q-bg-glass: rgba(10, 10, 15, 0.94);
+    --q-border-glass: rgba(255, 255, 255, 0.1);
+}
+
+.quest-shell {
+    position: absolute; top: 60px; left: 50%;
+    transform: translateX(-50%) translateY(-30px);
+    width: 460px; max-height: 70vh;
+    z-index: 9100;
+    display: flex; flex-direction: column;
+    opacity: 0; pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.65));
+}
+.quest-shell.active {
+    opacity: 1; pointer-events: all;
+    transform: translateX(-50%) translateY(0);
+}
+
+.quest-shell__header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 3px solid var(--q-theme-info);
+    padding: 4px 6px 8px 6px;
+}
+.quest-shell__title {
+    font-size: 16px; font-weight: 900; font-style: italic;
+    color: var(--q-theme-info); text-transform: uppercase; letter-spacing: 2px;
+    display: flex; align-items: center; gap: 8px;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.9);
+}
+.quest-shell__count {
+    font-size: 11px; font-weight: 900; color: #fff;
+    background: rgba(0, 0, 0, 0.8); padding: 4px 8px; border-radius: 4px; letter-spacing: 1px;
+}
+.quest-shell__close {
+    background: transparent; border: 1px solid rgba(255,255,255,0.25); color: #fff;
+    font-family: inherit; font-weight: 800; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 5px 10px; border-radius: 4px; cursor: pointer;
+    transition: 0.2s;
+}
+.quest-shell__close:hover { background: #fff; color: #000; }
+
+.quest-shell__body {
+    background: var(--q-bg-glass);
+    border: 1px solid var(--q-border-glass); border-top: none;
+    padding: 14px 16px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.quest-shell__body::-webkit-scrollbar { width: 4px; }
+.quest-shell__body::-webkit-scrollbar-thumb { background: rgba(0,255,204,0.35); border-radius: 2px; }
+
+.quest-card {
+    background: rgba(0, 0, 0, 0.55);
+    border-left: 3px solid var(--q-theme-info);
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: all 0.25s ease;
+}
+.quest-card.is-complete { border-left-color: var(--q-theme-warning); background: rgba(245, 158, 11, 0.08); }
+.quest-card.is-claimed { border-left-color: var(--q-theme-success); opacity: 0.6; }
+
+.quest-card__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.quest-card__name {
+    font-size: 14px; font-weight: 900; font-style: italic; color: #fff;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.quest-card__badge {
+    font-size: 9px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 3px; background: rgba(0, 255, 204, 0.12); color: var(--q-theme-info);
+    white-space: nowrap;
+}
+.quest-card.is-complete .quest-card__badge { background: rgba(245, 158, 11, 0.15); color: var(--q-theme-warning); }
+.quest-card.is-claimed .quest-card__badge { background: rgba(16, 185, 129, 0.15); color: var(--q-theme-success); }
+
+.quest-card__chain { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px; }
+.quest-card__desc { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.55); line-height: 1.45; }
+
+.quest-card__objective {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.75);
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.quest-card__objective i { color: var(--q-theme-info); font-size: 14px; }
+
+.quest-card__progress { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.quest-card__progress-fill { height: 100%; background: var(--q-theme-info); transition: width 0.4s ease; }
+.quest-card.is-complete .quest-card__progress-fill { background: var(--q-theme-warning); }
+
+.quest-card__footer { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+.quest-card__reward { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.45); display: flex; gap: 10px; }
+.quest-card__reward b { color: #fff; font-weight: 900; }
+
+.quest-card__claim {
+    background: var(--q-theme-warning); color: #000; border: none;
+    font-family: inherit; font-size: 11px; font-weight: 900; letter-spacing: 1px;
+    text-transform: uppercase; padding: 7px 16px; border-radius: 4px; cursor: pointer;
+    transition: 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.quest-card__claim:hover { background: #fff; transform: translateY(-1px); }
+.quest-card__claim:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: default; transform: none; }
+
+.quest-shell__empty {
+    padding: 22px 10px; text-align: center;
+    font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4);
+    text-transform: uppercase; letter-spacing: 1px;
+}
+
+.quest-shell__hint {
+    text-align: center; font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.25);
+    text-transform: uppercase; letter-spacing: 2px; padding: 8px 0 2px 0;
+}

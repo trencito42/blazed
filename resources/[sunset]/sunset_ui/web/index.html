@@ -69,6 +69,7 @@
     <link rel="stylesheet" href="css/world-tooltip.css?v=3">
     <link rel="stylesheet" href="assets/phosphor/phosphor.css">
     <link rel="stylesheet" href="css/courier.css">
+    <link rel="stylesheet" href="css/quests.css?v=1">
     <link rel="stylesheet" href="css/clanwar.css?v=2">
     <!-- [CEF FIX] MUST stay last: disables backdrop-filter blur (renders as black
          edges/boxes in FiveM's Chromium). See _cef_overrides.css. -->
@@ -2678,18 +2679,6 @@
         </div>
     </div>
 
-    <!-- QUEST LOG -->
-    <div id="quest-log" class="overlay-panel overlay-panel--peek hidden">
-        <div class="overlay-panel__box overlay-panel__box--wide help-panel">
-            <div class="help-header">
-                <h2>Quests</h2>
-                <span class="help-sub" id="quest-sub">Your progression</span>
-            </div>
-            <div id="quest-body" class="help-body"></div>
-            <button type="button" class="panel-close" id="quest-close">Close (ESC)</button>
-        </div>
-    </div>
-
     <!-- GARAGE -->
     <div id="garage" class="overlay-panel overlay-panel--peek hidden">
         <div class="overlay-panel__box overlay-panel__box--wide overlay-panel__box--garage">
@@ -3480,7 +3469,7 @@
     <script src="js/app.js?v=30"></script>
     <!-- [AUDIT P8-22] courier/job_shift were never linked; their HUD windows were dead code -->
     <script src="js/courier.js?v=2"></script>
-    <script src="js/quests.js?v=2"></script>
+    <script src="js/quests.js?v=3"></script>
     <script src="js/clanwar.js?v=2"></script>
     <script src="js/job_shift.js?v=1"></script>
     <script src="js/characters.js"></script>
