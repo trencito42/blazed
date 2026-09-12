@@ -152,7 +152,6 @@ local function endWar(turfId, reason)
     local winnerClanId = attackerWon and war.attackerClanId or war.defenderClanId
     local winnerClanName = attackerWon and war.attackerName or war.defenderName
     local winnerClanTag = attackerWon and war.attackerTag or war.defenderTag
-    local loserClanName = attackerWon and war.defenderName or war.attackerName
 
     if winnerClanId then
         MySQL.update.await('UPDATE turfs SET owner_clan_id = ? WHERE id = ?', { winnerClanId, turfId })
@@ -165,14 +164,38 @@ local function endWar(turfId, reason)
         end
     end
 
+    -- [WAR REDESIGN] Build per-player stats + MVP for the end screen.
+    local stats, mvp = {}, nil
+    for src, p in pairs(war.participants or {}) do
+        stats[#stats + 1] = {
+            name = GetPlayerName(src) or p.name or '?',
+            src = src,
+            kills = p.kills or 0,
+            deaths = p.deaths or 0,
+            side = tonumber(p.clanId) == tonumber(war.attackerClanId) and 'attacker' or 'defender',
+        }
+        if not mvp or (p.kills or 0) > (mvp.kills or 0) then
+            mvp = { name = GetPlayerName(src) or p.name or '?', kills = p.kills or 0, deaths = p.deaths or 0 }
+        end
+    end
+
     syncTurfsToClient(-1)
     TriggerClientEvent('sunset:turfs:warEnd', -1, {
         turfId = turfId,
         turfName = turf.name,
         winnerName = winnerClanName,
         winnerTag = winnerClanTag,
+        attackerName = war.attackerName,
+        attackerTag = war.attackerTag,
+        defenderName = war.defenderName,
+        defenderTag = war.defenderTag,
+        attackerWon = attackerWon,
         attackerScore = war.attackerScore,
         defenderScore = war.defenderScore,
+        reason = reason,
+        stats = stats,
+        mvp = mvp,
+        scoreTarget = war.scoreTarget,
     })
 
     local announcement = ('^2[TURF WAR] ^7Razboiul pentru ^3%s^7 s-a incheiat! ^2[%s] %s^7 a castigat teritoriul (%d vs %d puncte)!'):format(
@@ -207,6 +230,8 @@ local function startWar(turf, attackerClan, defenderClan)
         defenderScore = 0,
         isNeutralCapture = isNeutralCapture,
         captureTarget = captureTarget,
+        scoreTarget = isNeutralCapture and nil or SunsetTurfs.WarScoreTarget,
+        participants = {},   -- [src] = { clanId, kills, deaths, name }
         startedAt = os.time(),
         expiresAt = os.time() + durationSec,
     }
@@ -232,8 +257,25 @@ local function startWar(turf, attackerClan, defenderClan)
             end
 
             -- Zone presence points
-            local attCount = getClanMembersInTurf(current.attackerClanId, turf)
-            local defCount = current.defenderClanId and getClanMembersInTurf(current.defenderClanId, turf) or 0
+            local attCount, attPeds = getClanMembersInTurf(current.attackerClanId, turf)
+            local defCount, defPeds = 0, {}
+            if current.defenderClanId then
+                defCount, defPeds = getClanMembersInTurf(current.defenderClanId, turf)
+            end
+
+            -- [WAR REDESIGN] Auto-register zone participants for stats/respawn/armory.
+            for _, src in ipairs(attPeds or {}) do
+                if not current.participants[src] then
+                    current.participants[src] = { clanId = current.attackerClanId, kills = 0, deaths = 0, name = GetPlayerName(src) or '?' }
+                    TriggerClientEvent('sunset:turfs:warJoined', src, { turfId = turfId, role = 'attacker' })
+                end
+            end
+            for _, src in ipairs(defPeds or {}) do
+                if not current.participants[src] then
+                    current.participants[src] = { clanId = current.defenderClanId, kills = 0, deaths = 0, name = GetPlayerName(src) or '?' }
+                    TriggerClientEvent('sunset:turfs:warJoined', src, { turfId = turfId, role = 'defender' })
+                end
+            end
 
             if attCount > 0 then
                 current.attackerScore = current.attackerScore + (attCount * SunsetTurfs.ScorePerSecond)
@@ -246,6 +288,18 @@ local function startWar(turf, attackerClan, defenderClan)
                 and current.attackerScore >= (current.captureTarget or SunsetTurfs.NeutralCaptureSec or 180) then
                 endWar(turfId, 'neutral_captured')
                 break
+            end
+
+            -- [WAR REDESIGN] Instant win on score target (kill-based races).
+            if not current.isNeutralCapture and current.scoreTarget then
+                if current.attackerScore >= current.scoreTarget then
+                    endWar(turfId, 'score_target')
+                    break
+                end
+                if current.defenderScore >= current.scoreTarget then
+                    endWar(turfId, 'score_target')
+                    break
+                end
             end
 
             current.attackerCount = attCount
@@ -378,22 +432,218 @@ AddEventHandler('sunset:death:recordAttacker', function(victimSrc, attackerSrc)
     local vClan = getPlayerClan(victimSrc)
     if not aClan or not vClan then return end
 
+    -- [WAR REDESIGN] Track per-player K/D for scoreboard + MVP.
+    local function bump(src, field)
+        if war.participants[src] then
+            war.participants[src][field] = (war.participants[src][field] or 0) + 1
+        end
+    end
+
     if aClan.clan_id == war.attackerClanId and vClan.clan_id == war.defenderClanId then
         war.attackerScore = war.attackerScore + SunsetTurfs.ScorePerKill
+        bump(attackerSrc, 'kills')
+        bump(victimSrc, 'deaths')
         TriggerClientEvent('sunset:turfs:warKill', -1, {
             killer = GetPlayerName(attackerSrc),
             victim = GetPlayerName(victimSrc),
             clanTag = aClan.tag,
             turfId = turf.id
         })
+        -- Kill target win check
+        if war.scoreTarget and war.attackerScore >= war.scoreTarget then
+            endWar(turf.id, 'score_target')
+        end
     elseif aClan.clan_id == war.defenderClanId and vClan.clan_id == war.attackerClanId then
         war.defenderScore = war.defenderScore + SunsetTurfs.ScorePerKill
+        bump(attackerSrc, 'kills')
+        bump(victimSrc, 'deaths')
         TriggerClientEvent('sunset:turfs:warKill', -1, {
             killer = GetPlayerName(attackerSrc),
             victim = GetPlayerName(victimSrc),
             clanTag = aClan.tag,
             turfId = turf.id
         })
+        if war.scoreTarget and war.defenderScore >= war.scoreTarget then
+            endWar(turf.id, 'score_target')
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  [WAR REDESIGN] ARMORY (loadout chooser) + WAR RESPAWN
+--  Server-authoritative: package list, rank/cost checks, weapon
+--  granting happens via client event AFTER validation; respawn
+--  coords always come from the server.
+-- ═══════════════════════════════════════════════════════════════
+
+local function findActiveWarForSource(src)
+    for _, war in pairs(ActiveWars) do
+        if war.participants[src] then
+            return war
+        end
+    end
+    return nil
+end
+
+local function getLoadoutById(id)
+    for _, pkg in ipairs(SunsetTurfs.Loadouts or {}) do
+        if pkg.id == id then return pkg end
+    end
+    return nil
+end
+
+-- Armory data for the UI: packages + which the player can afford/rank.
+exports.sunset_core:RegisterCallback('sunset:turfs:armoryData', function(source)
+    local war = findActiveWarForSource(source)
+    if not war then return nil, 'Nu esti intr-un razboi activ.' end
+    local pClan = getPlayerClan(source)
+    if not pClan then return nil, 'Nu faci parte dintr-un clan.' end
+
+    local packages = {}
+    for _, pkg in ipairs(SunsetTurfs.Loadouts or {}) do
+        local rankOk = (tonumber(pClan.rank) or 0) >= (pkg.rank or 1)
+        local weapons = {}
+        for _, w in ipairs(pkg.weapons or {}) do
+            weapons[#weapons + 1] = { label = w.label or w.weapon, ammo = w.ammo, tag = w.tag or '' }
+        end
+        packages[#packages + 1] = {
+            id = pkg.id,
+            name = pkg.name,
+            cost = pkg.cost or 0,
+            rank = pkg.rank or 1,
+            rankOk = rankOk,
+            weapons = weapons,
+        }
+    end
+
+    local turf = Turfs[war.turfId]
+    return {
+        packages = packages,
+        turfId = war.turfId,
+        turfName = turf and turf.name or '?',
+        role = tonumber(pClan.clan_id) == tonumber(war.attackerClanId) and 'attacker' or 'defender',
+        respawnDelay = SunsetTurfs.RespawnDelaySec or 5,
+        warEndsAt = war.expiresAt,
+    }
+end)
+
+-- Buy/equip a loadout. Validates rank, cost (RemoveMoney), war participation,
+-- then tells the client which weapons to give locally (server keeps the list
+-- so respawn re-grants the same kit).
+exports.sunset_core:RegisterCallback('sunset:turfs:takeLoadout', function(source, loadoutId)
+    local war = findActiveWarForSource(source)
+    if not war then return nil, 'Nu esti intr-un razboi activ.' end
+    local pClan = getPlayerClan(source)
+    if not pClan then return nil, 'Nu faci parte dintr-un clan.' end
+
+    local pkg = getLoadoutById(tostring(loadoutId or ''))
+    if not pkg then return nil, 'Pachet invalid.' end
+    if (tonumber(pClan.rank) or 0) < (pkg.rank or 1) then
+        return nil, ('Ai nevoie de rank %d pentru acest pachet.'):format(pkg.rank or 1)
+    end
+
+    -- One free loadout per war participant; paid packages can be re-bought.
+    local participant = war.participants[source]
+    if (pkg.cost or 0) > 0 then
+        if not exports.sunset_core:RemoveMoney(source, 'cash', pkg.cost, 'turf_loadout') then
+            if not exports.sunset_core:RemoveMoney(source, 'bank', pkg.cost, 'turf_loadout') then
+                return nil, ('Nu ai $%s pentru acest pachet.'):format(pkg.cost)
+            end
+        end
+    elseif participant.loadoutTaken then
+        return nil, 'Ai primit deja pachetul gratuit pentru acest razboi.'
+    end
+    participant.loadoutTaken = true
+    participant.loadout = pkg.id
+
+    TriggerClientEvent('sunset:turfs:grantLoadout', source, {
+        weapons = pkg.weapons,
+        armor = pkg.armor or 0,
+        heal = true,
+    })
+    return true, pkg.name
+end)
+
+-- War respawn: server picks a spawn point inside the turf zone and validates
+-- the player is a participant, dead/downed, and the war is still active.
+exports.sunset_core:RegisterCallback('sunset:turfs:warRespawn', function(source)
+    local war = findActiveWarForSource(source)
+    if not war then return nil, 'Nu esti intr-un razboi activ.' end
+    local turf = Turfs[war.turfId]
+    if not turf then return nil, 'Teritoriu invalid.' end
+
+    local participant = war.participants[source]
+    if not participant then return nil, 'Nu mai participi la acest razboi.' end
+
+    -- Respawn point: random offset inside the zone.
+    local angle = math.random() * 2 * math.pi
+    local dist = math.random() * (turf.radius * 0.5)
+    local spawn = vector3(
+        turf.coords.x + math.cos(angle) * dist,
+        turf.coords.y + math.sin(angle) * dist,
+        turf.coords.z
+    )
+
+    local pkg = participant.loadout and getLoadoutById(participant.loadout) or nil
+
+    -- Clear server-side downed state (sunset_death) so bleedout timers and
+    -- /respawn do not race the war respawn; this is a server-owned revive.
+    if GetResourceState('sunset_death') == 'started' then
+        pcall(function() exports.sunset_death:ClearDownedForCustody(source) end)
+    end
+
+    TriggerClientEvent('sunset:turfs:doWarRespawn', source, {
+        coords = { x = spawn.x, y = spawn.y, z = spawn.z },
+        weapons = pkg and pkg.weapons or nil,
+        armor = pkg and pkg.armor or 50,
+    })
+    return true
+end)
+
+-- Scoreboard data (Z key during war).
+exports.sunset_core:RegisterCallback('sunset:turfs:warScoreboard', function(source)
+    local war = findActiveWarForSource(source)
+    if not war then return nil end
+    local rows = {}
+    for src, p in pairs(war.participants) do
+        rows[#rows + 1] = {
+            name = GetPlayerName(src) or p.name or '?',
+            kills = p.kills or 0,
+            deaths = p.deaths or 0,
+            side = tonumber(p.clanId) == tonumber(war.attackerClanId) and 'attacker' or 'defender',
+        }
+    end
+    table.sort(rows, function(a, b) return a.kills > b.kills end)
+    return {
+        rows = rows,
+        attackerName = war.attackerName,
+        defenderName = war.defenderName,
+        attackerScore = war.attackerScore,
+        defenderScore = war.defenderScore,
+        scoreTarget = war.scoreTarget,
+        turfName = war.turfName,
+        remainingSec = math.max(0, war.expiresAt - os.time()),
+    }
+end)
+
+-- [WAR REDESIGN] Export so sunset_death can suppress EMS dispatch for war
+-- deaths (kill-feed respawn loop, not a medical emergency).
+exports('IsInWar', function(src)
+    src = tonumber(src)
+    if not src then return false end
+    for _, war in pairs(ActiveWars) do
+        if war.participants[src] then return true end
+    end
+    return false
+end)
+
+-- Remove participants on disconnect (war keeps running; scores stay).
+AddEventHandler('playerDropped', function()
+    local src = source
+    for _, war in pairs(ActiveWars) do
+        if war.participants[src] then
+            war.participants[src] = nil
+        end
     end
 end)
 

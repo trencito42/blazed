@@ -69,6 +69,7 @@
     <link rel="stylesheet" href="css/world-tooltip.css?v=2">
     <link rel="stylesheet" href="assets/phosphor/phosphor.css">
     <link rel="stylesheet" href="css/courier.css">
+    <link rel="stylesheet" href="css/clanwar.css?v=1">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -969,11 +970,7 @@
                     <div class="equip-slot" data-slot="bag" data-grid="equip-player"><i class="ph-fill ph-backpack equip-ghost"></i></div>
                 </div>
                 <div class="inv-grid-wrapper">
-                    <div class="quick-picks-container" id="grid-quick"></div>
                     <div class="inv-grid" id="grid-player"></div>
-                </div>
-                <div class="inv-duty-row hidden" id="inventory-duty-wrap">
-                    <div id="inventory-duty-list"></div>
                 </div>
                 <div class="inv-actions">
                     <span id="inventory-selected-label">SELECT AN ITEM</span>
@@ -3454,7 +3451,6 @@
         <span class="wah-sep">|</span>
         <span class="wah-total" id="wah-total">0</span>
     </div>
-    <div id="hotbar-hud" class="hotbar-container hidden" aria-label="Quick slots"></div>
 
     <div id="emote-wheel" class="wheel-overlay hidden" aria-hidden="true">
         <div class="wheel-container" id="wheel-container">
@@ -3482,6 +3478,7 @@
     <!-- [AUDIT P8-22] courier/job_shift were never linked; their HUD windows were dead code -->
     <script src="js/courier.js?v=1"></script>
     <script src="js/quests.js?v=1"></script>
+    <script src="js/clanwar.js?v=1"></script>
     <script src="js/job_shift.js?v=1"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>

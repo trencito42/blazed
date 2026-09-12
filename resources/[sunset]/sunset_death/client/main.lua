@@ -165,8 +165,17 @@ CreateThread(function()
         if active then
             local ped = getPed()
             if not downed and not respawning and (IsEntityDead(ped) or IsPedFatallyInjured(ped)) then
-                enterDownedState()
-                TriggerServerEvent('sunset:server:playerDied')
+                -- [WAR REDESIGN] Turf-war deaths use the war respawn loop; skip
+                -- the downed/EMS flow entirely for active participants.
+                local inWar = false
+                if GetResourceState('sunset_turfs') == 'started' then
+                    local ok, res = pcall(function() return exports.sunset_turfs:IsInWar() end)
+                    inWar = ok and res == true
+                end
+                if not inWar then
+                    enterDownedState()
+                    TriggerServerEvent('sunset:server:playerDied')
+                end
             end
 
             if downed and not respawning then

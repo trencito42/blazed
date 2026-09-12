@@ -216,6 +216,16 @@ RegisterNetEvent('sunset:turfs:warStart', function(war)
     ActiveWar = war
     refreshBlips()
     PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+    -- [WAR REDESIGN] NUI HUD for everyone (scores + timer + target).
+    exports.sunset_ui:Send('warHudShow', {
+        attackerName = war.attackerName,
+        defenderName = war.defenderName,
+        attackerScore = war.attackerScore or 0,
+        defenderScore = war.defenderScore or 0,
+        scoreTarget = war.scoreTarget,
+        turfName = war.turfName,
+        remainingSec = war.remainingSec or 0,
+    })
     if war.isNeutralCapture then
         exports.sunset_ui:Notify(
             ('Capturare %s: sta in zona %d secunde (%d oameni = mai rapid).'):format(
@@ -242,6 +252,30 @@ RegisterNetEvent('sunset:turfs:warEnd', function(data)
     clearWarPlayerBlips()
     refreshBlips()
     PlaySoundFrontend(-1, 'RACE_PLACED', 'HUD_AWARDS', true)
+    -- [WAR REDESIGN] Hide HUD + end screen for participants (myRole injected
+    -- client-side from the war data cached at join time).
+    exports.sunset_ui:Send('warHudHide', {})
+    exports.sunset_ui:Send('warRespawnHide', {})
+    exports.sunset_ui:Send('warScoreboardHide', {})
+    exports.sunset_ui:Send('warArmoryHide', {})
+    if warParticipant then
+        warParticipant = false
+        local myRole = myWarRole or 'defender'
+        TriggerEvent('sunset:turfs:warEndedLocal')
+        exports.sunset_ui:Send('warEndShow', {
+            turfId = data.turfId,
+            turfName = data.turfName,
+            attackerName = data.attackerName,
+            defenderName = data.defenderName,
+            attackerWon = data.attackerWon,
+            attackerScore = data.attackerScore,
+            defenderScore = data.defenderScore,
+            mvp = data.mvp,
+            myRole = myRole,
+        })
+        exports.sunset_ui:SetFocus(true, true)
+    end
+    myWarRole = nil
 end)
 
 CreateThread(function()
@@ -303,91 +337,195 @@ CreateThread(function()
     end
 end)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [WAR REDESIGN] Participant flow: join -> armory (loadout) ->
+--  fight -> death -> respawn in zone with HP/armor -> war end screen.
+-- ═══════════════════════════════════════════════════════════════
+warParticipant = false            -- server said we're in the war
+myWarRole = nil                   -- 'attacker' | 'defender'
+local armoryOpen = false
+local respawnPending = false
+
+local function closeArmory()
+    if not armoryOpen then return end
+    armoryOpen = false
+    exports.sunset_ui:Send('warArmoryHide', {})
+    exports.sunset_ui:SetFocus(false, false)
+end
+
+RegisterNetEvent('sunset:turfs:warJoined', function(data)
+    warParticipant = true
+    myWarRole = data and data.role or 'defender'
+    exports.sunset_ui:Notify('Ai intrat in razboi! /armurie pentru loadout. Z = statistici war.', 'warning', 9000)
+    -- Auto-open the armory on first join so players discover the loadout menu.
+    if not armoryOpen and not IsNuiFocused() then
+        CreateThread(function()
+            local info = Sunset.AwaitCallback('sunset:turfs:armoryData')
+            if info and warParticipant then
+                armoryOpen = true
+                exports.sunset_ui:Send('warArmoryShow', info)
+                exports.sunset_ui:SetFocus(true, true)
+            end
+        end)
+    end
+end)
+
+RegisterCommand('armurie', function()
+    if not warParticipant then
+        exports.sunset_ui:Notify('Nu esti intr-un razboi activ.', 'error')
+        return
+    end
+    if armoryOpen then closeArmory() return end
+    CreateThread(function()
+        local info = Sunset.AwaitCallback('sunset:turfs:armoryData')
+        if not info then exports.sunset_ui:Notify('Armuria nu e disponibila acum.', 'error') return end
+        armoryOpen = true
+        exports.sunset_ui:Send('warArmoryShow', info)
+        exports.sunset_ui:SetFocus(true, true)
+    end)
+end, false)
+
+AddEventHandler('sunset:nui:warArmoryClose', function()
+    closeArmory()
+end)
+
+AddEventHandler('sunset:nui:warTakeLoadout', function(data)
+    CreateThread(function()
+        local ok, name = Sunset.AwaitCallback('sunset:turfs:takeLoadout', data and data.loadoutId)
+        if ok then
+            exports.sunset_ui:Notify(('Pachet echipat: %s'):format(tostring(name or '')), 'success')
+            closeArmory()
+        else
+            exports.sunset_ui:Notify(name or 'Nu ai putut echipa pachetul.', 'error')
+        end
+    end)
+end)
+
+RegisterNetEvent('sunset:turfs:grantLoadout', function(payload)
+    local ped = PlayerPedId()
+    if payload.heal then
+        SetEntityHealth(ped, GetEntityMaxHealth(ped))
+    end
+    if payload.armor and payload.armor > 0 then
+        SetPedArmour(ped, math.min(100, payload.armor))
+    end
+    for _, w in ipairs(payload.weapons or {}) do
+        local hash = type(w.weapon) == 'number' and w.weapon or joaat(w.weapon)
+        GiveWeaponToPed(ped, hash, w.ammo or 120, false, true)
+    end
+end)
+
+-- War respawn: server picks the coords and re-grants the chosen loadout.
+RegisterNetEvent('sunset:turfs:doWarRespawn', function(payload)
+    respawnPending = false
+    exports.sunset_ui:Send('warRespawnHide', {})
+    -- Clear sunset_death downed state (same pattern as the jail intake flow)
+    -- so bleedout anim/controls do not race the war respawn.
+    pcall(function() exports.sunset_death:ClearDead() end)
+    NetworkResurrectLocalPlayer(payload.coords.x, payload.coords.y, payload.coords.z, 0.0, true, false)
+    local ped = PlayerPedId()
+    ClearPedTasksImmediately(ped)
+    SetEntityHealth(ped, GetEntityMaxHealth(ped))
+    SetPedArmour(ped, math.min(100, payload.armor or 50))
+    for _, w in ipairs(payload.weapons or {}) do
+        local hash = type(w.weapon) == 'number' and w.weapon or joaat(w.weapon)
+        GiveWeaponToPed(ped, hash, w.ammo or 120, false, true)
+    end
+    SetPlayerControl(PlayerId(), true, 0)
+end)
+
+local function startWarRespawnCountdown()
+    if respawnPending then return end
+    respawnPending = true
+    closeArmory()
+    CreateThread(function()
+        local secs = SunsetTurfs.RespawnDelaySec or 5
+        exports.sunset_ui:Send('warRespawnShow', { seconds = secs })
+        while secs > 0 and warParticipant do
+            Wait(1000)
+            secs = secs - 1
+            exports.sunset_ui:Send('warRespawnShow', { seconds = secs })
+        end
+        if warParticipant then
+            Sunset.AwaitCallback('sunset:turfs:warRespawn')
+        else
+            respawnPending = false
+            exports.sunset_ui:Send('warRespawnHide', {})
+        end
+    end)
+end
+
+-- Death watch: only for war participants (the normal death/EMS flow stays
+-- intact for everyone else). Downed in war -> respawn inside the zone.
+CreateThread(function()
+    while true do
+        if warParticipant and not respawnPending then
+            local ped = PlayerPedId()
+            if IsEntityDead(ped) or IsPedFatallyInjured(ped) then
+                startWarRespawnCountdown()
+            end
+            Wait(400)
+        else
+            Wait(800)
+        end
+    end
+end)
+
+-- Z scoreboard during war (overrides the global player list for participants).
+CreateThread(function()
+    local zDown = false
+    while true do
+        if warParticipant and not IsNuiFocused() and not IsPauseMenuActive() then
+            DisableControlAction(0, 20, true)
+            local pressed = IsDisabledControlPressed(0, 20)
+            if pressed and not zDown then
+                zDown = true
+                CreateThread(function()
+                    local data = Sunset.AwaitCallback('sunset:turfs:warScoreboard')
+                    if data and zDown then exports.sunset_ui:Send('warScoreboardShow', data) end
+                end)
+            elseif not pressed and zDown then
+                zDown = false
+                exports.sunset_ui:Send('warScoreboardHide', {})
+            end
+            Wait(0)
+        else
+            if zDown then
+                zDown = false
+                exports.sunset_ui:Send('warScoreboardHide', {})
+            end
+            Wait(300)
+        end
+    end
+end)
+
+AddEventHandler('sunset:nui:warEndClose', function()
+    exports.sunset_ui:Send('warEndHide', {})
+    exports.sunset_ui:SetFocus(false, false)
+end)
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    closeArmory()
+    exports.sunset_ui:Send('warHudHide', {})
+    exports.sunset_ui:Send('warRespawnHide', {})
+    exports.sunset_ui:Send('warScoreboardHide', {})
+    exports.sunset_ui:Send('warEndHide', {})
+end)
+
 CreateThread(function()
     while true do
         if ActiveWar then
-            Wait(0)
-            local rem = ActiveWar.remainingSec or 0
-            local mins = math.floor(rem / 60)
-            local secs = rem % 60
-            local timeStr = ('%02d:%02d'):format(mins, secs)
-
-            local attTag = ActiveWar.attackerTag or 'ATK'
-            local defTag = ActiveWar.defenderTag or 'DEF'
-            local attScore = ActiveWar.attackerScore or 0
-            local defScore = ActiveWar.defenderScore or 0
-            local attCount = ActiveWar.attackerCount or 0
-            local defCount = ActiveWar.defenderCount or 0
-            local captureTarget = ActiveWar.captureTarget or SunsetTurfs.NeutralCaptureSec or 180
-
-            DrawRect(0.5, 0.045, 0.44, 0.07, 10, 15, 20, 220)
-            DrawRect(0.5, 0.015, 0.44, 0.003, 0, 255, 204, 255)
-
-            if ActiveWar.isNeutralCapture then
-                SetTextFont(4)
-                SetTextScale(0.34, 0.34)
-                SetTextColour(0, 255, 204, 255)
-                SetTextCentre(false)
-                SetTextEntry('STRING')
-                AddTextComponentString(('CAPTURARE [%s]: %d / %d'):format(attTag, attScore, captureTarget))
-                DrawText(0.28, 0.024)
-
-                SetTextFont(4)
-                SetTextScale(0.42, 0.42)
-                SetTextColour(255, 255, 255, 255)
-                SetTextCentre(true)
-                SetTextEntry('STRING')
-                AddTextComponentString(timeStr)
-                DrawText(0.5, 0.023)
-
-                SetTextFont(4)
-                SetTextScale(0.34, 0.34)
-                SetTextColour(160, 160, 160, 255)
-                SetTextCentre(false)
-                SetTextEntry('STRING')
-                AddTextComponentString('TURF LIBER')
-                DrawText(0.63, 0.024)
-
-                SetTextFont(4)
-                SetTextScale(0.26, 0.26)
-                SetTextColour(180, 180, 180, 220)
-                SetTextCentre(true)
-                SetTextEntry('STRING')
-                AddTextComponentString(('In zona: %d capturatori | Progres = secunde in raza'):format(attCount))
-                DrawText(0.5, 0.054)
-            else
-                SetTextFont(4)
-                SetTextScale(0.36, 0.36)
-                SetTextColour(0, 255, 204, 255)
-                SetTextCentre(false)
-                SetTextEntry('STRING')
-                AddTextComponentString(('ATTACK [%s]: %d'):format(attTag, attScore))
-                DrawText(0.31, 0.025)
-
-                SetTextFont(4)
-                SetTextScale(0.42, 0.42)
-                SetTextColour(255, 255, 255, 255)
-                SetTextCentre(true)
-                SetTextEntry('STRING')
-                AddTextComponentString(timeStr)
-                DrawText(0.5, 0.023)
-
-                SetTextFont(4)
-                SetTextScale(0.36, 0.36)
-                SetTextColour(255, 75, 75, 255)
-                SetTextCentre(false)
-                SetTextEntry('STRING')
-                AddTextComponentString(('DEFEND [%s]: %d'):format(defTag, defScore))
-                DrawText(0.61, 0.025)
-
-                SetTextFont(4)
-                SetTextScale(0.26, 0.26)
-                SetTextColour(180, 180, 180, 220)
-                SetTextCentre(true)
-                SetTextEntry('STRING')
-                AddTextComponentString(('In zona: %d atacatori vs %d aparatori'):format(attCount, defCount))
-                DrawText(0.5, 0.052)
-            end
+            exports.sunset_ui:Send('warHudUpdate', {
+                attackerName = ActiveWar.attackerName,
+                defenderName = ActiveWar.defenderName,
+                attackerScore = ActiveWar.attackerScore or 0,
+                defenderScore = ActiveWar.defenderScore or 0,
+                scoreTarget = ActiveWar.scoreTarget,
+                turfName = ActiveWar.turfName,
+                remainingSec = ActiveWar.remainingSec or 0,
+            })
+            Wait(250)
         else
             Wait(1000)
         end
@@ -412,4 +550,15 @@ CreateThread(function()
     })
     TriggerEvent('chat:addSuggestion', '/stopwar', 'Opreste razboiul activ (admin)', { { name = 'turfId', help = '1-16' } })
     TriggerEvent('chat:addSuggestion', '/resetturfcd', 'Reset cooldown teritoriu (admin)', { { name = 'id|all' } })
+end)
+
+-- [WAR REDESIGN] Client export so sunset_death can skip the downed/EMS flow
+-- for war participants (war respawn handles them instead).
+exports('IsInWar', function() return warParticipant == true end)
+-- Kill feed during wars (server broadcasts each war kill).
+RegisterNetEvent('sunset:turfs:warKill', function(data)
+    if not data then return end
+    exports.sunset_ui:Notify(
+        ('WAR: %s [%s] l-a doborat pe %s'):format(tostring(data.killer), tostring(data.clanTag or ''), tostring(data.victim)),
+        'error', 4000)
 end)

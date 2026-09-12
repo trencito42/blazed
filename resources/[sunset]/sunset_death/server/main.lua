@@ -149,6 +149,12 @@ RegisterNetEvent('sunset:server:playerDied', function()
     if ped and ped ~= 0 then
         if GetEntityHealth(ped) > 100 and not IsPedDeadOrDying(ped, true) then return end
     end
+    -- [WAR REDESIGN] Turf-war deaths use the war respawn loop (kill-feed style);
+    -- skip the downed/EMS flow entirely for active war participants.
+    if GetResourceState('sunset_turfs') == 'started' then
+        local ok, inWar = pcall(function() return exports.sunset_turfs:IsInWar(source) end)
+        if ok and inWar then return end
+    end
     if Downed[source] then return end
     local char = exports.sunset_core:GetCharacter(source)
     if char then char.is_dead = true end

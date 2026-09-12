@@ -34,4 +34,11 @@ dependencies {
 exports {
     'RunChatCommand',
     'ExecutePlayerCommand',
+    'IsInWar',
+}
+
+server_exports {
+    'RunChatCommand',
+    'ExecutePlayerCommand',
+    'IsInWar',
 }
