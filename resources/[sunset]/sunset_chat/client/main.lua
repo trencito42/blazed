@@ -202,6 +202,51 @@ AddEventHandler('sunset:client:playerSpawned', function()
     })
 end)
 
+-- ═══════════════════════════════════════════════════════════════
+-- [CHAT SHIM] The stock FiveM chat resource is DISABLED on this
+-- server (SetTextChatEnabled(false), no default chat NUI), so
+-- every TriggerClientEvent('chat:addMessage', ...) emitted by
+-- resources (turf war announcements, /profiler output, dice,
+-- lottery, /trunk listings, cinematic tool, ...) went nowhere.
+-- Bridge it into the custom sunset_ui chat feed.
+-- ═══════════════════════════════════════════════════════════════
+RegisterNetEvent('chat:addMessage')
+AddEventHandler('chat:addMessage', function(msg)
+    if type(msg) == 'string' then
+        exports.sunset_ui:Send('chatMessage', {
+            id = 0, name = 'SYSTEM', message = msg, time = chatTimeStamp(),
+        })
+        return
+    end
+    if type(msg) ~= 'table' then return end
+    local name = 'SYSTEM'
+    local text = msg.message
+    if type(msg.args) == 'table' then
+        name = tostring(msg.args[1] or name)
+        text = msg.args[2]
+    elseif msg.args ~= nil then
+        text = msg.args
+    end
+    text = tostring(text or '')
+    if text == '' then return end
+    -- Stock chat args may carry ^N color codes; strip them, the UI themes lines itself.
+    text = text:gsub('%^%d', '')
+    local msgType = 'command_info'
+    local color = msg.color
+    if type(color) == 'table' then
+        local r, g, b = color[1] or 0, color[2] or 0, color[3] or 0
+        if r > 180 and g < 110 and b < 110 then msgType = 'command_error'
+        elseif r > 180 and g > 140 and b < 110 then msgType = 'command_warn' end
+    end
+    exports.sunset_ui:Send('chatMessage', {
+        id = 0,
+        name = name,
+        message = text,
+        time = chatTimeStamp(),
+        type = msgType,
+    })
+end)
+
 -- NUI focus handles input; do not DisableAllControlActions here (breaks chat keys/copy).
 
 CreateThread(function()

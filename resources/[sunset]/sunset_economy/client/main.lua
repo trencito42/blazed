@@ -122,6 +122,10 @@ AddEventHandler('sunset:nui:shopBuy', function(data)
     else
         exports.sunset_ui:Notify(err or 'Purchase failed', 'error')
     end
+    -- [GUNSHOP FIX] Tell the store UI the server answered so it re-arms the
+    -- buy button (previously it reset on a timer and double-fires hit the
+    -- rate limiter while the first purchase was still processing).
+    exports.sunset_ui:Send('shopBuyResult', { ok = ok == true })
 end)
 
 AddEventHandler('sunset:nui:shopClose', function()

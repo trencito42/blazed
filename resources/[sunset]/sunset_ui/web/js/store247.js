@@ -306,7 +306,7 @@ const StoreUI = {
     },
 
     startBuy() {
-        if (!this.state?.selected || this.buyComplete) return;
+        if (!this.state?.selected || this.buyComplete || this.buyPending) return;
         if (this.buyRaf) cancelAnimationFrame(this.buyRaf);
         const tick = () => {
             this.buyProgress += 2.5;
@@ -314,11 +314,13 @@ const StoreUI = {
             if (bar) bar.style.width = `${this.buyProgress}%`;
             if (this.buyProgress >= 100) {
                 this.buyComplete = true;
+                // [GUNSHOP FIX] Block re-buy until the SERVER answers (shopBuyResult).
+                // The old 1200ms auto-reset re-armed the button while a slow purchase
+                // was still processing; the second click hit the server rate limit
+                // ("action failed") even though the first purchase later succeeded.
+                this.buyPending = true;
                 const text = document.getElementById('store-buy-text');
                 if (text) {
-                    // [BUGFIX] Was "Payment Confirmed!" shown BEFORE the server
-                    // answered — a lie when the purchase then failed (level/
-                    // license/money). The real result arrives as a notify.
                     text.innerHTML = 'Processing...';
                     text.style.color = '#000';
                 }
@@ -342,7 +344,14 @@ const StoreUI = {
                         amount,
                     });
                 }
-                setTimeout(() => this.resetBuyUi(), 1200);
+                // Safety net: if the result message never arrives (NUI hiccup),
+                // unblock after 6s instead of 1.2s.
+                setTimeout(() => {
+                    if (this.buyPending) {
+                        this.buyPending = false;
+                        this.resetBuyUi();
+                    }
+                }, 6000);
                 return;
             }
             this.buyRaf = requestAnimationFrame(tick);
@@ -350,9 +359,16 @@ const StoreUI = {
         this.buyRaf = requestAnimationFrame(tick);
     },
 
+    // [GUNSHOP FIX] Server-authoritative purchase result from Lua.
+    onBuyResult() {
+        this.buyPending = false;
+        this.resetBuyUi();
+    },
+
     resetBuyUi() {
         this.buyProgress = 0;
         this.buyComplete = false;
+        this.buyPending = false;
         const bar = document.getElementById('store-buy-progress');
         if (bar) bar.style.width = '0%';
         const text = document.getElementById('store-buy-text');

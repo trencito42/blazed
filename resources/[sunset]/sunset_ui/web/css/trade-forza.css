@@ -587,7 +587,16 @@
     display: flex;
     flex-direction: column;
     min-height: 450px;
+    /* [TRADE FIX] Cap the modal height: with many garage vehicles the list
+       grew unbounded (min-height only). .sc-body already scrolls; it just
+       needs a bounded parent. */
+    max-height: min(620px, calc(100vh - 80px));
     min-width: 0;
+}
+
+.sel-sidebar {
+    max-height: min(620px, calc(100vh - 80px));
+    overflow-y: auto;
 }
 
 .sc-header {

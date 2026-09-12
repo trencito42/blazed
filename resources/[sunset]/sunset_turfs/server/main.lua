@@ -151,6 +151,27 @@ local function endWar(turfId, reason)
     ActiveWars[turfId] = nil
     TurfCooldowns[turfId] = os.time() + SunsetTurfs.TurfCooldownSec
 
+    -- [WAR END FIX] Participants who are dead/downed when the war ends used to
+    -- stay on the ground waiting for EMS (the war respawn UI disappears at
+    -- warEnd). The war is over -> auto-revive everyone still in the war death
+    -- loop so they are not stranded.
+    if GetResourceState('sunset_death') == 'started' then
+        for src in pairs(war.participants or {}) do
+            if GetPlayerName(src) then
+                local ped = GetPlayerPed(src)
+                local isDead = ped and ped ~= 0 and (GetEntityHealth(ped) <= 0 or IsPedFatallyInjured(ped))
+                local isDowned = false
+                if not isDead then
+                    local okD, downed = pcall(function() return exports.sunset_death:IsPlayerDowned(src) end)
+                    isDowned = okD and downed == true
+                end
+                if isDead or isDowned then
+                    pcall(function() exports.sunset_death:RevivePlayer(src) end)
+                end
+            end
+        end
+    end
+
     local turf = Turfs[turfId]
     local attackerWon
     if war.isNeutralCapture then

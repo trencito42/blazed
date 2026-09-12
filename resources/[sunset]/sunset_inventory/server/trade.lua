@@ -486,6 +486,13 @@ local function completeTrade(trade)
         if not insertRows(query, toB, bChar.id, bSlots) then return false end
         if not insertRows(query, toA, aChar.id, aSlots) then return false end
 
+        -- [TRADE FIX] Assets BEFORE the cash ledger: transferAssets writes the
+        -- property_rentals/characters side-tables and returns false on any
+        -- failed row. When it ran last, a failed asset transfer rolled back the
+        -- whole transaction AFTER the cash UPDATEs had "succeeded" inside the
+        -- closure — and any partial work outside the transaction (ledger logs,
+        -- inventory reloads) then desynced the characters ("inventory action
+        -- failed" / phantom cash). Failing early keeps the closure pure.
         if not transferAssets(query, aAssets, aChar.id, bChar.id) then return false end
         if not transferAssets(query, bAssets, bChar.id, aChar.id) then return false end
         return true
@@ -623,7 +630,13 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeOfferAsset', functio
 
     local assetType = type(data) == 'table' and data.assetType
     local assetId = tonumber(type(data) == 'table' and data.id)
-    if not ASSET_TYPES[assetType] or not assetId then return nil, 'Invalid trade asset.' end
+    -- [TRADE DEBUG] Log rejected/failed vehicle offers: players reported a
+    -- generic "inventory action failed" when offering cars (businesses worked).
+    if not ASSET_TYPES[assetType] or not assetId then
+        print(('^3[trade]^7 offerAsset rejected src=%s type=%s id=%s'):format(
+            tostring(source), tostring(assetType), tostring(assetId)))
+        return nil, 'Invalid trade asset.'
+    end
     if assetsMap(trade, source)[assetType] then
         return nil, 'Remove your current asset offer of that type first.'
     end
@@ -639,10 +652,19 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeOfferAsset', functio
         end
         if match then break end
     end
-    if not match then return nil, 'That asset is no longer available to trade.' end
+    if not match then
+        print(('^3[trade]^7 offerAsset no catalog match src=%s type=%s id=%s (catalog v=%d p=%d b=%d)'):format(
+            tostring(source), tostring(assetType), tostring(assetId),
+            #catalog.vehicles, #catalog.properties, #catalog.businesses))
+        return nil, 'That asset is no longer available to trade.'
+    end
 
     local assetOk, assetErr = validateAssetOwnership(source, match)
-    if not assetOk then return nil, assetErr end
+    if not assetOk then
+        print(('^3[trade]^7 offerAsset ownership failed src=%s type=%s id=%s: %s'):format(
+            tostring(source), tostring(assetType), tostring(assetId), tostring(assetErr)))
+        return nil, assetErr
+    end
 
     trade.assets[source][assetType] = match
     trade.finalizing = false

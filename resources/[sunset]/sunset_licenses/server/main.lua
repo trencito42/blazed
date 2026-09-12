@@ -221,9 +221,29 @@ function HasLicense(source, licenseType)
             return true, 'test'
         end
     end
-    local cache = licenseCache(source)
-    if not cache then return false, 'Character not loaded.' end
-    if cache.licenses[licenseType] ~= true then
+    -- [LICENSE FIX] ALWAYS read fresh rows from the DB. The old ServerLicenseCache
+    -- went stale whenever paydays_received lagged behind a license grant/revoke
+    -- or the character object was momentarily incomplete, and wrongly reported
+    -- "no license" for players who demonstrably had a valid row (blocked gunshop
+    -- purchases: "action failed" while the DB said licensed). One indexed query
+    -- per check is cheap; correctness beats the cache.
+    local cid = charId(source)
+    if not cid then return false, 'Character not loaded.' end
+    local paydays = currentPaydays(source)
+    local owned = false
+    for _, row in ipairs(loadLicenseRows(cid)) do
+        if tostring(row.license_type) == licenseType and rowValid(row, paydays) then
+            owned = true
+            break
+        end
+    end
+    -- Keep the mirror cache in sync for any remaining cachedHasLicense callers.
+    local cache = ServerLicenseCache[source]
+    if cache and cache.characterId == cid then
+        cache.licenses[licenseType] = owned
+        cache.paydays = paydays
+    end
+    if not owned then
         return false, ('You need a valid %s. Visit the %s.'):format(def.label, def.label)
     end
     return true
@@ -306,38 +326,17 @@ local function resyncVictimTo(source, data)
     end
 end
 
+-- [LICENSE GATE DISABLED] Owner decision: the firearm-license damage gate was
+-- implemented on shaky primitives (stale ServerLicenseCache, unreliable
+-- NetworkGetEntityOwner victim resolution) and blocked legit licensed players
+-- mid-combat. Damage is NO LONGER cancelled for missing licenses; this handler
+-- stays ONLY to attribute the last aggressor for war kill scoring. The
+-- license is still enforced where it matters economically: buying weapons
+-- (gunshop) and receiving weapons in trade/inventory (AddItem checks).
 AddEventHandler('weaponDamageEvent', function(sender, data)
     if type(data) ~= 'table' then return end
     local weaponHash = tonumber(data.weaponType)
     if isMeleeWeaponHash(weaponHash) then return end
-    -- [WAR FIX] Turf-war combat is exempt from the firearm license gate:
-    -- both sides are validated war participants, the war is consensual PvP.
-    -- [LICENSE NAG FIX] If the shooter is a war participant and the damaged
-    -- entity is ANY player ped, treat it as war combat. The old code resolved
-    -- the victim's source via NetworkGetEntityOwner, which can fail (entity
-    -- owned by the shooter's client / scope edge), leaving participants to
-    -- get "you need a Firearm License" nags mid-war.
-    local inWarCombat = false
-    if GetResourceState('sunset_turfs') == 'started' then
-        local okS, shooterInWar = pcall(function() return exports.sunset_turfs:IsInWar(sender) end)
-        if okS and shooterInWar then
-            local victimNet = tonumber(data.hitGlobalId)
-            local victimEnt = victimNet and victimNet ~= 0 and NetworkGetEntityFromNetworkId(victimNet) or 0
-            if victimEnt ~= 0 and GetEntityType(victimEnt) == 1 and IsPedAPlayer(victimEnt) then
-                inWarCombat = true
-            end
-        end
-    end
-    if not inWarCombat and not canDealWeaponDamage(sender) then
-        CancelEvent()
-        resyncVictimTo(sender, data)
-        local now = os.time()
-        if now - (LastWeaponWarning[sender] or 0) >= 5 then
-            LastWeaponWarning[sender] = now
-            notify(sender, 'Firearm damage blocked: you need a valid Firearm License.', 'error')
-        end
-        return
-    end
     local victimNet = tonumber(data.hitGlobalId)
     if victimNet and victimNet ~= 0 then
         local victimEnt = NetworkGetEntityFromNetworkId(victimNet)

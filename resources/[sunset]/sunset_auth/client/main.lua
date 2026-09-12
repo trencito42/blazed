@@ -123,6 +123,16 @@ end)
 
 RegisterNetEvent('sunset:auth:openLogin', openAuth)
 
+-- [SAVED ACCOUNTS FIX] The auth screen announces itself once it is rendered;
+-- (re)push the saved-account list then, because SendNUIMessage issued before
+-- the NUI page is live can be dropped (accounts only appeared after toggling
+-- the quick-login checkbox, which triggered a fresh push).
+AddEventHandler('sunset:nui:authReady', function()
+    if not authenticated then
+        pushAuthAccounts()
+    end
+end)
+
 RegisterCommand('fixlogin', function()
     if authenticated then
         exports.sunset_ui:Notify('You are already logged in.', 'info')

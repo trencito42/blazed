@@ -358,6 +358,12 @@ window.addEventListener('message', (event) => {
                 if (window.HandoffScreen) HandoffScreen.hide();
                 showScreen('auth');
                 if (window.Panels) Panels.showAuth(data || {});
+                // [SAVED ACCOUNTS FIX] Tell Lua the auth screen is actually
+                // rendered so it (re)pushes the saved-account list. SendNUIMessage
+                // before the page is interactive can be lost entirely, which is
+                // why the quick-login card only appeared after toggling the
+                // remember checkbox (that round-trip re-pushed the accounts).
+                post('authReady', {});
                 return;
             }
             showScreen(screen);
@@ -580,6 +586,10 @@ window.addEventListener('message', (event) => {
             break;
         case 'shopHide':
             if (window.Panels) Panels.hideShop();
+            break;
+        case 'shopBuyResult':
+            // [GUNSHOP FIX] Server answered the purchase; re-arm the buy button.
+            if (window.StoreUI) StoreUI.onBuyResult();
             break;
         case 'fishingShopShow':
             if (window.Panels) Panels.showFishingShop(data || event.data.data);
