@@ -148,8 +148,76 @@ MySQL.ready = setmetatable({
 	end,
 })
 
+-- oxmysql's transaction export passes a single callable query function to Lua.
+-- The framework historically used the same typed helpers exposed by MySQL
+-- (query.await, single.await, update.await and insert.await) inside transaction
+-- callbacks.  Adapt the raw transaction result here so every resource uses the
+-- transaction connection while retaining the normal oxmysql return contracts.
+local function transactionResult(kind, raw)
+	if kind == 'single' then
+		return type(raw) == 'table' and raw[1] or nil
+	end
+
+	if kind == 'scalar' then
+		local row = type(raw) == 'table' and raw[1] or nil
+		if type(row) ~= 'table' then return nil end
+		local _, value = next(row)
+		return value
+	end
+
+	if kind == 'update' then
+		return type(raw) == 'table' and raw.affectedRows or nil
+	end
+
+	if kind == 'insert' then
+		return type(raw) == 'table' and raw.insertId or nil
+	end
+
+	return raw
+end
+
+local function inferTransactionKind(sql)
+	local verb = type(sql) == 'string' and sql:match('^%s*(%a+)')
+	verb = verb and verb:upper() or ''
+	if verb == 'INSERT' or verb == 'REPLACE' then return 'insert' end
+	if verb == 'UPDATE' or verb == 'DELETE' then return 'update' end
+	return 'query'
+end
+
+local function transactionAdapter(rawQuery)
+	local adapter = {}
+
+	adapter.await = function(sql, values)
+		return transactionResult(inferTransactionKind(sql), rawQuery(sql, values))
+	end
+	adapter.query = { await = function(sql, values)
+		return transactionResult('query', rawQuery(sql, values))
+	end }
+	adapter.single = { await = function(sql, values)
+		return transactionResult('single', rawQuery(sql, values))
+	end }
+	adapter.scalar = { await = function(sql, values)
+		return transactionResult('scalar', rawQuery(sql, values))
+	end }
+	adapter.update = { await = function(sql, values)
+		return transactionResult('update', rawQuery(sql, values))
+	end }
+	adapter.insert = { await = function(sql, values)
+		return transactionResult('insert', rawQuery(sql, values))
+	end }
+
+	return setmetatable(adapter, {
+		__call = function(_, sql, values)
+			return rawQuery(sql, values)
+		end,
+	})
+end
+
 function MySQL.startTransaction(cb)
-	return oxmysql:startTransaction(cb, resourceName)
+	assert(type(cb) == 'function', 'MySQL.startTransaction expects a callback')
+	return oxmysql:startTransaction(function(rawQuery)
+		return cb(transactionAdapter(rawQuery))
+	end, resourceName)
 end
 
 _ENV.MySQL = MySQL

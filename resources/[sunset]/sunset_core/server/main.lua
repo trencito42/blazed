@@ -512,24 +512,42 @@ RegisterCallback('sunset:deleteCharacter', function(source, charId)
         return false, 'You cannot delete the character you are playing. Switch characters first.'
     end
 
-    -- [AUDIT P5-09] Release orphan-prone ownership before the delete (tables
-    -- without FK cascades: properties, player_businesses, clans, turfs, lottery).
-    MySQL.update.await('UPDATE properties SET owner_character_id = NULL, enabled = 0 WHERE owner_character_id = ?', { charId })
-    MySQL.update.await('UPDATE player_businesses SET owner_character_id = NULL, for_sale = 0, balance = 0 WHERE owner_character_id = ?', { charId })
-    MySQL.update.await('UPDATE characters SET home_property_id = NULL WHERE home_property_id IN (SELECT id FROM properties WHERE owner_character_id IS NULL AND enabled = 0)')
-    MySQL.update.await('UPDATE turfs SET owner_clan_id = NULL WHERE owner_clan_id IN (SELECT id FROM clans WHERE owner_character_id = ?)', { charId })
-    MySQL.update.await('DELETE FROM clans WHERE owner_character_id = ?', { charId })
-    MySQL.update.await('DELETE FROM lottery_tickets WHERE character_id = ?', { charId })
+    -- Prove ownership before any related asset is touched, then repeat that
+    -- check under a row lock so a forged/stale charId can never affect another
+    -- account and a partial cleanup can never escape the transaction.
+    local owned = MySQL.scalar.await(
+        'SELECT 1 FROM characters WHERE id = ? AND player_id = ? LIMIT 1',
+        { charId, player.id }
+    )
+    if not owned then return false, 'That character does not belong to your account.' end
 
-    local affected = MySQL.update.await('DELETE FROM characters WHERE id = ? AND player_id = ?', { charId, player.id })
+    local deleted = MySQL.startTransaction(function(query)
+        local locked = query.single.await(
+            'SELECT id FROM characters WHERE id = ? AND player_id = ? FOR UPDATE',
+            { charId, player.id }
+        )
+        if not locked then return false end
 
-    if affected and affected > 0 then
+        query.update.await('UPDATE properties SET owner_character_id = NULL, enabled = 0 WHERE owner_character_id = ?', { charId })
+        query.update.await('UPDATE player_businesses SET owner_character_id = NULL, for_sale = 0, balance = 0 WHERE owner_character_id = ?', { charId })
+        query.update.await('UPDATE characters SET home_property_id = NULL WHERE home_property_id IN (SELECT id FROM properties WHERE owner_character_id IS NULL AND enabled = 0)')
+        query.update.await('UPDATE turfs SET owner_clan_id = NULL WHERE owner_clan_id IN (SELECT id FROM clans WHERE owner_character_id = ?)', { charId })
+        query.update.await('DELETE FROM clans WHERE owner_character_id = ?', { charId })
+        query.update.await('DELETE FROM lottery_tickets WHERE character_id = ?', { charId })
+
+        return query.update.await(
+            'DELETE FROM characters WHERE id = ? AND player_id = ?',
+            { charId, player.id }
+        ) == 1
+    end)
+
+    if deleted then
         -- [AUDIT P6-07] Drop any in-memory vehicle key grants for the deleted character.
         if GetResourceState('sunset_vehicles') == 'started' then
             pcall(function() exports.sunset_vehicles:ClearKeysForCharacter(charId) end)
         end
     end
-    return affected > 0
+    return deleted == true
 end)
 
 -- [AUDIT P5-08] Persist every loaded character on resource stop so a core

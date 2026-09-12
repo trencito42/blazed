@@ -137,7 +137,7 @@ local function resolveSpawnChoiceForChar(source, char, choice, propertyId)
         if not pos then
             local metadata = type(char.metadata) == 'table' and char.metadata or {}
             local factionId = metadata.faction
-            local faction = factionId and Sunset.Factions[factionId]
+            local faction = factionId and Sunset.Factions and Sunset.Factions[factionId]
             local hq = faction and faction.hq
             if hq then
                 local heading = 0.0
