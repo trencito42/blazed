@@ -23,7 +23,7 @@ local function sessionsCall(method, ...)
     local ok, res = pcall(function()
         -- Dot-call form: FiveM export proxies take the args directly; passing
         -- the proxy table as a first "self" arg (colon form) shifts parameters.
-        return exports.sunset_sessions[method](table.unpack(args, 1, args.n))
+        return exports.sunset_sessions[method](exports.sunset_sessions, table.unpack(args, 1, args.n))
     end)
     if not ok then return nil end
     return res
