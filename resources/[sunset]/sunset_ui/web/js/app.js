@@ -394,6 +394,23 @@ window.addEventListener('message', (event) => {
             showApp(false);
             break;
 
+        case 'sessionForceClose': {
+            // [AUDIT P2] Emergency cleanup from sunset_sessions: hide every
+            // gameplay modal so a cancelled/ended session can never leave a
+            // panel open with stranded focus.
+            for (const selector of GAMEPLAY_MODAL_ROOTS) {
+                const root = $(selector);
+                if (root && !root.classList.contains('hidden')) {
+                    root.classList.add('hidden');
+                    root.setAttribute('aria-hidden', 'true');
+                }
+            }
+            for (const className of MODAL_BODY_CLASSES) {
+                document.body.classList.remove(className);
+            }
+            break;
+        }
+
         case 'showHud':
             showHud(true);
             const hudData = data || {};

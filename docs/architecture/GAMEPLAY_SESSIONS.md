@@ -1,6 +1,13 @@
 # GAMEPLAY_SESSIONS — Canonical Server-Authoritative Session Framework
 
-**Status:** DESIGN (Phase 2 target). Current systems are ad-hoc; robbery is the closest reference. This document defines the shared model every job/mission/quest/robbery/exam/faction-op/minigame must adopt. Do NOT build new gameplay on the old ad-hoc pattern.
+**Status:** IMPLEMENTED (Phase 2, 2026-09-12) — `sunset_sessions` resource ships the SessionService (server) + EmergencyCleanup (client) + central triggers (downed/jailed/drop/reconnect/timeout/resource-stop) + activity registry + reward idempotency API + admin diagnostics (`ListSessions`). Unit-tested via `sunset_testdriver` console command `sessiontest` (state machine, absorbing terminals, duplicate refusal, reward re-arm rejection).
+
+**Adoption status (honest):**
+- Trucker: NOT yet running on sunset_sessions. Instead it was hardened IN PLACE in sunset_jobs with framework-equivalent guarantees (death/jail listeners, server-side entity deletion on drop + resource stop, synchronous stage-flip closing the double-pay race window, PayReward DB-failure handling). Rationale: a wholesale port without runtime testing violated "stability before content"; the existing validated state machine was kept and its gaps closed.
+- Migration of trucker + remaining jobs onto sunset_sessions is Phase 5 work (Jobs stream), one activity at a time with runtime validation between ports.
+- All NEW gameplay must be built on sunset_sessions directly. Do not extend the ad-hoc pattern.
+
+Current systems are ad-hoc; robbery is the closest reference. This document defines the shared model every job/mission/quest/robbery/exam/faction-op/minigame must adopt. Do NOT build new gameplay on the old ad-hoc pattern.
 
 ## 1. Why
 

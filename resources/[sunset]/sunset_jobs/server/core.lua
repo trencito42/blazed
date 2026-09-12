@@ -269,12 +269,25 @@ function SunsetJobs_PayReward(source, jobId, amount, reason, countTask)
     local char = getChar(source)
     if not char or not amount or amount <= 0 then return false end
 
-    exports.sunset_core:AddMoney(source, 'cash', amount, reason or ('job_' .. jobId))
-    
+    -- [AUDIT P2-SESSIONS] Scenario 16: check the money write. If AddMoney
+    -- fails (DB hiccup), do NOT record task progress for unpaid work and
+    -- let the caller retry — previously XP/progress committed after a
+    -- silently failed payout.
+    local paid = exports.sunset_core:AddMoney(source, 'cash', amount, reason or ('job_' .. jobId))
+    if not paid then
+        print(('[sunset_jobs] PayReward FAILED for char %d amount %d reason %s'):format(char.id, amount, tostring(reason)))
+        return false
+    end
+
     -- Award job skill XP and progress in a single unified atomic pass
     local jobXp = math.max(5, math.floor(amount / 10))
     local taskCount = countTask and 1 or 0
-    SunsetJobs_AddJobProgress(source, jobId, jobXp, taskCount, amount)
+    local okProgress, progressErr = pcall(SunsetJobs_AddJobProgress, source, jobId, jobXp, taskCount, amount)
+    if not okProgress then
+        -- Money is out; progress write failed. Log loudly for manual repair
+        -- (money_transactions ledger has the payout row for reconciliation).
+        print(('[sunset_jobs] job_progress write failed after payout char %d: %s'):format(char.id, tostring(progressErr)))
+    end
     return true
 end
 
@@ -585,10 +598,59 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trailerDestroyed', function(so
     }
 end)
 
+-- [AUDIT P2-SESSIONS] Server-side cleanup of session entities. The client used
+-- to be the only deleter: a disconnect/crash orphaned a protected phantom +
+-- trailer in the world forever (culling suppressed by sunsetProtectedVehicle).
+local function deleteSessionEntities(session)
+    if not session then return end
+    for _, netId in ipairs({ session.vehicleNetId, session.trailerNetId }) do
+        if netId then
+            local ent = NetworkGetEntityFromNetworkId(netId)
+            if ent and ent ~= 0 and DoesEntityExist(ent) then
+                Entity(ent).state:set('sunsetProtectedVehicle', nil, true)
+                DeleteEntity(ent)
+            end
+        end
+    end
+end
+
 AddEventHandler('playerDropped', function()
     local src = source
-    if Sessions[src] then
+    local session = Sessions[src]
+    if session then
+        deleteSessionEntities(session)
         Sessions[src] = nil
+    end
+end)
+
+-- [AUDIT P2-SESSIONS] Scenario 4/5: death and jail must end job sessions.
+-- Previously a downed/jailed player kept the shift alive until the 30-min
+-- timeout (accidental coverage only via the vehicle-exit monitor).
+AddEventHandler('sunset:death:playerDowned', function(src)
+    src = tonumber(src)
+    if src and Sessions[src] then
+        deleteSessionEntities(Sessions[src])
+        SunsetJobs_ClearSession(src, 'FAILED', 'Shift ended - you were downed')
+    end
+end)
+
+AddEventHandler('sunset:faction:playerJailed', function(src)
+    src = tonumber(src)
+    if src and Sessions[src] then
+        deleteSessionEntities(Sessions[src])
+        SunsetJobs_ClearSession(src, 'FAILED', 'Shift ended - you were jailed')
+    end
+end)
+
+-- [AUDIT P2-SESSIONS] Scenario 12: resource restart must not orphan entities
+-- or leave clients with a phantom objective loop.
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    for src, session in pairs(Sessions) do
+        deleteSessionEntities(session)
+        if GetPlayerName(src) then
+            TriggerClientEvent('sunset:jobs:sessionEnded', src, session.jobId, 'CANCELLED', 'resource restart', {})
+        end
     end
 end)
 

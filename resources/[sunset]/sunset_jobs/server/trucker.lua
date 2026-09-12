@@ -66,11 +66,24 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:deliver', function(sou
         return nil, 'Not at delivery location — drive into the green loading dock marker'
     end
 
+    -- [AUDIT P2-SESSIONS] Scenario 14: flip the stage SYNCHRONOUSLY before any
+    -- yielding payout call. Previously a second `deliver` arriving during the
+    -- AddMoney/DB await still saw stage=='to_delivery' → double pay.
+    session.data.stage = 'return_depot'
+    local delivered = session.data.deliveredAt
+    if delivered then return nil, 'Cargo already delivered on this route.' end
+    session.data.deliveredAt = os.time()
+
     local pay = route.pay or 500
-    SunsetJobs_PayReward(source, 'trucker', pay, 'trucker_delivery', true)
+    local paid = SunsetJobs_PayReward(source, 'trucker', pay, 'trucker_delivery', true)
+    if not paid then
+        -- Payout failed (no char/DB): allow retry, restore stage.
+        session.data.stage = 'to_delivery'
+        session.data.deliveredAt = nil
+        return nil, 'Payment could not be processed. Try delivering once more.'
+    end
     SunsetJobs_AddJobXP(source, 'trucker', cfg.xpPerDelivery or 40)
 
-    session.data.stage = 'return_depot'
     SunsetJobs_SetState(source, 'RETURNING')
     return { pay = pay, stage = 'return_depot' }
 end)

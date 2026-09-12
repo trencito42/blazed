@@ -45,7 +45,8 @@ ensure sunset_loadscreen
 ensure oxmysql
 ensure bob74_ipl
 ensure sunset_core
-ensure sunset_ui
+ensure sunset_sessions
+ensure sunset_ui  
 ensure sunset_chat
 ensure sunset_world
 ensure sunset_factions
