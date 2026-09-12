@@ -126,7 +126,6 @@ function AddItem(source, item, count, slot, metadata)
     if not metadata and item == 'gas_can' then
         metadata = { liters = 0 }
     elseif not metadata and itemDef.weapon then
-        -- Weapons are unique inventory objects, never stackable commodities.
         metadata = {
             serial = ('LS-%06d-%06d'):format(tonumber(char.id) or 0, math.random(0, 999999)),
         }
@@ -517,6 +516,7 @@ exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
         maxWeight = Sunset.Config.MaxWeight,
         cash = (char and tonumber(char.cash)) or 0,
         nearbyPlayers = nearbyPlayers,
+        quickslots = BuildHotbarView(source, true),
     }
 end)
 

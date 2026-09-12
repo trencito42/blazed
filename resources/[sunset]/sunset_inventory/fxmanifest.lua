@@ -16,6 +16,7 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/quickslots.lua',
     'server/trade.lua',
     'server/containers.lua',
 }
@@ -36,6 +37,8 @@ server_exports {
 }
 
 client_exports {
+    'EquipHotbarWeapon', 'HolsterHotbarWeapon', 'GetHotbarEquippedHash',
     'EquipHotbarProp', 'HolsterHotbarProp', 'GetHotbarEquippedPropItem',
     'GetHotbarPropEntity', 'IsHotbarPropEntity',
+    'EnrichInventoryPayload', 'GetHotbarSlots', 'RefreshHotbar',
 }

@@ -47,7 +47,7 @@ function Sunset.SaveCharacter(source)
     -- LONGER written here. They are owned by atomic server operations (guarded
     -- UPDATEs, payday/buyLevel transactions). The previous SELECT-then-UPDATE
     -- pattern could silently roll back any concurrent money/progress op.
-    -- [AUDIT P5-10] metadata: merge DB-authoritative keys (rob_points)
+    -- [AUDIT P5-10] metadata: merge DB-authoritative keys (rob_points, quickslots)
     -- over the cached blob so autosave can never erase them.
     local currentDb = MySQL.single.await('SELECT cash, bank, metadata FROM characters WHERE id = ?', { char.id })
     if currentDb then
@@ -60,6 +60,7 @@ function Sunset.SaveCharacter(source)
         local ok, dbMeta = pcall(json.decode, currentDb.metadata)
         if ok and type(dbMeta) == 'table' then
             if dbMeta.rob_points ~= nil then char.metadata.rob_points = dbMeta.rob_points end
+            if dbMeta.quickslots ~= nil then char.metadata.quickslots = dbMeta.quickslots end
         end
     end
 
@@ -656,7 +657,7 @@ function Sunset.SetRobPoints(source, value)
     char.metadata = type(char.metadata) == 'table' and char.metadata or {}
     char.metadata.rob_points = value
     -- [AUDIT P5-10] Targeted JSON_SET instead of rewriting the whole blob:
-    -- concurrent writers (payday and other targeted updates) keep their own keys.
+    -- concurrent writers (quickslots, payday) keep their own keys.
     MySQL.update.await(
         "UPDATE characters SET metadata = JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.rob_points', ?) WHERE id = ?",
         { value, char.id })

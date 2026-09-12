@@ -1,5 +1,6 @@
 local UNARMED = `WEAPON_UNARMED`
 local syncedWeapons = {}
+local hotbarEquippedHash = nil
 
 local MELEE_WEAPONS = {
     WEAPON_UNARMED = true,
@@ -98,7 +99,6 @@ end
 
 function SyncInventoryWeapons(items)
     local ped = PlayerPedId()
-    local selectedWeapon = GetSelectedPedWeapon(ped)
     local preservedAmmo = {}
     for hash in pairs(syncedWeapons) do
         preservedAmmo[hash] = math.max(0, GetAmmoInPedWeapon(ped, hash))
@@ -114,10 +114,47 @@ function SyncInventoryWeapons(items)
         end
     end
 
-    if selectedWeapon ~= UNARMED and HasPedGotWeapon(ped, selectedWeapon, false) then
-        SetCurrentPedWeapon(ped, selectedWeapon, true)
+    if hotbarEquippedHash and HasPedGotWeapon(ped, hotbarEquippedHash, false) then
+        SetCurrentPedWeapon(ped, hotbarEquippedHash, true)
+    else
+        hotbarEquippedHash = nil
+        SetCurrentPedWeapon(ped, UNARMED, true)
     end
 end
+
+RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
+    if type(weaponNames) ~= 'table' then return end
+    local ped = PlayerPedId()
+    local amount = math.max(1, math.min(250, math.floor(tonumber(rounds) or 0)))
+    for _, weaponName in ipairs(weaponNames) do
+        local hash = joaat(tostring(weaponName))
+        if HasPedGotWeapon(ped, hash, false) then
+            AddAmmoToPed(ped, hash, amount)
+            return
+        end
+    end
+end)
+
+local function equipHotbarWeapon(hash)
+    if not hash or hash == UNARMED then return false end
+    local ped = PlayerPedId()
+    if not HasPedGotWeapon(ped, hash, false) then return false end
+    exports.sunset_inventory:HolsterHotbarProp()
+    SetCurrentPedWeapon(ped, hash, true)
+    hotbarEquippedHash = hash
+    return true
+end
+
+local function holsterHotbarWeapon()
+    local ped = PlayerPedId()
+    hotbarEquippedHash = nil
+    SetCurrentPedWeapon(ped, UNARMED, true)
+    return true
+end
+
+exports('EquipHotbarWeapon', equipHotbarWeapon)
+exports('HolsterHotbarWeapon', holsterHotbarWeapon)
+exports('GetHotbarEquippedHash', function() return hotbarEquippedHash end)
 
 RegisterNetEvent('sunset:client:inventoryUpdate', function(items)
     SyncInventoryWeapons(items)
@@ -182,19 +219,10 @@ CreateThread(function()
         local ped = PlayerPedId()
         ensureUnarmed(ped)
         SetPedCanSwitchWeapon(ped, true)
-        Wait(5000)
-    end
-end)
-
-RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
-    if type(weaponNames) ~= 'table' then return end
-    local ped = PlayerPedId()
-    local amount = math.max(1, math.min(250, math.floor(tonumber(rounds) or 0)))
-    for _, weaponName in ipairs(weaponNames) do
-        local hash = joaat(tostring(weaponName))
-        if HasPedGotWeapon(ped, hash, false) then
-            AddAmmoToPed(ped, hash, amount)
-            return
+        if hotbarEquippedHash and not HasPedGotWeapon(ped, hotbarEquippedHash, false) then
+            hotbarEquippedHash = nil
+            SetCurrentPedWeapon(ped, UNARMED, true)
         end
+        Wait(5000)
     end
 end)

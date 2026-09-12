@@ -68,7 +68,7 @@ local function equipHotbarProp(itemName)
     if IsPedInAnyVehicle(ped, false) then return false end
 
     holsterHotbarProp()
-    SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
+    exports.sunset_inventory:HolsterHotbarWeapon()
 
     local hash = loadModel(ep.model)
     if not hash then return false end
