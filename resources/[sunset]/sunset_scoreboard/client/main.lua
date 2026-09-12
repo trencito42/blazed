@@ -1,8 +1,17 @@
 local open = false
 
+-- [WAR FIX] During a turf war, Z belongs to the war scoreboard (sunset_turfs).
+-- Yield to it so the two scoreboards don't both open on the same key.
+local function inTurfWar()
+    if GetResourceState('sunset_turfs') ~= 'started' then return false end
+    local ok, res = pcall(function() return exports.sunset_turfs:IsInWar() end)
+    return ok and res == true
+end
+
 local function toggleScoreboard(show)
     if show == open then return end
     if show and (IsPauseMenuActive() or IsNuiFocused()) then return end
+    if show and inTurfWar() then return end
     open = show
 
     if show then
@@ -30,7 +39,7 @@ RegisterKeyMapping('+sunset_playerlist', 'Player list (hold)', 'keyboard', 'Z')
 CreateThread(function()
     local physicalZDown = false
     while true do
-        if IsPauseMenuActive() or IsNuiFocused() then
+        if IsPauseMenuActive() or IsNuiFocused() or inTurfWar() then
             physicalZDown = false
             if open then toggleScoreboard(false) end
             Wait(100)

@@ -128,10 +128,16 @@ RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
     local amount = math.max(1, math.min(250, math.floor(tonumber(rounds) or 0)))
     for _, weaponName in ipairs(weaponNames) do
         local hash = joaat(tostring(weaponName))
-        if HasPedGotWeapon(ped, hash, false) then
-            AddAmmoToPed(ped, hash, amount)
+        -- [GUNSHOP FIX] If the weapon isn't on the ped yet (fresh purchase race:
+        -- inventory sync grants it separately), give it now. This event is only
+        -- sent by the server after confirming the player owns the weapon/box.
+        if not HasPedGotWeapon(ped, hash, false) then
+            GiveWeaponToPed(ped, hash, amount, false, true)
+            syncedWeapons[hash] = true
             return
         end
+        AddAmmoToPed(ped, hash, amount)
+        return
     end
 end)
 

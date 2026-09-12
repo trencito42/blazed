@@ -199,7 +199,18 @@ local function resyncVictimTo(source, data)
     -- [AUDIT 3-8.2] Only resync player peds: vehicles/objects return odd values
     -- from GetEntityHealth that would be pushed into a client health-set event.
     if GetEntityType(victim) ~= 1 or not IsPedAPlayer(victim) then return end
-    TriggerClientEvent('sunset:combat:resyncPed', source, netId, GetEntityHealth(victim), GetPedArmour(victim))
+    local health = GetEntityHealth(victim)
+    local armor = GetPedArmour(victim)
+    -- [DESYNC FIX] Send the resync to BOTH the shooter and the victim. The
+    -- shooter's client predicts the kill locally and shows a dead body while
+    -- the damage was actually cancelled server-side; only the VICTIM owns
+    -- their ped, so the victim-side SetEntityHealth is what authoritatively
+    -- re-replicates the true (alive) state and clears the shooter's ghost.
+    TriggerClientEvent('sunset:combat:resyncPed', source, netId, health, armor)
+    local victimSrc = NetworkGetEntityOwner(victim)
+    if victimSrc and victimSrc > 0 and victimSrc ~= source then
+        TriggerClientEvent('sunset:combat:resyncPed', victimSrc, netId, health, armor)
+    end
 end
 
 AddEventHandler('weaponDamageEvent', function(sender, data)

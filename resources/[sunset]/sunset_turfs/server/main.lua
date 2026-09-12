@@ -198,9 +198,19 @@ local function endWar(turfId, reason)
         scoreTarget = war.scoreTarget,
     })
 
-    local announcement = ('^2[TURF WAR] ^7Razboiul pentru ^3%s^7 s-a incheiat! ^2[%s] %s^7 a castigat teritoriul (%d vs %d puncte)!'):format(
-        turf.name, winnerClanTag or '--', winnerClanName or 'Necunoscut', war.attackerScore, war.defenderScore
-    )
+    -- [WAR FIX] A defender who wins (or ties) KEEPS the turf they already owned;
+    -- the announcement must say "defended", not "conquered".
+    local winnerIsDefender = (not war.isNeutralCapture) and not attackerWon
+    local announcement
+    if winnerIsDefender then
+        announcement = ('^2[TURF WAR] ^7Razboiul pentru ^3%s^7 s-a incheiat! ^2[%s] %s^7 a aparat teritoriul (%d vs %d puncte)!'):format(
+            turf.name, winnerClanTag or '--', winnerClanName or 'Necunoscut', war.defenderScore, war.attackerScore
+        )
+    else
+        announcement = ('^2[TURF WAR] ^7Razboiul pentru ^3%s^7 s-a incheiat! ^2[%s] %s^7 a cucerit teritoriul (%d vs %d puncte)!'):format(
+            turf.name, winnerClanTag or '--', winnerClanName or 'Necunoscut', war.attackerScore, war.defenderScore
+        )
+    end
     TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'WAR', announcement } })
 end
 

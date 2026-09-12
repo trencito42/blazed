@@ -151,50 +151,26 @@ MySQL.ready = setmetatable({
 -- oxmysql's transaction export passes a single callable query function to Lua.
 -- The framework historically used the same typed helpers exposed by MySQL
 -- (query.await, single.await, update.await and insert.await) inside transaction
--- callbacks.  Adapt the raw transaction result here so every resource uses the
+-- callbacks. Adapt the raw transaction result here so every resource uses the
 -- transaction connection while retaining the normal oxmysql return contracts.
 --
--- [CRITICAL FIX] The JS side (startTransaction -> runQuery -> conn.query)
--- returns a PROMISE resolving to the mysql2 tuple `[rows, fields]`. The
--- previous adapter neither awaited the promise nor unwrapped the tuple, so
--- every transactional UPDATE returned nil -> `tonumber(nil) ~= 1` -> rollback.
--- That broke refueling ("Payment failed"), dealership purchases, crafting,
--- fisherman sells, tuning saves and trades. Always Citizen.Await + unwrap.
-local CitizenAwait = Citizen.Await
-
-local function runRaw(rawQuery, sql, values)
-	local result = rawQuery(sql, values)
-	-- If the bridge handed back an un-awaited promise (older/newer runtimes),
-	-- resolve it. A real Cfx promise is identifiable by __cfx_promise or a
-	-- callable .next; a plain result table (OkPacket / row array) is not.
-	if type(result) == 'table' and result.__cfx_promise ~= nil then
-		result = CitizenAwait(result)
-	elseif type(result) == 'table' and type(result.next) == 'function' and result.affectedRows == nil and result[1] == nil then
-		result = CitizenAwait(result)
-	end
-	return result
-end
-
-local function unwrap(raw)
-	-- JS resolves [rows, fields]; rows is the OkPacket (UPDATE/INSERT) or the
-	-- row array (SELECT). When await returns the marshaled tuple, payload = [1].
-	if type(raw) == 'table' and raw[1] ~= nil and raw.affectedRows == nil and raw.insertId == nil then
-		return raw[1]
-	end
-	return raw
-end
-
-local function transactionResult(kind, raw)
-	local result = unwrap(raw)
-
+-- GROUND TRUTH (verified in dist/build.js): the transaction's runQuery calls
+-- MySql.query, which ALREADY destructures the mysql2 tuple (`const [result]`)
+-- and returns the parsed result itself:
+--   SELECT          -> rows array
+--   UPDATE/DELETE   -> OkPacket { affectedRows, ... }
+--   INSERT          -> OkPacket { insertId, ... }
+-- The Lua scheduler also auto-awaits the JS promise (__cfx_async_retval), so
+-- no manual Citizen.Await and NO tuple unwrapping is needed here.
+-- (A previous version unwrapped raw[1], which corrupted SELECT results inside
+-- transactions and broke payday: rows[1] became nil -> 'could not commit'.)
+local function transactionResult(kind, result)
 	if kind == 'single' then
-		if type(result) ~= 'table' then return nil end
-		return result[1]
+		return type(result) == 'table' and result[1] or nil
 	end
 
 	if kind == 'scalar' then
-		if type(result) ~= 'table' then return nil end
-		local row = result[1]
+		local row = type(result) == 'table' and result[1] or nil
 		if type(row) ~= 'table' then return nil end
 		local _, value = next(row)
 		return value
@@ -223,22 +199,22 @@ local function transactionAdapter(rawQuery)
 	local adapter = {}
 
 	adapter.await = function(sql, values)
-		return transactionResult(inferTransactionKind(sql), runRaw(rawQuery, sql, values))
+		return transactionResult(inferTransactionKind(sql), rawQuery(sql, values))
 	end
 	adapter.query = { await = function(sql, values)
-		return transactionResult('query', runRaw(rawQuery, sql, values))
+		return transactionResult('query', rawQuery(sql, values))
 	end }
 	adapter.single = { await = function(sql, values)
-		return transactionResult('single', runRaw(rawQuery, sql, values))
+		return transactionResult('single', rawQuery(sql, values))
 	end }
 	adapter.scalar = { await = function(sql, values)
-		return transactionResult('scalar', runRaw(rawQuery, sql, values))
+		return transactionResult('scalar', rawQuery(sql, values))
 	end }
 	adapter.update = { await = function(sql, values)
-		return transactionResult('update', runRaw(rawQuery, sql, values))
+		return transactionResult('update', rawQuery(sql, values))
 	end }
 	adapter.insert = { await = function(sql, values)
-		return transactionResult('insert', runRaw(rawQuery, sql, values))
+		return transactionResult('insert', rawQuery(sql, values))
 	end }
 
 	return setmetatable(adapter, {

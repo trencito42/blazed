@@ -26,9 +26,10 @@ local function openInventory()
         return exports.sunset_ui:Notify(err or 'Inventory could not be loaded. Your character may still be loading; try again in a moment.', 'error')
     end
     inventoryOpen = true
-    if exports.sunset_inventory and exports.sunset_inventory.EnrichInventoryPayload then
-        data = exports.sunset_inventory:EnrichInventoryPayload(data)
-    end
+    -- [BUGFIX] EnrichInventoryPayload was deleted with the quickbar but these
+    -- call sites remained. In FiveM, exports.res.X returns a truthy proxy even
+    -- for UNDEFINED exports, so the guard passed and the call errored ->
+    -- openInventory died before inventoryShow (inventory would not open).
     exports.sunset_ui:SetFocus(true, true)
     exports.sunset_ui:Send('inventoryShow', data)
 end
@@ -53,9 +54,7 @@ RegisterNetEvent('sunset:client:inventoryUpdate', function(items, weight, cash)
             currentCash = (char and tonumber(char.cash)) or 0
         end
         local payload = { items = items, weight = weight, maxWeight = Sunset.Config.MaxWeight, cash = currentCash }
-        if exports.sunset_inventory and exports.sunset_inventory.EnrichInventoryPayload then
-            payload = exports.sunset_inventory:EnrichInventoryPayload(payload)
-        end
+        -- [BUGFIX] EnrichInventoryPayload removed (see openInventory note).
         exports.sunset_ui:Send('inventoryUpdate', payload)
     end
 end)

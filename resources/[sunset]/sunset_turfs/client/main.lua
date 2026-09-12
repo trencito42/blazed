@@ -215,17 +215,21 @@ end)
 RegisterNetEvent('sunset:turfs:warStart', function(war)
     ActiveWar = war
     refreshBlips()
-    PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
-    -- [WAR REDESIGN] NUI HUD for everyone (scores + timer + target).
-    exports.sunset_ui:Send('warHudShow', {
-        attackerName = war.attackerName,
-        defenderName = war.defenderName,
-        attackerScore = war.attackerScore or 0,
-        defenderScore = war.defenderScore or 0,
-        scoreTarget = war.scoreTarget,
-        turfName = war.turfName,
-        remainingSec = war.remainingSec or 0,
-    })
+    -- [WAR FIX] Only participants hear the war-start sting and see the HUD;
+    -- the broadcast still updates blips/map for everyone, but the on-screen
+    -- war panels are participant-only (warParticipant set via warJoined).
+    if warParticipant then
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        exports.sunset_ui:Send('warHudShow', {
+            attackerName = war.attackerName,
+            defenderName = war.defenderName,
+            attackerScore = war.attackerScore or 0,
+            defenderScore = war.defenderScore or 0,
+            scoreTarget = war.scoreTarget,
+            turfName = war.turfName,
+            remainingSec = war.remainingSec or 0,
+        })
+    end
     if war.isNeutralCapture then
         exports.sunset_ui:Notify(
             ('Capturare %s: sta in zona %d secunde (%d oameni = mai rapid).'):format(
@@ -251,9 +255,7 @@ RegisterNetEvent('sunset:turfs:warEnd', function(data)
     end
     clearWarPlayerBlips()
     refreshBlips()
-    PlaySoundFrontend(-1, 'RACE_PLACED', 'HUD_AWARDS', true)
-    -- [WAR REDESIGN] Hide HUD + end screen for participants (myRole injected
-    -- client-side from the war data cached at join time).
+    -- [WAR FIX] Hide participant panels first (harmless for non-participants).
     exports.sunset_ui:Send('warHudHide', {})
     exports.sunset_ui:Send('warRespawnHide', {})
     exports.sunset_ui:Send('warScoreboardHide', {})
@@ -261,6 +263,8 @@ RegisterNetEvent('sunset:turfs:warEnd', function(data)
     if warParticipant then
         warParticipant = false
         local myRole = myWarRole or 'defender'
+        PlaySoundFrontend(-1, 'RACE_PLACED', 'HUD_AWARDS', true)
+        -- [WAR FIX] Strip the loadout weapons granted for this war.
         TriggerEvent('sunset:turfs:warEndedLocal')
         exports.sunset_ui:Send('warEndShow', {
             turfId = data.turfId,
@@ -343,6 +347,7 @@ end)
 -- ═══════════════════════════════════════════════════════════════
 warParticipant = false            -- server said we're in the war
 myWarRole = nil                   -- 'attacker' | 'defender'
+local warWeapons = {}             -- loadout weapon hashes to strip at war end
 local armoryOpen = false
 local respawnPending = false
 
@@ -412,8 +417,24 @@ RegisterNetEvent('sunset:turfs:grantLoadout', function(payload)
     for _, w in ipairs(payload.weapons or {}) do
         local hash = type(w.weapon) == 'number' and w.weapon or joaat(w.weapon)
         GiveWeaponToPed(ped, hash, w.ammo or 120, false, true)
+        -- [WAR FIX] Track granted hashes so they can be stripped when the war
+        -- ends (previously the sniper kit stayed forever after the war).
+        warWeapons[hash] = true
     end
 end)
+
+-- [WAR FIX] Strip every loadout weapon granted during the war.
+local function stripWarWeapons()
+    local ped = PlayerPedId()
+    for hash in pairs(warWeapons) do
+        if HasPedGotWeapon(ped, hash, false) then
+            RemoveWeaponFromPed(ped, hash)
+        end
+        warWeapons[hash] = nil
+    end
+    SetPedArmour(ped, 0)
+    SetCurrentPedWeapon(ped, joaat('WEAPON_UNARMED'), true)
+end
 
 -- War respawn: server picks the coords and re-grants the chosen loadout.
 RegisterNetEvent('sunset:turfs:doWarRespawn', function(payload)
@@ -504,6 +525,15 @@ AddEventHandler('sunset:nui:warEndClose', function()
     exports.sunset_ui:SetFocus(false, false)
 end)
 
+-- [WAR FIX] Fired from the warEnd handler after warParticipant is cleared:
+-- remove the loadout kit so players don't keep sniper/rifle weapons forever.
+AddEventHandler('sunset:turfs:warEndedLocal', function()
+    stripWarWeapons()
+    myWarRole = nil
+    respawnPending = false
+    exports.sunset_ui:Send('warRespawnHide', {})
+end)
+
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     closeArmory()
@@ -515,7 +545,8 @@ end)
 
 CreateThread(function()
     while true do
-        if ActiveWar then
+        -- [WAR FIX] HUD updates only for participants (was sent to everyone).
+        if ActiveWar and warParticipant then
             exports.sunset_ui:Send('warHudUpdate', {
                 attackerName = ActiveWar.attackerName,
                 defenderName = ActiveWar.defenderName,

@@ -23,6 +23,23 @@ local function inputIsBusy()
     return isChatOpen() or IsNuiFocused() or IsPauseMenuActive()
 end
 
+-- [UX] While riding with another player in the same vehicle, hide the ambient
+-- name tag + "hold G" prompt: the interaction menu opens instantly on G press
+-- instead (no passive tag spam inside cars).
+local function sharingVehicle()
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then return false end
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 or not DoesEntityExist(veh) then return false end
+    for seat = -1, GetVehicleMaxNumberOfPassengers(veh) - 1 do
+        local other = GetPedInVehicleSeat(veh, seat)
+        if other ~= 0 and other ~= ped and IsPedAPlayer(other) then
+            return true
+        end
+    end
+    return false
+end
+
 local function closestPlayer(maxDistance)
     local me = PlayerPedId()
     local myCoords = GetEntityCoords(me)
@@ -190,6 +207,9 @@ RegisterCommand('-interactplayer', function()
         return
     end
     setHoldState(false)
+    -- [UX] Releasing G inside a shared vehicle hides the prompt again
+    -- (ambient prompts are suppressed there; only hold shows it).
+    if sharingVehicle() then hidePlayerPrompt() end
 end, false)
 
 AddEventHandler('sunset:nui:playerInteractionHoldComplete', function()
@@ -324,7 +344,10 @@ end)
 
 CreateThread(function()
     while true do
-        if promptPlayer and not menuOpen and not contextRequestActive and not inputIsBusy() then
+        -- [UX] In a shared vehicle: no ambient name tag / "hold G" prompt.
+        -- The prompt only appears while G is actually held (see setHoldState).
+        if promptPlayer and not menuOpen and not contextRequestActive and not inputIsBusy()
+            and not (sharingVehicle() and not holdActive) then
             sendPlayerPrompt(promptPlayer)
             Wait(16)
         else

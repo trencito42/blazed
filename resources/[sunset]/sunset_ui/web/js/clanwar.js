@@ -263,7 +263,13 @@
             const won = data.myRole === 'attacker' ? !!data.attackerWon : !data.attackerWon;
             banner?.classList.toggle('lost', !won);
             if (title) {
-                title.textContent = won ? 'TURF CUCERIT!' : 'TURF PIERDUT!';
+                // [WAR FIX] A defender who wins/ties KEPT the turf — show "DEFENDED",
+                // not "CONQUERED" (it was already theirs; tie goes to defender).
+                if (won && data.myRole !== 'attacker') {
+                    title.textContent = 'TURF APĂRAT!';
+                } else {
+                    title.textContent = won ? 'TURF CUCERIT!' : 'TURF PIERDUT!';
+                }
                 title.style.color = won ? 'var(--war-accent, #00ffcc)' : 'var(--war-danger, #ff3366)';
             }
             set('war-end-turf', `Turf #${data.turfId || '?'} • ${data.turfName || ''}`);

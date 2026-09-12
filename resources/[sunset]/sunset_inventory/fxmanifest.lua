@@ -40,5 +40,4 @@ client_exports {
     'EquipHotbarWeapon', 'HolsterHotbarWeapon', 'GetHotbarEquippedHash',
     'EquipHotbarProp', 'HolsterHotbarProp', 'GetHotbarEquippedPropItem',
     'GetHotbarPropEntity', 'IsHotbarPropEntity',
-    'EnrichInventoryPayload', 'GetHotbarSlots', 'RefreshHotbar',
 }
