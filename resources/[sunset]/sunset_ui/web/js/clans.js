@@ -233,7 +233,11 @@ const ClanPanels = {
             if (onlineEl) onlineEl.textContent = onlineCount;
 
             const memberCountEl = $('#clan-member-count');
-            if (memberCountEl) memberCountEl.textContent = `${payload.memberCount || 0}/${payload.maxMembers || 25}`;
+            // [BUGFIX] The stat reads "<online> / <this>" under the label
+            // "Membri Online"; it used to be set to "total/max" producing
+            // "1 / 1/25". Show only the total registered members here; the
+            // x/max capacity stays in the roster meta line below.
+            if (memberCountEl) memberCountEl.textContent = `${payload.memberCount || 0}`;
 
             const styleLabel = $('#clan-tag-style-label');
             if (styleLabel) styleLabel.textContent = this.tagStyleLabel(payload.tagStyle);
