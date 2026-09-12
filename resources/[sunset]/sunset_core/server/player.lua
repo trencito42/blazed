@@ -620,6 +620,12 @@ exports('SaveCharacter', Sunset.SaveCharacter)
 exports('AddMoney', Sunset.AddMoney)
 exports('RemoveMoney', Sunset.RemoveMoney)
 exports('GetMoney', Sunset.GetMoney)
+-- [BUGFIX] MoveMoney/TransferMoney were declared in fxmanifest and used by
+-- sunset_economy (ATM deposit/withdraw + bank transfer) but never actually
+-- exported, so every ATM/transfer call hit a missing export and failed
+-- silently. Caught by the testdriver smoke check.
+exports('MoveMoney', Sunset.MoveMoney)
+exports('TransferMoney', Sunset.TransferMoney)
 exports('SetPersistentStat', Sunset.SetPersistentStat)
 exports('RefreshBlazePoints', Sunset.RefreshBlazePoints)
 exports('SpendBlazePoints', Sunset.SpendBlazePoints)

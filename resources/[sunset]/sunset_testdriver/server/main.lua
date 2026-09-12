@@ -109,17 +109,17 @@ local function sessionTests()
 
     local testActivity = 'td_test_' .. tostring(os.time())
     local endedStates = {}
-    local ok = exports.sunset_sessions:RegisterActivity(testActivity, {
+    local ok = exports.sunset_sessions.RegisterActivity(testActivity, {
         reconnect = 'ABANDON',
         onEnd = function(session, state) endedStates[#endedStates + 1] = state end,
     })
     record('RegisterActivity accepts valid def', ok == true)
 
-    local rejected = exports.sunset_sessions:RegisterActivity('td_bad', {})
+    local rejected = exports.sunset_sessions.RegisterActivity('td_bad', {})
     record('RegisterActivity rejects def without onEnd', rejected == false)
 
     -- fake source (999999 is not a connected player; framework must tolerate)
-    local session, err = exports.sunset_sessions:CreateSession({
+    local session, err = exports.sunset_sessions.CreateSession({
         source = 999999, charId = 999999, activity = testActivity, timeoutSec = 60,
     })
     record('CreateSession', session ~= nil, err)
@@ -127,48 +127,48 @@ local function sessionTests()
 
     record('initial state STARTING', session.state == 'STARTING')
 
-    local t1 = exports.sunset_sessions:Transition(session.id, 'ACTIVE')
+    local t1 = exports.sunset_sessions.Transition(session.id, 'ACTIVE')
     record('STARTING->ACTIVE', t1 == true)
 
     -- reward idempotency
-    local m1 = exports.sunset_sessions:MarkRewardPending(session.id)
-    local m2 = exports.sunset_sessions:MarkRewardPending(session.id)
+    local m1 = exports.sunset_sessions.MarkRewardPending(session.id)
+    local m2 = exports.sunset_sessions.MarkRewardPending(session.id)
     record('MarkRewardPending once', m1 == true and m2 == false)
-    exports.sunset_sessions:CommitReward(session.id)
-    local m3 = exports.sunset_sessions:MarkRewardPending(session.id)
+    exports.sunset_sessions.CommitReward(session.id)
+    local m3 = exports.sunset_sessions.MarkRewardPending(session.id)
     record('reward cannot re-arm after commit', m3 == false)
 
     -- duplicate create for same char refused
-    local dup, dupErr = exports.sunset_sessions:CreateSession({
+    local dup, dupErr = exports.sunset_sessions.CreateSession({
         source = 999998, charId = 999999, activity = testActivity,
     })
     record('duplicate session refused', dup == nil, dupErr)
 
     -- terminal transition
-    local t2 = exports.sunset_sessions:Transition(session.id, 'COMPLETED', 'test')
+    local t2 = exports.sunset_sessions.Transition(session.id, 'COMPLETED', 'test')
     record('ACTIVE->COMPLETED', t2 == true)
     record('onEnd cleanup ran once', #endedStates == 1, 'states: ' .. table.concat(endedStates, ','))
 
     -- terminal absorbing
-    local t3 = exports.sunset_sessions:Transition(session.id, 'ACTIVE')
+    local t3 = exports.sunset_sessions.Transition(session.id, 'ACTIVE')
     record('terminal state absorbing', t3 == false)
 
     -- cancel after end is a no-op returning false (idempotent)
-    local t4 = exports.sunset_sessions:CancelSession(session.id)
+    local t4 = exports.sunset_sessions.CancelSession(session.id)
     record('cancel after end rejected', t4 == false)
 
     -- invalid state name
-    local session2 = exports.sunset_sessions:CreateSession({
+    local session2 = exports.sunset_sessions.CreateSession({
         source = 999997, charId = 999997, activity = testActivity, timeoutSec = 60,
     })
     if session2 then
-        local t5 = exports.sunset_sessions:Transition(session2.id, 'BOGUS')
+        local t5 = exports.sunset_sessions.Transition(session2.id, 'BOGUS')
         record('invalid state rejected', t5 == false)
-        exports.sunset_sessions:CancelSession(session2.id, 'test done')
+        exports.sunset_sessions.CancelSession(session2.id, 'test done')
         record('cancel works', #endedStates == 2)
     end
 
-    record('GetSessionBySource nil for offline', exports.sunset_sessions:GetSessionBySource(999999) == nil)
+    record('GetSessionBySource nil for offline', exports.sunset_sessions.GetSessionBySource(999999) == nil)
 end
 
 -- ------------------------------------------------------------
@@ -189,24 +189,23 @@ local function smokeChecks()
         'TransferMoney', 'RefreshMoney', 'LogMoneyTransaction', 'IsIncapacitated',
         'RegisterCallback', 'SaveCharacter', 'RateLimit' }
     for _, name in ipairs(coreExports) do
-        local okCall, _ = pcall(function()
-            -- calling GetExportMetadata-free: just reference the export
+        local okCall, res = pcall(function()
             local fn = exports.sunset_core[name]
             return fn ~= nil
         end)
-        record('core export: ' .. name, okCall == true)
+        record('core export: ' .. name, okCall == true and res == true)
     end
 
     -- RateLimit behaves (same key twice within window)
-    local rl1 = exports.sunset_core:RateLimit(999990, 'td_smoke', 1000)
-    local rl2 = exports.sunset_core:RateLimit(999990, 'td_smoke', 1000)
+    local rl1 = exports.sunset_core.RateLimit(999990, 'td_smoke', 1000)
+    local rl2 = exports.sunset_core.RateLimit(999990, 'td_smoke', 1000)
     record('RateLimit first passes', rl1 == true)
     record('RateLimit second throttled', rl2 == false)
 
     -- money API rejects nonsense for offline source (no side effects)
-    local bad = exports.sunset_core:AddMoney(999991, 'cash', 100, 'td_should_fail')
+    local bad = exports.sunset_core.AddMoney(999991, 'cash', 100, 'td_should_fail')
     record('AddMoney offline source rejected', bad == false or bad == nil, tostring(bad))
-    local neg = exports.sunset_core:RemoveMoney(999991, 'cash', -500, 'td_neg')
+    local neg = exports.sunset_core.RemoveMoney(999991, 'cash', -500, 'td_neg')
     record('RemoveMoney negative rejected', neg == false or neg == nil, tostring(neg))
 end
 
