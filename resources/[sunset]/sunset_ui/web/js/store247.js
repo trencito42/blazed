@@ -316,7 +316,10 @@ const StoreUI = {
                 this.buyComplete = true;
                 const text = document.getElementById('store-buy-text');
                 if (text) {
-                    text.innerHTML = 'Payment Confirmed!';
+                    // [BUGFIX] Was "Payment Confirmed!" shown BEFORE the server
+                    // answered — a lie when the purchase then failed (level/
+                    // license/money). The real result arrives as a notify.
+                    text.innerHTML = 'Processing...';
                     text.style.color = '#000';
                 }
                 const btn = document.getElementById('store-buy');

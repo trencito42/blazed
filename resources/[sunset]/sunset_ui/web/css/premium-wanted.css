@@ -6,17 +6,17 @@
     gap: 6px;
     padding-right: 20px;
     margin-top: 8px;
-    transform: skewX(-5deg);
+    transform: none;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
     transition: opacity 0.4s ease, transform 0.4s ease;
     opacity: 0;
     pointer-events: none;
-    transform: skewX(-5deg) translateX(30px);
+    transform: translateX(30px);
 }
 
 .hud-wanted-premium.active {
     opacity: 1;
-    transform: skewX(-5deg) translateX(0);
+    transform: translateX(0);
 }
 
 .hud-wanted-premium .wanted-title {

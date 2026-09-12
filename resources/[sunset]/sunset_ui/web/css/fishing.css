@@ -386,8 +386,8 @@
 
 @keyframes fishingGlitch {
     0% { transform: translateX(-50%); }
-    20% { transform: translateX(calc(-50% - 10px)) skewX(10deg); }
-    40% { transform: translateX(calc(-50% + 10px)) skewX(-10deg); }
+    20% { transform: translateX(calc(-50% - 10px)) ; }
+    40% { transform: translateX(calc(-50% + 10px)) ; }
     60% { transform: translateX(calc(-50% - 5px)); }
     80% { transform: translateX(calc(-50% + 5px)); }
     100% { transform: translateX(-50%); }

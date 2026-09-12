@@ -5,7 +5,7 @@
     position: fixed;
     bottom: 100px;
     left: 50%;
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -45,7 +45,7 @@
     font-size: 18px;
     font-weight: 800;
     color: #fff;
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
     line-height: 1.35;
     margin: 0;
@@ -115,7 +115,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    transform: skewX(5deg);
+    transform: none;
     transition: color 0.1s;
 }
 
@@ -157,7 +157,7 @@
 .trade-container {
     display: flex;
     gap: 40px;
-    transform: skewX(-5deg);
+    transform: none;
     position: relative;
     max-width: calc(100vw - 40px);
 }
@@ -197,7 +197,7 @@
     font-style: italic;
     color: #fff;
     text-transform: uppercase;
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -211,7 +211,7 @@
     padding: 6px 10px;
     background: #f59e0b;
     color: #000;
-    transform: skewX(5deg);
+    transform: none;
     transition: 0.3s;
 }
 
@@ -259,7 +259,7 @@
 .oi-icon {
     font-size: 24px;
     color: rgba(255, 255, 255, 0.4);
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     justify-content: center;
     width: 30px;
@@ -274,7 +274,7 @@
 .oi-details {
     display: flex;
     flex-direction: column;
-    transform: skewX(5deg);
+    transform: none;
     flex: 1;
     min-width: 0;
 }
@@ -313,7 +313,7 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     cursor: pointer;
-    transform: skewX(5deg);
+    transform: none;
     transition: 0.2s;
     font-family: 'Montserrat', sans-serif;
 }
@@ -364,7 +364,7 @@
     font-weight: 800;
     text-transform: uppercase;
     cursor: pointer;
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
 }
 
@@ -374,7 +374,7 @@
     color: rgba(255, 255, 255, 0.4);
     text-transform: uppercase;
     text-align: center;
-    transform: skewX(5deg);
+    transform: none;
     padding: 30px 20px;
 }
 
@@ -385,7 +385,7 @@
     text-transform: uppercase;
     text-align: center;
     padding: 40px 10px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 /* Countdown */
@@ -422,7 +422,7 @@
     color: #00ffcc;
     line-height: 1;
     text-shadow: 0 0 50px rgba(0, 255, 204, 0.5);
-    transform: skewX(-10deg);
+    transform: none;
     animation: tradeCdPulse 1s infinite;
 }
 
@@ -433,7 +433,7 @@
     letter-spacing: 10px;
     color: #fff;
     margin-top: 20px;
-    transform: skewX(-5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
 }
 
@@ -448,9 +448,9 @@
 }
 
 @keyframes tradeCdPulse {
-    0% { transform: skewX(-10deg) scale(0.9); opacity: 0.8; }
-    50% { transform: skewX(-10deg) scale(1.1); opacity: 1; text-shadow: 0 0 100px rgba(0, 255, 204, 0.8); }
-    100% { transform: skewX(-10deg) scale(0.9); opacity: 0.8; }
+    0% { transform: scale(0.9); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 100px rgba(0, 255, 204, 0.8); }
+    100% { transform: scale(0.9); opacity: 0.8; }
 }
 
 /* ── Asset selector modal ── */
@@ -481,7 +481,7 @@
 .selector-wrapper {
     display: flex;
     gap: 20px;
-    transform: skewX(-5deg);
+    transform: none;
     width: min(850px, calc(100vw - 40px));
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
     font-family: 'Montserrat', sans-serif;
@@ -505,7 +505,7 @@
     font-style: italic;
     color: #fff;
     text-transform: uppercase;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .cat-list {
@@ -538,12 +538,12 @@
 
 .cat-item i {
     font-size: 24px;
-    transform: skewX(5deg);
+    transform: none;
     transition: 0.2s;
 }
 
 .cat-item span {
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .cat-item:hover,
@@ -597,7 +597,7 @@
     color: rgba(255, 255, 255, 0.4);
     text-transform: uppercase;
     letter-spacing: 2px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .sc-balance {
@@ -605,7 +605,7 @@
     font-size: 18px;
     font-weight: 800;
     color: #10b981;
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -636,7 +636,7 @@
     justify-content: center;
     height: 100%;
     min-height: 280px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .ct-amount {
@@ -675,12 +675,12 @@
     padding: 10px 20px;
     cursor: pointer;
     transition: 0.2s;
-    transform: skewX(-5deg);
+    transform: none;
 }
 
 .ct-btn span {
     display: block;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .ct-btn:hover {
@@ -703,7 +703,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .asset-grid.is-list {
@@ -845,7 +845,7 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: 0.2s;
-    transform: skewX(5deg);
+    transform: none;
     border: 1px solid transparent;
 }
 
@@ -877,7 +877,7 @@
     text-transform: uppercase;
     text-align: center;
     padding: 40px 20px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 /* Hide legacy side trade panel when forza modal is active */

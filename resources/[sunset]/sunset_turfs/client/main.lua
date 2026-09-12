@@ -362,6 +362,20 @@ RegisterNetEvent('sunset:turfs:warJoined', function(data)
     warParticipant = true
     myWarRole = data and data.role or 'defender'
     exports.sunset_ui:Notify('Ai intrat in razboi! /armurie pentru loadout. Z = statistici war.', 'warning', 9000)
+    -- [WAR FIX] warStart (-1 broadcast) arrives BEFORE the ticker registers us
+    -- as participant, so the participant-gated warHudShow never fired for the
+    -- attacker who started the war. Show the HUD here from the cached war data.
+    if ActiveWar and ActiveWar.turfId == (data and data.turfId or ActiveWar.turfId) then
+        exports.sunset_ui:Send('warHudShow', {
+            attackerName = ActiveWar.attackerName,
+            defenderName = ActiveWar.defenderName,
+            attackerScore = ActiveWar.attackerScore or 0,
+            defenderScore = ActiveWar.defenderScore or 0,
+            scoreTarget = ActiveWar.scoreTarget,
+            turfName = ActiveWar.turfName,
+            remainingSec = ActiveWar.remainingSec or 0,
+        })
+    end
     -- Auto-open the armory on first join so players discover the loadout menu.
     if not armoryOpen and not IsNuiFocused() then
         CreateThread(function()

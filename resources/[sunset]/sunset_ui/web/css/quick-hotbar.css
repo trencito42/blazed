@@ -12,7 +12,7 @@
     display: flex;
     gap: 14px;
     padding: 0 6px;
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.8));
     pointer-events: none;
     opacity: 0;
@@ -21,11 +21,11 @@
 
 .hotbar-container.is-visible {
     opacity: 1;
-    transform: translateX(-50%) skewX(-5deg) translateY(0);
+    transform: translateX(-50%) translateY(0);
 }
 
 .hotbar-container:not(.is-visible) {
-    transform: translateX(-50%) skewX(-5deg) translateY(12px);
+    transform: translateX(-50%) translateY(12px);
 }
 
 body.in-vehicle #hotbar-hud {
@@ -40,7 +40,7 @@ body.in-vehicle #hotbar-hud {
     display: flex;
     align-items: baseline;
     gap: 6px;
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     font-family: 'Montserrat', sans-serif;
     font-size: 22px;
     font-weight: 900;
@@ -86,7 +86,7 @@ body.in-vehicle .weapon-ammo-hud {
     right: auto;
     opacity: 1 !important;
     visibility: visible !important;
-    transform: skewX(-5deg);
+    transform: none;
     pointer-events: auto !important;
     z-index: 6;
     transition: none;
@@ -171,7 +171,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
 .hotbar-slot-icon {
     font-size: 32px;
     color: var(--hotbar-text-muted);
-    transform: skewX(5deg);
+    transform: none;
     transition: 0.2s;
     display: flex;
     align-items: center;
@@ -190,7 +190,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
 .hotbar-slot.active .hotbar-slot-icon {
     color: var(--hotbar-accent);
     filter: drop-shadow(0 0 5px var(--hotbar-accent));
-    transform: skewX(5deg) scale(1.1);
+    transform: scale(1.1);
 }
 
 .hotbar-slot-qty {
@@ -200,7 +200,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     font-size: 11px;
     font-weight: 800;
     color: var(--hotbar-text-muted);
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
 }
 
@@ -225,7 +225,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     bottom: 3px;
     left: auto;
     top: auto;
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
     font-size: 8px;
     font-weight: 900;
@@ -343,13 +343,13 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     position: relative;
     width: 600px;
     height: 600px;
-    transform: skewX(-5deg) scale(0.8);
+    transform: scale(0.8);
     transition: transform 0.4s var(--hotbar-transition);
     pointer-events: auto;
 }
 
 .wheel-overlay.active .wheel-container {
-    transform: skewX(-5deg) scale(1);
+    transform: scale(1);
 }
 
 .wheel-center {
@@ -378,7 +378,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     text-transform: uppercase;
     letter-spacing: 1px;
     text-shadow: 0 4px 10px rgba(0, 0, 0, 0.9);
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
 }
 
@@ -388,7 +388,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     color: var(--hotbar-accent);
     text-transform: uppercase;
     letter-spacing: 2px;
-    transform: skewX(5deg);
+    transform: none;
     margin-top: 5px;
     font-family: 'Montserrat', sans-serif;
 }
@@ -411,7 +411,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
 
 .wheel-item i {
     font-size: 42px;
-    transform: skewX(5deg);
+    transform: none;
     transition: 0.2s;
 }
 
@@ -420,7 +420,7 @@ body.inventory-dragging #inventory-hotbar .hotbar-slot {
     font-weight: 800;
     text-transform: uppercase;
     margin-top: 8px;
-    transform: skewX(5deg);
+    transform: none;
     opacity: 0;
     transition: 0.2s;
     font-family: 'Montserrat', sans-serif;

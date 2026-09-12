@@ -12,7 +12,7 @@
     display: flex;
     flex-direction: column;
     gap: 5px;
-    transform: translate(-50%, -100%) skewX(-5deg);
+    transform: translate(-50%, -100%) ;
     filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.8));
     transition: opacity 0.15s ease;
     opacity: 0;
@@ -31,7 +31,7 @@
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 1px;
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
 }
 
@@ -61,13 +61,13 @@
 .world-tooltip-3d .wt-icon {
     font-size: 24px;
     color: #fff;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .world-tooltip-3d .wt-info {
     display: flex;
     flex-direction: column;
-    transform: skewX(5deg);
+    transform: none;
     font-family: 'Montserrat', sans-serif;
 }
 

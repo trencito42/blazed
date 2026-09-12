@@ -38,7 +38,7 @@
     display: flex;
     justify-content: space-between;
     align-items: stretch;
-    transform: skewX(-5deg);
+    transform: none;
     transition: opacity 0.4s ease, transform 0.4s var(--dl-transition);
     opacity: 1;
     pointer-events: none;
@@ -184,7 +184,7 @@
 .dealership-forza .dl-stat-segment {
     flex: 1;
     background: rgba(255, 255, 255, 0.1);
-    transform: skewX(-15deg);
+    transform: none;
     transition: all 0.3s;
 }
 
@@ -282,7 +282,7 @@
     border-radius: 3px;
     font-size: 14px;
     font-style: normal;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 /* Hidden legacy nodes kept for JS */
@@ -296,7 +296,7 @@
     left: 50%;
     bottom: 28px;
     z-index: 20;
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     display: flex;
     align-items: center;
     gap: 18px;
@@ -409,7 +409,7 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     cursor: pointer;
-    transform: skewX(-5deg);
+    transform: none;
 }
 
 .dealership-forza .dl-admin-panel {
@@ -424,7 +424,7 @@
     background: rgba(0, 0, 0, 0.88);
     border: 1px solid rgba(0, 255, 204, 0.35);
     padding: 20px 24px;
-    transform: skewX(-5deg);
+    transform: none;
 }
 
 .dealership-forza .dl-admin-panel.hidden,

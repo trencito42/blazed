@@ -2,6 +2,7 @@ local TestSessions = {}
 local AuthorizedTests = {}
 local ServerLicenseCache = {}
 local LastWeaponWarning = {}
+local LicenseForceReload = {} -- [source] = last forced DB reload time (throttle)
 
 local function notify(source, message, kind)
     TriggerClientEvent('sunset:client:notify', source, message, kind or 'info', 7000)
@@ -156,7 +157,21 @@ local function cachedHasLicense(source, licenseType)
     if session and session.licenseType == licenseType
         and (session.phase == 'practical' or session.phase == 'validated') then return true end
     local cache = licenseCache(source)
-    return cache and cache.licenses[licenseType] == true or false
+    if cache and cache.licenses[licenseType] == true then return true end
+    -- [BUGFIX] Cache said NO: force a fresh DB load before deciding. A stale
+    -- ServerLicenseCache (e.g. license granted while cache held old paydays,
+    -- or character data lag) wrongly blocked firearm damage for players who
+    -- DO have a valid license ("Firearm damage blocked" while licensed).
+    -- Throttled to one forced reload per 3s per source so a licensed-less
+    -- player spamming shots cannot hammer the DB.
+    local now = os.time()
+    local last = LicenseForceReload[source]
+    if not last or (now - last) >= 3 then
+        LicenseForceReload[source] = now
+        cache = loadLicenseCache(source)
+        if cache and cache.licenses[licenseType] == true then return true end
+    end
+    return false
 end
 
 local meleeHashes = {}
@@ -644,6 +659,7 @@ AddEventHandler('playerDropped', function()
     AuthorizedTests[source] = nil
     ServerLicenseCache[source] = nil
     LastWeaponWarning[source] = nil
+    LicenseForceReload[source] = nil
     for target, authorization in pairs(AuthorizedTests) do
         if authorization.instructor == droppedSource then AuthorizedTests[target] = nil end
     end

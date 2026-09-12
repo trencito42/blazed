@@ -13,7 +13,7 @@
     left: 50%;
     width: auto;
     max-width: min(96vw, 1180px);
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     z-index: 9000;
     display: flex;
     align-items: flex-end;
@@ -98,7 +98,7 @@
     color: var(--fp-text-muted);
     text-transform: uppercase;
     letter-spacing: 4px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .fuel-pump-forza .fp-cg-value {
@@ -109,7 +109,7 @@
     color: var(--fp-text-main);
     line-height: 0.85;
     text-shadow: var(--fp-shadow-text);
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     align-items: baseline;
     gap: 10px;
@@ -187,7 +187,7 @@
     font-size: 28px;
     font-weight: 700;
     color: var(--fp-text-main);
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -241,7 +241,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .fuel-pump-forza .fp-key-hint {
@@ -294,7 +294,7 @@
 @media (max-width: 1400px) {
     #fuel-pump.fuel-pump-forza {
         gap: 24px;
-        transform: translateX(-50%) skewX(-5deg) scale(0.88);
+        transform: translateX(-50%) scale(0.88);
         transform-origin: bottom center;
     }
 }

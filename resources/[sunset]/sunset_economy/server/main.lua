@@ -377,6 +377,12 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     if amount < 1 then return nil, 'Invalid amount' end
     -- [AUDIT P6-05] Downed/jailed players cannot shop.
     if exports.sunset_core:IsIncapacitated(source) then return nil, 'You cannot shop right now.' end
+    -- [BUGFIX] Double-fire guard: the hold-to-buy UI could post twice (click +
+    -- ENTER), first purchase succeeded while the second failed with "already
+    -- own" -> player saw "purchase failed" yet the item was in inventory.
+    if not exports.sunset_core:RateLimit(source, 'shopBuy', 800) then
+        return nil, 'Processing your last purchase...'
+    end
 
     local shop = Sunset.Shops[shopId]
     if not shop then return nil, 'Shop not found' end

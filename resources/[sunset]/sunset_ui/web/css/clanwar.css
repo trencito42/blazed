@@ -15,11 +15,11 @@
 
 .war-hud .hud-panel {
     background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1);
-    padding: 10px 25px;; transform: skewX(-5deg);
+    padding: 10px 25px;; transform: none;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-.war-hud .hud-panel > div { transform: skewX(5deg); }
+.war-hud .hud-panel > div { transform: none; }
 
 .war-hud .team-score { font-size: 24px; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 10px; }
 .war-hud .team-name { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px; }
@@ -93,17 +93,17 @@
     pointer-events: none;
 }
 .war-scoreboard.active { right: 30px; }
-.war-scoreboard .sb-header { background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1); border-right: 4px solid var(--war-accent); padding: 15px 20px;; transform: skewX(-5deg); display: flex; justify-content: space-between; align-items: center; }
-.war-scoreboard .sb-title { font-size: 16px; font-weight: 900; font-style: italic; color: #fff; text-transform: uppercase; transform: skewX(5deg); margin: 0; }
-.war-scoreboard .sb-subtitle { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase; transform: skewX(5deg); margin-top: 2px; }
-.war-scoreboard .sb-score-row { display: flex; justify-content: space-between; padding: 10px 20px; background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1); transform: skewX(-5deg); font-weight: 900; font-size: 14px; color: #fff; }
-.war-scoreboard .sb-score-row > span { transform: skewX(5deg); }
-.war-scoreboard .sb-list-container { background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1); padding: 10px;; transform: skewX(-5deg); display: flex; flex-direction: column; max-height: 50vh; overflow-y: auto; gap: 4px; }
+.war-scoreboard .sb-header { background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1); border-right: 4px solid var(--war-accent); padding: 15px 20px;; transform: none; display: flex; justify-content: space-between; align-items: center; }
+.war-scoreboard .sb-title { font-size: 16px; font-weight: 900; font-style: italic; color: #fff; text-transform: uppercase; transform: none; margin: 0; }
+.war-scoreboard .sb-subtitle { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase; transform: none; margin-top: 2px; }
+.war-scoreboard .sb-score-row { display: flex; justify-content: space-between; padding: 10px 20px; background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1); transform: none; font-weight: 900; font-size: 14px; color: #fff; }
+.war-scoreboard .sb-score-row > span { transform: none; }
+.war-scoreboard .sb-list-container { background: #0a0a0f; border: 1px solid rgba(255,255,255,0.1); padding: 10px;; transform: none; display: flex; flex-direction: column; max-height: 50vh; overflow-y: auto; gap: 4px; }
 .war-scoreboard .sb-list-container::-webkit-scrollbar { width: 0; }
-.war-scoreboard .sb-col-headers { display: flex; padding: 5px 12px; font-size: 9px; font-weight: 900; color: rgba(255,255,255,0.4); text-transform: uppercase; transform: skewX(5deg); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; }
+.war-scoreboard .sb-col-headers { display: flex; padding: 5px 12px; font-size: 9px; font-weight: 900; color: rgba(255,255,255,0.4); text-transform: uppercase; transform: none; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; }
 .war-scoreboard .col-name { flex: 1; }
 .war-scoreboard .col-stat { width: 45px; text-align: center; }
-.war-scoreboard .sb-player { display: flex; align-items: center; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid transparent; transform: skewX(5deg); }
+.war-scoreboard .sb-player { display: flex; align-items: center; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid transparent; transform: none; }
 .war-scoreboard .sb-player:nth-child(even) { background: rgba(255,255,255,0.02); }
 .war-scoreboard .sb-name { flex: 1; font-size: 12px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
 .war-scoreboard .is-ally { border-left: 2px solid var(--war-accent); padding-left: 8px; }

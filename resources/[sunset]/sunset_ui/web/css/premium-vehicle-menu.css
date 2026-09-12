@@ -87,7 +87,7 @@
 #menu-vehicle-grid.v-menu-forza {
     display: flex;
     gap: 20px;
-    transform: skewX(-5deg);
+    transform: none;
     width: 100%;
     height: 100%;
     min-height: 0;
@@ -133,7 +133,7 @@
     font-style: italic;
     color: #fff;
     text-transform: uppercase;
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -147,7 +147,7 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 10px 15px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 #menu-vehicle-grid .v-search input {
@@ -206,7 +206,7 @@
 #menu-vehicle-grid .vi-icon {
     font-size: 28px;
     color: rgba(255, 255, 255, 0.4);
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     justify-content: center;
     width: 40px;
@@ -221,7 +221,7 @@
 #menu-vehicle-grid .vi-info {
     display: flex;
     flex-direction: column;
-    transform: skewX(5deg);
+    transform: none;
     flex: 1;
     min-width: 0;
 }
@@ -245,7 +245,7 @@
     font-size: 10px;
     font-weight: 900;
     text-transform: uppercase;
-    transform: skewX(5deg);
+    transform: none;
     padding: 2px 6px;
     border-radius: 2px;
     flex-shrink: 0;
@@ -275,7 +275,7 @@
     bottom: -20px;
     font-size: 250px;
     color: rgba(255, 255, 255, 0.02);
-    transform: skewX(5deg);
+    transform: none;
     pointer-events: none;
 }
 
@@ -292,7 +292,7 @@
 #menu-vehicle-grid .vd-title-box {
     display: flex;
     flex-direction: column;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 #menu-vehicle-grid .vd-class {
@@ -323,7 +323,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    transform: skewX(5deg);
+    transform: none;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     flex-shrink: 0;
 }
@@ -362,7 +362,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 #menu-vehicle-grid .status-box {
@@ -402,7 +402,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 #menu-vehicle-grid .vd-card {
@@ -482,7 +482,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 #menu-vehicle-grid .btn-action:hover {
@@ -521,7 +521,7 @@
     letter-spacing: 2px;
     cursor: pointer;
     overflow: hidden;
-    transform: skewX(5deg);
+    transform: none;
     font-family: inherit;
 }
 
@@ -563,7 +563,7 @@
     gap: 8px;
     background: rgba(10, 10, 15, 0.95);
     border: 2px solid rgba(255, 255, 255, 0.1);
-    transform: skewX(-5deg);
+    transform: none;
     text-align: center;
     padding: 40px;
 }
@@ -585,7 +585,7 @@
     position: fixed;
     bottom: 24px;
     left: 50%;
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     font-family: 'Montserrat', sans-serif;
     font-size: 11px;
     font-weight: 800;

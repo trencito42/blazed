@@ -112,14 +112,14 @@
 @keyframes dmgFloatDamage {
     0% {
         opacity: 0;
-        transform: translate(-50%, -50%) skewX(-5deg) scale(0.5);
+        transform: translate(-50%, -50%) scale(0.5);
     }
     20% {
         opacity: 1;
-        transform: translate(-50%, calc(-50% - 30px)) skewX(-5deg) scale(1.1);
+        transform: translate(-50%, calc(-50% - 30px)) scale(1.1);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, calc(-50% - 100px)) skewX(-5deg) scale(0.9);
+        transform: translate(-50%, calc(-50% - 100px)) scale(0.9);
     }
 }

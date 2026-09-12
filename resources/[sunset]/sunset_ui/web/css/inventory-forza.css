@@ -43,7 +43,7 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
-    transform: skewX(-5deg);
+    transform: none;
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
     max-height: calc(100vh - 80px);
 }
@@ -111,7 +111,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
 .inventory-forza .weight-segment {
     flex: 1;
     background: rgba(255, 255, 255, 0.1);
-    transform: skewX(-15deg);
+    transform: none;
     transition: all 0.3s;
 }
 
@@ -159,7 +159,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     position: absolute;
     font-size: 28px;
     color: rgba(255, 255, 255, 0.1);
-    transform: skewX(5deg);
+    transform: none;
     pointer-events: none;
 }
 
@@ -197,7 +197,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     letter-spacing: 2px;
     background: #0a0a0e;
     padding: 0 5px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .inventory-forza .inv-grid {
@@ -236,7 +236,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     color: #000;
     background: var(--inv-accent);
     padding: 2px 6px;
-    transform: skewX(5deg);
+    transform: none;
     pointer-events: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     z-index: 10;
@@ -265,7 +265,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     cursor: grab;
     position: relative;
     z-index: 5;
-    transform: skewX(5deg);
+    transform: none;
     border: none;
     color: inherit;
     padding: 0;
@@ -317,7 +317,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    transform: skewX(-5deg) translateY(20px);
+    transform: translateY(20px);
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
 }
 
@@ -376,8 +376,8 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     transform: scale(1.05);
 }
 
-.inventory-forza .prox-id { font-size: 10px; font-weight: 900; color: var(--inv-text-muted); transform: skewX(5deg); }
-.inventory-forza .prox-name { font-size: 14px; font-weight: 800; font-style: italic; color: var(--inv-text-main); text-transform: uppercase; transform: skewX(5deg); }
+.inventory-forza .prox-id { font-size: 10px; font-weight: 900; color: var(--inv-text-muted); transform: none; }
+.inventory-forza .prox-name { font-size: 14px; font-weight: 800; font-style: italic; color: var(--inv-text-main); text-transform: uppercase; transform: none; }
 .inventory-forza .prox-actions {
     display: flex;
     justify-content: space-between;
@@ -385,7 +385,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     margin-top: 5px;
     border-top: 1px solid var(--inv-border-glass);
     padding-top: 8px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .inventory-forza .prox-hint {
@@ -407,7 +407,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     color: var(--inv-text-muted);
     font-size: 11px;
     font-weight: 700;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .inventory-forza .inv-actions {
@@ -528,7 +528,7 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
     position: absolute;
     bottom: 24px;
     left: 50%;
-    transform: translateX(-50%) skewX(-5deg);
+    transform: translateX(-50%) ;
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 2px;

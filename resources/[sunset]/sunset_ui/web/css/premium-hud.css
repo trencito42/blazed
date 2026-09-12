@@ -11,7 +11,7 @@
 }
 
 .premium-unskew {
-    transform: skewX(5deg);
+    transform: none;
 }
 
 /* ── Top right ── */
@@ -27,7 +27,7 @@
     top: 30px;
     right: 40px;
     gap: 20px;
-    transform: skewX(-5deg);
+    transform: none;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
 }
 
@@ -248,7 +248,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 25px;
-    transform: skewX(-5deg);
+    transform: none;
     filter: none;
     pointer-events: none;
 }
@@ -494,8 +494,8 @@
 }
 
 @keyframes premiumHudBootTr {
-    from { opacity: 0; transform: skewX(-5deg) translateY(10px); }
-    to { opacity: 1; transform: skewX(-5deg) translateY(0); }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Location panel: no skew — skew + glow caused CEF artifacts near top-right HUD */

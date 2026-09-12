@@ -51,18 +51,18 @@
     justify-content: space-between;
     align-items: stretch;
     opacity: 0;
-    transform: skewX(-5deg) translateY(16px) scale(0.985);
+    transform: translateY(16px) scale(0.985);
     transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease;
     will-change: transform, opacity;
 }
 
 .spawn-ui.is-ready {
     opacity: 1;
-    transform: skewX(-5deg) translateY(0) scale(1);
+    transform: translateY(0) scale(1);
 }
 
 .spawn-ui.exit {
-    transform: skewX(-5deg) translateX(-150px) scale(0.95);
+    transform: translateX(-150px) scale(0.95);
     opacity: 0;
 }
 
@@ -160,7 +160,7 @@
     width: 34px;
     height: 34px;
     flex-shrink: 0;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .spawn-loc-icon svg {
@@ -174,7 +174,7 @@
 }
 
 .spawn-loc-label {
-    transform: skewX(5deg);
+    transform: none;
     display: inline-block;
     line-height: 1.05;
 }
@@ -258,7 +258,7 @@
     border-radius: 4px;
     font-size: 16px;
     font-style: normal;
-    transform: skewX(5deg);
+    transform: none;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     transition: all 0.2s;
 }

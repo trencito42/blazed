@@ -39,7 +39,7 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    transform: translate(-50%, -50%) skewX(-5deg);
+    transform: translate(-50%, -50%) ;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
     animation: pi-float-target 3s ease-in-out infinite;
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -55,7 +55,7 @@
 
 .pi-world-target.hidden {
     opacity: 0;
-    transform: translate(-50%, -50%) skewX(-5deg) scale(0.8);
+    transform: translate(-50%, -50%) scale(0.8);
     pointer-events: none;
 }
 
@@ -98,7 +98,7 @@
     font-size: 18px;
     font-weight: 900;
     color: var(--pi-text-main);
-    transform: skewX(5deg);
+    transform: none;
     text-shadow: var(--pi-shadow-text);
 }
 
@@ -133,7 +133,7 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 15px;
-    transform: translateY(-50%) skewX(-5deg) translateX(50px);
+    transform: translateY(-50%) translateX(50px);
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8));
     opacity: 0;
     pointer-events: none;
@@ -147,7 +147,7 @@
 .pi-screen-menu.active {
     opacity: 1;
     pointer-events: all;
-    transform: translateY(-50%) skewX(-5deg) translateX(0);
+    transform: translateY(-50%) translateX(0);
 }
 
 .pi-menu-title {
@@ -244,7 +244,7 @@
 .pi-menu-icon {
     width: 24px;
     height: 24px;
-    transform: skewX(5deg);
+    transform: none;
     flex-shrink: 0;
     stroke: currentColor;
     stroke-width: 2;
@@ -254,7 +254,7 @@
 }
 
 .pi-menu-item span {
-    transform: skewX(5deg);
+    transform: none;
 }
 
 /* ── INPUT PANEL (give cash etc.) ── */
@@ -265,7 +265,7 @@
     background: rgba(0, 0, 0, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 .pi-input-panel.hidden { display: none !important; }

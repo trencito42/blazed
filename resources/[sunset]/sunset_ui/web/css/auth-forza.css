@@ -30,7 +30,7 @@
     border-right: 2px solid rgba(255, 255, 255, 0.1);
     border-top: none;
     z-index: 100;
-    transform: skewX(-5deg) translateX(-50px);
+    transform: translateX(-50px);
     display: flex;
     flex-direction: column;
     padding: 60px 80px;
@@ -47,7 +47,7 @@
 
 #screen-auth.auth-forza #auth-panel.auth-container.active {
     left: -30px;
-    transform: skewX(-5deg) translateX(0);
+    transform: translateX(0);
 }
 
 #screen-auth.auth-forza #auth-panel.auth-container.is-hidden {
@@ -170,7 +170,7 @@
     font-weight: 700;
     outline: none;
     transition: 0.3s;
-    transform: skewX(5deg);
+    transform: none;
     width: 90%;
     box-shadow: none;
 }
@@ -196,7 +196,7 @@
     top: 35px;
     font-size: 20px;
     color: rgba(255, 255, 255, 0.4);
-    transform: skewX(5deg);
+    transform: none;
     transition: 0.3s;
     pointer-events: none;
 }
@@ -210,7 +210,7 @@
 
 #screen-auth.auth-forza .auth-remember,
 #screen-auth.auth-forza .checkbox-group {
-    transform: skewX(5deg);
+    transform: none;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -333,7 +333,7 @@
     color: rgba(255, 255, 255, 0.35);
     text-transform: uppercase;
     letter-spacing: 2px;
-    transform: skewX(5deg);
+    transform: none;
     display: inline-block;
 }
 
@@ -344,7 +344,7 @@
     gap: 8px;
     max-height: 160px;
     overflow-y: auto;
-    transform: skewX(5deg);
+    transform: none;
     margin-bottom: 12px;
 }
 
@@ -370,7 +370,7 @@
     gap: 5px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     padding-top: 20px;
-    transform: skewX(5deg);
+    transform: none;
     font-size: 10px;
     color: rgba(255, 255, 255, 0.35);
     text-align: left;
@@ -408,7 +408,7 @@
     color: rgba(255, 255, 255, 0.35);
     text-transform: uppercase;
     letter-spacing: 1px;
-    transform: skewX(5deg);
+    transform: none;
 }
 
 #screen-auth.auth-forza #auth-panel.has-saved-accounts .auth-login-stack {
@@ -446,7 +446,7 @@
     font-weight: 900;
     font-style: italic;
     color: #00ffcc;
-    transform: skewX(-3deg);
+    transform: none;
 }
 
 #screen-auth.auth-forza .auth-id-avatar img,
@@ -454,7 +454,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: skewX(3deg) scale(1.08);
+    transform: scale(1.08);
 }
 
 #screen-auth.auth-forza .auth-id-info,
@@ -464,7 +464,7 @@
     flex-direction: column;
     gap: 3px;
     min-width: 0;
-    transform: skewX(3deg);
+    transform: none;
 }
 
 #screen-auth.auth-forza .auth-id-name,
@@ -532,7 +532,7 @@
     font-weight: 900;
     letter-spacing: 1px;
     color: rgba(0, 255, 204, 0.55);
-    transform: skewX(3deg);
+    transform: none;
     flex-shrink: 0;
 }
 
