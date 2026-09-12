@@ -29,6 +29,10 @@
 | OneSync enabled | **BLOCKED** | txAdmin controls onesync at runtime; cfg line commented by txAdmin validator. VERIFY in txAdmin settings page (40120) that OneSync=Infinity is ON. Required for damage/explosion gating to actually cancel. |
 | pma-voice present | PASS | info.json resources list includes pma-voice + ox_lib + bob74_ipl (Docker image installs them) |
 | oxmysql transaction adapter (commit eb138d0) | PASS (deployed) | VPS HEAD = eb138d0, `transactionAdapter` present, container healthy, 50 resources started, 0 errors. The typed `query.single/update/insert.await` helpers used by the Phase-5 transaction fixes (crafting, fisherman, tuning, dealership, trade, deleteCharacter) run on the transaction connection through this adapter. |
+| Phase 2 deploy (sunset_sessions + trucker hardening) | PASS (startup) | commit aa28709/af92473 deployed; 51 resources started incl. sunset_sessions ("session service online"), 0 script errors, info.json alive, containers healthy |
+| NUI bridge completeness | PASS (AUTOMATED) | `node scripts/check-nui-bridge.js` — 162/162 posted callbacks registered; 29 registered-without-caller are other-resource NUI pages (pass/robbery/tuning) + dynamic ESC map (informational) |
+| Cross-domain DB writes | PASS (AUTOMATED) | `node scripts/check-db-writes.js` — 0 NEW violations; 11 known-debt entries tracked for Phase 3 remediation |
+| Session framework unit tests | BLOCKED (remote) | `sunset_testdriver` console commands (integrity/sessiontest/smoketest/testall) or `+setr testdriver_autorun 1`. VPS regenerates server.cfg from template each start, wiping convars; run locally on the Windows dev server, or temporarily add testdriver to config/server.cfg.template for one CI boot |
 | Transaction paths at runtime (craft/tune/purchase/trade/delete-char) | **BLOCKED** | adapter is new — exercise each txn path once in-game and check for `Callback error` in `docker compose logs fivem` (R31) |
 
 ## 3. Runtime gameplay tests (ALL BLOCKED — need in-game execution)
