@@ -2,6 +2,8 @@ SunsetWorld = SunsetWorld or {}
 SunsetWorld.Tooltips = SunsetWorld.Tooltips or {}
 
 local active = {}
+local TOOLTIP_TTL_MS = 750
+local TOOLTIP_MAX_DISTANCE = 15.0
 
 local function sendSync(list)
     exports.sunset_ui:Send('worldTooltipsSync', list or {})
@@ -39,6 +41,8 @@ function SunsetWorld.Tooltips.set(id, data)
 
     active[id] = {
         coords = coords,
+        touchedAt = GetGameTimer(),
+        maxDistance = tonumber(data.maxDistance) or TOOLTIP_MAX_DISTANCE,
         badge = data.badge or '',
         badgeClass = data.badgeClass or '',
         bodyClass = data.bodyClass or data.badgeClass or '',
@@ -80,9 +84,15 @@ CreateThread(function()
         local hasActive = next(active) ~= nil
         if hasActive then
             local list = {}
+            local now = GetGameTimer()
+            local playerCoords = GetEntityCoords(PlayerPedId())
             for id, row in pairs(active) do
                 local coords = row.coords
-                if coords then
+                local stale = now - (row.touchedAt or 0) > TOOLTIP_TTL_MS
+                local tooFar = coords and #(playerCoords - coords) > (row.maxDistance or TOOLTIP_MAX_DISTANCE)
+                if stale or tooFar then
+                    active[id] = nil
+                elseif coords then
                     local onScreen, sx, sy = World3dToScreen2d(coords.x, coords.y, coords.z)
                     if onScreen then
                         list[#list + 1] = rowPayload(id, row, sx, sy)
@@ -90,11 +100,15 @@ CreateThread(function()
                 end
             end
             sendSync(list)
-            -- [AUDIT P7-04] 60Hz NUI JSON sends while standing near any 24/7 or gas
-            -- attendant; 10Hz is imperceptible for screen-space tooltips.
-            Wait(100)
+            -- Screen-space labels must follow camera motion smoothly. 30Hz keeps
+            -- them responsive without returning to the old per-frame NUI flood.
+            Wait(33)
         else
             Wait(250)
         end
     end
+end)
+
+AddEventHandler('sunset:world:clearTooltips', function()
+    SunsetWorld.Tooltips.clear()
 end)

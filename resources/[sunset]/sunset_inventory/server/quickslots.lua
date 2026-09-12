@@ -13,7 +13,7 @@ local function saveMeta(characterId, meta)
     -- [AUDIT P5-10] Only write the quickslots key via JSON_SET. The previous
     -- whole-blob rewrite could erase rob_points changed between read and write.
     MySQL.update.await(
-        "UPDATE characters SET metadata = JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.quickslots', CAST(? AS JSON)) WHERE id = ?",
+        "UPDATE characters SET metadata = JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.quickslots', JSON_EXTRACT(?, '$')) WHERE id = ?",
         { json.encode(meta.quickslots or {}), characterId })
 end
 

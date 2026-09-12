@@ -46,7 +46,7 @@ The static audit cannot execute these. Each maps to a fix; run before trusting t
 | R3 | Faction grade label with HTML | P8-03 XSS | escaped in chat header |
 | R4 | Sell stolen car at chop shop vs elsewhere | P2-01 carjack | pays+deletes at shop; refuses elsewhere; owned plate refused |
 | R5 | Spam carjack sell 5×/sec | P2-01 cooldown | one sale per 10s |
-| R6 | Open `/trunk` of another player's car from 100m | P2-05 containers | refused |
+| R6 | Vehicle trunk access | N/A | No player-facing trunk system is implemented; do not assign this to testers |
 | R7 | Deposit item while trade-locked | P5-03 dupe | no duplication |
 | R8 | Jailed player at hourly payday | P6-01 | $0, no RP/rob point |
 | R9 | Taxi: spam complete callback | P5-04 | single charge |
@@ -69,7 +69,7 @@ The static audit cannot execute these. Each maps to a fix; run before trusting t
 | R26 | Chop NPC peds after `restart sunset_carjack` | P7-09 | no duplicate peds |
 | R27 | Courier job HUD | P8-22 | renders (courier.js linked) |
 | R28 | ATM transfer from middle of map | P2-08 | refused (needs ATM) |
-| R29 | Delete character owning house/business/clan | P5-09 | assets released, not orphaned; active char deletion refused |
+| R29 | Delete the active identity/account owning house/business/clan | INTERNAL/DESTRUCTIVE | Not a secondary-character test; run only against a disposable database fixture |
 | R30 | NUI fonts/icons load with internet blocked | P7-05 | render from local assets |
 
 ## 4. Concurrency / adversarial (BLOCKED — needs 2+ clients or test-driver)

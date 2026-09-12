@@ -339,7 +339,11 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         fuelLevel = math.max(0, math.min(math.min(100, previousFuel + 0.5), tonumber(fuelLevel) or previousFuel))
     end
     -- Prefer the server-side entity fuel reading when the vehicle is resolvable.
-    if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+    -- GetVehicleFuelLevel is a client-only native on the current server artifact.
+    -- Keep the persisted monotonic value when the server cannot read fuel instead
+    -- of crashing the whole store callback.
+    if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle)
+        and type(GetVehicleFuelLevel) == 'function' then
         local entityFuel = GetVehicleFuelLevel(vehicle)
         if entityFuel and entityFuel > 0 then
             fuelLevel = math.min(fuelLevel, math.max(0, math.min(100, entityFuel)))

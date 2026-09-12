@@ -235,8 +235,10 @@ const Chat = {
     createContent(html, className = '') {
         const content = document.createElement('span');
         content.className = `msg-content${className ? ` ${className}` : ''}`;
-        if (html.includes('<')) content.innerHTML = html;
-        else content.textContent = html;
+        // premiumMeta always HTML-escapes player-controlled fields. Rendering the
+        // escaped string as textContent exposed entities such as &quot; and &amp;
+        // instead of the characters the player typed.
+        content.innerHTML = html;
         return content;
     },
 

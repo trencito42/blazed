@@ -8,6 +8,7 @@ end)
 
 RegisterNetEvent('sunset:admin:teleport', function(x, y, z)
     local ped = PlayerPedId()
+    TriggerEvent('sunset:world:clearTooltips')
     SetEntityCoords(ped, x + 0.0, y + 0.0, z + 0.0, false, false, false, false)
 end)
 

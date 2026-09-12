@@ -415,7 +415,7 @@ AddEventHandler('sunset:payday:processed', function(source)
         exports.sunset_core:AddMoney(source, 'bank', totalPayout, 'turf_payout')
         TriggerClientEvent('sunset:client:notify', source,
             ('Clanul tau a incasat $%s din cele %d teritorii controlate (virat in banca ta).'):format(
-                string.format('%\'d', totalPayout):gsub('\'', ','), count
+                tostring(math.floor(totalPayout)), count
             ), 'success', 10000)
     end
 end)

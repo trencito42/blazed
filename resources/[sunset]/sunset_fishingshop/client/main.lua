@@ -8,6 +8,7 @@ local NPC_MENU_DIST    = 2.15
 local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
 local BAIT_SHOP_DIST   = 2.5
 local SELL_DIST        = 2.5
+local shopOpen         = false   -- fishing shop UI (buy/sell) open
 
 local function getSellZones()
     local zones = {}
@@ -17,12 +18,64 @@ local function getSellZones()
     return zones
 end
 
+local function nearestFishBuyer()
+    local pos = GetEntityCoords(PlayerPedId())
+    local best = {
+        label = 'Billy Ray',
+        coords = vector3(NPC_COORDS.x, NPC_COORDS.y, NPC_COORDS.z),
+    }
+    local bestDistance = #(pos - best.coords)
+    for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+        local coords = store.cashier
+            and vector3(store.cashier.x, store.cashier.y, store.cashier.z)
+            or store.coords
+        if coords then
+            local distance = #(pos - coords)
+            if distance < bestDistance then
+                best = { label = store.label or '24/7 Store', coords = coords }
+                bestDistance = distance
+            end
+        end
+    end
+    return best, bestDistance
+end
+
+local function openFishSellMenu()
+    if shopOpen or IsNuiFocused() then return end
+    CreateThread(function()
+        local invData, err = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
+        if not invData then
+            exports.sunset_ui:Notify(err or 'Could not read your fish inventory.', 'error')
+            return
+        end
+        if not invData.items or #invData.items == 0 then
+            exports.sunset_ui:Notify('You have no fish to sell. Caught fish appear in your inventory.', 'info', 6500)
+            return
+        end
+
+        local buyer, distance = nearestFishBuyer()
+        if not buyer or distance > 6.0 then
+            SetNewWaypoint(buyer.coords.x, buyer.coords.y)
+            exports.sunset_ui:Notify(('GPS set to %s. Talk to the cashier and choose Sell Fish.'):format(buyer.label), 'info', 8000)
+            return
+        end
+
+        exports.sunset_ui:Send('fishingShopShow', {
+            mode = 'sell',
+            title = 'SELL FISH',
+            cash = invData.cash,
+            items = invData.items,
+        })
+        exports.sunset_ui:SetFocus(true, true)
+        shopOpen = true
+    end)
+end
+
 local hillbillyPed   = nil
 local nearNpc        = false
 local nearBaitShop   = false
 local storeContext   = nil
 local menuOpen       = false   -- playerInteraction menu open
-local shopOpen       = false   -- fishing shop UI (buy/sell) open
 local inCooldown     = false
 local billyPromptVisible = false
 local billyHoldStart = nil
@@ -626,4 +679,13 @@ AddEventHandler('sunset:nui:fishingShopSell', function(data)
     else
         exports.sunset_ui:Notify(tostring(err or 'Sale failed.'), 'error')
     end
+end)
+
+RegisterCommand('sellfish', function()
+    openFishSellMenu()
+end, false)
+
+CreateThread(function()
+    Wait(2000)
+    TriggerEvent('chat:addSuggestion', '/sellfish', 'Sell fish nearby or mark the nearest fish buyer on GPS')
 end)

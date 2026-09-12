@@ -55,7 +55,14 @@ const WorldTooltipLayer = {
                 this.nodes[row.id] = el;
             }
             if (row.visible) {
-                el.innerHTML = this.renderNode(row);
+                const signature = JSON.stringify([
+                    row.badge, row.badgeClass, row.bodyClass, row.icon,
+                    row.title, row.meta, row.desc, row.key,
+                ]);
+                if (el.dataset.contentSignature !== signature) {
+                    el.innerHTML = this.renderNode(row);
+                    el.dataset.contentSignature = signature;
+                }
                 el.style.left = `${Number(row.x) || 0}%`;
                 el.style.top = `${Number(row.y) || 0}%`;
                 el.classList.add('is-visible');
