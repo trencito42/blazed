@@ -124,9 +124,10 @@ forward('propertyOpenManage')
 forward('propertyRenters')
 forward('emotePlay')
 forward('emotesClose')
-forward('hotbarAssign')
-forward('hotbarUse')
 forward('emoteWheelClose')
+-- NOTE: hotbarAssign/hotbarUse intentionally NOT forwarded: the numbered
+-- quick bar (1-5) was removed by design; GTA's weapon wheel is the selector.
+-- The JS posts are being deleted in hotbar.js (see below).
 forward('clothingApply')
 forward('clothingPreview')
 forward('clothingClose')

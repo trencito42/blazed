@@ -74,6 +74,7 @@ const WardrobeUI = {
             hasChanges: data.hasChanges === true,
             camera: data.camera || 'full',
             isProp: data.isProp === true,
+            itemName: data.itemName || '',
         };
         const panel = this._$('#wardrobe');
         panel?.classList.remove('hidden');
@@ -97,6 +98,7 @@ const WardrobeUI = {
             hasChanges: data.hasChanges === true,
             camera: data.camera ?? this.state.camera,
             isProp: data.isProp === true,
+            itemName: data.itemName ?? this.state.itemName,
         });
         this.renderCategories();
         this.renderValues();
@@ -143,7 +145,9 @@ const WardrobeUI = {
         const textureTrack = this._$('#wardrobe-track-texture');
         const cartPrice = this._$('#wardrobe-cart-price');
 
-        if (modelValue) modelValue.textContent = String(this.state.drawable);
+        // [CLOTHING UX] Show a friendly name ("Top 032" / "None"); raw IDs only
+        // in the small counter row below.
+        if (modelValue) modelValue.textContent = this.state.itemName || String(this.state.drawable);
         if (modelMax) modelMax.textContent = String(this.state.maxDrawable);
         if (textureValue) textureValue.textContent = String(this.state.texture);
         if (textureMax) textureMax.textContent = String(this.state.maxTexture);

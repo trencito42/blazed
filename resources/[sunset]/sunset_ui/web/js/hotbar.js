@@ -1,7 +1,9 @@
+// HotbarUI — emote wheel + weapon ammo HUD only.
+// The numbered 1-5 quick bar was REMOVED by design: GTA's weapon wheel is the
+// single selector and items are used from the inventory. The dead slot-render
+// code (renderHud/renderInventory/_renderSlot, hotbarAssign/hotbarUse posts)
+// was deleted so nothing posts to unregistered NUI callbacks anymore.
 const HotbarUI = {
-    slots: {},
-    activeSlot: null,
-    driverReservesSlot2: false,
     emotes: [],
     wheelOpen: false,
     selectedEmoteIndex: -1,
@@ -28,78 +30,6 @@ const HotbarUI = {
         });
     },
 
-    _slotAmmoHtml(slot) {
-        if (!slot) return '';
-        if (slot.ammoClip != null && slot.ammoTotal != null) {
-            return `<span class="ammo-clip">${slot.ammoClip}</span><span class="ammo-sep">|</span><span class="ammo-total">${slot.ammoTotal}</span>`;
-        }
-        if (slot.kind === 'duty_weapon' && slot.ammo != null) return String(slot.ammo);
-        if (slot.kind === 'item' && slot.weapon && slot.ammo != null) return String(slot.ammo);
-        return '';
-    },
-
-    _slotQtyText(slot) {
-        if (!slot) return '';
-        if (this._slotAmmoHtml(slot)) return '';
-        if (slot.kind === 'item' && slot.count > 1) return `${slot.count}x`;
-        return '';
-    },
-
-    _slotIconHtml(slot) {
-        if (!slot) return '<i class="ph-fill ph-square slot-icon-placeholder"></i>';
-        if (slot.kind === 'emote' && slot.icon && slot.icon.startsWith('ph-')) {
-            return `<i class="ph-fill ${slot.icon}"></i>`;
-        }
-        const icon = slot.icon || 'backpack';
-        const src = /^[a-z0-9_-]+$/i.test(icon)
-            ? `assets/items/${icon}.webp`
-            : 'assets/items/backpack.webp';
-        return `<img src="${src}" alt="" draggable="false" onerror="this.src='assets/items/backpack.webp'">`;
-    },
-
-    _isSlotDisabledInVehicle(slotIndex) {
-        if (slotIndex !== 2) return false;
-        return this.driverReservesSlot2 || document.body.classList.contains('is-driver');
-    },
-
-    _renderSlot(container, slotIndex, slot, interactive) {
-        const disabledInVehicle = this._isSlotDisabledInVehicle(slotIndex);
-        const isActive = !disabledInVehicle && Number(this.activeSlot) === slotIndex;
-        const isUsable = !disabledInVehicle && !!(slot && slot.usable);
-        const el = document.createElement('div');
-        el.className = `hotbar-slot${isActive ? ' active' : ''}${slot ? ' has-item' : ''}${isUsable ? ' is-usable' : ''}${isActive && isUsable ? ' is-ready' : ''}${disabledInVehicle ? ' hotbar-slot--disabled' : ''}`;
-        el.dataset.hotbarSlot = String(slotIndex);
-        el.innerHTML = `
-            <div class="hotbar-slot-key">${slotIndex}</div>
-            <div class="hotbar-slot-icon">${this._slotIconHtml(slot)}</div>
-            <div class="hotbar-slot-qty">${this._slotAmmoHtml(slot) || this._slotQtyText(slot)}</div>
-        `;
-        if (interactive === true) {
-            el.title = disabledInVehicle
-                ? 'Slot 2 indisponibil la volan (tasta 2 = motor)'
-                : (slot ? `${slot.label || 'Quick slot'} — double-click to clear` : `Quick slot ${slotIndex}`);
-            if (!disabledInVehicle) {
-                el.addEventListener('dblclick', () => {
-                    post('hotbarAssign', { slot: slotIndex, clear: true, fromInventory: true });
-                });
-            }
-        } else if (disabledInVehicle) {
-            el.title = 'Slot 2 indisponibil la volan (tasta 2 = motor)';
-        } else if (interactive === 'hud' && isUsable) {
-            el.title = isActive
-                ? `${slot.label} — click or press ${slotIndex} to use`
-                : `${slot.label} — press ${slotIndex} to equip`;
-            el.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const activeNow = Number(HotbarUI.activeSlot) === slotIndex;
-                post('hotbarUse', { slot: slotIndex, consume: activeNow });
-            });
-        }
-        container.appendChild(el);
-        return el;
-    },
-
     renderWeaponAmmo(data = {}) {
         this.init();
         const hud = $('#weapon-ammo-hud');
@@ -124,58 +54,6 @@ const HotbarUI = {
         const totalEl = $('#wah-total');
         if (clipEl) clipEl.textContent = String(clip);
         if (totalEl) totalEl.textContent = String(total);
-    },
-
-    renderHud(data = {}) {
-        this.init();
-        if (data.slots) this.slots = data.slots;
-        if (data.activeSlot !== undefined) this.activeSlot = data.activeSlot;
-        if (data.driverReservesSlot2 !== undefined) {
-            this.driverReservesSlot2 = !!data.driverReservesSlot2;
-        } else if (!document.body.classList.contains('is-driver')) {
-            this.driverReservesSlot2 = false;
-        }
-
-        const hud = $('#hotbar-hud');
-        if (!hud) return;
-
-        if (data.visible === false) {
-            hud.classList.remove('is-visible');
-            window.setTimeout(() => {
-                if (!hud.classList.contains('is-visible')) hud.classList.add('hidden');
-            }, 220);
-            return;
-        }
-        hud.classList.remove('hidden');
-        hud.innerHTML = '';
-        for (let i = 1; i <= 5; i += 1) {
-            const slot = this.slots[String(i)] || this.slots[i];
-            this._renderSlot(hud, i, slot, 'hud');
-        }
-        requestAnimationFrame(() => hud.classList.add('is-visible'));
-    },
-
-    renderInventory(data = {}) {
-        this.init();
-        if (data.quickslots) this.slots = data.quickslots;
-        if (data.activeHotbarSlot !== undefined) this.activeSlot = data.activeHotbarSlot;
-
-        const wrap = $('#inventory-hotbar');
-        if (!wrap) return;
-        wrap.innerHTML = '';
-        for (let i = 1; i <= 5; i += 1) {
-            this._renderSlot(wrap, i, this.slots[String(i)] || this.slots[i], true);
-        }
-    },
-
-    markDropTarget(slotIndex, active) {
-        const selector = `[data-hotbar-slot="${slotIndex}"]`;
-        $$(selector).forEach((el) => el.classList.toggle('is-drop-target', active));
-        $$(`.hotbar-slot[data-hotbar-slot="${slotIndex}"]`).forEach((el) => el.classList.toggle('is-drop-target', active));
-    },
-
-    clearDropTargets() {
-        $$('.hotbar-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
     },
 
     showEmoteWheel(emotes = []) {
@@ -220,6 +98,7 @@ const HotbarUI = {
         document.body.classList.add('emote-wheel-open');
         overlay.classList.remove('hidden');
         overlay.classList.add('active');
+
         const hint = count
             ? 'Mișcă privirea / 1-9 · eliberează [X]'
             : 'Niciun emote încărcat';

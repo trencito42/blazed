@@ -135,6 +135,8 @@ function SunsetAppearance.default(gender)
             ['0'] = { drawable = -1, texture = 0 },
             ['1'] = { drawable = -1, texture = 0 },
             ['2'] = { drawable = -1, texture = 0 },
+            ['6'] = { drawable = -1, texture = 0 },
+            ['7'] = { drawable = -1, texture = 0 },
         },
     }
 end
@@ -224,6 +226,26 @@ function SunsetAppearance.applyClothes(ped, appearance, gender)
     d, t = setComponentSafe(ped, 8, c['8'].drawable or 15)
     c['8'].drawable, c['8'].texture = d, t
 
+    -- [CLOTHING FIX] Bags (5) and accessories (7) were never restored by
+    -- apply(): items bought in the shop were lost on relog and stale values
+    -- survived duty toggles / respawns. Apply them when present.
+    if c['5'] then
+        d, t = setComponentSafe(ped, 5, c['5'].drawable or 0, c['5'].texture or 0)
+        c['5'].drawable, c['5'].texture = d, t
+    end
+    if c['7'] then
+        d, t = setComponentSafe(ped, 7, c['7'].drawable or 0, c['7'].texture or 0)
+        c['7'].drawable, c['7'].texture = d, t
+    end
+    if c['9'] then
+        d, t = setComponentSafe(ped, 9, c['9'].drawable or 0, c['9'].texture or 0)
+        c['9'].drawable, c['9'].texture = d, t
+    end
+    if c['10'] then
+        d, t = setComponentSafe(ped, 10, c['10'].drawable or 0, c['10'].texture or 0)
+        c['10'].drawable, c['10'].texture = d, t
+    end
+
     appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
 
     d, t = setComponentSafe(ped, 3, c['3'].drawable, c['3'].texture)
@@ -235,11 +257,105 @@ function SunsetAppearance.applyClothes(ped, appearance, gender)
     return appearance
 end
 
+-- [CLOTHING FIX] Props were NEVER applied by SunsetAppearance.apply — the root
+-- cause of "the hat stays after going off duty" and hats/glasses lost on
+-- relog. drawable -1 (or invalid) means "none" -> ClearPedProp.
+local function setPropSafe(ped, propId, drawable, texture)
+    drawable = math.floor(tonumber(drawable) or -1)
+    texture = math.max(0, math.floor(tonumber(texture) or 0))
+    if drawable < 0 then
+        ClearPedProp(ped, propId)
+        return -1, 0
+    end
+    local maxDraw = GetNumberOfPedPropDrawableVariations(ped, propId) - 1
+    if maxDraw < 0 then
+        ClearPedProp(ped, propId)
+        return -1, 0
+    end
+    drawable = math.min(drawable, maxDraw)
+    local maxTex = GetNumberOfPedPropTextureVariations(ped, propId, drawable) - 1
+    if maxTex < 0 then maxTex = 0 end
+    texture = math.min(texture, maxTex)
+    if not IsPedPropValid(ped, propId, drawable, texture) then
+        -- find nearest valid texture, else clear
+        local found = false
+        for t = 0, maxTex do
+            if IsPedPropValid(ped, propId, drawable, t) then
+                texture = t
+                found = true
+                break
+            end
+        end
+        if not found then
+            ClearPedProp(ped, propId)
+            return -1, 0
+        end
+    end
+    SetPedPropIndex(ped, propId, drawable, texture, true)
+    return drawable, texture
+end
+SunsetAppearance.setPropSafe = setPropSafe
+
+function SunsetAppearance.applyProps(ped, appearance)
+    local props = appearance.props or {}
+    for _, propId in ipairs({ 0, 1, 2, 6, 7 }) do
+        local key = tostring(propId)
+        local p = props[key]
+        if p then
+            local d, t = setPropSafe(ped, propId, p.drawable, p.texture)
+            p.drawable, p.texture = d, t
+        else
+            ClearPedProp(ped, propId)
+            props[key] = { drawable = -1, texture = 0 }
+        end
+    end
+    return appearance
+end
+
+-- Snapshot/restore helpers for uniform & preview transactions (public API).
+function SunsetAppearance.GetClothingSnapshot(ped)
+    local snap = { components = {}, props = {} }
+    for comp = 0, 11 do
+        snap.components[tostring(comp)] = {
+            drawable = GetPedDrawableVariation(ped, comp),
+            texture = GetPedTextureVariation(ped, comp),
+        }
+    end
+    for _, propId in ipairs({ 0, 1, 2, 6, 7 }) do
+        snap.props[tostring(propId)] = {
+            drawable = GetPedPropIndex(ped, propId),
+            texture = GetPedPropTextureIndex(ped, propId),
+        }
+    end
+    return snap
+end
+
+function SunsetAppearance.ApplyClothingSnapshot(ped, snap)
+    if type(snap) ~= 'table' then return end
+    if type(snap.components) == 'table' then
+        for slot, comp in pairs(snap.components) do
+            local componentId = tonumber(slot)
+            if componentId and componentId >= 0 and componentId <= 11 and type(comp) == 'table' then
+                setComponentSafe(ped, componentId, comp.drawable or 0, comp.texture or 0)
+            end
+        end
+    end
+    if type(snap.props) == 'table' then
+        for slot, prop in pairs(snap.props) do
+            local propId = tonumber(slot)
+            if propId and type(prop) == 'table' then
+                setPropSafe(ped, propId, prop.drawable, prop.texture)
+            end
+        end
+    end
+end
+
 function SunsetAppearance.apply(ped, appearance, gender)
     appearance = SunsetAppearance.normalize(appearance, gender)
     local hb = appearance.headBlend
 
     appearance = SunsetAppearance.applyClothes(ped, appearance, gender)
+    appearance = SunsetAppearance.applyProps(ped, appearance)
 
     local hd, ht = setComponentSafe(ped, 2, appearance.hair.drawable or 0, appearance.hair.texture or 0)
     appearance.hair.drawable, appearance.hair.texture = hd, ht

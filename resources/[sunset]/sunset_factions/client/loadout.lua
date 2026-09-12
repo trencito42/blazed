@@ -1,4 +1,9 @@
 local dutyWeapons = {}
+-- [CLOTHING FIX] Exact civilian clothing snapshot taken BEFORE a uniform is
+-- applied. Restoring from char.appearance alone lost props/state that the
+-- client cache did not hold (the "hat stays after duty" bug). Snapshot first,
+-- appearance JSON second.
+local civilianSnapshot = nil
 
 local WEAPON_LABELS = {
     WEAPON_NIGHTSTICK = 'Nightstick',
@@ -150,6 +155,19 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
     local gender = char.gender or 0
     local ped = PlayerPedId()
 
+    -- [CLOTHING FIX] Snapshot the EXACT current civilian clothing (components
+    -- 0-11 + props) before the uniform overwrites anything, but only if we are
+    -- not already uniformed (re-apply on grade change must not snapshot the
+    -- uniform over itself).
+    if not civilianSnapshot and GetResourceState('sunset_appearance') == 'started' then
+        local ok, snap = pcall(function()
+            return exports.sunset_appearance:GetClothingSnapshot(ped)
+        end)
+        if ok and type(snap) == 'table' then
+            civilianSnapshot = snap
+        end
+    end
+
     if customSkin then
         switchPedModel(customSkin)
         ped = PlayerPedId()
@@ -227,7 +245,16 @@ function ClearFactionLoadout()
         ped = PlayerPedId()
     end
 
+    -- [CLOTHING FIX] Restore the exact pre-duty snapshot FIRST (includes
+    -- props: hats/glasses/watches survive duty now), then the persisted
+    -- appearance for head/hair/overlays. The snapshot is consumed so a later
+    -- duty cycle re-snapshots fresh civilian clothes.
+    local snap = civilianSnapshot
+    civilianSnapshot = nil
     applySavedAppearance(ped, char, gender)
+    if snap and GetResourceState('sunset_appearance') == 'started' then
+        pcall(function() exports.sunset_appearance:ApplyClothingSnapshot(ped, snap) end)
+    end
     restoreScreenIfFaded()
 end
 
@@ -239,6 +266,45 @@ RegisterNetEvent('sunset:client:dutyState', function(state, factionId)
         ApplyFactionLoadout(fid, grade)
     else
         ClearFactionLoadout()
+    end
+end)
+
+-- [CLOTHING FIX B5] After a hospital respawn / revive the engine resurrect can
+-- drop components. Re-apply the persisted appearance; if the player is ON DUTY
+-- re-apply the faction uniform on top (duty state survives death by design).
+AddEventHandler('sunset:client:playerSpawned', function()
+    CreateThread(function()
+        Wait(500)
+        local char = getChar()
+        if not char then return end
+        local ped = PlayerPedId()
+        local gender = char.gender or 0
+        applySavedAppearance(ped, char, gender)
+        local okDuty, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
+        if okDuty and onDuty then
+            local fid = getFactionId(char)
+            local grade = (char.metadata and tonumber(char.metadata.faction_grade)) or 0
+            if fid then
+                civilianSnapshot = nil -- post-respawn state IS the civilian base
+                ApplyFactionLoadout(fid, grade)
+            end
+        end
+    end)
+end)
+
+-- [CLOTHING FIX B6] If THIS client resource restarts while the player is on
+-- duty, the uniform/dutyWeapons tables were lost: re-apply from server state
+-- so the player is not left in civilian clothes (or with unremovable weapons)
+-- mid-shift.
+CreateThread(function()
+    Wait(2500)
+    local char = getChar()
+    if not char then return end
+    local okDuty, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
+    if okDuty and onDuty then
+        local fid = getFactionId(char)
+        local grade = (char.metadata and tonumber(char.metadata.faction_grade)) or 0
+        if fid then ApplyFactionLoadout(fid, grade) end
     end
 end)
 

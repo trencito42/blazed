@@ -283,6 +283,22 @@ exports('ApplyAppearance', ApplyAppearance)
 exports('ResolveTorso', exportResolveTorso)
 exports('IsEditing', function() return editing end)
 
+-- [CLOTHING FIX] Snapshot/restore helpers for faction uniforms & clothing
+-- preview transactions. Centralizes clothing correctness so other resources
+-- (factions loadout) never hand-roll component/prop application.
+exports('GetClothingSnapshot', function(ped)
+    ped = ped or PlayerPedId()
+    if not ped or ped == 0 then return nil end
+    return SunsetAppearance.GetClothingSnapshot(ped)
+end)
+
+exports('ApplyClothingSnapshot', function(ped, snapshot)
+    ped = ped or PlayerPedId()
+    if not ped or ped == 0 or type(snapshot) ~= 'table' then return false end
+    SunsetAppearance.ApplyClothingSnapshot(ped, snapshot)
+    return true
+end)
+
 AddEventHandler('sunset:client:playerSpawned', function(char)
     if char and char.appearance then
         SunsetAppearance.apply(PlayerPedId(), char.appearance, char.gender or 0)

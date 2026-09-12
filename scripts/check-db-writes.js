@@ -96,6 +96,7 @@ const KNOWN_VIOLATIONS = new Set([
     'sunset_robbery:character_inventory',  // fence sale item consumption in txn
     'sunset_robbery:characters',        // fence payout credit in txn
     'sunset_admin:accounts',            // setadmin level write (level-5 gated)
+    'sunset_clothing:characters',       // outfit equip writes validated appearance (C8; same sanitizer as saveAppearance)
 ]);
 
 function walk(dir, out = []) {

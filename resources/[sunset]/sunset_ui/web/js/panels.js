@@ -329,11 +329,9 @@ const Panels = {
                 if (event.button !== 0) return;
                 this._startInventoryPointerDrag(row, cell, item, event);
             },
-            onQuickPointerDown: () => {},
         };
 
         inv.renderMainGrid(items, hooks, 20);
-        inv.renderQuickSlots(data.quickslots || {}, hooks);
         inv.updateWeight(Number(data.weight) || 0, Number(data.maxWeight) || 30);
         inv.renderNearby(Array.isArray(data.nearbyPlayers) ? data.nearbyPlayers : (this._inventoryNearby || []));
 
@@ -341,37 +339,6 @@ const Panels = {
         this._inventoryCash = cash;
         const cashEl = $('#inventory-cash');
         if (cashEl) cashEl.textContent = cash.toLocaleString();
-
-        const dutyWrap = $('#inventory-duty-wrap');
-        const dutyList = $('#inventory-duty-list');
-        const dutyWeapons = Array.isArray(data.dutyWeapons) ? data.dutyWeapons : [];
-        if (dutyWrap && dutyList) {
-            dutyList.innerHTML = '';
-            if (!dutyWeapons.length) {
-                dutyWrap.classList.add('hidden');
-            } else {
-                dutyWrap.classList.remove('hidden');
-                dutyWeapons.forEach((weaponRow) => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'inv-duty-chip';
-                    btn.title = `Drag to quick slot — ${weaponRow.label || weaponRow.weapon}`;
-                    btn.appendChild(createItemArtwork(weaponRow, 'item-icon'));
-                    const name = document.createElement('span');
-                    name.textContent = weaponRow.label || weaponRow.weapon;
-                    btn.appendChild(name);
-                    btn.addEventListener('pointerdown', (event) => {
-                        if (event.button !== 0) return;
-                        this._startDutyWeaponDrag(weaponRow, btn, event);
-                    });
-                    dutyList.appendChild(btn);
-                });
-            }
-        }
-
-        if (window.HotbarUI) {
-            HotbarUI.renderHud({ slots: data.quickslots || {}, activeSlot: data.activeHotbarSlot, visible: false });
-        }
 
         document.body.classList.add('inventory-open');
         document.body.classList.add('hud-chrome-hidden');
@@ -453,7 +420,6 @@ const Panels = {
             $('#inventory-cash-badge')?.classList.remove('is-dragover');
             $('#inventory-drop-selected')?.classList.remove('is-dragover');
             $$('.inv-slot.is-drop-target, .premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
-            if (window.HotbarUI) HotbarUI.clearDropTargets();
         };
 
         const endDrag = (event) => {
@@ -480,36 +446,11 @@ const Panels = {
                 }, 0);
                 const stack = document.elementsFromPoint(x, y);
                 const el = stack[0] || null;
-                const hotbarSlot = stack.map((node) => node.closest?.('[data-hotbar-slot]')).find(Boolean)
-                    || el?.closest('[data-hotbar-slot]')
-                    || stack.map((node) => node.closest?.('.hotbar-slot')).find(Boolean)
-                    || el?.closest('.hotbar-slot');
                 const offerZone = el?.closest('#inventory-my-offer');
                 const dropBtn = el?.closest('#inventory-drop-selected');
                 const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
 
-                if (hotbarSlot && !this._inventoryTrade) {
-                    const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
-                    const slotBlockedInVehicle = hotbarIndex === 2 && document.body.classList.contains('is-driver');
-                    if (hotbarIndex >= 1 && hotbarIndex <= 5 && !slotBlockedInVehicle) {
-                        if (state.dutyWeapon) {
-                            post('hotbarAssign', {
-                                slot: hotbarIndex,
-                                kind: 'duty_weapon',
-                                weapon: state.dutyWeapon.weapon,
-                                label: state.dutyWeapon.label,
-                                fromInventory: true,
-                            });
-                        } else if (state.row) {
-                            post('hotbarAssign', {
-                                slot: hotbarIndex,
-                                kind: 'item',
-                                rowId: state.row.id,
-                                fromInventory: true,
-                            });
-                        }
-                    }
-                } else if (offerZone && this._inventoryTrade) {
+                if (offerZone && this._inventoryTrade) {
                     if (state.cash) this.openCashOfferModal(this._inventoryCash, (amount) => this._offerTradeCash(amount));
                     else this._offerInventoryRow(state.row);
                 } else if (dropBtn) {
@@ -524,10 +465,7 @@ const Panels = {
                     const fromGrid = state.cell?.dataset.grid || 'grid-player';
                     const toSlot = Number(slot.dataset.slot) || 0;
                     const fromSlot = Number(state.row.slot) || Number(state.cell?.dataset.slot) || 0;
-                    if (toGrid === 'grid-quick' && fromGrid === 'grid-player' && toSlot >= 1 && toSlot <= 5) {
-                        if (toSlot === 2 && document.body.classList.contains('is-driver')) return;
-                        post('hotbarAssign', { slot: toSlot, kind: 'item', rowId: state.row.id, fromInventory: true });
-                    } else if (toGrid === 'grid-player' && fromGrid === 'grid-player' && toSlot && fromSlot && toSlot !== fromSlot) {
+                    if (toGrid === 'grid-player' && fromGrid === 'grid-player' && toSlot && fromSlot && toSlot !== fromSlot) {
                         post('inventoryMoveSlot', { fromSlot, toSlot });
                     }
                 }
@@ -580,15 +518,8 @@ const Panels = {
             } else if (el?.closest('#inventory-drop-selected')) {
                 $('#inventory-drop-selected')?.classList.add('is-dragover');
             } else {
-                const hotbarSlot = el?.closest('[data-hotbar-slot]') || el?.closest('.hotbar-slot');
-                if (hotbarSlot && !this._inventoryTrade) {
-                    const hotbarIndex = Number(hotbarSlot.dataset.hotbarSlot) || 0;
-                    if (window.HotbarUI) HotbarUI.markDropTarget(hotbarIndex, true);
-                    hotbarSlot.classList.add('is-drop-target');
-                } else {
-                    const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
-                    if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
-                }
+                const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
+                if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
             }
         }, { passive: false });
 

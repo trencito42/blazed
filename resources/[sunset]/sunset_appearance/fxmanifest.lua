@@ -13,7 +13,7 @@ shared_scripts {
     '@sunset_core/shared/utils.lua',
 }
 
-exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso', 'ApplyFactionOutfit', 'ApplyAllClothing' }
+exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso', 'ApplyFactionOutfit', 'ApplyAllClothing', 'GetClothingSnapshot', 'ApplyClothingSnapshot' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
@@ -31,4 +31,8 @@ files {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+}
+
+server_exports {
+    'ValidateAppearance',
 }

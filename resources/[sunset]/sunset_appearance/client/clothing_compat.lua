@@ -3,21 +3,58 @@ SunsetClothing = SunsetClothing or {}
 local PRICE_PER_ITEM = 50
 
 SunsetClothing.Categories = {
-    { id = 'hat', label = 'Hats', display = 'Hats / Caps', kind = 'prop', slot = 0, icon = 'ph-baseball-cap', camera = 'full' },
+    { id = 'hat', label = 'Hats', display = 'Hats / Caps', kind = 'prop', slot = 0, icon = 'ph-baseball-cap', camera = 'face' },
     { id = 'mask', label = 'Masks', display = 'Masks', kind = 'component', slot = 1, icon = 'ph-mask-happy', camera = 'face' },
     { id = 'glasses', label = 'Glasses', display = 'Glasses', kind = 'prop', slot = 1, icon = 'ph-sunglasses', camera = 'face' },
+    { id = 'ears', label = 'Earrings', display = 'Ears / Earrings', kind = 'prop', slot = 2, icon = 'ph-ear', camera = 'face' },
     { id = 'accessory', label = 'Accessories', display = 'Chains / Accessories', kind = 'component', slot = 7, icon = 'ph-sketch-logo', camera = 'full' },
     { id = 'top', label = 'Tops', display = 'Shirt / Jacket', kind = 'component', slot = 11, icon = 'ph-t-shirt', camera = 'full', syncTorso = true },
+    { id = 'undershirt', label = 'Undershirts', display = 'Undershirts', kind = 'component', slot = 8, icon = 'ph-shirt-folded', camera = 'full', compatFilter = true },
+    { id = 'vest', label = 'Vests', display = 'Vests / Body Armor', kind = 'component', slot = 9, icon = 'ph-shield-check', camera = 'full' },
     { id = 'pants', label = 'Pants', display = 'Pants', kind = 'component', slot = 4, icon = 'ph-pants', camera = 'full' },
     { id = 'shoes', label = 'Shoes', display = 'Footwear', kind = 'component', slot = 6, icon = 'ph-sneaker', camera = 'feet' },
     { id = 'bag', label = 'Bags', display = 'Backpacks / Bags', kind = 'component', slot = 5, icon = 'ph-backpack', camera = 'full' },
+    { id = 'watch', label = 'Watches', display = 'Watches', kind = 'prop', slot = 6, icon = 'ph-watch', camera = 'full' },
+    { id = 'bracelet', label = 'Bracelets', display = 'Bracelets', kind = 'prop', slot = 7, icon = 'ph-circle-half', camera = 'full' },
 }
 
 local function categoryById(id)
     for _, cat in ipairs(SunsetClothing.Categories) do
         if cat.id == id then return cat end
     end
-    return SunsetClothing.Categories[5]
+    for _, cat in ipairs(SunsetClothing.Categories) do
+        if cat.id == 'top' then return cat end
+    end
+    return SunsetClothing.Categories[1]
+end
+
+-- [CLOTHING UX] Generic player-facing names: the wardrobe must not show raw
+-- drawable numbers as the item identity ("32 / 611"). Real item naming would
+-- need a curated catalog; generic labels are honest and readable.
+local CATEGORY_NOUNS = {
+    hat = 'Hat', mask = 'Mask', glasses = 'Glasses', ears = 'Earring',
+    accessory = 'Accessory', top = 'Top', undershirt = 'Undershirt',
+    vest = 'Vest', pants = 'Pants', shoes = 'Shoes', bag = 'Bag',
+    watch = 'Watch', bracelet = 'Bracelet',
+}
+
+function SunsetClothing.itemName(cat, drawable)
+    drawable = math.floor(tonumber(drawable) or 0)
+    if cat.kind == 'prop' and drawable < 0 then return 'None' end
+    local noun = CATEGORY_NOUNS[cat.id] or cat.label or 'Item'
+    return ('%s %03d'):format(noun, drawable)
+end
+
+-- [CLOTHING CURATION] Disabled drawables per gender+slot (broken/clipping
+-- items). Extend via SunsetClothing.Blacklist entries; kept in one place, not
+-- scattered through UI code. Format: [slot] = { [gender] = { drawable=true } }
+SunsetClothing.Blacklist = SunsetClothing.Blacklist or {}
+
+function SunsetClothing.isBlacklisted(gender, slot, drawable)
+    local bySlot = SunsetClothing.Blacklist[tostring(slot)]
+    if not bySlot then return false end
+    local byGender = bySlot[gender == 1 and 'female' or 'male'] or bySlot['all']
+    return byGender ~= nil and byGender[tostring(math.floor(drawable or -1))] == true
 end
 
 local function drawableMax(ped, slot)
@@ -43,7 +80,7 @@ end
 
 local function ensureProps(appearance)
     appearance.props = appearance.props or {}
-    for _, propSlot in ipairs({ 0, 1, 2 }) do
+    for _, propSlot in ipairs({ 0, 1, 2, 6, 7 }) do
         local key = tostring(propSlot)
         appearance.props[key] = appearance.props[key] or { drawable = -1, texture = 0 }
     end
@@ -52,7 +89,7 @@ end
 
 local function ensureComponents(appearance)
     appearance.components = appearance.components or {}
-    for _, slot in ipairs({ '1', '3', '4', '5', '6', '7', '8', '11' }) do
+    for _, slot in ipairs({ '1', '3', '4', '5', '6', '7', '8', '9', '11' }) do
         appearance.components[slot] = appearance.components[slot] or { drawable = 0, texture = 0 }
     end
     return appearance
@@ -204,6 +241,9 @@ function SunsetClothing.buildCatalog(ped, appearance, gender, activeCategoryId)
         texture = texture,
         maxDrawable = maxDrawable,
         maxTexture = maxTexture,
+        -- [CLOTHING UX] Player-friendly names instead of raw drawable numbers:
+        -- "Bomber Jacket 032" style. "None" for prop -1.
+        itemName = SunsetClothing.itemName(cat, drawable),
         pricePerItem = PRICE_PER_ITEM,
         cartTotal = PRICE_PER_ITEM,
         camera = cat.camera or 'full',
@@ -237,7 +277,7 @@ function SunsetClothing.syncFromPed(appearance, ped, gender)
             appearance.components[key].texture = GetPedTextureVariation(ped, slot)
         end
     end
-    for _, propSlot in ipairs({ 0, 1, 2 }) do
+    for _, propSlot in ipairs({ 0, 1, 2, 6, 7 }) do
         local drawable = GetPedPropIndex(ped, propSlot)
         local key = tostring(propSlot)
         if drawable < 0 then

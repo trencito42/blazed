@@ -1,7 +1,13 @@
 TorsoData = { male = {}, female = {} }
 
 local function loadJson(path)
-    local raw = LoadResourceFile(GetCurrentResourceName(), path)
+    -- [CLOTHING FIX] This file is @-included into sunset_clothing as well; the
+    -- data always lives in sunset_appearance, so try that resource first and
+    -- fall back to the current one.
+    local raw = LoadResourceFile('sunset_appearance', path)
+    if not raw or raw == '' then
+        raw = LoadResourceFile(GetCurrentResourceName(), path)
+    end
     if not raw or raw == '' then return {} end
     local ok, data = pcall(json.decode, raw)
     return ok and data or {}
