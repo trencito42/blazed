@@ -213,6 +213,8 @@ local function performFactionAcceptInvite(source)
             ('%s accepted the invitation to %s.'):format(
                 exports.sunset_core:GetPlayerDisplayName(source), faction.label), 'success', 7000)
     end
+    -- [QUESTS] faction chain: joined a faction.
+    TriggerEvent('sunset:quest:progress', char.id, 'faction_joined', 1, { factionId = invite.factionId })
     return { factionId = invite.factionId, label = faction.label }
 end
 

@@ -212,47 +212,39 @@ end
 function SunsetAppearance.applyClothes(ped, appearance, gender)
     local c = appearance.components
 
-    if c['1'] then
-        local d, t = setComponentSafe(ped, 1, c['1'].drawable or 0, c['1'].texture or 0)
-        c['1'].drawable, c['1'].texture = d, t
+    -- [C10] Components may carry an optional `collection` (streamed DLC pack).
+    -- ApplyComponent routes to SetPedCollectionComponentVariation when present
+    -- and falls back to safe base-game drawables when the pack is missing.
+    local function applyComp(slot)
+        local comp = c[tostring(slot)]
+        if not comp then return end
+        local collection = type(comp.collection) == 'string' and comp.collection or nil
+        SunsetAppearance.ApplyComponent(ped, slot, comp.drawable or 0, comp.texture or 0, collection)
+        -- read back what actually stuck so persistence never stores invalid ids
+        if not collection then
+            comp.drawable = GetPedDrawableVariation(ped, slot)
+            comp.texture = GetPedTextureVariation(ped, slot)
+        end
     end
 
-    local d, t = setComponentSafe(ped, 4, math.max(1, c['4'].drawable or 1))
-    c['4'].drawable, c['4'].texture = d, t
+    applyComp(1)
 
-    d, t = setComponentSafe(ped, 6, c['6'].drawable or 1)
-    c['6'].drawable, c['6'].texture = d, t
+    local d, t = setComponentSafe(ped, 4, math.max(1, c['4'] and c['4'].drawable or 1))
+    if c['4'] then c['4'].drawable, c['4'].texture = d, t end
 
-    d, t = setComponentSafe(ped, 8, c['8'].drawable or 15)
-    c['8'].drawable, c['8'].texture = d, t
-
-    -- [CLOTHING FIX] Bags (5) and accessories (7) were never restored by
-    -- apply(): items bought in the shop were lost on relog and stale values
-    -- survived duty toggles / respawns. Apply them when present.
-    if c['5'] then
-        d, t = setComponentSafe(ped, 5, c['5'].drawable or 0, c['5'].texture or 0)
-        c['5'].drawable, c['5'].texture = d, t
-    end
-    if c['7'] then
-        d, t = setComponentSafe(ped, 7, c['7'].drawable or 0, c['7'].texture or 0)
-        c['7'].drawable, c['7'].texture = d, t
-    end
-    if c['9'] then
-        d, t = setComponentSafe(ped, 9, c['9'].drawable or 0, c['9'].texture or 0)
-        c['9'].drawable, c['9'].texture = d, t
-    end
-    if c['10'] then
-        d, t = setComponentSafe(ped, 10, c['10'].drawable or 0, c['10'].texture or 0)
-        c['10'].drawable, c['10'].texture = d, t
-    end
+    applyComp(6)
+    applyComp(8)
+    applyComp(5)
+    applyComp(7)
+    applyComp(9)
+    applyComp(10)
 
     appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
 
     d, t = setComponentSafe(ped, 3, c['3'].drawable, c['3'].texture)
     c['3'].drawable, c['3'].texture = d, t
 
-    d, t = setComponentSafe(ped, 11, c['11'].drawable, c['11'].texture)
-    c['11'].drawable, c['11'].texture = d, t
+    applyComp(11)
 
     return appearance
 end
@@ -328,6 +320,58 @@ function SunsetAppearance.GetClothingSnapshot(ped)
         }
     end
     return snap
+end
+
+-- ============================================================
+--  [C10] Streamed/addon clothing collections.
+--  Registration model so a new clothing pack NEVER requires
+--  editing 10 files: one call per pack at resource start.
+--    SunsetAppearance.RegisterClothingCollection({
+--      name = 'mypack',                     -- DLC collection name
+--      components = { [11] = { from = 0, to = 50, labelPrefix = 'MP Jacket' }, ... },
+--      props = { [0] = { from = 0, to = 10, labelPrefix = 'MP Hat' } },
+--    })
+--  Applied via SetPedCollectionComponentVariation when a stored component
+--  carries `collection`; otherwise plain drawables (base game) are used.
+-- ============================================================
+SunsetAppearance.Collections = SunsetAppearance.Collections or {}
+
+function SunsetAppearance.RegisterClothingCollection(def)
+    if type(def) ~= 'table' or type(def.name) ~= 'string' or def.name == '' then
+        print('[appearance] RegisterClothingCollection: invalid definition')
+        return false
+    end
+    if not GetHashKey(def.name) then return false end
+    SunsetAppearance.Collections[def.name] = def
+    return true
+end
+
+function SunsetAppearance.ApplyComponent(ped, componentId, drawable, texture, collection)
+    drawable = math.floor(tonumber(drawable) or 0)
+    texture = math.max(0, math.floor(tonumber(texture) or 0))
+    if type(collection) == 'string' and collection ~= '' then
+        local ok, applied = pcall(function()
+            SetPedCollectionComponentVariation(ped, componentId, collection, drawable, texture, 2)
+            return true
+        end)
+        if ok and applied then return true end
+        -- Collection missing (pack not streamed): fall back to base drawables
+        -- rather than leaving the ped naked/broken.
+        print(('[appearance] collection %s not available for component %d; falling back'):format(collection, componentId))
+    end
+    setComponentSafe(ped, componentId, drawable, texture)
+    return true
+end
+
+function SunsetAppearance.ApplyProp(ped, propId, drawable, texture, collection)
+    drawable = math.floor(tonumber(drawable) or -1)
+    if type(collection) == 'string' and collection ~= '' and drawable >= 0 then
+        local ok = pcall(function()
+            SetPedCollectionPropIndex(ped, propId, collection, drawable, math.max(0, texture or 0), true)
+        end)
+        if ok then return true end
+    end
+    return setPropSafe(ped, propId, drawable, texture or 0) ~= nil
 end
 
 function SunsetAppearance.ApplyClothingSnapshot(ped, snap)

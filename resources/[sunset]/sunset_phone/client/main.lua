@@ -256,12 +256,25 @@ AddEventHandler('sunset:nui:phoneBankTransfer', function(data)
     end)
 end)
 
+-- [PERF] Debounced full refresh: an SMS burst (or send+incoming overlapping)
+-- used to fire one 3-query getPhoneData per event while the phone was open.
+local refreshPending = false
+local function refreshPhoneSoon()
+    if refreshPending then return end
+    refreshPending = true
+    CreateThread(function()
+        Wait(500)
+        refreshPending = false
+        if phoneOpen then
+            local refreshed = Sunset.AwaitCallback('sunset:getPhoneData') or {}
+            exports.sunset_ui:Send('phoneUpdate', refreshed)
+        end
+    end)
+end
+
 RegisterNetEvent('sunset:client:phoneMessage', function()
     if not phoneOpen then return end
-    CreateThread(function()
-        local refreshed = Sunset.AwaitCallback('sunset:getPhoneData') or {}
-        exports.sunset_ui:Send('phoneUpdate', refreshed)
-    end)
+    refreshPhoneSoon()
 end)
 
 CreateThread(function()

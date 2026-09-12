@@ -210,6 +210,11 @@ exports.sunset_core:RegisterCallback('sunset:phoneAddContact', function(source, 
 
     local isOnline = (contactCharId and findSourceByCharacterId(contactCharId) ~= nil) or false
 
+    -- [QUESTS] social chain: adding another player as contact.
+    if contactCharId then
+        TriggerEvent('sunset:quest:progress', tonumber(char.id), 'contact_added', 1)
+    end
+
     return {
         ok = true,
         contact = {

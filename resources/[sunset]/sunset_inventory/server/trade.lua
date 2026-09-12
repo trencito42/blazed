@@ -496,6 +496,9 @@ local function completeTrade(trade)
         TriggerClientEvent('sunset:client:propertiesChanged', -1)
         TriggerClientEvent('sunset:client:businessesChanged', -1)
     end
+    -- [QUESTS] social chain: first completed trade counts for BOTH parties.
+    TriggerEvent('sunset:quest:progress', aChar.id, 'first_trade', 1)
+    TriggerEvent('sunset:quest:progress', bChar.id, 'first_trade', 1)
     return true
 end
 

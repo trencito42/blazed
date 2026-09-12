@@ -305,6 +305,8 @@ exports.sunset_core:RegisterCallback('sunset:rentProperty', function(source,id)
         if online and tonumber(online.id) == ownerId then exports.sunset_core:RefreshMoney(ownerSource) break end
     end
     TriggerClientEvent('sunset:client:propertiesChanged',-1)
+    -- [QUESTS] housing chain: first rental.
+    TriggerEvent('sunset:quest:progress', char.id, 'property_rented', 1, { propertyId = prop.id })
     return true,('You now rent %s for $%d each payday.'):format(prop.label,price)
 end)
 

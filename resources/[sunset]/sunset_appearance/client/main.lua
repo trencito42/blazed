@@ -299,6 +299,19 @@ exports('ApplyClothingSnapshot', function(ped, snapshot)
     return true
 end)
 
+-- [C10] Streamed clothing pack registration (see appearance_lib.lua docs).
+exports('RegisterClothingCollection', function(def)
+    return SunsetAppearance.RegisterClothingCollection(def)
+end)
+
+-- [C10] Collection-aware component application: `collection` may be nil
+-- (base game drawable) or a DLC collection name.
+exports('ApplyComponent', function(ped, componentId, drawable, texture, collection)
+    ped = ped or PlayerPedId()
+    if not ped or ped == 0 then return false end
+    return SunsetAppearance.ApplyComponent(ped, tonumber(componentId), drawable, texture, collection)
+end)
+
 AddEventHandler('sunset:client:playerSpawned', function(char)
     if char and char.appearance then
         SunsetAppearance.apply(PlayerPedId(), char.appearance, char.gender or 0)

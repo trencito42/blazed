@@ -583,6 +583,30 @@ exports.sunset_core:RegisterCallback('sunset:license:abortTest', function(source
     return true
 end)
 
+-- [SESSIONS] Central lifecycle triggers: a downed or jailed examinee cannot
+-- continue an exam. Abort exactly like the manual abort path (finalize report,
+-- clean entities, release the session). Previously only instructor-disconnect
+-- and playerDropped were handled.
+local function abortIfInTest(src, reason)
+    src = tonumber(src)
+    if not src or not TestSessions[src] then return end
+    if type(FinalizeLicenseExamReport) == 'function' then
+        FinalizeLicenseExamReport(TestSessions[src], 'aborted')
+    end
+    if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(src) end
+    TestSessions[src] = nil
+    TriggerClientEvent('sunset:licenses:testAbort', src)
+    notify(src, ('Your license exam was cancelled: %s.'):format(reason), 'error')
+end
+
+AddEventHandler('sunset:death:playerDowned', function(src)
+    abortIfInTest(src, 'you were downed')
+end)
+
+AddEventHandler('sunset:faction:playerJailed', function(src)
+    abortIfInTest(src, 'you were jailed')
+end)
+
 exports.sunset_core:RegisterCallback('sunset:license:completePractical', function(source, licenseType)
     licenseType = tostring(licenseType or '')
     local session = TestSessions[source]

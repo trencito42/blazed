@@ -90,6 +90,22 @@ function CreateSession(opts)
             return nil, 'You already have an active session.'
         end
     end
+    -- [MULTI-PARTY] Optional extra participants (e.g. taxi passenger). Every
+    -- participant is indexed in ByChar so central triggers (downed/jail/drop)
+    -- end the session when ANY party becomes incapacitated.
+    local participants = { charId }
+    if type(opts.participants) == 'table' then
+        for _, cid in ipairs(opts.participants) do
+            cid = tonumber(cid)
+            if cid and cid ~= charId then
+                local existing = ByChar[cid] and Sessions[ByChar[cid]]
+                if existing and not TERMINAL[existing.state] then
+                    return nil, 'Another participant already has an active session.'
+                end
+                participants[#participants + 1] = cid
+            end
+        end
+    end
 
     local id = newSessionId(activity, charId)
     local session = {
@@ -108,13 +124,14 @@ function CreateSession(opts)
         rewardKey = opts.rewardKey,
         cancelReason = nil,
         reconnect = Activities[activity].reconnect or 'ABANDON',
+        participants = participants, -- [charId,...] all parties in this session
         data = opts.data or {},
         ended = false,
     }
     Sessions[id] = session
-    ByChar[charId] = id
+    for _, cid in ipairs(participants) do ByChar[cid] = id end
     BySource[source] = id
-    log(id, 'CREATED activity=%s source=%d char=%d', activity, source, charId)
+    log(id, 'CREATED activity=%s source=%d char=%d parts=%d', activity, source, charId, #participants)
     TriggerClientEvent('sunset:sessions:started', source, {
         id = id, activity = activity, deadlineAt = session.deadlineAt, data = session.data,
     })
@@ -153,13 +170,25 @@ local function finish(session, endState, reason)
     local def = Activities[session.activity]
     runActivityHook(def, 'onEnd', session, endState)
 
-    if session.source and GetPlayerName(session.source) then
-        TriggerClientEvent('sunset:sessions:ended', session.source, {
-            id = session.id, state = endState, reason = reason,
-        })
+    -- Notify EVERY online participant (not just the owner source).
+    for _, pid in ipairs(GetPlayers()) do
+        local src = tonumber(pid)
+        local ok, char = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+        if ok and char and char.id then
+            for _, cid in ipairs(session.participants or {}) do
+                if cid == char.id then
+                    TriggerClientEvent('sunset:sessions:ended', src, {
+                        id = session.id, state = endState, reason = reason,
+                    })
+                    break
+                end
+            end
+        end
     end
 
-    if session.charId then ByChar[session.charId] = nil end
+    for _, cid in ipairs(session.participants or {}) do
+        if ByChar[cid] == session.id then ByChar[cid] = nil end
+    end
     if session.source then BySource[session.source] = nil end
     -- Keep the record briefly for late idempotency checks, then drop it.
     SetTimeout(60000, function() Sessions[session.id] = nil end)
@@ -298,6 +327,15 @@ end)
 -- ------------------------------------------------------------
 local function cancelForSource(src, endState, reason)
     local session = GetSessionBySource(src)
+    if not session then
+        -- [MULTI-PARTY] Non-owner participants (e.g. taxi passenger) are not in
+        -- BySource; look them up by character id so ANY party going downed/jailed
+        -- ends the shared session.
+        local ok, char = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+        if ok and char and char.id then
+            session = GetSessionByChar(char.id)
+        end
+    end
     if session then
         finish(session, endState, reason)
     end
@@ -314,6 +352,12 @@ end)
 AddEventHandler('playerDropped', function()
     local src = source
     local session = GetSessionBySource(src)
+    if not session then
+        -- [MULTI-PARTY] A participant (e.g. taxi passenger) dropping must also
+        -- end the shared session under ABANDON policy.
+        local ok, char = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+        if ok and char and char.id then session = GetSessionByChar(char.id) end
+    end
     if not session then return end
     local policy = session.reconnect
     if policy == 'SUSPEND' or policy == 'PERSIST' then

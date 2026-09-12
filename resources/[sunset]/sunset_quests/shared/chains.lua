@@ -99,8 +99,10 @@ Sunset.QuestChains = {
     },
 
     -- ── DESIGNED, NOT YET ENABLED (future phases) ────────────────
+    -- ── ENABLED (emitters wired: contact_added, first_trade, property_rented,
+    --    faction_joined) ──────────────────────────────────────────────────
     social = {
-        label = 'Making Connections', order = 4, enabled = false, requiresChain = 'driving',
+        label = 'Making Connections', order = 4, enabled = true, requiresChain = 'driving',
         quests = {
             { key = 'soc_contact', label = 'Stay in Touch', description = 'Add another player as a phone contact.',
               objectives = { { type = 'contact_added', target = 1, label = 'Add a contact' } },
@@ -111,21 +113,24 @@ Sunset.QuestChains = {
         },
     },
     housing = {
-        label = 'A Place to Call Home', order = 5, enabled = false, requiresChain = 'social',
+        label = 'A Place to Call Home', order = 5, enabled = true, requiresChain = 'social',
         quests = {
             { key = 'hou_rent', label = 'First Rental', description = 'Rent a property to call home.',
               objectives = { { type = 'property_rented', target = 1, label = 'Rent a property' } },
-              reward = { money = 400, xp = 50, rp = 2, reason = 'quest_rental' } },
+              reward = { money = 400, xp = 50, rp = 2, reason = 'quest_rental' }, unlocksChain = 'faction' },
         },
     },
     faction = {
-        label = 'Joining the Ranks', order = 6, enabled = false, requiresChain = 'housing',
+        label = 'Joining the Ranks', order = 6, enabled = true, requiresChain = 'housing',
         quests = {
             { key = 'fac_join', label = 'Application', description = 'Join a faction.',
               objectives = { { type = 'faction_joined', target = 1, label = 'Join a faction' } },
               reward = { money = 300, xp = 60, rp = 3, reason = 'quest_faction' } },
         },
     },
+    -- advanced/criminal/clan (orders 7-9) remain designed-but-disabled until
+    -- their progression systems (skill tiers, criminal contacts, clan endgame)
+    -- are built — see docs/product/RPG_PROGRESSION.md.
     advanced = {
         label = 'Master of Your Craft', order = 7, enabled = false, requiresChain = 'faction',
         quests = {},

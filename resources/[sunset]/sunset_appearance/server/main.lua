@@ -36,7 +36,13 @@ local function sanitizePair(raw, maxDrawable, fallbackDraw, fallbackTex, minDraw
     local t = num(raw.texture, 0, MAX_TEXTURE, fallbackTex or 0)
     if t == nil then return nil end
     if d < 0 then d = minDrawable t = 0 end
-    return { drawable = math.floor(d), texture = math.floor(t) }
+    local out = { drawable = math.floor(d), texture = math.floor(t) }
+    -- [C10] Optional streamed-collection name: strict charset, length-capped.
+    if type(raw.collection) == 'string' then
+        local coll = raw.collection:match('^[%w_%-]+%.[%w_%-]+$') or raw.collection:match('^[%w_%-]+$')
+        if coll and #coll <= 64 then out.collection = coll end
+    end
+    return out
 end
 
 -- Returns a sanitized appearance table, or nil + reason on hostile input.

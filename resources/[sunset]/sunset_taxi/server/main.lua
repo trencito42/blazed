@@ -4,6 +4,65 @@ local DriverAvailable = {}
 local DriverSessionStats = {}
 local MeterThreads = {}
 
+-- ═══════════════════════════════════════════════════════════════
+--  [SESSIONS MIGRATION] Mirror active rides into sunset_sessions so the
+--  canonical framework owns lifecycle triggers (downed/jail/drop for EITHER
+--  party) and admin diagnostics. Taxi keeps its own meter/settlement logic
+--  (already hardened: P5-04 settling lock, P6-02 downed/jail cancel); the
+--  framework session is the authoritative "this ride is live" record.
+-- ═══════════════════════════════════════════════════════════════
+local SessionsService = GetResourceState('sunset_sessions') == 'started'
+local function sessionsCall(method, ...)
+    if GetResourceState('sunset_sessions') ~= 'started' then SessionsService = false return nil end
+    local args = table.pack(...)
+    local ok, res = pcall(function()
+        return exports.sunset_sessions[method](exports.sunset_sessions, table.unpack(args, 1, args.n))
+    end)
+    if not ok then return nil end
+    return res
+end
+
+CreateThread(function()
+    Wait(1200)
+    if GetResourceState('sunset_sessions') ~= 'started' then
+        print('^3[sunset_taxi]^7 sunset_sessions not started; rides run without framework mirroring.')
+        return
+    end
+    SessionsService = true
+    sessionsCall('RegisterActivity', 'taxi_ride', {
+        reconnect = 'ABANDON',
+        onEndEvent = 'sunset:taxi:frameworkRideEnded',
+    })
+end)
+
+-- NOTE: the 'sunset:taxi:frameworkRideEnded' handler lives next to
+-- cancelRideForParty (Lua upvalue scoping: handlers cannot reference locals
+-- declared later in the file).
+
+local function createRideSession(driverSource, driverCharId, passengerCharId, rideId)
+    if not SessionsService then return nil end
+    local s = sessionsCall('CreateSession', {
+        source = driverSource,
+        charId = driverCharId,
+        participants = { passengerCharId },
+        activity = 'taxi_ride',
+        timeoutSec = 3600,
+        data = { rideId = rideId },
+    })
+    return type(s) == 'table' and s.id or nil
+end
+
+local function endRideSession(rideId)
+    if not SessionsService then return end
+    for _, ride in pairs(Rides) do
+        if ride.id == rideId and ride.frameworkId then
+            sessionsCall('EndSession', ride.frameworkId, 'COMPLETED', 'ride ended')
+            ride.frameworkId = nil
+            return
+        end
+    end
+end
+
 
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
@@ -229,6 +288,12 @@ local function cancelRideForParty(ride, reason)
     if ride.status == 'completed' or ride.status == 'cancelled' or ride.status == 'settling' then return end
     ride.status = 'cancelled'
     stopMeter(ride.id)
+    if ride.frameworkId then
+        -- end WITHOUT re-entering cancelRideForParty (framework onEnd is guarded
+        -- by ride.status ~= 'cancelled' above)
+        sessionsCall('EndSession', ride.frameworkId, 'CANCELLED', reason or 'cancelled')
+        ride.frameworkId = nil
+    end
     for _, src in ipairs({ ride.driverSource, findSourceByCharacterId(ride.passengerCharId) }) do
         if src and GetPlayerName(src) then
             TriggerClientEvent('sunset:client:notify', src, reason, 'warning')
@@ -245,6 +310,17 @@ local function cancelRidesForSource(src, reason)
     local ride = rideForPassenger(char.id) or rideForDriver(char.id)
     if ride then cancelRideForParty(ride, reason) end
 end
+
+-- [SESSIONS] Framework ended a mirrored ride (downed/jail/drop/deadline):
+-- cancel the local ride so meter + UI stop for both parties.
+AddEventHandler('sunset:taxi:frameworkRideEnded', function(sess, state)
+    if type(sess) ~= 'table' then return end
+    local rideId = sess.data and sess.data.rideId
+    local ride = rideId and Rides[rideId] or nil
+    if ride and ride.status ~= 'completed' and ride.status ~= 'cancelled' and ride.status ~= 'settling' then
+        cancelRideForParty(ride, 'Ride ended - ' .. tostring(state or 'session closed'))
+    end
+end)
 
 AddEventHandler('sunset:death:playerDowned', function(src)
     cancelRidesForSource(src, 'Ride ended - a party is downed')
@@ -539,6 +615,11 @@ exports.sunset_core:RegisterCallback('sunset:taxiPickupPassenger', function(sour
     end
 
     ride.status = 'in_progress'
+    -- [SESSIONS] Mirror the live ride into the framework now that both parties
+    -- are known (driver accepted + passenger boarded).
+    if not ride.frameworkId then
+        ride.frameworkId = createRideSession(source, char.id, ride.passengerCharId, ride.id)
+    end
     TriggerClientEvent('sunset:client:notify', passengerSrc, 'You are on your way!', 'info')
     pushTaxiUpdate(passengerSrc)
 
@@ -606,6 +687,10 @@ exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
     end
     addSociety(companyCut)
     ride.status = 'completed'
+    if ride.frameworkId then
+        sessionsCall('EndSession', ride.frameworkId, 'COMPLETED', 'ride paid')
+        ride.frameworkId = nil
+    end
 
     local session = DriverSessionStats[char.id] or { rides = 0, earnings = 0 }
     session.rides = (session.rides or 0) + 1
@@ -695,6 +780,12 @@ AddEventHandler('playerDropped', function()
     if ride.status == 'completed' or ride.status == 'cancelled' then return end
 
     ride.status = 'cancelled'
+    -- [SESSIONS] Release the mirrored framework session (its own playerDropped
+    -- trigger may also fire; EndSession on a terminal session is a safe no-op).
+    if ride.frameworkId then
+        sessionsCall('EndSession', ride.frameworkId, 'PLAYER_DROPPED', 'disconnected')
+        ride.frameworkId = nil
+    end
     local otherSrc
     if ride.passengerCharId == char.id then
         otherSrc = ride.driverSource

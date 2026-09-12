@@ -13,7 +13,7 @@ shared_scripts {
     '@sunset_core/shared/utils.lua',
 }
 
-exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso', 'ApplyFactionOutfit', 'ApplyAllClothing', 'GetClothingSnapshot', 'ApplyClothingSnapshot' }
+exports { 'IsEditing', 'ApplyAppearance', 'ResolveTorso', 'ApplyFactionOutfit', 'ApplyAllClothing', 'GetClothingSnapshot', 'ApplyClothingSnapshot', 'RegisterClothingCollection', 'ApplyComponent' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',

@@ -174,6 +174,33 @@ local function sessionTests()
     end
 
     record('GetSessionBySource nil for offline', exports.sunset_sessions:GetSessionBySource(999999) == nil)
+
+    -- [MULTI-PARTY] taxi-style session: owner + participant
+    local multiActivity = 'td_multi_' .. tostring(os.time())
+    local endedMulti = 0
+    local multiEvent = 'td_multi_ended_' .. tostring(os.time())
+    AddEventHandler(multiEvent, function() endedMulti = endedMulti + 1 end)
+    local regOk = exports.sunset_sessions:RegisterActivity(multiActivity, {
+        reconnect = 'ABANDON', onEndEvent = multiEvent,
+    })
+    record('multi-party RegisterActivity', regOk == true)
+    if regOk then
+        local ms = exports.sunset_sessions:CreateSession({
+            source = 999995, charId = 999995,
+            participants = { 999994 },
+            activity = multiActivity, timeoutSec = 60,
+        })
+        record('multi-party CreateSession', ms ~= nil and type(ms) == 'table')
+        if type(ms) == 'table' then
+            record('participants stored', type(ms.participants) == 'table' and #ms.participants == 2)
+            local conf = exports.sunset_sessions:CreateSession({
+                source = 999993, charId = 999994, activity = multiActivity, timeoutSec = 60,
+            })
+            record('participant conflict refused', conf == nil)
+            exports.sunset_sessions:EndSession(ms.id, 'CANCELLED', 'test')
+            record('multi-party onEnd fired', endedMulti == 1)
+        end
+    end
 end
 
 -- ------------------------------------------------------------
