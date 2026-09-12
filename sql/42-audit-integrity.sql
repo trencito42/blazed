@@ -80,6 +80,10 @@ SET @stmt = IF(
     'DO 0');
 PREPARE s FROM @stmt; EXECUTE s; DEALLOCATE PREPARE s;
 
+-- turfs.owner_clan_id is signed INT while clans.id is INT UNSIGNED -> align.
+ALTER TABLE `turfs`
+    MODIFY `owner_clan_id` INT UNSIGNED DEFAULT NULL;
+
 SET @stmt = IF(
     (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'turfs'
