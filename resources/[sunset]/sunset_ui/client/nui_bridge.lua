@@ -184,6 +184,10 @@ forward('fishingShopBuy')
 forward('fishingShopSell')
 forward('fishingShopClose')
 
+-- Quest log panel (sunset_quests)
+forward('questLogClose')
+forward('questClaim')
+
 -- [AUDIT P8-07] battlepass.js posts these four callbacks but none were
 -- registered, so every fetch 404'd silently. Forward them (the real battlepass
 -- lives in sunset_pass; these keep the dormant sunset_ui modal from hanging and

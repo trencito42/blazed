@@ -27,6 +27,7 @@
 | Admin & permissions | **sunset_admin** | `IsAdmin(src, level)`, `GetAdminLevel`, ban enforcement at connect | admins, bans, admin_checkpoints, admin_stat_audit |
 | Chat & command routing | **sunset_chat** | `sunset:chat:runCommand` → router → `ExecutePlayerCommand` exports | — |
 | Phone | **sunset_phone** | send/contact callbacks | phone_messages, phone_contacts |
+| Quests & progression chains | **sunset_quests** | `StartQuest`, `AddProgress`, `CompleteObjective`, `IsQuestComplete`, `GetProgress`, `ClaimReward`; listens `sunset:quest:progress(charId, eventType, amount, ctx)` | character_quests |
 | Payday & taxes | **sunset_economy** | internal `processPayday` (queued, batched); event `sunset:payday:processed` | payday_runs |
 | Security/anti-cheat | **sunset_core/security** | `Sunset.Security.RateLimit` (exported as `RateLimit`), weapon strip, teleport flag, explosionEvent gate | — |
 
@@ -52,6 +53,7 @@
 | `sunset:server:factionChanged` | core SetFaction | factions main+detention | membership transitions |
 | `sunset:clans:dissolved` | clans | turfs | release turfs + abort wars |
 | `sunset:server:characterSelected` | core | police (hydrate), jobs, factions, many | character lifecycle |
+| `sunset:quest:progress` | jobs, licenses, dealership, help (future: economy, factions, properties) | quests | gameplay → quest progression (charId-based) |
 | `sunset:payday:processed` | economy | turfs (payout hook) | economy tick |
 | `sunset:nui:modalSuperseded` | sunset_ui bridge (from JS) | menu, properties, factions | clear stale open-flags |
 | `sunset:ui:ticketReceive` etc. | various servers | nui_bridge | UI open commands |

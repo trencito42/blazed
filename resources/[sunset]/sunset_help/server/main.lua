@@ -183,6 +183,11 @@ local function buildHelp(source)
 end
 
 exports.sunset_core:RegisterCallback('sunset:getHelp', function(source)
+    -- [QUESTS] onboarding chain: opening the help menu counts as orientation.
+    local ok, char = pcall(function() return exports.sunset_core:GetCharacter(source) end)
+    if ok and char and char.id then
+        TriggerEvent('sunset:quest:progress', char.id, 'help_opened', 1)
+    end
     return buildHelp(source)
 end)
 

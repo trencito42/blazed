@@ -40,6 +40,13 @@ function SunsetJobs_ClearSession(source, finalState, reason, options)
     session.endReason = reason
     Sessions[source] = nil
     TriggerClientEvent('sunset:jobs:sessionEnded', source, session.jobId, session.state, reason, options or {})
+    -- [QUESTS] first_job chain: a COMPLETED shift counts as progress.
+    if finalState == 'COMPLETED' then
+        local char = getChar(source)
+        if char and char.id then
+            TriggerEvent('sunset:quest:progress', char.id, 'job_shift_completed', 1, { jobId = session.jobId })
+        end
+    end
     return true
 end
 

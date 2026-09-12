@@ -199,6 +199,8 @@ exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(sour
     end
     exports.sunset_core:RefreshMoney(source)
 
+    -- [QUESTS] driving chain: first car purchase.
+    TriggerEvent('sunset:quest:progress', char.id, 'vehicle_purchased', 1, { model = model })
     return finish({ id = vehicleId, model = model, label = row.label, plate = plate, price = price })
 end)
 

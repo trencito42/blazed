@@ -268,7 +268,7 @@ const GAMEPLAY_MODAL_ROOTS = [
     '#faction-panel', '#faction-directory', '#clan-panel', '#clan-directory',
     '#business-panel', '#garage', '#fleet-garage', '#properties', '#emotes',
     '#clothing', '#wardrobe', '#phone-device', '#documents', '#dealership',
-    '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal',
+    '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal', '#quest-log',
     '#license-quiz-panel',
 ];
 
@@ -288,6 +288,7 @@ const MODAL_ACTION_ROOT = {
     dealershipShow: '#dealership', playerInteractionShow: '#player-interaction',
     craftingShow: '#crafting', appearanceShow: '#appearance-studio',
     battlepassShow: '#battlepass-modal', licenseQuizShow: '#license-quiz-panel',
+    questLogShow: '#quest-log',
 };
 
 // [AUDIT P8-12] When the single-modal rule force-hides a panel that owns a Lua

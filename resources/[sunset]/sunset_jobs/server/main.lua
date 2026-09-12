@@ -118,6 +118,8 @@ local function hireCivilianJob(source, jobId)
     exports.sunset_core:CommandReply(source,
         ('Hired as %s. Use /work to start.'):format(hiredLabel), 'success')
     TriggerClientEvent('sunset:jobs:waypointToWork', source, jobId)
+    -- [QUESTS] onboarding chain: first hire completes the objective.
+    TriggerEvent('sunset:quest:progress', char.id, 'job_hired', 1, { jobId = jobId })
     return true
 end
 

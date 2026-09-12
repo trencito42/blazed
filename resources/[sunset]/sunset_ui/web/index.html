@@ -2678,6 +2678,18 @@
         </div>
     </div>
 
+    <!-- QUEST LOG -->
+    <div id="quest-log" class="overlay-panel overlay-panel--peek hidden">
+        <div class="overlay-panel__box overlay-panel__box--wide help-panel">
+            <div class="help-header">
+                <h2>Quests</h2>
+                <span class="help-sub" id="quest-sub">Your progression</span>
+            </div>
+            <div id="quest-body" class="help-body"></div>
+            <button type="button" class="panel-close" id="quest-close">Close (ESC)</button>
+        </div>
+    </div>
+
     <!-- GARAGE -->
     <div id="garage" class="overlay-panel overlay-panel--peek hidden">
         <div class="overlay-panel__box overlay-panel__box--wide overlay-panel__box--garage">
@@ -3469,6 +3481,7 @@
     <script src="js/app.js?v=28"></script>
     <!-- [AUDIT P8-22] courier/job_shift were never linked; their HUD windows were dead code -->
     <script src="js/courier.js?v=1"></script>
+    <script src="js/quests.js?v=1"></script>
     <script src="js/job_shift.js?v=1"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>

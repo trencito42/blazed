@@ -193,11 +193,12 @@ const Panels = {
             if (e.key !== 'Escape') return;
             // [AUDIT P8-11] #ticket-receive added: the civilian citation window had
             // no close path, trapping NUI focus when PAY/REFUSE failed.
-            const panels = ['#ticket-receive', '#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#wardrobe', '#clothing'];
+            const panels = ['#quest-log', '#ticket-receive', '#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#wardrobe', '#clothing'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
                     const map = {
+                        '#quest-log': 'questLogClose',
                         '#ticket-receive': 'ticketReceiveClose',
                         '#fishing-shop': 'fishingShopClose',
                         '#mdc': 'mdcClose',

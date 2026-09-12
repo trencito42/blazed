@@ -253,6 +253,8 @@ function GrantLicense(source, licenseType, issuedByCharacterId)
         SunsetLicenses.Types[licenseType].label, expires), 'success')
     TriggerClientEvent('sunset:licenses:refresh', source)
     loadLicenseCache(source)
+    -- [QUESTS] driving chain: license acquisition progress.
+    TriggerEvent('sunset:quest:progress', cid, 'license_obtained', 1, { license = licenseType })
     return true
 end
 exports('GrantLicense', GrantLicense)
