@@ -80,12 +80,16 @@ local function getVehiclePrice(model)
         'SELECT price FROM dealership_vehicles WHERE model = ? AND available = 1 LIMIT 1',
         { tostring(model):lower() }
     )
+    -- [AUDIT ECONOMY] Was 18% of dealership price (~90k on an adder) with a 10s
+    -- cooldown — an unlimited money printer. Halved to 9% and unlisted range
+    -- reduced; combined with the 60s cooldown below this is a side income, not
+    -- a primary one.
     if row and tonumber(row.price) and tonumber(row.price) > 0 then
-        return math.floor(tonumber(row.price) * 0.18)
+        return math.floor(tonumber(row.price) * 0.09)
     end
     -- Unlisted / random spawn: fixed range based on hash parity (feels random but consistent per model)
     local hash = joaat and joaat(tostring(model)) or 0
-    return 600 + (hash % 1201) -- $600 – $1800
+    return 300 + (hash % 701) -- $300 – $1000
 end
 
 -- Chop-shop NPC positions (mirrored from client/main.lua). Server must own these so
@@ -120,8 +124,8 @@ exports.sunset_core:RegisterCallback('sunset:carjack:sell', function(source, dat
     if not netId then return false, 'Invalid vehicle data.' end
 
     local now = os.time()
-    if SellCooldown[source] and (now - SellCooldown[source]) < 10 then
-        return false, 'The buyer is still counting the last cash. Wait a moment.'
+    if SellCooldown[source] and (now - SellCooldown[source]) < 60 then
+        return false, 'The buyer is still counting the last cash. Come back in a minute.'
     end
 
     if not nearChopShop(source) then return false, 'You need to be at a chop shop.' end
@@ -164,7 +168,7 @@ exports.sunset_core:RegisterCallback('sunset:carjack:sell', function(source, dat
     if model then
         payout = getVehiclePrice(model)
     else
-        payout = 600 + (modelHash % 1201) -- unlisted car: $600-$1800, deterministic per model
+        payout = 300 + (modelHash % 701) -- unlisted car: $300-$1000, deterministic per model
     end
 
     DeleteEntity(veh)

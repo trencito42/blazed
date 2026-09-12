@@ -36,6 +36,10 @@ SunsetRobbery.Fence = {
         jewelry = 0.94,
         gold = 0.90,
     },
+    -- [AUDIT ECONOMY] Global fence haircut. Robbery used to pay 20-50x legal
+    -- hourly income; 0.5 halves all fence offers on top of demand/variance,
+    -- keeping crime profitable but no longer the dominant money path.
+    globalFactor = 0.5,
 }
 
 SunsetRobbery.LootTables = {
