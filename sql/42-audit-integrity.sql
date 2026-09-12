@@ -1,6 +1,8 @@
 -- 42: Audit integrity hardening (docs/audit/MASTER_AUDIT.md Phase 5)
 -- Adds missing constraints found by the production-readiness audit.
--- Safe to re-run only if the guards below pass; run once on live DB.
+-- IDEMPOTENT: safe to re-run (MariaDB IF NOT EXISTS / IF EXISTS guard clauses),
+-- because the fail-fast migration runner may have applied earlier statements
+-- of a previous failed attempt.
 
 -- P5-03/P5-25: container_inventory had no uniqueness: concurrent deposits of a
 -- new item created duplicate rows and racing slot numbers.
@@ -24,11 +26,11 @@ JOIN (
     AND c.`item` = d.`item` AND c.`id` <> d.keep_id;
 
 ALTER TABLE `container_inventory`
-    ADD UNIQUE KEY `uk_container_item` (`container_type`, `container_id`, `item`);
+    ADD UNIQUE KEY IF NOT EXISTS `uk_container_item` (`container_type`, `container_id`, `item`);
 
 -- P5-25: index for audit queries filtering by reason (money_transactions scans).
 ALTER TABLE `money_transactions`
-    ADD KEY `idx_reason` (`reason`);
+    ADD KEY IF NOT EXISTS `idx_reason` (`reason`);
 
 -- P5-09: orphan-prone ownership columns. SET NULL keeps rows alive but frees
 -- them for re-sale instead of being ghost-owned by deleted characters.
@@ -46,17 +48,22 @@ UPDATE `turfs` t LEFT JOIN `clans` cl ON cl.`id` = t.`owner_clan_id`
 SET t.`owner_clan_id` = NULL WHERE t.`owner_clan_id` IS NOT NULL AND cl.`id` IS NULL;
 
 ALTER TABLE `properties`
-    ADD CONSTRAINT `fk_property_owner` FOREIGN KEY (`owner_character_id`)
+    ADD CONSTRAINT IF NOT EXISTS `fk_property_owner` FOREIGN KEY (`owner_character_id`)
     REFERENCES `characters` (`id`) ON DELETE SET NULL;
 
 ALTER TABLE `player_businesses`
-    ADD CONSTRAINT `fk_business_owner` FOREIGN KEY (`owner_character_id`)
+    ADD CONSTRAINT IF NOT EXISTS `fk_business_owner` FOREIGN KEY (`owner_character_id`)
     REFERENCES `characters` (`id`) ON DELETE SET NULL;
 
+-- lottery_tickets.character_id was signed INT while characters.id is INT
+-- UNSIGNED -> errno 150 on FK creation. Align the column type first.
 ALTER TABLE `lottery_tickets`
-    ADD CONSTRAINT `fk_lottery_char` FOREIGN KEY (`character_id`)
+    MODIFY `character_id` INT UNSIGNED NOT NULL;
+
+ALTER TABLE `lottery_tickets`
+    ADD CONSTRAINT IF NOT EXISTS `fk_lottery_char` FOREIGN KEY (`character_id`)
     REFERENCES `characters` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `turfs`
-    ADD CONSTRAINT `fk_turf_clan` FOREIGN KEY (`owner_clan_id`)
+    ADD CONSTRAINT IF NOT EXISTS `fk_turf_clan` FOREIGN KEY (`owner_clan_id`)
     REFERENCES `clans` (`id`) ON DELETE SET NULL;
