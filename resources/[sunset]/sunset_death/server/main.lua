@@ -32,6 +32,12 @@ local function respawnPlayer(source, bill)
 
     char.is_dead = false
     Downed[source] = nil
+    -- [AUDIT 3-5.1] Release any property routing bucket before hospital respawn;
+    -- otherwise the player spawns at the hospital invisible to everyone.
+    if GetResourceState('sunset_properties') == 'started' then
+        pcall(function() exports.sunset_properties:LeaveProperty(source) end)
+    end
+    SetPlayerRoutingBucket(source, 0)
     local pos = hospitalSpawn(char)
     pcall(function() exports.sunset_core:SaveCharacter(source) end)
     TriggerClientEvent('sunset:death:forceHospital', source, pos, bill)
@@ -134,6 +140,13 @@ end
 
 RegisterNetEvent('sunset:server:playerDied', function()
     local source = source
+    -- [AUDIT P2-07] Verify the ped is actually downed server-side; a live player
+    -- must not be able to fake death to spam EMS dispatch or dodge activity.
+    local ped = GetPlayerPed(source)
+    if ped and ped ~= 0 then
+        if GetEntityHealth(ped) > 100 and not IsPedDeadOrDying(ped, true) then return end
+    end
+    if Downed[source] then return end
     local char = exports.sunset_core:GetCharacter(source)
     if char then char.is_dead = true end
     local now = os.time()
@@ -165,6 +178,11 @@ end)
 
 RegisterNetEvent('sunset:death:enteredDowned', function()
     local source = source
+    -- [AUDIT P2-07] Same server-side verification as playerDied.
+    local ped = GetPlayerPed(source)
+    if ped and ped ~= 0 then
+        if GetEntityHealth(ped) > 100 and not IsPedDeadOrDying(ped, true) then return end
+    end
     if not Downed[source] then
         local now = os.time()
         local dur = bleedoutDurationFor(source)
@@ -237,6 +255,12 @@ RegisterNetEvent('sunset:death:playerKilled', function(victimId)
 
     if isOnDutyPolice(killer) then return end
     if MurderWindow[victimId] then return end
+
+    -- [AUDIT P2-07] Only accept the client claim when it matches server-recorded
+    -- damage attribution (weaponDamageEvent -> recordAttacker). Without this any
+    -- client within 500m could frame an innocent player for murder.
+    local recorded = LastPvPAttacker[victimId]
+    if not recorded or recorded.attacker ~= killer then return end
 
     MurderWindow[victimId] = { killerId = killer, expires = os.time() + 60 }
     TriggerClientEvent('sunset:client:notify', victimId, 'You were attacked! You have 60 seconds to use /112 to call emergency services and report your attacker.', 'error', 10000)

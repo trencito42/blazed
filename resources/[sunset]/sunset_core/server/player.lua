@@ -43,23 +43,35 @@ function Sunset.SaveCharacter(source)
         end
     end
 
-    -- Refresh latest DB balances to avoid overwriting concurrent transactions
-    local currentDb = MySQL.single.await('SELECT cash, bank FROM characters WHERE id = ?', { char.id })
+    -- [AUDIT P5-05] cash/bank/level/xp/respect_points/paydays_received are NO
+    -- LONGER written here. They are owned by atomic server operations (guarded
+    -- UPDATEs, payday/buyLevel transactions). The previous SELECT-then-UPDATE
+    -- pattern could silently roll back any concurrent money/progress op.
+    -- [AUDIT P5-10] metadata: merge DB-authoritative keys (rob_points, quickslots)
+    -- over the cached blob so autosave can never erase them.
+    local currentDb = MySQL.single.await('SELECT cash, bank, metadata FROM characters WHERE id = ?', { char.id })
     if currentDb then
         if currentDb.cash ~= nil then char.cash = currentDb.cash end
         if currentDb.bank ~= nil then char.bank = currentDb.bank end
     end
 
+    char.metadata = type(char.metadata) == 'table' and char.metadata or {}
+    if currentDb and type(currentDb.metadata) == 'string' and currentDb.metadata ~= '' then
+        local ok, dbMeta = pcall(json.decode, currentDb.metadata)
+        if ok and type(dbMeta) == 'table' then
+            if dbMeta.rob_points ~= nil then char.metadata.rob_points = dbMeta.rob_points end
+            if dbMeta.quickslots ~= nil then char.metadata.quickslots = dbMeta.quickslots end
+        end
+    end
+
     MySQL.update.await([[
         UPDATE characters SET
-            cash = ?, bank = ?, job = ?, job_grade = ?,
+            job = ?, job_grade = ?,
             position = ?, appearance = ?, metadata = ?,
-            hunger = ?, thirst = ?, stress = ?, level = ?, xp = ?, respect_points = ?, paydays_received = ?,
+            hunger = ?, thirst = ?, stress = ?,
             is_dead = ?, home_property_id = ?, last_played = NOW()
         WHERE id = ? AND player_id = ?
     ]], {
-        char.cash or 0,
-        char.bank or 0,
         char.job or 'unemployed',
         char.job_grade or 0,
         position,
@@ -68,10 +80,6 @@ function Sunset.SaveCharacter(source)
         char.hunger or 100,
         char.thirst or 100,
         char.stress or 0,
-        char.level or 1,
-        char.xp or 0,
-        char.respect_points or 0,
-        char.paydays_received or 0,
         char.is_dead and 1 or 0,
         char.home_property_id,
         char.id,
@@ -547,7 +555,16 @@ function Sunset.SetSpawnPreference(source, choice, propertyId)
     else
         char.metadata.spawn_property_id = nil
     end
-    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(char.metadata), char.id })
+    -- [AUDIT P5-10] Targeted JSON_SET so other metadata keys survive (see SetRobPoints).
+    if char.metadata.spawn_property_id then
+        MySQL.update.await(
+            "UPDATE characters SET metadata = JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.spawn_choice', ?, '$.spawn_property_id', ?) WHERE id = ?",
+            { choice, char.metadata.spawn_property_id, char.id })
+    else
+        MySQL.update.await(
+            "UPDATE characters SET metadata = JSON_REMOVE(JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.spawn_choice', ?), '$.spawn_property_id') WHERE id = ?",
+            { choice, char.id })
+    end
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
 end
@@ -612,6 +629,20 @@ exports('RefreshMoney', Sunset.RefreshMoney)
 exports('SetJob', Sunset.SetJob)
 exports('SetFaction', Sunset.SetFaction)
 exports('AddXP', Sunset.AddXP)
+-- [AUDIT P6-05] Shared incapacitation gate: downed or jailed players must not
+-- keep economic agency (trade, give cash, buy, gamble) or spawn vehicles.
+function Sunset.IsIncapacitated(source)
+    if GetResourceState('sunset_death') == 'started' then
+        local ok, downed = pcall(function() return exports.sunset_death:IsPlayerDowned(source) end)
+        if ok and downed then return true, 'downed' end
+    end
+    if GetResourceState('sunset_factions') == 'started' then
+        local ok, state = pcall(function() return exports.sunset_factions:GetDetentionState(source) end)
+        if ok and tostring(state or ''):upper() == 'JAILED' then return true, 'jailed' end
+    end
+    return false
+end
+
 function Sunset.GetRobPoints(source)
     local char = Sunset.GetCharacter(source)
     if not char then return 0 end
@@ -625,7 +656,11 @@ function Sunset.SetRobPoints(source, value)
     value = math.max(0, math.floor(tonumber(value) or 0))
     char.metadata = type(char.metadata) == 'table' and char.metadata or {}
     char.metadata.rob_points = value
-    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(char.metadata), char.id })
+    -- [AUDIT P5-10] Targeted JSON_SET instead of rewriting the whole blob:
+    -- concurrent writers (quickslots, payday) keep their own keys.
+    MySQL.update.await(
+        "UPDATE characters SET metadata = JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.rob_points', ?) WHERE id = ?",
+        { value, char.id })
     TriggerClientEvent('sunset:client:updateCharacter', source, char)
     return true
 end
@@ -640,6 +675,7 @@ end
 
 exports('AddRespectPoints', Sunset.AddRespectPoints)
 exports('GetRobPoints', Sunset.GetRobPoints)
+exports('IsIncapacitated', Sunset.IsIncapacitated)
 exports('SetRobPoints', Sunset.SetRobPoints)
 exports('AddRobPoints', Sunset.AddRobPoints)
 exports('SetSpawnPreference', Sunset.SetSpawnPreference)

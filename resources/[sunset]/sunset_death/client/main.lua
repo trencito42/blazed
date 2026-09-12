@@ -13,6 +13,22 @@ local function cfg()
     return Sunset.Death or {}
 end
 
+-- [AUDIT P8-14] Force-close every modal UI and release NUI focus across death
+-- transitions: trade panels, inventory and phone used to survive respawn with a
+-- stuck cursor.
+local function closeAllModalUi()
+    pcall(function() TriggerEvent('sunset:client:inventoryForceClose') end)
+    pcall(function() TriggerEvent('sunset:phone:forceClose') end)
+    if GetResourceState('sunset_ui') == 'started' then
+        pcall(function()
+            exports.sunset_ui:Send('tradeHide', {})
+            exports.sunset_ui:Send('ticketReceiveHide', {})
+            exports.sunset_ui:Send('mdcHide', {})
+            exports.sunset_ui:SetFocus(false, false)
+        end)
+    end
+end
+
 local function doRespawn(coords, bill)
     if respawning then return end
     respawning = true
@@ -20,6 +36,7 @@ local function doRespawn(coords, bill)
     downed = false
     stabilized = false
     bleedoutEndsAt = 0
+    closeAllModalUi()
 
     local x = coords.x or 0.0
     local y = coords.y or 0.0
@@ -78,6 +95,7 @@ local function enterDownedState()
     dead = true
     stabilized = false
     bleedoutEndsAt = GetGameTimer() + ((cfg().soloBleedoutSeconds or 15) * 1000)
+    closeAllModalUi()
 
     local ped = getPed()
     NetworkResurrectLocalPlayer(GetEntityCoords(ped), GetEntityHeading(ped), true, false)

@@ -258,6 +258,9 @@ function ServiceCore.createServiceCall(source, callType, coords, metadata, descr
 
     metadata = metadata or {}
     description = description or ''
+    -- [AUDIT P8-02] Strip HTML-significant chars from caller-supplied descriptions
+    -- (defense-in-depth; the calls panel escapes at render time as well).
+    description = tostring(description):gsub('[<>"\']', ''):sub(1, 300)
     local isSystem = not source or source == 0 or metadata.system == true
 
     local char = not isSystem and getChar(source) or nil

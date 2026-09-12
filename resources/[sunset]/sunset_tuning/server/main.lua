@@ -58,17 +58,15 @@ local function saveTuneToVehicle(charId, plate, tune, cosmetics)
         props.cosmetics = SunsetTuning.SanitizeCosmetics(cosmetics)
     end
 
+    -- [AUDIT F6.2] This free dyno path must not rename plates: the check below was
+    -- non-transactional (race → duplicate plates) and skipped the vanity fee.
+    -- Plate changes are only allowed through the paid saveTune transaction.
     local newPlate = plate
     local vanity = props.cosmetics and props.cosmetics.plateText
     if vanity and vanity ~= '' then
         vanity = normalizePlate(vanity)
         if vanity ~= '' and vanity ~= plate then
-            local taken = MySQL.single.await(
-                'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND id != ? LIMIT 1',
-                { vanity, row.id }
-            )
-            if taken then return false, 'Numarul de inmatriculare este deja folosit', plate end
-            newPlate = vanity
+            props.cosmetics.plateText = nil -- strip attempted rename
         end
     end
 
@@ -150,18 +148,21 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
     local vanity = sanitizedCosmetics and normalizePlate(sanitizedCosmetics.plateText)
     if vanity and vanity ~= '' then newPlate = vanity end
     local failure
-    local committed = MySQL.startTransaction(function()
-        local lockedVehicle = MySQL.single.await(
+    -- [AUDIT F6.3] Every query inside startTransaction MUST go through the
+    -- transaction handle (query.*); global MySQL.* ran on pool connections outside
+    -- the transaction, voiding the FOR UPDATE locks and atomicity.
+    local committed = MySQL.startTransaction(function(query)
+        local lockedVehicle = query.single.await(
             'SELECT id, model, props FROM vehicles WHERE id = ? AND character_id = ? FOR UPDATE',
             { row.id, char.id })
         if not lockedVehicle then failure = 'Vehicle changed; reopen the tuning menu.' error('vehicle_missing') end
         if newPlate ~= plate then
-            local taken = MySQL.single.await(
+            local taken = query.single.await(
                 'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND id != ? LIMIT 1 FOR UPDATE',
                 { newPlate, row.id })
             if taken then failure = 'Numarul de inmatriculare este deja folosit.' error('plate_taken') end
         end
-        local lockedChar = MySQL.single.await('SELECT bank FROM characters WHERE id = ? FOR UPDATE', { char.id })
+        local lockedChar = query.single.await('SELECT bank FROM characters WHERE id = ? FOR UPDATE', { char.id })
         if not lockedChar or (tonumber(lockedChar.bank) or 0) < cost then
             failure = ('Need $%d in bank for ECU save.'):format(cost)
             error('insufficient_funds')
@@ -169,9 +170,9 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
         local latestProps = decodeProps(lockedVehicle.props)
         latestProps.ecu = SunsetTuning.IsStockTune(sanitized) and nil or sanitized
         latestProps.cosmetics = sanitizedCosmetics
-        if MySQL.update.await('UPDATE characters SET bank = bank - ? WHERE id = ? AND bank >= ?', { cost, char.id, cost }) ~= 1 then error('debit_failed') end
-        if MySQL.update.await('UPDATE vehicles SET props = ?, plate = ? WHERE id = ? AND character_id = ?', { json.encode(latestProps), newPlate, row.id, char.id }) ~= 1 then error('save_failed') end
-        MySQL.insert.await([[INSERT INTO money_transactions
+        if query.update.await('UPDATE characters SET bank = bank - ? WHERE id = ? AND bank >= ?', { cost, char.id, cost }) ~= 1 then error('debit_failed') end
+        if query.update.await('UPDATE vehicles SET props = ?, plate = ? WHERE id = ? AND character_id = ?', { json.encode(latestProps), newPlate, row.id, char.id }) ~= 1 then error('save_failed') end
+        query.insert.await([[INSERT INTO money_transactions
             (character_id, account, direction, amount, reason, balance_after)
             SELECT id, 'bank', 'out', ?, 'ecu_tune_save', bank FROM characters WHERE id = ?]], { cost, char.id })
     end)

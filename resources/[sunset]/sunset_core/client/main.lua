@@ -13,14 +13,21 @@ CreateThread(function()
     while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < uiDeadline do
         Wait(50)
     end
-    if GetResourceState('sunset_ui') == 'started' then
-        exports.sunset_ui:Show('handoff', {})
-        exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
-        Wait(80)
-        SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
-        Wait(380)
-    else
-        print('^1[sunset_core]^7 sunset_ui was not ready before loadscreen shutdown; login UI may need /fixlogin')
+    -- [AUDIT P8-24] Guard the handoff so a sunset_ui export error can never kill
+    -- this thread before ShutdownLoadingScreen (manual shutdown = stuck loadscreen).
+    local handoffOk, handoffErr = pcall(function()
+        if GetResourceState('sunset_ui') == 'started' then
+            exports.sunset_ui:Show('handoff', {})
+            exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
+            Wait(80)
+            SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
+            Wait(380)
+        else
+            print('^1[sunset_core]^7 sunset_ui was not ready before loadscreen shutdown; login UI may need /fixlogin')
+        end
+    end)
+    if not handoffOk then
+        print('^1[sunset_core]^7 loadscreen handoff failed: ' .. tostring(handoffErr))
     end
 
     ShutdownLoadingScreenNui()

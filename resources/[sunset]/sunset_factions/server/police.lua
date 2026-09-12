@@ -332,9 +332,17 @@ local function beginJail(targetId, seconds, reason, officerSource)
     JailedOnline[targetId] = { releaseAt = releaseAt, minutes = minutes, seconds = seconds, reason = reason }
     syncJailBag(targetId, { releaseAt = releaseAt, minutes = minutes })
 
+    -- [AUDIT P6-09] A jailed officer must not stay on duty: on-duty counts feed
+    -- robbery police presence, EMS bleedout timers and faction salary.
+    -- setDuty lives in main.lua; go through the internal force-duty-off event.
+    TriggerEvent('sunset:faction:forceDutyOff', targetId)
+
     if Detention then
         Detention.setJailed(targetId)
     end
+
+    -- [AUDIT P6-02] Notify cross-system listeners (taxi rides etc.) of jail intake.
+    TriggerEvent('sunset:faction:playerJailed', targetId)
 
     Detention.setCuffed(targetId, false)
     TriggerClientEvent('sunset:faction:uncuff', targetId)
@@ -345,11 +353,22 @@ local function beginJail(targetId, seconds, reason, officerSource)
     })
 
     local jail = Sunset.Police and Sunset.Police.jailCoords
-    TriggerClientEvent('sunset:police:jail', targetId, {
+    local jailPayload = {
         releaseAt = releaseAt,
         minutes = minutes,
         coords = jail and { x = jail.x, y = jail.y, z = jail.z, w = jail.w } or nil,
-    })
+    }
+    TriggerClientEvent('sunset:police:jail', targetId, jailPayload)
+    -- [AUDIT P6-04] The jail intake client event is one-shot: if it is lost
+    -- (client hitch during death capture, factions restart between downed-clear
+    -- and this call) the player is left not-downed AND not-jailed with no
+    -- recovery path. Re-send once; the client handler is idempotent, and skip
+    -- if the jail was already completed server-side meanwhile.
+    SetTimeout(3000, function()
+        if JailedOnline[targetId] and JailedOnline[targetId].releaseAt == releaseAt and GetPlayerName(targetId) then
+            TriggerClientEvent('sunset:police:jail', targetId, jailPayload)
+        end
+    end)
 end
 
 local function nearestOnDutyOfficer(targetId, range)
@@ -1126,6 +1145,23 @@ AddEventHandler('sunset:server:characterSelected', function(source, characterId)
     if characterId then
         Police.hydratePlayer(source, characterId)
     end
+end)
+
+-- [AUDIT P7-12] On factions restart, already-connected players never re-fire
+-- characterSelected, so wanted/jail state stayed lost until relog. Rehydrate
+-- every online player from DB after the resource starts.
+AddEventHandler('onResourceStart', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    CreateThread(function()
+        Wait(1500)
+        for _, pid in ipairs(GetPlayers()) do
+            local src = tonumber(pid)
+            local ok, char = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+            if ok and char and char.id then
+                pcall(Police.hydratePlayer, src, char.id)
+            end
+        end
+    end)
 end)
 
 AddEventHandler('sunset:death:playerDowned', function(victimSource)

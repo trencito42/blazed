@@ -220,6 +220,40 @@ local function broadcastDrivers(event, payload)
     end
 end
 
+-- [AUDIT P6-02] Cancel a ride for both parties and stop the meter. Previously a
+-- downed/jailed passenger wedged the ride permanently: the meter kept running,
+-- complete required destination proximity, and in_progress rides could not be
+-- cancelled by either side.
+local function cancelRideForParty(ride, reason)
+    if not ride then return end
+    if ride.status == 'completed' or ride.status == 'cancelled' or ride.status == 'settling' then return end
+    ride.status = 'cancelled'
+    stopMeter(ride.id)
+    for _, src in ipairs({ ride.driverSource, findSourceByCharacterId(ride.passengerCharId) }) do
+        if src and GetPlayerName(src) then
+            TriggerClientEvent('sunset:client:notify', src, reason, 'warning')
+            TriggerClientEvent('sunset:client:taxiRideEnded', src)
+            pushTaxiUpdate(src)
+        end
+    end
+    broadcastDrivers('sunset:client:taxiRideTaken', { id = ride.id })
+end
+
+local function cancelRidesForSource(src, reason)
+    local char = getChar(src)
+    if not char then return end
+    local ride = rideForPassenger(char.id) or rideForDriver(char.id)
+    if ride then cancelRideForParty(ride, reason) end
+end
+
+AddEventHandler('sunset:death:playerDowned', function(src)
+    cancelRidesForSource(src, 'Ride ended - a party is downed')
+end)
+
+AddEventHandler('sunset:faction:playerJailed', function(src)
+    cancelRidesForSource(src, 'Ride ended - a party was jailed')
+end)
+
 local function addSociety(amount)
     local cut = math.floor(amount or 0)
     if cut <= 0 then return end
@@ -543,6 +577,12 @@ exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
         return nil, 'Passenger is offline'
     end
 
+    -- [AUDIT P5-04] Mark the ride settling SYNCHRONOUSLY before any await:
+    -- two rapid complete callbacks both passed the 'in_progress' check while the
+    -- first RemoveMoney was still awaiting, double-charging the passenger and
+    -- double-paying the driver.
+    ride.status = 'settling'
+
     local amount = ride.meterFare or ride.fare or Sunset.Taxi.minFare
     stopMeter(ride.id)
     local cutRate = Sunset.Taxi.companyCut or 0.12
@@ -551,11 +591,19 @@ exports.sunset_core:RegisterCallback('sunset:taxiCompleteRide', function(source)
 
     if not exports.sunset_core:RemoveMoney(passengerSrc, 'cash', amount, 'taxi_ride') then
         if not exports.sunset_core:RemoveMoney(passengerSrc, 'bank', amount, 'taxi_ride') then
+            ride.status = 'in_progress'
             return nil, 'Passenger cannot pay'
         end
     end
 
-    exports.sunset_core:AddMoney(source, 'cash', driverPay, 'taxi_ride')
+    -- [AUDIT P5-18] The passenger was already debited; if the driver credit fails
+    -- the money would silently vanish. Retry once, then log loudly.
+    if not exports.sunset_core:AddMoney(source, 'cash', driverPay, 'taxi_ride') then
+        if not exports.sunset_core:AddMoney(source, 'cash', driverPay, 'taxi_ride_retry') then
+            print(('[taxi] CRITICAL: driver payout FAILED for char %d, amount %d — manual compensation required')
+                :format(char.id or 0, driverPay))
+        end
+    end
     addSociety(companyCut)
     ride.status = 'completed'
 
@@ -620,6 +668,20 @@ exports.sunset_core:RegisterCallback('sunset:taxiTip', function(source, amount)
         TriggerClientEvent('sunset:client:notify', driverSrc, ('Tip received: $%s'):format(amount), 'success')
     end
     return true
+end)
+
+-- [AUDIT P7-06] Terminal-state rides were never removed from the Rides table
+-- (completed + disconnect-cancelled), making every rideForPassenger/rideForDriver
+-- scan grow forever. Sweep them periodically.
+CreateThread(function()
+    while true do
+        Wait(300000)
+        for id, ride in pairs(Rides) do
+            if ride.status == 'completed' or ride.status == 'cancelled' then
+                Rides[id] = nil
+            end
+        end
+    end
 end)
 
 AddEventHandler('playerDropped', function()

@@ -83,7 +83,7 @@ local function pumpBrand(station)
     if label:find('LTD', 1, true) then return 'LTD GASOLINE' end
     if label:find('Ron', 1, true) then return 'RON GAS' end
     if label:find('Xero', 1, true) then return 'XERO GAS' end
-    return 'XODO FUEL INC.'
+    return 'SUNSET FUEL INC.'
 end
 
 local function worldTooltips()

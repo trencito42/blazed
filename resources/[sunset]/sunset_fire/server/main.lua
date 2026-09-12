@@ -83,6 +83,19 @@ local function spawnIncident()
     return serializeIncident(inc)
 end
 
+-- [AUDIT P7-06] Completed incidents were never removed from the table: with a
+-- new incident every 15 min this grows unbounded. Sweep terminal entries.
+CreateThread(function()
+    while true do
+        Wait(600000)
+        for id, inc in pairs(Incidents) do
+            if inc.status == 'completed' then
+                Incidents[id] = nil
+            end
+        end
+    end
+end)
+
 local function completeIncident(incidentId, source)
     local inc = Incidents[incidentId]
     if not inc or inc.status ~= 'active' then return false, 'Incident not active' end

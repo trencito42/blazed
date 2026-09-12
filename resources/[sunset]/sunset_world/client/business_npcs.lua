@@ -17,7 +17,7 @@ local function gasBrand(label)
     for prefix, style in pairs(GAS_STYLES) do
         if label:find(prefix, 1, true) then return style end
     end
-    return { badge = 'XODO FUEL INC.', shirt = 0 }
+    return { badge = 'SUNSET FUEL INC.', shirt = 0 }
 end
 
 local function notify(msg, typ)

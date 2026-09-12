@@ -250,6 +250,15 @@ exports('OpenVehicle', openVehicleMenu)
 exports('IsMenuOpen', function() return menuOpen end)
 exports('CloseMenu', closeMenu)
 
+-- [AUDIT P8-12] The shared NUI hides this panel when another modal opens;
+-- clear the open-flag (without touching focus, which the new modal owns).
+AddEventHandler('sunset:nui:modalSuperseded', function(panel)
+    if panel == 'menu' then
+        menuOpen = false
+        menuSoloMode = nil
+    end
+end)
+
 AddEventHandler('sunset:menu:refreshIfOpen', function()
     if not menuOpen then return end
     cachedExtras = nil

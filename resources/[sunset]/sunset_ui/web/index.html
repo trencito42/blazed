@@ -33,9 +33,8 @@
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/phone.css?v=2">
     <link rel="stylesheet" href="css/fuel-pump-forza.css?v=4">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700;1,800;1,900&family=JetBrains+Mono:wght@400;500;700;800&display=swap">
+    <!-- [AUDIT P7-05] Self-hosted fonts/icons (were remote Google Fonts + unpkg, blocking NUI first paint) -->
+    <link rel="stylesheet" href="assets/fonts/gfonts.css">
     <link rel="stylesheet" href="css/theme.css?v=9">
     <link rel="stylesheet" href="css/fishing.css?v=4">
     <link rel="stylesheet" href="css/license_test.css?v=7">
@@ -68,7 +67,8 @@
     <link rel="stylesheet" href="css/quick-hotbar.css?v=11">
     <link rel="stylesheet" href="css/inventory-forza.css?v=4">
     <link rel="stylesheet" href="css/world-tooltip.css?v=2">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="assets/phosphor/phosphor.css">
+    <link rel="stylesheet" href="css/courier.css">
 </head>
 <body>
     <div id="notifications" class="notifications"></div>
@@ -420,7 +420,7 @@
             <div class="nui-load-vignette"></div>
             <div class="hud-wrapper">
                 <div class="brand-container">
-                    <div class="brand-title">XODO <span>RP</span></div>
+                    <div class="brand-title">SUNSET <span>MP</span></div>
                     <div class="brand-subtitle">Est. 2026 &middot; Los Santos</div>
                 </div>
                 <div class="bottom-area">
@@ -477,7 +477,7 @@
             <div class="nui-load-vignette"></div>
             <div class="hud-wrapper">
                 <div class="brand-container">
-                    <div class="brand-title">XODO <span>RP</span></div>
+                    <div class="brand-title">SUNSET <span>MP</span></div>
                     <div class="brand-subtitle">Est. 2026 &middot; Los Santos</div>
                 </div>
                 <div class="bottom-area">
@@ -546,7 +546,7 @@
             <div class="auth-overlay"></div>
             <div id="auth-panel" class="auth-container active">
                 <header class="auth-header">
-                    <div class="auth-subtitle">Securitate XODO</div>
+                    <div class="auth-subtitle">Securitate SunsetMP</div>
                     <div class="auth-title" id="auth-main-title">Loghează-te</div>
                 </header>
                 <div class="auth-tabs hidden" aria-hidden="true">
@@ -612,7 +612,7 @@
                 <div id="auth-account-list" class="auth-identities-list auth-account-list"></div>
                 <div class="auth-footer">
                     <div class="server-status" id="auth-server-status"><i class="ph-fill ph-circle"></i> Server Online</div>
-                    <div class="build-version">blaze.mp — XODO Core Edition</div>
+                    <div class="build-version">blaze.mp — Sunset Core Edition</div>
                 </div>
             </div>
             <div id="auth-email-modal" class="auth-email-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-email-title">
@@ -3467,6 +3467,9 @@
 
     <script src="js/world-tooltip.js?v=4"></script>
     <script src="js/app.js?v=28"></script>
+    <!-- [AUDIT P8-22] courier/job_shift were never linked; their HUD windows were dead code -->
+    <script src="js/courier.js?v=1"></script>
+    <script src="js/job_shift.js?v=1"></script>
     <script src="js/characters.js"></script>
     <script src="js/forza_speedometer.js?v=2"></script>
     <script src="js/hud.js?v=9"></script>

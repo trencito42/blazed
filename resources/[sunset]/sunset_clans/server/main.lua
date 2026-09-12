@@ -798,6 +798,10 @@ local function handleClanManage(source, payload)
         local members = MySQL.query.await('SELECT character_id FROM clan_members WHERE clan_id = ?', { clanId }) or {}
         safeAudit(clanId, cid, 'dissolve', {})
         safeBroadcast(clanId, source, 'dissolved the clan.')
+        -- [AUDIT P6-12] End active turf wars and release turf ownership BEFORE the
+        -- clan row disappears (turfs.owner_clan_id has no FK; a dangling id left
+        -- the turf unattackable-as-neutral while payouts silently stopped).
+        TriggerEvent('sunset:clans:dissolved', clanId)
         MySQL.update.await('DELETE FROM clans WHERE id = ?', { clanId })
         for _, member in ipairs(members) do
             local src = sourceForChar(member.character_id)

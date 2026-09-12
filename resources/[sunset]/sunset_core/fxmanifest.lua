@@ -75,6 +75,7 @@ server_exports {
     'AddXP',
     'AddRespectPoints',
     'GetRobPoints',
+    'IsIncapacitated',
     'SetRobPoints',
     'AddRobPoints',
     'GetSpawnPosition',

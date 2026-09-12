@@ -264,7 +264,7 @@ const Chat = {
             if ((type === 'r' || type === 'd') && text && !/over\.?$/i.test(text.trim())) {
                 text = `${text.replace(/[.,\s]+$/, '')}, over.`;
             }
-            const header = [faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+            const header = [esc(faction), esc(rank), this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
             return {
                 badge: { label: channel, className: type === 'f' ? 'badge-peace' : (type === 'd' ? 'badge-dept' : 'badge-radio') },
                 author: { html: `${header}:`, className: 'color-dept' },
@@ -305,7 +305,7 @@ const Chat = {
         }
 
         if (type === 'faction_action' || type === 'faction_info') {
-            const header = [faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+            const header = [esc(faction), esc(rank), this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
             return {
                 badge: { label: 'FACTION', className: 'badge-peace' },
                 author: { html: `${header}:`, className: 'color-peace' },
@@ -485,7 +485,7 @@ const Chat = {
         const spyTag = m.spy
             ? `<span class="chat-spy-tag">SPY ${esc(String(m.spyChannel || 'CHAT'))}</span> `
             : '';
-        const header = [spyTag, faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+        const header = [spyTag, this.escapeHtml(faction), this.escapeHtml(rank), this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
         return `${timeHtml}<span class="chat-pill chat-pill--radio">${channel}</span> <span class="chat-row__who">${header}</span>: <span class="chat-row__msg">${esc(text)}</span>`;
     },
 
@@ -532,7 +532,7 @@ const Chat = {
         const spyTag = m.spy
             ? `<span class="chat-spy-tag">[SPY ${this.escapeHtml(String(m.spyChannel || 'CHAT'))}]</span> `
             : '';
-        const header = [spyTag, faction, rank, this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
+        const header = [spyTag, this.escapeHtml(faction), this.escapeHtml(rank), this.formatPlayerNameHtml(m)].filter(Boolean).join(' ');
         const time = this.formatTime(m);
         const prefix = time ? `${this.escapeHtml(time)} ` : '';
         const body = this.escapeHtml(text);

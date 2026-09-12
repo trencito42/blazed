@@ -196,6 +196,9 @@ local function resyncVictimTo(source, data)
     if not netId or netId == 0 then return end
     local victim = NetworkGetEntityFromNetworkId(netId)
     if not victim or victim == 0 then return end
+    -- [AUDIT 3-8.2] Only resync player peds: vehicles/objects return odd values
+    -- from GetEntityHealth that would be pushed into a client health-set event.
+    if GetEntityType(victim) ~= 1 or not IsPedAPlayer(victim) then return end
     TriggerClientEvent('sunset:combat:resyncPed', source, netId, GetEntityHealth(victim), GetPedArmour(victim))
 end
 
@@ -216,7 +219,7 @@ AddEventHandler('weaponDamageEvent', function(sender, data)
     local victimNet = tonumber(data.hitGlobalId)
     if victimNet and victimNet ~= 0 then
         local victimEnt = NetworkGetEntityFromNetworkId(victimNet)
-        if victimEnt and victimEnt ~= 0 then
+        if victimEnt and victimEnt ~= 0 and GetEntityType(victimEnt) == 1 and IsPedAPlayer(victimEnt) then
             local victimSrc = NetworkGetEntityOwner(victimEnt)
             if victimSrc and victimSrc > 0 and victimSrc ~= sender then
                 TriggerEvent('sunset:death:recordAttacker', victimSrc, sender)

@@ -88,22 +88,95 @@ local function getVehiclePrice(model)
     return 600 + (hash % 1201) -- $600 – $1800
 end
 
+-- Chop-shop NPC positions (mirrored from client/main.lua). Server must own these so
+-- the sale can be validated by proximity instead of trusting the client menu.
+local CHOP_SHOPS = {
+    vector3(835.6, -3001.4, 5.9),
+    vector3(-151.9, -1716.8, 29.3),
+    vector3(115.2, -1947.8, 20.8),
+}
+local CHOP_SELL_DIST = 8.0
+local SellCooldown = {}
+
+local function nearChopShop(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return false end
+    local pos = GetEntityCoords(ped)
+    for _, shop in ipairs(CHOP_SHOPS) do
+        if #(pos - shop) <= CHOP_SELL_DIST then return true end
+    end
+    return false
+end
+
+-- [AUDIT P2-01] CRIT: this callback used to pay out purely from client-sent model+netId
+-- with zero validation, allowing unlimited money minting at 12 calls/sec. It now
+-- resolves the entity server-side and enforces: driver seat, chop-shop proximity,
+-- cooldown, vehicle is not player-owned, not a protected/faction vehicle, then deletes it.
 exports.sunset_core:RegisterCallback('sunset:carjack:sell', function(source, data)
     local char = getChar(source)
     if not char then return false, 'Character not loaded.' end
 
-    local model  = tostring(type(data) == 'table' and data.model or ''):lower()
-    local netId  = tonumber(type(data) == 'table' and data.netId)
-    if model == '' or not netId then return false, 'Invalid vehicle data.' end
+    local netId = tonumber(type(data) == 'table' and data.netId)
+    if not netId then return false, 'Invalid vehicle data.' end
 
-    local payout = getVehiclePrice(model)
+    local now = os.time()
+    if SellCooldown[source] and (now - SellCooldown[source]) < 10 then
+        return false, 'The buyer is still counting the last cash. Wait a moment.'
+    end
+
+    if not nearChopShop(source) then return false, 'You need to be at a chop shop.' end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return false, 'Character not loaded.' end
+
+    local veh = NetworkGetEntityFromNetworkId(netId)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return false, 'That vehicle is gone.' end
+    if GetVehicleClass(veh) == -1 then return false, 'Invalid vehicle data.' end
+    if GetPedInVehicleSeat(veh, -1) ~= ped then return false, 'You must be driving the vehicle.' end
+
+    local entityState = Entity(veh).state
+    if entityState:get('sunsetProtectedVehicle') or entityState:get('sunsetFactionVehicle') then
+        return false, 'Nobody will touch that vehicle.'
+    end
+
+    local plate = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
+
+    -- Player-owned vehicles must go through the garage/insurance flow, not the chop shop.
+    if plate ~= '' then
+        local owned = MySQL.scalar.await(
+            'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? LIMIT 1',
+            { plate }
+        )
+        if owned then return false, 'The buyer does not want a registered car.' end
+    end
+
+    -- The client may send a model name, but it is only trusted if its hash matches the
+    -- actual server-side entity model. Otherwise fall back to the unlisted-car range.
+    local modelHash = GetEntityModel(veh)
+    local model = tostring(type(data) == 'table' and data.model or ''):lower()
+    if model == '' or GetHashKey(model) ~= modelHash then
+        model = nil
+    end
+
+    SellCooldown[source] = now
+
+    local payout
+    if model then
+        payout = getVehiclePrice(model)
+    else
+        payout = 600 + (modelHash % 1201) -- unlisted car: $600-$1800, deterministic per model
+    end
+
+    DeleteEntity(veh)
+
     exports.sunset_core:AddMoney(source, 'cash', payout, 'carjack_sale')
-
-    -- Give some lockpicking XP for a successful delivery
     addLockpickXP(source, 50)
 
-    -- Log it
-    print(('[carjack] %s sold %s for $%d'):format(GetPlayerName(source), model, payout))
+    print(('[carjack] %s sold a vehicle (hash %d) for $%d'):format(GetPlayerName(source) or '?', modelHash, payout))
 
     return true, payout
+end)
+
+AddEventHandler('playerDropped', function()
+    SellCooldown[source] = nil
 end)

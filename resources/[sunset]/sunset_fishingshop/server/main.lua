@@ -44,16 +44,35 @@ local function decodeMetadata(raw)
 end
 
 local function fishUnitValue(fishItem, metadata)
+    local range = FISH_PRICES[fishItem]
+    local cap = range and range.max or 0
     local meta = decodeMetadata(metadata)
     if meta then
         local value = tonumber(meta.value)
-        if value and value > 0 then return math.floor(value) end
+        if value and value > 0 then
+            -- [AUDIT P2-09] Clamp to the configured price range: metadata travels
+            -- through trades verbatim, so an attacker-influenced value must never
+            -- pay above the legitimate maximum.
+            return math.min(math.floor(value), cap)
+        end
         local kg = tonumber(meta.fishKg)
-        if kg and kg > 0 then return math.floor(kg * 10) end
+        if kg and kg > 0 then return math.min(math.floor(kg * 10), cap) end
     end
-    local range = FISH_PRICES[fishItem]
     if not range then return 0 end
     return math.floor((range.min + range.max) / 2)
+end
+
+-- [AUDIT P2-09] Fish sale proximity: must be at a 24/7 store (or Billy Ray).
+local FISH_SELL_DIST = 12.0
+local function nearFishBuyer(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return false end
+    local pos = GetEntityCoords(ped)
+    if #(pos - BILLY_RAY_COORDS) <= FISH_SELL_DIST then return true end
+    for _, store in ipairs(Sunset.TwentyFourSevenStores or {}) do
+        if #(pos - store.coords) <= FISH_SELL_DIST then return true end
+    end
+    return false
 end
 
 local function nearBillyRay(source, maxDist)
@@ -180,6 +199,9 @@ end)
 
 -- ── Vinde peste selectat din cos (fishing shop UI) ────────────
 exports.sunset_core:RegisterCallback('sunset:fishingshop:sellCart', function(source, cart)
+    if not nearFishBuyer(source) then
+        return nil, 'You need to be at a 24/7 store or Billy Ray to sell fish.'
+    end
     if not cart or type(cart) ~= 'table' or #cart == 0 then
         return nil, 'Sell cart is empty.'
     end
@@ -230,6 +252,9 @@ end)
 
 -- ── Vinde tot pestele la 24/7 (legacy — pastrat pentru compatibilitate) ──
 exports.sunset_core:RegisterCallback('sunset:fishingshop:sellFish247', function(source)
+    if not nearFishBuyer(source) then
+        return nil, 'You need to be at a 24/7 store or Billy Ray to sell fish.'
+    end
     local total = 0
     local sold  = {}
 

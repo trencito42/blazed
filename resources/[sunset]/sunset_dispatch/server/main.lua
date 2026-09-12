@@ -170,7 +170,11 @@ local function create112Call(source, category, description, street, area)
 
     description = tostring(description or ''):gsub('^%s*(.-)%s*$', '%1')
     if description == '' then description = 'Citizen reported 112 emergency' end
-    description = description:sub(1, 300)
+    -- [AUDIT P8-01] Strip HTML-significant chars (defense-in-depth on top of the
+    -- client-side escaping): these strings are rendered in the MDC/calls panels.
+    description = description:gsub('[<>"\']', ''):sub(1, 300)
+    if type(street) == 'string' then street = street:gsub('[<>"\']', ''):sub(1, 80) end
+    if type(area) == 'string' then area = area:gsub('[<>"\']', ''):sub(1, 80) end
 
     local ped = GetPlayerPed(source)
     local pCoords = (ped and ped ~= 0) and GetEntityCoords(ped) or vector3(0, 0, 0)

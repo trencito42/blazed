@@ -138,8 +138,8 @@ exports.sunset_core:RegisterCallback('sunset:craftItem', function(source, statio
     end
 
     local failure
-    local crafted = MySQL.startTransaction(function()
-        local rows = MySQL.query.await(
+    local crafted = MySQL.startTransaction(function(query)
+        local rows = query.await(
             'SELECT id, item, count, slot, metadata FROM character_inventory WHERE character_id = ? ORDER BY id FOR UPDATE',
             { char.id }) or {}
         local totals, used, currentWeight = {}, {}, 0
@@ -173,10 +173,10 @@ exports.sunset_core:RegisterCallback('sunset:craftItem', function(source, statio
                     local take = math.min(remaining, tonumber(row.count) or 0)
                     if take > 0 then
                         if take == tonumber(row.count) then
-                            if MySQL.update.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ?', { row.id, char.id }) ~= 1 then error('consume_failed') end
+                            if query.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ?', { row.id, char.id }) ~= 1 then error('consume_failed') end
                             used[tonumber(row.slot)] = nil
                         else
-                            if MySQL.update.await('UPDATE character_inventory SET count = count - ? WHERE id = ? AND character_id = ? AND count >= ?', { take, row.id, char.id, take }) ~= 1 then error('consume_failed') end
+                            if query.await('UPDATE character_inventory SET count = count - ? WHERE id = ? AND character_id = ? AND count >= ?', { take, row.id, char.id, take }) ~= 1 then error('consume_failed') end
                         end
                         remaining = remaining - take
                     end
@@ -190,7 +190,7 @@ exports.sunset_core:RegisterCallback('sunset:craftItem', function(source, statio
             if row.item == out.item and (row.metadata == nil or row.metadata == '') then stack = row break end
         end
         if stack then
-            if MySQL.update.await('UPDATE character_inventory SET count = count + ? WHERE id = ? AND character_id = ?', { outCount, stack.id, char.id }) ~= 1 then error('output_failed') end
+            if query.await('UPDATE character_inventory SET count = count + ? WHERE id = ? AND character_id = ?', { outCount, stack.id, char.id }) ~= 1 then error('output_failed') end
         else
             local freeSlot
             for slot = 1, tonumber(Sunset.Config.MaxSlots) or 30 do
@@ -200,7 +200,7 @@ exports.sunset_core:RegisterCallback('sunset:craftItem', function(source, statio
                 failure = 'Your inventory has no free slot for the crafted output. Nothing was consumed.'
                 error('no_slot')
             end
-            if not MySQL.insert.await('INSERT INTO character_inventory (character_id, item, count, slot) VALUES (?, ?, ?, ?)', { char.id, out.item, outCount, freeSlot }) then error('output_failed') end
+            if not query.insert.await('INSERT INTO character_inventory (character_id, item, count, slot) VALUES (?, ?, ?, ?)', { char.id, out.item, outCount, freeSlot }) then error('output_failed') end
         end
     end)
     if not crafted then

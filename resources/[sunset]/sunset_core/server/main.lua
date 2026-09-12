@@ -5,6 +5,8 @@ local CallbackRate = {}
 local CallbackNameRate = {}
 local FlowTraceRate = {}
 local EXPENSIVE_CALLBACK_LIMITS = {
+    ['sunset:authLogin'] = 2,
+    ['sunset:authQuickLogin'] = 2,
     ['sunset:getInventory'] = 4,
     ['sunset:getPhoneData'] = 3,
     ['sunset:getScoreboard'] = 4,
@@ -103,6 +105,11 @@ end
 
 RegisterNetEvent('sunset:server:playerLoaded', function()
     local source = source
+    -- [AUDIT P2-03] Ignore replays: an authenticated client must never be able to
+    -- reset its own session flag mid-game (account hopping / unsaved character swap).
+    local existing = Sessions[source]
+    if existing and existing.authenticated then return end
+
     local license = getLicense(source)
     if not license then
         DropPlayer(source, 'Could not verify your game license.')
@@ -146,6 +153,20 @@ local function completeAuthentication(source, accountId, username)
             Players[otherSrc] = nil
             Sessions[otherSrc] = nil
         end
+    end
+
+    -- [AUDIT P2-03] Defensive: if a stale live session exists on this source,
+    -- persist it before it is replaced so progress/items are never silently lost.
+    local stale = Players[source]
+    if stale then
+        if stale.character then Sunset.SaveCharacter(source) end
+        if stale.sessionStart then
+            local mins = math.max(0, math.floor((os.time() - stale.sessionStart) / 60))
+            if mins > 0 and stale.id then
+                MySQL.update.await('UPDATE players SET playtime = playtime + ? WHERE id = ?', { mins, stale.id })
+            end
+        end
+        Players[source] = nil
     end
 
     local license = session.license
@@ -376,6 +397,7 @@ AddEventHandler('playerDropped', function()
     Sessions[source] = nil
     CallbackRate[source] = nil
     CallbackNameRate[source] = nil
+    FlowTraceRate[source] = nil -- [AUDIT P7-06] was leaking per source
 end)
 
 -- ═══ CHARACTER CALLBACKS ═══
@@ -481,8 +503,52 @@ end)
 RegisterCallback('sunset:deleteCharacter', function(source, charId)
     local player = GetPlayer(source)
     if not player then return false, 'Not logged in' end
+    charId = tonumber(charId)
+    if not charId then return false, 'Invalid character' end
+
+    -- [AUDIT P5-09] Never delete the currently loaded character: the live cache
+    -- would point at a dead row and all subsequent writes would silently no-op.
+    if player.character and tonumber(player.character.id) == charId then
+        return false, 'You cannot delete the character you are playing. Switch characters first.'
+    end
+
+    -- [AUDIT P5-09] Release orphan-prone ownership before the delete (tables
+    -- without FK cascades: properties, player_businesses, clans, turfs, lottery).
+    MySQL.update.await('UPDATE properties SET owner_character_id = NULL, enabled = 0 WHERE owner_character_id = ?', { charId })
+    MySQL.update.await('UPDATE player_businesses SET owner_character_id = NULL, for_sale = 0, balance = 0 WHERE owner_character_id = ?', { charId })
+    MySQL.update.await('UPDATE characters SET home_property_id = NULL WHERE home_property_id IN (SELECT id FROM properties WHERE owner_character_id IS NULL AND enabled = 0)')
+    MySQL.update.await('UPDATE turfs SET owner_clan_id = NULL WHERE owner_clan_id IN (SELECT id FROM clans WHERE owner_character_id = ?)', { charId })
+    MySQL.update.await('DELETE FROM clans WHERE owner_character_id = ?', { charId })
+    MySQL.update.await('DELETE FROM lottery_tickets WHERE character_id = ?', { charId })
+
     local affected = MySQL.update.await('DELETE FROM characters WHERE id = ? AND player_id = ?', { charId, player.id })
+
+    if affected and affected > 0 then
+        -- [AUDIT P6-07] Drop any in-memory vehicle key grants for the deleted character.
+        if GetResourceState('sunset_vehicles') == 'started' then
+            pcall(function() exports.sunset_vehicles:ClearKeysForCharacter(charId) end)
+        end
+    end
     return affected > 0
+end)
+
+-- [AUDIT P5-08] Persist every loaded character on resource stop so a core
+-- restart (or controlled server shutdown) never drops up to 60s of player state.
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    for src, player in pairs(Players) do
+        if player and player.character then
+            pcall(function() Sunset.SaveCharacter(src) end)
+        end
+        if player and player.sessionStart and player.id then
+            local mins = math.max(0, math.floor((os.time() - player.sessionStart) / 60))
+            if mins > 0 then
+                pcall(function()
+                    MySQL.update.await('UPDATE players SET playtime = playtime + ? WHERE id = ?', { mins, player.id })
+                end)
+            end
+        end
+    end
 end)
 
 CreateThread(function()

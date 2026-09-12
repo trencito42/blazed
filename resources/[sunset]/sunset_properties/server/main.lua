@@ -333,6 +333,18 @@ local function enter(source,id)
     if not char then return nil,'Character data is unavailable.' end
     if not prop or not dbBool(prop.enabled) then return nil,'This house is disabled. Ask an administrator to enable it.' end
     if not nearby(source,prop) then return nil,'Stand inside the entrance marker to enter.' end
+    -- [AUDIT P6-10] A cuffed/escorted/downed suspect must not escape into a house
+    -- routing bucket; nothing releases the escort attach on property enter.
+    if GetResourceState('sunset_factions')=='started' then
+        local ok,cuffed=pcall(function() return exports.sunset_factions:IsCuffed(source) end)
+        if ok and cuffed then return nil,'You cannot enter a house while cuffed.' end
+        local ok2,det=pcall(function() return exports.sunset_factions:GetDetentionState(source) end)
+        if ok2 and tostring(det or ''):upper()=='ESCORTED' then return nil,'You cannot enter a house while being escorted.' end
+    end
+    if GetResourceState('sunset_death')=='started' then
+        local ok3,downed=pcall(function() return exports.sunset_death:IsPlayerDowned(source) end)
+        if ok3 and downed then return nil,'You cannot enter a house while downed.' end
+    end
     if dbBool(prop.locked) and not accessible(char,prop) then return nil,'The door is locked. Only the owner and active renters may enter.' end
     local preset=SunsetProperties.Interiors[prop.interior]
     local interior=preset and preset.coords or decodePos(prop.interior_pos)
@@ -574,6 +586,20 @@ RegisterNetEvent('sunset:server:exitProperty',function()
     local prop=property(id); Inside[src]=nil; SetPlayerRoutingBucket(src,0); Player(src).state:set('sunsetPropertyExit',nil,false)
     if prop then TriggerClientEvent('sunset:client:propertyExited',src,{id=prop.id,entry=decodePos(prop.exit_pos) or decodePos(prop.entry)}) end
 end)
+-- [AUDIT 3-5.1] Server export so death/hospital respawn, jail intake and admin
+-- teleports can release a player from a house routing bucket. Without this a
+-- downed player respawned at the hospital still inside their bucket (invisible).
+exports('LeaveProperty', function(src)
+    src = tonumber(src)
+    if not src or not Inside[src] then return false end
+    Inside[src] = nil
+    SetPlayerRoutingBucket(src, 0)
+    if GetPlayerName(src) then
+        Player(src).state:set('sunsetPropertyExit', nil, false)
+    end
+    return true
+end)
+
 AddEventHandler('playerDropped',function() Inside[source]=nil end)
 AddEventHandler('onResourceStop',function(resource)
     if resource~=GetCurrentResourceName() then return end

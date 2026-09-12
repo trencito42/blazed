@@ -31,6 +31,9 @@ setr voice_enableUi 0
 setr voice_enableRadios 1
 setr voice_enablePhones 1
 setr voice_defaultCycle Z
+# OneSync - required: server-side entity authority for damage gating and lookups
+set onesync on
+set onesync_population false
 setr sv_stateBagStrictMode true
 
 # ox_inventory optional — enable after bridge migration

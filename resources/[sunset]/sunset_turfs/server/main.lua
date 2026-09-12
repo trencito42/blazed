@@ -18,9 +18,21 @@ local function refreshChatCommands()
     end)
 end
 
+-- [AUDIT P7-01] The war ticker called this per-player-per-second (~20-40 blocking
+-- queries/s during a busy war). Cache results per character for 30s; membership
+-- changes mid-war are reflected within the TTL, which is acceptable for scoring.
+local ClanCache = {}
+local CLAN_CACHE_TTL = 30
+
 local function getPlayerClan(src)
     local char = exports.sunset_core:GetCharacter(src)
     if not char then return nil end
+
+    local now = os.time()
+    local cached = ClanCache[char.id]
+    if cached and (now - cached.at) < CLAN_CACHE_TTL then
+        return cached.row
+    end
 
     local row = MySQL.single.await([[
         SELECT cm.clan_id, cm.rank, c.name, c.tag, c.tag_color
@@ -29,8 +41,14 @@ local function getPlayerClan(src)
         WHERE cm.character_id = ?
         LIMIT 1
     ]], { char.id })
+    ClanCache[char.id] = { row = row, at = now }
     return row
 end
+
+AddEventHandler('playerDropped', function()
+    local ok, char = pcall(function() return exports.sunset_core:GetCharacter(source) end)
+    if ok and char and char.id then ClanCache[char.id] = nil end
+end)
 
 local function loadTurfsFromDb()
     local rows = MySQL.query.await([[
@@ -80,6 +98,8 @@ end
 
 RegisterNetEvent('sunset:turfs:requestSync', function()
     local src = source
+    -- [AUDIT P2-10] Full turf+war state dump per call: throttle to prevent DoS amplification.
+    if not exports.sunset_core:RateLimit(src, 'turfsSync', 5000) then return end
     syncTurfsToClient(src)
     for turfId, war in pairs(ActiveWars) do
         TriggerClientEvent('sunset:turfs:warStart', src, war)
@@ -312,6 +332,36 @@ RegisterCommand('atac', function(source)
 end, false)
 
 -- Kill hook inside turf wars
+-- [AUDIT P6-12] A dissolved clan must lose its turfs and any wars it is in.
+AddEventHandler('sunset:clans:dissolved', function(clanId)
+    clanId = tonumber(clanId)
+    if not clanId then return end
+    for turfId, war in pairs(ActiveWars) do
+        if tonumber(war.attackerClanId) == clanId or tonumber(war.defenderClanId) == clanId then
+            -- No ownership change: simply abort the war (both parties gone/invalid).
+            ActiveWars[turfId] = nil
+            TurfCooldowns[turfId] = os.time() + SunsetTurfs.TurfCooldownSec
+            TriggerClientEvent('sunset:turfs:warEnd', -1, {
+                turfId = turfId,
+                turfName = Turfs[turfId] and Turfs[turfId].name or '?',
+                winnerName = nil, winnerTag = nil,
+                attackerScore = war.attackerScore or 0,
+                defenderScore = war.defenderScore or 0,
+            })
+        end
+    end
+    MySQL.update.await('UPDATE turfs SET owner_clan_id = NULL WHERE owner_clan_id = ?', { clanId })
+    for _, turf in pairs(Turfs) do
+        if tonumber(turf.ownerClanId) == clanId then
+            turf.ownerClanId = nil
+            turf.ownerName = nil
+            turf.ownerTag = nil
+            turf.ownerColor = nil
+        end
+    end
+    syncTurfsToClient(-1)
+end)
+
 AddEventHandler('sunset:death:recordAttacker', function(victimSrc, attackerSrc)
     victimSrc = tonumber(victimSrc)
     attackerSrc = tonumber(attackerSrc)

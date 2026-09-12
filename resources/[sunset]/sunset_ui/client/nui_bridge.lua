@@ -5,6 +5,22 @@ local function forward(name)
     end)
 end
 
+-- [AUDIT UI-HANG] Failsafe: when the JS explicitly asks to close the shared
+-- player-interaction menu, guarantee the panel hides and focus is released even
+-- if the owning resource's handler no-ops or errors. Resources that close the
+-- menu themselves just trigger a redundant (harmless) hide.
+RegisterNUICallback('playerInteractionClose', function(_, cb)
+    local ok, err = pcall(function()
+        TriggerEvent('sunset:nui:playerInteractionClose', {})
+    end)
+    if not ok then
+        print(('[sunset_ui] playerInteractionClose handler error: %s'):format(tostring(err)))
+    end
+    Send('playerInteractionHide', {})
+    ReleaseFocusUnlessModal()
+    cb('ok')
+end)
+
 forward('select')
 forward('create')
 forward('delete')
@@ -69,6 +85,7 @@ forward('mdcBookingGps')
 forward('submit112Call')
 forward('close112Modal')
 forward('ticketClose')
+forward('ticketReceiveClose')
 forward('ticketIssue')
 forward('ticketPay')
 forward('ticketRefuse')
@@ -158,7 +175,6 @@ forward('appearanceRotate')
 forward('appearanceGender')
 forward('licenseQuizClose')
 forward('licenseQuizSubmit')
-forward('playerInteractionClose')
 forward('playerInteractionAction')
 forward('playerInteractionHoldComplete')
 forward('fuelPumpCheckout')
@@ -167,6 +183,18 @@ forward('fuelPumpPumpStop')
 forward('fishingShopBuy')
 forward('fishingShopSell')
 forward('fishingShopClose')
+
+-- [AUDIT P8-07] battlepass.js posts these four callbacks but none were
+-- registered, so every fetch 404'd silently. Forward them (the real battlepass
+-- lives in sunset_pass; these keep the dormant sunset_ui modal from hanging and
+-- guarantee battlepassClose releases focus).
+forward('battlepassClaim')
+forward('missionClaim')
+forward('battlepassBuyPremium')
+forward('battlepassClose')
+AddEventHandler('sunset:nui:battlepassClose', function()
+    SetFocus(false, false)
+end)
 
 RegisterNUICallback('licenseQuizAnswer', function(data, cb)
     data = type(data) == 'table' and data or {}
@@ -188,6 +216,16 @@ RegisterNUICallback('licenseQuizAnswer', function(data, cb)
             correct = type(result) == 'table' and result.correct == true,
         })
     end, licenseType, questionIndex, answer)
+end)
+
+-- [AUDIT P8-12] JS posts this when the single-modal rule force-hides a panel
+-- that owns a Lua open-flag; broadcast so the owning resource clears its flag.
+RegisterNUICallback('modalSuperseded', function(data, cb)
+    local panel = type(data) == 'table' and data.panel or nil
+    if panel then
+        TriggerEvent('sunset:nui:modalSuperseded', panel)
+    end
+    cb('ok')
 end)
 
 RegisterNUICallback('hudEditSave', function(data, cb)
@@ -215,9 +253,21 @@ RegisterNetEvent('sunset:ui:announcement', function(data)
     Send('announcementShow', data or {})
 end)
 
+local ticketReceiveOpen = false
+
 RegisterNetEvent('sunset:ui:ticketReceive', function(data)
     Send('ticketReceiveShow', data or {})
     SetFocus(true, true)
+    -- [AUDIT P8-11] Safety net: auto-close the citation window after 120s so a
+    -- dropped/expired ticket can never trap NUI focus indefinitely.
+    ticketReceiveOpen = true
+    SetTimeout(120000, function()
+        if ticketReceiveOpen then
+            ticketReceiveOpen = false
+            Send('ticketReceiveHide', {})
+            SetFocus(false, false)
+        end
+    end)
 end)
 
 RegisterNetEvent('sunset:ui:serviceCalls', function(data)
@@ -410,11 +460,19 @@ AddEventHandler('sunset:nui:submit112Call', function(data)
 end)
 
 AddEventHandler('sunset:nui:ticketPay', function(data)
+    ticketReceiveOpen = false
     TriggerEvent('sunset:ui:ticketPayRequest', data)
 end)
 
 AddEventHandler('sunset:nui:ticketRefuse', function(data)
+    ticketReceiveOpen = false
     TriggerEvent('sunset:ui:ticketRefuseRequest', data)
+end)
+
+AddEventHandler('sunset:nui:ticketReceiveClose', function()
+    ticketReceiveOpen = false
+    Send('ticketReceiveHide', {})
+    SetFocus(false, false)
 end)
 
 AddEventHandler('sunset:nui:serviceCallsAccept', function(data)

@@ -97,11 +97,61 @@ function SunsetContainers.RemoveItem(containerType, containerId, item, count)
     return true
 end
 
+-- [AUDIT P2-05] Access validation: trunk/glovebox/property containers used to accept
+-- ANY containerType/containerId from the client, allowing remote looting of other
+-- players' trunks/houses by iterating plates. Now every callback proves physical
+-- access: the vehicle with that plate must exist server-side within range (or the
+-- caller must be inside it); property safes require owner/active-renter status.
+local VEHICLE_CONTAINER_DIST = 6.0
+
+local function findVehicleByPlate(plate)
+    for _, veh in ipairs(GetAllVehicles()) do
+        local vPlate = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper()
+        if vPlate == plate then return veh end
+    end
+    return nil
+end
+
+local function canAccessContainer(source, containerType, containerId)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return false, 'Character not loaded.' end
+
+    if containerType == 'trunk' or containerType == 'glovebox' then
+        local ped = GetPlayerPed(source)
+        if not ped or ped == 0 then return false, 'Nu esti in lume.' end
+        local veh = findVehicleByPlate(containerId)
+        if not veh then return false, 'Vehiculul nu este langa tine.' end
+        -- Inside this vehicle, or standing next to it
+        if GetVehiclePedIsIn(ped, false) == veh then return true end
+        if #(GetEntityCoords(ped) - GetEntityCoords(veh)) <= VEHICLE_CONTAINER_DIST then return true end
+        return false, 'Esti prea departe de vehicul.'
+    elseif containerType == 'property' then
+        local propId = tonumber(containerId)
+        if not propId then return false, 'Identificator invalid' end
+        local allowed = MySQL.scalar.await([[
+            SELECT 1 FROM properties
+            WHERE id = ? AND owner_character_id = ?
+            UNION
+            SELECT 1 FROM property_rentals
+            WHERE property_id = ? AND character_id = ? AND active = 1
+            LIMIT 1
+        ]], { propId, char.id, propId, char.id })
+        if allowed then return true end
+        return false, 'Nu ai acces la aceasta proprietate.'
+    end
+
+    return false, 'Tip necunoscut'
+end
+
 -- Callbacks
 exports.sunset_core:RegisterCallback('sunset:container:open', function(source, containerType, containerId)
     if not CAPACITY_LIMITS[containerType] then return nil, 'Tip necunoscut' end
     containerId = tostring(containerId or ''):upper():gsub('%s+', '')
     if containerId == '' then return nil, 'Identificator invalid' end
+    if not exports.sunset_core:RateLimit(source, 'container:' .. containerType, 500) then return nil end
+
+    local accessOk, accessErr = canAccessContainer(source, containerType, containerId)
+    if not accessOk then return nil, accessErr end
 
     local items = SunsetContainers.GetItems(containerType, containerId)
     local curWeight = calcContainerWeight(items)
@@ -120,15 +170,40 @@ exports.sunset_core:RegisterCallback('sunset:container:deposit', function(source
     count = math.floor(tonumber(count) or 1)
     if count < 1 then return nil, 'Cantitate invalida' end
     containerId = tostring(containerId or ''):upper():gsub('%s+', '')
+    if not CAPACITY_LIMITS[containerType] or containerId == '' then return nil, 'Identificator invalid' end
+    if not exports.sunset_core:RateLimit(source, 'container:' .. containerType, 500) then return nil end
+
+    local accessOk, accessErr = canAccessContainer(source, containerType, containerId)
+    if not accessOk then return nil, accessErr end
+
+    if type(item) ~= 'string' or not Sunset.Items[item] then return nil, 'Obiect invalid' end
 
     if not exports.sunset_inventory:HasItem(source, item, count) then
         return nil, 'Nu ai obiectul in inventar.'
     end
 
-    local ok, err = SunsetContainers.AddItem(containerType, containerId, item, count)
-    if not ok then return nil, err end
+    -- [AUDIT P5-03] Remove from the player FIRST and verify success before the
+    -- container is credited. The old order duplicated items whenever RemoveItem
+    -- failed (trade lock, concurrent consume race) because its result was ignored.
+    -- [AUDIT P5-12] Preserve item metadata (stolen flags, gas can liters) on
+    -- deposit so containers cannot be used to launder metadata.
+    local meta
+    for _, row in ipairs(exports.sunset_inventory:GetInventory(source) or {}) do
+        if row.item == item and row.metadata and next(row.metadata) then
+            meta = row.metadata
+            break
+        end
+    end
+    if not exports.sunset_inventory:RemoveItem(source, item, count) then
+        return nil, 'Nu s-a putut muta obiectul din inventar.'
+    end
 
-    exports.sunset_inventory:RemoveItem(source, item, count)
+    local ok, err = SunsetContainers.AddItem(containerType, containerId, item, count, meta)
+    if not ok then
+        -- rollback: give the items back
+        exports.sunset_inventory:AddItem(source, item, count, nil, meta)
+        return nil, err
+    end
 
     local updated = SunsetContainers.GetItems(containerType, containerId)
     return {
@@ -143,13 +218,28 @@ exports.sunset_core:RegisterCallback('sunset:container:withdraw', function(sourc
     count = math.floor(tonumber(count) or 1)
     if count < 1 then return nil, 'Cantitate invalida' end
     containerId = tostring(containerId or ''):upper():gsub('%s+', '')
+    if not CAPACITY_LIMITS[containerType] or containerId == '' then return nil, 'Identificator invalid' end
+    if not exports.sunset_core:RateLimit(source, 'container:' .. containerType, 500) then return nil end
+
+    local accessOk, accessErr = canAccessContainer(source, containerType, containerId)
+    if not accessOk then return nil, accessErr end
+
+    -- [AUDIT P5-12] Preserve item metadata (gas can liters, robbery/stolen data)
+    -- across withdraw; it used to be silently stripped.
+    local meta
+    for _, row in ipairs(SunsetContainers.GetItems(containerType, containerId)) do
+        if row.item == item and row.metadata and next(row.metadata or {}) then
+            meta = row.metadata
+            break
+        end
+    end
 
     local ok, err = SunsetContainers.RemoveItem(containerType, containerId, item, count)
     if not ok then return nil, err end
 
-    if not exports.sunset_inventory:AddItem(source, item, count) then
+    if not exports.sunset_inventory:AddItem(source, item, count, nil, meta) then
         -- rollback if player inventory full
-        SunsetContainers.AddItem(containerType, containerId, item, count)
+        SunsetContainers.AddItem(containerType, containerId, item, count, meta)
         return nil, 'Inventarul tau este plin.'
     end
 

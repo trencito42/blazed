@@ -12,11 +12,13 @@ window.$$ = $$;
 function post(action, data = {}) {
     const resource = typeof GetParentResourceName === 'function' ? GetParentResourceName() : '';
     if (!resource) return Promise.resolve({ ok: true, qa: true, action, data });
+    // [AUDIT P8-31] Swallow rejections centrally: ~150 call sites never .catch(),
+    // and a resource restart mid-POST produced unhandled promise rejections.
     return fetch(`https://${resource}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-    });
+    }).catch(() => ({}));
 }
 window.post = post;
 
@@ -288,6 +290,17 @@ const MODAL_ACTION_ROOT = {
     battlepassShow: '#battlepass-modal', licenseQuizShow: '#license-quiz-panel',
 };
 
+// [AUDIT P8-12] When the single-modal rule force-hides a panel that owns a Lua
+// open-flag (menu/properties/factions), notify Lua so the flag clears. Without
+// this, ReleaseFocusUnlessModal() stayed blocked by stale flags and the cursor
+// got stuck after closing the newer panel.
+const MODAL_FLAG_PANELS = {
+    '#menu': 'menu',
+    '#properties': 'properties',
+    '#faction-panel': 'factionPanel',
+    '#faction-directory': 'factionPanel',
+};
+
 const MODAL_BODY_CLASSES = [
     'menu-open', 'menu--solo-vehicle-active', 'inventory-open',
     'inventory-trade-open', 'trade-forza-active', 'store-open',
@@ -306,6 +319,18 @@ function activateGameplayModal(action, payload) {
         if (!root || root.classList.contains('hidden')) continue;
         root.classList.add('hidden');
         root.setAttribute('aria-hidden', 'true');
+        // [AUDIT P8-12] A panel owning a Lua open-flag was force-hidden: post the
+        // supersede callback so Lua clears the flag (prevents stuck-focus traps).
+        const flag = MODAL_FLAG_PANELS[selector];
+        if (flag) {
+            try {
+                fetch(`https://${GetParentResourceName()}/modalSuperseded`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                    body: JSON.stringify({ panel: flag }),
+                }).catch(() => {});
+            } catch (_) { /* noop */ }
+        }
     }
     for (const className of MODAL_BODY_CLASSES) {
         document.body.classList.remove(className);

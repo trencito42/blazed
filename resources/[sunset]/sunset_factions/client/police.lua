@@ -314,6 +314,17 @@ RegisterNetEvent('sunset:police:jail', function(payload)
 
     TriggerEvent('sunset:jobs:forceClearHud')
 
+    -- [AUDIT P8-14] Close all modal UIs and release NUI focus on jail intake so
+    -- no panel/cursor survives the teleport into the cell.
+    pcall(function() TriggerEvent('sunset:client:inventoryForceClose') end)
+    pcall(function() TriggerEvent('sunset:phone:forceClose') end)
+    pcall(function()
+        exports.sunset_ui:Send('tradeHide', {})
+        exports.sunset_ui:Send('ticketReceiveHide', {})
+        exports.sunset_ui:Send('mdcHide', {})
+        exports.sunset_ui:SetFocus(false, false)
+    end)
+
     local ped = PlayerPedId()
     pcall(function() exports.sunset_death:ClearDead() end)
     if IsEntityDead(ped) or IsPedFatallyInjured(ped) then
@@ -1061,6 +1072,10 @@ AddEventHandler('sunset:ui:ticketPayRequest', function(data)
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Notify('Citation paid', 'success')
     else
+        -- [AUDIT P8-11] Always close the window and release focus on failure:
+        -- leaving it open with no other close path trapped the cursor.
+        exports.sunset_ui:Send('ticketReceiveHide', {})
+        exports.sunset_ui:SetFocus(false, false)
         actionError(err, 'Citation payment failed. Check that it is still active and that you have enough bank or cash funds.')
     end
 end)
@@ -1071,11 +1086,20 @@ AddEventHandler('sunset:ui:ticketRefuseRequest', function(data)
         exports.sunset_ui:Send('ticketReceiveHide', {})
         exports.sunset_ui:SetFocus(false, false)
     else
+        -- [AUDIT P8-11] Same guaranteed close on the refuse failure path.
+        exports.sunset_ui:Send('ticketReceiveHide', {})
+        exports.sunset_ui:SetFocus(false, false)
         actionError(err, 'Citation could not be refused. It may already have been handled.')
     end
 end)
 
 AddEventHandler('sunset:nui:ticketClose', function()
+    exports.sunset_ui:SetFocus(false, false)
+end)
+
+-- [AUDIT P8-11] ESC / close button path for the civilian citation window.
+AddEventHandler('sunset:nui:ticketReceiveClose', function()
+    exports.sunset_ui:Send('ticketReceiveHide', {})
     exports.sunset_ui:SetFocus(false, false)
 end)
 

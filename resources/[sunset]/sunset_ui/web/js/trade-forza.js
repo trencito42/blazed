@@ -14,10 +14,15 @@ const TradeForza = {
         const modal = document.getElementById('trade-invite-modal');
         const desc = document.getElementById('trade-invite-desc');
         if (!modal) return;
-        const name = data.requesterName || 'Jucător';
+        const name = data.requesterName || 'Juctor';
         const id = data.requesterId || '?';
         if (desc) {
-            desc.innerHTML = `Jucătorul <span>${name}</span> (ID: ${id})<br>vrea să inițieze un Trade.`;
+            // [AUDIT P8-04] Escape the requester name: it can fall back to the raw
+            // Steam display name which may contain HTML-significant characters.
+            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+            }[c]));
+            desc.innerHTML = `Juctorul <span>${esc(name)}</span> (ID: ${esc(Number(id) || '?')})<br>vrea s iniE>ieze un Trade.`;
         }
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');

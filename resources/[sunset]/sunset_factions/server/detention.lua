@@ -269,6 +269,30 @@ AddEventHandler('playerDropped', function()
     end
 end)
 
+-- [AUDIT P6-08] When an officer leaves/loses their faction or goes off duty,
+-- release every suspect they were escorting. Otherwise the client attach loop
+-- kept the suspect physically attached to a now-civilian across the map.
+local function releaseEscortsByOfficer(src, reason)
+    for target, officer in pairs(Escorted) do
+        if officer == src then
+            Detention.setEscort(target, nil)
+            if GetPlayerName(target) then
+                TriggerClientEvent('sunset:client:notify', target, reason, 'info')
+            end
+        end
+    end
+end
+
+AddEventHandler('sunset:server:factionChanged', function(src)
+    releaseEscortsByOfficer(src, 'Escort released - the officer left law enforcement.')
+end)
+
+AddEventHandler('sunset:server:dutyChanged', function(src, state)
+    if state == false then
+        releaseEscortsByOfficer(src, 'Escort released - the officer went off duty.')
+    end
+end)
+
 function IsCuffed(source)
     return Detention.isCuffed(source)
 end

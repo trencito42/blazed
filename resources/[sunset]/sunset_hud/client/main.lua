@@ -228,7 +228,9 @@ CreateThread(function()
             local veh = nil
             pcall(function() veh = exports.sunset_vehicles:GetVehicleState() end)
             updateHud()
-            Wait(veh and 50 or 500)
+            -- [AUDIT P7-03] 20Hz full-NUI-payload was the heaviest steady-state
+            -- NUI traffic; 10Hz is visually identical for gauges/street name.
+            Wait(veh and 100 or 500)
         else
             Wait(1000)
         end

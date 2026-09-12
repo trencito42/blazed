@@ -187,34 +187,10 @@ local function receiverCanTakeAsset(receiverSource, asset)
     return true
 end
 
-local function transferTradeAsset(fromSource, toSource, asset)
-    local fromChar = character(fromSource)
-    local toChar = character(toSource)
-    if not fromChar or not toChar then return nil, 'Both characters must remain loaded.' end
-
-    if asset.assetType == 'vehicle' then
-        if GetResourceState('sunset_vehicles') ~= 'started' then
-            return nil, 'Vehicle trading is unavailable.'
-        end
-        local ok, err = exports.sunset_vehicles:TransferVehicleOwnership(asset.id, fromChar.id, toChar.id)
-        if not ok then return nil, err or 'Vehicle transfer failed.' end
-    elseif asset.assetType == 'property' then
-        if GetResourceState('sunset_properties') ~= 'started' then
-            return nil, 'Property trading is unavailable.'
-        end
-        local ok, err = exports.sunset_properties:TransferPropertyOwnership(asset.id, fromChar.id, toChar.id)
-        if not ok then return nil, err or 'Property transfer failed.' end
-    elseif asset.assetType == 'business' then
-        if GetResourceState('sunset_businesses') ~= 'started' then
-            return nil, 'Business trading is unavailable.'
-        end
-        local ok, err = exports.sunset_businesses:TransferOwnership(asset.id, fromChar.id, toChar.id)
-        if not ok then return nil, err or 'Business transfer failed.' end
-    else
-        return nil, 'Invalid trade asset.'
-    end
-    return true
-end
+-- [AUDIT P5-06] Removed dead `transferTradeAsset`: a divergent non-transactional
+-- asset transfer implementation that was never called (completeTrade uses
+-- transferAssets inside the settlement transaction). Kept deleted to prevent
+-- future misuse of the unsafe path.
 
 local function buildTradeCatalog(source)
     local char = character(source)
@@ -421,15 +397,32 @@ local function completeTrade(trade)
     -- trade behind after a query failure or disconnect.
     local function transferRows(query, rows, fromCharId, toCharId, slots)
         for index, row in ipairs(rows) do
+            -- [AUDIT P5-06] Re-read the row FOR UPDATE and transfer the FRESH
+            -- metadata instead of the offer-time snapshot: items mutated during
+            -- the 5s countdown (e.g. gas cans refilled via SetItemMetadata) used
+            -- to be committed with stale metadata (liters/value rollback).
+            local freshRows = query.await(
+                'SELECT metadata FROM character_inventory WHERE id = ? AND character_id = ? AND item = ? FOR UPDATE',
+                { row.id, fromCharId, row.item })
+            local fresh = freshRows and freshRows[1]
+            if not fresh then return false end
             local changed = query.await(
                 'UPDATE character_inventory SET count = count - ? WHERE id = ? AND character_id = ? AND item = ? AND count >= ?',
                 { row.count, row.id, fromCharId, row.item, row.count })
             if tonumber(changed) ~= 1 then return false end
             query.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ? AND count <= 0',
                 { row.id, fromCharId })
+            -- fresh.metadata is a raw string for TEXT columns or a table for JSON
+            -- columns (oxmysql auto-decodes); normalize to a JSON string/nil.
+            local freshMeta = fresh.metadata
+            if type(freshMeta) == 'table' then
+                freshMeta = next(freshMeta) ~= nil and json.encode(freshMeta) or nil
+            elseif freshMeta == '' then
+                freshMeta = nil
+            end
             local inserted = query.await(
                 'INSERT INTO character_inventory (character_id, item, count, slot, metadata) VALUES (?, ?, ?, ?, ?)',
-                { toCharId, row.item, row.count, slots[index], row.metadata and json.encode(row.metadata) or nil })
+                { toCharId, row.item, row.count, slots[index], freshMeta })
             if not inserted then return false end
         end
         return true
@@ -486,6 +479,19 @@ local function completeTrade(trade)
     ReloadInventory(trade.b)
     exports.sunset_core:RefreshMoney(trade.a)
     exports.sunset_core:RefreshMoney(trade.b)
+    -- [AUDIT P1-02] The transaction writes characters.cash directly (atomic, guarded);
+    -- record it in the money ledger so trade cash is audited like every other flow.
+    local cashDelta = (bCash or 0) - (aCash or 0) -- cash received by side A
+    if cashDelta ~= 0 then
+        local aAfter = character(trade.a)
+        local bAfter = character(trade.b)
+        exports.sunset_core:LogMoneyTransaction(aChar.id, 'cash',
+            cashDelta > 0 and 'in' or 'out', math.abs(cashDelta), 'player_trade',
+            aAfter and tonumber(aAfter.cash) or nil)
+        exports.sunset_core:LogMoneyTransaction(bChar.id, 'cash',
+            cashDelta > 0 and 'out' or 'in', math.abs(cashDelta), 'player_trade',
+            bAfter and tonumber(bAfter.cash) or nil)
+    end
     if #aAssets + #bAssets > 0 then
         TriggerClientEvent('sunset:client:propertiesChanged', -1)
         TriggerClientEvent('sunset:client:businessesChanged', -1)
@@ -496,6 +502,10 @@ end
 exports.sunset_core:RegisterCallback('sunset:inventory:tradeRequest', function(source, data)
     local target = tonumber(type(data) == 'table' and data.targetId)
     if not target or target == source then return nil, 'Choose another nearby player.' end
+    -- [AUDIT P6-05] Downed/jailed players cannot trade (neither side).
+    if exports.sunset_core:IsIncapacitated(source) or exports.sunset_core:IsIncapacitated(target) then
+        return nil, 'One of the players cannot trade right now.'
+    end
     if TradesByPlayer[source] or TradesByPlayer[target] then return nil, 'One of the players already has an active trade.' end
     if not closeEnough(source, target) then return nil, 'Move within 3.5 metres of that player.' end
     TradeInvites[target] = { from = source, expiresAt = os.time() + INVITE_SECONDS }
@@ -769,6 +779,8 @@ end)
 
 RegisterNetEvent('sunset:server:inventoryRequestDrops', function()
     local source = source
+    -- [AUDIT P2-10] Throttle the full drop-table dump to prevent DoS amplification.
+    if not exports.sunset_core:RateLimit(source, 'requestDrops', 5000) then return end
     for _, drop in pairs(Drops) do TriggerClientEvent('sunset:inventory:dropSync', source, 'add', drop) end
 end)
 
@@ -778,4 +790,22 @@ AddEventHandler('playerDropped', function()
     for target, invite in pairs(TradeInvites) do if invite.from == source then TradeInvites[target] = nil end end
     local trade = TradesByPlayer[source]
     if trade then endTrade(trade, 'Trade cancelled because a player disconnected.', 'error') end
+end)
+
+-- [AUDIT P8-14] End any active trade when a party is downed or jailed, so the
+-- trade modal + NUI focus do not survive death/arrest (previously only distance
+-- or disconnect ended it).
+local function endTradeForSource(src, reason)
+    local trade = TradesByPlayer[src]
+    if trade then endTrade(trade, reason, 'error') end
+    TradeInvites[src] = nil
+    for target, invite in pairs(TradeInvites) do if invite.from == src then TradeInvites[target] = nil end end
+end
+
+AddEventHandler('sunset:death:playerDowned', function(src)
+    endTradeForSource(src, 'Trade cancelled because a player was downed.')
+end)
+
+AddEventHandler('sunset:faction:playerJailed', function(src)
+    endTradeForSource(src, 'Trade cancelled because a player was jailed.')
 end)

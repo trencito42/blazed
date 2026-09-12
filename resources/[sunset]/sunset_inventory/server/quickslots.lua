@@ -10,7 +10,11 @@ local function getCharMeta(source)
 end
 
 local function saveMeta(characterId, meta)
-    MySQL.update.await('UPDATE characters SET metadata = ? WHERE id = ?', { json.encode(meta), characterId })
+    -- [AUDIT P5-10] Only write the quickslots key via JSON_SET. The previous
+    -- whole-blob rewrite could erase rob_points changed between read and write.
+    MySQL.update.await(
+        "UPDATE characters SET metadata = JSON_SET(COALESCE(NULLIF(metadata,''),'{}'), '$.quickslots', CAST(? AS JSON)) WHERE id = ?",
+        { json.encode(meta.quickslots or {}), characterId })
 end
 
 local function weaponLabel(weapon)

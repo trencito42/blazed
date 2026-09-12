@@ -25,6 +25,34 @@ local function broadcastWeather()
     TriggerClientEvent('sunset:client:serverWeather', -1, { weather = WorldWeather })
 end
 
+-- [AUDIT P7-07] One UPDATE per player per minute (48/min) replaced by in-memory
+-- accumulation + a single batched flush every 5 minutes. Pending minutes for a
+-- disconnecting player are flushed immediately so nothing is lost.
+local PendingMinutes = {} -- [charId] = minutes not yet written
+
+local function flushPendingMinutes(onlyCharId)
+    local ids, params, whenClauses = {}, {}, {}
+    for charId, mins in pairs(PendingMinutes) do
+        if (not onlyCharId or charId == onlyCharId) and mins > 0 then
+            ids[#ids + 1] = charId
+            whenClauses[#whenClauses + 1] = 'WHEN ? THEN ?'
+            params[#params + 1] = charId
+            params[#params + 1] = mins
+        end
+    end
+    if #ids == 0 then return end
+    for _, charId in ipairs(ids) do PendingMinutes[charId] = nil end
+    local sql = ('UPDATE characters SET active_minutes_since_payday = LEAST(65535, active_minutes_since_payday + CASE id %s END) WHERE id IN (%s)')
+        :format(table.concat(whenClauses, ' '), table.concat(ids, ','))
+    local ok, err = pcall(function() MySQL.update.await(sql, params) end)
+    if not ok then
+        print(('[sunset_economy] pending minutes flush failed: %s'):format(tostring(err)))
+        for i, charId in ipairs(ids) do
+            PendingMinutes[charId] = (PendingMinutes[charId] or 0) + (params[(i - 1) * 2 + 2] or 0)
+        end
+    end
+end
+
 CreateThread(function()
     while true do
         Wait(60000)
@@ -34,17 +62,26 @@ CreateThread(function()
                 local char = exports.sunset_core:GetCharacter(src)
                 if char and not char.is_dead then
                     PlayedMinutes[src] = (PlayedMinutes[src] or 0) + 1
-                    MySQL.update.await([[UPDATE characters
-                        SET active_minutes_since_payday = LEAST(65535, active_minutes_since_payday + 1)
-                        WHERE id = ?]], { char.id })
+                    PendingMinutes[char.id] = (PendingMinutes[char.id] or 0) + 1
                 end
             end
         end
     end
 end)
 
+CreateThread(function()
+    while true do
+        Wait(300000)
+        flushPendingMinutes()
+    end
+end)
+
 AddEventHandler('playerDropped', function()
+    local ok, char = pcall(function() return exports.sunset_core:GetCharacter(source) end)
     PlayedMinutes[source] = nil
+    if ok and char and char.id then
+        flushPendingMinutes(char.id)
+    end
 end)
 
 local function getSalary(char, source)
@@ -93,8 +130,12 @@ local function processPayday(source)
     local robPts = 1
     local rent = { charged = 0 }
     local outcome = { status = 'failed', played = 0 }
+    -- [AUDIT P6-01] GetDetentionState returns uppercase 'JAILED'; the previous
+    -- lowercase comparison never matched, so jailed players collected full payday.
+    local detentionState = GetResourceState('sunset_factions') == 'started'
+        and exports.sunset_factions:GetDetentionState(source) or nil
     local detained = char.is_dead == 1 or char.is_dead == true
-        or (GetResourceState('sunset_factions') == 'started' and exports.sunset_factions:GetDetentionState(source) == 'jailed')
+        or tostring(detentionState or ''):upper() == 'JAILED'
     local callOk, committed = pcall(function()
         return MySQL.startTransaction(function(query)
             local rows = query.await([[SELECT cash, bank, active_minutes_since_payday, metadata
@@ -258,6 +299,37 @@ exports('ClearWorldWeather', function()
     return true
 end)
 
+-- [AUDIT P7-02] Payday used to fire ~8-10 sequential queries per player in ONE
+-- tick (~400-500 queries at 48 slots), freezing the server thread for seconds.
+-- Players are now queued and processed a few at a time, spread over ~30s.
+local PaydayQueue = {}
+local PAYDAY_BATCH_SIZE = 2
+local PAYDAY_BATCH_DELAY = 500
+
+CreateThread(function()
+    while true do
+        if #PaydayQueue > 0 then
+            local batch = {}
+            for _ = 1, PAYDAY_BATCH_SIZE do
+                local src = table.remove(PaydayQueue, 1)
+                if not src then break end
+                batch[#batch + 1] = src
+            end
+            for _, src in ipairs(batch) do
+                if GetPlayerName(src) then
+                    local ok, err = pcall(processPayday, src)
+                    if not ok then
+                        print(('[sunset_economy] payday error for %d: %s'):format(src, tostring(err)))
+                    end
+                end
+            end
+            Wait(PAYDAY_BATCH_DELAY)
+        else
+            Wait(2000)
+        end
+    end
+end)
+
 CreateThread(function()
     while true do
         local srvHour, _ = serverClock()
@@ -266,10 +338,17 @@ CreateThread(function()
         elseif srvHour ~= lastPaydayHour then
             lastPaydayHour = srvHour
             print(('[sunset_economy] Triggering hourly payday at %02d:00'):format(srvHour))
+            -- [AUDIT P7-07] Flush pending activity minutes FIRST so payday's
+            -- 20-minute eligibility check sees fresh data.
+            pcall(flushPendingMinutes)
+            -- Enqueue instead of processing inline; dedupe by source.
+            local queued = {}
+            for _, src in ipairs(PaydayQueue) do queued[src] = true end
             for _, playerId in ipairs(GetPlayers()) do
                 local pSrc = tonumber(playerId)
-                if pSrc then
-                    processPayday(pSrc)
+                if pSrc and not queued[pSrc] then
+                    PaydayQueue[#PaydayQueue + 1] = pSrc
+                    queued[pSrc] = true
                 end
             end
             if SunsetLottery and SunsetLottery.Draw then
@@ -296,6 +375,8 @@ end)
 exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, itemName, amount, businessId)
     amount = math.floor(amount or 1)
     if amount < 1 then return nil, 'Invalid amount' end
+    -- [AUDIT P6-05] Downed/jailed players cannot shop.
+    if exports.sunset_core:IsIncapacitated(source) then return nil, 'You cannot shop right now.' end
 
     local shop = Sunset.Shops[shopId]
     if not shop then return nil, 'Shop not found' end
@@ -367,6 +448,17 @@ exports.sunset_core:RegisterCallback('sunset:atmTransfer', function(source, acti
     if amount < 1 then return nil, 'Invalid amount' end
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
+
+    -- [AUDIT P2-08] Require physical presence at an ATM. Money math was already
+    -- safe, but the callback was callable from anywhere (defeats robbery RP).
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return nil, 'No character' end
+    local pos = GetEntityCoords(ped)
+    local nearAtm = false
+    for _, atm in ipairs(Sunset.ATMs or {}) do
+        if #(pos - atm) <= 2.5 then nearAtm = true break end
+    end
+    if not nearAtm then return nil, 'You must be at an ATM.' end
 
     if action == 'deposit' then
         if not exports.sunset_core:MoveMoney(source, 'cash', 'bank', amount, 'atm_deposit') then

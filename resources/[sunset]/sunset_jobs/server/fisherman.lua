@@ -354,8 +354,8 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:sell', function(sour
     local bonus = math.floor(pending * (cfg.sellBonusMultiplier or 1.0))
     local fishSet = {}
     for _, item in ipairs(ALL_FISH_ITEMS) do fishSet[item] = true end
-    local committed = MySQL.startTransaction(function()
-        local rows = MySQL.query.await(
+    local committed = MySQL.startTransaction(function(query)
+        local rows = query.await(
             'SELECT id, item, count, metadata FROM character_inventory WHERE character_id = ? FOR UPDATE',
             { char.id }) or {}
         local lockedCount, lockedValue, ids = 0, 0, {}
@@ -376,10 +376,10 @@ exports.sunset_core:RegisterCallback('sunset:jobs:fisherman:sell', function(sour
         if lockedCount < 1 or lockedValue <= 0 then error('fish_changed') end
         bonus = math.floor(lockedValue * (cfg.sellBonusMultiplier or 1.0))
         for _, id in ipairs(ids) do
-            if MySQL.update.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ?', { id, char.id }) ~= 1 then error('fish_changed') end
+            if query.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ?', { id, char.id }) ~= 1 then error('fish_changed') end
         end
-        if MySQL.update.await('UPDATE characters SET cash = cash + ? WHERE id = ?', { bonus, char.id }) ~= 1 then error('payment_failed') end
-        MySQL.insert.await([[INSERT INTO money_transactions
+        if query.await('UPDATE characters SET cash = cash + ? WHERE id = ?', { bonus, char.id }) ~= 1 then error('payment_failed') end
+        query.insert.await([[INSERT INTO money_transactions
             (character_id, account, direction, amount, reason, balance_after)
             SELECT id, 'cash', 'in', ?, 'fisherman_sell', cash FROM characters WHERE id = ?]], { bonus, char.id })
         count = lockedCount

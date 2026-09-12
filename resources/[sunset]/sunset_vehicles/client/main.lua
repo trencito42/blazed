@@ -628,11 +628,13 @@ local function deleteVehicleEntity(veh)
 end
 
 local function plateTextMatches(vehPlate, target)
+    -- [AUDIT F6.4] Exact match only after normalization. The previous substring
+    -- match let short vanity plates (e.g. "A") match unrelated world traffic,
+    -- causing deleteVehicleByPlate to remove other players' vehicles on spawn.
     local a = normalizePlate(vehPlate)
     local b = normalizePlate(target)
     if a == '' or b == '' then return false end
-    if a == b then return true end
-    return a:find(b, 1, true) ~= nil or b:find(a, 1, true) ~= nil
+    return a == b
 end
 
 local function findVehicleByPlate(plate)
@@ -698,8 +700,11 @@ local function normalizeVehicleStats(vehData)
         engine = 0.0
         body = 0.0
     else
-        if engine == nil or engine <= 100.0 then engine = 1000.0 end
-        if body == nil or body <= 100.0 then body = 1000.0 end
+        -- [AUDIT F4.1] Only default MISSING (legacy NULL) health; do not silently
+        -- heal damaged values to 1000 (that was a free repair loop: damage to
+        -- ~100, re-store, re-spawn fully repaired).
+        if engine == nil then engine = 1000.0 end
+        if body == nil then body = 1000.0 end
     end
 
     fuel = math.max(0.0, math.min(100.0, fuel))

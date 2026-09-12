@@ -203,6 +203,16 @@ AddEventHandler('sunset:nui:propertiesClose', function()
     exports.sunset_ui:Send('propertiesHide', {})
 end)
 
+-- [AUDIT P8-12] Force-hidden by another modal: clear flags only (the new modal
+-- owns focus now, so do NOT release focus here).
+AddEventHandler('sunset:nui:modalSuperseded', function(panel)
+    if panel == 'properties' then
+        propertiesPanelOpen = false
+        panelSelectedId = nil
+        managePropertyId = nil
+    end
+end)
+
 AddEventHandler('sunset:nui:propertyOpenManage', function(data)
     CreateThread(function()
         local id = tonumber(data and data.propertyId)

@@ -192,7 +192,9 @@ Sunset.Factions = {
             platePrefix = 'EMS',
             vehicles = {
                 { model = 'ambulance', label = 'Ambulance', minGrade = 0 },
-                { model = 'ambulance2', label = 'Ambulance Type II', minGrade = 2 },
+                -- [AUDIT F2.1] 'ambulance2' does not exist in vanilla build 3258
+                -- and no addon streaming is shipped; spawn would always time out.
+                { model = 'ambulance', label = 'Ambulance Type II', minGrade = 2 },
                 { model = 'lguard', label = 'Lifeguard SUV', minGrade = 3 },
                 { model = 'rumpo', label = 'EMS Response Van', minGrade = 4 },
                 { model = 'burrito3', label = 'Command Unit', minGrade = 6 },
@@ -228,7 +230,8 @@ Sunset.Factions = {
             platePrefix = 'CAB',
             vehicles = {
                 { model = 'taxi', label = 'Yellow Cab', minGrade = 0 },
-                { model = 'taxiold', label = 'Classic Cab', minGrade = 1 },
+                -- [AUDIT F2.1] 'taxiold' does not exist in vanilla build 3258.
+                { model = 'taxi', label = 'Classic Cab', minGrade = 1 },
                 { model = 'dynasty', label = 'Executive Sedan', minGrade = 2 },
                 { model = 'rumpo', label = 'Dispatch Van', minGrade = 3 },
                 { model = 'stretch', label = 'Limousine', minGrade = 5 },

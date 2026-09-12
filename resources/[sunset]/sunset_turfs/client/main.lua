@@ -37,6 +37,7 @@ end
 local function clearTurfBlips()
     for _, row in pairs(TurfBlips) do
         removeBlipHandle(row.area)
+        removeBlipHandle(row.center)
     end
     TurfBlips = {}
 end
@@ -63,24 +64,37 @@ local function turfAreaColour(turf, atWar)
 end
 
 local function applyTurfBlipStyle(turf, row, atWar)
-    local map = SunsetTurfs.GetMapZone(turf.id, turf)
-    local areaAlpha = SunsetTurfs.TurfBlipAlpha or 95
-    local areaColour = turfAreaColour(turf, atWar)
+    local radius = turf.radius or 110.0
+    local zoneAlpha = SunsetTurfs.TurfBlipAlpha or 80
+    local zoneColour = turfAreaColour(turf, atWar)
 
     if atWar then
-        areaAlpha = SunsetTurfs.TurfBlipAlphaWar or 140
+        zoneAlpha = SunsetTurfs.TurfBlipAlphaWar or 120
     end
 
     if row.area and DoesBlipExist(row.area) then
-        SetBlipSprite(row.area, BLIP_SPRITE_AREA)
-        SetBlipDisplay(row.area, BLIP_DISPLAY_BOTH)
-        SetBlipAlpha(row.area, areaAlpha)
-        SetBlipColour(row.area, areaColour)
-        SetBlipRotation(row.area, map.rotation or 0.0)
+        SetBlipDisplay(row.area, BLIP_DISPLAY_PAUSE_MAP)
+        SetBlipAlpha(row.area, zoneAlpha)
+        SetBlipColour(row.area, zoneColour)
         SetBlipAsShortRange(row.area, false)
         SetBlipFlashes(row.area, atWar)
     end
 
+    if row.center and DoesBlipExist(row.center) then
+        SetBlipSprite(row.center, 437)
+        SetBlipDisplay(row.center, BLIP_DISPLAY_PAUSE_MAP)
+        SetBlipScale(row.center, 0.7)
+        SetBlipColour(row.center, zoneColour)
+        SetBlipAlpha(row.center, atWar and 255 or 210)
+        SetBlipAsShortRange(row.center, false)
+        SetBlipFlashes(row.center, atWar)
+        BeginTextCommandSetBlipName('STRING')
+        local suffix = atWar and ' | RAZBOI' or ''
+        AddTextComponentSubstringPlayerName(('Turf #%d: %s [%s]%s'):format(
+            turf.id, turf.name, turf.ownerTag or 'LIBER', suffix
+        ))
+        EndTextCommandSetBlipName(row.center)
+    end
 end
 
 local function refreshBlips()
@@ -88,9 +102,10 @@ local function refreshBlips()
     for id, t in pairs(LocalTurfs) do
         if not t.coords then goto continue end
         local atWar = turfAtWar(id)
-        local map = SunsetTurfs.GetMapZone(id, t)
-        local areaBlip = AddBlipForArea(t.coords.x, t.coords.y, t.coords.z, map.width, map.height)
-        TurfBlips[id] = { area = areaBlip }
+        local radius = t.radius or 110.0
+        local zoneBlip = AddBlipForRadius(t.coords.x, t.coords.y, t.coords.z, radius)
+        local centerBlip = AddBlipForCoord(t.coords.x, t.coords.y, t.coords.z)
+        TurfBlips[id] = { area = zoneBlip, center = centerBlip }
         applyTurfBlipStyle(t, TurfBlips[id], atWar)
         ::continue::
     end

@@ -176,7 +176,11 @@ end)
 
 -- ── Actiuni NUI ──────────────────────────────────────────────
 AddEventHandler('sunset:nui:playerInteractionClose', function()
-    if menuOpen then menuOpen = nil end
+    -- [AUDIT UI-HANG] Acest handler doar stergea flag-ul: JS-ul asteapta ca Lua
+    -- sa trimita playerInteractionHide + SetFocus(false), deci meniul "Vinde
+    -- masina" ramanea pe ecran cu focus blocat (nu mergea nici ESC, nici
+    -- mersul pe jos - SetNuiFocus dezactiveaza comenzile). Acum inchide real.
+    closeMenu()
 end)
 
 AddEventHandler('sunset:nui:playerInteractionAction', function(data)
@@ -220,4 +224,19 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         end
         SetTimeout(1500, function() inCooldown = false end)
     end
+end)
+
+
+-- [AUDIT P7-09/P8-32] Mission-flagged NPCs survive resource restarts; delete
+-- them and their blips on stop to avoid duplicate chop-shop peds.
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    for i, ped in pairs(spawnedNpcs) do
+        if DoesEntityExist(ped) then
+            SetEntityAsMissionEntity(ped, true, true)
+            DeleteEntity(ped)
+        end
+        spawnedNpcs[i] = nil
+    end
+    hideNpcBlips()
 end)

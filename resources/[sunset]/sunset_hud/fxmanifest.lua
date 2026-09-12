@@ -40,10 +40,13 @@ exports {
     'GetVoiceHudData',
 }
 
+-- [AUDIT 3-9.1] pma-voice is NOT shipped in resources/ (Docker installs it at build
+-- time; local Windows installs do not). A hard dependency made sunset_hud fail to
+-- start locally, killing the entire HUD. client/voice.lua already degrades
+-- gracefully via GetResourceState('pma-voice') checks, so the dependency is dropped.
 dependencies {
     'sunset_core',
     'sunset_ui',
     'sunset_vehicles',
     'sunset_admin',
-    'pma-voice',
 }

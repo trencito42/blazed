@@ -645,6 +645,12 @@ registerServerCommand('arespawn', function(source, args)
         return
     end
 
+    -- [AUDIT 3-5.1] Release property routing bucket before admin respawn so the
+    -- target does not spawn invisible in a house bucket.
+    if GetResourceState('sunset_properties') == 'started' then
+        pcall(function() exports.sunset_properties:LeaveProperty(target) end)
+    end
+    SetPlayerRoutingBucket(target, 0)
     TriggerClientEvent('sunset:death:forceHospital', target, pos, 0)
     notify(source, ('Respawned #%d at their spawn point.'):format(target), 'success')
     if target ~= source then
@@ -1109,8 +1115,11 @@ end
 
 RegisterNetEvent('sunset:admin:weaponGiveFailed', function(adminSource, weapon)
     adminSource = tonumber(adminSource)
-    if adminSource and adminSource > 0 then
-        notify(adminSource, ('Invalid weapon "%s" — use a GTA weapon name like PISTOL or WEAPON_PISTOL.'):format(tostring(weapon or '?')), 'error')
+    -- [AUDIT P2-11] Any client could message arbitrary players via this event.
+    -- Only notify if the recipient is actually an admin (staff giving themselves
+    -- a weapon is the sole legitimate flow).
+    if adminSource and adminSource > 0 and IsAdmin(adminSource, 1) then
+        notify(adminSource, ('Invalid weapon "%s" - use a GTA weapon name like PISTOL or WEAPON_PISTOL.'):format(tostring(weapon or '?')), 'error')
     end
 end)
 

@@ -183,6 +183,14 @@ exports.sunset_core:RegisterCallback('sunset:dealership:purchase', function(sour
                 INSERT INTO dealership_sales (character_id, vehicle_id, model, plate, price, payment_account)
                 VALUES (?, ?, ?, ?, ?, ?)
             ]], { char.id, vehicleId, model, plate, price, account })
+            -- [AUDIT P1-02] Mirror the direct cash/bank debit into the money ledger
+            -- so dealership purchases are audited like every other money flow.
+            -- `account` is whitelisted to 'bank'/'cash' above, safe to interpolate
+            -- as a column name; balance_after is read from the same row post-debit.
+            query.await(([[
+                INSERT INTO money_transactions (character_id, account, direction, amount, reason, balance_after)
+                SELECT id, '%s', 'out', ?, 'dealership_purchase', %s FROM characters WHERE id = ?
+            ]]):format(account, account), { price, char.id })
             return true
         end)
     end)

@@ -557,6 +557,14 @@ AddEventHandler('sunset:nui:factionPanelsClose', function()
     factionPanelOpen = false
 end)
 
+-- [AUDIT P8-12] Force-hidden by another modal: clear the flag only (no focus
+-- release; the superseding modal owns focus).
+AddEventHandler('sunset:nui:modalSuperseded', function(panel)
+    if panel == 'factionPanel' then
+        factionPanelOpen = false
+    end
+end)
+
 AddEventHandler('sunset:world:factionHQ', function(factionId, faction)
     if blocked() then return end
     local label = faction.label or factionId

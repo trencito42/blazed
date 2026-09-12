@@ -176,6 +176,12 @@ exports.sunset_core:RegisterCallback('sunset:interactionGiveCash', function(sour
     local pair, err = nearbyPlayers(source, targetId)
     if not pair then return nil, err end
 
+    -- [AUDIT P6-05] Downed/jailed players cannot hand over cash (robbery-at-gunpoint
+    -- of a bleeding player must go through the robbery system, not free transfer).
+    if exports.sunset_core:IsIncapacitated(source) or exports.sunset_core:IsIncapacitated(targetId) then
+        return nil, 'Cash cannot be exchanged right now.'
+    end
+
     local amount = math.floor(tonumber(rawAmount) or 0)
     if amount < 1 or amount > MAX_CASH_TRANSFER then
         return nil, ('Enter an amount between $1 and $%s.'):format(MAX_CASH_TRANSFER)

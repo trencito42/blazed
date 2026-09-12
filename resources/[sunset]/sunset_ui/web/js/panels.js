@@ -1,3 +1,7 @@
+// [AUDIT P8-02] Escape player-controlled strings before innerHTML interpolation.
+const escHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char]));
 const ITEM_ICON_ROOT = 'assets/items/';
 const ITEM_ICON_FALLBACK = `${ITEM_ICON_ROOT}backpack.webp`;
 
@@ -187,11 +191,14 @@ const Panels = {
             }
 
             if (e.key !== 'Escape') return;
-            const panels = ['#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#wardrobe', '#clothing'];
+            // [AUDIT P8-11] #ticket-receive added: the civilian citation window had
+            // no close path, trapping NUI focus when PAY/REFUSE failed.
+            const panels = ['#ticket-receive', '#fishing-shop', '#mdc', '#ticket', '#servicecalls', '#jobs-browser', '#jobs-panel', '#skills', '#help', '#properties', '#clan-panel', '#clan-directory', '#faction-panel', '#faction-directory', '#garage', '#fleet-garage', '#documents', '#jobcenter', '#emotes', '#crafting', '#dealership', '#wardrobe', '#clothing'];
             for (const sel of panels) {
                 const el = $(sel);
                 if (el && !el.classList.contains('hidden')) {
                     const map = {
+                        '#ticket-receive': 'ticketReceiveClose',
                         '#fishing-shop': 'fishingShopClose',
                         '#mdc': 'mdcClose',
                         '#ticket': 'ticketClose',
@@ -1117,9 +1124,9 @@ const Panels = {
                 const canAccept = call.canAccept === true && call.status === 'open';
                 li.innerHTML = `
                     <div>
-                        <div class="sc-type">${call.typeLabel || call.type || 'CALL'}</div>
-                        <div class="sc-title">${call.title || call.message || 'Service request'}</div>
-                        <div class="sc-meta">${call.location || call.zone || ''}${call.caller ? ` · ${call.caller}` : ''}</div>
+                        <div class="sc-type">${escHtml(call.typeLabel || call.type || 'CALL')}</div>
+                        <div class="sc-title">${escHtml(call.title || call.message || 'Service request')}</div>
+                        <div class="sc-meta">${escHtml(call.location || call.zone || '')}${call.caller ? ` · ${escHtml(call.caller)}` : ''}</div>
                     </div>
                     <span class="sc-status ${statusClass}">${call.status || 'open'}</span>
                     ${canAccept ? `<button type="button" data-call-id="${call.id}">ACCEPT</button>` : ''}`;

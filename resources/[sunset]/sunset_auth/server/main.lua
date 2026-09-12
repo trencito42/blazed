@@ -1,5 +1,33 @@
 local PendingEmail = {}
 
+-- [AUDIT P2-04] Brute-force protection: per-source failed-login counter with
+-- exponential lockout. Generic callback rate limit (12/s) alone allowed fast
+-- online password guessing and cheap scrypt CPU-DoS.
+local LoginFails = {}
+local LOCKOUT_STEP_MS = 5000 -- 5s, 10s, 20s, ... capped at 5 minutes
+
+local function loginLocked(source)
+    local rec = LoginFails[source]
+    if not rec or rec.count < 5 then return false end
+    local backoff = math.min(300000, LOCKOUT_STEP_MS * (2 ^ (rec.count - 5)))
+    return (GetGameTimer() - rec.lastAt) < backoff, backoff
+end
+
+local function recordLoginFail(source)
+    local rec = LoginFails[source]
+    if not rec then rec = { count = 0, lastAt = 0 } LoginFails[source] = rec end
+    rec.count = rec.count + 1
+    rec.lastAt = GetGameTimer()
+end
+
+local function clearLoginFails(source)
+    LoginFails[source] = nil
+end
+
+AddEventHandler('playerDropped', function()
+    LoginFails[source] = nil
+end)
+
 local function deviceHash(source)
     local license = GetPlayerIdentifierByType(source, 'license') or ''
     return exports.sunset_auth:HashToken(license)
@@ -108,22 +136,29 @@ exports.sunset_core:RegisterCallback('sunset:authRegister', function(source, use
     end
     return { username = normalized, needsEmail = false, quickToken = issueQuickToken(source, accountId) }
 end)
-
 exports.sunset_core:RegisterCallback('sunset:authLogin', function(source, username, password)
     local ok, err = validateUsername(username)
     if not ok then return nil, err end
     if not password or password == '' then return nil, 'Enter your password' end
 
+    local locked, backoff = loginLocked(source)
+    if locked then
+        return nil, ('Too many failed attempts. Try again in %d seconds.'):format(math.ceil(backoff / 1000))
+    end
+
     local account = MySQL.single.await(
         'SELECT id, username, email, password_hash, password_salt FROM accounts WHERE LOWER(username) = LOWER(?)',
         { username }
     )
-    if not account then return nil, 'Invalid username or password' end
+    if not account then recordLoginFail(source) return nil, 'Invalid username or password' end
     local modern = type(account.password_hash) == 'string' and account.password_hash:sub(1, 8) == '$scrypt$'
     local valid = modern and exports.sunset_auth:VerifyPassword(password, account.password_hash)
         or Sunset.Password.Verify(password, account.password_salt, account.password_hash)
     if not valid then
-        return nil, 'Invalid username or password' end
+        recordLoginFail(source)
+        return nil, 'Invalid username or password'
+    end
+    clearLoginFails(source)
 
     if not modern then
         local upgraded = exports.sunset_auth:HashPassword(password)

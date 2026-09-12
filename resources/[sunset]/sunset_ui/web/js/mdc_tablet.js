@@ -15,6 +15,12 @@
         }).catch(() => {});
     };
 
+    // [AUDIT P8-01] Escape player-controlled strings before innerHTML interpolation
+    // (112 description/street/area/caller names were stored XSS vectors).
+    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[char]));
+
     const MdcTablet = {
         activeTab: 'calls',
         officer: null,
@@ -540,19 +546,19 @@
                     <div class="mdc-call-card ${catClass} ${call.isPanic ? 'mdc-call-card--panic' : ''}">
                         <div class="mdc-call-card__head">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span class="mdc-call-id">#${call.id}</span>
-                                <span class="mdc-call-category">${call.category || 'Emergency'}</span>
+                                <span class="mdc-call-id">#${esc(call.id)}</span>
+                                <span class="mdc-call-category">${esc(call.category || 'Emergency')}</span>
                                 ${call.isPanic ? '<span class="mdc-pill mdc-pill--wanted" style="animation: mdcBlink 0.8s infinite;">[10-99 PANIC]</span>' : ''}
                             </div>
                             <span class="mdc-call-status ${isAssigned ? 'is-assigned' : 'is-pending'}">
                                 ${call.status || 'PENDING'}
                             </span>
                         </div>
-                        <div class="mdc-call-desc">${call.description || 'No details provided'}</div>
+                        <div class="mdc-call-desc">${esc(call.description || 'No details provided')}</div>
                         <div class="mdc-call-meta">
-                            <span>LOC: <strong>${call.street}</strong>, ${call.area}</span>
-                            <span>CALLER: <strong>${call.callerName}</strong> (${call.callerPhone})</span>
-                            ${call.responderName ? `<span>UNIT: <strong>${call.responderName}</strong></span>` : ''}
+                            <span>LOC: <strong>${esc(call.street)}</strong>, ${esc(call.area)}</span>
+                            <span>CALLER: <strong>${esc(call.callerName)}</strong> (${esc(call.callerPhone)})</span>
+                            ${call.responderName ? `<span>UNIT: <strong>${esc(call.responderName)}</strong></span>` : ''}
                         </div>
                         <div class="mdc-call-actions">
                             <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-call-waypoint" data-x="${call.coords.x}" data-y="${call.coords.y}">
@@ -943,10 +949,10 @@
                             <span class="mdc-wanted-stars">${stars}</span>
                             <div>
                                 <div style="font-size: 15px; font-weight: 700; color: #f8fafc;">
-                                    ${row.name || 'Suspect'} <span style="font-size: 12px; color: #38bdf8;">(#${row.id})</span>
+                                    ${esc(row.name || 'Suspect')} <span style="font-size: 12px; color: #38bdf8;">(#${esc(row.id)})</span>
                                 </div>
                                 <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
-                                    Reason: <strong style="color: #cbd5e1;">${row.reason || 'Unspecified'}</strong> · 
+                                    Reason: <strong style="color: #cbd5e1;">${esc(row.reason || 'Unspecified')}</strong> · 
                                     ${row.surrenderable === false ? '<span style="color: #ef4444; font-weight: 700;">NO SURRENDER</span>' : 'SURRENDER ALLOWED'}
                                 </div>
                             </div>
@@ -956,7 +962,7 @@
                                 <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
                                 LOCATE GPS
                             </button>
-                            <button type="button" class="mdc-btn mdc-btn--primary mdc-btn--sm btn-view-wanted-cit" data-name="${row.name}">
+                            <button type="button" class="mdc-btn mdc-btn--primary mdc-btn--sm btn-view-wanted-cit" data-name="${esc(row.name)}">
                                 <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 DOSSIER
                             </button>
@@ -1015,7 +1021,7 @@
                     <div class="mdc-unit-card" style="display: flex; align-items: center; justify-content: space-between;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">
-                                ${unit.name} ${unit.isMe ? '<span style="color: #38bdf8; font-size: 11px;">(YOU)</span>' : ''}
+                                ${esc(unit.name)} ${unit.isMe ? '<span style="color: #38bdf8; font-size: 11px;">(YOU)</span>' : ''}
                             </div>
                             <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">
                                 ${unit.rank} · ${unit.shortDept || 'LSPD'}
@@ -1023,13 +1029,13 @@
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             ${hasCoords && !unit.isMe ? `
-                                <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-unit-gps" data-x="${unit.coords.x}" data-y="${unit.coords.y}" data-name="${unit.name}">
+                                <button type="button" class="mdc-btn mdc-btn--outline mdc-btn--sm btn-unit-gps" data-x="${unit.coords.x}" data-y="${unit.coords.y}" data-name="${esc(unit.name)}">
                                     <svg class="mdc-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
                                     GPS
                                 </button>
                             ` : ''}
                             <span class="mdc-unit-status-tag ${statusClass}">
-                                ${unit.status || '10-8'}
+                                ${esc(unit.status || '10-8')}
                             </span>
                         </div>
                     </div>

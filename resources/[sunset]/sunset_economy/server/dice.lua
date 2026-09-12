@@ -35,6 +35,69 @@ local function broadcastNearby(src, msg)
     end
 end
 
+-- [AUDIT P5-07] Escrow safety net: track every in-flight wager by CHARACTER id
+-- so it can be refunded even when the player is offline (disconnect mid-roll)
+-- or the resource stops between debit and payout. Previously both bets were
+-- silently destroyed in those windows.
+local ActiveEscrows = {} -- [escrowId] = { charIds = {a, b}, amounts = {bet, bet}, settled = false }
+local escrowSeq = 0
+
+local function refundByCharId(charId, amount)
+    charId = tonumber(charId)
+    amount = math.floor(tonumber(amount) or 0)
+    if not charId or charId < 1 or amount <= 0 then return end
+    local changed = MySQL.update.await('UPDATE characters SET cash = cash + ? WHERE id = ?', { amount, charId })
+    if changed and changed >= 1 then
+        MySQL.insert.await([[INSERT INTO money_transactions
+            (character_id, account, direction, amount, reason, balance_after)
+            SELECT id, 'cash', 'in', ?, 'dice_refund', cash FROM characters WHERE id = ?]], { amount, charId })
+    end
+end
+
+local function settleEscrow(escrowId)
+    local e = ActiveEscrows[escrowId]
+    if not e then return end
+    ActiveEscrows[escrowId] = nil
+end
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    local ok, char = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+    if not ok or not char or not char.id then return end
+    for escrowId, e in pairs(ActiveEscrows) do
+        if not e.settled then
+            for i, cid in ipairs(e.charIds) do
+                if cid == char.id then
+                    -- This player is leaving mid-roll: refund BOTH wagers and cancel
+                    -- the round; the remaining player gets their money back too.
+                    e.settled = true
+                    refundByCharId(e.charIds[1], e.amounts[1])
+                    if e.charIds[2] ~= e.charIds[1] then
+                        refundByCharId(e.charIds[2], e.amounts[2])
+                    end
+                    ActiveEscrows[escrowId] = nil
+                    break
+                end
+            end
+        end
+    end
+end)
+
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    -- Refund every in-flight wager on stop so a restart never destroys bets.
+    for _, e in pairs(ActiveEscrows) do
+        if not e.settled then
+            e.settled = true
+            refundByCharId(e.charIds[1], e.amounts[1])
+            if e.charIds[2] ~= e.charIds[1] then
+                refundByCharId(e.charIds[2], e.amounts[2])
+            end
+        end
+    end
+    ActiveEscrows = {}
+end)
+
 local function executeDiceMatch(challengerSrc, targetSrc, bet)
     local cChar = exports.sunset_core:GetCharacter(challengerSrc)
     local tChar = exports.sunset_core:GetCharacter(targetSrc)
@@ -53,14 +116,31 @@ local function executeDiceMatch(challengerSrc, targetSrc, bet)
         return
     end
 
+    -- [AUDIT P5-07] Register the escrow keyed by character ids so it survives a
+    -- disconnect or resource stop during the 1.8s roll.
+    escrowSeq = escrowSeq + 1
+    local escrowId = escrowSeq
+    ActiveEscrows[escrowId] = {
+        charIds = { cChar.id, tChar.id },
+        amounts = { bet, bet },
+        settled = false,
+    }
+
     TriggerClientEvent('sunset:economy:playDiceAnim', challengerSrc)
     TriggerClientEvent('sunset:economy:playDiceAnim', targetSrc)
 
     SetTimeout(1800, function()
+        local escrow = ActiveEscrows[escrowId]
+        -- Already refunded by the drop/stop handlers: do nothing (no double-pay).
+        if not escrow or escrow.settled then return end
         if not GetPlayerName(challengerSrc) or not GetPlayerName(targetSrc) then
-            -- Fallback refund if someone disconnected during roll
-            if GetPlayerName(challengerSrc) then exports.sunset_core:AddMoney(challengerSrc, 'cash', bet, 'dice_refund') end
-            if GetPlayerName(targetSrc) then exports.sunset_core:AddMoney(targetSrc, 'cash', bet, 'dice_refund') end
+            -- Someone left mid-roll but the drop handler missed it: refund both.
+            escrow.settled = true
+            refundByCharId(escrow.charIds[1], escrow.amounts[1])
+            if escrow.charIds[2] ~= escrow.charIds[1] then
+                refundByCharId(escrow.charIds[2], escrow.amounts[2])
+            end
+            ActiveEscrows[escrowId] = nil
             return
         end
 
@@ -98,7 +178,18 @@ local function executeDiceMatch(challengerSrc, targetSrc, bet)
             loserName = cName
         end
 
-        exports.sunset_core:AddMoney(winnerSrc, 'cash', prize, 'dice_win')
+        -- [AUDIT P5-07] Payout is terminal for this escrow. If AddMoney fails
+        -- (DB hiccup), refund both wagers instead of destroying the pot.
+        local paid = exports.sunset_core:AddMoney(winnerSrc, 'cash', prize, 'dice_win')
+        escrow.settled = true
+        ActiveEscrows[escrowId] = nil
+        if not paid then
+            refundByCharId(escrow.charIds[1], escrow.amounts[1])
+            if escrow.charIds[2] ~= escrow.charIds[1] then
+                refundByCharId(escrow.charIds[2], escrow.amounts[2])
+            end
+            return
+        end
 
         local broadcastMsg = ('^3%s^7 a dat ^2%s^7 vs ^3%s^7 a dat ^1%s^7. ^2%s a castigat $%s^7! (Taxa arsa: $%s)'):format(
             winnerName, winnerScore, loserName, loserScore, winnerName,
@@ -115,6 +206,12 @@ RegisterCommand('barbut', function(source, args)
         local challenge = PendingChallenges[source]
         if not challenge then
             TriggerClientEvent('sunset:client:notify', source, 'Nu ai nicio cerere activa de barbut.', 'error')
+            return
+        end
+        -- [AUDIT P6-05] Downed/jailed players cannot gamble.
+        if exports.sunset_core:IsIncapacitated(source) or exports.sunset_core:IsIncapacitated(challenge.from) then
+            PendingChallenges[source] = nil
+            TriggerClientEvent('sunset:client:notify', source, 'Nu poti juca barbut acum.', 'error')
             return
         end
         PendingChallenges[source] = nil
@@ -159,6 +256,12 @@ RegisterCommand('barbut', function(source, args)
 
     if targetId == source then
         TriggerClientEvent('sunset:client:notify', source, 'Nu poti juca barbut cu tine insuti.', 'error')
+        return
+    end
+
+    -- [AUDIT P6-05] Downed/jailed players cannot challenge or be challenged.
+    if exports.sunset_core:IsIncapacitated(source) or exports.sunset_core:IsIncapacitated(targetId) then
+        TriggerClientEvent('sunset:client:notify', source, 'Nu poti juca barbut acum.', 'error')
         return
     end
 

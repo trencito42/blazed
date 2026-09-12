@@ -58,8 +58,18 @@ local function setDuty(source, state)
     local factionId = char and select(1, getFactionOf(char)) or nil
     TriggerClientEvent('sunset:client:dutyState', source, state, factionId)
     TriggerEvent('sunset:server:taxiDutySync', source, state)
+    -- [AUDIT P6-08] Let detention (escort release) and other systems react to duty changes.
+    TriggerEvent('sunset:server:dutyChanged', source, state)
     if SyncPlayerCombatState then SyncPlayerCombatState(source) end
 end
+
+-- [AUDIT P6-09] Internal hook so police.lua (loaded later) can force duty off
+-- on jail intake without a forward-reference to the local setDuty function.
+AddEventHandler('sunset:faction:forceDutyOff', function(src)
+    if FactionCore.isOnDuty(src) then
+        setDuty(src, false)
+    end
+end)
 
 exports.sunset_core:RegisterCallback('sunset:toggleDuty', function(source)
     local char = getChar(source)

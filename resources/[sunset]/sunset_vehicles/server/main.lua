@@ -206,6 +206,11 @@ exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, veh
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return nil, 'No character' end
 
+    -- [AUDIT P6-10] Jailed/downed players must not pull cars from the garage.
+    if exports.sunset_core:IsIncapacitated(source) then
+        return nil, 'You cannot access your vehicles right now.'
+    end
+
     vehicleId = tonumber(vehicleId)
     if not vehicleId then return nil, 'Invalid vehicle' end
 
@@ -236,7 +241,11 @@ exports.sunset_core:RegisterCallback('sunset:spawnVehicle', function(source, veh
         return nil, 'Garage spawn not configured'
     end
 
-    TriggerClientEvent('sunset:client:cleanupOwnedVehicles', source, outPlates)
+    -- [AUDIT F7.1] Broadcast cleanup to ALL clients: a key-holder may be driving the
+    -- "out" vehicle far from the owner; source-only cleanup left a plate-dupe window.
+    if #outPlates > 0 then
+        TriggerClientEvent('sunset:client:cleanupOwnedVehicles', -1, outPlates)
+    end
     TriggerClientEvent('sunset:client:spawnOwnedVehicle', source, veh, spawnOpts)
     return true
 end)
@@ -275,12 +284,26 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
     )
     if not owned then return nil, 'This vehicle is not owned by your character' end
 
+    -- [AUDIT F1.1] Whitelist client-reported props keys. Performance data (ecu) can
+    -- ONLY come from the DB (paid tuning flow); cosmetics/colors/odometer from client.
+    -- Anything else is dropped instead of being persisted.
     local storedProps = decodeProps(owned.props)
+    local clientProps = props
+    props = {}
+    local PROPS_WHITELIST = { 'cosmetics', 'color1', 'color2', 'odometer' }
+    for _, key in ipairs(PROPS_WHITELIST) do
+        if clientProps[key] ~= nil then props[key] = clientProps[key] end
+    end
     for key, value in pairs(storedProps) do
         if props[key] == nil then props[key] = value end
     end
+    -- ecu/hardware: always carry over the persisted (paid) values, never client input.
+    props.ecu = storedProps.ecu
     local previousOdometer = math.max(0, tonumber(storedProps.odometer) or 0)
-    props.odometer = math.max(previousOdometer, tonumber(props.odometer) or previousOdometer)
+    -- [AUDIT F5.2] Monotonic AND capped (+8 km per store) like the sync/park paths.
+    props.odometer = math.min(
+        math.max(previousOdometer, tonumber(props.odometer) or previousOdometer),
+        previousOdometer + 8.0)
     local encodedProps = json.encode(props)
     if #encodedProps > 32768 then return nil, 'Vehicle data is too large' end
 
@@ -306,10 +329,21 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         and math.max(0, math.min(1000, GetVehicleBodyHealth(vehicle)))
         or (tonumber(owned.body) or 1000.0)
 
+    -- [AUDIT F3.1] Fuel must never increase through the store path (same monotonic
+    -- cap as sync/park: +0.5 tolerance). Otherwise a modified client stores
+    -- fuelLevel=100 for a free tank, bypassing paid refueling.
+    local previousFuel = math.max(0, math.min(100, tonumber(owned.fuel) or 100.0))
     if fuelLevel == nil or tonumber(fuelLevel) == nil then
-        fuelLevel = tonumber(owned.fuel) or 100.0
+        fuelLevel = previousFuel
     else
-        fuelLevel = math.max(0, math.min(100, tonumber(fuelLevel) or 100.0))
+        fuelLevel = math.max(0, math.min(math.min(100, previousFuel + 0.5), tonumber(fuelLevel) or previousFuel))
+    end
+    -- Prefer the server-side entity fuel reading when the vehicle is resolvable.
+    if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+        local entityFuel = GetVehicleFuelLevel(vehicle)
+        if entityFuel and entityFuel > 0 then
+            fuelLevel = math.min(fuelLevel, math.max(0, math.min(100, entityFuel)))
+        end
     end
 
     local px, py, pz, ph = nil, nil, nil, nil
@@ -368,6 +402,21 @@ RegisterNetEvent('sunset:server:vehicleDestroyed', function(netId, plate)
 
     if veh.destroyed == 1 or veh.destroyed == true or veh.destroyed == '1' then
         return
+    end
+
+    -- [AUDIT P2-12] Reject if the resolved entity is perfectly healthy: a client
+    -- should not be able to remotely total an undamaged car (self-harm only, but
+    -- it desyncs DB state and can grief insurance level progression).
+    local checkVeh = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+    if checkVeh == 0 or not DoesEntityExist(checkVeh) then
+        checkVeh = findVehicleEntityByPlate(plate) or 0
+    end
+    if checkVeh ~= 0 and DoesEntityExist(checkVeh) then
+        local engineHealth = GetVehicleEngineHealth(checkVeh)
+        local bodyHealth = GetVehicleBodyHealth(checkVeh)
+        if engineHealth > 300.0 and bodyHealth > 500.0 and not IsEntityDead(checkVeh) then
+            return
+        end
     end
 
     local currentLevel = math.max(1, math.min(11, tonumber(veh.insurance_level) or 1))
@@ -469,6 +518,9 @@ end)
 
 RegisterNetEvent('sunset:vehicles:adminRepairDatabase', function(plate)
     local src = source
+    -- [AUDIT P1-01] This event repairs/undestroys vehicles: admins only.
+    local okAdmin, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(src, 3) end)
+    if not okAdmin or not isAdmin then return end
     local char = exports.sunset_core:GetCharacter(src)
     if not char then return end
     plate = normalizePlate(plate)
@@ -577,9 +629,58 @@ exports.sunset_core:RegisterCallback('sunset:syncOwnedVehicleState', function(so
 end)
 
 AddEventHandler('playerDropped', function()
-    StoreRate[source] = nil
-    StateSyncRate[source] = nil
-    ParkRate[source] = nil
+    local src = source
+    StoreRate[src] = nil
+    StateSyncRate[src] = nil
+    ParkRate[src] = nil
+
+    -- [AUDIT P6-03] Capture the character id SYNCHRONOUSLY: sunset_core's own
+    -- playerDropped handler nils Players[src] and a deferred GetCharacter call
+    -- would race it and silently skip cleanup.
+    local charId
+    local okChar, char = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+    if okChar and char then charId = char.id end
+    if not charId then return end
+
+    -- [AUDIT F7.2] Clean up this character's out-of-garage vehicles so they don't
+    -- orphan in-world (mission entities never auto-despawn) with stale DB state.
+    CreateThread(function()
+        local ok, err = pcall(function()
+            local rows = MySQL.query.await(
+                'SELECT id, plate, parked_x, parked_y FROM vehicles WHERE character_id = ? AND stored = 0',
+                { charId }
+            ) or {}
+            for _, row in ipairs(rows) do
+                local plate = normalizePlate(row.plate)
+                local veh = plate ~= '' and findVehicleEntityByPlate(plate) or 0
+                local entityOk = veh and veh ~= 0 and DoesEntityExist(veh)
+                -- If we can resolve the entity, persist where it was left and remove it;
+                -- otherwise just mark it stored so it doesn't dupe on next login.
+                if entityOk then
+                    local coords = GetEntityCoords(veh)
+                    MySQL.update.await([[
+                        UPDATE vehicles SET stored = 1,
+                            parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?,
+                            engine = ?, body = ?
+                        WHERE id = ? AND character_id = ?
+                    ]], {
+                        coords.x, coords.y, coords.z, GetEntityHeading(veh),
+                        math.max(-4000, math.min(1000, GetVehicleEngineHealth(veh))),
+                        math.max(0, math.min(1000, GetVehicleBodyHealth(veh))),
+                        row.id, charId,
+                    })
+                    DeleteEntity(veh)
+                else
+                    MySQL.update.await('UPDATE vehicles SET stored = 1 WHERE id = ? AND character_id = ?',
+                        { row.id, charId })
+                end
+                TriggerClientEvent('sunset:client:cleanupOwnedVehicles', -1, { { plate = plate } })
+            end
+        end)
+        if not ok then
+            print(('[sunset_vehicles] disconnect cleanup error: %s'):format(tostring(err)))
+        end
+    end)
 end)
 
 local function isNearGasStation(playerCoords, maxDist)
@@ -781,6 +882,24 @@ local function plateKey(plate)
     return (plate or ''):gsub('%s+', ''):upper()
 end
 
+-- [AUDIT P6-07] Key grants must die with ownership. Previously grants survived
+-- TransferVehicleOwnership and character deletion, so an old friend kept engine
+-- access to a car they no longer had any relationship with.
+local function clearKeysForPlate(plate)
+    VehicleKeys[plateKey(plate)] = nil
+end
+
+local function clearKeysForCharacter(charId)
+    charId = tonumber(charId)
+    if not charId then return end
+    for _, grants in pairs(VehicleKeys) do
+        grants[charId] = nil
+    end
+end
+
+exports('ClearKeysForPlate', clearKeysForPlate)
+exports('ClearKeysForCharacter', clearKeysForCharacter)
+
 exports.sunset_core:RegisterCallback('sunset:hasVehicleKeys', function(source, plate)
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return false end
@@ -978,6 +1097,8 @@ function TransferVehicleOwnership(vehicleId, fromCharId, toCharId)
         { toCharId, vehicleId, fromCharId }
     )
     if changed ~= 1 then return false, 'Vehicle transfer failed.' end
+    -- [AUDIT P6-07] Revoke all in-memory key grants on ownership change.
+    clearKeysForPlate(row.plate)
     return true
 end
 exports('TransferVehicleOwnership', TransferVehicleOwnership)

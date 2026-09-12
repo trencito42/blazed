@@ -90,7 +90,9 @@ CreateThread(function()
                 end
             end
             sendSync(list)
-            Wait(0)
+            -- [AUDIT P7-04] 60Hz NUI JSON sends while standing near any 24/7 or gas
+            -- attendant; 10Hz is imperceptible for screen-space tooltips.
+            Wait(100)
         else
             Wait(250)
         end
