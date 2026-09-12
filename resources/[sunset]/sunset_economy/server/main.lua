@@ -373,7 +373,7 @@ CreateThread(function()
 end)
 
 exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, itemName, amount, businessId)
-    amount = math.floor(amount or 1)
+    amount = math.floor(tonumber(amount) or 1)
     if amount < 1 then return nil, 'Invalid amount' end
     -- [AUDIT P6-05] Downed/jailed players cannot shop.
     if exports.sunset_core:IsIncapacitated(source) then return nil, 'You cannot shop right now.' end
@@ -405,9 +405,32 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     end
     if not shopItem then return nil, 'Item not sold here' end
 
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'Your character is not loaded. Reconnect and try again.' end
+    local maxAmount = math.max(1, math.floor(tonumber(shopItem.maxAmount) or 100))
+    if amount > maxAmount then
+        return nil, ('You can buy at most %d of this item at once.'):format(maxAmount)
+    end
+    local itemDef = Sunset.Items[itemName]
+    if not itemDef then return nil, 'This shop item is not configured correctly.' end
+    if shopItem.minLevel and (tonumber(char.level) or 1) < tonumber(shopItem.minLevel) then
+        return nil, ('Requires level %d. Your current level is %d.'):format(
+            tonumber(shopItem.minLevel), tonumber(char.level) or 1)
+    end
+    if shopItem.requiredLicense then
+        if GetResourceState('sunset_licenses') ~= 'started' then
+            return nil, 'The license service is unavailable. You were not charged.'
+        end
+        if not exports.sunset_licenses:HasLicense(source, shopItem.requiredLicense) then
+            return nil, 'A valid Firearm License is required. Contact an on-duty LSSI instructor.'
+        end
+    end
+    if itemDef.weapon and exports.sunset_inventory:HasItem(source, itemName, 1) then
+        return nil, ('You already own %s.'):format(itemDef.label or itemName)
+    end
+
     -- Optional fisherman-skill gate (minFishLevel on shop item)
     if shopItem.minFishLevel then
-        local char = exports.sunset_core:GetCharacter(source)
         local fishLevel = 1
         if char then
             fishLevel = tonumber(MySQL.scalar.await(

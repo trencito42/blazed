@@ -115,45 +115,6 @@ const InventoryForza = {
         }
     },
 
-    renderQuickSlots(quickslots, hooks) {
-        const grid = document.getElementById('grid-quick');
-        if (!grid) return;
-        grid.innerHTML = '<div class="quick-picks-label">Quick Access</div>';
-        for (let i = 1; i <= 5; i += 1) {
-            const slot = quickslots?.[String(i)] || quickslots?.[i];
-            const cell = document.createElement('div');
-            cell.className = 'inv-slot';
-            cell.dataset.slot = String(i);
-            cell.dataset.grid = 'grid-quick';
-            cell.dataset.hotbarSlot = String(i);
-            const disabledInVehicle = i === 2 && document.body.classList.contains('is-driver');
-            if (disabledInVehicle) cell.classList.add('inv-slot--disabled-key');
-            const marker = document.createElement('div');
-            marker.className = `hotbar-marker${disabledInVehicle ? ' hotbar-marker--disabled' : ''}`;
-            marker.textContent = String(i);
-            cell.appendChild(marker);
-
-            if (slot) {
-                const pseudo = {
-                    item: slot.item || slot.kind || 'quick',
-                    label: slot.label || 'Quick slot',
-                    count: slot.count || 1,
-                    weight: slot.weight || 0,
-                    icon: slot.icon,
-                    usable: slot.usable,
-                    id: slot.rowId || `quick-${i}`,
-                    slot: i,
-                };
-                this.buildItemButton(pseudo, cell, {
-                    onClick: () => {},
-                    onDblClick: () => post('hotbarAssign', { slot: i, clear: true, fromInventory: true }),
-                    onPointerDown: (row, c, el, event) => hooks.onQuickPointerDown?.(pseudo, c, el, event),
-                });
-            }
-            grid.appendChild(cell);
-        }
-    },
-
     renderNearby(players) {
         const list = document.getElementById('inventory-nearby-list');
         if (!list) return;

@@ -937,9 +937,6 @@ window.addEventListener('message', (event) => {
         case 'emotesHide':
             if (window.Panels) Panels.hideEmotes();
             break;
-        case 'hotbarUpdate':
-            if (window.HotbarUI) HotbarUI.renderHud(data || event.data.data);
-            break;
         case 'weaponAmmoUpdate':
             if (window.HotbarUI) HotbarUI.renderWeaponAmmo(data || event.data.data);
             break;

@@ -111,7 +111,8 @@ function AddItem(source, item, count, slot, metadata)
     if not char or not Sunset.Items[item] then return false end
     local itemDef = Sunset.Items[item]
     local meleeWeapon = itemDef.weapon and LICENSE_EXEMPT_WEAPONS[string.upper(itemDef.weapon)]
-    if itemDef.weapon and not meleeWeapon and GetResourceState('sunset_licenses') == 'started' then
+    if itemDef.weapon and not meleeWeapon then
+        if GetResourceState('sunset_licenses') ~= 'started' then return false end
         local allowed = exports.sunset_licenses:HasLicense(source, 'weapon')
         if not allowed then return false end
     end
@@ -122,7 +123,14 @@ function AddItem(source, item, count, slot, metadata)
     local newWeight = calcWeight(inv) + getItemWeight(item, count)
     if newWeight > Sunset.Config.MaxWeight then return false end
 
-    metadata = metadata or (item == 'gas_can' and { liters = 0 } or nil)
+    if not metadata and item == 'gas_can' then
+        metadata = { liters = 0 }
+    elseif not metadata and itemDef.weapon then
+        -- Weapons are unique inventory objects, never stackable commodities.
+        metadata = {
+            serial = ('LS-%06d-%06d'):format(tonumber(char.id) or 0, math.random(0, 999999)),
+        }
+    end
 
     for _, row in ipairs(inv) do
         if row.item == item and (not slot or row.slot == slot) and not metadata then
@@ -359,6 +367,33 @@ function UseItem(source, item)
         return true
     end
 
+    if def.ammoRounds and type(def.ammoWeapons) == 'table' then
+        if GetResourceState('sunset_licenses') ~= 'started' then
+            return false, 'The license service is unavailable. The ammunition was not consumed.'
+        end
+        if not exports.sunset_licenses:HasLicense(source, 'weapon') then
+            return false, 'Your Firearm License is missing or expired. The ammunition was not consumed.'
+        end
+        local compatible = {}
+        for _, weaponName in ipairs(def.ammoWeapons) do compatible[string.upper(weaponName)] = true end
+        local ownsCompatibleWeapon = false
+        for _, row in ipairs(GetInventory(source)) do
+            local rowDef = Sunset.Items[row.item]
+            if rowDef and rowDef.weapon and compatible[string.upper(rowDef.weapon)] then
+                ownsCompatibleWeapon = true
+                break
+            end
+        end
+        if not ownsCompatibleWeapon then
+            return false, ('You do not own a weapon compatible with %s. The box was not consumed.'):format(def.label or item)
+        end
+        if not RemoveItem(source, item, 1) then
+            return false, 'Your ammunition changed before it could be loaded. Reopen the inventory.'
+        end
+        emitClient('sunset:client:addWeaponAmmo', source, def.ammoWeapons, def.ammoRounds)
+        return true
+    end
+
     local char = exports.sunset_core:GetCharacter(source)
     if not char then return false, 'Your character is not loaded. Reconnect and try again.' end
     if not def.hunger and not def.thirst and not def.stress and not def.heal then
@@ -482,7 +517,6 @@ exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
         maxWeight = Sunset.Config.MaxWeight,
         cash = (char and tonumber(char.cash)) or 0,
         nearbyPlayers = nearbyPlayers,
-        quickslots = BuildHotbarView(source, true),
     }
 end)
 

@@ -57,6 +57,9 @@ local function enrichShop(shop)
             category = def.category or 'misc',
             icon = def.icon or 'backpack',
             weight = def.weight,
+            minLevel = row.minLevel,
+            requiredLicense = row.requiredLicense,
+            maxAmount = row.maxAmount,
         }
     end
     return {

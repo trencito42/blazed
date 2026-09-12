@@ -15,6 +15,10 @@ const StoreUI = {
         tools: 'ph-wrench',
         ammo: 'ph-crosshair',
         electronics: 'ph-device-mobile',
+        utility: 'ph-flashlight',
+        melee: 'ph-sword',
+        handguns: 'ph-crosshair',
+        shotguns: 'ph-target',
         misc: 'ph-shopping-bag',
     },
 
@@ -28,6 +32,10 @@ const StoreUI = {
         tools: 'Tools',
         ammo: 'Ammo',
         electronics: 'Electronics',
+        utility: 'Safety & Utility',
+        melee: 'Melee',
+        handguns: 'Handguns',
+        shotguns: 'Shotguns',
         misc: 'Misc',
     },
 
@@ -216,6 +224,8 @@ const StoreUI = {
         this.state.qty = 1;
         if (this.state.uiMode === 'fishing-sell') {
             this.state.maxQty = Math.max(1, Number(row.count) || 1);
+        } else if (this.state.uiMode === 'shop') {
+            this.state.maxQty = Math.max(1, Number(row.maxAmount) || 100);
         }
         this.renderItems();
         this.renderCheckout();
@@ -282,7 +292,13 @@ const StoreUI = {
             price.style.color = this.state.uiMode === 'fishing-sell' ? 'var(--st-success)' : '';
         }
         const weight = document.getElementById('store-preview-weight');
-        if (weight) weight.textContent = row.weight != null ? `Weight: ${Number(row.weight).toFixed(1)} kg` : '';
+        if (weight) {
+            const requirements = [];
+            if (row.minLevel) requirements.push(`Level ${row.minLevel}`);
+            if (row.requiredLicense === 'weapon') requirements.push('Firearm License');
+            const weightText = row.weight != null ? `Weight: ${Number(row.weight).toFixed(1)} kg` : '';
+            weight.textContent = [weightText, requirements.join(' · ')].filter(Boolean).join(' — ');
+        }
         const qty = document.getElementById('store-qty-value');
         if (qty) qty.textContent = String(this.state.qty);
         const totalEl = document.getElementById('store-total-value');
