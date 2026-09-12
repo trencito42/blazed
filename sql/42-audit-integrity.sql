@@ -48,11 +48,13 @@ UPDATE `turfs` t LEFT JOIN `clans` cl ON cl.`id` = t.`owner_clan_id`
 SET t.`owner_clan_id` = NULL WHERE t.`owner_clan_id` IS NOT NULL AND cl.`id` IS NULL;
 
 ALTER TABLE `properties`
-    ADD CONSTRAINT IF NOT EXISTS `fk_property_owner` FOREIGN KEY (`owner_character_id`)
+    DROP FOREIGN KEY IF EXISTS `fk_property_owner`,
+    ADD CONSTRAINT `fk_property_owner` FOREIGN KEY (`owner_character_id`)
     REFERENCES `characters` (`id`) ON DELETE SET NULL;
 
 ALTER TABLE `player_businesses`
-    ADD CONSTRAINT IF NOT EXISTS `fk_business_owner` FOREIGN KEY (`owner_character_id`)
+    DROP FOREIGN KEY IF EXISTS `fk_business_owner`,
+    ADD CONSTRAINT `fk_business_owner` FOREIGN KEY (`owner_character_id`)
     REFERENCES `characters` (`id`) ON DELETE SET NULL;
 
 -- lottery_tickets.character_id was signed INT while characters.id is INT
@@ -61,9 +63,11 @@ ALTER TABLE `lottery_tickets`
     MODIFY `character_id` INT UNSIGNED NOT NULL;
 
 ALTER TABLE `lottery_tickets`
-    ADD CONSTRAINT IF NOT EXISTS `fk_lottery_char` FOREIGN KEY (`character_id`)
+    DROP FOREIGN KEY IF EXISTS `fk_lottery_char`,
+    ADD CONSTRAINT `fk_lottery_char` FOREIGN KEY (`character_id`)
     REFERENCES `characters` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `turfs`
-    ADD CONSTRAINT IF NOT EXISTS `fk_turf_clan` FOREIGN KEY (`owner_clan_id`)
+    DROP FOREIGN KEY IF EXISTS `fk_turf_clan`,
+    ADD CONSTRAINT `fk_turf_clan` FOREIGN KEY (`owner_clan_id`)
     REFERENCES `clans` (`id`) ON DELETE SET NULL;
