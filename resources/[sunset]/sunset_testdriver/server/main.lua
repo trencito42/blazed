@@ -109,14 +109,19 @@ local function sessionTests()
 
     local testActivity = 'td_test_' .. tostring(os.time())
     local endedStates = {}
+    local endedEventName = 'td_test_ended_' .. tostring(os.time())
+    AddEventHandler(endedEventName, function(session, state)
+        endedStates[#endedStates + 1] = state
+    end)
+    -- Functions cannot cross the export boundary; register via event name.
     local ok = exports.sunset_sessions.RegisterActivity(testActivity, {
         reconnect = 'ABANDON',
-        onEnd = function(session, state) endedStates[#endedStates + 1] = state end,
+        onEndEvent = endedEventName,
     })
     record('RegisterActivity accepts valid def', ok == true)
 
     local rejected = exports.sunset_sessions.RegisterActivity('td_bad', {})
-    record('RegisterActivity rejects def without onEnd', rejected == false)
+    record('RegisterActivity rejects def without cleanup', rejected == false)
 
     -- fake source (999999 is not a connected player; framework must tolerate)
     local session, err = exports.sunset_sessions.CreateSession({

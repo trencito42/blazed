@@ -36,26 +36,31 @@ CreateThread(function()
         return
     end
     SessionsService = true
+    -- NOTE: Lua functions cannot cross the export boundary (msgpack), so the
+    -- cleanup hook is an EVENT name handled below.
     sessionsCall('RegisterActivity', 'civilian_job', {
         reconnect = 'ABANDON',
-        onEnd = function(sess, state)
-            -- Server-side entity cleanup for the mirrored job session.
-            for _, netId in pairs(sess.entities or {}) do
-                local ent = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
-                if ent ~= 0 and DoesEntityExist(ent) then
-                    Entity(ent).state:set('sunsetProtectedVehicle', nil, true)
-                    DeleteEntity(ent)
-                end
-            end
-            -- If the framework ended the session via a central trigger
-            -- (downed/jail/drop/deadline), mirror it into the local job table so
-            -- the two never desync. Guarded: ClearSession also calls EndSession.
-            local src = tonumber(sess.source)
-            if src and Sessions[src] and Sessions[src].frameworkId == sess.id and not Sessions[src].ending then
-                SunsetJobs_ClearSession(src, state == 'COMPLETED' and 'COMPLETED' or 'FAILED', 'framework:' .. tostring(state))
-            end
-        end,
+        onEndEvent = 'sunset:jobs:frameworkSessionEnded',
     })
+end)
+
+-- [SESSIONS MIGRATION] Framework session ended (any path: deadline, central
+-- triggers, explicit EndSession): clean up work entities + mirror into the
+-- local job table so the two never desync.
+AddEventHandler('sunset:jobs:frameworkSessionEnded', function(sess, state)
+    if type(sess) ~= 'table' then return end
+    for _, netId in pairs(sess.entities or {}) do
+        local ent = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+        if ent ~= 0 and DoesEntityExist(ent) then
+            Entity(ent).state:set('sunsetProtectedVehicle', nil, true)
+            DeleteEntity(ent)
+        end
+    end
+    local src = tonumber(sess.source)
+    if src and Sessions[src] and Sessions[src].frameworkId == sess.id and not Sessions[src].ending then
+        Sessions[src].ending = true
+        SunsetJobs_ClearSession(src, state == 'COMPLETED' and 'COMPLETED' or 'FAILED', 'framework:' .. tostring(state))
+    end
 end)
 
 local function getChar(source)
@@ -95,6 +100,7 @@ function SunsetJobs_ClearSession(source, finalState, reason, options)
     end
     session.state = finalState
     session.endReason = reason
+    session.ending = true -- [SESSIONS] guards re-entrancy with the framework hook
     Sessions[source] = nil
     -- [SESSIONS MIGRATION] End the mirrored canonical session (runs onEnd
     -- entity cleanup; terminal states are absorbing so double-end is safe).

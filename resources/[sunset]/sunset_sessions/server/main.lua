@@ -38,22 +38,40 @@ end
 -- Activity registry
 -- ------------------------------------------------------------
 -- Definition fields:
---   states: optional custom transition whitelist (table from->to set)
---   onEnd(session, endState): REQUIRED cleanup (server-side entity release,
---       lock clearing). Runs exactly once, pcall-wrapped.
---   onCancel(session, reason), onTimeout(session): optional specifics
+--   states: optional custom transition whitelist
+--   Cleanup/timeout/reconnect handlers CANNOT be Lua functions when
+--   registered from another resource: FiveM serializes export arguments
+--   (msgpack) and functions do not survive the boundary. Use EVENT NAMES:
+--     onEndEvent       -> TriggerEvent(name, session, endState)   REQUIRED*
+--     onTimeoutEvent   -> TriggerEvent(name, session)
+--     onReconnectEvent -> TriggerEvent(name, session, newSource)
+--   (*internal same-resource registrations may pass onEnd as a function;
+--   cross-resource registrations must provide onEndEvent.)
 --   reconnect: 'ABANDON' | 'SUSPEND' | 'PERSIST' (default ABANDON)
---   onReconnect(session, newSource): required for SUSPEND/PERSIST
 function RegisterActivity(name, def)
     if type(name) ~= 'string' or type(def) ~= 'table' then return false end
-    if type(def.onEnd) ~= 'function' then
-        print(('[sessions] activity %s rejected: onEnd cleanup is required'):format(name))
+    if type(def.onEnd) ~= 'function' and type(def.onEndEvent) ~= 'string' then
+        print(('[sessions] activity %s rejected: onEndEvent (or internal onEnd) is required'):format(name))
         return false
     end
     Activities[name] = def
     return true
 end
 exports('RegisterActivity', RegisterActivity)
+
+local function runActivityHook(def, kind, ...)
+    -- kind: 'onEnd' | 'onTimeout' | 'onReconnect'
+    local fn = def[kind]
+    if type(fn) == 'function' then
+        local ok, err = pcall(fn, ...)
+        if not ok then print(('[sessions] %s hook error: %s'):format(kind, tostring(err))) end
+        return
+    end
+    local eventName = def[kind .. 'Event']
+    if type(eventName) == 'string' then
+        TriggerEvent(eventName, ...)
+    end
+end
 
 -- ------------------------------------------------------------
 -- Session lifecycle
@@ -133,10 +151,7 @@ local function finish(session, endState, reason)
     log(session.id, 'END state=%s reason=%s', endState, tostring(reason))
 
     local def = Activities[session.activity]
-    local ok, err = pcall(def.onEnd, session, endState)
-    if not ok then
-        print(('[sessions] cleanup error for %s: %s'):format(session.id, tostring(err)))
-    end
+    runActivityHook(def, 'onEnd', session, endState)
 
     if session.source and GetPlayerName(session.source) then
         TriggerClientEvent('sunset:sessions:ended', session.source, {
@@ -271,7 +286,7 @@ CreateThread(function()
         for _, session in pairs(Sessions) do
             if not session.ended and session.deadlineAt and now > session.deadlineAt then
                 local def = Activities[session.activity]
-                if def.onTimeout then pcall(def.onTimeout, session) end
+                runActivityHook(def, 'onTimeout', session)
                 finish(session, 'TIMED_OUT', 'deadline exceeded')
             end
         end
@@ -325,14 +340,7 @@ AddEventHandler('sunset:server:characterSelected', function(src, charId)
         local def = Activities[session.activity]
         session.source = src
         BySource[src] = id
-        if def.onReconnect then
-            local ok, err = pcall(def.onReconnect, session, src)
-            if not ok then
-                print(('[sessions] onReconnect error %s: %s'):format(id, tostring(err)))
-                finish(session, 'FAILED', 'reconnect handler error')
-                return
-            end
-        end
+        runActivityHook(def, 'onReconnect', session, src)
         log(id, 'REATTACHED source=%d', src)
     end
 end)
