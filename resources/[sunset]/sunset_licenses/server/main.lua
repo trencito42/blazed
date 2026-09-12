@@ -333,16 +333,27 @@ end
 -- stays ONLY to attribute the last aggressor for war kill scoring. The
 -- license is still enforced where it matters economically: buying weapons
 -- (gunshop) and receiving weapons in trade/inventory (AddItem checks).
+-- [WAR KILL FIX 2] This handler is now PURE kill attribution. Two bugs made
+-- war kills not score:
+--  (1) melee hits returned early -> knife kills were never attributed;
+--  (2) NetworkGetEntityOwner(victim) frequently returns 0/nil under OneSync
+--      -> firearm kills lost their attacker. The victim is now resolved by
+--      comparing the entity against every player's ped (cheap, reliable).
 AddEventHandler('weaponDamageEvent', function(sender, data)
     if type(data) ~= 'table' then return end
-    local weaponHash = tonumber(data.weaponType)
-    if isMeleeWeaponHash(weaponHash) then return end
     local victimNet = tonumber(data.hitGlobalId)
     if victimNet and victimNet ~= 0 then
         local victimEnt = NetworkGetEntityFromNetworkId(victimNet)
-        if victimEnt and victimEnt ~= 0 and GetEntityType(victimEnt) == 1 and IsPedAPlayer(victimEnt) then
-            local victimSrc = NetworkGetEntityOwner(victimEnt)
-            if victimSrc and victimSrc > 0 and victimSrc ~= sender then
+        if victimEnt and victimEnt ~= 0 and IsPedAPlayer(victimEnt) then
+            local victimSrc = nil
+            for _, pid in ipairs(GetPlayers()) do
+                local src = tonumber(pid)
+                if src and src ~= sender and GetPlayerPed(src) == victimEnt then
+                    victimSrc = src
+                    break
+                end
+            end
+            if victimSrc then
                 TriggerEvent('sunset:death:recordAttacker', victimSrc, sender)
             end
         end
