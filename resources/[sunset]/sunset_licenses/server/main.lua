@@ -4,6 +4,84 @@ local ServerLicenseCache = {}
 local LastWeaponWarning = {}
 local LicenseForceReload = {} -- [source] = last forced DB reload time (throttle)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [SESSIONS MIGRATION] Mirror license exams into sunset_sessions:
+--  ListSessions visibility + hard deadline backstop + central
+--  triggers. The exam logic stays in this resource (validated).
+-- ═══════════════════════════════════════════════════════════════
+local SessionsService = GetResourceState('sunset_sessions') == 'started'
+local function sessionsCall(method, ...)
+    if GetResourceState('sunset_sessions') ~= 'started' then SessionsService = false return nil end
+    local args = table.pack(...)
+    local ok, res = pcall(function()
+        return exports.sunset_sessions[method](exports.sunset_sessions, table.unpack(args, 1, args.n))
+    end)
+    if not ok then return nil end
+    return res
+end
+
+CreateThread(function()
+    Wait(1500)
+    if GetResourceState('sunset_sessions') ~= 'started' then
+        print('^3[sunset_licenses]^7 sunset_sessions not started; exams run standalone.')
+        return
+    end
+    SessionsService = true
+    sessionsCall('RegisterActivity', 'license_exam', {
+        reconnect = 'ABANDON',
+        onEndEvent = 'sunset:licenses:frameworkSessionEnded',
+    })
+end)
+
+-- Framework ended the mirrored exam (deadline/downed/jail/drop/stop):
+-- abort the local exam exactly like the manual abort path.
+AddEventHandler('sunset:licenses:frameworkSessionEnded', function(fwSession, state)
+    if type(fwSession) ~= 'table' then return end
+    local src = tonumber(fwSession.source)
+    if not src then return end
+    local session = TestSessions[src]
+    if not session or session.frameworkId ~= fwSession.id then return end
+    if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
+    if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(src) end
+    TestSessions[src] = nil
+    if GetPlayerName(src) then
+        TriggerClientEvent('sunset:licenses:testAbort', src)
+        -- NOTE: do not use `notify` here — it is a local declared later in this
+        -- file (forward ref would resolve to nil global at this scope).
+        TriggerClientEvent('sunset:client:notify', src,
+            ('Your license exam ended: %s.'):format(tostring(state or 'session closed')), 'error', 7000)
+    end
+end)
+
+local function createExamFrameworkSession(source, charId, licenseType)
+    if not SessionsService then return nil end
+    local theoryTimeSec = tonumber(SunsetLicenses.TheoryTimeSec) or 600
+    local practicalTimeSec = 1500
+    local s = sessionsCall('CreateSession', {
+        source = source,
+        charId = charId,
+        activity = 'license_exam',
+        timeoutSec = theoryTimeSec + practicalTimeSec + 300,
+        data = { licenseType = licenseType },
+    })
+    if type(s) == 'table' and s.id then
+        sessionsCall('Transition', s.id, 'ACTIVE', 'exam started')
+        return s.id
+    end
+    return nil
+end
+
+-- Single clear path so the framework mirror always ends with the local exam.
+local function clearTestSession(source, fwState, fwReason)
+    local session = TestSessions[source]
+    TestSessions[source] = nil
+    if session and session.frameworkId then
+        local id = session.frameworkId
+        session.frameworkId = nil
+        sessionsCall('EndSession', id, fwState or 'COMPLETED', fwReason or 'exam ended')
+    end
+end
+
 local function notify(source, message, kind)
     TriggerClientEvent('sunset:client:notify', source, message, kind or 'info', 7000)
 end
@@ -468,11 +546,16 @@ exports.sunset_core:RegisterCallback('sunset:license:startTheory', function(sour
         instructor = authorization and authorization.instructor or nil,
         issuerCharacterId = authorization and authorization.issuerCharacterId or nil,
     }
+    -- [SESSIONS] mirror into the framework (deadline backstop + diagnostics).
+    local examineeCid = charId(source)
+    if examineeCid then
+        TestSessions[source].frameworkId = createExamFrameworkSession(source, examineeCid, licenseType)
+    end
     if def and def.instructorFaction then
         local reportId = type(CreateLicenseExamReport) == 'function'
             and CreateLicenseExamReport(source, TestSessions[source]) or nil
         if not reportId then
-            TestSessions[source] = nil
+            clearTestSession(source)
             AuthorizedTests[source] = nil
             if charged > 0 and chargedAccount then
                 exports.sunset_core:AddMoney(source, chargedAccount, charged, 'license_exam_refund')
@@ -524,7 +607,7 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     end
     if session.theoryDeadline and os.time() > session.theoryDeadline then
         if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'failed') end
-        TestSessions[source] = nil
+        clearTestSession(source)
         return nil, 'Theory time expired — exam failed.'
     end
     local theory = SunsetLicenses.Theory[licenseType]
@@ -547,7 +630,7 @@ exports.sunset_core:RegisterCallback('sunset:license:submitTheory', function(sou
     end
     if score < need then
         if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'failed') end
-        TestSessions[source] = nil
+        clearTestSession(source)
         return nil, ('Theory failed (%d/%d). Study the rules and try again.'):format(score, #(theory.questions or {}))
     end
     session.phase = 'practical'
@@ -578,7 +661,7 @@ exports.sunset_core:RegisterCallback('sunset:license:abortTest', function(source
     local session = TestSessions[source]
     if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
     if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
-    TestSessions[source] = nil
+    clearTestSession(source)
     TriggerClientEvent('sunset:licenses:testAbort', source)
     return true
 end)
@@ -594,7 +677,7 @@ local function abortIfInTest(src, reason)
         FinalizeLicenseExamReport(TestSessions[src], 'aborted')
     end
     if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(src) end
-    TestSessions[src] = nil
+    clearTestSession(src, 'FAILED', reason or 'aborted')
     TriggerClientEvent('sunset:licenses:testAbort', src)
     notify(src, ('Your license exam was cancelled: %s.'):format(reason), 'error')
 end
@@ -617,7 +700,7 @@ exports.sunset_core:RegisterCallback('sunset:license:completePractical', functio
     if sessionTimedOut(session) or os.time() - session.practicalValidatedAt > 20 then
         if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
         if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
-        TestSessions[source] = nil
+        clearTestSession(source)
         return nil, 'The practical result expired. Start the exam again.'
     end
     local def = SunsetLicenses.Types[licenseType]
@@ -625,7 +708,7 @@ exports.sunset_core:RegisterCallback('sunset:license:completePractical', functio
         if not session.instructor or not GetPlayerName(session.instructor) or not isInstructor(session.instructor) then
             if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
             if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
-            TestSessions[source] = nil
+            clearTestSession(source)
             return nil, 'Your LSSI instructor must remain online and on duty until the exam is completed.'
         end
     end
@@ -634,14 +717,14 @@ exports.sunset_core:RegisterCallback('sunset:license:completePractical', functio
     if def and def.instructorFaction and candidateMistakes >= failAt then
         if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
         if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'failed') end
-        TestSessions[source] = nil
+        clearTestSession(source)
         notify(session.instructor, ('Candidate #%d failed the practical with %.1f/%.1f recorded mistakes.'):format(
             source, candidateMistakes, failAt), 'warning')
         return nil, ('Practical failed: the instructor recorded %.1f/%.1f mistakes. Ask LSSI management to review the report if needed.'):format(
             candidateMistakes, failAt)
     end
     if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
-    TestSessions[source] = nil
+    clearTestSession(source)
     local issuer = session.issuerCharacterId
     local ok, err = GrantLicense(source, licenseType, issuer)
     if not ok then
@@ -679,7 +762,7 @@ AddEventHandler('playerDropped', function()
     local session = TestSessions[source]
     if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(session, 'aborted') end
     if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(source) end
-    TestSessions[source] = nil
+    clearTestSession(source)
     AuthorizedTests[source] = nil
     ServerLicenseCache[source] = nil
     LastWeaponWarning[source] = nil
@@ -691,7 +774,7 @@ AddEventHandler('playerDropped', function()
         if activeSession.instructor == droppedSource then
             if type(FinalizeLicenseExamReport) == 'function' then FinalizeLicenseExamReport(activeSession, 'aborted') end
             if type(CleanupLicenseTestEntities) == 'function' then CleanupLicenseTestEntities(target) end
-            TestSessions[target] = nil
+            clearTestSession(target, 'FAILED', 'instructor disconnected')
             notify(target, 'Your LSSI exam ended because the supervising instructor disconnected.', 'error')
             TriggerClientEvent('sunset:licenses:testAbort', target)
         end

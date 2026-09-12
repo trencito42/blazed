@@ -137,17 +137,26 @@ SunsetRobbery.Locations = {
             coords = vector3(149.20, -1040.50, 29.37),
             radius = 4.0,
         },
-        doors = {},
+        -- [FLEECA FIX] doors was EMPTY: the vault door never unlocked on hack
+        -- success, so players couldn't enter and the loot markers sat behind/
+        -- inside the wall. The Fleeca vault door is v_ilev_gb_vauldoor; it is
+        -- unlocked for 15s after the hack (sessions.scheduleDoorLock) and the
+        -- world.lua 2s refresh keeps the state until then.
+        doors = {
+            { model = `v_ilev_gb_vauldoor`, coords = vector3(147.30, -1044.86, 29.36) },
+        },
         hackTerminal = {
-            coords = vector3(147.20, -1046.20, 29.37),
-            heading = 340.0,
+            coords = vector3(147.20, -1042.20, 29.37),
+            heading = 180.0,
             label = '[E] Bypass vault keypad',
         },
+        -- Loot points moved INSIDE the actual Fleeca Legion vault room
+        -- (past the vault door, south side), reachable floor positions.
         displays = {
-            { id = 'fb1', coords = vector3(148.80, -1050.20, 29.37), lootTable = 'vault', label = 'Safety Deposit Row A' },
-            { id = 'fb2', coords = vector3(147.10, -1051.40, 29.37), lootTable = 'vault', label = 'Cash Safe Compartment' },
-            { id = 'fb3', coords = vector3(145.40, -1049.80, 29.37), lootTable = 'vault', label = 'Safety Deposit Row B' },
-            { id = 'fb4', coords = vector3(146.50, -1047.80, 29.37), lootTable = 'vault', label = 'Teller Vault Box' },
+            { id = 'fb1', coords = vector3(146.70, -1048.90, 29.37), lootTable = 'vault', label = 'Safety Deposit Row A' },
+            { id = 'fb2', coords = vector3(148.20, -1048.90, 29.37), lootTable = 'vault', label = 'Cash Safe Compartment' },
+            { id = 'fb3', coords = vector3(146.70, -1050.40, 29.37), lootTable = 'vault', label = 'Safety Deposit Row B' },
+            { id = 'fb4', coords = vector3(148.20, -1050.40, 29.37), lootTable = 'vault', label = 'Teller Vault Box' },
         },
     },
 }

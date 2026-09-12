@@ -204,6 +204,20 @@ end
 
 function SunsetAppearance.syncTorso(appearance, ped, gender)
     local top = appearance.components['11'] or { drawable = 0, texture = 0 }
+    -- [C4] Full combo resolution: torso from rules/besttorso + undershirt
+    -- validated against the top's blocked list. Changing a top can no longer
+    -- leave a stale incompatible undershirt (the hole-in-chest bug class).
+    if SunsetClothingRules and SunsetClothingRules.resolveTopCombo then
+        local torsoD, torsoT, underD, underT =
+            SunsetClothingRules.resolveTopCombo(ped, gender, top.drawable, top.texture)
+        appearance.components['3'] = { drawable = torsoD, texture = torsoT }
+        local currentUnder = appearance.components['8']
+        if not currentUnder
+            or not SunsetClothingRules.isUndershirtAllowed(gender, top.drawable, currentUnder.drawable) then
+            appearance.components['8'] = { drawable = underD, texture = underT }
+        end
+        return appearance
+    end
     local torso, tex = SunsetAppearance.resolveTorso(ped, gender, top.drawable, top.texture)
     appearance.components['3'] = { drawable = torso, texture = tex }
     return appearance

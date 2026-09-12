@@ -7,6 +7,60 @@ RobberySessions = {
     starting = {},
 }
 
+-- ═══════════════════════════════════════════════════════════════
+--  [SESSIONS MIGRATION] Mirror active robberies into sunset_sessions.
+--  The robbery state machine stays here (validated, cooldown ledger,
+--  loot strip on fail) — the framework adds: ListSessions visibility,
+--  a hard deadline backstop, and centralized downed/jail/drop triggers
+--  that call back into RobberySessions.fail via the onEnd event.
+-- ═══════════════════════════════════════════════════════════════
+local SessionsService = GetResourceState('sunset_sessions') == 'started'
+local function sessionsCall(method, ...)
+    if GetResourceState('sunset_sessions') ~= 'started' then SessionsService = false return nil end
+    local args = table.pack(...)
+    local ok, res = pcall(function()
+        return exports.sunset_sessions[method](exports.sunset_sessions, table.unpack(args, 1, args.n))
+    end)
+    if not ok then return nil end
+    return res
+end
+
+CreateThread(function()
+    Wait(1500)
+    if GetResourceState('sunset_sessions') ~= 'started' then
+        print('^3[sunset_robbery]^7 sunset_sessions not started; running standalone sessions.')
+        return
+    end
+    SessionsService = true
+    sessionsCall('RegisterActivity', 'robbery', {
+        reconnect = 'ABANDON',
+        onEndEvent = 'sunset:robbery:frameworkSessionEnded',
+    })
+end)
+
+local function createFrameworkSession(source, charId, sessionId, locationId)
+    if not SessionsService then return nil end
+    local s = sessionsCall('CreateSession', {
+        source = source,
+        charId = charId,
+        activity = 'robbery',
+        timeoutSec = SunsetRobbery.MaxSessionSec or 1200,
+        data = { robberyId = sessionId, locationId = locationId },
+    })
+    if type(s) == 'table' and s.id then
+        sessionsCall('Transition', s.id, 'ACTIVE', 'robbery started')
+        return s.id
+    end
+    return nil
+end
+
+local function endFrameworkSession(session, endState, reason)
+    if not session or not session.frameworkId then return end
+    local id = session.frameworkId
+    session.frameworkId = nil
+    sessionsCall('EndSession', id, endState or 'COMPLETED', reason)
+end
+
 local STATES = {
     IDLE = 'IDLE',
     STARTING = 'STARTING',
@@ -17,6 +71,20 @@ local STATES = {
     FAILED = 'FAILED',
     CANCELLED = 'CANCELLED',
 }
+AddEventHandler('sunset:robbery:frameworkSessionEnded', function(fwSession, state)
+    if type(fwSession) ~= 'table' then return end
+    local src = tonumber(fwSession.source)
+    if not src then return end
+    local localSession = RobberySessions.bySource[src]
+    if localSession and localSession.frameworkId == fwSession.id then
+        localSession.frameworkId = nil
+        if localSession.stage ~= STATES.SUCCESS and localSession.stage ~= STATES.FAILED then
+            RobberySessions.fail(src, 'framework:' .. tostring(state or 'ended'))
+        end
+    end
+end)
+
+
 
 local function setDoors(session, unlocked)
     TriggerClientEvent('sunset:robbery:doorState', -1, session.locationId, unlocked == true)
@@ -272,6 +340,8 @@ function RobberySessions.begin(source, locationId, skipGates)
     RobberySessions.locationBusy[locationId] = source
     RobberySessions.starting[source] = nil
     setDoors(session, true)
+    -- [SESSIONS] mirror into the framework (ListSessions + deadline backstop).
+    session.frameworkId = createFrameworkSession(source, session.characterId, session.id, locationId)
     RobberyAdapter.audit(session, 'started', { skipGates = skipGates == true })
     return session
 end
@@ -284,6 +354,7 @@ function RobberySessions.fail(source, reason)
     local session = RobberySessions.bySource[source]
     if not session then return end
     session.stage = STATES.FAILED
+    endFrameworkSession(session, 'FAILED', reason or 'robbery failed')
     local removed, cleanupOk = RobberyAdapter.removeRobberyLoot(source, session.characterId, session.id)
     if cleanupOk then RobberyAdapter.finishRun(session, 'failed') end
     RobberySessions.locationBusy[session.locationId] = nil
@@ -303,6 +374,7 @@ function RobberySessions.success(source)
     local session = RobberySessions.bySource[source]
     if not session then return end
     session.stage = STATES.SUCCESS
+    endFrameworkSession(session, 'COMPLETED', 'robbery success')
     RobberyAdapter.finishRun(session, 'success')
     RobberySessions.locationBusy[session.locationId] = nil
     RobberySessions.bySource[source] = nil
@@ -352,6 +424,7 @@ function RobberySessions.cancel(source, reason)
     local session = RobberySessions.bySource[source]
     if not session then return end
     session.stage = STATES.CANCELLED
+    endFrameworkSession(session, 'CANCELLED', reason or 'cancelled')
     local removed, cleanupOk = RobberyAdapter.removeRobberyLoot(source, session.characterId, session.id)
     if cleanupOk then RobberyAdapter.finishRun(session, 'cancelled') end
     RobberySessions.locationBusy[session.locationId] = nil

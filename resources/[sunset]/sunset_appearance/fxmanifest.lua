@@ -19,6 +19,7 @@ client_scripts {
     '@sunset_core/client/callbacks.lua',
     'client/torso_data.lua',
     'client/appearance_lib.lua',
+    'client/clothing_rules.lua',
     'client/clothing_compat.lua',
     'client/main.lua',
 }
