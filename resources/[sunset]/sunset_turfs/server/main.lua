@@ -913,7 +913,7 @@ local function runTurflist(source)
 
     if source ~= 0 then
         TriggerClientEvent('sunset:client:notify', source,
-            %d territories listed in chat.:format(#rows), 'success', 5000)
+            ('%d territories listed in chat.'):format(#rows), 'success', 5000)
     end
 end
 

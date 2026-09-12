@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XODO RP - Trade & Scoreboard</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent: #00ffcc; 
+            --danger: #ff3366; 
+            --warning: #f59e0b;
+            --success: #10b981;
+            
+            --bg-panel: rgba(10, 10, 15, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif;
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover; overflow: hidden; user-select: none;
+        }
+
+        .dev-tools { position: absolute; top: 30px; left: 30px; z-index: 100; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; color: white; display: flex; gap: 10px; border: 1px solid var(--border-glass);}
+        .dev-btn { background: var(--text-main); color: #000; border: none; padding: 8px 12px; border-radius: 4px; font-family: inherit; font-weight: 900; cursor: pointer; font-size: 11px; text-transform: uppercase; transition: 0.2s;}
+        .dev-btn:hover { background: var(--accent); }
+
+        /* ==========================================================
+           SCOREBOARD (TASTA Z)
+           ========================================================== */
+        .scoreboard {
+            position: absolute; top: 30px; right: -400px; /* Ascuns in dreapta */
+            width: 320px; z-index: 50; display: flex; flex-direction: column; gap: 10px;
+            transition: right 0.4s var(--transition-snappy);
+        }
+        .scoreboard.active { right: 30px; } /* Gliseaza vizibil */
+
+        .sb-header {
+            background: var(--bg-panel); border: 1px solid var(--border-glass);
+            border-right: 4px solid var(--accent); padding: 15px 20px;
+            backdrop-filter: blur(10px); transform: skewX(-5deg);
+        }
+        .sb-title { font-size: 18px; font-weight: 900; font-style: italic; color: var(--text-main); text-transform: uppercase; transform: skewX(5deg); display: flex; justify-content: space-between; align-items: center;}
+        .sb-title span { color: var(--accent); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;}
+        
+        .sb-stats { display: flex; justify-content: space-between; margin-top: 10px; transform: skewX(5deg); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;}
+        .sb-stat { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+        .sb-stat i { font-size: 14px; }
+        .sb-stat.cops i { color: #3b82f6; }
+        .sb-stat.ems i { color: var(--danger); }
+
+        .sb-list {
+            background: var(--bg-panel); border: 1px solid var(--border-glass);
+            padding: 10px; backdrop-filter: blur(10px); transform: skewX(-5deg);
+            display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto;
+        }
+        .sb-list::-webkit-scrollbar { width: 0; }
+
+        .sb-player { display: flex; align-items: center; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid transparent; transform: skewX(5deg); transition: 0.2s;}
+        .sb-player:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        .sb-id { width: 40px; font-size: 11px; font-weight: 900; color: var(--accent); }
+        .sb-name { flex: 1; font-size: 12px; font-weight: 700; color: var(--text-main); }
+        .sb-ping { font-size: 10px; font-weight: 800; color: var(--success); display: flex; align-items: center; gap: 4px;}
+
+        /* ==========================================================
+           TRADE UI (MODAL)
+           ========================================================== */
+        .trade-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .trade-overlay.active { opacity: 1; pointer-events: all; }
+
+        .trade-wrapper {
+            display: flex; gap: 20px; transform: skewX(-5deg);
+        }
+
+        .trade-panel {
+            width: 350px; background: var(--bg-panel); border: 2px solid var(--border-glass);
+            display: flex; flex-direction: column; position: relative;
+        }
+
+        /* Status Header */
+        .tp-header { padding: 15px 20px; border-bottom: 2px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; }
+        .tp-name { font-size: 16px; font-weight: 900; font-style: italic; color: var(--text-main); text-transform: uppercase; transform: skewX(5deg);}
+        .tp-status { font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 4px 8px; background: var(--warning); color: #000; transform: skewX(5deg); border-radius: 2px; transition: 0.3s;}
+        
+        .trade-panel.locked { border-color: var(--accent); box-shadow: 0 0 30px rgba(0,255,204,0.1); }
+        .trade-panel.locked .tp-status { background: var(--accent); }
+
+        /* Grid Obiecte */
+        .tp-grid { padding: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; min-height: 250px; align-content: start; }
+        .inv-slot { aspect-ratio: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; position: relative;}
+        .inv-item { width: 90%; height: 90%; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: skewX(5deg); }
+        .item-icon { font-size: 28px; color: var(--text-main); }
+        .item-qty { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: 900; color: var(--accent); }
+
+        /* Actions */
+        .tp-actions { padding: 20px; border-top: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 10px; }
+        
+        .btn-trade {
+            background: rgba(0,0,0,0.6); border: 1px solid var(--text-muted); color: var(--text-main);
+            padding: 12px; font-family: 'Montserrat'; font-size: 12px; font-weight: 900; font-style: italic;
+            text-transform: uppercase; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-trade:hover { background: var(--text-main); color: #000; }
+        
+        .btn-trade.lock-btn.active { background: var(--accent); border-color: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <div class="dev-tools">
+        <button class="dev-btn" onclick="document.getElementById('trade-modal').classList.add('active')">Deschide Trade</button>
+        <div style="font-size: 11px; margin-top: 5px;">Apasă tasta <strong style="color:var(--accent);">Z</strong> pentru Scoreboard</div>
+    </div>
+
+    <!-- SCOREBOARD -->
+    <div class="scoreboard" id="scoreboard">
+        <div class="sb-header">
+            <div class="sb-title">Los Santos <span>142 / 256</span></div>
+            <div class="sb-stats">
+                <div class="sb-stat cops"><i class="ph-fill ph-shield-check"></i> LSPD: 8</div>
+                <div class="sb-stat ems"><i class="ph-fill ph-first-aid"></i> EMS: 3</div>
+                <div class="sb-stat"><i class="ph-fill ph-users"></i> Mecanici: 5</div>
+            </div>
+        </div>
+        <div class="sb-list">
+            <div class="sb-player"><div class="sb-id">1</div><div class="sb-name">Ștefan XODO</div><div class="sb-ping"><i class="ph-bold ph-wifi-high"></i> 5ms</div></div>
+            <div class="sb-player"><div class="sb-id">22</div><div class="sb-name">AlexTheDon</div><div class="sb-ping"><i class="ph-bold ph-wifi-high"></i> 12ms</div></div>
+            <div class="sb-player"><div class="sb-id">104</div><div class="sb-name">Om Mascat</div><div class="sb-ping"><i class="ph-bold ph-wifi-high"></i> 24ms</div></div>
+        </div>
+    </div>
+
+    <!-- TRADE MODAL -->
+    <div class="trade-overlay" id="trade-modal">
+        <div class="trade-wrapper">
+            
+            <!-- PANEL: TU -->
+            <div class="trade-panel" id="trade-my-panel">
+                <div class="tp-header">
+                    <div class="tp-name">Oferta Ta</div>
+                    <div class="tp-status" id="my-status">Modificare...</div>
+                </div>
+                <div class="tp-grid">
+                    <div class="inv-slot"><div class="inv-item"><i class="ph-fill ph-crosshair item-icon"></i><div class="item-qty">1x</div></div></div>
+                    <div class="inv-slot"><div class="inv-item"><i class="ph-fill ph-briefcase item-icon"></i><div class="item-qty">50k</div></div></div>
+                    <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
+                </div>
+                <div class="tp-actions">
+                    <button class="btn-trade lock-btn" id="btn-lock" onclick="toggleMyLock()"><i class="ph-bold ph-lock-key"></i> Blochează Oferta</button>
+                    <button class="btn-trade" onclick="document.getElementById('trade-modal').classList.remove('active')" style="border-color: var(--danger); color: var(--danger);"><i class="ph-bold ph-x"></i> Anulează</button>
+                </div>
+            </div>
+
+            <!-- PANEL: EL -->
+            <div class="trade-panel" id="trade-his-panel">
+                <div class="tp-header" style="border-bottom-color: var(--text-muted);">
+                    <div class="tp-name" style="color: var(--text-muted);">Oferta Lui</div>
+                    <div class="tp-status" id="his-status" style="background: var(--text-muted);">Așteptare...</div>
+                </div>
+                <div class="tp-grid">
+                    <div class="inv-slot"><div class="inv-item"><i class="ph-fill ph-car-profile item-icon"></i><div class="item-qty">Chei</div></div></div>
+                    <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
+                </div>
+                <div class="tp-actions" style="justify-content: center; align-items: center; padding: 30px;">
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; text-align: center; transform: skewX(5deg);">
+                        Așteaptă ca celălalt jucător<br>să își blocheze oferta.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Scoreboard Toggle pe Z
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'z') {
+                document.getElementById('scoreboard').classList.add('active');
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'z') {
+                document.getElementById('scoreboard').classList.remove('active');
+            }
+        });
+
+        // Trade Logic Simulator
+        let myLocked = false;
+        function toggleMyLock() {
+            myLocked = !myLocked;
+            const btn = document.getElementById('btn-lock');
+            const panel = document.getElementById('trade-my-panel');
+            const status = document.getElementById('my-status');
+
+            if (myLocked) {
+                btn.classList.add('active');
+                btn.innerHTML = `<i class="ph-bold ph-check"></i> Gata!`;
+                panel.classList.add('locked');
+                status.innerText = "Pregătit";
+                
+                // Simulam ca si celalalt apasa dupa 1 secunda
+                setTimeout(() => lockHisOffer(), 1000);
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = `<i class="ph-bold ph-lock-key"></i> Blochează Oferta`;
+                panel.classList.remove('locked');
+                status.innerText = "Modificare...";
+            }
+        }
+
+        function lockHisOffer() {
+            if(!myLocked) return;
+            const panel = document.getElementById('trade-his-panel');
+            panel.classList.add('locked');
+            document.getElementById('his-status').innerText = "Pregătit";
+            document.getElementById('his-status').style.background = "var(--accent)";
+            document.getElementById('his-status').style.color = "#000";
+            
+            setTimeout(() => {
+                alert("Trade Efectuat cu Succes!");
+                document.getElementById('trade-modal').classList.remove('active');
+            }, 800);
+        }
+    </script>
+</body>
+</html>

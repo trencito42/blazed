@@ -621,6 +621,6 @@ exports('IsInWar', function() return warParticipant == true end)
 RegisterNetEvent('sunset:turfs:warKill', function(data)
     if not data then return end
     exports.sunset_ui:Notify(
-        ('WAR: %s [%s] l-a doborat pe %s'):format(tostring(data.killer), tostring(data.clanTag or ''), tostring(data.victim)),
+                    ('WAR: %s [%s] took down %s'):format(tostring(data.killer), tostring(data.clanTag or ''), tostring(data.victim)),
         'error', 4000)
 end)
