@@ -414,6 +414,14 @@
     pointer-events: none;
 }
 
+/* [TRADE FIX] Cancel affordance INSIDE the countdown overlay (the overlay
+   covers the trade window, so the panel's cancel button was unreachable). */
+.cd-cancel {
+    margin-top: 28px;
+    min-width: 240px;
+    z-index: 1;
+}
+
 .cd-number {
     font-family: 'JetBrains Mono', monospace;
     font-size: clamp(100px, 20vw, 200px);

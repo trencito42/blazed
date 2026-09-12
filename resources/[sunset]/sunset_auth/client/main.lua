@@ -35,6 +35,11 @@ end
 
 local function openAuth()
     exports.sunset_ui:Show('auth', authPayload())
+    -- [SAVED ACCOUNTS FIX] Show('auth') only initializes the account list when
+    -- the screen is NOT already open (Panels.showAuth skips AuthAccounts.init
+    -- for re-opens). Always push the list explicitly so quick-login accounts
+    -- render even when the auth screen was pre-shown by the loadscreen handoff.
+    pushAuthAccounts()
     exports.sunset_ui:SetFocus(true, true)
 end
 exports('OpenLogin', openAuth)

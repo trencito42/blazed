@@ -41,8 +41,8 @@ exports.sunset_core:RegisterCallback('sunset:outfits:save', function(source, nam
     local char = getChar(source)
     if not char then return nil, 'No character' end
     name = tostring(name or ''):gsub('^%s*(.-)%s*$', '%1'):sub(1, 24)
-    if #name < 2 then return nil, 'Numele trebuie sa aiba minim 2 caractere.' end
-    if hasBadChars(name) then return nil, 'Caractere invalide in nume.' end
+    if #name < 2 then return nil, 'The name must have at least 2 characters.' end
+    if hasBadChars(name) then return nil, 'Invalid characters in name.' end
 
     local count = tonumber(MySQL.scalar.await(
         'SELECT COUNT(*) FROM character_outfits WHERE character_id = ?', { char.id })) or 0
@@ -127,7 +127,7 @@ exports.sunset_core:RegisterCallback('sunset:outfits:rename', function(source, o
     outfitId = tonumber(outfitId)
     newName = tostring(newName or ''):gsub('^%s*(.-)%s*$', '%1'):sub(1, 24)
     if not outfitId or #newName < 2 then return nil, 'Invalid name.' end
-    if hasBadChars(newName) then return nil, 'Caractere invalide in nume.' end
+    if hasBadChars(newName) then return nil, 'Invalid characters in name.' end
     local changed = MySQL.update.await(
         'UPDATE character_outfits SET name = ? WHERE id = ? AND character_id = ?',
         { newName, outfitId, char.id })

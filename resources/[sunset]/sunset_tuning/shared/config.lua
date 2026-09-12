@@ -8,11 +8,11 @@ SunsetTuning.FlashCost = 150
 -- GTA V performance slots. Level 0 means factory, positive levels map to the
 -- available mod index on that specific vehicle (and are clamped client-side).
 SunsetTuning.HardwareSlots = {
-    engine = { label = 'Motor', modType = 11, maxLevel = 4, unitCost = 1800 },
-    brakes = { label = 'Frane', modType = 12, maxLevel = 3, unitCost = 1200 },
-    transmission = { label = 'Transmisie', modType = 13, maxLevel = 3, unitCost = 1600 },
-    suspension = { label = 'Suspensie', modType = 15, maxLevel = 4, unitCost = 1100 },
-    armor = { label = 'Protectie', modType = 16, maxLevel = 5, unitCost = 1500 },
+    engine = { label = 'Engine', modType = 11, maxLevel = 4, unitCost = 1800 },
+    brakes = { label = 'Brakes', modType = 12, maxLevel = 3, unitCost = 1200 },
+    transmission = { label = 'Transmission', modType = 13, maxLevel = 3, unitCost = 1600 },
+    suspension = { label = 'Suspension', modType = 15, maxLevel = 4, unitCost = 1100 },
+    armor = { label = 'Armor', modType = 16, maxLevel = 5, unitCost = 1500 },
 }
 
 SunsetTuning.FeatureCosts = {
@@ -269,31 +269,31 @@ function SunsetTuning.BuildVehicleInfo(raw)
     if tune.hud.enabled then chips[#chips + 1] = 'HUD' end
     if tune.hardware.turbo then chips[#chips + 1] = 'TURBO' end
     if tune.hardware.engine > 0 then chips[#chips + 1] = 'ENGINE ' .. tune.hardware.engine end
-    if tune.dyno.lastHp > 0 then chips[#chips + 1] = tune.dyno.lastHp .. ' CP' end
+    if tune.dyno.lastHp > 0 then chips[#chips + 1] = tune.dyno.lastHp .. ' HP' end
 
     local lines = {
         { label = 'STAGE', value = stage.label },
-        { label = 'PUTERE', value = tune.power .. '%' },
-        { label = 'CUPLU', value = tune.torque .. '%' },
-        { label = 'EVACUARE', value = exhaust.label },
-        { label = 'POP & BANG', value = tune.pop.enabled and 'Activ' or 'Oprit' },
-        { label = 'FLĂCĂRI', value = tune.flames.enabled and 'Activ' or 'Oprit' },
-        { label = 'CULOARE FLAME', value = ('RGB %d/%d/%d'):format(tune.flames.color.r, tune.flames.color.g, tune.flames.color.b) },
+        { label = 'POWER', value = tune.power .. '%' },
+        { label = 'TORQUE', value = tune.torque .. '%' },
+        { label = 'EXHAUST', value = exhaust.label },
+        { label = 'POP & BANG', value = tune.pop.enabled and 'On' or 'Off' },
+        { label = 'FLAMES', value = tune.flames.enabled and 'On' or 'Off' },
+        { label = 'FLAME COLOR', value = ('RGB %d/%d/%d'):format(tune.flames.color.r, tune.flames.color.g, tune.flames.color.b) },
         { label = 'RPM POP', value = tune.pop.rpmMax .. '%' },
-        { label = 'ANTI-LAG', value = tune.antiLag.enabled and ('Activ (' .. tune.antiLag.intensity .. '%)') or 'Oprit' },
-        { label = 'DRIFT', value = tune.drift.enabled and ('Activ · grip ' .. tune.drift.grip .. '%') or 'Oprit' },
-        { label = 'MOTOR', value = ('Nivel %d/4'):format(tune.hardware.engine) },
-        { label = 'TURBO', value = tune.hardware.turbo and 'Instalat' or 'Stock' },
-        { label = 'TRANSMISIE', value = ('Nivel %d/3'):format(tune.hardware.transmission) },
-        { label = 'FRANE', value = ('Nivel %d/3'):format(tune.hardware.brakes) },
-        { label = 'SUSPENSIE', value = ('Nivel %d/4'):format(tune.hardware.suspension) },
-        { label = 'HUD ECU', value = tune.hud.enabled and 'Activ' or 'Oprit' },
+        { label = 'ANTI-LAG', value = tune.antiLag.enabled and ('On (' .. tune.antiLag.intensity .. '%)') or 'Off' },
+        { label = 'DRIFT', value = tune.drift.enabled and ('On · grip ' .. tune.drift.grip .. '%') or 'Off' },
+        { label = 'ENGINE', value = ('Level %d/4'):format(tune.hardware.engine) },
+        { label = 'TURBO', value = tune.hardware.turbo and 'Installed' or 'Stock' },
+        { label = 'TRANSMISSION', value = ('Level %d/3'):format(tune.hardware.transmission) },
+        { label = 'BRAKES', value = ('Level %d/3'):format(tune.hardware.brakes) },
+        { label = 'SUSPENSION', value = ('Level %d/4'):format(tune.hardware.suspension) },
+        { label = 'HUD ECU', value = tune.hud.enabled and 'On' or 'Off' },
     }
 
     if tune.dyno.lastHp > 0 then
         lines[#lines + 1] = {
             label = 'DYNO',
-            value = tune.dyno.lastHp .. ' CP / ' .. tune.dyno.lastTorque .. ' Nm',
+            value = tune.dyno.lastHp .. ' HP / ' .. tune.dyno.lastTorque .. ' Nm',
         }
     end
 

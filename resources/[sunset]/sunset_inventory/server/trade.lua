@@ -278,6 +278,11 @@ end
 local function endTrade(trade, message, kind)
     if not trade then return end
     trade.finalizing = false
+    -- [BUGFIX] Reset accept flags: a trade object reused/re-offered with the
+    -- same players kept accepted=true and jumped straight to finalizing.
+    trade.accepted[trade.a], trade.accepted[trade.b] = false, false
+    trade.busy = false
+    trade.countdown = 0
     TradesByPlayer[trade.a] = nil
     TradesByPlayer[trade.b] = nil
     for _, source in ipairs({ trade.a, trade.b }) do
@@ -395,12 +400,15 @@ local function completeTrade(trade)
     -- All offered value is committed on one database connection. Returning false
     -- rolls the complete exchange back; no compensation chain can leave half a
     -- trade behind after a query failure or disconnect.
-    local function transferRows(query, rows, fromCharId, toCharId, slots)
-        for index, row in ipairs(rows) do
-            -- [AUDIT P5-06] Re-read the row FOR UPDATE and transfer the FRESH
-            -- metadata instead of the offer-time snapshot: items mutated during
-            -- the 5s countdown (e.g. gas cans refilled via SetItemMetadata) used
-            -- to be committed with stale metadata (liters/value rollback).
+    -- [BUGFIX "redo the trade"] Two-phase row transfer. The old single-pass
+    -- inserted the INCOMING items before the receiver's OUTGOING rows were
+    -- deleted, while the pre-computed free-slot list counted slots that only
+    -- became free after those deletes -> UNIQUE (character_id, slot) collision
+    -- -> whole transaction rolled back ("Trade could not be committed").
+    -- Phase 1 consumes both sides; phase 2 inserts both sides into truly free
+    -- slots. Fresh metadata is re-read FOR UPDATE per row (P5-06 preserved).
+    local function consumeRows(query, rows, fromCharId, collected)
+        for _, row in ipairs(rows) do
             local freshRows = query.await(
                 'SELECT metadata FROM character_inventory WHERE id = ? AND character_id = ? AND item = ? FOR UPDATE',
                 { row.id, fromCharId, row.item })
@@ -412,17 +420,22 @@ local function completeTrade(trade)
             if tonumber(changed) ~= 1 then return false end
             query.await('DELETE FROM character_inventory WHERE id = ? AND character_id = ? AND count <= 0',
                 { row.id, fromCharId })
-            -- fresh.metadata is a raw string for TEXT columns or a table for JSON
-            -- columns (oxmysql auto-decodes); normalize to a JSON string/nil.
             local freshMeta = fresh.metadata
             if type(freshMeta) == 'table' then
                 freshMeta = next(freshMeta) ~= nil and json.encode(freshMeta) or nil
             elseif freshMeta == '' then
                 freshMeta = nil
             end
+            collected[#collected + 1] = { item = row.item, count = row.count, metadata = freshMeta }
+        end
+        return true
+    end
+
+    local function insertRows(query, collected, toCharId, slots)
+        for index, row in ipairs(collected) do
             local inserted = query.await(
                 'INSERT INTO character_inventory (character_id, item, count, slot, metadata) VALUES (?, ?, ?, ?, ?)',
-                { toCharId, row.item, row.count, slots[index], freshMeta })
+                { toCharId, row.item, row.count, slots[index], row.metadata })
             if not inserted then return false end
         end
         return true
@@ -452,8 +465,10 @@ local function completeTrade(trade)
     end
 
     local transactionOk = MySQL.startTransaction(function(query)
-        if not transferRows(query, aOut, aChar.id, bChar.id, bSlots) then return false end
-        if not transferRows(query, bOut, bChar.id, aChar.id, aSlots) then return false end
+        -- Phase 1: consume BOTH sides first (frees the receiver's outgoing slots)
+        local toB, toA = {}, {}
+        if not consumeRows(query, aOut, aChar.id, toB) then return false end
+        if not consumeRows(query, bOut, bChar.id, toA) then return false end
 
         local aDelta, bDelta = bCash - aCash, aCash - bCash
         if aDelta ~= 0 then
@@ -466,6 +481,10 @@ local function completeTrade(trade)
                 { bDelta, bChar.id, bDelta })
             if tonumber(changed) ~= 1 then return false end
         end
+
+        -- Phase 2: insert into now-truly-free slots
+        if not insertRows(query, toB, bChar.id, bSlots) then return false end
+        if not insertRows(query, toA, aChar.id, aSlots) then return false end
 
         if not transferAssets(query, aAssets, aChar.id, bChar.id) then return false end
         if not transferAssets(query, bAssets, bChar.id, aChar.id) then return false end

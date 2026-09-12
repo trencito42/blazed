@@ -24,14 +24,14 @@ local function notify(msg, t) exports.sunset_ui:Notify(msg, t or 'info') end
 
 local function openVehicleMenu(veh)
     local modelHash = GetEntityModel(veh)
-    local modelName = 'Vehicul'
+    local modelName = 'Vehicle'
     for _, name in ipairs(GetAllVehicleModels and GetAllVehicleModels() or {}) do
         if GetHashKey(name) == modelHash then modelName = name:upper() break end
     end
     exports.sunset_ui:Send('playerInteractionShow', {
         target  = { name = modelName, id = '' },
         actions = {
-            { id = 'lockpick_vehicle', label = 'Forteaza usa (Lockpick)', group = 'CIVILIAN' },
+            { id = 'lockpick_vehicle', label = 'Force the door (Lockpick)', group = 'CIVILIAN' },
         },
     })
     exports.sunset_ui:SetFocus(true, true)
@@ -42,7 +42,7 @@ local function openNpcMenu(idx)
     exports.sunset_ui:Send('playerInteractionShow', {
         target  = { name = CHOP_NPCS[idx].label, id = '' },
         actions = {
-            { id = 'sell_stolen_car', label = 'Vinde masina', group = 'CIVILIAN' },
+            { id = 'sell_stolen_car', label = 'Sell car', group = 'CIVILIAN' },
         },
     })
     exports.sunset_ui:SetFocus(true, true)
@@ -197,14 +197,14 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             hasStolenCar = true
             showNpcBlips()
         else
-            notify(err or 'Lockpick-ul s-a rupt.', 'error')
+            notify(err or 'The lockpick broke.', 'error')
         end
         SetTimeout(2000, function() inCooldown = false end)
 
     elseif data.action == 'sell_stolen_car' then
         closeMenu()
         local veh = GetVehiclePedIsIn(PlayerPedId(), false)
-        if veh == 0 then notify('Trebuie sa fii in masina ca s-o vinzi.', 'error') return end
+        if veh == 0 then notify('You need to be in the car to sell it.', 'error') return end
         inCooldown = true
         local modelHash = GetEntityModel(veh)
         local modelName = tostring(modelHash)
@@ -214,13 +214,13 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         local netId = NetworkGetNetworkIdFromEntity(veh)
         local ok, result = Sunset.AwaitCallback('sunset:carjack:sell', { model = modelName, netId = netId })
         if ok then
-            notify(('Vandut! Ai primit $%d cash.'):format(result), 'success')
+            notify(('Sold! You received $%d cash.'):format(result), 'success')
             SetEntityAsMissionEntity(veh, false, true)
             DeleteVehicle(veh)
             hasStolenCar = false
             hideNpcBlips()
         else
-            notify(result or 'Nu s-a putut vinde.', 'error')
+            notify(result or 'Could not sell the vehicle.', 'error')
         end
         SetTimeout(1500, function() inCooldown = false end)
     end

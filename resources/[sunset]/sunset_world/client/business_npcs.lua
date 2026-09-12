@@ -62,8 +62,8 @@ local function spawnGasAttendant(station, index)
             badgeClass = 'gas',
             bodyClass = 'gas',
             icon = 'ph-gas-pump',
-            title = 'Operator Benzinărie',
-            desc = 'Business / Interacțiune',
+            title = 'Gas Station Operator',
+            desc = 'Business / Interaction',
             key = 'E',
         },
         onInteract = function()
@@ -98,7 +98,7 @@ local function spawnAmmunationClerk()
             bodyClass = 'ammo',
             icon = 'ph-crosshair',
             title = 'Marcus (Arme)',
-            desc = 'Interacțiune / Magazin',
+            desc = 'Interaction / Store',
             key = 'E',
         },
         onInteract = function()

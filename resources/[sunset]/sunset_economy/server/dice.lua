@@ -28,7 +28,7 @@ local function broadcastNearby(src, msg)
             if tPed and tPed ~= 0 and #(GetEntityCoords(tPed) - coords) <= 15.0 then
                 TriggerClientEvent('chat:addMessage', targetSrc, {
                     color = { 255, 180, 0 },
-                    args = { 'BARBUT', msg }
+                    args = { 'DICE', msg }
                 })
             end
         end
@@ -104,15 +104,15 @@ local function executeDiceMatch(challengerSrc, targetSrc, bet)
     if not cChar or not tChar then return end
 
     if not exports.sunset_core:RemoveMoney(challengerSrc, 'cash', bet, 'dice_wager') then
-        TriggerClientEvent('sunset:client:notify', challengerSrc, 'Nu mai ai banii necesari.', 'error')
-        TriggerClientEvent('sunset:client:notify', targetSrc, 'Adversarul nu mai are banii necesari.', 'error')
+        TriggerClientEvent('sunset:client:notify', challengerSrc, 'You no longer have the required money.', 'error')
+        TriggerClientEvent('sunset:client:notify', targetSrc, 'Your opponent no longer has the required money.', 'error')
         return
     end
 
     if not exports.sunset_core:RemoveMoney(targetSrc, 'cash', bet, 'dice_wager') then
         exports.sunset_core:AddMoney(challengerSrc, 'cash', bet, 'dice_refund')
-        TriggerClientEvent('sunset:client:notify', targetSrc, 'Nu mai ai banii necesari.', 'error')
-        TriggerClientEvent('sunset:client:notify', challengerSrc, 'Adversarul nu mai are banii necesari.', 'error')
+        TriggerClientEvent('sunset:client:notify', targetSrc, 'You no longer have the required money.', 'error')
+        TriggerClientEvent('sunset:client:notify', challengerSrc, 'Your opponent no longer has the required money.', 'error')
         return
     end
 
@@ -191,7 +191,7 @@ local function executeDiceMatch(challengerSrc, targetSrc, bet)
             return
         end
 
-        local broadcastMsg = ('^3%s^7 a dat ^2%s^7 vs ^3%s^7 a dat ^1%s^7. ^2%s a castigat $%s^7! (Taxa arsa: $%s)'):format(
+        local broadcastMsg = ('^3%s^7 rolled ^2%s^7 vs ^3%s^7 rolled ^1%s^7. ^2%s won $%s^7! (Burned tax: $%s)'):format(
             winnerName, winnerScore, loserName, loserScore, winnerName,
             string.format('%\'d', prize):gsub('\'', ','),
             string.format('%\'d', tax):gsub('\'', ',')
@@ -205,25 +205,25 @@ RegisterCommand('barbut', function(source, args)
     if sub == 'accept' then
         local challenge = PendingChallenges[source]
         if not challenge then
-            TriggerClientEvent('sunset:client:notify', source, 'Nu ai nicio cerere activa de barbut.', 'error')
+            TriggerClientEvent('sunset:client:notify', source, 'You have no active dice challenge.', 'error')
             return
         end
         -- [AUDIT P6-05] Downed/jailed players cannot gamble.
         if exports.sunset_core:IsIncapacitated(source) or exports.sunset_core:IsIncapacitated(challenge.from) then
             PendingChallenges[source] = nil
-            TriggerClientEvent('sunset:client:notify', source, 'Nu poti juca barbut acum.', 'error')
+            TriggerClientEvent('sunset:client:notify', source, 'You cannot play dice right now.', 'error')
             return
         end
         PendingChallenges[source] = nil
 
         local challenger = challenge.from
         if not GetPlayerName(challenger) then
-            TriggerClientEvent('sunset:client:notify', source, 'Jucatorul care te-a provocat s-a deconectat.', 'error')
+            TriggerClientEvent('sunset:client:notify', source, 'The player who challenged you has disconnected.', 'error')
             return
         end
 
         if getDist(source, challenger) > 5.0 then
-            TriggerClientEvent('sunset:client:notify', source, 'Trebuie sa fii langa jucator pentru a juca.', 'error')
+            TriggerClientEvent('sunset:client:notify', source, 'You must be next to the player to play.', 'error')
             return
         end
 
@@ -233,9 +233,9 @@ RegisterCommand('barbut', function(source, args)
         if PendingChallenges[source] then
             local challenger = PendingChallenges[source].from
             PendingChallenges[source] = nil
-            TriggerClientEvent('sunset:client:notify', source, 'Ai refuzat partida de barbut.', 'info')
+            TriggerClientEvent('sunset:client:notify', source, 'You declined the dice game.', 'info')
             if GetPlayerName(challenger) then
-                TriggerClientEvent('sunset:client:notify', challenger, 'Provocarea de barbut a fost refuzata.', 'warning')
+                TriggerClientEvent('sunset:client:notify', challenger, 'Your dice challenge was declined.', 'warning')
             end
         end
         return
@@ -245,58 +245,58 @@ RegisterCommand('barbut', function(source, args)
     local bet = tonumber(args[2])
 
     if not targetId or not bet or bet < MIN_DICE_BET then
-        TriggerClientEvent('sunset:client:notify', source, ('Utilizare: /barbut [id_jucator] [suma min. $%d]'):format(MIN_DICE_BET), 'info')
+        TriggerClientEvent('sunset:client:notify', source, ('Usage: /barbut [player_id] [min. bet $%d]'):format(MIN_DICE_BET), 'info')
         return
     end
 
     if bet > MAX_DICE_BET then
-        TriggerClientEvent('sunset:client:notify', source, ('Miza maxima este de $%s.'):format(string.format('%\'d', MAX_DICE_BET):gsub('\'', ',')), 'error')
+        TriggerClientEvent('sunset:client:notify', source, ('The maximum bet is $%s.'):format(string.format('%\'d', MAX_DICE_BET):gsub('\'', ',')), 'error')
         return
     end
 
     if targetId == source then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu poti juca barbut cu tine insuti.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You cannot play dice with yourself.', 'error')
         return
     end
 
     -- [AUDIT P6-05] Downed/jailed players cannot challenge or be challenged.
     if exports.sunset_core:IsIncapacitated(source) or exports.sunset_core:IsIncapacitated(targetId) then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu poti juca barbut acum.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You cannot play dice right now.', 'error')
         return
     end
 
     if not GetPlayerName(targetId) then
-        TriggerClientEvent('sunset:client:notify', source, 'Jucatorul nu a fost gasit.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'Player not found.', 'error')
         return
     end
 
     if getDist(source, targetId) > 4.0 then
-        TriggerClientEvent('sunset:client:notify', source, 'Jucatorul este prea departe (trebuie sa fiti aproape).', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'The player is too far away (you must be close to each other).', 'error')
         return
     end
 
     local cCash = exports.sunset_core:GetCharacter(source)
     local tCash = exports.sunset_core:GetCharacter(targetId)
     if not cCash or (tonumber(cCash.cash) or 0) < bet then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu ai destui bani cash la tine.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You do not have enough cash on you.', 'error')
         return
     end
     if not tCash or (tonumber(tCash.cash) or 0) < bet then
-        TriggerClientEvent('sunset:client:notify', source, 'Jucatorul provocat nu are destui bani cash.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'The challenged player does not have enough cash.', 'error')
         return
     end
 
     PendingChallenges[targetId] = { from = source, bet = bet, expires = os.time() + 30 }
 
     local cName = (cCash.firstname or '') .. ' ' .. (cCash.lastname or '')
-    TriggerClientEvent('sunset:client:notify', source, ('I-ai trimis o provocare de barbut lui %s pe $%s.'):format(
+    TriggerClientEvent('sunset:client:notify', source, ('You sent a dice challenge to %s for $%s.'):format(
         (tCash.firstname or '') .. ' ' .. (tCash.lastname or ''),
         string.format('%\'d', bet):gsub('\'', ',')
     ), 'info')
 
     TriggerClientEvent('chat:addMessage', targetId, {
         color = { 255, 180, 0 },
-        args = { 'BARBUT', ('^2%s^7 te-a provocat la barbut pe ^2$%s^7! Scrie ^3/barbut accept^7 sau ^1/barbut decline^7 (30s).'):format(
+        args = { 'DICE', ('^2%s^7 challenged you to a dice game for ^2$%s^7! Type ^3/barbut accept^7 or ^1/barbut decline^7 (30s).'):format(
             cName, string.format('%\'d', bet):gsub('\'', ',')
         ) }
     })
@@ -312,11 +312,11 @@ RegisterCommand('dice', function(source, args)
     ExecuteCommand(('barbut %s'):format(table.concat(args, ' ')))
 end, false)
 
-TriggerEvent('chat:addSuggestion', '/barbut', 'Provoaca un jucator din apropiere la barbut', {
-    { name = 'id/accept/decline', help = 'ID-ul jucatorului sau accept/decline' },
-    { name = 'suma', help = 'Suma pariata (cash)' }
+TriggerEvent('chat:addSuggestion', '/barbut', 'Challenge a nearby player to a dice game', {
+    { name = 'id/accept/decline', help = 'Player ID or accept/decline' },
+    { name = 'amount', help = 'Bet amount (cash)' }
 })
-TriggerEvent('chat:addSuggestion', '/dice', 'Alias pentru /barbut', {
-    { name = 'id/accept/decline', help = 'ID-ul jucatorului sau accept/decline' },
-    { name = 'suma', help = 'Suma pariata (cash)' }
+TriggerEvent('chat:addSuggestion', '/dice', 'Alias for /barbut', {
+    { name = 'id/accept/decline', help = 'Player ID or accept/decline' },
+    { name = 'amount', help = 'Bet amount (cash)' }
 })

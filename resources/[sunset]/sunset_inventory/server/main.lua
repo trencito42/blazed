@@ -32,6 +32,14 @@ local function calcWeight(items)
     return total
 end
 
+-- [DUFFEL BAG] Temporary carry-capacity bonus (kg) granted by gameplay
+-- systems (e.g. robbery duffel bag). Cleared when the session ends.
+local CapacityBonus = {}
+
+local function maxWeightFor(source)
+    return (tonumber(Sunset.Config.MaxWeight) or 30) + (CapacityBonus[source] or 0)
+end
+
 local function inventoryView(items)
     local view = {}
     for _, row in ipairs(items or {}) do
@@ -53,8 +61,25 @@ end
 
 local function sendInventoryUpdate(source, items)
     local char = exports.sunset_core:GetCharacter(source)
-    emitClient('sunset:client:inventoryUpdate', source, inventoryView(items), calcWeight(items), (char and tonumber(char.cash)) or 0)
+    -- [DUFFEL BAG FIX] Also send the EFFECTIVE capacity (base + bonus) so the
+    -- UI weight bar/limit matches what the server actually enforces.
+    emitClient('sunset:client:inventoryUpdate', source, inventoryView(items), calcWeight(items), (char and tonumber(char.cash)) or 0, maxWeightFor(source))
 end
+
+function SetCapacityBonus(source, bonusKg)
+    source = tonumber(source)
+    bonusKg = math.max(0, tonumber(bonusKg) or 0)
+    if not source then return false end
+    if bonusKg <= 0 then CapacityBonus[source] = nil
+    else CapacityBonus[source] = bonusKg end
+    -- [DUFFEL BAG FIX] Push an immediate UI update so the weight limit changes
+    -- the moment the bag is granted/removed (not just on the next item move).
+    if GetPlayerName(source) then
+        sendInventoryUpdate(source, GetInventory(source))
+    end
+    return true
+end
+exports('SetCapacityBonus', SetCapacityBonus)
 
 local function ensureStarterItems(characterId)
     local granted = false
@@ -121,7 +146,7 @@ function AddItem(source, item, count, slot, metadata)
 
     local inv = GetInventory(source)
     local newWeight = calcWeight(inv) + getItemWeight(item, count)
-    if newWeight > Sunset.Config.MaxWeight then return false end
+    if newWeight > maxWeightFor(source) then return false end
 
     if not metadata and item == 'gas_can' then
         metadata = { liters = 0 }
@@ -431,9 +456,10 @@ function TryAddItem(source, item, count, slot, metadata)
     local inv = GetInventory(source)
     local currentWeight = calcWeight(inv)
     local addedWeight = getItemWeight(item, count)
-    if currentWeight + addedWeight > Sunset.Config.MaxWeight then
+    local capacity = maxWeightFor(source)
+    if currentWeight + addedWeight > capacity then
         return false, ('Inventory too heavy: %.1f/%.1f kg — cannot add %.1f kg of %s.'):format(
-            currentWeight, Sunset.Config.MaxWeight, addedWeight, item)
+            currentWeight, capacity, addedWeight, item)
     end
 
     metadata = metadata or (item == 'gas_can' and { liters = 0 } or nil)
@@ -513,7 +539,7 @@ exports.sunset_core:RegisterCallback('sunset:getInventory', function(source)
     return {
         items = inventoryView(inv),
         weight = calcWeight(inv),
-        maxWeight = Sunset.Config.MaxWeight,
+        maxWeight = maxWeightFor(source),
         cash = (char and tonumber(char.cash)) or 0,
         nearbyPlayers = nearbyPlayers,
         quickslots = BuildHotbarView(source, true),
@@ -617,4 +643,5 @@ end)
 AddEventHandler('playerDropped', function()
     local char = exports.sunset_core:GetCharacter(source)
     if char then Inventories[char.id] = nil end
+    CapacityBonus[source] = nil -- [DUFFEL BAG] never leak the bonus
 end)

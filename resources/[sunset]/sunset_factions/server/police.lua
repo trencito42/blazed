@@ -91,8 +91,8 @@ local function notifyRadarCaught(driverSource, officer, speed, limit, over)
 
     TriggerClientEvent('sunset:ui:radarAlert', driverSource, {
         type = 'mobile',
-        title = ('%s — RADAR PATRULĂ'):format(officer.factionLabel or 'POLIȚIA RUTIERĂ'),
-        location = ('Ofițer %s (%s)'):format(officerBase, officer.rank or 'Patrol'),
+        title = ('%s — PATROL RADAR'):format(officer.factionLabel or 'TRAFFIC POLICE'),
+        location = ('Officer %s (%s)'):format(officerBase, officer.rank or 'Patrol'),
         officer = officerBase,
         rank = officer.rank,
         limit = limit,
@@ -1049,7 +1049,7 @@ RegisterNetEvent('sunset:police:fixedRadarTrigger', function(radarIndex)
 
     local payNote = paid and ('-$%d din cont'):format(fine) or ('neachitat ($%d)'):format(fine)
     TriggerClientEvent('sunset:client:notify', source,
-        ('📷 [RADAR FIX — %s] Ai fost surprins conducând cu %d km/h (Limită: %d km/h, +%d km/h). Amendă automată: %s.'):format(
+        ('📷 [RADAR FIX — %s] You were caught driving at %d km/h (Limit: %d km/h, +%d km/h). Automatic fine: %s.'):format(
             radar.label, speedKmh, limit, over, payNote
         ),
         'error', 9000
@@ -1706,12 +1706,12 @@ function Police.suspendLicense(source, targetId, licenseType, reason)
 
     reason = tostring(reason or ''):gsub('^%s*(.-)%s*$', '%1')
     if reason == '' then
-        reason = 'Viteză excesivă (+50 km/h) / Conducere periculoasă pe contrasens'
+        reason = 'Excessive speed (+50 km/h) / Dangerous driving against traffic'
     end
 
     local targetNum = tonumber(targetId)
     if not targetNum or targetNum <= 0 then
-        return nil, 'ID-ul cetățeanului este invalid.'
+        return nil, 'The citizen ID is invalid.'
     end
 
     local targetChar = nil
@@ -1736,18 +1736,18 @@ function Police.suspendLicense(source, targetId, licenseType, reason)
     end
 
     if not targetChar then
-        return nil, ('Nu a fost găsit niciun cetățean cu ID-ul %s.'):format(tostring(targetId))
+        return nil, ('No citizen found with ID %s.'):format(tostring(targetId))
     end
 
     local cid = targetChar.id
     local targetName = ('%s %s'):format(targetChar.firstname or '', targetChar.lastname or ''):gsub('^%s*(.-)%s*$', '%1')
-    if targetName == '' then targetName = ('Cetățean #%d'):format(cid) end
+    if targetName == '' then targetName = ('Citizen #%d'):format(cid) end
 
     -- Check if target has the license in database
     local existing = MySQL.single.await('SELECT id FROM character_licenses WHERE character_id = ? AND license_type = ?', { cid, licenseType })
     if not existing then
-        local licLabel = licenseType == 'driver' and 'de conducere' or 'de armă'
-        return nil, ('%s nu deține un permis %s activ.'):format(targetName, licLabel)
+        local licLabel = licenseType == 'driver' and 'driver' or 'weapon'
+        return nil, ('%s does not hold an active %s license.'):format(targetName, licLabel)
     end
 
     -- Revoke license
@@ -1760,21 +1760,21 @@ function Police.suspendLicense(source, targetId, licenseType, reason)
     end
 
     local officerName = exports.sunset_core:GetPlayerDisplayName(source)
-    local licLabelRo = licenseType == 'driver' and 'conducere' or 'armă'
+    local licLabelRo = licenseType == 'driver' and 'driving' or 'weapon'
 
     -- If suspect is online: refresh client cache and notify
     if onlineSrc then
         TriggerClientEvent('sunset:licenses:refresh', onlineSrc)
         TriggerClientEvent('sunset:client:notify', onlineSrc,
-            ('🚨 PERMIS SUSPENDAT: Permisul tău de %s a fost confiscat de către Poliție!\nMotiv: %s\nOfițer: %s'):format(licLabelRo, reason, officerName),
+            ('🚨 LICENSE SUSPENDED: Your %s license has been confiscated by the Police!\nReason: %s\nOfficer: %s'):format(licLabelRo, reason, officerName),
             'error', 12000)
     end
 
     -- Broadcast to police channels
-    broadcastToPolice('TRAFFIC', ('Ofițerul %s (#%d) a suspendat permisul de %s al cetățeanului %s (#%d). Motiv: %s'):format(
+    broadcastToPolice('TRAFFIC', ('Officer %s (#%d) suspended the %s license of citizen %s (#%d). Reason: %s'):format(
         officerName, source, licLabelRo, targetName, cid, reason))
 
-    notify(source, ('Ai suspendat cu succes permisul de %s al lui %s (#%d).'):format(licLabelRo, targetName, cid), 'success', 8000)
+    notify(source, ('You successfully suspended the %s license of %s (#%d).'):format(licLabelRo, targetName, cid), 'success', 8000)
 
     return {
         success = true,
@@ -1795,7 +1795,7 @@ RegisterCommand('suspendlicense', function(source, args)
     if source == 0 then return end
     local target = tonumber(args[1])
     if not target then
-        return notify(source, 'Sintaxă: /suspendlicense [id] [driver|weapon] [motiv]', 'error')
+        return notify(source, 'Syntax: /suspendlicense [id] [driver|weapon] [reason]', 'error')
     end
     local licType = args[2] and tostring(args[2]):lower() or 'driver'
     local reasonParts = {}
@@ -1809,7 +1809,7 @@ RegisterCommand('suspendlicense', function(source, args)
         table.insert(reasonParts, args[i])
     end
     local reason = table.concat(reasonParts, ' ')
-    if reason == '' then reason = 'Viteză excesivă (+50 km/h) / Conducere pe contrasens' end
+    if reason == '' then reason = 'Excessive speed (+50 km/h) / Driving against traffic' end
 
     local res, err = Police.suspendLicense(source, target, licType, reason)
     if not res and err then

@@ -39,8 +39,8 @@ local function showJailHud(remainingSec)
     local totalSec = math.max(remainingSec, tonumber(jailSentenceTotal) or remainingSec, 60)
     exports.sunset_ui:Send('fishingShow', {
         state = 'jail',
-        title = 'Sentință închisoare',
-        message = ('Timp rămas: %d:%02d'):format(math.floor(remainingSec / 60), remainingSec % 60),
+        title = 'Prison sentence',
+        message = ('Time remaining: %d:%02d'):format(math.floor(remainingSec / 60), remainingSec % 60),
         icon = 'jail',
         remainingSec = remainingSec,
         totalSec = totalSec,
@@ -412,7 +412,7 @@ CreateThread(function()
                 local now = GetGameTimer()
                 if now - lastDriveWarn > 3500 then
                     lastDriveWarn = now
-                    exports.sunset_ui:Notify('Radar activat — oprește radarul (/stopradar sau STOP din MDC) pentru a conduce.', 'warning', 4000)
+                    exports.sunset_ui:Notify('Radar active — stop the radar (/stopradar or STOP from the MDC) to drive.', 'warning', 4000)
                 end
             end
 
@@ -749,7 +749,7 @@ local function tryStartRadar(requestedLimit)
         title = 'Mobile Radar',
         message = 'Scanning traffic…',
     })
-    radarFeedback(('Mobile radar active: %d km/h — vehicul ancorat. Oprește radarul (/stopradar sau din MDC) pentru a conduce.'):format(radarLimitKmh), 'success')
+    radarFeedback(('Mobile radar active: %d km/h — anchored vehicle. Stop the radar (/stopradar or from the MDC) to drive.'):format(radarLimitKmh), 'success')
 end
 
 RegisterNetEvent('sunset:police:tryStartRadar', function(limit)
@@ -1033,13 +1033,13 @@ AddEventHandler('sunset:ui:mdcSuspendLicense', function(data)
     local res, err = Sunset.AwaitCallback('sunset:policeMdcSuspendLicense', tonumber(data.targetId), data.licenseType or 'driver', data.reason)
     if res and res.ok then
         PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-        exports.sunset_ui:Notify(('Permis suspendat cu succes pentru #%d (%s)'):format(tonumber(data.targetId), data.licenseType or 'driver'), 'success')
+        exports.sunset_ui:Notify(('License successfully suspended for #%d (%s)'):format(tonumber(data.targetId), data.licenseType or 'driver'), 'success')
         local citizenResult = Sunset.AwaitCallback('sunset:policeMdcLookup', tostring(data.targetId))
         if citizenResult then exports.sunset_ui:Send('mdcUpdateCitizen', { citizen = citizenResult }) end
         local freshData = Sunset.AwaitCallback('sunset:policeMdcData')
         if freshData then exports.sunset_ui:Send('mdcRefresh', freshData) end
     else
-        actionError(res and res.error or err, 'Nu s-a putut suspenda permisul.')
+        actionError(res and res.error or err, 'Could not suspend the license.')
     end
 end)
 
@@ -1121,8 +1121,8 @@ local function registerPoliceChatSuggestions()
     TriggerEvent('chat:addSuggestion', '/mdc', 'Mobile data terminal')
     TriggerEvent('chat:addSuggestion', '/ticket', 'Issue citation (UI)', { { name = 'id', help = 'optional target ID' } })
     TriggerEvent('chat:addSuggestion', '/confiscate', 'Confiscate contraband (LSPD)', { { name = 'id' } })
-    TriggerEvent('chat:addSuggestion', '/suspendlicense', 'Suspendă permisul de conducere sau de armă (PD)', { { name = 'id' }, { name = 'driver|weapon', help = 'opțional, default driver' }, { name = 'motiv' } })
-    TriggerEvent('chat:addSuggestion', '/confiscatelicense', 'Alias pentru /suspendlicense', { { name = 'id' }, { name = 'driver|weapon' }, { name = 'motiv' } })
+    TriggerEvent('chat:addSuggestion', '/suspendlicense', 'Suspend a driver or weapon license (PD)', { { name = 'id' }, { name = 'driver|weapon', help = 'optional, default driver' }, { name = 'reason' } })
+    TriggerEvent('chat:addSuggestion', '/confiscatelicense', 'Alias for /suspendlicense', { { name = 'id' }, { name = 'driver|weapon' }, { name = 'reason' } })
     TriggerEvent('chat:addSuggestion', '/startradar', 'Activate mobile speed radar and monitor traffic', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/setradar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
     TriggerEvent('chat:addSuggestion', '/radar', 'Alias for /startradar', { { name = 'limit_kmh', help = '20-250, default 90' } })
@@ -1246,7 +1246,7 @@ CreateThread(function()
                             clientRadarCooldowns[idx] = now
 
                             if isEmergencyExempt(ped, veh) then
-                                exports.sunset_ui:Notify(('RADAR FIX: Vehicul de intervenție autorizat (%d km/h — exceptat de la amendă).'):format(speedKmh), 'info', 4000)
+                                exports.sunset_ui:Notify(('RADAR FIX: Authorized emergency vehicle (%d km/h — exempt from the fine).'):format(speedKmh), 'info', 4000)
                             else
                                 CreateThread(function()
                                     PlaySoundFrontend(-1, 'Camera_Shoot', 'Phone_SoundSet_Default', true)
@@ -1259,7 +1259,7 @@ CreateThread(function()
 
                                 local plate = GetVehicleNumberPlateText(veh)
                                 local modelHash = GetEntityModel(veh)
-                                local modelName = GetDisplayNameFromVehicleModel(modelHash) or 'Vehicul'
+                                local modelName = GetDisplayNameFromVehicleModel(modelHash) or 'Vehicle'
 
                                 TriggerServerEvent('sunset:police:fixedRadarTrigger', idx, speedKmh, plate, modelName)
                             end

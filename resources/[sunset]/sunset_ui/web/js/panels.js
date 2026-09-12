@@ -467,6 +467,12 @@ const Panels = {
                     if (toGrid === 'grid-player' && fromGrid === 'grid-player' && toSlot && fromSlot && toSlot !== fromSlot) {
                         post('inventoryMoveSlot', { fromSlot, toSlot });
                     }
+                } else if (!this._inventoryTrade && !state.cash && state.row
+                    && !el?.closest('#inventory')) {
+                    // [DROP FIX] Dragging an item OUTSIDE the inventory panel and
+                    // releasing it drops it on the ground (expected behaviour that
+                    // was missing - only the DROP button worked).
+                    this._dropInventoryRow(state.row);
                 }
             }
 

@@ -288,7 +288,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
     elseif action == 'add_friend' or action == 'add_contact' then
         result, err = Sunset.AwaitCallback('sunset:interactionAddFriend', activeTarget)
         if result then
-            notify(('%s a fost salvat în contacte (%s).'):format(result.name, result.phone), 'success')
+            notify(('%s has been saved to your contacts (%s).'):format(result.name, result.phone), 'success')
             if GetResourceState('sunset_phone') == 'started' then
                 local refreshed = Sunset.AwaitCallback('sunset:getPhoneData')
                 if refreshed then exports.sunset_ui:Send('phoneUpdate', refreshed) end

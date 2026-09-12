@@ -76,7 +76,7 @@ end
 local function openPanel(shop)
     local veh = getDriverVehicle()
     if veh == 0 then
-        notify('Intra la volan in masina ta pentru ECU tuning', 'error')
+        notify('Get in the driver seat of your car for ECU tuning', 'error')
         return
     end
 
@@ -84,7 +84,7 @@ local function openPanel(shop)
     currentPlate = STC.plateOf(veh)
     currentShop = shop or nearestShop()
     if not currentShop then
-        notify('Nu esti la un shop de tuning', 'error')
+        notify('You are not at a tuning shop', 'error')
         return
     end
 
@@ -104,7 +104,7 @@ local function openPanel(shop)
 
     local payload, err = Sunset.AwaitCallback('sunset:tuning:getTune', currentPlate, modelName)
     if not payload then
-        notify(err or 'Nu pot incarca ECU pentru aceasta masina', 'error')
+        notify(err or 'Could not load the ECU for this car', 'error')
         return
     end
 
@@ -206,7 +206,7 @@ RegisterNUICallback('tuningSave', function(data, cb)
     ApplyTune(currentVeh, draftTune, true)
     ApplyCosmetics(currentVeh, draftCosmetics)
     if flash and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 5) end
-    notify(('ECU salvat & flash — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
+    notify(('ECU saved & flashed — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
     sendUi('saved', { saved = true, tune = draftTune, cosmetics = draftCosmetics, plate = currentPlate })
     cb({ ok = true, tune = draftTune })
 end)
@@ -217,7 +217,7 @@ RegisterNUICallback('tuningDyno', function(_, cb)
 
     local dynoSession, beginError = Sunset.AwaitCallback('sunset:tuning:beginDyno', currentPlate)
     if not dynoSession or not dynoSession.token then
-        notify(beginError or ('Dyno indisponibil — ai nevoie de $%d in banca'):format(SunsetTuning.DynoCost), 'error')
+        notify(beginError or ('Dyno unavailable — you need $%d in the bank'):format(SunsetTuning.DynoCost), 'error')
         cb({ ok = false, error = beginError })
         return
     end
@@ -245,7 +245,7 @@ RegisterNUICallback('tuningDyno', function(_, cb)
             end
             sendUi('dynoResult', { dyno = dynoSaved, result = result })
         else
-            notify(err or 'Dyno esuat — verifica banii in banca ($' .. SunsetTuning.DynoCost .. ')', 'error')
+            notify(err or 'Dyno failed — check your bank money ($' .. SunsetTuning.DynoCost .. ')', 'error')
             sendUi('dynoDone', { ok = false })
         end
         cb({ ok = true })

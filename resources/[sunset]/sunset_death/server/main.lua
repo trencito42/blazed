@@ -172,7 +172,7 @@ RegisterNetEvent('sunset:server:playerDied', function()
             if not MurderWindow[source] then
                 MurderWindow[source] = { killerId = killer, expires = now + 60 }
                 TriggerClientEvent('sunset:client:notify', source,
-                    'Ai fost atacat! Ai 60 de secunde sa folosesti /112 pentru a raporta atacatorul.',
+                    'You were attacked! You have 60 seconds to use /112 to report the attacker.',
                     'error', 10000)
                 SetTimeout(61000, function()
                     local row = MurderWindow[source]
@@ -211,7 +211,7 @@ RegisterNetEvent('sunset:server:requestRespawn', function()
     local source = source
     local state = Downed[source]
     if not state then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu esti la pamant.', 'info', 4000)
+        TriggerClientEvent('sunset:client:notify', source, 'You are not downed.', 'info', 4000)
         return
     end
     local now = os.time()
@@ -224,7 +224,7 @@ RegisterNetEvent('sunset:server:requestRespawn', function()
     if now < (state.releaseAt or math.huge) then
         local remaining = math.max(1, (state.releaseAt or now) - now)
         TriggerClientEvent('sunset:client:notify', source,
-            ('Trebuie sa mai astepti %d secunde inainte de respawn la spital sau apeleaza /112.'):format(remaining),
+            ('You must wait %d more seconds before respawning at the hospital, or call /112.'):format(remaining),
             'warning', 5000)
         return
     end

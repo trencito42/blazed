@@ -310,7 +310,25 @@ AddEventHandler('weaponDamageEvent', function(sender, data)
     if type(data) ~= 'table' then return end
     local weaponHash = tonumber(data.weaponType)
     if isMeleeWeaponHash(weaponHash) then return end
-    if not canDealWeaponDamage(sender) then
+    -- [WAR FIX] Turf-war combat is exempt from the firearm license gate:
+    -- both sides are validated war participants, the war is consensual PvP.
+    -- [LICENSE NAG FIX] If the shooter is a war participant and the damaged
+    -- entity is ANY player ped, treat it as war combat. The old code resolved
+    -- the victim's source via NetworkGetEntityOwner, which can fail (entity
+    -- owned by the shooter's client / scope edge), leaving participants to
+    -- get "you need a Firearm License" nags mid-war.
+    local inWarCombat = false
+    if GetResourceState('sunset_turfs') == 'started' then
+        local okS, shooterInWar = pcall(function() return exports.sunset_turfs:IsInWar(sender) end)
+        if okS and shooterInWar then
+            local victimNet = tonumber(data.hitGlobalId)
+            local victimEnt = victimNet and victimNet ~= 0 and NetworkGetEntityFromNetworkId(victimNet) or 0
+            if victimEnt ~= 0 and GetEntityType(victimEnt) == 1 and IsPedAPlayer(victimEnt) then
+                inWarCombat = true
+            end
+        end
+    end
+    if not inWarCombat and not canDealWeaponDamage(sender) then
         CancelEvent()
         resyncVictimTo(sender, data)
         local now = os.time()

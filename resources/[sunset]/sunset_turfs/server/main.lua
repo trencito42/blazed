@@ -65,7 +65,7 @@ local function loadTurfsFromDb()
             coords = vector3(r.x, r.y, r.z),
             radius = tonumber(r.radius) or 110.0,
             ownerClanId = r.owner_clan_id and tonumber(r.owner_clan_id) or nil,
-            ownerName = r.clan_name or 'Liber',
+            ownerName = r.clan_name or 'Free',
             ownerTag = r.clan_tag or '--',
             ownerColor = r.clan_color or '#00ffcc',
             payout = tonumber(r.payout) or 1500,
@@ -123,10 +123,20 @@ local function getClanMembersInTurf(clanId, turf)
         if src then
             local ped = GetPlayerPed(src)
             if ped and ped ~= 0 and #(GetEntityCoords(ped) - turf.coords) <= turf.radius then
-                local pClan = getPlayerClan(src)
-                if pClan and tonumber(pClan.clan_id) == tonumber(clanId) then
-                    count = count + 1
-                    table.insert(peds, src)
+                -- [PHANTOM POINTS FIX] Dead/downed players must NOT count for
+                -- zone-presence scoring (their corpse stays in the zone while
+                -- they wait for the war respawn -> team kept scoring).
+                local alive = GetEntityHealth(ped) > 0
+                if alive and GetResourceState('sunset_death') == 'started' then
+                    local okD, downed = pcall(function() return exports.sunset_death:IsPlayerDowned(src) end)
+                    if okD and downed then alive = false end
+                end
+                if alive then
+                    local pClan = getPlayerClan(src)
+                    if pClan and tonumber(pClan.clan_id) == tonumber(clanId) then
+                        count = count + 1
+                        table.insert(peds, src)
+                    end
                 end
             end
         end
@@ -203,12 +213,12 @@ local function endWar(turfId, reason)
     local winnerIsDefender = (not war.isNeutralCapture) and not attackerWon
     local announcement
     if winnerIsDefender then
-        announcement = ('^2[TURF WAR] ^7Razboiul pentru ^3%s^7 s-a incheiat! ^2[%s] %s^7 a aparat teritoriul (%d vs %d puncte)!'):format(
-            turf.name, winnerClanTag or '--', winnerClanName or 'Necunoscut', war.defenderScore, war.attackerScore
+        announcement = ('^2[TURF WAR] ^7The war for ^3%s^7 ended! ^2[%s] %s^7 defended the territory (%d vs %d points)!'):format(
+            turf.name, winnerClanTag or '--', winnerClanName or 'Unknown', war.defenderScore, war.attackerScore
         )
     else
-        announcement = ('^2[TURF WAR] ^7Razboiul pentru ^3%s^7 s-a incheiat! ^2[%s] %s^7 a cucerit teritoriul (%d vs %d puncte)!'):format(
-            turf.name, winnerClanTag or '--', winnerClanName or 'Necunoscut', war.attackerScore, war.defenderScore
+        announcement = ('^2[TURF WAR] ^7The war for ^3%s^7 ended! ^2[%s] %s^7 captured the territory (%d vs %d points)!'):format(
+            turf.name, winnerClanTag or '--', winnerClanName or 'Unknown', war.attackerScore, war.defenderScore
         )
     end
     TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'WAR', announcement } })
@@ -234,7 +244,7 @@ local function startWar(turf, attackerClan, defenderClan)
         attackerColor = attackerClan.tag_color or '#00ffcc',
         attackerScore = 0,
         defenderClanId = defenderClan and defenderClan.id or nil,
-        defenderName = defenderClan and defenderClan.name or 'Liber (neocupat)',
+        defenderName = defenderClan and defenderClan.name or 'Unowned (free turf)',
         defenderTag = defenderClan and defenderClan.tag or 'LIBER',
         defenderColor = defenderClan and defenderClan.tag_color or '#555555',
         defenderScore = 0,
@@ -247,12 +257,34 @@ local function startWar(turf, attackerClan, defenderClan)
     }
 
     ActiveWars[turfId] = warData
+    -- [ARMORY FIX] Register ALL online members of both clans as participants
+    -- immediately (the zone ticker used to be the only registration path, so
+    -- anyone outside the radius got "not in an active war" on /armory).
+    for _, pid in ipairs(GetPlayers()) do
+        local src = tonumber(pid)
+        if src then
+            local pClan = getPlayerClan(src)
+            if pClan then
+                if tonumber(pClan.clan_id) == tonumber(warData.attackerClanId) then
+                    warData.participants[src] = { clanId = warData.attackerClanId, kills = 0, deaths = 0, name = GetPlayerName(src) or '?' }
+                    TriggerClientEvent('sunset:turfs:warJoined', src, { turfId = turfId, role = 'attacker' })
+                elseif warData.defenderClanId and tonumber(pClan.clan_id) == tonumber(warData.defenderClanId) then
+                    warData.participants[src] = { clanId = warData.defenderClanId, kills = 0, deaths = 0, name = GetPlayerName(src) or '?' }
+                    TriggerClientEvent('sunset:turfs:warJoined', src, { turfId = turfId, role = 'defender' })
+                end
+            end
+        end
+    end
     TriggerClientEvent('sunset:turfs:warStart', -1, warData)
 
-    local announcement = ('^1[TURF WAR] ^7Clanul ^3[%s] %s^7 a atacat teritoriul ^2%s^7 detinut de ^3[%s] %s^7! Durata: 10 minute.'):format(
+    local announcement = ('^1[TURF WAR] ^7Clan ^3[%s] %s^7 attacked territory ^2%s^7 held by ^3[%s] %s^7! Duration: 10 minutes.'):format(
         attackerClan.tag, attackerClan.name, turf.name, warData.defenderTag, warData.defenderName
     )
     TriggerClientEvent('chat:addMessage', -1, { color = { 255, 50, 50 }, args = { 'WAR', announcement } })
+
+    -- [MOBILIZATION] Defenders get a rally window before zone scoring starts,
+    -- so they have time to reach the turf when attacked.
+    warData.rallyUntil = os.time() + (SunsetTurfs.RallyDelaySec or 60)
 
     -- War ticker thread
     CreateThread(function()
@@ -282,17 +314,29 @@ local function startWar(turf, attackerClan, defenderClan)
             end
             for _, src in ipairs(defPeds or {}) do
                 if not current.participants[src] then
-                    current.participants[src] = { clanId = current.defenderClanId, kills = 0, deaths = 0, name = GetPlayerName(src) or '?' }
+                    -- [INTERVENTION] Keep each player's REAL clan on the participant
+                    -- row (the defender clan can change mid-war via /intervene).
+                    local srcClan = getPlayerClan(src)
+                    current.participants[src] = {
+                        clanId = (srcClan and srcClan.clan_id) or current.defenderClanId,
+                        kills = 0, deaths = 0, name = GetPlayerName(src) or '?'
+                    }
                     TriggerClientEvent('sunset:turfs:warJoined', src, { turfId = turfId, role = 'defender' })
                 end
             end
 
-            if attCount > 0 then
-                current.attackerScore = current.attackerScore + (attCount * SunsetTurfs.ScorePerSecond)
+            -- [MOBILIZATION] No zone scoring during the rally window (kills still
+            -- score via scoreWarKill); gives defenders time to arrive.
+            local rallyOver = not current.rallyUntil or os.time() >= current.rallyUntil
+            if rallyOver then
+                if attCount > 0 then
+                    current.attackerScore = current.attackerScore + (attCount * SunsetTurfs.ScorePerSecond)
+                end
+                if current.defenderClanId and defCount > 0 then
+                    current.defenderScore = current.defenderScore + (defCount * SunsetTurfs.ScorePerSecond)
+                end
             end
-            if current.defenderClanId and defCount > 0 then
-                current.defenderScore = current.defenderScore + (defCount * SunsetTurfs.ScorePerSecond)
-            end
+            current.rallyRemaining = current.rallyUntil and math.max(0, current.rallyUntil - os.time()) or 0
 
             if current.isNeutralCapture and attCount > 0
                 and current.attackerScore >= (current.captureTarget or SunsetTurfs.NeutralCaptureSec or 180) then
@@ -337,43 +381,43 @@ local function runAttackTurf(source)
 
     local pClan = getPlayerClan(source)
     if not pClan then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu faci parte din niciun clan.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You are not in a clan.', 'error')
         return
     end
 
     if not canDeclareTurfAttack(pClan.rank) then
-        TriggerClientEvent('sunset:client:notify', source, 'Doar ofiterii si liderii de clan (rank 5+) pot declara un atac.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'Only clan officers and leaders (rank 5+) can declare an attack.', 'error')
         return
     end
 
     local pCoords = GetEntityCoords(ped)
     local turf = findTurfAtCoords(pCoords)
     if not turf then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu te afli in interiorul niciunui teritoriu. Vezi blip-urile de pe harta.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You are not inside any territory. Check the blips on the map.', 'error')
         return
     end
 
     if turf.ownerClanId and tonumber(turf.ownerClanId) == tonumber(pClan.clan_id) then
-        TriggerClientEvent('sunset:client:notify', source, 'Acest teritoriu este deja controlat de clanul tau!', 'info')
+        TriggerClientEvent('sunset:client:notify', source, 'This territory is already controlled by your clan!', 'info')
         return
     end
 
     if ActiveWars[turf.id] then
-        TriggerClientEvent('sunset:client:notify', source, 'Acest teritoriu este deja intr-un razboi activ.', 'warning')
+        TriggerClientEvent('sunset:client:notify', source, 'This territory is already in an active war.', 'warning')
         return
     end
 
     local cd = TurfCooldowns[turf.id] or 0
     if os.time() < cd then
         local remMin = math.ceil((cd - os.time()) / 60)
-        TriggerClientEvent('sunset:client:notify', source, ('Acest teritoriu este sub protectie post-razboi inca %d minute.'):format(remMin), 'warning')
+        TriggerClientEvent('sunset:client:notify', source, ('This territory is under post-war protection for %d more minutes.'):format(remMin), 'warning')
         return
     end
 
     for _, activeWar in pairs(ActiveWars) do
         if tonumber(activeWar.attackerClanId) == tonumber(pClan.clan_id)
             or tonumber(activeWar.defenderClanId) == tonumber(pClan.clan_id) then
-            TriggerClientEvent('sunset:client:notify', source, 'Clanul tau este deja angajat intr-un razboi pe alt teritoriu!', 'error')
+            TriggerClientEvent('sunset:client:notify', source, 'Your clan is already engaged in a war on another territory!', 'error')
             return
         end
     end
@@ -393,6 +437,106 @@ end, false)
 
 RegisterCommand('atac', function(source)
     runAttackTurf(source)
+end, false)
+
+-- ═══════════════════════════════════════════════════════════════
+--  [INTERVENTION] A third clan (leader, rank 5+) can claim an
+--  UNOWNED turf that is currently being captured (/intervene).
+--  The neutral capture war becomes a contested 1v1: the intervener
+--  BECOMES the defender (armory, war respawn, kill scoring).
+--  Intervention is NOT allowed on an owner-vs-attacker war —
+--  that is already 1v1 and stays that way.
+-- ═══════════════════════════════════════════════════════════════
+local function runIntervene(source)
+    if source == 0 then
+        print('[sunset_turfs] /intervene must be used in-game.')
+        return
+    end
+
+    local pClan = getPlayerClan(source)
+    if not pClan then
+        TriggerClientEvent('sunset:client:notify', source, 'You are not in a clan.', 'error')
+        return
+    end
+    if not canDeclareTurfAttack(pClan.rank) then
+        TriggerClientEvent('sunset:client:notify', source, 'Only clan officers and leaders (rank 5+) can declare an intervention.', 'error')
+        return
+    end
+
+    local clanId = tonumber(pClan.clan_id)
+
+    -- Clan must not be engaged anywhere already.
+    for _, war in pairs(ActiveWars) do
+        if tonumber(war.attackerClanId) == clanId
+            or tonumber(war.defenderClanId or 0) == clanId then
+            TriggerClientEvent('sunset:client:notify', source, 'Your clan is already engaged in a war!', 'error')
+            return
+        end
+    end
+
+    -- Only an UNOWNED turf under neutral capture can be claimed by intervention.
+    local targetWar, targetTurfId
+    for turfId, war in pairs(ActiveWars) do
+        if war.isNeutralCapture and not war.defenderClanId then
+            targetWar = war
+            targetTurfId = turfId
+            break
+        end
+    end
+    if not targetWar then
+        TriggerClientEvent('sunset:client:notify', source, 'There is no unowned territory being captured right now. /intervene only works on an empty turf.', 'error')
+        return
+    end
+
+    -- Intervention window: the capture must still be in progress, and only
+    -- during the first part of it (no last-second steals of a decided war).
+    local elapsed = os.time() - (targetWar.startedAt or os.time())
+    local window = SunsetTurfs.InterventionWindowSec or 240
+    if elapsed > window then
+        TriggerClientEvent('sunset:client:notify', source, 'The intervention window has closed — the capture is too far along.', 'warning')
+        return
+    end
+
+    -- The intervening clan BECOMES the defender: neutral capture turns into
+    -- a contested war (score target, full duration, no rally needed — both
+    -- sides are already mobilized).
+    targetWar.defenderClanId = clanId
+    targetWar.defenderName = pClan.name
+    targetWar.defenderTag = pClan.tag
+    targetWar.defenderColor = pClan.tag_color or '#00ffcc'
+    targetWar.isNeutralCapture = false
+    targetWar.captureTarget = nil
+    targetWar.scoreTarget = SunsetTurfs.WarScoreTarget
+    targetWar.rallyUntil = nil
+    targetWar.rallyRemaining = 0
+    targetWar.expiresAt = math.max(targetWar.expiresAt, os.time() + SunsetTurfs.WarDurationSec)
+
+    -- Register all online members of the intervening clan as defenders.
+    local joined = 0
+    for _, pid in ipairs(GetPlayers()) do
+        local src = tonumber(pid)
+        if src then
+            local mClan = getPlayerClan(src)
+            if mClan and tonumber(mClan.clan_id) == clanId and not targetWar.participants[src] then
+                targetWar.participants[src] = { clanId = clanId, kills = 0, deaths = 0, name = GetPlayerName(src) or '?' }
+                TriggerClientEvent('sunset:turfs:warJoined', src, { turfId = targetTurfId, role = 'defender' })
+                joined = joined + 1
+            end
+        end
+    end
+
+    -- Re-broadcast so every client sees the contested war state.
+    TriggerClientEvent('sunset:turfs:warStart', -1, targetWar)
+
+    local announcement = ('^3[TURF WAR] ^7Clan ^3[%s] %s^7 intervened on unowned territory ^2%s^7 — the capture is now a contested war against ^3[%s] %s^7!'):format(
+        pClan.tag, pClan.name, targetWar.turfName or '?', targetWar.attackerTag or '--', targetWar.attackerName or '?'
+    )
+    TriggerClientEvent('chat:addMessage', -1, { color = { 255, 204, 0 }, args = { 'WAR', announcement } })
+    log(('intervene src=%s clan=%s turf=%s joined=%d'):format(source, tostring(clanId), tostring(targetTurfId), joined))
+end
+
+RegisterCommand('intervene', function(source)
+    runIntervene(source)
 end, false)
 
 -- Kill hook inside turf wars
@@ -426,58 +570,66 @@ AddEventHandler('sunset:clans:dissolved', function(clanId)
     syncTurfsToClient(-1)
 end)
 
+-- [WAR KILL FIX] recordAttacker fires on EVERY weapon hit, not on kills —
+-- previously each bullet scored team points ("I shoot someone, get points,
+-- they're still alive"). Now hits only RECORD the last aggressor; the kill is
+-- scored when the victim actually dies and requests the war respawn.
+local LastWarHit = {} -- [victimSrc] = { attacker = src, at = os.time() }
+
 AddEventHandler('sunset:death:recordAttacker', function(victimSrc, attackerSrc)
     victimSrc = tonumber(victimSrc)
     attackerSrc = tonumber(attackerSrc)
     if not victimSrc or not attackerSrc or victimSrc == attackerSrc then return end
+    LastWarHit[victimSrc] = { attacker = attackerSrc, at = os.time() }
+end)
 
-    local aPed = GetPlayerPed(attackerSrc)
-    if not aPed or aPed == 0 then return end
-    local coords = GetEntityCoords(aPed)
-    local turf = findTurfAtCoords(coords)
-    if not turf or not ActiveWars[turf.id] then return end
+local function scoreWarKill(victimSrc, turfId)
+    local war = ActiveWars[turfId]
+    if not war then return end
+    local hit = LastWarHit[victimSrc]
+    LastWarHit[victimSrc] = nil
+    if not hit or (os.time() - hit.at) > 15 then return end
+    local attackerSrc = hit.attacker
+    if not GetPlayerName(attackerSrc) then return end
 
-    local war = ActiveWars[turf.id]
     local aClan = getPlayerClan(attackerSrc)
     local vClan = getPlayerClan(victimSrc)
     if not aClan or not vClan then return end
 
-    -- [WAR REDESIGN] Track per-player K/D for scoreboard + MVP.
     local function bump(src, field)
         if war.participants[src] then
             war.participants[src][field] = (war.participants[src][field] or 0) + 1
         end
     end
 
+    local scoringClan
     if aClan.clan_id == war.attackerClanId and vClan.clan_id == war.defenderClanId then
-        war.attackerScore = war.attackerScore + SunsetTurfs.ScorePerKill
-        bump(attackerSrc, 'kills')
-        bump(victimSrc, 'deaths')
-        TriggerClientEvent('sunset:turfs:warKill', -1, {
-            killer = GetPlayerName(attackerSrc),
-            victim = GetPlayerName(victimSrc),
-            clanTag = aClan.tag,
-            turfId = turf.id
-        })
-        -- Kill target win check
-        if war.scoreTarget and war.attackerScore >= war.scoreTarget then
-            endWar(turf.id, 'score_target')
-        end
+        scoringClan = 'attacker'
     elseif aClan.clan_id == war.defenderClanId and vClan.clan_id == war.attackerClanId then
+        scoringClan = 'defender'
+    end
+    if not scoringClan then return end
+
+    if scoringClan == 'attacker' then
+        war.attackerScore = war.attackerScore + SunsetTurfs.ScorePerKill
+    else
         war.defenderScore = war.defenderScore + SunsetTurfs.ScorePerKill
-        bump(attackerSrc, 'kills')
-        bump(victimSrc, 'deaths')
-        TriggerClientEvent('sunset:turfs:warKill', -1, {
-            killer = GetPlayerName(attackerSrc),
-            victim = GetPlayerName(victimSrc),
-            clanTag = aClan.tag,
-            turfId = turf.id
-        })
-        if war.scoreTarget and war.defenderScore >= war.scoreTarget then
-            endWar(turf.id, 'score_target')
+    end
+    bump(attackerSrc, 'kills')
+    bump(victimSrc, 'deaths')
+    TriggerClientEvent('sunset:turfs:warKill', -1, {
+        killer = GetPlayerName(attackerSrc),
+        victim = GetPlayerName(victimSrc),
+        clanTag = aClan.tag,
+        turfId = turfId,
+    })
+    if war.scoreTarget then
+        local score = scoringClan == 'attacker' and war.attackerScore or war.defenderScore
+        if score >= war.scoreTarget then
+            endWar(turfId, 'score_target')
         end
     end
-end)
+end
 
 -- ═══════════════════════════════════════════════════════════════
 --  [WAR REDESIGN] ARMORY (loadout chooser) + WAR RESPAWN
@@ -505,9 +657,9 @@ end
 -- Armory data for the UI: packages + which the player can afford/rank.
 exports.sunset_core:RegisterCallback('sunset:turfs:armoryData', function(source)
     local war = findActiveWarForSource(source)
-    if not war then return nil, 'Nu esti intr-un razboi activ.' end
+    if not war then return nil, 'You are not in an active war.' end
     local pClan = getPlayerClan(source)
-    if not pClan then return nil, 'Nu faci parte dintr-un clan.' end
+    if not pClan then return nil, 'You are not in a clan.' end
 
     local packages = {}
     for _, pkg in ipairs(SunsetTurfs.Loadouts or {}) do
@@ -542,14 +694,14 @@ end)
 -- so respawn re-grants the same kit).
 exports.sunset_core:RegisterCallback('sunset:turfs:takeLoadout', function(source, loadoutId)
     local war = findActiveWarForSource(source)
-    if not war then return nil, 'Nu esti intr-un razboi activ.' end
+    if not war then return nil, 'You are not in an active war.' end
     local pClan = getPlayerClan(source)
-    if not pClan then return nil, 'Nu faci parte dintr-un clan.' end
+    if not pClan then return nil, 'You are not in a clan.' end
 
     local pkg = getLoadoutById(tostring(loadoutId or ''))
-    if not pkg then return nil, 'Pachet invalid.' end
+    if not pkg then return nil, 'Invalid package.' end
     if (tonumber(pClan.rank) or 0) < (pkg.rank or 1) then
-        return nil, ('Ai nevoie de rank %d pentru acest pachet.'):format(pkg.rank or 1)
+        return nil, ('You need rank %d for this package.'):format(pkg.rank or 1)
     end
 
     -- One free loadout per war participant; paid packages can be re-bought.
@@ -557,11 +709,11 @@ exports.sunset_core:RegisterCallback('sunset:turfs:takeLoadout', function(source
     if (pkg.cost or 0) > 0 then
         if not exports.sunset_core:RemoveMoney(source, 'cash', pkg.cost, 'turf_loadout') then
             if not exports.sunset_core:RemoveMoney(source, 'bank', pkg.cost, 'turf_loadout') then
-                return nil, ('Nu ai $%s pentru acest pachet.'):format(pkg.cost)
+                return nil, ('You do not have $%s for this package.'):format(pkg.cost)
             end
         end
     elseif participant.loadoutTaken then
-        return nil, 'Ai primit deja pachetul gratuit pentru acest razboi.'
+        return nil, 'You already took the free package for this war.'
     end
     participant.loadoutTaken = true
     participant.loadout = pkg.id
@@ -578,12 +730,16 @@ end)
 -- the player is a participant, dead/downed, and the war is still active.
 exports.sunset_core:RegisterCallback('sunset:turfs:warRespawn', function(source)
     local war = findActiveWarForSource(source)
-    if not war then return nil, 'Nu esti intr-un razboi activ.' end
+    if not war then return nil, 'You are not in an active war.' end
     local turf = Turfs[war.turfId]
-    if not turf then return nil, 'Teritoriu invalid.' end
+    if not turf then return nil, 'Invalid territory.' end
 
     local participant = war.participants[source]
-    if not participant then return nil, 'Nu mai participi la acest razboi.' end
+    if not participant then return nil, 'You are no longer part of this war.' end
+
+    -- [WAR KILL FIX] The victim actually died and used the war respawn: this is
+    -- the authoritative kill moment. Score it now (not on every hit).
+    scoreWarKill(source, war.turfId)
 
     -- Respawn point: random offset inside the zone.
     local angle = math.random() * 2 * math.pi
@@ -650,6 +806,7 @@ end)
 -- Remove participants on disconnect (war keeps running; scores stay).
 AddEventHandler('playerDropped', function()
     local src = source
+    LastWarHit[src] = nil
     for _, war in pairs(ActiveWars) do
         if war.participants[src] then
             war.participants[src] = nil
@@ -674,7 +831,7 @@ AddEventHandler('sunset:payday:processed', function(source)
     if count > 0 and totalPayout > 0 then
         exports.sunset_core:AddMoney(source, 'bank', totalPayout, 'turf_payout')
         TriggerClientEvent('sunset:client:notify', source,
-            ('Clanul tau a incasat $%s din cele %d teritorii controlate (virat in banca ta).'):format(
+            ('Your clan collected $%s from %d controlled territories (deposited to your bank).'):format(
                 tostring(math.floor(totalPayout)), count
             ), 'success', 10000)
     end
@@ -694,7 +851,7 @@ end
 
 local function runTurflist(source)
     if not checkAdmin(source, 1) then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You do not have the required permission.', 'error')
         return
     end
 
@@ -704,7 +861,7 @@ local function runTurflist(source)
             id = id,
             name = t.name,
             ownerTag = t.ownerTag or '--',
-            ownerName = t.ownerName or 'Liber',
+            ownerName = t.ownerName or 'Free',
             war = ActiveWars[id] ~= nil,
         }
     end
@@ -712,7 +869,7 @@ local function runTurflist(source)
     table.sort(rows, function(a, b) return a.id < b.id end)
 
     if #rows == 0 then
-        local empty = 'Niciun teritoriu in DB. Verifica migrarea 34-turfs.sql.'
+        local empty = 'No territories in DB. Check migration 34-turfs.sql.'
         if source == 0 then
             print(('[sunset_turfs] %s'):format(empty))
         else
@@ -735,7 +892,7 @@ local function runTurflist(source)
 
     if source ~= 0 then
         TriggerClientEvent('sunset:client:notify', source,
-            ('%d teritorii listate in chat.'):format(#rows), 'success', 5000)
+            %d territories listed in chat.:format(#rows), 'success', 5000)
     end
 end
 
@@ -746,19 +903,19 @@ end, false)
 local function runGototurf(source, args)
     if source == 0 then print('Comanda doar in joc.'); return end
     if not checkAdmin(source, 2) then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You do not have the required permission.', 'error')
         return
     end
 
     local turfId = tonumber(args[1])
     local turf = turfId and Turfs[turfId]
     if not turf then
-        TriggerClientEvent('sunset:client:notify', source, 'Folosire: /gototurf [1-16]. Vezi /turflist', 'warning')
+        TriggerClientEvent('sunset:client:notify', source, 'Usage: /gototurf [1-16]. See /turflist', 'warning')
         return
     end
 
     TriggerClientEvent('sunset:turfs:teleport', source, turf.coords)
-    TriggerClientEvent('sunset:client:notify', source, ('Te-ai teleportat la teritoriul #%d (%s)'):format(turf.id, turf.name), 'success')
+    TriggerClientEvent('sunset:client:notify', source, ('Teleported to territory #%d (%s)'):format(turf.id, turf.name), 'success')
 end
 
 RegisterCommand('gototurf', function(source, args)
@@ -767,20 +924,20 @@ end, false)
 
 local function runForceturf(source, args)
     if not checkAdmin(source, 2) then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You do not have the required permission.', 'error')
         return
     end
 
     local turfId = tonumber(args[1])
     local turf = turfId and Turfs[turfId]
     if not turf then
-        local tip = 'Folosire: /forceturf [turfId (1-16)] [optional attackerClanId]'
+        local tip = 'Usage: /forceturf [turfId (1-16)] [optional attackerClanId]'
         if source == 0 then print(tip) else TriggerClientEvent('sunset:client:notify', source, tip, 'warning') end
         return
     end
 
     if ActiveWars[turf.id] then
-        local msg = ('Teritoriul #%d este deja intr-un razboi activ! Foloseste /stopwar %d'):format(turf.id, turf.id)
+        local msg = ('Territory #%d is already in an active war! Use /stopwar %d'):format(turf.id, turf.id)
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'error') end
         return
     end
@@ -800,7 +957,7 @@ local function runForceturf(source, args)
     end
 
     if not attackerClan then
-        local err = 'Nu exista clanuri in baza de date pentru a porni razboiul. Creeaza un clan mai intai!'
+        local err = 'No clans exist in the database to start a war. Create a clan first!'
         if source == 0 then print(err) else TriggerClientEvent('sunset:client:notify', source, err, 'error') end
         return
     end
@@ -815,7 +972,7 @@ local function runForceturf(source, args)
 
     startWar(turf, attackerClan, defenderClan)
 
-    local note = ('[ADMIN] Razboi fortat pe teritoriul #%d (%s) de catre [%s] %s'):format(
+    local note = ('[ADMIN] War forced on territory #%d (%s) by [%s] %s'):format(
         turf.id, turf.name, attackerClan.tag, attackerClan.name
     )
     if source == 0 then print(note) else TriggerClientEvent('sunset:client:notify', source, note, 'success') end
@@ -827,19 +984,19 @@ end, false)
 
 local function runStopwar(source, args)
     if not checkAdmin(source, 2) then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You do not have the required permission.', 'error')
         return
     end
 
     local turfId = tonumber(args[1])
     if not turfId or not ActiveWars[turfId] then
-        local msg = 'Folosire: /stopwar [turfId]. Niciun razboi activ pe acest ID.'
+        local msg = 'Usage: /stopwar [turfId]. No active war on this ID.'
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'warning') end
         return
     end
 
     endWar(turfId, 'admin_force_stop')
-    local note = ('[ADMIN] Razboiul pentru teritoriul #%d a fost oprit fortat.'):format(turfId)
+    local note = ('[ADMIN] The war for territory #%d was force-stopped.'):format(turfId)
     if source == 0 then print(note) else TriggerClientEvent('sunset:client:notify', source, note, 'info') end
 end
 
@@ -849,23 +1006,23 @@ end, false)
 
 local function runResetturfcd(source, args)
     if not checkAdmin(source, 2) then
-        TriggerClientEvent('sunset:client:notify', source, 'Nu ai permisiunea necesara.', 'error')
+        TriggerClientEvent('sunset:client:notify', source, 'You do not have the required permission.', 'error')
         return
     end
 
     local target = args[1]
     if target == 'all' then
         TurfCooldowns = {}
-        local msg = 'Toate cooldown-urile de teritorii au fost resetate!'
+        local msg = 'All territory cooldowns have been reset!'
         if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'success') end
     else
         local id = tonumber(target)
         if id and Turfs[id] then
             TurfCooldowns[id] = nil
-            local msg = ('Cooldown resetat pentru teritoriul #%d (%s)'):format(id, Turfs[id].name)
+            local msg = ('Cooldown reset for territory #%d (%s)'):format(id, Turfs[id].name)
             if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'success') end
         else
-            local msg = 'Folosire: /resetturfcd [1-16] sau /resetturfcd all'
+            local msg = 'Usage: /resetturfcd [1-16] or /resetturfcd all'
             if source == 0 then print(msg) else TriggerClientEvent('sunset:client:notify', source, msg, 'warning') end
         end
     end

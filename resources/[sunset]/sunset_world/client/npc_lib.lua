@@ -66,7 +66,7 @@ function SunsetWorld.Npc.showTooltip(id, ped, meta)
         bodyClass = meta.bodyClass or meta.badgeClass or 'npc',
         icon = meta.icon or 'ph-user',
         title = meta.title or 'NPC',
-        desc = meta.desc or 'Interacțiune',
+        desc = meta.desc or 'Interaction',
         key = meta.key or 'E',
     })
 end

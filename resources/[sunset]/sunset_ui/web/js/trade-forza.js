@@ -1,4 +1,4 @@
-const TradeForza = {
+﻿const TradeForza = {
     _catalog: null,
     _cashDraft: 0,
     _selectedItems: new Set(),
@@ -22,7 +22,7 @@ const TradeForza = {
             const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
             }[c]));
-            desc.innerHTML = `Juctorul <span>${esc(name)}</span> (ID: ${esc(Number(id) || '?')})<br>vrea s iniE>ieze un Trade.`;
+            desc.innerHTML = `<span>${esc(name)}</span> (ID: ${esc(Number(id) || '?')})<br>wants to start a trade.`;
         }
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
@@ -96,7 +96,7 @@ const TradeForza = {
         if (!items.length) {
             const empty = document.createElement('div');
             empty.className = 'offer-empty';
-            empty.textContent = 'Nicio ofertă adăugată';
+            empty.textContent = 'No offers added';
             container.appendChild(empty);
             return;
         }
@@ -113,7 +113,7 @@ const TradeForza = {
             const sub = document.createElement('div');
             sub.className = 'oi-sub';
             if (row.cash) {
-                name.textContent = 'Bani Cash';
+                name.textContent = 'Cash';
                 sub.textContent = `${this.formatMoney(row.amount)} USD`;
                 if (removable) {
                     el.classList.add('is-removable');
@@ -128,7 +128,7 @@ const TradeForza = {
                 }
             } else {
                 name.textContent = row.label || row.item || 'Item';
-                sub.textContent = `Cantitate: x${Number(row.count) || 0}`;
+                sub.textContent = `Qty: x${Number(row.count) || 0}`;
                 if (removable) {
                     el.classList.add('is-removable');
                     el.addEventListener('click', () => post('inventoryTradeRemove', { rowId: row.id }));
@@ -179,18 +179,18 @@ const TradeForza = {
         theirPanel?.classList.toggle('is-locked-their', data.theirAccepted === true);
 
         if (myStatus) {
-            myStatus.textContent = data.myAccepted ? 'Pregătit' : 'Modificare...';
+            myStatus.textContent = data.myAccepted ? 'Ready' : 'Editing...';
         }
         if (theirStatus) {
-            theirStatus.textContent = data.theirAccepted ? 'Ofertă Blocată' : 'În Modificare';
+            theirStatus.textContent = data.theirAccepted ? 'Offer Locked' : 'Editing';
             theirStatus.style.background = data.theirAccepted ? '' : 'var(--text-muted, rgba(255,255,255,0.4))';
         }
         if (lockBtn) {
             lockBtn.classList.toggle('is-locked', data.myAccepted === true);
             lockBtn.disabled = data.myAccepted === true || data.finalizing === true;
             lockBtn.innerHTML = data.myAccepted
-                ? '<i class="ph-bold ph-lock-key-open"></i> Ofertă Blocată'
-                : '<i class="ph-bold ph-lock-key"></i> Blochează Oferta';
+                ? '<i class="ph-bold ph-lock-key-open"></i> Offer Locked'
+                : '<i class="ph-bold ph-lock-key"></i> Lock Offer';
         }
         if (addBtn) {
             const canEdit = !data.myAccepted && data.finalizing !== true;
@@ -218,7 +218,7 @@ const TradeForza = {
             businesses: 'Selectează Afacere',
         };
         const titleEl = document.getElementById('trade-sc-title');
-        if (titleEl) titleEl.textContent = titles[tabId] || 'Alege Sursa';
+        if (titleEl) titleEl.textContent = titles[tabId] || 'Choose Source';
 
         const balance = document.getElementById('trade-sc-balance');
         if (balance) balance.style.display = tabId === 'cash' ? 'flex' : 'none';
@@ -245,7 +245,7 @@ const TradeForza = {
 
         const balance = document.getElementById('trade-sc-balance');
         if (balance) {
-            balance.innerHTML = `<span>Disponibil:</span> ${this.formatMoney(this._maxCash)}`;
+            balance.innerHTML = `<span>Available:</span> ${this.formatMoney(this._maxCash)}`;
         }
 
         this._renderSelectorItems(inventoryItems);
@@ -287,7 +287,7 @@ const TradeForza = {
         grid.innerHTML = '';
         const rows = Array.isArray(items) ? items.filter((row) => row && row.item) : [];
         if (!rows.length) {
-            grid.innerHTML = '<div class="selector-empty">Niciun obiect în buzunar</div>';
+            grid.innerHTML = '<div class="selector-empty">No items in inventoryîn buzunar</div>';
             return;
         }
         rows.forEach((row) => {
@@ -319,7 +319,7 @@ const TradeForza = {
         grid.innerHTML = '';
         const rows = Array.isArray(items) ? items : [];
         if (!rows.length) {
-            grid.innerHTML = '<div class="selector-empty">Nimic disponibil</div>';
+            grid.innerHTML = '<div class="selector-empty">Nothing available</div>';
             return;
         }
         rows.forEach((asset) => {
@@ -394,6 +394,28 @@ const TradeForza = {
         document.getElementById('trade-cancel-mine')?.addEventListener('click', () => {
             post('inventoryTradeCancel', {});
         });
+        // [TRADE FIX] The finalizing countdown overlay covers the whole screen
+        // (pointer-events:all) and used to have NO cancel affordance: players
+        // could not click "Cancel Trade" underneath. Dedicated button on the
+        // overlay + ESC key both cancel the trade now.
+        document.getElementById('trade-cd-cancel')?.addEventListener('click', () => {
+            post('inventoryTradeCancel', {});
+        });
+        if (!this._escBound) {
+            this._escBound = true;
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                const overlay = document.getElementById('trade-countdown-screen');
+                const win = document.getElementById('trade-window');
+                const overlayVisible = overlay && !overlay.classList.contains('hidden');
+                const tradeVisible = win && !win.classList.contains('hidden');
+                if (overlayVisible || tradeVisible) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    post('inventoryTradeCancel', {});
+                }
+            }, true);
+        }
         document.getElementById('trade-add-offer')?.addEventListener('click', () => {
             post('inventoryTradeCatalog', {});
         });

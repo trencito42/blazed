@@ -123,7 +123,7 @@ local function drawDynoHud()
     SetTextCentre(true)
     SetTextOutline()
     SetTextEntry('STRING')
-    AddTextComponentSubstringPlayerName('Tine W apasat — masina sta pe loc pe stand')
+    AddTextComponentSubstringPlayerName('Hold W — the car stays in place on the stand')
     DrawText(0.5, 0.905)
 end
 
@@ -148,7 +148,7 @@ function RunDynoTest(shop, onComplete)
     if dynoActive then return end
     local veh = getDriverVehicle()
     if veh == 0 then
-        notify('Trebuie sa fii la volan pentru dyno', 'error')
+        notify('You must be in the driver seat for the dyno', 'error')
         return
     end
 
@@ -197,7 +197,7 @@ function RunDynoTest(shop, onComplete)
     STC.dynoActive = false
 
     if peakRpm < 0.35 then
-        notify('RPM prea mic — tine W apasat pe stand pana se termina testul', 'error')
+        notify('RPM too low — hold W on the stand until the test finishes', 'error')
         if onComplete then onComplete(nil) end
         return
     end
@@ -214,7 +214,7 @@ function RunDynoTest(shop, onComplete)
     }
 
     if onComplete then onComplete(dynoResult) end
-    notify(('Dyno finalizat: %d CP / %d Nm (RPM max %d%%)'):format(hp, torque, dynoResult.peakRpm), 'success')
+    notify(('Dyno complete: %d HP / %d Nm (max RPM %d%%)'):format(hp, torque, dynoResult.peakRpm), 'success')
 end
 
 function IsDynoActive()

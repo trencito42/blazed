@@ -22,9 +22,9 @@ local npcUnlockAt       = GetGameTimer() + 60000
 local HOLD_MS           = 800
 
 local TRUCKER_ROUTES = {
-    { id = 'route_food',  label = 'Livrare Mancare',      desc = 'Colecteaza alimente → livreaza la 24/7 Blaine County',   pickup = vector3(892.15, -3204.55, 5.90),  delivery = vector3(2678.55, 3279.25, 55.24) },
-    { id = 'route_fuel',  label = 'Transport Combustibil', desc = 'Port Ls → Benzinarie Sandy Shores',                     pickup = vector3(-424.88, -2789.33, 6.0),  delivery = vector3(1701.53, 3757.68, 33.95) },
-    { id = 'route_build', label = 'Materiale Constructii', desc = 'Sandy Shores → depozit Vinewood',                       pickup = vector3(2747.32, 3472.88, 55.67), delivery = vector3(297.01, 188.41, 103.17) },
+    { id = 'route_food',  label = 'Food Delivery',       desc = 'Pick up food → deliver to the 24/7 in Blaine County',   pickup = vector3(892.15, -3204.55, 5.90),  delivery = vector3(2678.55, 3279.25, 55.24) },
+    { id = 'route_fuel',  label = 'Fuel Transport',        desc = 'LS Port → Sandy Shores gas station',                     pickup = vector3(-424.88, -2789.33, 6.0),  delivery = vector3(1701.53, 3757.68, 33.95) },
+    { id = 'route_build', label = 'Construction Materials', desc = 'Sandy Shores → Vinewood warehouse',                       pickup = vector3(2747.32, 3472.88, 55.67), delivery = vector3(297.01, 188.41, 103.17) },
 }
 
 -- ── Helpers ───────────────────────────────────────────────────
@@ -87,8 +87,8 @@ local function showNpcPrompt()
         badgeClass = 'trucker',
         bodyClass = 'trucker',
         icon = 'ph-truck',
-        title = 'Horia (Dispecer)',
-        desc = 'Interacțiune / Tura Trucker',
+        title = 'Horia (Dispatcher)',
+        desc = 'Interaction / Trucker Shift',
         key = 'E',
     })
 end
@@ -103,9 +103,9 @@ local function buildNpcActions()
     end
     if job == 'trucker' then
         if isTruckerShiftActive() then
-            actions[#actions + 1] = { id = 'stop_trucker_shift', label = 'Opreste Tura', group = 'TRUCKER' }
+            actions[#actions + 1] = { id = 'stop_trucker_shift', label = 'Stop Shift', group = 'TRUCKER' }
         else
-            actions[#actions + 1] = { id = 'laptop_info', label = 'Alege Cursa (Laptop)', group = 'TRUCKER' }
+            actions[#actions + 1] = { id = 'laptop_info', label = 'Pick a Route (Laptop)', group = 'TRUCKER' }
         end
     end
     return actions
@@ -117,11 +117,11 @@ local function openNpcMenu()
     if menuOpen or not interactionsReady() then return end
     local actions = buildNpcActions()
     if #actions == 0 then
-        exports.sunset_ui:Notify('Nu ai nicio actiune disponibila la dispecer.', 'info')
+        exports.sunset_ui:Notify('You have no actions available at the dispatcher.', 'info')
         return
     end
     exports.sunset_ui:Send('playerInteractionShow', {
-        target  = { name = 'Horia (Dispecer)', id = '' },
+        target  = { name = 'Horia (Dispatcher)', id = '' },
         actions = actions,
     })
     exports.sunset_ui:SetFocus(true, true)
@@ -131,11 +131,11 @@ end
 local function openLaptopMenu()
     if menuOpen or not interactionsReady() then return end
     if getCharJob() ~= 'trucker' then
-        exports.sunset_ui:Notify('Trebuie sa fii Trucker ca sa alegi o cursa.', 'error')
+        exports.sunset_ui:Notify('You must be a Trucker to pick a route.', 'error')
         return
     end
     if isTruckerShiftActive() then
-        exports.sunset_ui:Notify('Ai deja o tura activa! Termina-o inainte.', 'info')
+        exports.sunset_ui:Notify('You already have an active shift! Finish it first.', 'info')
         return
     end
 
@@ -148,7 +148,7 @@ local function openLaptopMenu()
         }
     end
     exports.sunset_ui:Send('playerInteractionShow', {
-        target  = { name = 'Laptop Dispecer', id = '' },
+        target  = { name = 'Dispatcher Laptop', id = '' },
         actions = routeActions,
     })
     exports.sunset_ui:SetFocus(true, true)
@@ -210,7 +210,7 @@ CreateThread(function()
     SetBlipScale(blip, 0.85)
     SetBlipAsShortRange(blip, true)
     BeginTextCommandSetBlipName('STRING')
-    AddTextComponentString('Horia — Dispecer Trucker')
+    AddTextComponentString('Horia — Trucker Dispatcher')
     EndTextCommandSetBlipName(blip)
 end)
 
@@ -321,11 +321,11 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         CreateThread(function()
             local ok, err = Sunset.AwaitCallback('sunset:hireJob', 'trucker')
             if ok then
-                exports.sunset_ui:Notify('Esti acum Trucker! Alege o cursa de la laptop.', 'success', 8000)
+                exports.sunset_ui:Notify('You are now a Trucker! Pick a route from the laptop.', 'success', 8000)
             else
                 local errMsg = err or 'Nu a functionat angajarea.'
                 if errMsg:find('already work', 1, true) then
-                    exports.sunset_ui:Notify('Esti deja Trucker! Alege o cursa de la laptop.', 'info', 6000)
+                    exports.sunset_ui:Notify('You are already a Trucker! Pick a route from the laptop.', 'info', 6000)
                 else
                     exports.sunset_ui:Notify(errMsg, 'error', 6000)
                 end
@@ -334,7 +334,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         end)
 
     elseif action == 'laptop_info' then
-        exports.sunset_ui:Notify('Mergi la laptop pentru a alege o cursa.', 'info', 4000)
+        exports.sunset_ui:Notify('Go to the laptop to pick a route.', 'info', 4000)
 
     elseif action == 'stop_trucker_shift' then
         inCooldown = true
@@ -343,9 +343,9 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             if ok then
                 JC.cleanup()
                 JC.hideObjective()
-                exports.sunset_ui:Notify('Tura anulata.', 'info', 4000)
+                exports.sunset_ui:Notify('Shift cancelled.', 'info', 4000)
             else
-                exports.sunset_ui:Notify(err or 'Nu s-a putut anula tura.', 'error')
+                exports.sunset_ui:Notify(err or 'Could not cancel the shift.', 'error')
             end
             SetTimeout(2000, function() inCooldown = false end)
         end)
@@ -361,7 +361,7 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             CreateThread(function()
                 -- Store selected route and set GPS to pickup
                 exports.sunset_ui:Notify(
-                    ('Cursa selectata: %s\nMergi la locul de incarcare!'):format(selectedRoute.label),
+                    ('Route selected: %s\nHead to the pickup location!'):format(selectedRoute.label),
                     'success', 7000)
                 SetNewWaypoint(selectedRoute.pickup.x, selectedRoute.pickup.y)
                 -- TODO: when vehicle spawn is ready, trigger shift start here with selectedRoute.id

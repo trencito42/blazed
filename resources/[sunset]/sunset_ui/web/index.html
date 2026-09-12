@@ -100,57 +100,58 @@
         <div class="trade-container">
             <div class="tp-panel" id="trade-panel-mine">
                 <div class="tp-header">
-                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-up" style="color:#00ffcc;"></i> Oferta Ta</div>
-                    <div class="tp-status" id="trade-status-mine">Modificare...</div>
+                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-up" style="color:#00ffcc;"></i> Your Offer</div>
+                    <div class="tp-status" id="trade-status-mine">Editing...</div>
                 </div>
                 <div class="tp-content" id="trade-my-offer"></div>
                 <div class="tp-actions">
-                    <button type="button" class="btn-add-trade" id="trade-add-offer"><i class="ph-bold ph-plus"></i> Adaugă din Inventar / Proprietăți</button>
-                    <button type="button" class="btn-lock-trade" id="trade-lock-mine"><i class="ph-bold ph-lock-key"></i> Blochează Oferta</button>
-                    <button type="button" class="btn-cancel-trade" id="trade-cancel-mine"><i class="ph-bold ph-x"></i> Anulează Trade</button>
+                    <button type="button" class="btn-add-trade" id="trade-add-offer"><i class="ph-bold ph-plus"></i> Add from Inventory / Properties</button>
+                    <button type="button" class="btn-lock-trade" id="trade-lock-mine"><i class="ph-bold ph-lock-key"></i> Lock Offer</button>
+                    <button type="button" class="btn-cancel-trade" id="trade-cancel-mine"><i class="ph-bold ph-x"></i> Cancel Trade</button>
                 </div>
             </div>
             <div class="tp-panel" id="trade-panel-their">
                 <div class="tp-header">
-                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-down" style="color:rgba(255,255,255,0.4);"></i> <span id="trade-their-title">Jucător</span></div>
-                    <div class="tp-status" id="trade-status-their">În Modificare</div>
+                    <div class="tp-title"><i class="ph-bold ph-arrow-circle-down" style="color:rgba(255,255,255,0.4);"></i> <span id="trade-their-title">Player</span></div>
+                    <div class="tp-status" id="trade-status-their">Editing</div>
                 </div>
                 <div class="tp-content" id="trade-their-offer"></div>
                 <div class="tp-actions">
-                    <div class="tp-waiting">Așteaptă ca celălalt jucător<br>să își confirme oferta.</div>
+                    <div class="tp-waiting">Waiting for the other player<br>to confirm their offer.</div>
                 </div>
             </div>
         </div>
     </div>
     <div id="trade-countdown-screen" class="countdown-overlay hidden" aria-hidden="true">
         <div class="cd-number" id="trade-cd-timer">5</div>
-        <div class="cd-text">Finalizare Tranzacție</div>
-        <div class="cd-hint">Orice jucător poate anula tranzacția în acest timp.</div>
+        <div class="cd-text">Finalizing Trade</div>
+        <div class="cd-hint">Either player can cancel during the countdown.</div>
+        <button type="button" class="btn-cancel-trade cd-cancel" id="trade-cd-cancel"><i class="ph-bold ph-x"></i> Cancel Trade (ESC)</button>
     </div>
 
     <!-- ASSET SELECTOR MODAL -->
     <div id="trade-selector-modal" class="selector-modal hidden" aria-hidden="true">
         <div class="selector-wrapper">
             <div class="sel-sidebar">
-                <div class="sel-header">Alege Sursa</div>
+                <div class="sel-header">Choose Source</div>
                 <div class="cat-list">
-                    <button type="button" class="cat-item money active" data-tab="cash"><i class="ph-fill ph-currency-dollar"></i> <span>Bani Cash</span></button>
-                    <button type="button" class="cat-item" data-tab="items"><i class="ph-fill ph-backpack"></i> <span>Buzunare</span></button>
-                    <button type="button" class="cat-item" data-tab="vehicles"><i class="ph-fill ph-car-profile"></i> <span>Garaj Auto</span></button>
-                    <button type="button" class="cat-item" data-tab="properties"><i class="ph-fill ph-house"></i> <span>Portofoliu</span></button>
-                    <button type="button" class="cat-item" data-tab="businesses"><i class="ph-fill ph-storefront"></i> <span>Afacere</span></button>
+                    <button type="button" class="cat-item money active" data-tab="cash"><i class="ph-fill ph-currency-dollar"></i> <span>Cash</span></button>
+                    <button type="button" class="cat-item" data-tab="items"><i class="ph-fill ph-backpack"></i> <span>Inventory</span></button>
+                    <button type="button" class="cat-item" data-tab="vehicles"><i class="ph-fill ph-car-profile"></i> <span>Vehicles</span></button>
+                    <button type="button" class="cat-item" data-tab="properties"><i class="ph-fill ph-house"></i> <span>Properties</span></button>
+                    <button type="button" class="cat-item" data-tab="businesses"><i class="ph-fill ph-storefront"></i> <span>Businesses</span></button>
                 </div>
             </div>
             <div class="sel-content">
                 <div class="sc-header">
-                    <div class="sc-title" id="trade-sc-title">Adaugă Sumă</div>
-                    <div class="sc-balance" id="trade-sc-balance"><span>Disponibil:</span> $0</div>
+                    <div class="sc-title" id="trade-sc-title">Add Amount</div>
+                    <div class="sc-balance" id="trade-sc-balance"><span>Available:</span> $0</div>
                 </div>
                 <div class="sc-body">
                     <div id="trade-tab-cash">
                         <div class="cash-terminal">
                             <div class="ct-amount"><span>$</span><div id="trade-cash-value">0</div></div>
-                            <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;">Introdu suma exactă</div>
+                            <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;">Enter the exact amount</div>
                             <div class="ct-controls">
                                 <button type="button" class="ct-btn" data-cash-add="100"><span>+100</span></button>
                                 <button type="button" class="ct-btn" data-cash-add="1000"><span>+1k</span></button>
@@ -166,8 +167,8 @@
                     <div id="trade-tab-businesses" style="display:none;"><div class="asset-grid is-list" id="trade-tab-businesses-grid"></div></div>
                 </div>
                 <div class="sc-actions">
-                    <button type="button" class="btn-act cancel" id="trade-selector-close">Anulează</button>
-                    <button type="button" class="btn-act confirm" id="trade-selector-confirm">Adaugă la Ofertă</button>
+                    <button type="button" class="btn-act cancel" id="trade-selector-close">Cancel</button>
+                    <button type="button" class="btn-act confirm" id="trade-selector-confirm">Add to Offer</button>
                 </div>
             </div>
         </div>

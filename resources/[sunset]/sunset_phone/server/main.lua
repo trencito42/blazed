@@ -272,10 +272,10 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
         end)
         if not dispatchOk then
             print(('[sunset_phone] 112 SMS dispatch error for character %s: %s'):format(char.id, tostring(dispatchResult)))
-            return nil, 'Dispeceratul 112 este momentan indisponibil. Mesajul nu a fost trimis; incearca din nou.'
+            return nil, 'The 112 dispatch is currently unavailable. The message was not sent; try again.'
         end
         if not dispatchResult or not dispatchResult.ok then
-            return nil, dispatchErr or 'Apelul 112 nu a putut fi inregistrat. Incearca din nou.'
+            return nil, dispatchErr or 'The 112 call could not be registered. Try again.'
         end
 
         -- Character id 0 is reserved for system messages. The columns are

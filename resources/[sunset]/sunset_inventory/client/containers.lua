@@ -18,12 +18,12 @@ local function printContainerList(title, data)
     TriggerClientEvent('chat:addMessage', -1, {}) -- ensure chat initialized
     TriggerEvent('chat:addMessage', {
         color = { 0, 255, 204 },
-        args = { title, ('Capacitate: ^3%.1fkg / %.1fkg^7'):format(data.weight or 0, data.maxWeight or 50) }
+        args = { title, ('Capacity: ^3%.1fkg / %.1fkg^7'):format(data.weight or 0, data.maxWeight or 50) }
     })
     if #data.items == 0 then
         TriggerEvent('chat:addMessage', {
             color = { 180, 180, 180 },
-            args = { title, 'Compartimentul este gol.' }
+            args = { title, 'The compartment is empty.' }
         })
     else
         for _, item in ipairs(data.items) do
@@ -35,7 +35,7 @@ local function printContainerList(title, data)
     end
     TriggerEvent('chat:addMessage', {
         color = { 120, 120, 120 },
-        args = { 'INFO', ('Foloseste ^3/%s put [nume_obiect] [cantitate]^7 sau ^3/%s take [nume_obiect] [cantitate]^7'):format(data.type, data.type) }
+        args = { 'INFO', ('Use ^3/%s put [item] [count]^7 or ^3/%s take [item] [count]^7'):format(data.type, data.type) }
     })
 end
 
@@ -46,12 +46,12 @@ RegisterCommand('trunk', function(source, args)
 
     local veh = getClosestVehicle(4.5)
     if not veh then
-        return exports.sunset_ui:Notify('Nu exista niciun vehicul in apropiere.', 'error')
+        return exports.sunset_ui:Notify('No vehicle nearby.', 'error')
     end
 
     local lock = GetVehicleDoorLockStatus(veh)
     if lock > 1 then
-        return exports.sunset_ui:Notify('Vehiculul este incuiat.', 'warning')
+        return exports.sunset_ui:Notify('The vehicle is locked.', 'warning')
     end
 
     local plate = string.upper(GetVehicleNumberPlateText(veh)):gsub('%s+', '')
@@ -60,28 +60,28 @@ RegisterCommand('trunk', function(source, args)
         local item = args[2] and string.lower(args[2])
         local count = tonumber(args[3]) or 1
         if not item then
-            return exports.sunset_ui:Notify('Utilizare: /trunk put [item] [cantitate]', 'info')
+            return exports.sunset_ui:Notify('Usage: /trunk put [item] [count]', 'info')
         end
         local res, err = Sunset.AwaitCallback('sunset:container:deposit', 'trunk', plate, item, count)
         if res and res.ok then
-            exports.sunset_ui:Notify(('Ai depus x%d %s in portbagaj.'):format(count, item), 'success')
-            printContainerList('PORTBAGAJ ' .. plate, res)
+            exports.sunset_ui:Notify(('Put x%d %s in the trunk.'):format(count, item), 'success')
+            printContainerList('TRUNK ' .. plate, res)
         else
-            exports.sunset_ui:Notify(err or 'Eroare la depunere.', 'error')
+            exports.sunset_ui:Notify(err or 'Deposit failed.', 'error')
         end
         return
     elseif sub == 'take' or sub == 'ia' then
         local item = args[2] and string.lower(args[2])
         local count = tonumber(args[3]) or 1
         if not item then
-            return exports.sunset_ui:Notify('Utilizare: /trunk take [item] [cantitate]', 'info')
+            return exports.sunset_ui:Notify('Usage: /trunk take [item] [count]', 'info')
         end
         local res, err = Sunset.AwaitCallback('sunset:container:withdraw', 'trunk', plate, item, count)
         if res and res.ok then
-            exports.sunset_ui:Notify(('Ai scos x%d %s din portbagaj.'):format(count, item), 'success')
-            printContainerList('PORTBAGAJ ' .. plate, res)
+            exports.sunset_ui:Notify(('Took x%d %s from the trunk.'):format(count, item), 'success')
+            printContainerList('TRUNK ' .. plate, res)
         else
-            exports.sunset_ui:Notify(err or 'Eroare la retragere.', 'error')
+            exports.sunset_ui:Notify(err or 'Withdraw failed.', 'error')
         end
         return
     end
@@ -94,9 +94,9 @@ RegisterCommand('trunk', function(source, args)
 
     local res, err = Sunset.AwaitCallback('sunset:container:open', 'trunk', plate)
     if res then
-        printContainerList('PORTBAGAJ ' .. plate, res)
+        printContainerList('TRUNK ' .. plate, res)
     else
-        exports.sunset_ui:Notify(err or 'Nu s-a putut deschide portbagajul.', 'error')
+        exports.sunset_ui:Notify(err or 'Could not open the trunk.', 'error')
     end
 end, false)
 
@@ -104,12 +104,12 @@ RegisterCommand('portbagaj', function(_, args)
     ExecuteCommand(('trunk %s'):format(table.concat(args, ' ')))
 end, false)
 
-TriggerEvent('chat:addSuggestion', '/trunk', 'Deschide sau gestioneaza portbagajul vehiculului', {
-    { name = 'put/take', help = 'Operatiune optionala: "put" sau "take"' },
-    { name = 'obiect', help = 'Numele obiectului (ex: water, repairkit)' },
-    { name = 'cantitate', help = 'Numarul de bucati' }
+TriggerEvent('chat:addSuggestion', '/trunk', 'Open or manage the vehicle trunk', {
+    { name = 'put/take', help = 'Optional operation: put or take' },
+    { name = 'obiect', help = 'Item name (e.g. water, repairkit)' },
+    { name = 'cantitate', help = 'Amount' }
 })
-TriggerEvent('chat:addSuggestion', '/portbagaj', 'Alias pentru /trunk')
+TriggerEvent('chat:addSuggestion', '/portbagaj', 'Alias for /trunk')
 
 -- ── GLOVEBOX ────────────────────────────────────────────────
 RegisterCommand('glovebox', function(source, args)
@@ -119,7 +119,7 @@ RegisterCommand('glovebox', function(source, args)
     if veh == 0 then veh = getClosestVehicle(2.5) end
 
     if not veh or veh == 0 then
-        return exports.sunset_ui:Notify('Trebuie sa fii in vehicul sau langa el.', 'error')
+        return exports.sunset_ui:Notify('You must be inside or next to a vehicle.', 'error')
     end
 
     local plate = string.upper(GetVehicleNumberPlateText(veh)):gsub('%s+', '')
@@ -128,37 +128,37 @@ RegisterCommand('glovebox', function(source, args)
         local item = args[2] and string.lower(args[2])
         local count = tonumber(args[3]) or 1
         if not item then
-            return exports.sunset_ui:Notify('Utilizare: /glovebox put [item] [cantitate]', 'info')
+            return exports.sunset_ui:Notify('Usage: /glovebox put [item] [count]', 'info')
         end
         local res, err = Sunset.AwaitCallback('sunset:container:deposit', 'glovebox', plate, item, count)
         if res and res.ok then
-            exports.sunset_ui:Notify(('Ai pus x%d %s in torpedou.'):format(count, item), 'success')
-            printContainerList('TORPEDOU ' .. plate, res)
+            exports.sunset_ui:Notify(('Put x%d %s in the glovebox.'):format(count, item), 'success')
+            printContainerList('GLOVEBOX ' .. plate, res)
         else
-            exports.sunset_ui:Notify(err or 'Eroare la depunere.', 'error')
+            exports.sunset_ui:Notify(err or 'Deposit failed.', 'error')
         end
         return
     elseif sub == 'take' or sub == 'ia' then
         local item = args[2] and string.lower(args[2])
         local count = tonumber(args[3]) or 1
         if not item then
-            return exports.sunset_ui:Notify('Utilizare: /glovebox take [item] [cantitate]', 'info')
+            return exports.sunset_ui:Notify('Usage: /glovebox take [item] [count]', 'info')
         end
         local res, err = Sunset.AwaitCallback('sunset:container:withdraw', 'glovebox', plate, item, count)
         if res and res.ok then
-            exports.sunset_ui:Notify(('Ai scos x%d %s din torpedou.'):format(count, item), 'success')
-            printContainerList('TORPEDOU ' .. plate, res)
+            exports.sunset_ui:Notify(('Took x%d %s from the glovebox.'):format(count, item), 'success')
+            printContainerList('GLOVEBOX ' .. plate, res)
         else
-            exports.sunset_ui:Notify(err or 'Eroare la retragere.', 'error')
+            exports.sunset_ui:Notify(err or 'Withdraw failed.', 'error')
         end
         return
     end
 
     local res, err = Sunset.AwaitCallback('sunset:container:open', 'glovebox', plate)
     if res then
-        printContainerList('TORPEDOU ' .. plate, res)
+        printContainerList('GLOVEBOX ' .. plate, res)
     else
-        exports.sunset_ui:Notify(err or 'Nu s-a putut deschide torpedoul.', 'error')
+        exports.sunset_ui:Notify(err or 'Could not open the glovebox.', 'error')
     end
 end, false)
 
@@ -166,9 +166,9 @@ RegisterCommand('torpedou', function(_, args)
     ExecuteCommand(('glovebox %s'):format(table.concat(args, ' ')))
 end, false)
 
-TriggerEvent('chat:addSuggestion', '/glovebox', 'Deschide sau gestioneaza torpedoul vehiculului', {
-    { name = 'put/take', help = 'Operatiune: "put" sau "take"' },
-    { name = 'obiect', help = 'Numele obiectului' },
-    { name = 'cantitate', help = 'Numarul de bucati' }
+TriggerEvent('chat:addSuggestion', '/glovebox', 'Open or manage the vehicle glovebox', {
+    { name = 'put/take', help = 'Operation: put or take' },
+    { name = 'obiect', help = 'Item name' },
+    { name = 'cantitate', help = 'Amount' }
 })
-TriggerEvent('chat:addSuggestion', '/torpedou', 'Alias pentru /glovebox')
+TriggerEvent('chat:addSuggestion', '/torpedou', 'Alias for /glovebox')

@@ -67,7 +67,7 @@ exports.sunset_core:RegisterCallback('sunset:interactionContext', function(sourc
         input = { type = 'number', label = 'Amount', min = 1, max = MAX_CASH_TRANSFER, placeholder = '$ amount' },
     })
     addAction(actions, 'trade', 'CIVILIAN', 'Trade items', 'Propose a secure item trade with this player.')
-    addAction(actions, 'add_contact', 'CIVILIAN', 'Adaugă la Contacte', 'Salvează jucătorul în agenda telefonului.')
+    addAction(actions, 'add_contact', 'CIVILIAN', 'Add to Contacts', 'Save the player to your phone contacts.')
 
     local isLeader = false
     local leaderOk, leaderResult = pcall(function()
@@ -232,10 +232,10 @@ exports.sunset_core:RegisterCallback('sunset:interactionAddFriend', function(sou
 
     if not ok then
         print(('[sunset_interactions] add contact failed: %s'):format(tostring(dbErr)))
-        return nil, 'Contactul nu a putut fi salvat. Încearcă din nou.'
+        return nil, 'The contact could not be saved. Try again.'
     end
 
-    notify(pair.targetId, ('%s te-a adăugat în contacte.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 5000)
+    notify(pair.targetId, ('%s added you to their contacts.'):format(exports.sunset_core:GetPlayerDisplayName(source)), 'info', 5000)
     return { name = name, phone = phone }
 end)
 

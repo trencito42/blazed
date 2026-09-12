@@ -246,11 +246,11 @@ Sunset.FactionSkins = {
             [7] = 's_f_y_cop_01',
         },
         options = {
-            { key = 'cop', label = 'Ofițer LSPD Patrulă', male = 's_m_y_cop_01', female = 's_f_y_cop_01', minGrade = 0 },
-            { key = 'senior', label = 'Ofițer LSPD Senior / Sergent', male = 'csb_cop', female = 's_f_y_cop_01', minGrade = 2 },
-            { key = 'hway', label = 'Highway Patrol (Autostradă)', male = 's_m_y_hwaycop_01', female = 's_f_y_cop_01', minGrade = 1 },
-            { key = 'swat', label = 'SWAT / Intervenție Rapidă', male = 's_m_y_swat_01', female = 's_f_y_cop_01', minGrade = 2 },
-            { key = 'command', label = 'Conducere / Detectiv', male = 's_m_m_ciasec_01', female = 's_f_y_cop_01', minGrade = 4 },
+            { key = 'cop', label = 'LSPD Patrol Officer', male = 's_m_y_cop_01', female = 's_f_y_cop_01', minGrade = 0 },
+            { key = 'senior', label = 'LSPD Senior Officer / Sergeant', male = 'csb_cop', female = 's_f_y_cop_01', minGrade = 2 },
+            { key = 'hway', label = 'Highway Patrol', male = 's_m_y_hwaycop_01', female = 's_f_y_cop_01', minGrade = 1 },
+            { key = 'swat', label = 'SWAT / Rapid Response', male = 's_m_y_swat_01', female = 's_f_y_cop_01', minGrade = 2 },
+            { key = 'command', label = 'Command / Detective', male = 's_m_m_ciasec_01', female = 's_f_y_cop_01', minGrade = 4 },
         },
     },
     sheriff = {
@@ -278,7 +278,7 @@ Sunset.FactionSkins = {
             [7] = 's_f_y_sheriff_01',
         },
         options = {
-            { key = 'sheriff', label = 'Șerif Patrulă', male = 's_m_y_sheriff_01', female = 's_f_y_sheriff_01', minGrade = 0 },
+            { key = 'sheriff', label = 'Sheriff Patrol', male = 's_m_y_sheriff_01', female = 's_f_y_sheriff_01', minGrade = 0 },
             { key = 'hway', label = 'Highway Patrol Sheriff', male = 's_m_y_hwaycop_01', female = 's_f_y_sheriff_01', minGrade = 1 },
             { key = 'swat', label = 'Tactical Response / SWAT', male = 's_m_y_swat_01', female = 's_f_y_sheriff_01', minGrade = 2 },
         },
@@ -339,8 +339,8 @@ Sunset.FactionSkins = {
             [7] = 's_f_y_scrubs_01',
         },
         options = {
-            { key = 'paramedic', label = 'Paramedic Ambulanță', male = 's_m_m_paramedic_01', female = 's_f_y_scrubs_01', minGrade = 0 },
-            { key = 'doctor', label = 'Medic / Chirurg Halat Alb', male = 's_m_m_doctor_01', female = 's_f_y_scrubs_01', minGrade = 3 },
+            { key = 'paramedic', label = 'Ambulance Paramedic', male = 's_m_m_paramedic_01', female = 's_f_y_scrubs_01', minGrade = 0 },
+            { key = 'doctor', label = 'Doctor / Surgeon White Coat', male = 's_m_m_doctor_01', female = 's_f_y_scrubs_01', minGrade = 3 },
         },
     },
     lsfd = {
@@ -368,8 +368,8 @@ Sunset.FactionSkins = {
             [7] = 's_m_y_fireman_01',
         },
         options = {
-            { key = 'fireman', label = 'Pompier Bunker Gear', male = 's_m_y_fireman_01', female = 's_m_y_fireman_01', minGrade = 0 },
-            { key = 'paramedic', label = 'Paramedic / Prim Ajutor', male = 's_m_m_paramedic_01', female = 's_f_y_scrubs_01', minGrade = 2 },
+            { key = 'fireman', label = 'Firefighter Bunker Gear', male = 's_m_y_fireman_01', female = 's_m_y_fireman_01', minGrade = 0 },
+            { key = 'paramedic', label = 'Paramedic / First Responder', male = 's_m_m_paramedic_01', female = 's_f_y_scrubs_01', minGrade = 2 },
         },
     },
     mechanic = {
@@ -397,9 +397,9 @@ Sunset.FactionSkins = {
             [7] = 's_f_y_migrant_01',
         },
         options = {
-            { key = 'mechanic', label = 'Mecanic Salopetă Garaj', male = 'mp_m_waremech_01', female = 'mp_m_waremech_01', minGrade = 0 },
-            { key = 'tuner', label = 'Mecanic Tuner / Custom', male = 's_m_y_xmech_01', female = 's_f_y_migrant_01', minGrade = 1 },
-            { key = 'heavy', label = 'Mecanic Heavy / Tractări', male = 's_m_m_dockwork_01', female = 's_f_y_migrant_01', minGrade = 2 },
+            { key = 'mechanic', label = 'Mechanic Garage Overalls', male = 'mp_m_waremech_01', female = 'mp_m_waremech_01', minGrade = 0 },
+            { key = 'tuner', label = 'Mechanic Tuner / Custom', male = 's_m_y_xmech_01', female = 's_f_y_migrant_01', minGrade = 1 },
+            { key = 'heavy', label = 'Heavy Mechanic / Towing', male = 's_m_m_dockwork_01', female = 's_f_y_migrant_01', minGrade = 2 },
         },
     },
     taxi = {
@@ -427,9 +427,9 @@ Sunset.FactionSkins = {
             [7] = 'a_f_y_smartcaspat_01',
         },
         options = {
-            { key = 'driver', label = 'Șofer Taxi Clasic', male = 'a_m_y_stlat_01', female = 'a_f_y_smartcaspat_01', minGrade = 0 },
-            { key = 'executive', label = 'Șofer Executiv / Limuzină', male = 'a_m_y_smartcaspat_01', female = 'a_f_y_smartcaspat_01', minGrade = 2 },
-            { key = 'manager', label = 'Manager Flotă', male = 'ig_chengsr', female = 'a_f_y_smartcaspat_01', minGrade = 4 },
+            { key = 'driver', label = 'Classic Taxi Driver', male = 'a_m_y_stlat_01', female = 'a_f_y_smartcaspat_01', minGrade = 0 },
+            { key = 'executive', label = 'Executive Driver / Limousine', male = 'a_m_y_smartcaspat_01', female = 'a_f_y_smartcaspat_01', minGrade = 2 },
+            { key = 'manager', label = 'Fleet Manager', male = 'ig_chengsr', female = 'a_f_y_smartcaspat_01', minGrade = 4 },
         },
     },
     lssi = {
@@ -457,8 +457,8 @@ Sunset.FactionSkins = {
             [7] = 'a_f_y_business_02',
         },
         options = {
-            { key = 'inspector', label = 'Instructor Rutier / Uniformă', male = 's_m_m_highsec_02', female = 'a_f_y_business_02', minGrade = 0 },
-            { key = 'examiner', label = 'Examinator Oficial Costum', male = 'a_m_y_business_01', female = 'a_f_y_business_02', minGrade = 2 },
+            { key = 'inspector', label = 'Driving Instructor / Uniform', male = 's_m_m_highsec_02', female = 'a_f_y_business_02', minGrade = 0 },
+            { key = 'examiner', label = 'Official Examiner Suit', male = 'a_m_y_business_01', female = 'a_f_y_business_02', minGrade = 2 },
         },
     },
     sunset_cartel = {
@@ -517,9 +517,9 @@ Sunset.FactionSkins = {
             [7] = 'g_f_y_ballas_01',
         },
         options = {
-            { key = 'runner', label = 'Street Enforcer Geacă Piele', male = 'g_m_y_armgoon_02', female = 'g_f_y_ballas_01', minGrade = 0 },
-            { key = 'captain', label = 'Căpitan Sindicat Mafiot', male = 'g_m_m_armgoon_01', female = 'g_f_y_ballas_01', minGrade = 2 },
-            { key = 'don', label = 'Don Sindicat / Boss', male = 'g_m_y_korean_01', female = 'g_f_y_ballas_01', minGrade = 4 },
+            { key = 'runner', label = 'Street Enforcer Leather Jacket', male = 'g_m_y_armgoon_02', female = 'g_f_y_ballas_01', minGrade = 0 },
+            { key = 'captain', label = 'Mob Syndicate Captain', male = 'g_m_m_armgoon_01', female = 'g_f_y_ballas_01', minGrade = 2 },
+            { key = 'don', label = 'Syndicate Don / Boss', male = 'g_m_y_korean_01', female = 'g_f_y_ballas_01', minGrade = 4 },
         },
     },
 }

@@ -53,12 +53,12 @@
                     </div>
                     <div class="content">
                         <div class="content-header">
-                            <h2 class="ch-title" id="war-det-name">PACHET</h2>
+                            <h2 class="ch-title" id="war-det-name">PACKAGE</h2>
                         </div>
                         <div class="weapon-list" id="war-weapon-list"></div>
                         <div class="spawn-actions">
-                            <button class="btn btn-equip" id="war-equip-btn"><i class="ph-bold ph-crosshair-simple"></i> Echipează Pachetul</button>
-                            <button class="btn btn-close-war" id="war-armory-close"><i class="ph-bold ph-x"></i> Închide</button>
+                            <button class="btn btn-equip" id="war-equip-btn"><i class="ph-bold ph-crosshair-simple"></i> Equip Package</button>
+                            <button class="btn btn-close-war" id="war-armory-close"><i class="ph-bold ph-x"></i> Close</button>
                         </div>
                     </div>
                 </div>
@@ -66,7 +66,7 @@
                 <div class="war-scoreboard" id="war-scoreboard">
                     <div class="sb-header">
                         <div>
-                            <h2 class="sb-title">Statistici War</h2>
+                            <h2 class="sb-title">War Stats</h2>
                             <div class="sb-subtitle" id="war-sb-turf">Turf</div>
                         </div>
                         <i class="ph-bold ph-crosshair" style="color: var(--war-accent, #00ffcc); font-size: 24px; transform: skewX(5deg);"></i>
@@ -84,7 +84,7 @@
 
                 <div class="war-end-screen" id="war-end-screen">
                     <div class="end-banner" id="war-end-banner">
-                        <h1 class="end-status" id="war-end-title">TURF CUCERIT!</h1>
+                        <h1 class="end-status" id="war-end-title">TURF CAPTURED!</h1>
                         <div class="end-turf" id="war-end-turf">Turf</div>
                     </div>
                     <div class="end-content">
@@ -102,7 +102,7 @@
                         <div class="mvp-box" id="war-mvp-box">
                             <div class="mvp-icon"><i class="ph-fill ph-crown"></i></div>
                             <div class="mvp-details">
-                                <div class="mvp-label">MVP-ul War-ului</div>
+                                <div class="mvp-label">War MVP</div>
                                 <div class="mvp-name" id="war-mvp-name">—</div>
                                 <div class="mvp-stats">
                                     <div>Kills: <span id="war-mvp-kills">0</span></div>
@@ -115,9 +115,9 @@
                 </div>
 
                 <div class="war-respawn-box hidden" id="war-respawn">
-                    <div class="rr-title">Ai căzut în war</div>
+                    <div class="rr-title">You were downed in the war</div>
                     <div class="rr-count" id="war-respawn-count">5</div>
-                    <div class="rr-hint">Revin în zona turfului…</div>
+                    <div class="rr-hint">Returning to the turf zone…</div>
                 </div>
             `;
             document.body.appendChild(wrap);
@@ -170,7 +170,7 @@
             modal?.classList.add('active');
             this.armoryOpen = true;
             const sub = document.getElementById('war-armory-sub');
-            if (sub) sub.textContent = data.turfName ? `War: ${data.turfName} (${data.role === 'attacker' ? 'atacator' : 'aparare'})` : 'Alege-ți armele pentru war';
+            if (sub) sub.textContent = data.turfName ? `War: ${data.turfName} (${data.role === 'attacker' ? 'attacker' : 'defender'})` : 'Choose your weapons for the war';
             this.renderPackages(data.packages || []);
         },
 
@@ -181,13 +181,13 @@
             packages.forEach((p) => {
                 const el = document.createElement('div');
                 el.className = `package-item ${this.selectedPkg === p.id ? 'selected' : ''}`;
-                const costLabel = p.cost > 0 ? `$${Number(p.cost).toLocaleString('en-US')}` : (p.rank > 1 ? `Gratuit (Rank ${p.rank}+)` : 'Gratuit');
+                const costLabel = p.cost > 0 ? `$${Number(p.cost).toLocaleString('en-US')}` : (p.rank > 1 ? `Free (Rank ${p.rank}+)` : 'Free');
                 el.innerHTML = `
                     <div class="pkg-info">
                         <span class="pkg-name">${esc(p.name)}</span>
                         <span class="pkg-cost"><i class="ph-bold ph-coins"></i> ${esc(costLabel)}</span>
                     </div>
-                    ${p.rankOk ? '' : '<span class="pkg-locked">Rank blocat</span>'}
+                    ${p.rankOk ? '' : '<span class="pkg-locked">Rank locked</span>'}
                 `;
                 el.addEventListener('click', () => this.selectPackage(p.id));
                 list.appendChild(el);
@@ -268,7 +268,7 @@
                 if (won && data.myRole !== 'attacker') {
                     title.textContent = 'TURF APĂRAT!';
                 } else {
-                    title.textContent = won ? 'TURF CUCERIT!' : 'TURF PIERDUT!';
+                    title.textContent = won ? 'TURF CAPTURED!' : 'TURF PIERDUT!';
                 }
                 title.style.color = won ? 'var(--war-accent, #00ffcc)' : 'var(--war-danger, #ff3366)';
             }

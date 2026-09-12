@@ -351,22 +351,20 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
     end
 
     local px, py, pz, ph = nil, nil, nil, nil
+    -- [SPAWN FIX] parked coords are NO LONGER persisted by the garage store
+    -- (see UPDATE below); only /park (parkOwnedVehicle) sets them. This block
+    -- is kept only to consume the client payload shape; values are ignored.
     if type(parked) == 'table' and parked.x then
         px = tonumber(parked.x)
-        py = tonumber(parked.y)
-        pz = tonumber(parked.z)
-        ph = tonumber(parked.h) or tonumber(parked.w)
-    elseif vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
-        local coords = GetEntityCoords(vehicle)
-        px = coords.x
-        py = coords.y
-        pz = coords.z
-        ph = GetEntityHeading(vehicle)
     end
 
+    -- [SPAWN FIX] Garage store must NOT set a parked position: the user asked
+    -- that personal cars spawn ONLY at their garage spawn point or where they
+    -- were explicitly parked (/park in the car -> parkOwnedVehicle). The old
+    -- code stored the entity coords here, making every store a "park anywhere".
     local changed = MySQL.update.await([[
         UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?,
-            parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?
+            parked_x = NULL, parked_y = NULL, parked_z = NULL, parked_h = NULL
         WHERE id = ? AND character_id = ?
     ]], {
         garageId or 'legion',
@@ -374,7 +372,6 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         fuelLevel,
         engine,
         body,
-        px, py, pz, ph,
         owned.id,
         char.id,
     })
@@ -661,14 +658,14 @@ AddEventHandler('playerDropped', function()
                 -- If we can resolve the entity, persist where it was left and remove it;
                 -- otherwise just mark it stored so it doesn't dupe on next login.
                 if entityOk then
-                    local coords = GetEntityCoords(veh)
+                    -- [SPAWN FIX] Disconnect stores the car at its GARAGE (no
+                    -- parked coords): cars only respawn where /park put them.
                     MySQL.update.await([[
                         UPDATE vehicles SET stored = 1,
-                            parked_x = ?, parked_y = ?, parked_z = ?, parked_h = ?,
+                            parked_x = NULL, parked_y = NULL, parked_z = NULL, parked_h = NULL,
                             engine = ?, body = ?
                         WHERE id = ? AND character_id = ?
                     ]], {
-                        coords.x, coords.y, coords.z, GetEntityHeading(veh),
                         math.max(-4000, math.min(1000, GetVehicleEngineHealth(veh))),
                         math.max(0, math.min(1000, GetVehicleBodyHealth(veh))),
                         row.id, charId,

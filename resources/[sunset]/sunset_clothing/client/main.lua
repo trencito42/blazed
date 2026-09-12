@@ -104,7 +104,7 @@ local function openWardrobe()
     -- civilian appearance. Refuse to open on duty.
     local okDuty, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
     if okDuty and onDuty then
-        notify('Nu poti cumpara haine in uniforma. Iesi din tura mai intai.', 'error')
+        notify('You cannot buy clothes while in uniform. Get off duty first.', 'error')
         return
     end
 
@@ -374,7 +374,7 @@ RegisterCommand('outfits', function(_, args)
     if sub == 'list' or sub == 'lista' then
         local res = Sunset.AwaitCallback('sunset:outfits:list')
         if not res then notify('Nu s-a putut incarca lista de outfit-uri.', 'error') return end
-        TriggerEvent('chat:addMessage', { color = { 0, 255, 204 }, args = { 'OUTFITS', ('Salvate: %d/%d. Foloseste /outfits save <nume>, /outfits wear <numar>, /outfits delete <numar>.'):format(#res.outfits, res.max) } })
+        TriggerEvent('chat:addMessage', { color = { 0, 255, 204 }, args = { 'OUTFITS', ('Saved: %d/%d. Use /outfits save <name>, /outfits wear <number>, /outfits delete <number>.'):format(#res.outfits, res.max) } })
         for i, row in ipairs(res.outfits) do
             TriggerEvent('chat:addMessage', { color = { 220, 220, 220 }, args = { ('%d. %s'):format(i, row.name), '' } })
         end
@@ -386,17 +386,17 @@ RegisterCommand('outfits', function(_, args)
         -- bug as shopping while on duty).
         local okDuty, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
         if okDuty and onDuty then
-            notify('Nu poti salva uniforma de serviciu ca outfit. Iesi din tura.', 'error')
+            notify('You cannot save your duty uniform as an outfit. Get off duty.', 'error')
             return
         end
         local name = table.concat(args, ' ', 2)
-        if name == '' then notify('Utilizare: /outfits save <nume>', 'info') return end
+        if name == '' then notify('Usage: /outfits save <name>', 'info') return end
         local snapshot = SunsetAppearance.GetClothingSnapshot(PlayerPedId())
         local ok, kind = Sunset.AwaitCallback('sunset:outfits:save', name, snapshot)
         if ok then
-            notify(kind == 'existing' and 'Outfit actualizat.' or 'Outfit salvat.', 'success')
+            notify(kind == 'existing' and 'Outfit updated.' or 'Outfit saved.', 'success')
         else
-            notify(kind or 'Nu s-a putut salva outfit-ul.', 'error')
+            notify(kind or 'Could not save the outfit.', 'error')
         end
         return
     end
@@ -404,27 +404,27 @@ RegisterCommand('outfits', function(_, args)
     if sub == 'wear' or sub == 'equip' then
         local res = Sunset.AwaitCallback('sunset:outfits:list')
         local idx = tonumber(args[2])
-        if not res or not idx or not res.outfits[idx] then notify('Numar invalid. Foloseste /outfits list.', 'error') return end
+        if not res or not idx or not res.outfits[idx] then notify('Invalid number. Use /outfits list.', 'error') return end
         local ok, err = Sunset.AwaitCallback('sunset:outfits:equip', res.outfits[idx].id)
-        if ok then notify(('Outfit "%s" echipat.'):format(res.outfits[idx].name), 'success')
-        else notify(err or 'Echipare esuata.', 'error') end
+        if ok then notify(('Outfit "%s" equipped.'):format(res.outfits[idx].name), 'success')
+        else notify(err or 'Failed to equip the outfit.', 'error') end
         return
     end
 
     if sub == 'delete' then
         local res = Sunset.AwaitCallback('sunset:outfits:list')
         local idx = tonumber(args[2])
-        if not res or not idx or not res.outfits[idx] then notify('Numar invalid.', 'error') return end
+        if not res or not idx or not res.outfits[idx] then notify('Invalid number.', 'error') return end
         local ok = Sunset.AwaitCallback('sunset:outfits:delete', res.outfits[idx].id)
-        notify(ok and 'Outfit sters.' or 'Stergere esuata.', ok and 'success' or 'error')
+        notify(ok and 'Outfit deleted.' or 'Delete failed.', ok and 'success' or 'error')
         return
     end
 
-    notify('Utilizare: /outfits [list|save <nume>|wear <nr>|delete <nr>]', 'info')
+    notify('Usage: /outfits [list|save <name>|wear <nr>|delete <nr>]', 'info')
 end, false)
-TriggerEvent('chat:addSuggestion', '/outfits', 'Gestioneaza outfit-urile salvate', {
-    { name = 'actiune', help = 'list / save / wear / delete' },
-    { name = 'nume/nr', help = 'nume pentru save, numar pentru wear/delete' },
+TriggerEvent('chat:addSuggestion', '/outfits', 'Manage your saved outfits', {
+    { name = 'action', help = 'list / save / wear / delete' },
+    { name = 'name/nr', help = 'name for save, number for wear/delete' },
 })
 
 -- [CLOTHING FIX B3] Guaranteed cleanup: death, jail and resource stop used to

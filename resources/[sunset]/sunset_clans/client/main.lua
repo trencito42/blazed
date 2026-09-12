@@ -130,7 +130,7 @@ local function handleClanManageUi(data)
         -- [BUGFIX] 'ok' can be a string message from rare fallback paths
         -- ('Clan created but could not be loaded...'): treat as success-with-note.
         if type(ok) == 'nil' and err == nil then
-            err = 'Crearea a esuat fara mesaj de la server. Verifica numele/tag-ul (minim 3 litere, fara caractere speciale) si ca ai 500 Blaze Points.'
+            err = 'Creation failed with no message from the server. Check the name/tag (min 3 letters, no special characters) and that you have 500 Blaze Points.'
         end
     else
         ok, err = Sunset.AwaitCallback('sunset:clanManage', data)

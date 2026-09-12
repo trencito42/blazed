@@ -988,7 +988,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
             local ped = PlayerPedId()
             local driver = GetPedInVehicleSeat(entity, -1)
             if driver ~= 0 and driver ~= ped then
-                notify('Vehiculul este condus în acest moment de altcineva', 'error')
+                notify('The vehicle is currently being driven by someone else', 'error')
                 return
             end
 
@@ -1011,7 +1011,7 @@ AddEventHandler('sunset:nui:garageStore', function(data)
             deleteVehicleEntity(entity)
         end
         if entity then untrackSpawnedOwned(entity) end
-        notify('Vehiculul a fost garat cu succes', 'success')
+        notify('Vehicle successfully stored', 'success')
         closeGarageUiUnlessMenu()
     end)
 end)
@@ -1139,12 +1139,12 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
     CreateThread(function()
         local veh = resolveVehicleToStore()
         if veh == 0 or not DoesEntityExist(veh) then
-            return notify('Niciun vehicul în apropiere pentru garare', 'error')
+            return notify('No vehicle nearby to store', 'error')
         end
         local ped = PlayerPedId()
         local driver = GetPedInVehicleSeat(veh, -1)
         if driver ~= 0 and driver ~= ped then
-            return notify('Vehiculul este condus în acest moment de altcineva', 'error')
+            return notify('The vehicle is currently being driven by someone else', 'error')
         end
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
         local parked = captureParkedPosition(veh)
@@ -1155,7 +1155,7 @@ RegisterNetEvent('sunset:client:storeVehicleRequest', function(garageId)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
         untrackSpawnedOwned(veh)
-        notify('Vehiculul a fost garat cu succes', 'success')
+        notify('Vehicle successfully stored', 'success')
     end)
 end)
 
@@ -1163,13 +1163,13 @@ AddEventHandler('sunset:world:garageStore', function(garageId)
     CreateThread(function()
         local veh = resolveVehicleToStore()
         if veh == 0 or not DoesEntityExist(veh) then
-            notify('Niciun vehicul în apropiere pentru garare. Folosește /v pentru meniul garajului.', 'info')
+            notify('No vehicle nearby to store. Use /v for the garage menu.', 'info')
             return
         end
         local ped = PlayerPedId()
         local driver = GetPedInVehicleSeat(veh, -1)
         if driver ~= 0 and driver ~= ped then
-            notify('Vehiculul este condus în acest moment de altcineva', 'error')
+            notify('The vehicle is currently being driven by someone else', 'error')
             return
         end
         local plate = normalizePlate(GetVehicleNumberPlateText(veh))
@@ -1181,7 +1181,7 @@ AddEventHandler('sunset:world:garageStore', function(garageId)
         if not ok then return notify(err or 'Vehicle could not be stored', 'error') end
         deleteVehicleEntity(veh)
         untrackSpawnedOwned(veh)
-        notify('Vehiculul a fost garat cu succes', 'success')
+        notify('Vehicle successfully stored', 'success')
     end)
 end)
 

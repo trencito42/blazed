@@ -132,10 +132,10 @@ local function ownerLabelFromBusiness(biz)
         return biz.ownerName
     end
     if biz.ownerCharacterId then
-        return ('Jucător #%d'):format(biz.ownerCharacterId)
+        return ('Player #%d'):format(biz.ownerCharacterId)
     end
     if biz.forSale then
-        return 'De vânzare'
+        return 'For sale'
     end
     return 'Stat'
 end
@@ -241,10 +241,10 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                 local globalId = pumpGlobalId(si, pi)
                 local isActive = si == nearestSi and pi == nearestPi and dist <= PUMP_REACH
                 local key = 'G'
-                local desc = 'Pompă Activă'
+                local desc = 'Active Pump'
                 if isActive then
                     if veh ~= 0 then
-                        desc = 'Alimentați Vehiculul'
+                        desc = 'Refuel Vehicle'
                     elseif onFoot then
                         key = 'E'
                         desc = 'Umple Bidonul'
@@ -257,7 +257,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                     badgeClass = 'gas',
                     bodyClass = 'gas',
                     icon = 'ph-gas-pump',
-                    title = ('Pompă Benzina #%02d'):format(globalId),
+                    title = ('Gas Pump #%02d'):format(globalId),
                     desc = desc,
                     meta = ('Proprietar: %s'):format(ownerLabel),
                     key = isActive and key or '',
@@ -394,7 +394,7 @@ local function startRefuel(station, pumpIndex, stationIndex)
         tankPct = current,
         sessionLiters = 0,
         cost = 0,
-        pumpLabel = ('Pompă #%02d'):format(sessionPumpGlobalId),
+        pumpLabel = ('Pump #%02d'):format(sessionPumpGlobalId),
     })
     SetVehicleEngineOn(veh, false, true, true)
 end
@@ -423,7 +423,7 @@ local function startCanFill(station, pumpIndex, stationIndex)
         tankPct = pct,
         sessionLiters = 0,
         cost = 0,
-        pumpLabel = ('Pompă #%02d'):format(sessionPumpGlobalId),
+        pumpLabel = ('Pump #%02d'):format(sessionPumpGlobalId),
     })
 end
 
@@ -541,7 +541,7 @@ CreateThread(function()
                                 tankPct = current,
                                 sessionLiters = 0,
                                 cost = 0,
-                                pumpLabel = ('Pompă #%02d'):format(globalId),
+                                pumpLabel = ('Pump #%02d'):format(globalId),
                             })
                         end
 
@@ -561,7 +561,7 @@ CreateThread(function()
                                 tankPct = maxLiters > 0 and (currentLiters / maxLiters) * 100.0 or 0,
                                 sessionLiters = 0,
                                 cost = 0,
-                                pumpLabel = ('Pompă #%02d'):format(globalId),
+                                pumpLabel = ('Pump #%02d'):format(globalId),
                             })
                         end
 

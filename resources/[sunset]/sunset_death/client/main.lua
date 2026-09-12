@@ -102,7 +102,7 @@ local function enterDownedState()
     SetEntityHealth(ped, 150)
     playDownedAnim()
 
-    exports.sunset_ui:Notify('Esti la pamant. Foloseste /respawn pentru spital sau /112 pentru echipaj medical.', 'error', 10000)
+    exports.sunset_ui:Notify('You are downed. Use /respawn for the hospital or /112 for a medical crew.', 'error', 10000)
     TriggerServerEvent('sunset:death:enteredDowned')
 end
 
@@ -154,7 +154,7 @@ end)
 
 RegisterCommand('respawn', function()
     if not downed and not dead and not IsEntityDead(getPed()) then
-        exports.sunset_ui:Notify('Nu esti la pamant.', 'error')
+        exports.sunset_ui:Notify('You are not downed.', 'error')
         return
     end
     TriggerServerEvent('sunset:server:requestRespawn')

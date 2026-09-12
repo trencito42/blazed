@@ -160,7 +160,7 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
             local taken = query.single.await(
                 'SELECT id FROM vehicles WHERE REPLACE(UPPER(plate), " ", "") = ? AND id != ? LIMIT 1 FOR UPDATE',
                 { newPlate, row.id })
-            if taken then failure = 'Numarul de inmatriculare este deja folosit.' error('plate_taken') end
+            if taken then failure = 'That license plate is already in use.' error('plate_taken') end
         end
         local lockedChar = query.single.await('SELECT bank FROM characters WHERE id = ? FOR UPDATE', { char.id })
         if not lockedChar or (tonumber(lockedChar.bank) or 0) < cost then
@@ -352,32 +352,32 @@ exports('GetVehicleTuningInfo', function(rawProps)
 
     local mods = {}
     if decoded.modEngine and decoded.modEngine >= 0 then
-        mods[#mods + 1] = ('Motor: Nivel %d/4'):format(decoded.modEngine + 1)
+        mods[#mods + 1] = ('Engine: Level %d/4'):format(decoded.modEngine + 1)
     end
     if decoded.modBrakes and decoded.modBrakes >= 0 then
-        mods[#mods + 1] = ('Frâne: Nivel %d/3'):format(decoded.modBrakes + 1)
+        mods[#mods + 1] = ('Brakes: Level %d/3'):format(decoded.modBrakes + 1)
     end
     if decoded.modTransmission and decoded.modTransmission >= 0 then
-        mods[#mods + 1] = ('Transmisie: Nivel %d/3'):format(decoded.modTransmission + 1)
+        mods[#mods + 1] = ('Transmission: Level %d/3'):format(decoded.modTransmission + 1)
     end
     if decoded.modSuspension and decoded.modSuspension >= 0 then
-        mods[#mods + 1] = ('Suspensie: Nivel %d/4'):format(decoded.modSuspension + 1)
+        mods[#mods + 1] = ('Suspension: Level %d/4'):format(decoded.modSuspension + 1)
     end
     if decoded.modTurbo and (decoded.modTurbo == 1 or decoded.modTurbo == true) then
-        mods[#mods + 1] = 'Turbină instalată'
+        mods[#mods + 1] = 'Turbo installed'
     end
     if decoded.windowTint and decoded.windowTint > 0 then
-        local tints = { [1] = 'Pure Black (Ilegal)', [2] = 'Dark Smoke', [3] = 'Light Smoke', [4] = 'Stock', [5] = 'Limo (Ilegal)', [6] = 'Green' }
-        mods[#mods + 1] = ('Folii geamuri: %s'):format(tints[decoded.windowTint] or ('Nivel ' .. decoded.windowTint))
+        local tints = { [1] = 'Pure Black (Illegal)', [2] = 'Dark Smoke', [3] = 'Light Smoke', [4] = 'Stock', [5] = 'Limo (Illegal)', [6] = 'Green' }
+        mods[#mods + 1] = ('Window tint: %s'):format(tints[decoded.windowTint] or ('Level ' .. decoded.windowTint))
     end
     if cosmetics and cosmetics.plateText and cosmetics.plateText ~= '' then
-        mods[#mods + 1] = ('Plăcuță custom: %s'):format(cosmetics.plateText)
+        mods[#mods + 1] = ('Custom plate: %s'):format(cosmetics.plateText)
     end
 
     local isTuned = info.tuned
     if not isTuned and (#mods > 0) then
         for _, m in ipairs(mods) do
-            if m:find('Turbină') or m:find('Motor') or m:find('Ilegal') then
+            if m:find('Turbo') or m:find('Engine') or m:find('Illegal') then
                 isTuned = true
                 break
             end

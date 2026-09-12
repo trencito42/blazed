@@ -423,7 +423,7 @@ Sunset.FactionCommandCatalog = {
     { perm = 'invite', cmd = '/finvite [id]', desc = 'Leader: invite an accepted applicant nearby' },
     { perm = 'promote', cmd = '/fpromote [id] [grade]', desc = 'Promote a faction member' },
     { cmd = '/fskins', desc = 'List available authentic skins/uniforms for your faction' },
-    { cmd = '/fskin [numar|nume]', desc = 'Switch to a specific authorized faction skin' },
+    { cmd = '/fskin [number|name]', desc = 'Switch to a specific authorized faction skin' },
 }
 
 Sunset.IllegalSellPrices = {

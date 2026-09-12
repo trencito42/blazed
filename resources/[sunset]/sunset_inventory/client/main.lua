@@ -46,14 +46,15 @@ local function closeInventory()
     exports.sunset_ui:Send('inventoryHide', {})
 end
 
-RegisterNetEvent('sunset:client:inventoryUpdate', function(items, weight, cash)
+RegisterNetEvent('sunset:client:inventoryUpdate', function(items, weight, cash, maxWeight)
     if inventoryOpen then
         local currentCash = cash
         if not currentCash then
             local char = exports.sunset_core:GetCharacter()
             currentCash = (char and tonumber(char.cash)) or 0
         end
-        local payload = { items = items, weight = weight, maxWeight = Sunset.Config.MaxWeight, cash = currentCash }
+        -- [DUFFEL BAG FIX] Use the server-sent effective capacity (base + bag bonus).
+        local payload = { items = items, weight = weight, maxWeight = tonumber(maxWeight) or Sunset.Config.MaxWeight, cash = currentCash }
         -- [BUGFIX] EnrichInventoryPayload removed (see openInventory note).
         exports.sunset_ui:Send('inventoryUpdate', payload)
     end
@@ -169,6 +170,9 @@ end)
 RegisterNetEvent('sunset:inventory:tradeEnded', function(message, kind)
     tradeActive = false
     exports.sunset_ui:Send('inventoryTradeEnded', {})
+    -- [BUGFIX] Focus was never released here: after a completed/cancelled
+    -- trade the cursor stayed captured and the game felt frozen.
+    exports.sunset_ui:SetFocus(false, false)
     if message then exports.sunset_ui:Notify(message, kind or 'info') end
 end)
 

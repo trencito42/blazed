@@ -17,18 +17,18 @@ AddEventHandler('sunset:nui:jobCenterHire', function(data)
     local ok, err = Sunset.AwaitCallback('sunset:hireJob', data.jobId)
     if ok then
         if data.jobId ~= 'unemployed' then
-            exports.sunset_ui:Notify('Esti acum angajat ca ' .. (data.jobLabel or data.jobId), 'success', 6000)
+            exports.sunset_ui:Notify('You are now employed as ' .. (data.jobLabel or data.jobId), 'success', 6000)
         else
-            exports.sunset_ui:Notify('Te-ai dat demisie.', 'info', 4000)
+            exports.sunset_ui:Notify('You have resigned.', 'info', 4000)
         end
         exports.sunset_ui:SetFocus(false, false)
         exports.sunset_ui:Send('jobCenterHide', {})
     else
-        local errMsg = err or 'Nu s-a putut finaliza angajarea.'
+        local errMsg = err or 'Could not complete the hiring.'
         -- "already work" = user already has this job; treat as info, not error
         local kind = (errMsg:find('already work') or errMsg:find('You already work')) and 'info' or 'error'
         if kind == 'info' then
-            errMsg = 'Esti deja angajat la acest job! Foloseste /work sa incepi tura.'
+            errMsg = 'You already work this job! Use /work to start your shift.'
         end
         exports.sunset_ui:Notify(errMsg, kind)
         -- nu inchidem UI-ul — userul poate incerca alt job sau apasa ESC

@@ -232,7 +232,7 @@ local function sendBillyRayPrompt()
         bodyClass = 'fishing',
         icon = 'ph-fish',
         title = 'Billy Ray',
-        desc = 'Interacțiune / Job Pescuit',
+        desc = 'Interaction / Fishing Job',
         key = 'E',
     })
 end

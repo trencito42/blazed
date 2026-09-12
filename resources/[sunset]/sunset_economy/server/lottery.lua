@@ -48,17 +48,17 @@ end
 function SunsetLottery.BuyTicket(source, number)
     number = tonumber(number)
     if not number or number < 1 or number > 100 then
-        return false, 'Alege un numar intre 1 si 100.'
+        return false, 'Pick a number between 1 and 100.'
     end
 
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return false, 'Caracterul nu este incarcat.' end
+    if not char then return false, 'Character is not loaded.' end
 
     local cost = SunsetLottery.TicketPrice
     local prizeCut = math.floor(cost * (1 - SunsetLottery.TaxBurnRate))
     local account = (tonumber(char.cash) or 0) >= cost and 'cash'
         or ((tonumber(char.bank) or 0) >= cost and 'bank' or nil)
-    if not account then return false, ('Ai nevoie de $%s pentru a cumpara un bilet.'):format(cost) end
+    if not account then return false, ('You need $%s to buy a ticket.'):format(cost) end
     local newJackpot
     local callOk, committed = pcall(function()
         return MySQL.startTransaction(function(query)
@@ -81,14 +81,14 @@ function SunsetLottery.BuyTicket(source, number)
         end)
     end)
     if not callOk or not committed then
-        return false, ('Biletul nu a fost cumparat: ai nevoie de $%d si poti avea maximum %d bilete pe runda. Nu ai fost taxat.'):format(
+        return false, ('Ticket not purchased: you need $%d and can hold a maximum of %d tickets per round. You were not charged.'):format(
             cost, SunsetLottery.MaxTicketsPerPlayer)
     end
     CurrentJackpot = newJackpot
     exports.sunset_core:RefreshMoney(source)
 
     TriggerClientEvent('sunset:client:notify', source,
-        ('Ai cumparat biletul cu numarul #%d pentru $%d! Potul actual: $%s.'):format(
+        ('You bought ticket number #%d for $%d! Current jackpot: $%s.'):format(
             number, cost, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
         ), 'success', 6000)
 
@@ -147,7 +147,7 @@ function SunsetLottery.Draw()
                 if online and tonumber(online.id) == tonumber(winner.character_id) then
                     exports.sunset_core:RefreshMoney(onlineSrc)
                     TriggerClientEvent('sunset:client:notify', onlineSrc,
-                        ('AI CASTIGAT LA LOTERIE! Ai incasat $%s in contul bancar!'):format(
+                        ('YOU WON THE LOTTERY! $%s has been paid to your bank account!'):format(
                             string.format('%\'d', draw.share):gsub('\'', ',')), 'success', 15000)
                     break
                 end
@@ -158,10 +158,10 @@ function SunsetLottery.Draw()
         LastPrize = draw.jackpot
 
         -- Server broadcast
-        local msg = ('^2[LOTTO] ^7Numarul extras: ^3#%d^7! Felicitari castigatorilor: ^2%s^7! Premiu total: ^2$%s^7!'):format(
+        local msg = ('^2[LOTTO] ^7Winning number: ^3#%d^7! Congratulations to the winners: ^2%s^7! Total prize: ^2$%s^7!'):format(
             winningNumber, namesStr, string.format('%\'d', draw.jackpot):gsub('\'', ',')
         )
-        TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTERIE', msg } })
+        TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTTERY', msg } })
 
         CurrentJackpot = SunsetLottery.StartingJackpot
     else
@@ -169,10 +169,10 @@ function SunsetLottery.Draw()
         LastPrize = 0
 
         -- Roll-over
-        local msg = ('^3[LOTTO] ^7Numarul extras a fost ^3#%d^7 (%d bilete jucate). Niciun castigator! Potul de ^2$%s^7 se reporteaza pentru ora urmatoare!'):format(
+        local msg = ('^3[LOTTO] ^7The drawn number was ^3#%d^7 (%d tickets played). No winner! The ^2$%s^7 jackpot rolls over to the next hour!'):format(
             winningNumber, draw.total, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
         )
-        TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTERIE', msg } })
+        TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTTERY', msg } })
     end
 
     return true
@@ -190,11 +190,11 @@ local function runLotteryCommand(source, args)
             for _, r in ipairs(myRows) do table.insert(myNumbers, '#' .. r.number) end
         end
         local totalTickets = MySQL.scalar.await('SELECT COUNT(*) FROM `lottery_tickets`') or 0
-        local myStr = #myNumbers > 0 and table.concat(myNumbers, ', ') or 'Niciunul'
+        local myStr = #myNumbers > 0 and table.concat(myNumbers, ', ') or 'None'
 
         TriggerClientEvent('chat:addMessage', source, {
             color = { 0, 255, 204 },
-            args = { 'LOTERIE', ('Pot actual: ^2$%s^7 | Pret bilet: ^3$%d^7 | Bilete vandute: ^3%d^7 | Biletele tale: ^2%s^7'):format(
+            args = { 'LOTTERY', ('Current jackpot: ^2$%s^7 | Ticket price: ^3$%d^7 | Tickets sold: ^3%d^7 | Your tickets: ^2%s^7'):format(
                 string.format('%\'d', CurrentJackpot):gsub('\'', ','),
                 SunsetLottery.TicketPrice,
                 totalTickets,
@@ -206,7 +206,7 @@ local function runLotteryCommand(source, args)
 
     local num = tonumber(sub)
     if not num then
-        TriggerClientEvent('sunset:client:notify', source, 'Foloseste: /loto [1-100] sau /loto info', 'info')
+        TriggerClientEvent('sunset:client:notify', source, 'Usage: /loto [1-100] or /loto info', 'info')
         return
     end
 
@@ -222,9 +222,9 @@ RegisterCommand('lottery', function(source, args)
     runLotteryCommand(source, args or {})
 end, false)
 
-TriggerEvent('chat:addSuggestion', '/loto', 'Cumpara un bilet la loteria orara sau vezi potul', {
-    { name = 'numar/info', help = 'Numar (1-100) sau "info"' }
+TriggerEvent('chat:addSuggestion', '/loto', 'Buy a ticket for the hourly lottery or view the jackpot', {
+    { name = 'number/info', help = 'Number (1-100) or "info"' }
 })
-TriggerEvent('chat:addSuggestion', '/lottery', 'Alias pentru /loto', {
-    { name = 'numar/info', help = 'Numar (1-100) sau "info"' }
+TriggerEvent('chat:addSuggestion', '/lottery', 'Alias for /loto', {
+    { name = 'number/info', help = 'Number (1-100) or "info"' }
 })

@@ -99,6 +99,15 @@ local function scheduleDoorLock(session)
     end)
 end
 
+-- [DUFFEL BAG] The bag physically extends carry capacity while a robbery is
+-- active: +BagCapacity kg on top of the normal inventory limit. Cleared on
+-- every end path (fail/success/cancel/drop all funnel through here or
+-- clearBagCapacity directly).
+local function setBagCapacity(source, kg)
+    if GetResourceState('sunset_inventory') ~= 'started' then return end
+    pcall(function() exports.sunset_inventory:SetCapacityBonus(source, kg or 0) end)
+end
+
 function RobberySessions.rateOk(source)
     local now = GetGameTimer()
     local last = RobberySessions.lastEvent[source] or 0
@@ -342,6 +351,8 @@ function RobberySessions.begin(source, locationId, skipGates)
     setDoors(session, true)
     -- [SESSIONS] mirror into the framework (ListSessions + deadline backstop).
     session.frameworkId = createFrameworkSession(source, session.characterId, session.id, locationId)
+    -- [DUFFEL BAG] extend carry capacity for the duration of the robbery.
+    setBagCapacity(source, SunsetRobbery.BagCapacity or 8)
     RobberyAdapter.audit(session, 'started', { skipGates = skipGates == true })
     return session
 end
@@ -366,6 +377,7 @@ function RobberySessions.fail(source, reason)
     RobberyAdapter.setCooldown('character', session.characterId, playerExpiry)
     RobberyAdapter.setCooldown('location', session.locationId, locationExpiry)
     RobberyAdapter.audit(session, 'failed', { reason = reason, removedLoot = removed, cleanupOk = cleanupOk })
+    setBagCapacity(source, 0)
     scheduleDoorLock(session)
     TriggerClientEvent('sunset:robbery:ended', source, { ok = false, reason = reason or 'Robbery failed' })
 end
@@ -411,6 +423,7 @@ function RobberySessions.success(source)
         end
     end
     RobberyAdapter.audit(session, 'success', { hackResult = session.hackResult })
+    setBagCapacity(source, 0)
     scheduleDoorLock(session)
     TriggerClientEvent('sunset:robbery:ended', source, {
         ok = true,
@@ -430,6 +443,7 @@ function RobberySessions.cancel(source, reason)
     RobberySessions.locationBusy[session.locationId] = nil
     RobberySessions.bySource[source] = nil
     RobberyAdapter.audit(session, 'cancelled', { reason = reason, removedLoot = removed, cleanupOk = cleanupOk })
+    setBagCapacity(source, 0)
     scheduleDoorLock(session)
     TriggerClientEvent('sunset:robbery:ended', source, { ok = false, reason = reason or 'Robbery cancelled' })
 end

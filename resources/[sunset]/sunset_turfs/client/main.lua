@@ -190,9 +190,9 @@ local function syncWarPlayerBlips()
 
         BeginTextCommandSetBlipName('STRING')
         if isFriendly then
-            AddTextComponentSubstringPlayerName(('[ALIAT] %s'):format(Player(sid).state.clanTag or 'CLAN'))
+            AddTextComponentSubstringPlayerName(('FRIENDLY %s'):format(Player(sid).state.clanTag or 'CLAN'))
         else
-            AddTextComponentSubstringPlayerName(('[INAMIC] %s'):format(Player(sid).state.clanTag or 'CLAN'))
+            AddTextComponentSubstringPlayerName(('ENEMY %s'):format(Player(sid).state.clanTag or 'CLAN'))
         end
         EndTextCommandSetBlipName(blip)
 
@@ -232,7 +232,7 @@ RegisterNetEvent('sunset:turfs:warStart', function(war)
     end
     if war.isNeutralCapture then
         exports.sunset_ui:Notify(
-            ('Capturare %s: sta in zona %d secunde (%d oameni = mai rapid).'):format(
+            ('Capturing %s: hold the zone for %d seconds (%d players = faster).'):format(
                 war.turfName or 'turf',
                 war.captureTarget or SunsetTurfs.NeutralCaptureSec or 180,
                 1
@@ -304,9 +304,9 @@ CreateThread(function()
                 CurrentTurf = insideAny
                 local ownerStr = insideAny.ownerClanId
                     and ('[%s] %s'):format(insideAny.ownerTag, insideAny.ownerName)
-                    or 'Liber'
+                    or 'Free'
                 exports.sunset_ui:Notify(
-                    ('Teritoriu: %s (%s)'):format(insideAny.name, ownerStr),
+                    ('Territory: %s (%s)'):format(insideAny.name, ownerStr),
                     'info',
                     4500
                 )
@@ -361,7 +361,13 @@ end
 RegisterNetEvent('sunset:turfs:warJoined', function(data)
     warParticipant = true
     myWarRole = data and data.role or 'defender'
-    exports.sunset_ui:Notify('Ai intrat in razboi! /armurie pentru loadout. Z = statistici war.', 'warning', 9000)
+    exports.sunset_ui:Notify('You joined the war! /armory for loadout. Z = war stats.', 'warning', 9000)
+    -- [MOBILIZATION] Loud targeted alert for defenders: your turf is under
+    -- attack, get there (rally window before zone scoring).
+    if myWarRole == 'defender' then
+        PlaySoundFrontend(-1, 'Event_Start_Text', 'HUD_MINI_GAME_SOUNDSET', true)
+        exports.sunset_ui:Notify('YOUR TERRITORY IS UNDER ATTACK! Rally now - scoring starts after the rally window.', 'error', 12000)
+    end
     -- [WAR FIX] warStart (-1 broadcast) arrives BEFORE the ticker registers us
     -- as participant, so the participant-gated warHudShow never fired for the
     -- attacker who started the war. Show the HUD here from the cached war data.
@@ -389,19 +395,25 @@ RegisterNetEvent('sunset:turfs:warJoined', function(data)
     end
 end)
 
-RegisterCommand('armurie', function()
+RegisterCommand('armory', function()
     if not warParticipant then
-        exports.sunset_ui:Notify('Nu esti intr-un razboi activ.', 'error')
+        exports.sunset_ui:Notify('You are not in an active war.', 'error')
         return
     end
     if armoryOpen then closeArmory() return end
     CreateThread(function()
         local info = Sunset.AwaitCallback('sunset:turfs:armoryData')
-        if not info then exports.sunset_ui:Notify('Armuria nu e disponibila acum.', 'error') return end
+        if not info then exports.sunset_ui:Notify('The armory is not available right now.', 'error') return end
         armoryOpen = true
         exports.sunset_ui:Send('warArmoryShow', info)
         exports.sunset_ui:SetFocus(true, true)
     end)
+end, false)
+
+-- [ARMORY FIX] Legacy alias: players used to type /armurie and got an
+-- "unknown command" error since the alias went missing. /armory is canonical.
+RegisterCommand('armurie', function()
+    ExecuteCommand('armory')
 end, false)
 
 AddEventHandler('sunset:nui:warArmoryClose', function()
@@ -412,10 +424,10 @@ AddEventHandler('sunset:nui:warTakeLoadout', function(data)
     CreateThread(function()
         local ok, name = Sunset.AwaitCallback('sunset:turfs:takeLoadout', data and data.loadoutId)
         if ok then
-            exports.sunset_ui:Notify(('Pachet echipat: %s'):format(tostring(name or '')), 'success')
+            exports.sunset_ui:Notify(('Package equipped: %s'):format(tostring(name or '')), 'success')
             closeArmory()
         else
-            exports.sunset_ui:Notify(name or 'Nu ai putut echipa pachetul.', 'error')
+            exports.sunset_ui:Notify(name or 'Could not equip the package.', 'error')
         end
     end)
 end)
@@ -454,6 +466,9 @@ end
 RegisterNetEvent('sunset:turfs:doWarRespawn', function(payload)
     respawnPending = false
     exports.sunset_ui:Send('warRespawnHide', {})
+    -- [FOCUS FIX] Guarantee mouse/cursor release after the war respawn, even if
+    -- some panel (armory/respawn UI) still held focus through the death.
+    exports.sunset_ui:SetFocus(false, false)
     -- Clear sunset_death downed state (same pattern as the jail intake flow)
     -- so bleedout anim/controls do not race the war respawn.
     pcall(function() exports.sunset_death:ClearDead() end)
@@ -585,16 +600,16 @@ end)
 
 CreateThread(function()
     Wait(1500)
-    TriggerEvent('chat:addSuggestion', '/attackturf', 'Ataca teritoriul in care te afli (rank 5+ in clan)')
-    TriggerEvent('chat:addSuggestion', '/atac', 'Alias pentru /attackturf')
-    TriggerEvent('chat:addSuggestion', '/turflist', 'Lista teritorii + status razboi (admin)')
-    TriggerEvent('chat:addSuggestion', '/gototurf', 'Teleport la un teritoriu (admin)', { { name = 'id', help = '1-16' } })
-    TriggerEvent('chat:addSuggestion', '/forceturf', 'Porneste razboi fortat (admin)', {
+    TriggerEvent('chat:addSuggestion', '/attackturf', 'Attack the territory you are standing in (clan rank 5+)')
+    TriggerEvent('chat:addSuggestion', '/atac', 'Alias for /attackturf')
+    TriggerEvent('chat:addSuggestion', '/turflist', 'List territories + war status (admin)')
+    TriggerEvent('chat:addSuggestion', '/gototurf', 'Teleport to a territory (admin)', { { name = 'id', help = '1-16' } })
+    TriggerEvent('chat:addSuggestion', '/forceturf', 'Force-start a war (admin)', {
         { name = 'turfId', help = '1-16' },
         { name = 'clanId', help = 'optional' },
     })
-    TriggerEvent('chat:addSuggestion', '/stopwar', 'Opreste razboiul activ (admin)', { { name = 'turfId', help = '1-16' } })
-    TriggerEvent('chat:addSuggestion', '/resetturfcd', 'Reset cooldown teritoriu (admin)', { { name = 'id|all' } })
+    TriggerEvent('chat:addSuggestion', '/stopwar', 'Stop the active war (admin)', { { name = 'turfId', help = '1-16' } })
+    TriggerEvent('chat:addSuggestion', '/resetturfcd', 'Reset territory cooldown (admin)', { { name = 'id|all' } })
 end)
 
 -- [WAR REDESIGN] Client export so sunset_death can skip the downed/EMS flow

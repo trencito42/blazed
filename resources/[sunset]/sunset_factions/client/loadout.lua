@@ -313,7 +313,7 @@ RegisterCommand('fskins', function()
     if not char then return end
     local fid = getFactionId(char)
     if not fid or not exports.sunset_factions:IsOnDuty() then
-        return exports.sunset_ui:Notify('Trebuie să fii ON DUTY într-o facțiune pentru a schimba uniforma / skinul.', 'error')
+        return exports.sunset_ui:Notify('You must be ON DUTY in a faction to change your uniform / skin.', 'error')
     end
 
     local grade = (char.metadata and tonumber(char.metadata.faction_grade)) or 0
@@ -321,19 +321,19 @@ RegisterCommand('fskins', function()
     local options = Sunset.GetFactionSkinOptions(fid, grade, gender)
 
     if not options or #options == 0 then
-        return exports.sunset_ui:Notify('Nu există skinuri alternative pentru gradul tău.', 'info')
+        return exports.sunset_ui:Notify('There are no alternative skins for your grade.', 'info')
     end
 
     TriggerEvent('chat:addMessage', {
         color = { 59, 130, 246 },
         multiline = true,
-        args = { 'Facțiune', ('^2Skinuri disponibile pentru %s (folosește ^3/fskin <număr>^2):'):format(Sunset.Factions[fid] and Sunset.Factions[fid].label or fid) }
+        args = { 'Faction', ('^2Available skins for %s (use ^3/fskin <number>^2):'):format(Sunset.Factions[fid] and Sunset.Factions[fid].label or fid) }
     })
 
     for _, opt in ipairs(options) do
         TriggerEvent('chat:addMessage', {
             color = { 200, 200, 200 },
-            args = { 'Skin ' .. opt.index, ('%s ^7— ^3/fskin %d^7 (sau ^3/fskin %s^7)'):format(opt.label, opt.index, opt.key) }
+            args = { 'Skin ' .. opt.index, ('%s ^7— ^3/fskin %d^7 (or ^3/fskin %s^7)'):format(opt.label, opt.index, opt.key) }
         })
     end
 end, false)
@@ -343,7 +343,7 @@ RegisterCommand('fskin', function(_, args)
     if not char then return end
     local fid = getFactionId(char)
     if not fid or not exports.sunset_factions:IsOnDuty() then
-        return exports.sunset_ui:Notify('Trebuie să fii ON DUTY într-o facțiune pentru a schimba uniforma / skinul.', 'error')
+        return exports.sunset_ui:Notify('You must be ON DUTY in a faction to change your uniform / skin.', 'error')
     end
 
     local arg = args[1] and tostring(args[1]):lower()
@@ -370,19 +370,19 @@ RegisterCommand('fskin', function(_, args)
     end
 
     if not chosen then
-        exports.sunset_ui:Notify('Skin negăsit. Tastează /fskins pentru lista completă.', 'error')
+        exports.sunset_ui:Notify('Skin not found. Type /fskins for the full list.', 'error')
         return
     end
 
     ApplyFactionLoadout(fid, grade, chosen.model)
-    exports.sunset_ui:Notify(('Uniformă / Skin echipat: %s'):format(chosen.label), 'success')
+    exports.sunset_ui:Notify(('Uniform / Skin equipped: %s'):format(chosen.label), 'success')
 end, false)
 
 CreateThread(function()
     Wait(2000)
-    TriggerEvent('chat:addSuggestion', '/fskins', 'Afișează skinurile și uniformele disponibile pentru facțiunea ta')
-    TriggerEvent('chat:addSuggestion', '/fskin', 'Echipează o uniformă sau un skin de facțiune', {
-        { name = 'număr sau nume', help = 'ex: 1, 2, swat, hway, doctor' }
+    TriggerEvent('chat:addSuggestion', '/fskins', 'Show the skins and uniforms available for your faction')
+    TriggerEvent('chat:addSuggestion', '/fskin', 'Equip a faction uniform or skin', {
+        { name = 'number or name', help = 'e.g.: 1, 2, swat, hway, doctor' }
     })
 end)
 

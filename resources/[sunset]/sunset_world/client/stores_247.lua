@@ -146,7 +146,7 @@ CreateThread(function()
                 bodyClass = 'npc',
                 icon = 'ph-storefront',
                 title = CASHIER_NAME,
-                desc = 'Magazin / Vinde pește',
+                desc = 'Store / Sell fish',
                 key = 'E',
             })
             promptId = row.promptId

@@ -118,16 +118,16 @@ local function canAccessContainer(source, containerType, containerId)
 
     if containerType == 'trunk' or containerType == 'glovebox' then
         local ped = GetPlayerPed(source)
-        if not ped or ped == 0 then return false, 'Nu esti in lume.' end
+        if not ped or ped == 0 then return false, 'Your character is not in the world.' end
         local veh = findVehicleByPlate(containerId)
-        if not veh then return false, 'Vehiculul nu este langa tine.' end
+        if not veh then return false, 'The vehicle is not near you.' end
         -- Inside this vehicle, or standing next to it
         if GetVehiclePedIsIn(ped, false) == veh then return true end
         if #(GetEntityCoords(ped) - GetEntityCoords(veh)) <= VEHICLE_CONTAINER_DIST then return true end
-        return false, 'Esti prea departe de vehicul.'
+        return false, 'You are too far from the vehicle.'
     elseif containerType == 'property' then
         local propId = tonumber(containerId)
-        if not propId then return false, 'Identificator invalid' end
+        if not propId then return false, 'Invalid container identifier' end
         local allowed = MySQL.scalar.await([[
             SELECT 1 FROM properties
             WHERE id = ? AND owner_character_id = ?
@@ -137,17 +137,17 @@ local function canAccessContainer(source, containerType, containerId)
             LIMIT 1
         ]], { propId, char.id, propId, char.id })
         if allowed then return true end
-        return false, 'Nu ai acces la aceasta proprietate.'
+        return false, 'You do not have access to this property.'
     end
 
-    return false, 'Tip necunoscut'
+    return false, 'Unknown container type'
 end
 
 -- Callbacks
 exports.sunset_core:RegisterCallback('sunset:container:open', function(source, containerType, containerId)
-    if not CAPACITY_LIMITS[containerType] then return nil, 'Tip necunoscut' end
+    if not CAPACITY_LIMITS[containerType] then return nil, 'Unknown container type' end
     containerId = tostring(containerId or ''):upper():gsub('%s+', '')
-    if containerId == '' then return nil, 'Identificator invalid' end
+    if containerId == '' then return nil, 'Invalid container identifier' end
     if not exports.sunset_core:RateLimit(source, 'container:' .. containerType, 500) then return nil end
 
     local accessOk, accessErr = canAccessContainer(source, containerType, containerId)
@@ -168,18 +168,18 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:container:deposit', function(source, containerType, containerId, item, count)
     count = math.floor(tonumber(count) or 1)
-    if count < 1 then return nil, 'Cantitate invalida' end
+    if count < 1 then return nil, 'Invalid amount' end
     containerId = tostring(containerId or ''):upper():gsub('%s+', '')
-    if not CAPACITY_LIMITS[containerType] or containerId == '' then return nil, 'Identificator invalid' end
+    if not CAPACITY_LIMITS[containerType] or containerId == '' then return nil, 'Invalid container identifier' end
     if not exports.sunset_core:RateLimit(source, 'container:' .. containerType, 500) then return nil end
 
     local accessOk, accessErr = canAccessContainer(source, containerType, containerId)
     if not accessOk then return nil, accessErr end
 
-    if type(item) ~= 'string' or not Sunset.Items[item] then return nil, 'Obiect invalid' end
+    if type(item) ~= 'string' or not Sunset.Items[item] then return nil, 'Invalid item' end
 
     if not exports.sunset_inventory:HasItem(source, item, count) then
-        return nil, 'Nu ai obiectul in inventar.'
+        return nil, 'You do not have that item in your inventory.'
     end
 
     -- [AUDIT P5-03] Remove from the player FIRST and verify success before the
@@ -195,7 +195,7 @@ exports.sunset_core:RegisterCallback('sunset:container:deposit', function(source
         end
     end
     if not exports.sunset_inventory:RemoveItem(source, item, count) then
-        return nil, 'Nu s-a putut muta obiectul din inventar.'
+        return nil, 'The item could not be moved out of your inventory.'
     end
 
     local ok, err = SunsetContainers.AddItem(containerType, containerId, item, count, meta)
@@ -216,9 +216,9 @@ end)
 
 exports.sunset_core:RegisterCallback('sunset:container:withdraw', function(source, containerType, containerId, item, count)
     count = math.floor(tonumber(count) or 1)
-    if count < 1 then return nil, 'Cantitate invalida' end
+    if count < 1 then return nil, 'Invalid amount' end
     containerId = tostring(containerId or ''):upper():gsub('%s+', '')
-    if not CAPACITY_LIMITS[containerType] or containerId == '' then return nil, 'Identificator invalid' end
+    if not CAPACITY_LIMITS[containerType] or containerId == '' then return nil, 'Invalid container identifier' end
     if not exports.sunset_core:RateLimit(source, 'container:' .. containerType, 500) then return nil end
 
     local accessOk, accessErr = canAccessContainer(source, containerType, containerId)
@@ -240,7 +240,7 @@ exports.sunset_core:RegisterCallback('sunset:container:withdraw', function(sourc
     if not exports.sunset_inventory:AddItem(source, item, count, nil, meta) then
         -- rollback if player inventory full
         SunsetContainers.AddItem(containerType, containerId, item, count, meta)
-        return nil, 'Inventarul tau este plin.'
+        return nil, 'Your inventory is full.'
     end
 
     local updated = SunsetContainers.GetItems(containerType, containerId)
