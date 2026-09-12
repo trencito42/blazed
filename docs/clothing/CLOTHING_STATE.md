@@ -1,6 +1,6 @@
 # CLOTHING_STATE â€” Resumable Checkpoint
 
-**Status (2026-09-12, commit 6a71b79, DEPLOYED to VPS):** Phases C1-C11 substantially DONE. C12 (full regression matrix) pending runtime tests.
+**Status (2026-09-12, commit 838260a+, DEPLOYED to VPS):** Phases C1-C11 DONE (C4 = rules system live, blocked-lists populated via /clothingdebug as holes are found in-game). C12 static side done; runtime matrix in CLOTHING_IMPLEMENTATION_REPORT.md §10 (user tests). See CLOTHING_IMPLEMENTATION_REPORT.md for the full report.
 
 ## What is DONE (deployed, static-checked green)
 
