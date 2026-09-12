@@ -28,6 +28,8 @@
 | Container healthy | PASS | `Up (healthy)` both fivem+mariadb |
 | OneSync enabled | **BLOCKED** | txAdmin controls onesync at runtime; cfg line commented by txAdmin validator. VERIFY in txAdmin settings page (40120) that OneSync=Infinity is ON. Required for damage/explosion gating to actually cancel. |
 | pma-voice present | PASS | info.json resources list includes pma-voice + ox_lib + bob74_ipl (Docker image installs them) |
+| oxmysql transaction adapter (commit eb138d0) | PASS (deployed) | VPS HEAD = eb138d0, `transactionAdapter` present, container healthy, 50 resources started, 0 errors. The typed `query.single/update/insert.await` helpers used by the Phase-5 transaction fixes (crafting, fisherman, tuning, dealership, trade, deleteCharacter) run on the transaction connection through this adapter. |
+| Transaction paths at runtime (craft/tune/purchase/trade/delete-char) | **BLOCKED** | adapter is new — exercise each txn path once in-game and check for `Callback error` in `docker compose logs fivem` (R31) |
 
 ## 3. Runtime gameplay tests (ALL BLOCKED — need in-game execution)
 
