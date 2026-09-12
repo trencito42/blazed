@@ -257,3 +257,13 @@ RegisterCommand('testall', function(source)
 end, true)
 
 print('^3[sunset_testdriver]^7 loaded (DEV-ONLY). Console commands: integrity | sessiontest | smoketest | testall')
+
+-- Auto-run once after startup when the convar is set (used by CI/remote runs
+-- where console stdin injection is unavailable):
+--   +setr testdriver_autorun 1
+if GetConvar('testdriver_autorun', '') == '1' then
+    CreateThread(function()
+        Wait(30000)
+        runAll('all')
+    end)
+end
