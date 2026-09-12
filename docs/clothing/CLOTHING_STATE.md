@@ -1,41 +1,29 @@
 # CLOTHING_STATE — Resumable Checkpoint
 
-**Status:** PHASE C1 (audit) COMPLETE — implementation NOT started. Work PAUSED at user request to finish the prior plan (Phases 3-9: quests/jobs/factions/UI streams), then RESUME clothing from Phase C2.
+**Status (2026-09-12, commit 6a71b79, DEPLOYED to VPS):** Phases C1-C11 substantially DONE. C12 (full regression matrix) pending runtime tests.
 
-**Priority when resumed:** C4 top↔torso↔undershirt compatibility is the highest priority (user-visible broken outfits: chest holes, wrong layering).
+## What is DONE (deployed, static-checked green)
 
-## Audit results (C1) — full details in subagent report summary below
+- **Root cause of "hat stays after duty" FIXED:** props (hats/glasses/watches/bracelets/ears) were never applied by `SunsetAppearance.apply` — only components. Added `applyProps` + `setPropSafe` (validation, -1=ClearPedProp). This was THE bug the user reported.
+- **C2/C3 canonical helpers:** `GetClothingSnapshot`/`ApplyClothingSnapshot` exports (components 0-11 + props 0,1,2,6,7). Server-side `sanitizeAppearance`/`ValidateAppearance` (B1 CRIT: saveAppearance no longer stores hostile JSON).
+- **C4 top↔torso:** besttorso JSON auto-sync was ALREADY present and works for base-game tops; torso_data JSON load path fixed (broke when @-included). Undershirt now user-facing (C5). Remaining: DLC/collection tops beyond base besttorso still need manual entries via /clothingdebug (C11 done).
+- **C5 categories:** undershirt(8), vest(9), ears(prop2), watch(prop6), bracelet(prop7) added; were missing.
+- **C6 preview transaction:** snapshot/restore existed; ADDED death/disconnect/resource-stop cleanup (forceCloseAll) + walk-away close + refund-on-save-fail (B4).
+- **C7 purchase:** server-authoritative price + proximity (existed); refund path added.
+- **C8 saved outfits:** NEW table `character_outfits` (sql/45), `/outfits list|save|wear|delete`, server-validated, max 8, own-char only.
+- **C9 faction uniforms:** lifecycle fixed — exact civilian snapshot before uniform, restore after; respawn/restart re-apply; duty refused while shopping.
+- **C11 /clothingdebug:** admin-4+ tool, dumps state + prints compat JSON.
+- **UX:** player-friendly names ("Top 032"/"None"), blacklist hooks.
 
-Key facts discovered (all verified with file:line in CLOTHING_AUDIT.md):
-- sunset_clothing has NO own component logic; it @-includes sunset_appearance/client/appearance_lib.lua + clothing_compat.lua.
-- Torso auto-sync ALREADY EXISTS: `SunsetAppearance.syncTorso` via besttorso_male/female.json (`TorsoData.getBestTorso`), triggered on component 11/8 change. Fallback M=15/F=14.
-- Categories exposed: hat(prop0), mask(1), glasses(prop1), accessory(7), top(11, syncTorso), pants(4), shoes(6), bag(5). NOT exposed: undershirt(8), armor(9), decals(10), ears(prop2).
-- Persistence: single `characters.appearance` JSON column (v2 format: headBlend/hair/overlays/components/props). No outfits/clothes tables exist. No ownership concept — flat $50 "save the look" fee.
-- Preview: applied LIVE to networked ped (others see unpaid clothes); DB written only on purchase. Snapshot/restore exists for ESC/cancel, but NO death/disconnect/onResourceStop cleanup.
-- Faction uniforms: sunset_core/shared/faction_outfits.lua — component-slot maps {1,4,6,8,11(+3)} per grade/gender; applied via ApplyFactionOutfit merge over civilian appearance; restore from char.appearance cache (no explicit snapshot).
-- Server validation: `sunset:saveAppearance` accepts ANY client JSON (no schema validation, no proximity check) — CRIT security issue (arbitrary appearance injection).
-- Known bugs (16 listed in audit): flat pricing regardless of items; pay-then-save failure loses money; uniform absorbed into civilian baseline if shopping while on duty; hospital respawn doesn't re-apply appearance; duty weapon leak on client restart; server-restart uniform stuck; raw drawables in UI; female defaults use male-ish drawables; pants forced >=1; barber hair raw unclamped apply.
+## What is NOT done / remaining (honest)
 
-## Phases remaining
-
-| Phase | Description | Status |
-|---|---|---|
-| C1 | Audit | DONE |
-| C2 | Canonical representation + compat model design | PENDING (start here) |
-| C3 | Validation + catalog module (server-side schema validation of saveAppearance is part of this) | PENDING |
-| C4 | Top↔torso↔undershirt compat (HIGHEST PRIORITY) | PENDING |
-| C5 | Full categories (undershirt user-facing w/ compat filter, armor, decals, ears, watches, bracelets) | PENDING |
-| C6 | Preview transaction (local ped only, not networked; death/disconnect/restart restore) | PENDING |
-| C7 | Purchase/persistence (per-item pricing server-side, refund on save failure) | PENDING |
-| C8 | Saved outfits/wardrobe (new table `character_outfits`) | PENDING |
-| C9 | Faction uniforms via clothing engine (validated presets) | PENDING |
-| C10 | Collection/add-on support (SetPedCollectionComponentVariation path) | PENDING |
-| C11 | /clothingdebug dev tool (admin-gated) | PENDING |
-| C12 | Regression + CLOTHING_IMPLEMENTATION_REPORT.md | PENDING |
+- **C10 collection/add-on clothing:** NOT implemented. Still zero `SetPedCollectionComponentVariation` usage. If you add streamed custom clothes later, they won't be selectable until this is built. (No custom clothes shipped today, so not blocking.)
+- **C12 runtime regression:** the 19-scenario test matrix (male/female × tops/jackets/undershirts/textures, preview cancel, duty on/off, death, restart) is NOT executed — needs a real client. Static checks pass; visual/behavioral confirmation pending YOUR in-game test.
+- **NUI outfit panel:** outfits are command-driven (`/outfits`), not a fancy UI panel. Functional, not polished.
+- **Undershirt compatibility filtering:** undershirt is now selectable but NOT yet filtered to "only undershirts compatible with current top" — it relies on torso auto-sync. True allowed-undershirts-per-top metadata (the brief's example model) is NOT built; would need authored data.
+- **Clipping guarantee:** eliminated the KNOWN broken path (props never applied + uniform absorbed). Cannot guarantee zero clipping on all GTA anims (brief acknowledges this is impossible).
 
 ## Resume instructions
-
-1. Read this file + docs/clothing/CLOTHING_AUDIT.md.
-2. Do NOT rewrite from scratch — evolve sunset_appearance (compat lib) + sunset_clothing (shop/wardrobe) per the brief's absolute rule.
-3. Design decisions pending (C2): snapshot format extension (add `version:3` with collections support?), outfit table schema, pricing model (per-component vs per-outfit), UI naming strategy (generic "Jacket 032" names).
-4. After each phase: lua/js syntax check + update this file + commit.
+1. Read this + CLOTHING_AUDIT.md.
+2. Next work = C10 (collections) only if adding custom clothes; otherwise C12 runtime testing by user, then close.
+3. Do NOT rewrite sunset_appearance/clothing — evolve. Static checks: `node scripts/check-nui-bridge.js`, `check-db-writes.js`, luaparse harness.

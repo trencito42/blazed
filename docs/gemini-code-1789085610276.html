@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>XODO RP · High-Performance Software Ecosystem</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;0,900;1,700;1,800;1,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --bg-base: #030305;
+            --bg-surface: #0a0a0e;
+            --bg-elevated: #121218;
+            
+            --border-faint: rgba(255, 255, 255, 0.03);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.15);
+            
+            --text-main: #ffffff;
+            --text-secondary: #8a8a93;
+            --text-tertiary: #5c5c66;
+            
+            --accent: #00ffcc;
+            --accent-muted: rgba(0, 255, 204, 0.1);
+            --success: #10b981;
+            
+            --shadow-text: 0 4px 12px rgba(0, 0, 0, 0.9);
+            --shadow-glow: 0 0 25px rgba(0, 255, 204, 0.3);
+            
+            --font-mono: 'JetBrains Mono', monospace;
+            --transition-snappy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        * { box-sizing: border-box; }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base); color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+        /* --- NAVBAR (Mobile-First) --- */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            height: 75px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; background: rgba(3, 3, 5, 0.88);
+            backdrop-filter: blur(15px); border-bottom: 1px solid var(--border-subtle);
+            transition: all 0.3s;
+        }
+
+        .brand {
+            font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 900;
+            color: var(--text-main); text-transform: uppercase; letter-spacing: -1px;
+            display: flex; align-items: center; gap: 8px; text-decoration: none;
+        }
+        .brand span { color: var(--accent); }
+
+        .nav-links { display: flex; gap: 28px; align-items: center; }
+        .nav-link {
+            font-family: 'Montserrat', sans-serif; font-size: 12.5px; font-weight: 800;
+            color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;
+            text-decoration: none; transition: color 0.2s;
+        }
+        .nav-link:hover { color: var(--text-main); }
+        .nav-link.active { color: var(--accent); }
+
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+
+        .mobile-hamburger {
+            display: none; background: transparent; border: 1px solid var(--border-subtle);
+            color: var(--text-main); width: 38px; height: 38px; border-radius: 6px;
+            align-items: center; justify-content: center; font-size: 20px; cursor: pointer;
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            background: transparent; border: none; font-family: 'Montserrat', sans-serif;
+            font-size: 13.5px; font-weight: 900; font-style: italic; text-transform: uppercase;
+            letter-spacing: 1.5px; cursor: pointer; transition: all 0.2s var(--transition-snappy);
+            transform: skewX(-5deg); text-decoration: none; position: relative;
+        }
+        .btn span { transform: skewX(5deg); display: flex; align-items: center; gap: 8px; }
+
+        .btn-primary {
+            background: var(--text-main); color: #000; padding: 14px 28px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .btn-primary:hover {
+            background: var(--accent); color: #000; box-shadow: var(--shadow-glow);
+            transform: skewX(-5deg) scale(1.04);
+        }
+        .btn-primary:active { transform: skewX(-5deg) scale(0.96); }
+
+        .btn-outline {
+            border: 1.5px solid var(--text-main); color: var(--text-main); padding: 12px 24px;
+        }
+        .btn-outline:hover {
+            border-color: var(--accent); color: var(--accent); background: var(--accent-muted);
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            position: relative; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; padding: 120px 20px 60px;
+        }
+
+        .hero-bg {
+            position: absolute; inset: 0; z-index: 0;
+            background: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover; filter: grayscale(50%) brightness(0.25) contrast(1.2);
+            animation: slowPan 40s linear infinite alternate;
+        }
+
+        @keyframes slowPan {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.08) translate(-2%, 2%); }
+        }
+
+        .hero-vignette {
+            position: absolute; inset: 0; z-index: 1;
+            background: radial-gradient(circle at center, transparent 0%, rgba(3,3,5,0.92) 100%);
+        }
+
+        .hero-content {
+            position: relative; z-index: 10; text-align: center;
+            display: flex; flex-direction: column; align-items: center; gap: 18px;
+            transform: skewX(-3deg); max-width: 900px; margin: 0 auto;
+        }
+
+        .hero-badge {
+            background: var(--accent-muted); color: var(--accent); border: 1px solid rgba(0,255,204,0.25);
+            padding: 5px 14px; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 2.5px; border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .hero-title {
+            font-family: 'Montserrat', sans-serif; font-size: clamp(40px, 7.5vw, 100px);
+            font-weight: 900; font-style: italic; color: var(--text-main);
+            text-transform: uppercase; line-height: 0.88; letter-spacing: -2px;
+            text-shadow: var(--shadow-text); margin: 0;
+        }
+        .hero-title span { color: var(--accent); }
+
+        .hero-desc {
+            font-size: clamp(14px, 2vw, 17px); color: var(--text-secondary); max-width: 650px;
+            font-weight: 400; line-height: 1.65; margin-top: 6px; transform: skewX(3deg);
+        }
+
+        .hero-actions { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; justify-content: center; }
+
+        /* --- STATS BAR --- */
+        .stats-bar {
+            position: relative; z-index: 20; display: flex; justify-content: center;
+            margin-top: -45px; padding: 0 20px;
+        }
+
+        .stats-container {
+            background: var(--bg-surface); border: 1px solid var(--border-subtle);
+            display: flex; padding: 18px 45px; gap: 50px;
+            transform: skewX(-5deg); box-shadow: 0 20px 40px rgba(0,0,0,0.85);
+            border-bottom: 2px solid var(--accent); flex-wrap: wrap; justify-content: center;
+        }
+
+        .stat-item { display: flex; flex-direction: column; align-items: center; transform: skewX(5deg); }
+        .stat-val { font-family: 'Montserrat', sans-serif; font-size: 28px; font-weight: 900; font-style: italic; color: var(--text-main); }
+        .stat-val.live { color: var(--accent); text-shadow: 0 0 10px rgba(0,255,204,0.3); }
+        .stat-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 2px; margin-top: 3px; }
+
+        /* --- FEATURES SECTION --- */
+        .section { padding: 100px 30px; max-width: 1300px; margin: 0 auto; }
+        
+        .section-header { margin-bottom: 50px; display: flex; flex-direction: column; gap: 8px; }
+        .section-subtitle {
+            font-family: var(--font-mono); font-size: 12px; font-weight: 800;
+            color: var(--accent); text-transform: uppercase; letter-spacing: 3px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-subtitle::before { content: ''; width: 24px; height: 2px; background: var(--accent); }
+        .section-title {
+            font-family: 'Montserrat', sans-serif; font-size: clamp(30px, 4.5vw, 44px);
+            font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 1.1; letter-spacing: -1px; margin: 0;
+        }
+
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+
+        .feature-card {
+            background: var(--bg-surface); border: 1px solid var(--border-subtle);
+            padding: 34px 26px; display: flex; flex-direction: column; gap: 12px;
+            transform: skewX(-3deg); transition: all 0.25s var(--transition-snappy);
+            position: relative; overflow: hidden;
+        }
+        .feature-card::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,255,204,0.06), transparent);
+            transform: skewX(-20deg); transition: 0.5s;
+        }
+        .feature-card:hover {
+            border-color: var(--accent); transform: skewX(-3deg) translateY(-6px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.6), inset 2px 0 0 var(--accent);
+        }
+        .feature-card:hover::after { left: 200%; }
+
+        .fc-icon { font-size: 32px; color: var(--accent); transform: skewX(3deg); margin-bottom: 6px; }
+        .fc-title { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 900; color: var(--text-main); text-transform: uppercase; transform: skewX(3deg); }
+        .fc-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; transform: skewX(3deg); }
+
+        /* --- FOOTER --- */
+        footer {
+            background: var(--bg-surface); border-top: 1px solid var(--border-subtle);
+            padding: 30px 40px; display: flex; justify-content: space-between; align-items: center;
+            font-size: 12.5px; color: var(--text-tertiary); font-weight: 500;
+            flex-wrap: wrap; gap: 15px;
+        }
+
+        /* --- MOBILE OVERRIDES --- */
+        @media (max-width: 860px) {
+            .navbar { padding: 0 20px; height: 65px; }
+            .nav-links {
+                display: none; position: fixed; top: 65px; left: 0; right: 0;
+                background: rgba(7, 7, 10, 0.98); flex-direction: column;
+                padding: 25px 20px; gap: 18px; border-bottom: 1px solid var(--border-subtle);
+            }
+            .nav-links.open { display: flex; }
+            .mobile-hamburger { display: flex; }
+            .nav-actions .btn { display: none; }
+            .hero { padding: 100px 15px 40px; }
+            .hero-content { transform: none; }
+            .hero-desc { transform: none; }
+            .stats-bar { margin-top: -20px; }
+            .stats-container { transform: none; gap: 25px; padding: 15px 20px; width: 100%; max-width: 400px; }
+            .stat-item { transform: none; }
+            .feature-card { transform: none; }
+            .feature-card:hover { transform: translateY(-4px); }
+            .fc-icon, .fc-title, .fc-desc { transform: none; }
+            .btn { transform: none; width: 100%; max-width: 320px; }
+            .btn span { transform: none; }
+            .btn-primary:hover { transform: scale(1.02); }
+            .section { padding: 60px 20px; }
+            footer { flex-direction: column; text-align: center; justify-content: center; padding: 25px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="gemini-code-1789085610276.html" class="brand">XODO <span>RP</span></a>
+        <div class="nav-links" id="nav-links">
+            <a href="gemini-code-1789085610276.html" class="nav-link active">Home</a>
+            <a href="gemini-code-1789085395835.html" class="nav-link">Documentation</a>
+            <a href="gemini-code-1789085395835.html#page-rules" class="nav-link">Policy</a>
+            <a href="https://discord.gg/xodorp" target="_blank" class="nav-link">Discord</a>
+        </div>
+        <div class="nav-actions">
+            <button class="btn btn-outline" style="padding: 10px 18px; font-size: 11.5px;" onclick="window.open('https://discord.gg/xodorp', '_blank')">
+                <span><i class="ph-fill ph-discord-logo"></i> Discord</span>
+            </button>
+            <button class="mobile-hamburger" id="nav-toggle" aria-label="Toggle navigation">
+                <i class="ph-bold ph-list"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-vignette"></div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">BUILD 3258 · 60 FPS NATIVE</div>
+            <h1 class="hero-title">Pure Engineering.<br><span>Zero Compromise.</span></h1>
+            <p class="hero-desc">A high-performance software ecosystem engineered for hardcore roleplay. Frame-level zero latency, unforgiving economy, and native vehicle dynamics.</p>
+            
+            <div class="hero-actions">
+                <button class="btn btn-primary" id="btn-copy-ip" onclick="copyIP()">
+                    <span><i class="ph-bold ph-play"></i> <b id="ip-text">play.xodorp.ro</b></span>
+                </button>
+                <a href="gemini-code-1789085395835.html" class="btn btn-outline">
+                    <span>Technical Docs</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar">
+        <div class="stats-container">
+            <div class="stat-item">
+                <div class="stat-val live">&lt; 0.5ms</div>
+                <div class="stat-label">Client Tick Latency</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val">38+</div>
+                <div class="stat-label">Isolated Modules</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val">100%</div>
+                <div class="stat-label">Standalone Resilience</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEATURES SECTION -->
+    <section class="section" id="features">
+        <div class="section-header">
+            <div class="section-subtitle">Ecosystem Architecture</div>
+            <h2 class="section-title">Native Execution.<br>Zero Illusions.</h2>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card" onclick="window.location.href='gemini-code-1789085395835.html#page-core-systems'">
+                <i class="ph-fill ph-cpu fc-icon"></i>
+                <div class="fc-title">Modular Architecture</div>
+                <div class="fc-desc">Zero bloated scripts. Every subsystem — from HUD telemetry to inventory storage matrices — runs isolated on GTA V Build 3258, locking 60 FPS with zero memory leaks.</div>
+            </div>
+            <div class="feature-card" onclick="window.location.href='gemini-code-1789085395835.html#page-economy'">
+                <i class="ph-fill ph-wallet fc-icon"></i>
+                <div class="fc-title">Hardcore Economy</div>
+                <div class="fc-desc">Zero artificial currency minting. Every dollar carries physical mass and audit trails in SQL. We do not sell success; we leave it to your execution skills.</div>
+            </div>
+            <div class="feature-card" onclick="window.location.href='gemini-code-1789085395835.html#page-core-systems'">
+                <i class="ph-fill ph-broadcast fc-icon"></i>
+                <div class="fc-title">Spatial 3D Voice Engine</div>
+                <div class="fc-desc">Native Mumble 3D spatialization with three proximity zones (1.5m / 4.0m / 10.0m) on key Z. Native Push-to-Talk on key N, decoupled from vehicle controls.</div>
+            </div>
+            <div class="feature-card" onclick="window.location.href='gemini-code-1789085395835.html#page-dealership'">
+                <i class="ph-fill ph-gauge fc-icon"></i>
+                <div class="fc-title">Fleet & ECU Telemetry</div>
+                <div class="fc-desc">We rebuilt the vehicle handling pipeline. Transformation matrix persistence via /park, physical odometer logging, dynamic fuel burn, and precision ECU chip remapping in LS Customs.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div>&copy; 2026 XODO RP · All rights reserved.</div>
+        <div style="display: flex; gap: 20px;">
+            <a href="gemini-code-1789085395835.html" style="color: var(--text-tertiary); text-decoration: none;">Documentation</a>
+            <a href="gemini-code-1789085395835.html#page-rules" style="color: var(--text-tertiary); text-decoration: none;">Policy</a>
+        </div>
+    </footer>
+
+    <script>
+        // Toggle mobile navigation
+        const navToggle = document.getElementById('nav-toggle');
+        const navLinks = document.getElementById('nav-links');
+        if(navToggle && navLinks) {
+            navToggle.addEventListener('click', () => {
+                navLinks.classList.toggle('open');
+            });
+        }
+
+        // Copy IP with visual feedback
+        function copyIP() {
+            const ip = "play.xodorp.ro";
+            navigator.clipboard.writeText(ip).then(() => {
+                const btn = document.getElementById('btn-copy-ip');
+                const textEl = document.getElementById('ip-text');
+                
+                btn.style.background = "var(--success)";
+                btn.style.boxShadow = "0 0 20px rgba(16, 185, 129, 0.4)";
+                textEl.innerText = "IP COPIED!";
+                
+                setTimeout(() => {
+                    btn.style.background = "var(--text-main)";
+                    btn.style.boxShadow = "0 10px 20px rgba(0,0,0,0.5)";
+                    textEl.innerText = ip;
+                }, 2000);
+            });
+        }
+
+        // Parallax scroll on hero
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const heroBg = document.querySelector('.hero-bg');
+            if(heroBg && scrolled < window.innerHeight) {
+                heroBg.style.transform = `translateY(${scrolled * 0.25}px) scale(1.05)`;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -287,6 +287,22 @@ AddEventHandler('sunset:server:factionChanged', function(src)
     releaseEscortsByOfficer(src, 'Escort released - the officer left law enforcement.')
 end)
 
+-- [STREAM B] Suspect client reports the escorting officer desynced (teleport/
+-- scope loss). Validate server-side before releasing to prevent abuse.
+RegisterNetEvent('sunset:server:detentionEscortDesync', function(officerSrc)
+    local src = source
+    officerSrc = tonumber(officerSrc)
+    if Escorted[src] ~= officerSrc then return end
+    local officerPed = GetPlayerPed(officerSrc)
+    local suspectPed = GetPlayerPed(src)
+    if not officerSrc or not GetPlayerName(officerSrc) or not officerPed or officerPed == 0
+        or not suspectPed or suspectPed == 0
+        or #(GetEntityCoords(officerPed) - GetEntityCoords(suspectPed)) > 50.0 then
+        Detention.setEscort(src, nil)
+        TriggerClientEvent('sunset:detention:sync', -1, src, { escorted = false })
+    end
+end)
+
 AddEventHandler('sunset:server:dutyChanged', function(src, state)
     if state == false then
         releaseEscortsByOfficer(src, 'Escort released - the officer went off duty.')

@@ -737,12 +737,18 @@ exports.sunset_core:RegisterCallback('sunset:refuelVehiclePartial', function(sou
         or ((tonumber(char.bank) or 0) >= cost and 'bank' or nil)
     if not account then return nil, ('You need $%s in cash or bank for this fuel.'):format(cost) end
     local committed = MySQL.startTransaction(function(query)
-        local charged = query.await(
+        local lockedFuel = query.single.await('SELECT id, fuel FROM vehicles WHERE id=? FOR UPDATE', { owned.id })
+        if not lockedFuel then return false end
+        -- Re-read fuel under the row lock: the pre-check value may be stale if
+        -- two checkouts raced; re-validate the increase against the locked row.
+        local lockedCurrent = math.max(0, math.min(100, tonumber(lockedFuel.fuel) or 0))
+        if requestedFuel <= lockedCurrent + 0.05 then return false end
+        local charged = query.update.await(
             ('UPDATE characters SET %s=%s-? WHERE id=? AND %s>=?'):format(account, account, account),
             { cost, char.id, cost })
         if tonumber(charged) ~= 1 then return false end
-        local saved = query.await([[UPDATE vehicles SET fuel=? WHERE id=? AND character_id=?
-            AND fuel <= ?]], { requestedFuel, owned.id, char.id, currentFuel + 0.01 })
+        local saved = query.update.await([[UPDATE vehicles SET fuel=? WHERE id=? AND character_id=?
+            AND fuel <= ?]], { requestedFuel, owned.id, char.id, lockedCurrent + 0.01 })
         return tonumber(saved) == 1
     end)
     if not committed then return nil, 'Fuel checkout was cancelled because the balance or tank changed. No payment was taken.' end

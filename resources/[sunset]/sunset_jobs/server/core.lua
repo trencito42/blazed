@@ -1,6 +1,61 @@
 local Sessions = {}
 local sessionSeq = 0
 
+-- ═══════════════════════════════════════════════════════════════
+--  [SESSIONS MIGRATION] sunset_sessions is the canonical lifecycle +
+--  reward-idempotency authority for ALL civilian jobs. High-frequency
+--  mutable tick state (exit timers, trailer warnings) stays local to
+--  avoid per-tick export traffic; lifecycle transitions, entity
+--  registry, reward guards and admin visibility (ListSessions) are
+--  owned by sunset_sessions. Every job (trucker/fisherman/courier/
+--  garbage/mechanic) passes through StartSession/ClearSession, so
+--  this single integration point migrates them all.
+-- ═══════════════════════════════════════════════════════════════
+local SessionsService = GetResourceState('sunset_sessions') == 'started'
+
+local function sessionsCall(method, ...)
+    if not SessionsService then return nil end
+    if GetResourceState('sunset_sessions') ~= 'started' then
+        SessionsService = false
+        return nil
+    end
+    local args = table.pack(...)
+    local ok, res = pcall(function()
+        return exports.sunset_sessions[method](exports.sunset_sessions, table.unpack(args, 1, args.n))
+    end)
+    if not ok then return nil end
+    return res
+end
+
+CreateThread(function()
+    Wait(1000)
+    if GetResourceState('sunset_sessions') ~= 'started' then
+        print('^3[sunset_jobs]^7 sunset_sessions not started; running standalone job sessions.')
+        return
+    end
+    SessionsService = true
+    sessionsCall('RegisterActivity', 'civilian_job', {
+        reconnect = 'ABANDON',
+        onEnd = function(sess, state)
+            -- Server-side entity cleanup for the mirrored job session.
+            for _, netId in pairs(sess.entities or {}) do
+                local ent = tonumber(netId) and NetworkGetEntityFromNetworkId(tonumber(netId)) or 0
+                if ent ~= 0 and DoesEntityExist(ent) then
+                    Entity(ent).state:set('sunsetProtectedVehicle', nil, true)
+                    DeleteEntity(ent)
+                end
+            end
+            -- If the framework ended the session via a central trigger
+            -- (downed/jail/drop/deadline), mirror it into the local job table so
+            -- the two never desync. Guarded: ClearSession also calls EndSession.
+            local src = tonumber(sess.source)
+            if src and Sessions[src] and Sessions[src].frameworkId == sess.id and not Sessions[src].ending then
+                SunsetJobs_ClearSession(src, state == 'COMPLETED' and 'COMPLETED' or 'FAILED', 'framework:' .. tostring(state))
+            end
+        end,
+    })
+end)
+
 local function getChar(source)
     return exports.sunset_core:GetCharacter(source)
 end
@@ -39,6 +94,14 @@ function SunsetJobs_ClearSession(source, finalState, reason, options)
     session.state = finalState
     session.endReason = reason
     Sessions[source] = nil
+    -- [SESSIONS MIGRATION] End the mirrored canonical session (runs onEnd
+    -- entity cleanup; terminal states are absorbing so double-end is safe).
+    if session.frameworkId then
+        local endState = finalState == 'COMPLETED' and 'COMPLETED'
+            or finalState == 'FAILED' and 'FAILED' or 'CANCELLED'
+        sessionsCall('EndSession', session.frameworkId, endState, reason)
+        session.frameworkId = nil
+    end
     TriggerClientEvent('sunset:jobs:sessionEnded', source, session.jobId, session.state, reason, options or {})
     -- [QUESTS] first_job chain: a COMPLETED shift counts as progress.
     if finalState == 'COMPLETED' then
@@ -337,6 +400,23 @@ function SunsetJobs_StartSession(source, jobId, data)
         trailerNetId = nil,
     }
     Sessions[source] = session
+    -- [SESSIONS MIGRATION] Mirror into the canonical session service:
+    -- deadline monitoring, downed/jailed/drop triggers, ListSessions
+    -- diagnostics and reward idempotency all become available to every job.
+    local char = getChar(source)
+    if char and char.id then
+        local fwSession = sessionsCall('CreateSession', {
+            source = source,
+            charId = char.id,
+            activity = 'civilian_job',
+            timeoutSec = cfg.timeoutSec or 1800,
+            data = { jobId = jobId },
+        })
+        if type(fwSession) == 'table' and fwSession.id then
+            session.frameworkId = fwSession.id
+            sessionsCall('Transition', fwSession.id, 'ACTIVE', 'shift started')
+        end
+    end
     TriggerClientEvent('sunset:jobs:sessionStarted', source, jobId, session)
     return session
 end
@@ -453,6 +533,11 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
     Entity(entity).state:set('sunsetProtectedVehicle', true, true)
     session.vehicleNetId = vehicleNetId
     session.trailerNetId = trailerNetId and tonumber(trailerNetId) or nil
+    -- [SESSIONS MIGRATION] Register work entities in the canonical session so
+    -- its onEnd cleanup deletes/protects them on every termination path.
+    if session.frameworkId then
+        sessionsCall('SetEntity', session.frameworkId, 'vehicle', vehicleNetId, GetEntityModel(entity))
+    end
     if cfg and cfg.trailerModel then
         if not session.trailerNetId then return nil, 'Work trailer was not registered' end
         local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)

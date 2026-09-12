@@ -236,14 +236,37 @@ CreateThread(function()
             if officerIdx ~= -1 then
                 local officerPed = GetPlayerPed(officerIdx)
                 if officerPed ~= 0 then
-                    AttachEntityToEntity(ped, officerPed, 11816, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true)
+                    -- [STREAM B] Escort-stuck guard: if the officer desyncs far
+                    -- away (scope loss/teleport), release the attach instead of
+                    -- stretching the ped across the map every frame.
+                    local d = #(GetEntityCoords(ped) - GetEntityCoords(officerPed))
+                    if d <= 30.0 then
+                        AttachEntityToEntity(ped, officerPed, 11816, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true)
+                    elseif IsEntityAttachedToEntity(ped, officerPed) then
+                        DetachEntity(ped, true, true)
+                        TriggerServerEvent('sunset:server:detentionEscortDesync', escortOfficer)
+                    end
                 end
+            elseif IsEntityAttached(ped) then
+                -- Officer left the server/scope entirely: detach locally.
+                DetachEntity(ped, true, true)
             end
             Wait(0)
         else
             Wait(500)
         end
     end
+end)
+
+-- [STREAM B] Resource restart while escorted/cuffed must not leave the ped
+-- attached, frozen or stuck in cuff anims.
+AddEventHandler('onResourceStop', function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    local ped = PlayerPedId()
+    if IsEntityAttached(ped) then DetachEntity(ped, true, true) end
+    ClearPedTasksImmediately(ped)
+    FreezeEntityPosition(ped, false)
+    SetPedCanSwitchWeapon(ped, true)
 end)
 
 exports('IsCuffedLocal', function() return isCuffed end)
