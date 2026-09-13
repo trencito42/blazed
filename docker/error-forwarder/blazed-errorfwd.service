@@ -1,0 +1,14 @@
+[Unit]
+Description=BlazeMP FiveM error forwarder (docker logs -> Discord)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/blazed/.env
+ExecStart=/bin/sh -c 'docker logs -f --tail 0 blazed-fivem-1 2>&1 | python3 /opt/blazed/docker/error-forwarder/forwarder.py'
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
