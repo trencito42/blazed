@@ -1209,6 +1209,131 @@ registerServerCommand('reports', function(source, args)
     end
 end)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [SA-MP STYLE] /n — PUBLIC newb question channel.
+--  The question AND the staff answer are broadcast to EVERY player
+--  in the main chat (badge "QUESTION" / "ANSWER"), like SA-MP /n.
+--  /n [question]            — any player, 20s cooldown
+--  /na [question id] [text] — staff (level 1+); id optional = last
+--                             unanswered question
+--  /na alone (no args)      — prints the open question list (staff)
+-- ═══════════════════════════════════════════════════════════════
+local NewbQuestions = {}  -- [qid] = { src, name, text, answered }
+local NewbSeq = 0
+local LastNewbAsk = {}
+
+local function publicLine(name, text, msgType, id)
+    TriggerClientEvent('sunset:chat:message', -1, {
+        id = id or 0,
+        name = name,
+        message = text,
+        time = os.date('%H:%M:%S'),
+        type = msgType,
+    })
+end
+
+registerServerCommand('n', function(source, args)
+    if source == 0 then return end
+    local question = table.concat(args, ' '):gsub('^%s*(.-)%s*$', '%1')
+    if question == '' or #question < 3 then
+        return notify(source, 'Usage: /n [question] — asked publicly; staff answer with /na.', 'error')
+    end
+    if #question > 200 then
+        return notify(source, 'Question too long (max 200 characters).', 'error')
+    end
+    local now = os.time()
+    if now - (LastNewbAsk[source] or 0) < 20 then
+        return notify(source, ('Wait %d seconds before another question.'):format(20 - (now - (LastNewbAsk[source] or 0))), 'error')
+    end
+    LastNewbAsk[source] = now
+
+    NewbSeq = NewbSeq + 1
+    local qid = NewbSeq
+    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or ('Player %d'):format(source)
+    NewbQuestions[qid] = { src = source, name = name, text = question, answered = false, at = now }
+
+    publicLine(name, ('(%d) %s'):format(qid, question), 'newb_question', source)
+    broadcastStaff(('^3[NEWB #%d]^7 %s (#%d): %s — answer publicly with /na %d [text]'):format(
+        qid, name, source, question, qid), 'info')
+end)
+
+registerServerCommand('na', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'na') then return end
+
+    -- /na with no args: list open questions
+    if not args[1] then
+        local open = 0
+        for qid, q in pairs(NewbQuestions) do
+            if not q.answered then
+                open = open + 1
+                notify(source, ('#%d %s (#%d): %s'):format(qid, q.name, q.src, q.text), 'info')
+            end
+        end
+        if open == 0 then notify(source, 'No unanswered /n questions.', 'success') end
+        return
+    end
+
+    -- /na [qid] [answer] — or /na [answer] (targets the most recent open question)
+    local qid = tonumber(args[1])
+    local answerStart = 2
+    if not qid then
+        -- no explicit id: find the most recent unanswered question
+        local best, bestAt = nil, -1
+        for id, q in pairs(NewbQuestions) do
+            if not q.answered and (q.at or 0) > bestAt then best, bestAt = id, q.at end
+        end
+        qid = best
+        answerStart = 1
+        if not qid then
+            return notify(source, 'No open question to answer. Usage: /na [question id] [answer]', 'error')
+        end
+    end
+
+    local q = NewbQuestions[qid]
+    if not q then
+        return notify(source, ('Question #%d not found. Use /na to list open questions.'):format(qid), 'error')
+    end
+    if q.answered then
+        return notify(source, ('Question #%d was already answered.'):format(qid), 'warning')
+    end
+
+    local answer = table.concat(args, ' ', answerStart):gsub('^%s*(.-)%s*$', '%1')
+    if answer == '' then
+        return notify(source, 'Usage: /na [question id] [answer]', 'error')
+    end
+
+    q.answered = true
+    q.answeredBy = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or 'Staff'
+
+    -- Public: question context + the answer, SA-MP style.
+    publicLine(q.name, ('(%d) %s'):format(qid, q.text), 'newb_question', q.src)
+    publicLine(q.answeredBy, ('(%d) %s'):format(qid, answer), 'newb_answer', source)
+    if GetPlayerName(q.src) then
+        notify(q.src, ('Your question was answered by %s: %s'):format(q.answeredBy, answer), 'success', 10000)
+    end
+    -- auto-expire answered questions after 10 min to keep the table small
+    SetTimeout(600000, function()
+        local row = NewbQuestions[qid]
+        if row and row.answered then NewbQuestions[qid] = nil end
+    end)
+end)
+
+-- prune stale unanswered questions after 30 min
+CreateThread(function()
+    while true do
+        Wait(300000)
+        local now = os.time()
+        for qid, q in pairs(NewbQuestions) do
+            if now - (q.at or 0) > 1800 then NewbQuestions[qid] = nil end
+        end
+    end
+end)
+
+AddEventHandler('playerDropped', function()
+    LastNewbAsk[source] = nil
+end)
+
 function ExecutePlayerCommand(source, name, args)
     name = string.lower(tostring(name or ''))
     local handler = SunsetAdmin.ServerHandlers[name]

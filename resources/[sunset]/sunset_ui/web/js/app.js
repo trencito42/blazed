@@ -358,9 +358,47 @@ function activateGameplayModal(action, payload) {
     }
 }
 
+// [BOOT TRACE] Timestamped logs for the loadscreen->login transition. Open F8
+// while connecting to see the exact stage sequence; also forwarded to the
+// server console (nuiError/nuiTrace callbacks) so crashes are diagnosable.
+const BOOT_T0 = Date.now();
+window.__btrace = function btrace(stage, extra) {
+    const line = `[BOOT +${Date.now() - BOOT_T0}ms] nui: ${stage}${extra ? ' | ' + extra : ''}`;
+    console.log(line);
+    try {
+        if (typeof GetParentResourceName === 'function') {
+            fetch(`https://${GetParentResourceName()}/nuiTrace`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ line }),
+            }).catch(() => {});
+        }
+    } catch (_) { /* noop */ }
+};
+window.addEventListener('error', (e) => {
+    try {
+        if (typeof GetParentResourceName === 'function') {
+            fetch(`https://${GetParentResourceName()}/nuiError`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: String(e.message || 'unknown'),
+                    file: String(e.filename || ''),
+                    line: Number(e.lineno || 0),
+                }),
+            }).catch(() => {});
+        }
+    } catch (_) { /* noop */ }
+});
+window.addEventListener('unhandledrejection', (e) => {
+    console.warn('[NUI] unhandled promise rejection:', e.reason);
+});
+window.__btrace('app.js parsed');
+
 // NUI message handler
 window.addEventListener('message', (event) => {
     const { action, screen, data, message, type, duration, label } = event.data;
+    if (action === 'show') window.__btrace(`show screen=${screen}`);
     activateGameplayModal(action, data || event.data.data || {});
 
     switch (action) {

@@ -5,6 +5,20 @@ const filesEl = document.getElementById('loading-files');
 const tipTextEl = document.getElementById('tip-text');
 const rpmContainer = document.getElementById('rpm-bar');
 
+// [BOOT TRACE] Timestamped console logs for the loadscreen->login handoff.
+// Crash debugging: read these in the F8 console (or client log) to see the
+// exact last stage reached before FiveM dies.
+const BOOT_T0 = Date.now();
+function btrace(stage, extra) {
+    try {
+        console.log(`[BOOT +${Date.now() - BOOT_T0}ms] loadscreen: ${stage}${extra ? ' | ' + extra : ''}`);
+    } catch (_) { /* console unavailable */ }
+}
+btrace('script start');
+window.addEventListener('error', (e) => {
+    btrace('JS ERROR', `${e.message} @ ${e.filename}:${e.lineno}`);
+});
+
 const TOTAL_SEGMENTS = 25;
 const TASKS = [
     'Downloading audio packages',
@@ -70,6 +84,7 @@ function setProgress(pct, task, files) {
 }
 
 function finishHandoff() {
+    btrace('handoff received -> finishing');
     clearTimeout(simTimer);
     simTimer = null;
     setProgress(100, 'Entering session...', '');
@@ -78,7 +93,10 @@ function finishHandoff() {
         if (seg.classList.contains('is-redline')) seg.classList.add('redline');
     });
     loadscreen.classList.add('is-handoff');
-    setTimeout(() => loadscreen.classList.add('fade-out'), 90);
+    setTimeout(() => {
+        btrace('fade-out started');
+        loadscreen.classList.add('fade-out');
+    }, 90);
 }
 
 function startSimulation() {

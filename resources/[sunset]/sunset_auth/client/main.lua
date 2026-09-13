@@ -114,10 +114,13 @@ local function performLogin(username, password, rememberQuickLogin)
 end
 
 RegisterNetEvent('sunset:client:sessionReady', function(data)
+    print('^5[BOOT]^7 auth: sessionReady received (license=' .. tostring(data and data.license ~= nil) .. ')')
     sessionLicense = data and data.license
     if authenticated then return end
     exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
+    print('^5[BOOT]^7 auth: opening auth screen')
     openAuth()
+    print('^5[BOOT]^7 auth: openAuth done')
     scheduleAuthWatchdog()
 end)
 

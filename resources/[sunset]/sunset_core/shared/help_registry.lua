@@ -267,6 +267,9 @@ Sunset.CommandUsage = {
     gotoid = { usage = '/gotoid [server id] — alias for /tp [id] (staff 2+)', minArgs = 1 },
     setclan = { usage = '/setclan [server id] [clan id|none] [rank] — move a player between clans (staff 3+)', minArgs = 2 },
     tempban = { usage = '/tempban [server id] [30m|1h|6h|1d|7d|30d] [reason] (staff 3+)', minArgs = 3 },
+    -- [SA-MP /n] public question channel
+    n = { usage = '/n [question] - ask all players publicly (staff answer with /na)', minArgs = 1 },
+    na = { usage = '/na [question id] [answer] - answer a /n question publicly (staff)', minArgs = 0 },
 }
 
 Sunset.HelpDispatchEntries = {

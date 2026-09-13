@@ -5,6 +5,21 @@ local function forward(name)
     end)
 end
 
+-- [BOOT TRACE] NUI-side boot/error telemetry -> client console (F8) AND the
+-- game log, so the error forwarder (docker logs) sees loadscreen/login crashes.
+RegisterNUICallback('nuiTrace', function(data, cb)
+    local line = type(data) == 'table' and data.line or tostring(data)
+    print(('^5[NUI TRACE]^7 %s'):format(tostring(line)))
+    cb('ok')
+end)
+
+RegisterNUICallback('nuiError', function(data, cb)
+    data = type(data) == 'table' and data or {}
+    print(('^1[NUI ERROR]^7 %s @ %s:%s'):format(
+        tostring(data.message or 'unknown'), tostring(data.file or '?'), tostring(data.line or 0)))
+    cb('ok')
+end)
+
 -- [AUDIT UI-HANG] Failsafe: when the JS explicitly asks to close the shared
 -- player-interaction menu, guarantee the panel hides and focus is released even
 -- if the owning resource's handler no-ops or errors. Resources that close the

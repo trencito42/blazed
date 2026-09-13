@@ -293,6 +293,18 @@ const Chat = {
             };
         }
 
+        // [SA-MP /n] Public newb question + staff answer channels.
+        if (type === 'newb_question' || type === 'newb_answer') {
+            const from = name || 'Player';
+            const idPart = id > 0 ? ` (${id})` : '';
+            const isAnswer = type === 'newb_answer';
+            return {
+                badge: { label: isAnswer ? 'ANSWER' : 'QUESTION', className: isAnswer ? 'badge-peace' : 'badge-warn' },
+                author: { html: `${esc(from)}${esc(idPart)}:`, className: isAnswer ? 'color-peace' : 'color-warn' },
+                content: { html: esc(msg), className: '' },
+            };
+        }
+
         if (type === 'gov') {
             const dept = String(m.factionLabel || m.name || 'GOVERNMENT').trim();
             const rankLabel = String(m.issuerRank || m.rank || '').trim();
@@ -630,6 +642,16 @@ const Chat = {
         if (type === 'announce') {
             const from = name || 'SERVER';
             return `${prefix}Public announcement from ${from}${id > 0 ? ` (${id})` : ''}: ${msg}`;
+        }
+
+        // [SA-MP /n] public newb question + staff answer.
+        if (type === 'newb_question') {
+            const from = name || 'Player';
+            return `${prefix}[QUESTION] ${from}${id > 0 ? ` (${id})` : ''}: ${msg}`;
+        }
+        if (type === 'newb_answer') {
+            const from = name || 'Staff';
+            return `${prefix}[ANSWER] ${from}${id > 0 ? ` (${id})` : ''}: ${msg}`;
         }
 
         if (type === 'hq') {
