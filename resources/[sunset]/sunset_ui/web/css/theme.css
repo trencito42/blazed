@@ -407,13 +407,15 @@ h5,
 }
 
 /* HUD notifications — below premium clock/money block (was 118px = overlapped clock). */
+/* [FIX] z-index raised above the Blaze Shield widget (4200) so toasts are never
+   hidden behind it; right offset moved left of the widget (264px + 16px margin). */
 .notifications {
     top: 290px;
-    right: 40px;
+    right: 300px;
     gap: 12px;
     width: min(380px, 34vw);
     pointer-events: none;
-    z-index: 95;
+    z-index: 4300;
 }
 
 .notification {
