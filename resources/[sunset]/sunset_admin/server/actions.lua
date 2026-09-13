@@ -132,6 +132,17 @@ end
 
 -- ── /spectate (level 2) ────────────────────────────────────────
 local Spectating = {} -- [adminSrc] = target
+local SavedBucket = {} -- [adminSrc] = bucket before we moved them (spectate/tpcar/bringcar)
+
+-- [G7 FIX] Leaving a borrowed routing bucket must also release the property
+-- registry, otherwise sunset_properties.Inside desyncs from the real bucket.
+local function restoreBucket(src, bucket)
+    if not GetPlayerName(src) then return end
+    if GetResourceState('sunset_properties') == 'started' then
+        pcall(function() exports.sunset_properties:LeaveProperty(src) end)
+    end
+    SetPlayerRoutingBucket(src, tonumber(bucket) or 0)
+end
 
 function A.spectate(source, args)
     if source == 0 then return end
@@ -142,6 +153,9 @@ function A.spectate(source, args)
     if not arg or arg == 'off' or arg == 'stop' then
         if Spectating[source] then
             Spectating[source] = nil
+            -- [G7 FIX] return the admin to their original bucket (usually 0)
+            restoreBucket(source, SavedBucket[source])
+            SavedBucket[source] = nil
             TriggerClientEvent('sunset:admin:spectateEnd', source)
             notify(source, 'Spectate ended.', 'info')
         else
@@ -157,6 +171,7 @@ function A.spectate(source, args)
         return
     end
     Spectating[source] = target
+    SavedBucket[source] = GetPlayerRoutingBucket(source) or 0
     -- [G7 FIX] join the target's routing bucket so properties are visible.
     local bucket = GetPlayerRoutingBucket(target) or 0
     SetPlayerRoutingBucket(source, bucket)
@@ -174,6 +189,8 @@ AddEventHandler('playerDropped', function()
     for admin, target in pairs(Spectating) do
         if target == src and GetPlayerName(admin) then
             Spectating[admin] = nil
+            restoreBucket(admin, SavedBucket[admin])
+            SavedBucket[admin] = nil
             TriggerClientEvent('sunset:admin:spectateEnd', admin)
             TriggerClientEvent('sunset:client:notify', admin, 'Spectate ended (target disconnected).', 'info')
         end
@@ -183,9 +200,11 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     for admin in pairs(Spectating) do
+        restoreBucket(admin, SavedBucket[admin])
         TriggerClientEvent('sunset:admin:spectateEnd', admin)
     end
     Spectating = {}
+    SavedBucket = {}
 end)
 
 -- 1Hz coords sync while spectating (client cam follows target).
@@ -232,7 +251,8 @@ function A.tpcar(source, args)
         return
     end
     if targetInProperty(target) then
-        notify(source, 'Target is inside a property — joining their routing bucket.', 'warning')
+        notify(source, 'Target is inside a property — joining their routing bucket. /tpback to return.', 'warning')
+        if SavedBucket[source] == nil then SavedBucket[source] = GetPlayerRoutingBucket(source) or 0 end
     end
     SetPlayerRoutingBucket(source, GetPlayerRoutingBucket(target) or 0)
     TriggerClientEvent('sunset:admin:teleportVehicle', source, coords.x, coords.y, coords.z)
@@ -250,11 +270,40 @@ function A.bringcar(source, args)
     if targetInProperty(source) then
         notify(source, 'You are inside a property — target joins your routing bucket.', 'warning')
     end
+    -- [G7 FIX] If the target is inside a property, release their registry entry
+    -- first, otherwise sunset_properties.Inside keeps a ghost record and their
+    -- bucket silently desyncs from where they actually are.
+    if targetInProperty(target) then
+        if GetResourceState('sunset_properties') == 'started' then
+            pcall(function() exports.sunset_properties:LeaveProperty(target) end)
+        end
+        TriggerClientEvent('sunset:client:notify', target, 'You were pulled out of a property by staff.', 'warning')
+    end
     SetPlayerRoutingBucket(target, GetPlayerRoutingBucket(source) or 0)
     TriggerClientEvent('sunset:admin:teleportVehicle', target, coords.x + 2.0, coords.y + 2.0, coords.z)
     notify(source, ('Brought #%d (with their vehicle) to you.'):format(target), 'success')
     TriggerClientEvent('sunset:client:notify', target, 'You were brought to an admin.', 'warning')
     markAnticheat(target, 'bringcar')
+end
+
+-- ── /tpback — restore the bucket you had before spectate/tpcar/bringcar (level 2) ──
+function A.tpback(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'tpback') then return end
+    local saved = SavedBucket[source]
+    if saved == nil then
+        -- Nothing saved: still useful as an escape hatch if stuck in a weird bucket.
+        if (GetPlayerRoutingBucket(source) or 0) ~= 0 then
+            restoreBucket(source, 0)
+            notify(source, 'No saved position, but your routing bucket was reset to the open world.', 'success')
+            return
+        end
+        notify(source, 'Nothing to return to — your bucket is already the open world.', 'info')
+        return
+    end
+    SavedBucket[source] = nil
+    restoreBucket(source, saved)
+    notify(source, ('Routing bucket restored (was %s).'):format(tostring(saved)), 'success')
 end
 
 -- ── /ajail · /aunjail · /aclear (level 2, via faction exports) ─
@@ -409,6 +458,9 @@ function A.gotoid(source, args)
     local ped = GetPlayerPed(target)
     if not ped or ped == 0 then return end
     local coords = GetEntityCoords(ped)
+    if targetInProperty(target) and SavedBucket[source] == nil then
+        SavedBucket[source] = GetPlayerRoutingBucket(source) or 0
+    end
     SetPlayerRoutingBucket(source, GetPlayerRoutingBucket(target) or 0)
     TriggerClientEvent('sunset:admin:teleport', source, coords.x, coords.y, coords.z)
     markAnticheat(source, 'gotoid')
@@ -475,6 +527,7 @@ function A.init(env)
     registerServerCommand('spectate', function(source, args) A.spectate(source, args) end, false)
     registerServerCommand('tpcar', function(source, args) A.tpcar(source, args) end, false)
     registerServerCommand('bringcar', function(source, args) A.bringcar(source, args) end, false)
+    registerServerCommand('tpback', function(source, args) A.tpback(source, args) end, false)
     registerServerCommand('ajail', function(source, args) A.ajail(source, args) end, false)
     registerServerCommand('aunjail', function(source, args) A.aunjail(source, args) end, false)
     registerServerCommand('aclear', function(source, args) A.aclear(source, args) end, false)

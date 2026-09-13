@@ -258,6 +258,7 @@ Sunset.CommandUsage = {
     slap = { usage = '/slap [server id] — launch a player (staff 2+)', minArgs = 1 },
     tpcar = { usage = '/tpcar [server id] — teleport to a player WITH your vehicle (staff 2+)', minArgs = 1 },
     bringcar = { usage = '/bringcar [server id] — bring a player AND their vehicle to you (staff 2+)', minArgs = 1 },
+    tpback = { usage = '/tpback — restore your routing bucket after spectate/tpcar into a property (staff 2+)', minArgs = 0 },
     ajail = { usage = '/ajail [server id] [minutes 1-1440] [reason] — admin jail (staff 2+)', minArgs = 2 },
     aunjail = { usage = '/aunjail [server id] — release from jail (staff 2+)', minArgs = 1 },
     aclear = { usage = '/aclear [server id] — clear wanted stars (staff 2+)', minArgs = 1 },

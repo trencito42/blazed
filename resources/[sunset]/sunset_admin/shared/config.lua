@@ -70,6 +70,7 @@ SunsetAdmin.Commands = {
     slap = 2,
     tpcar = 2,
     bringcar = 2,
+    tpback = 2,
     aclear = 2,
     ajail = 2,
     aunjail = 2,
