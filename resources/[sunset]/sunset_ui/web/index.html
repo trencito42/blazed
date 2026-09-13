@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="css/style.css?v=16">
     <link rel="stylesheet" href="css/hud.css?v=30" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="css/premium-hud.css?v=30" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/premium-hud.css?v=31" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/scoreboard-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/store-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/chat.css?v=30" media="print" onload="this.media='all'">
@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="css/fuel-pump-forza.css?v=30" media="print" onload="this.media='all'">
     <!-- [AUDIT P7-05] Self-hosted fonts/icons (were remote Google Fonts + unpkg, blocking NUI first paint) -->
     <link rel="stylesheet" href="assets/fonts/gfonts.css?v=40" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="css/theme.css?v=9">
+    <link rel="stylesheet" href="css/theme.css?v=10">
     <link rel="stylesheet" href="css/fishing.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/license_test.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/license_quiz.css?v=30" media="print" onload="this.media='all'">
@@ -63,7 +63,7 @@
     <link rel="stylesheet" href="css/auth-forza.css?v=5">
     <link rel="stylesheet" href="css/trade-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/premium-properties.css?v=30" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="css/premium-chat.css?v=30" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/premium-chat.css?v=31" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/quick-hotbar.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/inventory-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/world-tooltip.css?v=30" media="print" onload="this.media='all'">
@@ -643,8 +643,8 @@
         <div class="hud-tr premium-hud-tr hud-boot" data-hud-panel="tr">
             <div class="premium-top-row">
                 <div class="premium-unskew identity-container">
-                    <div class="identity-name" id="hud-identity-name">—</div>
-                    <div class="identity-id" id="hud-identity-id">ID 0</div>
+                    <span class="identity-name" id="hud-identity-name">—</span>
+                    <span class="identity-id" id="hud-identity-id">(0)</span>
                 </div>
                 <div class="premium-unskew voice-container">
                     <div class="voice-icon" id="hud-voice-icon" aria-hidden="true">

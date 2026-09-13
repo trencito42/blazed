@@ -257,7 +257,7 @@ const Hud = {
         }
         if (data.playerId !== undefined) {
             const el = $('#hud-identity-id');
-            if (el) el.textContent = `ID ${Number(data.playerId) || 0}`;
+            if (el) el.textContent = `(${Number(data.playerId) || 0})`;
         }
         if (data.time) $('#hud-time').textContent = data.time;
         if (data.date) this.updateDateDisplay(data.date);
