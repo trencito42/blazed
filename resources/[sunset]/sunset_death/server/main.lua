@@ -16,10 +16,12 @@ local function bleedoutDuration()
 end
 
 local function hospitalSpawn(char)
-    local pos = char and exports.sunset_core:GetSpawnPosition(char, source)
-    if pos and pos.x then return pos end
+    -- [FIX] Death respawn must ALWAYS be the hospital. It used to call
+    -- GetSpawnPosition (which returns the saved/last location), so players
+    -- respawned exactly where they died despite the "you wake up at the
+    -- hospital" message. Saved spawn preference is for LOGIN only.
     local h = Sunset.Config.HospitalSpawn or Sunset.Config.DefaultSpawn
-    return { x = h.x, y = h.y, z = h.z, w = h.w }
+    return { x = h.x, y = h.y, z = h.z, w = h.w or 0.0 }
 end
 
 local function respawnPlayer(source, bill)

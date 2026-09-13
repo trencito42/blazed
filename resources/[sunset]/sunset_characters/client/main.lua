@@ -25,13 +25,28 @@ local function showSpawnSelection(char, optional)
         })
         return
     end
+
+    -- [AUTO SPAWN] On the normal login flow (optional == false) do NOT show the
+    -- picker: resolve the saved preference automatically with the priority
+    -- house > faction HQ > default, then spawn. The picker only appears when
+    -- the player explicitly types /spawnmenu (optional == true) or an admin
+    -- forces it. Last-location spawn was removed entirely.
+    if not optionalSpawnMenu then
+        local resolved, err = Sunset.AwaitCallback('sunset:resolveAutoSpawn')
+        if resolved and resolved.x then
+            pendingSpawnCharacter = nil
+            trace('spawn_auto_resolved', tostring(resolved.source or 'default'))
+            exports.sunset_ui:Show('loading', { holdText = 'Loading character...' })
+            TriggerEvent('sunset:client:spawnCharacter', char, resolved)
+            return
+        end
+        trace('spawn_auto_failed', err or 'no_resolution') -- fall through to picker
+    end
+
     local homes = Sunset.AwaitCallback('sunset:getSpawnHomes') or {}
     local factionHq = Sunset.AwaitCallback('sunset:getLeaderSpawnHq')
-    local playedBefore = char and (char.last_played_before or char.last_played)
-    local hasLast = playedBefore ~= nil and playedBefore ~= ''
-        and type(pos) == 'table' and tonumber(pos.x) ~= nil and tonumber(pos.y) ~= nil
     exports.sunset_ui:Show('spawn', {
-        hasLastLocation = hasLast,
+        hasLastLocation = false,
         homes = homes,
         factionHq = factionHq,
         dismissible = optionalSpawnMenu,

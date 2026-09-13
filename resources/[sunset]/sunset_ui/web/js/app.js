@@ -358,13 +358,11 @@ function activateGameplayModal(action, payload) {
     }
 }
 
-// [BOOT TRACE] Timestamped logs for the loadscreen->login transition. Open F8
-// while connecting to see the exact stage sequence; also forwarded to the
-// server console (nuiError/nuiTrace callbacks) so crashes are diagnosable.
-const BOOT_T0 = Date.now();
-window.__btrace = function btrace(stage, extra) {
-    const line = `[BOOT +${Date.now() - BOOT_T0}ms] nui: ${stage}${extra ? ' | ' + extra : ''}`;
-    console.log(line);
+// [BOOT TRACE v2] ABSOLUTE epoch-ms timestamps (Date.now()) shared with the
+// loadscreen CEF and (after calibration) the Lua side — one timeline for the
+// whole loadscreen->login->auth transition. Forwarded to the server console
+// (nuiTrace) + the game log so crash forensics survive a client crash.
+function __btracePost(line) {
     try {
         if (typeof GetParentResourceName === 'function') {
             fetch(`https://${GetParentResourceName()}/nuiTrace`, {
@@ -374,6 +372,11 @@ window.__btrace = function btrace(stage, extra) {
             }).catch(() => {});
         }
     } catch (_) { /* noop */ }
+}
+window.__btrace = function btrace(stage, extra) {
+    const line = `[BOOT ${Date.now()}] nui: ${stage}${extra ? ' | ' + extra : ''}`;
+    console.log(line);
+    __btracePost(line);
 };
 window.addEventListener('error', (e) => {
     try {
@@ -395,10 +398,51 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 window.__btrace('app.js parsed');
 
+// [BOOT TRACE v2] Epoch handshake: send Date.now() to Lua so sunset_core can
+// calibrate its GetGameTimer() onto this same epoch timeline.
+try {
+    if (typeof GetParentResourceName === 'function') {
+        fetch(`https://${GetParentResourceName()}/bootEpoch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ now: Date.now() }),
+        }).catch(() => {});
+    }
+} catch (_) { /* noop */ }
+
+// [FREEZE WATCHDOG] rAF frame-gap detector for the NUI CEF: gaps > 300ms mean
+// the main window stopped rendering (the 3-4s freeze the owner reports).
+(function nuiFrameWatchdog() {
+    let last = performance.now();
+    let gaps = 0;
+    function frame() {
+        const now = performance.now();
+        const gap = now - last;
+        last = now;
+        if (gap > 300) {
+            gaps += 1;
+            if (gaps <= 20) window.__btrace('NUI FRAME GAP', `${Math.round(gap)}ms frozen`);
+        }
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+})();
+
+// [A/B NOFX MODE] 'bootNofx' from Lua (convar sv_sunset_nofx=1): disable all
+// animations/filters/backdrops/large backgrounds to measure compositor cost.
+window.__nofx = false;
+function applyNofx() {
+    if (window.__nofx) return;
+    window.__nofx = true;
+    window.__btrace('nofx mode ON (animations/filters/big bg disabled)');
+    document.body.classList.add('nofx');
+}
+
 // NUI message handler
 window.addEventListener('message', (event) => {
     const { action, screen, data, message, type, duration, label } = event.data;
     if (action === 'show') window.__btrace(`show screen=${screen}`);
+    if (action === 'bootNofx') applyNofx();
     activateGameplayModal(action, data || event.data.data || {});
 
     switch (action) {
@@ -416,6 +460,21 @@ window.addEventListener('message', (event) => {
                 if (window.HandoffScreen) HandoffScreen.hide();
                 showScreen('auth');
                 if (window.Panels) Panels.showAuth(data || {});
+                // [BOOT TRACE v2] 8) first rAF after auth paint = "responsive frame";
+                // 9) first pointer/key event = UI actually interactive.
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => window.__btrace('auth first responsive frame'));
+                });
+                if (!window.__bootInputLogged) {
+                    window.__bootInputLogged = true;
+                    const logFirstInput = (ev) => {
+                        window.__btrace(`auth first input event (${ev.type})`);
+                        window.removeEventListener('pointerdown', logFirstInput, true);
+                        window.removeEventListener('keydown', logFirstInput, true);
+                    };
+                    window.addEventListener('pointerdown', logFirstInput, true);
+                    window.addEventListener('keydown', logFirstInput, true);
+                }
                 // [SAVED ACCOUNTS FIX] Tell Lua the auth screen is actually
                 // rendered so it (re)pushes the saved-account list. SendNUIMessage
                 // before the page is interactive can be lost entirely, which is

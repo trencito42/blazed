@@ -232,3 +232,19 @@ end
 exports.sunset_core:RegisterCallback('sunset:getChatChannels', function(source)
     return buildChatChannels(source)
 end)
+
+-- /cc — staff chat wipe (level 2+). Clears every player's chat window.
+RegisterCommand('cc', function(source, args)
+    if source ~= 0 then
+        local allowed = false
+        if GetResourceState('sunset_admin') == 'started' then
+            local ok, res = pcall(function() return exports.sunset_admin:IsAdmin(source, 2) end)
+            allowed = ok and res == true
+        end
+        if not allowed then
+            exports.sunset_core:CommandDenyAdmin(source, 'cc')
+            return
+        end
+    end
+    TriggerClientEvent('sunset:chat:clear', -1)
+end, false)

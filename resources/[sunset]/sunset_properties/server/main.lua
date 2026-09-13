@@ -167,6 +167,47 @@ exports.sunset_core:RegisterCallback('sunset:resolveSpawnChoice', function(sourc
     return resolved
 end)
 
+-- [AUTO SPAWN] Login spawn without the picker. Priority (owner spec):
+--   1. saved preference (if valid — house > hq > default within it)
+--   2. home property (owned/rented)
+--   3. faction HQ
+--   4. default spawn
+-- Never resolves to the last position (removed from the game).
+exports.sunset_core:RegisterCallback('sunset:resolveAutoSpawn', function(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return nil, 'No character' end
+
+    -- jail lock wins over everything (resolveSpawnChoiceForChar handles it too)
+    local jailed = false
+    pcall(function() jailed = exports.sunset_factions:IsJailed(source) == true end)
+    if jailed and Sunset.Police and Sunset.Police.jailCoords then
+        local jail = spawnCoords(Sunset.Police.jailCoords)
+        if jail then jail.source = 'jail'; return jail end
+    end
+
+    local metadata = type(char.metadata) == 'table' and char.metadata or {}
+
+    -- 1. explicit saved preference
+    if metadata.spawn_choice and metadata.spawn_choice ~= 'last' then
+        local ok, resolved = pcall(resolveSpawnChoiceForChar, source, char, metadata.spawn_choice, metadata.spawn_property_id)
+        if ok and resolved and resolved.x then resolved.source = 'saved_' .. metadata.spawn_choice; return resolved end
+    end
+
+    -- 2. home property (owned or rented)
+    if char.home_property_id then
+        local ok, resolved = pcall(resolveSpawnChoiceForChar, source, char, 'house', char.home_property_id)
+        if ok and resolved and resolved.x then resolved.source = 'house'; return resolved end
+    end
+
+    -- 3. faction HQ
+    local okHq, hq = pcall(resolveSpawnChoiceForChar, source, char, 'hq')
+    if okHq and hq and hq.x then hq.source = 'hq'; return hq end
+
+    -- 4. default spawn
+    local d = Sunset.Config.DefaultSpawn
+    return { x = d.x, y = d.y, z = d.z, w = d.w or 0.0, source = 'default' }
+end)
+
 local function charge(source, amount, reason)
     local account
     if exports.sunset_core:GetMoney(source,'bank')>=amount then account='bank'

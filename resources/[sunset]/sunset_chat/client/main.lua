@@ -99,6 +99,11 @@ RegisterNetEvent('sunset:chat:system', function(message, kind)
     })
 end)
 
+-- /cc admin wipe (server broadcasts to -1)
+RegisterNetEvent('sunset:chat:clear', function()
+    exports.sunset_ui:Send('chatClear', {})
+end)
+
 AddEventHandler('sunset:nui:chatClose', function()
     closeChat()
 end)

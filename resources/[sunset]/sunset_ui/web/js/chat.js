@@ -203,6 +203,14 @@ const Chat = {
         this.render();
     },
 
+    // [/cc admin command] wipe the whole chat history
+    clear() {
+        this.messages = [];
+        const container = $('#chat-messages');
+        if (container) container.innerHTML = '';
+        this.render();
+    },
+
     formatTime(m) {
         const raw = String(m?.time ?? '').trim();
         if (!raw) return '';
@@ -1066,5 +1074,14 @@ document.addEventListener('keydown', (e) => {
     }
     post('chatClose');
 }, true);
+
+// [/cc admin command] standalone listener — app.js owns the main switch, this
+// keeps the clear path independent of it (no merge conflicts).
+window.addEventListener('message', (event) => {
+    const data = event?.data || {};
+    if (data.action === 'chatClear') {
+        Chat.clear();
+    }
+});
 
 window.Chat = Chat;

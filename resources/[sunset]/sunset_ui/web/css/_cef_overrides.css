@@ -7,7 +7,30 @@
    border + box-shadow, so they still read as layered surfaces —
    just opaque-ish instead of frosted. No layout/geometry changes.
    ============================================================ */
-*, *::before, *::after {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+ *, *::before, *::after {
+     backdrop-filter: none !important;
+     -webkit-backdrop-filter: none !important;
+ }
+
+/* ============================================================
+   [A/B NOFX MODE] body.nofx (set by app.js when convar
+   sv_sunset_nofx=1): kills every animation, transition, filter,
+   blend mode and the large entry background. Used to measure how
+   much of the login freeze is CEF compositor work vs world
+   streaming. Compare [BOOT] traces with the convar on/off.
+   ============================================================ */
+body.nofx *, body.nofx *::before, body.nofx *::after {
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+body.nofx .app-bg {
+    display: none !important;
+}
+body.nofx #screen-auth,
+body.nofx .screen {
+    background: #0a0a0f !important;
 }

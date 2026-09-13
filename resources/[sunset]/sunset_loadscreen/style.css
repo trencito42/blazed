@@ -56,6 +56,23 @@ html, body {
     100% { transform: scale(1.1) translate(-2%, 2%); }
 }
 
+/* [A/B NOFX MODE] sv_sunset_nofx 1: flat background, zero animations, zero
+   filters/blends — isolates how much of the login freeze is compositor work
+   vs world streaming. Compare [BOOT] traces with nofx on vs off. */
+body.nofx .bg-container {
+    background: #050508 !important;
+    animation: none !important;
+}
+body.nofx .loadscreen,
+body.nofx .loadscreen.fade-out { transition: none !important; }
+body.nofx .loadscreen.is-handoff .hud-wrapper {
+    filter: none !important;
+    transform: none !important;
+    transition: opacity 200ms linear !important;
+}
+body.nofx .vignette { display: none !important; }
+body.nofx * { animation: none !important; }
+
 .vignette {
     position: absolute;
     inset: 0;

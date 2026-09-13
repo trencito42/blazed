@@ -5,19 +5,41 @@ const filesEl = document.getElementById('loading-files');
 const tipTextEl = document.getElementById('tip-text');
 const rpmContainer = document.getElementById('rpm-bar');
 
-// [BOOT TRACE] Timestamped console logs for the loadscreen->login handoff.
-// Crash debugging: read these in the F8 console (or client log) to see the
-// exact last stage reached before FiveM dies.
+// [BOOT TRACE v2] ABSOLUTE epoch-ms timestamps (Date.now()) so every context
+// (loadscreen CEF, core Lua, sunset_ui NUI) can be correlated on ONE timeline.
+// Lua side calibrates to the same epoch via sunset_ui's nuiEpoch handshake.
 const BOOT_T0 = Date.now();
 function btrace(stage, extra) {
     try {
-        console.log(`[BOOT +${Date.now() - BOOT_T0}ms] loadscreen: ${stage}${extra ? ' | ' + extra : ''}`);
+        console.log(`[BOOT ${Date.now()} (+${Date.now() - BOOT_T0}ms)] loadscreen: ${stage}${extra ? ' | ' + extra : ''}`);
     } catch (_) { /* console unavailable */ }
 }
 btrace('script start');
 window.addEventListener('error', (e) => {
     btrace('JS ERROR', `${e.message} @ ${e.filename}:${e.lineno}`);
 });
+
+// [FREEZE WATCHDOG] rAF frame-gap detector for the loadscreen CEF: a gap
+// > 300ms means this window stopped rendering (main thread blocked).
+(function frameWatchdog() {
+    let last = performance.now();
+    function frame() {
+        const now = performance.now();
+        const gap = now - last;
+        last = now;
+        if (gap > 300) btrace('CEF FRAME GAP', `${Math.round(gap)}ms frozen`);
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+})();
+
+// [A/B NOFX MODE] Client Lua sends {eventName:'nofx'} when convar
+// sv_sunset_nofx=1: kills every animation/filter and swaps the big bg for a
+// flat color, so we can measure how much of the freeze is compositor work.
+function applyNofx() {
+    btrace('nofx mode ON (animations/filters/big bg disabled)');
+    document.body.classList.add('nofx');
+}
 
 const TOTAL_SEGMENTS = 25;
 const TASKS = [
@@ -84,9 +106,14 @@ function setProgress(pct, task, files) {
 }
 
 function finishHandoff() {
-    btrace('handoff received -> finishing');
+    btrace('handoff received -> animations off');
     clearTimeout(simTimer);
     simTimer = null;
+    // [A/B NOFX] kill every animation/filter BEFORE the compositor competes
+    // with the incoming NUI + world streaming.
+    if (document.body.classList.contains('nofx')) {
+        btrace('nofx: skipping segment animation, flat fade');
+    }
     setProgress(100, 'Entering session...', '');
     segments.forEach((seg) => {
         seg.classList.add('active');
@@ -96,6 +123,7 @@ function finishHandoff() {
     setTimeout(() => {
         btrace('fade-out started');
         loadscreen.classList.add('fade-out');
+        setTimeout(() => btrace('fade-out complete (still alive)'), 600);
     }, 90);
 }
 
@@ -115,6 +143,9 @@ const handlers = {
     sunsetHandoff() {
         useRealProgress = true;
         finishHandoff();
+    },
+    nofx() {
+        applyNofx();
     },
     loadProgress(data) {
         useRealProgress = true;

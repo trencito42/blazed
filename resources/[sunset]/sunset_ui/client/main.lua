@@ -78,6 +78,29 @@ function Send(action, data)
 end
 exports('Send', Send)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [BOOT TRACE v2] Epoch calibration bridge.
+--  The NUI (app.js) posts 'bootEpoch' with Date.now() when it parses;
+--  we pair it with GetGameTimer() at receipt so any Lua resource can
+--  convert to absolute epoch-ms and correlate with JS-side traces.
+-- ═══════════════════════════════════════════════════════════════
+local nuiEpochOffset = nil -- Date.now() - GetGameTimer()
+
+RegisterNUICallback('bootEpoch', function(data, cb)
+    local dateNow = tonumber(type(data) == 'table' and data.now)
+    if dateNow and dateNow > 0 then
+        nuiEpochOffset = dateNow - GetGameTimer()
+        print(('^5[BOOT %d]^7 nui: bootEpoch calibrated (offset=%d)'):format(dateNow, nuiEpochOffset))
+    end
+    cb('ok')
+end)
+
+function GetBootEpoch()
+    if not nuiEpochOffset then return nil end
+    return GetGameTimer() + nuiEpochOffset
+end
+exports('GetBootEpoch', GetBootEpoch)
+
 function HideHudChrome()
     Send('hudChromeHide', { show = false })
 end
