@@ -15,7 +15,7 @@ files {
     'index.html',
     'style.css',
     'script.js',
-    'assets/sunset.png',
+    'assets/sunset.webp',
     'assets/logoblaze.svg',
     -- [AUDIT P7-05] self-hosted fonts
     'assets/fonts/gfonts.css',

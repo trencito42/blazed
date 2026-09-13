@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,900;1,800;1,900&display=swap');
+@import url('../assets/fonts/montserrat.css');
 
 @font-face {
     font-family: 'Pricedown';
@@ -10,7 +10,7 @@
 
 @font-face {
     font-family: 'Chakra Petch';
-    src: url('../assets/fonts/chakra-petch-400.ttf') format('truetype');
+    src: url('../assets/fonts/chakra-petch-400.woff2') format('woff2');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -18,7 +18,7 @@
 
 @font-face {
     font-family: 'Chakra Petch';
-    src: url('../assets/fonts/chakra-petch-500.ttf') format('truetype');
+    src: url('../assets/fonts/chakra-petch-500.woff2') format('woff2');
     font-weight: 500;
     font-style: normal;
     font-display: swap;
@@ -26,7 +26,7 @@
 
 @font-face {
     font-family: 'Chakra Petch';
-    src: url('../assets/fonts/chakra-petch-600.ttf') format('truetype');
+    src: url('../assets/fonts/chakra-petch-600.woff2') format('woff2');
     font-weight: 600;
     font-style: normal;
     font-display: swap;
@@ -34,7 +34,7 @@
 
 @font-face {
     font-family: 'Chakra Petch';
-    src: url('../assets/fonts/chakra-petch-700.ttf') format('truetype');
+    src: url('../assets/fonts/chakra-petch-700.woff2') format('woff2');
     font-weight: 700;
     font-style: normal;
     font-display: swap;
@@ -42,7 +42,7 @@
 
 @font-face {
     font-family: 'Rajdhani';
-    src: url('../assets/fonts/rajdhani-400.ttf') format('truetype');
+    src: url('../assets/fonts/rajdhani-400.woff2') format('woff2');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -50,7 +50,7 @@
 
 @font-face {
     font-family: 'Rajdhani';
-    src: url('../assets/fonts/rajdhani-500.ttf') format('truetype');
+    src: url('../assets/fonts/rajdhani-500.woff2') format('woff2');
     font-weight: 500;
     font-style: normal;
     font-display: swap;
@@ -58,7 +58,7 @@
 
 @font-face {
     font-family: 'Rajdhani';
-    src: url('../assets/fonts/rajdhani-600.ttf') format('truetype');
+    src: url('../assets/fonts/rajdhani-600.woff2') format('woff2');
     font-weight: 600;
     font-style: normal;
     font-display: swap;
@@ -66,7 +66,7 @@
 
 @font-face {
     font-family: 'Rajdhani';
-    src: url('../assets/fonts/rajdhani-700.ttf') format('truetype');
+    src: url('../assets/fonts/rajdhani-700.woff2') format('woff2');
     font-weight: 700;
     font-style: normal;
     font-display: swap;

@@ -74,7 +74,7 @@ const TaxiPhoneMap = {
             maxBoundsViscosity: 1,
         });
 
-        this.layer = L.imageOverlay('assets/gta-map.jpg?v=3', this.bounds, {
+        this.layer = L.imageOverlay('assets/gta-map.webp?v=4', this.bounds, {
             interactive: false,
         }).addTo(map);
 

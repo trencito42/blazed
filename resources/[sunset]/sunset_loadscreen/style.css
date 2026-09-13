@@ -46,7 +46,7 @@ html, body {
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: #050508 url('assets/sunset.png?v=1') no-repeat center center;
+    background: #050508 url('assets/sunset.webp?v=2') no-repeat center center;
     background-size: cover;
     animation: slowPan 40s linear infinite alternate;
 }
