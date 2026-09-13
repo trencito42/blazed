@@ -274,7 +274,7 @@ const Panels = {
             regForm.classList.toggle('hidden', tab !== 'register');
         }
         if (slider) slider.classList.toggle('show-register', tab === 'register');
-        if (title) title.textContent = tab === 'register' ? 'Creează Cont' : 'Loghează-te';
+        if (title) title.textContent = tab === 'register' ? 'Create Account' : 'Log In';
     },
 
     showAuth(data = {}) {
@@ -1262,7 +1262,7 @@ const Panels = {
                     <div class="menu-vcard__meta">${v.garage || 'legion'}</div>
                     <div class="menu-vcard__insurance">
                         <span class="insurance-badge">🛡️ Insurance: <strong>${points} pts</strong></span>
-                        <span class="insurance-level ${level > 1 ? 'is-elevated' : ''}">Nivel ${level}/11</span>
+                        <span class="insurance-level ${level > 1 ? 'is-elevated' : ''}">Level ${level}/11</span>
                         <span class="insurance-cost">Claim fee: ${formatMoney(claimCost)}</span>
                     </div>
                     ${window.Menu ? window.Menu.formatEcuBlock(v.ecuInfo, v.id) : ''}
@@ -1570,7 +1570,7 @@ const Panels = {
 
         // Reset side panel
         sideTitle.textContent = 'JOB DETAILS';
-        detailEl.innerHTML = '<p class="jobcenter-details__hint">Selecteaza un job din lista</p>';
+        detailEl.innerHTML = '<p class="jobcenter-details__hint">Select a job from the list</p>';
         hireBtn.disabled = true;
         waypointBtn.classList.add('hidden');
 

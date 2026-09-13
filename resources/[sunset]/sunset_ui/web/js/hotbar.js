@@ -71,7 +71,7 @@ const HotbarUI = {
             container.insertAdjacentHTML('afterbegin', `
                 <div class="wheel-center">
                     <div class="wheel-center-title" id="wheel-title">Emotes</div>
-                    <div class="wheel-center-desc" id="wheel-desc">Selectează</div>
+                    <div class="wheel-center-desc" id="wheel-desc">Select</div>
                 </div>
             `);
         }
@@ -100,8 +100,8 @@ const HotbarUI = {
         overlay.classList.add('active');
 
         const hint = count
-            ? 'Mișcă privirea / 1-9 · eliberează [X]'
-            : 'Niciun emote încărcat';
+            ? 'Move view / 1-9 and release [X]'
+            : 'No emotes loaded';
         this._setWheelCenter('Emotes', hint);
     },
 
@@ -148,7 +148,7 @@ const HotbarUI = {
             }
         });
         const emote = this.emotes[index];
-        if (emote) this._setWheelCenter(emote.label || emote.name, 'Selectat');
+        if (emote) this._setWheelCenter(emote.label || emote.name, 'Selected');
     },
 
     _clearWheelSelection() {
@@ -158,7 +158,7 @@ const HotbarUI = {
             el.classList.remove('hovered');
             el.style.transform = el.getAttribute('data-transform') || '';
         });
-        this._setWheelCenter('Emotes', 'Selectează');
+        this._setWheelCenter('Emotes', 'Select');
     },
 
     _releaseWheel() {

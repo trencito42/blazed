@@ -123,7 +123,7 @@ const InventoryForza = {
         if (!nearby.length) {
             const empty = document.createElement('div');
             empty.className = 'prox-empty';
-            empty.textContent = 'Niciun jucător în zonă (3m).';
+            empty.textContent = 'No players nearby (3m).';
             list.appendChild(empty);
             return;
         }
@@ -133,7 +133,7 @@ const InventoryForza = {
             card.className = 'prox-player';
             card.dataset.playerId = String(player.id);
             card.innerHTML = `
-                <div class="prox-id">ID Jucător: ${player.id}</div>
+                <div class="prox-id">Player ID: ${player.id}</div>
                 <div class="prox-name">${player.name || `Player #${player.id}`}</div>
                 <div class="prox-actions">
                     <div class="prox-hint"><i class="ph-bold ph-handshake"></i> Click pt. Trade</div>

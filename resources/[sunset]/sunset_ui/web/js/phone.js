@@ -356,7 +356,7 @@ const Phone = {
             const otherCharId = isMine ? m.receiver_character_id : m.sender_character_id;
             const is112 = otherCharId === 0 || otherCharId === -112 || String(otherCharId) === '-112';
             let otherName = isMine ? (m.receiver_name || 'Player') : (m.sender_name || 'Player');
-            if (is112) otherName = '112 Urgențe';
+            if (is112) otherName = '112 Emergency';
 
             const key = String(otherCharId);
             const existing = threads.get(key) || {
@@ -530,28 +530,28 @@ const Phone = {
             const emRow = document.createElement('div');
             emRow.className = 'phone-contact-row phone-contact-row--emergency';
             emRow.innerHTML = `
-                <button type="button" class="phone-contact-row__main" title="Apel 112 Urgențe">
+                <button type="button" class="phone-contact-row__main" title="Call 112 Emergency">
                     <div class="phone-contact-row__avatar phone-contact-row__avatar--emergency">
                         <svg viewBox="0 0 24 24" fill="white" class="phone-contact-row__sos-icon"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
                         <span class="phone-contact-row__status-dot is-online"></span>
                     </div>
                     <div class="phone-contact-row__details">
                         <div class="phone-contact-row__name">
-                            112 Urgențe
+                            112 Emergency
                             <span class="phone-contact-badge phone-contact-badge--emergency">SOS</span>
                         </div>
                         <div class="phone-contact-row__meta">
                             <span class="phone-contact-num">112</span>
                             <span>·</span>
-                            <span class="phone-contact-desc">Poliție · Salvare · Pompieri</span>
+                            <span class="phone-contact-desc">Police / Medical / Fire</span>
                         </div>
                     </div>
                 </button>
                 <div class="phone-contact-row__actions">
-                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--call" title="Apelează 112 Dispecerat">
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--call" title="Call 112 Dispatch">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.053 15.053 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 3.9c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-.99-1.02z"/></svg>
                     </button>
-                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--chat" title="Trimite iMessage la 112">
+                    <button type="button" class="phone-contact-act-btn phone-contact-act-btn--chat" title="Send iMessage to 112">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                     </button>
                 </div>
@@ -567,7 +567,7 @@ const Phone = {
             emRow.querySelector('.phone-contact-act-btn--chat').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.openChat({
-                    name: '112 Urgențe',
+                    name: '112 Emergency',
                     charId: -112,
                     phone: '112',
                     isEmergency: true,
@@ -687,7 +687,7 @@ const Phone = {
         const sub = $('#phone-chat-subtitle');
         if (sub) {
             if (is112) {
-                sub.textContent = 'iMessage · Dispecerat 112';
+                sub.textContent = 'iMessage · 112 Dispatch';
             } else if (target.phone) {
                 sub.textContent = `${target.phone} · ${online ? 'iMessage' : 'Offline'}`;
             } else {
@@ -708,7 +708,7 @@ const Phone = {
 
         const input = $('#phone-chat-input');
         if (input) {
-            input.placeholder = is112 ? 'Mesaj către 112...' : 'iMessage';
+            input.placeholder = is112 ? 'Message to 112...' : 'iMessage';
             input.value = '';
         }
         const sendBtn = $('#phone-chat-send');
@@ -739,15 +739,15 @@ const Phone = {
         const infoBanner = document.createElement('div');
         infoBanner.className = 'phone-chat__info-banner';
         infoBanner.innerHTML = is112
-            ? '<span>🚨 Dispecerat Național 112 · Serviciu Oficial</span>'
-            : '<span>iMessage cu ' + this.escapeHtml(target.name || 'Contact') + '</span>';
+            ? '<span>🚨 National 112 Dispatch - Official Service</span>'
+            : '<span>iMessage with ' + this.escapeHtml(target.name || 'Contact') + '</span>';
         wrap.appendChild(infoBanner);
 
         if (!msgs.length) {
             const emptyEl = document.createElement('div');
             emptyEl.className = 'phone-chat__empty';
             emptyEl.innerHTML = is112
-                ? '<div class="phone-chat__empty-icon">🚨</div><p>Canal direct SMS cu Dispeceratul 112.<br>Scrieți locația și urgența sau folosiți butonul de apel.</p>'
+                ? '<div class="phone-chat__empty-icon">🚨</div><p>Direct SMS channel with 112 Dispatch.<br>Send your location and emergency, or use the call button.</p>'
                 : '<div class="phone-chat__empty-icon">👋</div><p>Say hi to ' + this.escapeHtml(target.name || 'them') + '</p>';
             wrap.appendChild(emptyEl);
             return;
@@ -805,17 +805,17 @@ const Phone = {
 
     bankReasonLabel(reason) {
         const map = {
-            payday: 'Salariu Facțiune',
-            shop: 'Achiziție Magazin',
-            shop_refund: 'Rambursare Magazin',
-            atm_deposit: 'Depunere ATM',
-            atm_withdraw: 'Retragere ATM',
+            payday: 'Faction Salary',
+            shop: 'Shop Purchase',
+            shop_refund: 'Shop Refund',
+            atm_deposit: 'ATM Deposit',
+            atm_withdraw: 'ATM Withdrawal',
             bank_transfer_out: 'Transfer Bancar',
             bank_transfer_in: 'Transfer Primit',
-            buy_level: 'Cumpărare Level',
+            buy_level: 'Level Purchase',
         };
         const key = String(reason || '').toLowerCase();
-        return map[key] || reason || 'Tranzacție';
+        return map[key] || reason || 'Transaction';
     },
 
     formatTxDate(raw) {
@@ -828,8 +828,8 @@ const Phone = {
         yesterday.setDate(now.getDate() - 1);
         const isYesterday = d.toDateString() === yesterday.toDateString();
         const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (sameDay) return `Astăzi, ${time}`;
-        if (isYesterday) return `Ieri, ${time}`;
+        if (sameDay) return `Today, ${time}`;
+        if (isYesterday) return `Yesterday, ${time}`;
         return d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + `, ${time}`;
     },
 
@@ -859,7 +859,7 @@ const Phone = {
         });
 
         if (!list.children.length) {
-            list.innerHTML = '<p class="phone-fleeca__tx-empty">Nicio tranzacție înregistrată încă.</p>';
+            list.innerHTML = '<p class="phone-fleeca__tx-empty">No transactions recorded yet.</p>';
         }
     },
 
@@ -886,11 +886,11 @@ const Phone = {
         const targetId = Number($('#phone-bank-target-id')?.value);
         const amount = Number($('#phone-bank-amount')?.value);
         if (!targetId || targetId < 1) {
-            this.showBankNotify('ID jucător invalid!', true);
+            this.showBankNotify('Invalid player ID!', true);
             return;
         }
         if (!amount || amount < 1) {
-            this.showBankNotify('Sumă invalidă!', true);
+            this.showBankNotify('Invalid amount!', true);
             return;
         }
         if (amount > Number(this.data?.bank || 0)) {

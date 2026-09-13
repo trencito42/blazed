@@ -278,7 +278,7 @@
 
             $('#mdc-license-confirm')?.addEventListener('click', () => {
                 if (!this.targetModalPlayerId) return;
-                const reason = $('#mdc-license-custom-reason')?.value?.trim() || 'Viteză excesivă (+50 km/h) / Conducere pe contrasens';
+                const reason = $('#mdc-license-custom-reason')?.value?.trim() || 'Excessive speed (+50 km/h) / Wrong-way driving';
                 const licType = this.selectedLicenseType || 'driver';
                 post('mdcSuspendLicense', {
                     targetId: this.targetModalPlayerId,
@@ -815,12 +815,12 @@
                     tuningHtml = `
                         <div class="mdc-dmv-tuning-box is-tuned">
                             <div class="mdc-tuning-header">
-                                <span class="mdc-tuning-badge is-tuned">[MODIFICAT] STAGE TUNE</span>
-                                <button type="button" class="mdc-tuning-toggle-btn" data-plate="${v.plate}">Fișă RAR ▼</button>
+                                <span class="mdc-tuning-badge is-tuned">[MODIFIED] STAGE TUNE</span>
+                                <button type="button" class="mdc-tuning-toggle-btn" data-plate="${v.plate}">Tuning Record ▼</button>
                             </div>
                             <div class="mdc-tuning-chips">${chips}</div>
                             <div class="mdc-tuning-details hidden" id="tune-details-${v.plate}">
-                                <div class="mdc-tuning-summary">${tune.summary || 'Modificări ECU / Motor'}</div>
+                                <div class="mdc-tuning-summary">${tune.summary || 'ECU / Engine Modifications'}</div>
                                 <div class="mdc-tuning-grid">
                                     ${lines}
                                     ${mods}
@@ -833,7 +833,7 @@
                     tuningHtml = `
                         <div class="mdc-dmv-tuning-box is-stock">
                             <div class="mdc-tuning-header">
-                                <span class="mdc-tuning-badge is-stock">[CONFORM] FACTORY STOCK (RAR)</span>
+                                <span class="mdc-tuning-badge is-stock">[COMPLIANT] FACTORY STOCK (DMV)</span>
                             </div>
                             ${mods ? `<div class="mdc-tuning-grid" style="margin-top: 4px;">${mods}</div>` : ''}
                         </div>
@@ -842,7 +842,7 @@
                     tuningHtml = `
                         <div class="mdc-dmv-tuning-box is-stock">
                             <div class="mdc-tuning-header">
-                                <span class="mdc-tuning-badge is-stock">[CONFORM] FACTORY STOCK (RAR)</span>
+                                <span class="mdc-tuning-badge is-stock">[COMPLIANT] FACTORY STOCK (DMV)</span>
                             </div>
                         </div>
                     `;
@@ -890,7 +890,7 @@
                     const details = $(`#tune-details-${plate}`);
                     if (details) {
                         const isHidden = details.classList.toggle('hidden');
-                        btn.textContent = isHidden ? 'Fișă RAR ▼' : 'Închide ▲';
+                        btn.textContent = isHidden ? 'Tuning Record ▼' : 'Close ▲';
                     }
                 });
             });
@@ -1190,7 +1190,7 @@
             const label = $('#mdc-license-target-label');
             const customInput = $('#mdc-license-custom-reason');
 
-            if (label) label.textContent = `Cetățean: ${targetName} (#${targetId})`;
+            if (label) label.textContent = `Citizen: ${targetName} (#${targetId})`;
             if (customInput) customInput.value = '';
 
             // Reset chips

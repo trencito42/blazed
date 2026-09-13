@@ -172,10 +172,10 @@ const RadarAlert = {
         const duration = Math.max(2500, Number(data.duration) || 7500);
 
         if (this._title) {
-            this._title.textContent = data.title || (data.type === 'mobile' ? 'POLIȚIA RUTIERĂ — RADAR' : 'RADAR FIX — SPEED CAMERA');
+            this._title.textContent = data.title || (data.type === 'mobile' ? 'HIGHWAY PATROL - RADAR' : 'FIXED RADAR - SPEED CAMERA');
         }
         if (this._meta) {
-            this._meta.textContent = data.location ? `${String(data.location).toUpperCase()} · LIMITĂ ${limit} KM/H` : `LIMITĂ LEGALĂ: ${limit} KM/H`;
+            this._meta.textContent = data.location ? `${String(data.location).toUpperCase()} · SPEED LIMIT ${limit} KM/H` : `SPEED LIMIT: ${limit} KM/H`;
         }
         if (this._badge) {
             this._badge.textContent = `+${over} KM/H`;
@@ -186,14 +186,14 @@ const RadarAlert = {
         if (this._sub) {
             if (fine > 0) {
                 this._sub.textContent = paid
-                    ? `AMENDĂ AUTOMATĂ: -$${fine.toLocaleString('en-US')} (DEBITAT DIN CONT)`
-                    : `AMENDĂ AUTOMATĂ: $${fine.toLocaleString('en-US')} (NEACHITAT)`;
+                    ? `AUTOMATIC FINE: -$${fine.toLocaleString('en-US')} (CHARGED TO ACCOUNT)`
+                    : `AUTOMATIC FINE: $${fine.toLocaleString('en-US')} (UNPAID)`;
                 this._sub.style.display = 'inline-block';
             } else if (data.officer) {
-                this._sub.textContent = `ÎNREGISTRAT DE ${String(data.officer).toUpperCase()}`;
+                this._sub.textContent = `RECORDED BY ${String(data.officer).toUpperCase()}`;
                 this._sub.style.display = 'inline-block';
             } else {
-                this._sub.textContent = 'VITEZĂ EXCESIVĂ ÎNREGISTRATĂ';
+                this._sub.textContent = 'EXCESSIVE SPEED RECORDED';
                 this._sub.style.display = 'inline-block';
             }
         }
@@ -205,11 +205,11 @@ const RadarAlert = {
             if (fine > 0) {
                 this._statFine.textContent = paid ? `-$${fine.toLocaleString('en-US')}` : `$${fine.toLocaleString('en-US')}`;
                 this._statFine.className = paid ? 'radar-alert__stat-value is-paid' : 'radar-alert__stat-value is-fine';
-                if (this._statFineLabel) this._statFineLabel.textContent = paid ? 'Debitat Cont' : 'Amendă Neachitată';
+                if (this._statFineLabel) this._statFineLabel.textContent = paid ? 'Charged to Account' : 'Unpaid Fine';
             } else {
-                this._statFine.textContent = 'Avertisment';
+                this._statFine.textContent = 'Warning';
                 this._statFine.className = 'radar-alert__stat-value is-danger';
-                if (this._statFineLabel) this._statFineLabel.textContent = 'Sancțiune';
+                if (this._statFineLabel) this._statFineLabel.textContent = 'Penalty';
             }
         }
 

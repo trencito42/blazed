@@ -5,7 +5,7 @@ const FACTION_ICONS = {
 };
 
 const FACTION_FILTER_TITLES = {
-    all: 'Toate Facțiunile',
+    all: 'All Factions',
     legal: 'Departamente Legale',
     illegal: 'Mafii / Gang-uri',
     service: 'Servicii / Afaceri',
@@ -98,15 +98,15 @@ const FactionPanels = {
 
     factionTypeLabel(faction) {
         const map = {
-            law_enforcement: 'Departament Public',
-            ems: 'Serviciu Medical',
-            fire_rescue: 'Pompieri / Salvare',
+            law_enforcement: 'Public Department',
+            ems: 'Medical Service',
+            fire_rescue: 'Fire / Rescue',
             transport: 'Transport',
-            mechanic: 'Mecanici / Tuning',
-            education: 'Educație / Licențe',
-            criminal_org: 'Organizație Criminală',
+            mechanic: 'Mechanics / Tuning',
+            education: 'Education / Licenses',
+            criminal_org: 'Criminal Organization',
         };
-        return map[faction?.factionType] || String(faction?.factionType || 'Organizație').replaceAll('_', ' ');
+        return map[faction?.factionType] || String(faction?.factionType || 'Organization').replaceAll('_', ' ');
     },
 
     renderCommands(commands) {
@@ -176,7 +176,7 @@ const FactionPanels = {
     populateManageSelect(members, viewerCharacterId) {
         const select = $('#faction-manage-select');
         if (!select) return;
-        select.innerHTML = '<option value="" disabled selected>Alege un membru...</option>';
+        select.innerHTML = '<option value="" disabled selected>Select a member...</option>';
         (members || []).forEach((member) => {
             if (Number(member.characterId) === Number(viewerCharacterId)) return;
             const opt = document.createElement('option');
@@ -200,7 +200,7 @@ const FactionPanels = {
         const select = $('#faction-manage-select');
         const characterId = Number(select?.value);
         if (!characterId) {
-            return notify('Selectează un membru mai întâi.', 'error');
+            return notify('Select a member first.', 'error');
         }
         if (action === 'rankDelta') {
             this.postAction('rankDelta', { characterId, delta: payload });
@@ -317,7 +317,7 @@ const FactionPanels = {
         const online = members.filter((m) => m.online).length;
 
         const title = $('#faction-panel-title');
-        if (title) title.textContent = data.label || 'Facțiune';
+        if (title) title.textContent = data.label || 'Faction';
         const typeEl = $('#faction-panel-type');
         if (typeEl) typeEl.textContent = this.factionTypeLabel(data);
 
@@ -412,7 +412,7 @@ const FactionPanels = {
 
             const leaders = Array.isArray(faction.leaders) && faction.leaders.length ? faction.leaders[0] : 'Vacant';
             const recruitClass = faction.applicationsOpen ? 'is-open' : 'is-closed';
-            const recruitLabel = faction.applicationsOpen ? 'Recrutări Deschise' : 'Recrutări Închise';
+            const recruitLabel = faction.applicationsOpen ? 'Recruiting Open' : 'Recruiting Closed';
 
             card.innerHTML = `
                 <div class="premium-factions-dir__card-head">
@@ -423,8 +423,8 @@ const FactionPanels = {
                     </div>
                 </div>
                 <div class="premium-factions-dir__card-stats">
-                    <div class="premium-factions-dir__stat-row"><span>Lider:</span><b>${this.escape(leaders)}</b></div>
-                    <div class="premium-factions-dir__stat-row"><span>Membri:</span><b><span class="highlight">${Number(faction.online) || 0}</span> / ${Number(faction.total) || 0}</b></div>
+                    <div class="premium-factions-dir__stat-row"><span>Leader:</span><b>${this.escape(leaders)}</b></div>
+                    <div class="premium-factions-dir__stat-row"><span>Members:</span><b><span class="highlight">${Number(faction.online) || 0}</span> / ${Number(faction.total) || 0}</b></div>
                 </div>
                 <div class="premium-factions-dir__recruit ${recruitClass}"><div class="dot"></div>${recruitLabel}</div>
             `;
@@ -450,9 +450,9 @@ const FactionPanels = {
         if (icon) icon.innerHTML = FACTION_ICONS[cat] || FACTION_ICONS.service;
         $('#faction-dir-modal-title').textContent = faction.label || faction.id;
         $('#faction-dir-modal-desc').textContent = faction.description || 'No public intel.';
-        $('#faction-dir-modal-motd').textContent = 'Se încarcă...';
-        $('#faction-dir-modal-leaders').innerHTML = '<li>Se încarcă...</li>';
-        $('#faction-dir-modal-roster').innerHTML = '<p class="premium-factions-dir__empty">Se încarcă...</p>';
+        $('#faction-dir-modal-motd').textContent = 'Loading...';
+        $('#faction-dir-modal-leaders').innerHTML = '<li>Loading...</li>';
+        $('#faction-dir-modal-roster').innerHTML = '<p class="premium-factions-dir__empty">Loading...</p>';
         $('#faction-dir-modal-recruit').innerHTML = `<li>${this.escape(faction.applicationLabel || '—')}</li>`;
 
         const btn = $('#faction-dir-modal-btn');
@@ -463,10 +463,10 @@ const FactionPanels = {
                 btn.textContent = 'Doar In-Character (IC)';
             } else if (faction.recruiting) {
                 btn.disabled = false;
-                btn.textContent = 'Trimite CV (Aplică)';
+                btn.textContent = 'Send Application';
             } else {
                 btn.disabled = true;
-                btn.textContent = 'Aplicații Închise';
+                btn.textContent = 'Applications Closed';
             }
         }
 
@@ -479,7 +479,7 @@ const FactionPanels = {
             return;
         }
 
-        $('#faction-dir-modal-motd').textContent = detail.motd || 'Niciun MOTD publicat.';
+        $('#faction-dir-modal-motd').textContent = detail.motd || 'No MOTD published.';
         const leaders = $('#faction-dir-modal-leaders');
         if (leaders) {
             leaders.innerHTML = '';
@@ -501,7 +501,7 @@ const FactionPanels = {
                 roster.appendChild(row);
             });
             if (!roster.children.length) {
-                roster.innerHTML = '<p class="premium-factions-dir__empty">Niciun membru înregistrat.</p>';
+                roster.innerHTML = '<p class="premium-factions-dir__empty">No members registered.</p>';
             }
         }
 
@@ -524,7 +524,7 @@ const FactionPanels = {
 
     applyFaction() {
         if (!this.selectedFaction) return;
-        this.showToast(`Aplicație trimisă la ${this.selectedFaction.label || this.selectedFaction.id}!`);
+        this.showToast(`Application sent to ${this.selectedFaction.label || this.selectedFaction.id}!`);
         this.closeDirectoryModal();
     },
 
@@ -552,7 +552,7 @@ const FactionPanels = {
         if (action === 'invite') {
             const targetId = Math.floor(Number(data.get('targetId')));
             if (!targetId || targetId < 1) {
-                return notify('Introdu un Server ID valid (ține Z pentru listă).', 'error');
+                return notify('Enter a valid Server ID (hold Z for the list).', 'error');
             }
             payload.targetId = targetId;
         }
@@ -560,7 +560,7 @@ const FactionPanels = {
         if (action === 'warn') {
             const targetId = Math.floor(Number(data.get('targetId')));
             if (!targetId || targetId < 1) {
-                return notify('Introdu un Server ID valid (ține Z pentru listă).', 'error');
+                return notify('Enter a valid Server ID (hold Z for the list).', 'error');
             }
             payload.targetId = targetId;
             payload.reason = String(data.get('reason') || 'No reason given').trim();

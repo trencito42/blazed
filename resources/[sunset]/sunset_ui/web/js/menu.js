@@ -259,15 +259,15 @@ const Menu = {
     },
 
     vmenuStatusTag(key) {
-        if (key === 'garage') return { cls: 'garage', label: 'Garaj' };
-        if (key === 'out' || key === 'parked') return { cls: 'out', label: key === 'parked' ? 'Parcat' : 'Stradă' };
+        if (key === 'garage') return { cls: 'garage', label: 'Garage' };
+        if (key === 'out' || key === 'parked') return { cls: 'out', label: key === 'parked' ? 'Parked' : 'Street' };
         return { cls: 'impound', label: 'Confiscat' };
     },
 
     vmenuTuningList(ecuInfo) {
         const ecu = ecuInfo || {};
         if (ecu.stock) {
-            return '<div class="tuning-item" style="color:rgba(255,255,255,0.4)">Fără modificări</div>';
+            return '<div class="tuning-item" style="color:rgba(255,255,255,0.4)">No modifications</div>';
         }
         const lines = (ecu.lines || []).slice(0, 6);
         if (!lines.length) {
@@ -296,11 +296,11 @@ const Menu = {
         const stored = !isDestroyed && (v.stored === true || v.stored === 1 || v.stored === '1' || Number(v.stored) === 1);
         const inWorld = !isDestroyed && v.inWorld === true;
         const hasPark = Number.isFinite(Number(v.parked_x)) && Number.isFinite(Number(v.parked_y));
-        if (isDestroyed) return { key: 'impound', label: 'Confiscat / Asigurare', stored: false, inWorld: false, isDestroyed: true };
-        if (stored) return { key: 'garage', label: `Garaj · ${v.garage || 'Central'}`, stored, inWorld };
-        if (inWorld) return { key: 'out', label: v.garage || 'Stradă', stored, inWorld };
-        if (hasPark) return { key: 'parked', label: 'Parcat', stored, inWorld };
-        return { key: 'impound', label: 'Indisponibil', stored, inWorld };
+        if (isDestroyed) return { key: 'impound', label: 'Impounded / Insurance', stored: false, inWorld: false, isDestroyed: true };
+        if (stored) return { key: 'garage', label: `Garage · ${v.garage || 'Central'}`, stored, inWorld };
+        if (inWorld) return { key: 'out', label: v.garage || 'Street', stored, inWorld };
+        if (hasPark) return { key: 'parked', label: 'Parked', stored, inWorld };
+        return { key: 'impound', label: 'Unavailable', stored, inWorld };
     },
 
     _bindVehicleImpoundHold(root, vehicleId, claimCost) {
@@ -330,7 +330,7 @@ const Menu = {
         hold.onpointerup = reset;
         hold.onpointerleave = reset;
         const label = hold.querySelector('.bh-text');
-        if (label) label.innerHTML = `<span class="key">ENTER</span> Achită Cauțiunea (${formatMoney(claimCost)})`;
+        if (label) label.innerHTML = `<span class="key">ENTER</span> Pay Impound Fee (${formatMoney(claimCost)})`;
     },
 
     renderVehicles(data) {
@@ -349,7 +349,7 @@ const Menu = {
 
         if (!vehicles.length) {
             this.selectedVehicleId = null;
-            grid.innerHTML = '<div class="vmenu-empty"><strong>Fără Vehicule</strong><span>Mașinile tale vor apărea aici.</span></div>';
+            grid.innerHTML = '<div class="vmenu-empty"><strong>No Vehicles</strong><span>Your cars will appear here.</span></div>';
             return;
         }
 
@@ -396,23 +396,23 @@ const Menu = {
 
         let mainAction = '';
         let gpsAction = `<button type="button" class="btn-action secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-crosshair"></i> GPS</button>`;
-        let impoundHold = `<div class="btn-hold hidden" data-v-impound-hold data-v-id="${Number(selected.id) || 0}"><div class="bh-progress"></div><div class="bh-text"><span class="key">ENTER</span> Achită Cauțiunea</div></div>`;
+        let impoundHold = `<div class="btn-hold hidden" data-v-impound-hold data-v-id="${Number(selected.id) || 0}"><div class="bh-progress"></div><div class="bh-text"><span class="key">ENTER</span> Pay Impound Fee</div></div>`;
 
         if (status.isDestroyed) {
             mainAction = '';
             gpsAction = '';
             if (insurancePts > 0) {
-                impoundHold = `<div class="btn-hold" data-v-impound-hold data-v-id="${Number(selected.id) || 0}"><div class="bh-progress"></div><div class="bh-text"><span class="key">ENTER</span> Achită Cauțiunea (${formatMoney(claimCost)})</div></div>`;
+                impoundHold = `<div class="btn-hold" data-v-impound-hold data-v-id="${Number(selected.id) || 0}"><div class="bh-progress"></div><div class="bh-text"><span class="key">ENTER</span> Pay Impound Fee (${formatMoney(claimCost)})</div></div>`;
             } else {
-                mainAction = `<button type="button" class="btn-action" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-shield-check"></i> Reînnoiește Asigurarea (${formatMoney(renewCost)})</button>`;
+                mainAction = `<button type="button" class="btn-action" data-v-action="renew_insurance" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-shield-check"></i> Renew Insurance (${formatMoney(renewCost)})</button>`;
                 impoundHold = '';
             }
         } else if (status.stored) {
-            mainAction = `<button type="button" class="btn-action" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-key"></i> Solicită Valet</button>`;
+            mainAction = `<button type="button" class="btn-action" data-v-action="spawn" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-key"></i> Request Valet</button>`;
             gpsAction = '';
         } else if (status.inWorld) {
             const parkAction = selected.isCurrentVehicle ? 'park' : 'store';
-            const parkLabel = selected.isCurrentVehicle ? 'Park / Garaj' : 'Trimite în Garaj';
+            const parkLabel = selected.isCurrentVehicle ? 'Park / Garage' : 'Send to Garage';
             mainAction = `<button type="button" class="btn-action" data-v-action="${parkAction}" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-car"></i> ${parkLabel}</button>`;
             gpsAction = `<button type="button" class="btn-action secondary" data-v-action="gps" data-v-plate="${plate}" data-v-id="${Number(selected.id) || 0}"><i class="ph-bold ph-crosshair"></i> GPS (${this.escape(status.label)})</button>`;
         } else {
@@ -424,10 +424,10 @@ const Menu = {
                     <h2 class="vh-title"><i class="ph-bold ph-steering-wheel"></i> Vehiculele Tale</h2>
                     <div class="v-search">
                         <i class="ph-bold ph-magnifying-glass"></i>
-                        <input type="text" id="v-menu-search" placeholder="Caută model sau număr..." value="${this.escape(query)}">
+                        <input type="text" id="v-menu-search" placeholder="Search model or plate..." value="${this.escape(query)}">
                     </div>
                 </div>
-                <div class="v-list">${listHtml || '<div class="vmenu-empty" style="transform:skewX(5deg);border:none;background:transparent"><span>Niciun rezultat</span></div>'}</div>
+                <div class="v-list">${listHtml || '<div class="vmenu-empty" style="transform:skewX(5deg);border:none;background:transparent"><span>No results</span></div>'}</div>
             </div>
             <div class="v-details">
                 <i class="ph-fill ph-car-profile vd-watermark"></i>
@@ -444,7 +444,7 @@ const Menu = {
                 <div class="vd-body">
                     <div class="vd-status-grid">
                         <div class="status-box ${this.vmenuStatClass(engine)}">
-                            <div class="sb-label"><i class="ph-fill ph-engine"></i> Motor</div>
+                            <div class="sb-label"><i class="ph-fill ph-engine"></i> Engine</div>
                             <div class="sb-val">${engine}%</div>
                         </div>
                         <div class="status-box ${this.vmenuStatClass(body)}">
@@ -452,7 +452,7 @@ const Menu = {
                             <div class="sb-val">${body}%</div>
                         </div>
                         <div class="status-box ${this.vmenuStatClass(fuel)}">
-                            <div class="sb-label"><i class="ph-fill ph-gas-pump"></i> Benzină</div>
+                            <div class="sb-label"><i class="ph-fill ph-gas-pump"></i> Fuel</div>
                             <div class="sb-val">${fuel}%</div>
                         </div>
                     </div>
@@ -462,7 +462,7 @@ const Menu = {
                             <div class="odometer-val">${odometer.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KM</div>
                         </div>
                         <div class="vd-card">
-                            <div class="vc-title"><i class="ph-fill ph-cpu"></i> Tuning Instalat</div>
+                            <div class="vc-title"><i class="ph-fill ph-cpu"></i> Installed Tuning</div>
                             <div class="tuning-list">${this.vmenuTuningList(selected.ecuInfo)}</div>
                         </div>
                     </div>
@@ -654,7 +654,7 @@ const Menu = {
         const xpMax = data.respectRequired || 4;
         const level = data.level || 1;
         $('#menu-xp-text').textContent = `${this.formatXp(xp)} / ${this.formatXp(xpMax)} RP`;
-        $('#menu-level').textContent = `Nivel ${level}`;
+        $('#menu-level').textContent = `Level ${level}`;
         const xpBar = $('#menu-xp-bar');
         if (xpBar) xpBar.style.width = `${Math.min(100, (xp / xpMax) * 100)}%`;
 

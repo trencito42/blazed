@@ -298,9 +298,20 @@ local function startWar(turf, attackerClan, defenderClan)
     end
     TriggerClientEvent('sunset:turfs:warStart', -1, warData)
 
-    local announcement = ('^1[TURF WAR] ^7Clan ^3[%s] %s^7 attacked territory ^2%s^7 held by ^3[%s] %s^7! Duration: 10 minutes.'):format(
-        attackerClan.tag, attackerClan.name, turf.name, warData.defenderTag, warData.defenderName
-    )
+    -- [ANNOUNCE FIX] Duration was hardcoded "10 minutes" even for neutral
+    -- captures (3-minute hold). Announce the actual computed duration and,
+    -- for free turfs, the hold requirement.
+    local durationMin = math.max(1, math.floor(durationSec / 60 + 0.5))
+    local announcement
+    if isNeutralCapture then
+        announcement = ('^1[TURF WAR] ^7Clan ^3[%s] %s^7 is capturing unowned territory ^2%s^7! Hold the zone for %d minutes to claim it.'):format(
+            attackerClan.tag, attackerClan.name, turf.name, durationMin
+        )
+    else
+        announcement = ('^1[TURF WAR] ^7Clan ^3[%s] %s^7 attacked territory ^2%s^7 held by ^3[%s] %s^7! Duration: %d minutes.'):format(
+            attackerClan.tag, attackerClan.name, turf.name, warData.defenderTag, warData.defenderName, durationMin
+        )
+    end
     TriggerClientEvent('chat:addMessage', -1, { color = { 255, 50, 50 }, args = { 'WAR', announcement } })
 
     -- [MOBILIZATION] Defenders get a rally window before zone scoring starts,

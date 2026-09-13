@@ -539,19 +539,25 @@ CreateThread(function()
 end)
 
 -- Z scoreboard during war (overrides the global player list for participants).
+-- [ALT-TAB FIX] Edge detection on the Z key breaks when the player alt-tabs:
+-- the key release is never observed, so zDown stayed true and the scoreboard
+-- remained stuck after returning. Now the scoreboard is also force-hidden by a
+-- hard timeout and re-checked state-wise every tick.
 CreateThread(function()
     local zDown = false
+    local zShownAt = 0
     while true do
-        if warParticipant and not IsNuiFocused() and not IsPauseMenuActive() then
+        if warParticipant and not IsNuiFocused() then
             DisableControlAction(0, 20, true)
-            local pressed = IsDisabledControlPressed(0, 20)
+            local pressed = IsDisabledControlPressed(0, 20) and not IsPauseMenuActive()
             if pressed and not zDown then
                 zDown = true
+                zShownAt = GetGameTimer()
                 CreateThread(function()
                     local data = Sunset.AwaitCallback('sunset:turfs:warScoreboard')
                     if data and zDown then exports.sunset_ui:Send('warScoreboardShow', data) end
                 end)
-            elseif not pressed and zDown then
+            elseif zDown and (not pressed or (GetGameTimer() - zShownAt) > 60000) then
                 zDown = false
                 exports.sunset_ui:Send('warScoreboardHide', {})
             end

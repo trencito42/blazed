@@ -20,16 +20,16 @@
         bpTiers.push({
             level: i,
             free: { name: `$${i * 1000}`, icon: '💵', claimed: i < 3 },
-            premium: { name: i % 5 === 0 ? 'Vehicul VIP' : `Crate Lvl ${i}`, icon: i % 5 === 0 ? '🏎️' : '📦', claimed: false }
+            premium: { name: i % 5 === 0 ? 'VIP Vehicle' : `Crate Lvl ${i}`, icon: i % 5 === 0 ? '🏎️' : '📦', claimed: false }
         });
     }
 
     let missions = [
-        { id: 1, type: 'daily', title: 'Șofer Model', desc: 'Condu un total de 15km fără a lovi vehiculul.', progress: 15, max: 15, reward: '500 XP', claimed: false },
-        { id: 2, type: 'daily', title: 'Harnic', desc: 'Completează 3 ture la jobul de Livrator.', progress: 1, max: 3, reward: '300 XP', claimed: false },
-        { id: 3, type: 'daily', title: 'Timp cu Prietenii', desc: 'Petrece 2 ore activ pe server.', progress: 120, max: 120, reward: '400 XP', claimed: true },
-        { id: 4, type: 'weekly', title: 'Magnat Local', desc: 'Câștigă un total de $50,000.', progress: 32000, max: 50000, reward: '2500 XP', claimed: false },
-        { id: 5, type: 'weekly', title: 'Infractor Căutat', desc: 'Evadează cu succes din 3 jafuri auto.', progress: 3, max: 3, reward: '3000 XP', claimed: false }
+        { id: 1, type: 'daily', title: 'Model Driver', desc: 'Drive a total of 15km without hitting a vehicle.', progress: 15, max: 15, reward: '500 XP', claimed: false },
+        { id: 2, type: 'daily', title: 'Hard Worker', desc: 'Complete 3 shifts as a Courier.', progress: 1, max: 3, reward: '300 XP', claimed: false },
+        { id: 3, type: 'daily', title: 'Time with Friends', desc: 'Spend 2 hours active on the server.', progress: 120, max: 120, reward: '400 XP', claimed: true },
+        { id: 4, type: 'weekly', title: 'Local Magnate', desc: 'Earn a total of $50,000.', progress: 32000, max: 50000, reward: '2500 XP', claimed: false },
+        { id: 5, type: 'weekly', title: 'Wanted Criminal', desc: 'Successfully escape from 3 car robberies.', progress: 3, max: 3, reward: '3000 XP', claimed: false }
     ];
 
     function updatePlayerStats() {
@@ -46,12 +46,12 @@
         }
         if (premBox) {
             if (playerData.hasPremium) {
-                premBox.innerHTML = `<div style="text-align:center; color:#b829ff; font-weight:800; font-size:12px; letter-spacing:1px;">✔️ PREMIUM ACTIVAT</div>`;
+                premBox.innerHTML = `<div style="text-align:center; color:#b829ff; font-weight:800; font-size:12px; letter-spacing:1px;">✔️ PREMIUM ACTIVE</div>`;
             } else {
                 premBox.innerHTML = `
                     <button class="bp-btn-upgrade" id="bp-btn-buy-premium">
                         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M2.5 2v6h13V2zM2.5 13v6h13v-6z"></path><path d="M18.5 2l3 6-3 6"></path></svg>
-                        Cumpără Premium
+                        Buy Premium
                     </button>`;
                 document.getElementById('bp-btn-buy-premium')?.addEventListener('click', buyPremium);
             }
@@ -81,7 +81,7 @@
             if (tier.free.claimed) {
                 freeBtnHtml = `<button class="bp-btn-claim claimed">Luat</button>`;
             } else if (playerData.level >= tier.level) {
-                freeBtnHtml = `<button class="bp-btn-claim" data-claim-lvl="${tier.level}" data-claim-type="free">Revendică</button>`;
+                freeBtnHtml = `<button class="bp-btn-claim" data-claim-lvl="${tier.level}" data-claim-type="free">Claim</button>`;
             } else {
                 freeBtnHtml = `<button class="bp-btn-claim" style="display:none;"></button>`;
             }
@@ -98,7 +98,7 @@
                 if (tier.premium.claimed) {
                     premBtnHtml = `<button class="bp-btn-claim claimed">Luat</button>`;
                 } else if (playerData.level >= tier.level) {
-                    premBtnHtml = `<button class="bp-btn-claim" style="background:#b829ff; color:white;" data-claim-lvl="${tier.level}" data-claim-type="premium">Revendică</button>`;
+                    premBtnHtml = `<button class="bp-btn-claim" style="background:#b829ff; color:white;" data-claim-lvl="${tier.level}" data-claim-type="premium">Claim</button>`;
                 }
             }
 
@@ -152,9 +152,9 @@
             if (m.claimed) {
                 btnHtml = `<button class="bp-btn" disabled>Colectat</button>`;
             } else if (isDone) {
-                btnHtml = `<button class="bp-btn bp-btn-primary" data-mission-id="${m.id}">Colectează</button>`;
+                btnHtml = `<button class="bp-btn bp-btn-primary" data-mission-id="${m.id}">Collect</button>`;
             } else {
-                btnHtml = `<button class="bp-btn" disabled>În Curs</button>`;
+                btnHtml = `<button class="bp-btn" disabled>In Progress</button>`;
             }
 
             const cardHtml = `

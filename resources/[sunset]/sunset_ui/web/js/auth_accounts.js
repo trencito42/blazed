@@ -51,7 +51,7 @@ const AuthAccounts = {
         list.innerHTML = '';
 
         if (this.accounts.length === 0) {
-            list.innerHTML = '<div class="auth-identities-empty">Niciun cont salvat încă.</div>';
+            list.innerHTML = '<div class="auth-identities-empty">No saved accounts yet.</div>';
             this.setMode();
             return;
         }

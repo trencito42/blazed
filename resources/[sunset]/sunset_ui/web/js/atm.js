@@ -503,7 +503,7 @@
         executeQuickCash(amount) {
             if (this.data.bank < amount) {
                 this.sound.playBeep(400);
-                showNotify('Sold insuficient în contul bancar.', 'error');
+                showNotify('Insufficient bank balance.', 'error');
                 return;
             }
             this.startTransaction('withdraw', amount);
@@ -512,7 +512,7 @@
         executeDeposit(amount) {
             if (this.data.cash < amount) {
                 this.sound.playBeep(400);
-                showNotify('Nu ai suficiente bancnote în numerar.', 'error');
+                showNotify('You do not have enough cash.', 'error');
                 return;
             }
             this.startTransaction('deposit', amount);
@@ -522,7 +522,7 @@
             const amount = this.data.cash;
             if (amount < 1) {
                 this.sound.playBeep(400);
-                showNotify('Nu ai numerar disponibil pentru depunere.', 'warning');
+                showNotify('You have no cash available to deposit.', 'warning');
                 return;
             }
             this.startTransaction('deposit', amount);
@@ -530,8 +530,8 @@
 
         openCustomAmount(action) {
             this.customAction = action;
-            $('#atm-custom-title').textContent = action === 'withdraw' ? 'RETRAGERE NUMERAR — SUMĂ PERSONALIZATĂ' : 'DEPUNERE NUMERAR — SUMĂ PERSONALIZATĂ';
-            $('#atm-custom-submit-label').textContent = action === 'withdraw' ? 'Confirmă Retragerea' : 'Confirmă Depunerea';
+            $('#atm-custom-title').textContent = action === 'withdraw' ? 'CASH WITHDRAWAL - CUSTOM AMOUNT' : 'CASH DEPOSIT - CUSTOM AMOUNT';
+            $('#atm-custom-submit-label').textContent = action === 'withdraw' ? 'Confirm Withdrawal' : 'Confirm Deposit';
             this.switchPane('CUSTOM');
         },
 
@@ -539,19 +539,19 @@
             const amount = Number(this.customAmount || 0);
             if (amount < 1) {
                 this.sound.playBeep(400);
-                showNotify('Introdu o sumă validă mai mare decât $0.', 'warning');
+                showNotify('Enter a valid amount greater than $0.', 'warning');
                 return;
             }
 
             if (this.customAction === 'withdraw' && this.data.bank < amount) {
                 this.sound.playBeep(400);
-                showNotify('Sold insuficient în contul bancar.', 'error');
+                showNotify('Insufficient bank balance.', 'error');
                 return;
             }
 
             if (this.customAction === 'deposit' && this.data.cash < amount) {
                 this.sound.playBeep(400);
-                showNotify('Nu ai suficient numerar în portofel.', 'error');
+                showNotify('You do not have enough cash in your wallet.', 'error');
                 return;
             }
 
@@ -561,9 +561,9 @@
         startTransaction(action, amount) {
             this.switchPane('PROCESSING');
 
-            $('#atm-proc-action').textContent = action === 'withdraw' ? 'RETRAGERE NUMERAR' : 'DEPUNERE NUMERAR';
+            $('#atm-proc-action').textContent = action === 'withdraw' ? 'CASH WITHDRAWAL' : 'CASH DEPOSIT';
             $('#atm-proc-amount').textContent = this.fmt(amount);
-            $('#atm-proc-status').textContent = 'Se contactează banca... Numărare bancnote în curs...';
+            $('#atm-proc-status').textContent = 'Contacting bank... Counting bills...';
 
             this.sound.playCashCounting(1300);
 
@@ -580,8 +580,8 @@
             shutter?.classList.add('is-dispensing');
 
             $('#atm-proc-status').textContent = action === 'withdraw'
-                ? 'Tranzacție Aprobată! Vă rugăm ridicați numerarul din fanta de eliberare.'
-                : 'Depunere Efectuată cu Succes! Fondurile au fost creditate în cont.';
+                ? 'Transaction Approved! Please take the cash from the dispenser.'
+                : 'Deposit Successful! Funds have been credited to your account.';
 
             setTimeout(() => {
                 shutter?.classList.remove('is-active', 'is-dispensing');
@@ -606,7 +606,7 @@
             $('#rcpt-txid').textContent = tx.txId || 'TX-902144';
             $('#rcpt-name').textContent = this.data.name;
             $('#rcpt-account').textContent = this.data.account;
-            $('#rcpt-action').textContent = (tx.action || 'INTEROGARE SOLD').toUpperCase();
+            $('#rcpt-action').textContent = (tx.action || 'BALANCE INQUIRY').toUpperCase();
             $('#rcpt-amount').textContent = tx.amount ? this.fmt(tx.amount) : '—';
             $('#rcpt-bank-balance').textContent = this.fmt(this.data.bank);
             $('#rcpt-cash-balance').textContent = this.fmt(this.data.cash);

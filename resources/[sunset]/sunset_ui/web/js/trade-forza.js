@@ -287,7 +287,7 @@
         grid.innerHTML = '';
         const rows = Array.isArray(items) ? items.filter((row) => row && row.item) : [];
         if (!rows.length) {
-            grid.innerHTML = '<div class="selector-empty">No items in inventoryîn buzunar</div>';
+            grid.innerHTML = '<div class="selector-empty">No items in your inventory</div>';
             return;
         }
         rows.forEach((row) => {

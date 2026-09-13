@@ -74,13 +74,13 @@
     };
 
     const GROUP_CONFIG = {
-        CIVILIAN: { title: 'Acțiuni Jucător' },
-        FACTION: { title: 'Acțiuni Facțiune' },
-        POLICE: { title: 'Departament Poliție' },
-        MEDICAL: { title: 'Serviciu Medical' },
-        SERVICE: { title: 'Servicii' },
-        ADMIN: { title: 'Panou Administrare' },
-        FISHING: { title: 'Acțiuni Pescuit' },
+        CIVILIAN: { title: 'Player Actions' },
+        FACTION: { title: 'Faction Actions' },
+        POLICE: { title: 'Police Department' },
+        MEDICAL: { title: 'Medical Service' },
+        SERVICE: { title: 'Services' },
+        ADMIN: { title: 'Admin Panel' },
+        FISHING: { title: 'Fishing Actions' },
         STORE: { title: 'Store' },
         BUSINESS: { title: 'Business' },
         CUSTOMS: { title: 'Vehicle Services' },
@@ -135,8 +135,8 @@
             const conf = GROUP_CONFIG[groups[0]];
             if (conf) return conf.title;
         }
-        if (target?.name) return `Acțiuni - ${String(target.name).toUpperCase()}`;
-        return 'Acțiuni Jucător';
+        if (target?.name) return `Actions - ${String(target.name).toUpperCase()}`;
+        return 'Player Actions';
     }
 
     function hideInputPanel() {
@@ -148,7 +148,7 @@
     function showInputPanel(action) {
         pendingInputAction = action;
         const input = action.input || {};
-        if (inputLabel) inputLabel.textContent = action.label || 'Introdu valoarea';
+        if (inputLabel) inputLabel.textContent = action.label || 'Enter value';
         if (inputField) {
             inputField.type = input.type === 'number' ? 'number' : 'text';
             inputField.placeholder = input.placeholder || input.label || '';
@@ -208,7 +208,7 @@
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
         closeBtn.className = 'pi-menu-item pi-menu-item--close';
-        closeBtn.innerHTML = `<span>Închide</span>${ACTION_ICONS.close}`;
+        closeBtn.innerHTML = `<span>Close</span>${ACTION_ICONS.close}`;
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             postNui('playerInteractionClose');

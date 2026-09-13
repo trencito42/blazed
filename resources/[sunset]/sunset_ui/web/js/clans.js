@@ -208,7 +208,7 @@ const ClanPanels = {
                     ? `CLAN <span>${clanName} · <span style="color:${color}">[${clanTag}]</span></span>`
                     : `CLAN <span>${clanName}</span>`;
             }
-            if (typeEl) typeEl.textContent = 'Organizație Privată';
+            if (typeEl) typeEl.textContent = 'Private Organization';
 
             // Sidebar Tab Toggles
             document.querySelector('[data-clan-tab="overview"]')?.classList.remove('hidden');
@@ -263,7 +263,7 @@ const ClanPanels = {
             if (rosterMeta) {
                 // [LEADERBOARD] show territories held next to member counts.
                 const turfCount = Number(payload.turfs) || 0;
-                rosterMeta.textContent = `${onlineCount} online · ${payload.memberCount || 0}/${payload.maxMembers || 25} membri · ${turfCount} teritorii`;
+                rosterMeta.textContent = `${onlineCount} online · ${payload.memberCount || 0}/${payload.maxMembers || 25} members · ${turfCount} turfs`;
             }
 
             // Management Select
@@ -302,8 +302,8 @@ const ClanPanels = {
         } else {
             $('#clan-overview-membership')?.classList.add('hidden');
             // Guest / Registration Mode
-            if (title) title.innerHTML = 'CLAN <span>ÎNREGISTRARE</span>';
-            if (typeEl) typeEl.textContent = 'Înregistrează un clan';
+            if (title) title.innerHTML = 'CLAN <span>REGISTRATION</span>';
+            if (typeEl) typeEl.textContent = 'Register a clan';
 
             document.querySelector('[data-clan-tab="overview"]')?.classList.add('hidden');
             document.querySelector('[data-clan-tab="roster"]')?.classList.add('hidden');
@@ -321,7 +321,7 @@ const ClanPanels = {
                 );
                 const costEl = $('#clan-create-cost');
                 if (costEl) {
-                    costEl.textContent = `Cost: ${Number(payload.creationCost || 500).toLocaleString()} Blaze Points — ai ${Number(payload.accountCoins || 0).toLocaleString()} BP`;
+                    costEl.textContent = `Cost: ${Number(payload.creationCost || 500).toLocaleString()} Blaze Points — you have ${Number(payload.accountCoins || 0).toLocaleString()} BP`;
                 }
             }
             this.updateCreatePreview();
@@ -350,8 +350,8 @@ const ClanPanels = {
                 <div class="premium-clan__roster-info">
                     <div class="premium-clan__status-dot ${dotClass}" title="${member.online ? 'Online' : 'Offline'}"></div>
                     <div>
-                        <div class="premium-clan__member-name">${this.escape(member.name || 'Necunoscut')} ${serverIdBadge}</div>
-                        <div class="premium-clan__member-rank">${member.leader ? '<span style="color:var(--pf-accent-orange);font-weight:800;">LIDER</span> · ' : ''}${this.escape(member.rankLabel || 'Membru')}</div>
+                        <div class="premium-clan__member-name">${this.escape(member.name || 'Unknown')} ${serverIdBadge}</div>
+                        <div class="premium-clan__member-rank">${member.leader ? '<span style="color:var(--pf-accent-orange);font-weight:800;">LEADER</span> · ' : ''}${this.escape(member.rankLabel || 'Member')}</div>
                     </div>
                 </div>
                 <div class="premium-clan__member-id">R${member.rank || 1}</div>
@@ -360,7 +360,7 @@ const ClanPanels = {
         });
 
         if (!members || !members.length) {
-            roster.innerHTML = '<p class="premium-clan__empty">Niciun membru înregistrat în acest clan.</p>';
+            roster.innerHTML = '<p class="premium-clan__empty">No members registered in this clan.</p>';
         }
     },
 
@@ -374,7 +374,7 @@ const ClanPanels = {
             opt.value = String(m.characterId);
             const online = m.online && m.serverId ? `online · ID ${m.serverId}` : 'offline';
             const warns = Number(m.warns) > 0 ? ` · ${m.warns}/3 warn` : '';
-            opt.textContent = `${m.name} (${online}) — ${m.rankLabel || 'Membru'}${warns}`;
+            opt.textContent = `${m.name} (${online}) — ${m.rankLabel || 'Member'}${warns}`;
             select.appendChild(opt);
         });
     },
@@ -384,13 +384,13 @@ const ClanPanels = {
             $('#clan-manage-select'),
             members,
             viewerCharacterId,
-            'Alege un membru...'
+            'Select a member...'
         );
         this.fillMemberSelect(
             $('#clan-warn-select'),
             members,
             viewerCharacterId,
-            'Alege un membru...'
+            'Select a member...'
         );
     },
 
@@ -398,7 +398,7 @@ const ClanPanels = {
         const select = $('#clan-manage-select');
         const targetCharacterId = Number(select?.value);
         if (!targetCharacterId) {
-            notify('Selectează un membru din listă.', 'error');
+            notify('Select a member from the list.', 'error');
             return;
         }
 
@@ -406,12 +406,12 @@ const ClanPanels = {
     },
 
     requestLeave() {
-        notify('Se procesează părăsirea clanului...', 'info', 2500);
+        notify('Processing clan leave...', 'info', 2500);
         post('clanManage', { action: 'leave' });
     },
 
     requestDissolve() {
-        notify('Se desființează clanul...', 'warning', 2500);
+        notify('Disbanding clan...', 'warning', 2500);
         post('clanManage', { action: 'dissolve' });
     },
 
@@ -436,7 +436,7 @@ const ClanPanels = {
             field.className = 'clan-rank-item';
             field.innerHTML = `
                 <span>GRADUL ${i}</span>
-                <input type="text" class="premium-clan__form-control" data-rank-label="${i}" maxlength="48" value="${this.escape(source[i] || source[String(i)] || '')}" placeholder="Denumire Grad ${i}">
+                <input type="text" class="premium-clan__form-control" data-rank-label="${i}" maxlength="48" value="${this.escape(source[i] || source[String(i)] || '')}" placeholder="Rank ${i} Name">
             `;
             wrap.appendChild(field);
         }
@@ -479,7 +479,7 @@ const ClanPanels = {
             const isFull = total >= maxMembers;
             const turfs = Number(clan.turfs) || 0;
             const isLeader = idx === 0 && turfs > 0 && turfs >= maxTurfs;
-            const crown = isLeader ? ' <span title="Lider teritorii" style="color:#f59e0b;">&#9819;</span>' : '';
+            const crown = isLeader ? ' <span title="Turf leader" style="color:#f59e0b;">&#9819;</span>' : '';
 
             card.innerHTML = `
                 <div class="premium-factions-dir__card-head">
@@ -494,11 +494,11 @@ const ClanPanels = {
 
                 <div class="premium-factions-dir__card-stats">
                     <div class="premium-factions-dir__stat-row">
-                        <span>Lider:</span>
-                        <b>${this.escape(clan.leader || 'Necunoscut')}</b>
+                        <span>Leader:</span>
+                        <b>${this.escape(clan.leader || 'Unknown')}</b>
                     </div>
                     <div class="premium-factions-dir__stat-row">
-                        <span>Membri:</span>
+                        <span>Members:</span>
                         <b><span class="highlight">${Number(clan.online) || 0}</span> / ${total}</b>
                     </div>
                     <div class="premium-factions-dir__stat-row">
@@ -508,7 +508,7 @@ const ClanPanels = {
                 </div>
 
                 <div class="premium-factions-dir__recruit ${isFull ? 'is-closed' : 'is-open'}">
-                    <div class="dot"></div>${isFull ? 'Recrutări Închise' : 'Recrutări Deschise'}
+                    <div class="dot"></div>${isFull ? 'Recruiting Closed' : 'Recruiting Open'}
                 </div>
             `;
 
@@ -517,7 +517,7 @@ const ClanPanels = {
         });
 
         if (!clans || !clans.length) {
-            list.innerHTML = '<p class="premium-clans-dir__empty">Niciun clan activ găsit pe server.</p>';
+            list.innerHTML = '<p class="premium-clans-dir__empty">No active clans found on the server.</p>';
         }
     },
 
@@ -537,17 +537,17 @@ const ClanPanels = {
         if (titleEl) titleEl.textContent = clan.name || 'Clan';
 
         const descEl = $('#clan-dir-modal-desc');
-        if (descEl) descEl.textContent = clan.description || 'Nicio descriere publică introdusă.';
+        if (descEl) descEl.textContent = clan.description || 'No public description provided.';
 
         const leaderEl = $('#clan-dir-modal-leader');
-        if (leaderEl) leaderEl.textContent = clan.leader || 'Necunoscut';
+        if (leaderEl) leaderEl.textContent = clan.leader || 'Unknown';
 
         const motdEl = $('#clan-dir-modal-motd');
-        if (motdEl) motdEl.textContent = clan.motd || 'Niciun MOTD publicat.';
+        if (motdEl) motdEl.textContent = clan.motd || 'No MOTD published.';
 
         const roster = $('#clan-dir-modal-roster');
         if (roster) {
-            roster.innerHTML = '<p class="premium-clans-dir__empty">Se încarcă membrii...</p>';
+            roster.innerHTML = '<p class="premium-clans-dir__empty">Loading members...</p>';
         }
 
         // Request clan profile (members)
@@ -568,13 +568,13 @@ const ClanPanels = {
             row.className = 'premium-clans-dir__modal-member';
             row.innerHTML = `
                 <strong>${this.escape(m.name || 'Necunoscut')}</strong>
-                <span>${this.escape(m.rankLabel || 'Membru')}${m.online ? ' · ONLINE' : ''}${m.leader ? ' · LIDER' : ''}</span>
+                <span>${this.escape(m.rankLabel || 'Member')}${m.online ? ' · ONLINE' : ''}${m.leader ? ' · LEADER' : ''}</span>
             `;
             roster.appendChild(row);
         });
 
         if (!members.length) {
-            roster.innerHTML = '<p class="premium-clans-dir__empty">Niciun membru găsit.</p>';
+            roster.innerHTML = '<p class="premium-clans-dir__empty">No members found.</p>';
         }
     },
 
@@ -602,7 +602,7 @@ const ClanPanels = {
             payload.targetCharacterId = Number(warnSelect?.value);
             payload.reason = form.querySelector('[name="reason"]')?.value || '';
             if (!payload.targetCharacterId) {
-                notify('Selectează un membru pentru avertisment.', 'error');
+                notify('Select a member to warn.', 'error');
                 return;
             }
         } else {

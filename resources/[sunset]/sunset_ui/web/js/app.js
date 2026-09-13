@@ -229,7 +229,26 @@ function notify(message, type = 'info', duration = 4000) {
         el.classList.add('is-leaving');
         setTimeout(() => el.remove(), 240);
     }, duration);
+    // [ALT-TAB FIX] CEF throttles timers while unfocused; stamp the expiry so
+    // the visibility sweep below can drop stale notifications immediately.
+    el.dataset.expiresAt = String(Date.now() + duration);
 }
+
+// [ALT-TAB FIX] When the game regains focus, purge any notification whose
+// hide-timer was throttled away while alt-tabbed (stuck toasts on the HUD).
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const now = Date.now();
+    document.querySelectorAll('#notifications .notification').forEach((el) => {
+        const exp = Number(el.dataset.expiresAt || 0);
+        if (exp && now > exp) el.remove();
+    });
+    const progress = document.getElementById('progress');
+    if (progress && !progress.classList.contains('hidden')) {
+        const exp = Number(progress.dataset.expiresAt || 0);
+        if (exp && now > exp) progress.classList.add('hidden');
+    }
+});
 
 function progressBar(label, duration) {
     const progress = $('#progress');
@@ -241,6 +260,7 @@ function progressBar(label, duration) {
     fill.style.width = '0%';
     fill.style.transition = 'none';
     progress.classList.remove('hidden');
+    progress.dataset.expiresAt = String(Date.now() + duration + 500);
 
     requestAnimationFrame(() => {
         fill.style.transition = `width ${duration}ms linear`;

@@ -1,10 +1,22 @@
 const Overlays = {
     _policeTimer: null,
     _announceTimer: null,
+    _policeExpiresAt: 0,
+    _announceExpiresAt: 0,
 
     init() {
         if (this._ready) return;
         this._ready = true;
+        // [ALT-TAB FIX] CEF throttles timers and freezes rAF while the game is
+        // unfocused; overlay hide timers can fire late/never, leaving banners
+        // stuck on screen after alt-tabbing back. Track expiry timestamps and
+        // force-hide expired overlays when the page becomes visible again.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            const now = Date.now();
+            if (this._announceExpiresAt && now > this._announceExpiresAt) this.hideAnnouncement();
+            if (this._policeExpiresAt && now > this._policeExpiresAt) this.hidePoliceOrder();
+        });
     },
 
     showAnnouncement(data) {
@@ -19,11 +31,13 @@ const Overlays = {
         el.classList.remove('hidden');
         clearTimeout(this._announceTimer);
         const duration = data?.duration || 6500;
+        this._announceExpiresAt = Date.now() + duration;
         this._announceTimer = setTimeout(() => this.hideAnnouncement(), duration);
     },
 
     hideAnnouncement() {
         clearTimeout(this._announceTimer);
+        this._announceExpiresAt = 0;
         $('#server-announce')?.classList.add('hidden');
     },
 
@@ -42,11 +56,13 @@ const Overlays = {
 
         clearTimeout(this._policeTimer);
         const duration = data?.duration || 12000;
+        this._policeExpiresAt = Date.now() + duration;
         this._policeTimer = setTimeout(() => this.hidePoliceOrder(), duration);
     },
 
     hidePoliceOrder() {
         clearTimeout(this._policeTimer);
+        this._policeExpiresAt = 0;
         $('#police-order')?.classList.add('hidden');
     },
 

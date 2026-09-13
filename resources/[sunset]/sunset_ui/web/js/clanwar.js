@@ -46,8 +46,8 @@
                 <div class="armory-wrapper" id="war-armory">
                     <div class="sidebar">
                         <div class="sidebar-header">
-                            <h1>Armurărie War</h1>
-                            <p id="war-armory-sub">Alege-ți armele pentru war</p>
+                            <h1>War Armory</h1>
+                            <p id="war-armory-sub">Choose your loadout for the war</p>
                         </div>
                         <div class="package-list" id="war-package-list"></div>
                     </div>
@@ -74,7 +74,7 @@
                     <div class="sb-score-row"><span id="war-sb-att" style="color:var(--war-accent,#00ffcc);">ATK 0</span><span id="war-sb-target" style="color:rgba(255,255,255,0.4);">/ 300</span><span id="war-sb-def" style="color:var(--war-enemy,#8b5cf6);">0 DEF</span></div>
                     <div class="sb-list-container">
                         <div class="sb-col-headers">
-                            <div class="col-name">Jucător</div>
+                            <div class="col-name">Player</div>
                             <div class="col-stat">Kills</div>
                             <div class="col-stat">Deaths</div>
                         </div>
@@ -110,7 +110,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button class="btn-close" id="war-end-close">Închide Rezumatul</button>
+                        <button class="btn-close" id="war-end-close">Close Summary</button>
                     </div>
                 </div>
 
@@ -212,7 +212,7 @@
                         <div class="weapon-icon-box"><i class="ph-fill ph-crosshair"></i></div>
                         <div class="weapon-details">
                             <span class="weapon-name">${esc(w.label)}</span>
-                            <span class="weapon-ammo">${esc(w.ammo)} gloanțe</span>
+                            <span class="weapon-ammo">${esc(w.ammo)} rounds</span>
                         </div>
                         <div class="weapon-tag">${esc(w.tag)}</div>
                     </div>
@@ -266,7 +266,7 @@
                 // [WAR FIX] A defender who wins/ties KEPT the turf — show "DEFENDED",
                 // not "CONQUERED" (it was already theirs; tie goes to defender).
                 if (won && data.myRole !== 'attacker') {
-                    title.textContent = 'TURF APĂRAT!';
+                    title.textContent = 'TURF DEFENDED!';
                 } else {
                     title.textContent = won ? 'TURF CAPTURED!' : 'TURF PIERDUT!';
                 }
