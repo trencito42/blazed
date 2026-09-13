@@ -116,6 +116,9 @@ Sunset.JobsConfig = {
         catchZTolerance = 8.0,   -- fallback Z tolerance
         markerSize     = 0,      -- fara marker vizibil
         markerDrawRadius = 0,    -- nu desena nimic
+        -- [BUGFIX] sellPoint was missing — cfg.sellPoint.coords crashed on
+        -- every sell attempt. Coordinates from items.lua 24/7 Paleto Bay.
+        sellPoint = { coords = vector3(-54.37, 6244.70, 31.09) },
         sellRadius = 5.0,
         catchPayMin = 28,
         catchPayMax = 85,

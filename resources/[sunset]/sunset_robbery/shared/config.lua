@@ -3,6 +3,7 @@ SunsetRobbery = SunsetRobbery or {}
 SunsetRobbery.Debug = false
 
 SunsetRobbery.MinPolice = 4
+SunsetRobbery.RequireRealPolice = true  -- [BUGFIX] was undefined (nil), so the police gate never enforced
 SunsetRobbery.PlayerCooldownSec = 60 * 60
 SunsetRobbery.LocationCooldownSec = 90 * 60
 SunsetRobbery.RobPointsPerPayday = 1
