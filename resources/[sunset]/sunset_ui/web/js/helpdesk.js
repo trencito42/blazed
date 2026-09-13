@@ -334,8 +334,10 @@ const Helpdesk = {
     },
 };
 
-// ── Bootstrap: static shell injected once ──
-document.addEventListener('DOMContentLoaded', () => {
+// ── Bootstrap: static shell injected immediately ──
+// [FIX] Was DOMContentLoaded which never fires for lazy-loaded scripts
+// (injected after boot). Now runs immediately — defer guarantees body exists.
+(function buildHelpdeskShell() {
     const shell = document.createElement('div');
     shell.id = 'helpdesk';
     shell.className = 'helpdesk-panel hidden';
@@ -406,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     $hd('#hd-close')?.addEventListener('click', () => post('helpdeskClose'));
-});
+})();
 
 // ESC closes the panel (universal handler in app.js also posts helpdeskClose)
 document.addEventListener('keydown', (e) => {

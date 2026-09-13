@@ -382,6 +382,17 @@ const Chat = {
             };
         }
 
+        if (type === 'staff') {
+            const level = Number(m.adminLevel) || 1;
+            const roleLabel = level >= 3 ? 'ADMIN' : level >= 2 ? 'MOD' : 'HELPER';
+            const who = this.formatPlayerNameHtml(m);
+            return {
+                badge: { label: 'STAFF', className: 'badge-staff' },
+                author: { html: `[${roleLabel}] ${who}:`, className: 'color-staff' },
+                content: { html: esc(msg), className: 'text-staff' },
+            };
+        }
+
         if (type === 'say' || type === '') {
             const who = (m.clanTag || m.factionId)
                 ? this.formatPlayerNameHtml(m)

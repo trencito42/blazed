@@ -102,9 +102,47 @@ local function sendBroadcast(payload, eventName)
     end
 end
 
+local function sendStaffOnly(payload)
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local ok, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(src, 1) end)
+        if ok and isAdmin == true then
+            TriggerClientEvent('sunset:chat:message', src, payload)
+        end
+    end
+end
+
 RegisterNetEvent('sunset:chat:send', function(message, channel)
     local src = source
     channel = tostring(channel or 'all'):lower()
+
+    -- [STAFF CHAT] /a or STAFF channel — staff-only, level 1+
+    if channel == 'staff' then
+        local ok, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(src, 1) end)
+        if not ok or isAdmin ~= true then
+            TriggerClientEvent('sunset:chat:system', src, 'Staff chat is for staff members only.', 'error')
+            return
+        end
+        if not checkChatRateLimit(src, 'say', CHAT_COOLDOWN_MS) then
+            TriggerClientEvent('sunset:chat:system', src, 'Slow down — message rate limited.', 'warning')
+            return
+        end
+        message = cleanChatText(message, 256)
+        if not message then return end
+        local identity = chatIdentity(src)
+        local level = 0
+        pcall(function() level = exports.sunset_admin:GetAdminLevel(src) or 0 end)
+        sendStaffOnly({
+            id = src,
+            name = identity.name,
+            message = message,
+            time = os.date('%H:%M:%S'),
+            type = 'staff',
+            adminLevel = level,
+        })
+        return
+    end
+
     local isOoc = channel == 'ooc'
     local rateKey = isOoc and 'ooc' or 'say'
     if not checkChatRateLimit(src, rateKey, CHAT_COOLDOWN_MS) then
@@ -149,6 +187,32 @@ local function runMeCommand(source, args)
         type = 'me',
     })
 end
+
+-- /a [message] — staff chat shortcut (level 1+)
+RegisterCommand('a', function(source, args)
+    if source == 0 then return end
+    local ok, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(source, 1) end)
+    if not ok or isAdmin ~= true then
+        exports.sunset_core:CommandDenyAdmin(source, 'a')
+        return
+    end
+    local msg = cleanChatText(table.concat(args, ' '), 256)
+    if not msg then
+        TriggerClientEvent('sunset:chat:system', source, 'Usage: /a [message]', 'warning')
+        return
+    end
+    local identity = chatIdentity(source)
+    local level = 0
+    pcall(function() level = exports.sunset_admin:GetAdminLevel(source) or 0 end)
+    sendStaffOnly({
+        id = source,
+        name = identity.name,
+        message = msg,
+        time = os.date('%H:%M:%S'),
+        type = 'staff',
+        adminLevel = level,
+    })
+end, false)
 
 local function runDoCommand(source, args)
     local msg = cleanChatText(table.concat(args, ' '), 256)
@@ -232,6 +296,18 @@ local function buildChatChannels(source)
                 id = 'clan',
                 label = string.upper(meta.clanTag),
                 placeholder = ('%s clan chat'):format(meta.clanTag),
+            }
+        end
+    end
+
+    -- [STAFF CHAT] Admins/helpers (level 1+) get a STAFF channel
+    if GetResourceState('sunset_admin') == 'started' then
+        local ok, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(source, 1) end)
+        if ok and isAdmin == true then
+            channels[#channels + 1] = {
+                id = 'staff',
+                label = 'STAFF',
+                placeholder = 'Staff chat — visible to all online staff only',
             }
         end
     end

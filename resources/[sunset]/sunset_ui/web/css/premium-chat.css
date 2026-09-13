@@ -179,6 +179,9 @@
 #chat .badge-ad     { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
 #chat .badge-clan   { background: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.3); }
 #chat .badge-faction { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+#chat .badge-staff  { background: rgba(0, 255, 204, 0.15); color: #00ffcc; border: 1px solid rgba(0, 255, 204, 0.35); }
+#chat .color-staff  { color: #00ffcc; }
+#chat .text-staff   { color: rgba(255, 255, 255, 0.9); }
 
 #chat .msg-author {
     font-weight: 800;

@@ -41,6 +41,33 @@ local function removeDutyWeapons(ped)
     dutyWeapons = {}
 end
 
+-- [ARMORY FIX] Strip ALL weapons from the ped, then re-sync inventory weapons.
+-- removeDutyWeapons only removes tracked duty weapons; if the table was lost
+-- (reconnect, faction switch, stale state) old weapons stayed on the ped.
+local function stripAllWeapons(ped)
+    RemoveAllPedWeapons(ped, true)
+    dutyWeapons = {}
+    -- Re-grant inventory weapons (they belong to the player, not duty)
+    if GetResourceState('sunset_inventory') == 'started' then
+        pcall(function()
+            local data = exports.sunset_inventory:GetInventory()
+            if data and data.items then
+                for _, row in ipairs(data.items) do
+                    local def = Sunset.Items and Sunset.Items[row.item]
+                    if def and def.weapon then
+                        local hash = joaat(def.weapon)
+                        local ammo = 0
+                        if type(row.metadata) == 'table' and row.metadata.ammo then
+                            ammo = tonumber(row.metadata.ammo) or 0
+                        end
+                        GiveWeaponToPed(ped, hash, ammo, false, false)
+                    end
+                end
+            end
+        end)
+    end
+end
+
 local function giveWeapon(ped, weapon, ammo)
     local hash = joaat(weapon)
     GiveWeaponToPed(ped, hash, ammo or 0, false, false)
@@ -195,7 +222,7 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
     end
 
     ped = PlayerPedId()
-    removeDutyWeapons(ped)
+    stripAllWeapons(ped)
 
     if loadout.armor and loadout.armor > 0 then
         SetPedArmour(ped, math.min(100, loadout.armor))

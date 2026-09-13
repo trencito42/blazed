@@ -653,7 +653,13 @@ end)
 RegisterNetEvent('sunset:turfs:teleport', function(coords)
     local ped = PlayerPedId()
     if not coords then return end
+    -- [FALL FIX] Request collision before teleporting; without it the ped
+    -- falls through the map because the ground hasn't streamed in yet.
+    RequestCollisionAtCoord(coords.x + 0.0, coords.y + 0.0, coords.z + 0.5)
+    FreezeEntityPosition(ped, true)
     SetEntityCoords(ped, coords.x + 0.0, coords.y + 0.0, coords.z + 0.5, false, false, false, false)
+    Wait(100)
+    FreezeEntityPosition(ped, false)
 end)
 
 CreateThread(function()

@@ -9,7 +9,13 @@ end)
 RegisterNetEvent('sunset:admin:teleport', function(x, y, z)
     local ped = PlayerPedId()
     TriggerEvent('sunset:world:clearTooltips')
+    -- [FALL FIX] Request collision before teleporting; without it the ped
+    -- falls through the map because the ground hasn't streamed in yet.
+    RequestCollisionAtCoord(x + 0.0, y + 0.0, z + 0.0)
+    FreezeEntityPosition(ped, true)
     SetEntityCoords(ped, x + 0.0, y + 0.0, z + 0.0, false, false, false, false)
+    Wait(100)
+    FreezeEntityPosition(ped, false)
 end)
 
 RegisterNetEvent('sunset:admin:giveWeapon', function(weapon, ammo, adminSource)
