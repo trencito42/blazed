@@ -323,6 +323,8 @@ function SunsetJobs_AddJobProgress(source, jobId, xpDelta, taskDelta, earnedDelt
         TriggerClientEvent('sunset:client:notify', source,
             ('%s skill level %d!'):format(Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId, level),
             'success', 5000)
+        -- [QUESTS 7-9] advanced chain: skill level-ups drive the quest progress.
+        TriggerEvent('sunset:quest:progress', char.id, 'job_level_up', 1, { jobId = jobId, level = level })
     end
 
     if row then

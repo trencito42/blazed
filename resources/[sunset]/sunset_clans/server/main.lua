@@ -546,6 +546,8 @@ exports.sunset_core:RegisterCallback('sunset:clanCreate', function(source, paylo
     pcall(function()
         audit(clanId, cid, 'create', { name = name, tag = tag, cost = cost })
     end)
+    -- [QUESTS 7-9] clan chain: founding a clan counts as joining.
+    TriggerEvent('sunset:quest:progress', cid, 'clan_joined', 1, { clanId = clanId, via = 'create' })
 
     local syncOk, syncErr = pcall(function()
         ClanDisplay.sync(source)
@@ -894,6 +896,8 @@ local function acceptInvite(source)
     MySQL.update.await('DELETE FROM clan_invites WHERE clan_id = ? AND character_id = ?', { invite.clan_id, cid })
     PendingInvites[source] = nil
     ClanDisplay.sync(source)
+    -- [QUESTS 7-9] clan chain: joining a clan drives quest progress.
+    TriggerEvent('sunset:quest:progress', cid, 'clan_joined', 1, { clanId = invite.clan_id, via = 'invite' })
     safeAudit(invite.clan_id, cid, 'join', {})
     safeBroadcast(invite.clan_id, source, 'joined the clan.')
     return clanManageDashboard(source, cid)

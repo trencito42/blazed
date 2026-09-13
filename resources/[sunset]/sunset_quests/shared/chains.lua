@@ -128,20 +128,49 @@ Sunset.QuestChains = {
               reward = { money = 300, xp = 60, rp = 3, reason = 'quest_faction' } },
         },
     },
-    -- advanced/criminal/clan (orders 7-9) remain designed-but-disabled until
-    -- their progression systems (skill tiers, criminal contacts, clan endgame)
-    -- are built — see docs/product/RPG_PROGRESSION.md.
+    -- advanced/criminal/clan (orders 7-9): [QUESTS 7-9] shipped using the
+    -- EXISTING gameplay systems as emitters (job_progress level-ups, carjack
+    -- chop-shop sales, robbery sessions, clan join/create, turf wars). No new
+    -- NPCs required; the black-market NPC from the design brief can replace
+    -- the carjack objective later without touching the quest engine.
     advanced = {
-        label = 'Master of Your Craft', order = 7, enabled = false, requiresChain = 'faction',
-        quests = {},
+        label = 'Master of Your Craft', order = 7, enabled = true, requiresChain = 'faction',
+        description = 'Become a specialist: climb skill tiers and stack shifts.',
+        quests = {
+            { key = 'adv_level3', label = 'Skilled Worker', description = 'Gain 3 skill levels in any civilian job (complete shifts to earn job XP).',
+              objectives = { { type = 'job_level_up', target = 3, label = 'Gain 3 skill levels' } },
+              reward = { money = 800, xp = 100, rp = 4, reason = 'quest_skill_tier' } },
+            { key = 'adv_shifts20', label = 'Workhorse', description = 'Complete 20 work shifts across any jobs.',
+              objectives = { { type = 'job_shift_completed', target = 20, label = 'Complete 20 shifts' } },
+              reward = { money = 1500, xp = 150, rp = 5, reason = 'quest_workhorse' }, unlocksChain = 'criminal' },
+        },
     },
     criminal = {
-        label = 'The Other Side', order = 8, enabled = false, requiresChain = 'advanced',
-        quests = {},
+        label = 'The Other Side', order = 8, enabled = true, requiresChain = 'advanced',
+        description = 'Wanted stars have a price. Prove you can survive the other side of the law.',
+        quests = {
+            { key = 'crim_chop', label = 'Fast Cars, Fast Cash', description = 'Sell a stolen vehicle at the chop shop.',
+              objectives = { { type = 'carjack_sold', target = 1, label = 'Sell a stolen vehicle' } },
+              reward = { money = 1000, xp = 120, rp = 5, reason = 'quest_chop' } },
+            { key = 'crim_robbery', label = 'Smash and Grab', description = 'Complete a robbery and get away with the goods.',
+              objectives = { { type = 'robbery_completed', target = 1, label = 'Complete a robbery' } },
+              reward = { money = 2500, xp = 200, rp = 6, reason = 'quest_robbery' } },
+            { key = 'crim_three', label = 'Career Criminal', description = 'Complete 3 robberies. The heat is on.',
+              objectives = { { type = 'robbery_completed', target = 3, label = 'Complete 3 robberies' } },
+              reward = { money = 5000, xp = 300, rp = 8, reason = 'quest_career_criminal' }, unlocksChain = 'clan' },
+        },
     },
     clan = {
-        label = 'Blood and Territory', order = 9, enabled = false, requiresChain = 'criminal',
-        quests = {},
+        label = 'Blood and Territory', order = 9, enabled = true, requiresChain = 'criminal',
+        description = 'Loyalty, colors, and turf. Join or found a clan and hold ground.',
+        quests = {
+            { key = 'cln_join', label = 'Colors', description = 'Join a clan (or found your own) via /clan.',
+              objectives = { { type = 'clan_joined', target = 1, label = 'Join or create a clan' } },
+              reward = { money = 1000, xp = 150, rp = 5, reason = 'quest_clan_join' } },
+            { key = 'cln_war', label = 'Hold the Line', description = 'Fight in a turf war and survive to the final scoreboard.',
+              objectives = { { type = 'turf_war_fought', target = 1, label = 'Fight in a turf war' } },
+              reward = { money = 3000, xp = 250, rp = 8, reason = 'quest_clan_war' } },
+        },
     },
 }
 

@@ -388,6 +388,11 @@ function RobberySessions.success(source)
     session.stage = STATES.SUCCESS
     endFrameworkSession(session, 'COMPLETED', 'robbery success')
     RobberyAdapter.finishRun(session, 'success')
+    -- [QUESTS 7-9] criminal chain: a completed robbery drives quest progress.
+    if session.characterId then
+        TriggerEvent('sunset:quest:progress', session.characterId, 'robbery_completed', 1,
+            { locationId = session.locationId })
+    end
     RobberySessions.locationBusy[session.locationId] = nil
     RobberySessions.bySource[source] = nil
     local playerExpiry = os.time() + (SunsetRobbery.PlayerCooldownSec or 1800)

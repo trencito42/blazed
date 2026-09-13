@@ -208,6 +208,15 @@ local function endWar(turfId, reason)
         if not mvp or (p.kills or 0) > (mvp.kills or 0) then
             mvp = { name = GetPlayerName(src) or p.name or '?', kills = p.kills or 0, deaths = p.deaths or 0 }
         end
+        -- [QUESTS 7-9] clan chain: participants who actually fought (any kill or
+        -- death) get quest progress; idle zone-sitters do not.
+        if ((p.kills or 0) + (p.deaths or 0)) > 0 and GetPlayerName(src) then
+            local okC, charC = pcall(function() return exports.sunset_core:GetCharacter(src) end)
+            if okC and charC and charC.id then
+                TriggerEvent('sunset:quest:progress', charC.id, 'turf_war_fought', 1,
+                    { turfId = turfId, kills = p.kills or 0 })
+            end
+        end
     end
 
     syncTurfsToClient(-1)

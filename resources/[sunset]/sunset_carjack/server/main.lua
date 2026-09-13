@@ -176,6 +176,12 @@ exports.sunset_core:RegisterCallback('sunset:carjack:sell', function(source, dat
     exports.sunset_core:AddMoney(source, 'cash', payout, 'carjack_sale')
     addLockpickXP(source, 50)
 
+    -- [QUESTS 7-9] criminal chain: chop-shop sales drive quest progress.
+    local okQ, charQ = pcall(function() return exports.sunset_core:GetCharacter(source) end)
+    if okQ and charQ and charQ.id then
+        TriggerEvent('sunset:quest:progress', charQ.id, 'carjack_sold', 1, { payout = payout })
+    end
+
     print(('[carjack] %s sold a vehicle (hash %d) for $%d'):format(GetPlayerName(source) or '?', modelHash, payout))
 
     return true, payout
