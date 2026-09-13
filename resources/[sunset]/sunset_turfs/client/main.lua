@@ -286,6 +286,15 @@ CreateThread(function()
     Wait(2000)
     TriggerServerEvent('sunset:turfs:requestSync')
 
+    -- [RESYNC] Re-request turf data after spawn/character load: the one-shot
+    -- sync at resource start could fire before the server had its DB rows or
+    -- before auth completed, leaving the map without turf blips entirely.
+    AddEventHandler('sunset:client:playerSpawned', function()
+        SetTimeout(1500, function()
+            TriggerServerEvent('sunset:turfs:requestSync')
+        end)
+    end)
+
     while true do
         Wait(800)
         local ped = PlayerPedId()

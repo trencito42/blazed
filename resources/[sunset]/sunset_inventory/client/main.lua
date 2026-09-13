@@ -82,7 +82,9 @@ local function inventoryAction(callbackName, data)
         local result, err = Sunset.AwaitCallback(callbackName, data or {})
         if not result then
             exports.sunset_ui:Notify(err or 'Inventory action failed. Reopen the inventory and try again.', 'error')
-        elseif result.message then
+        elseif type(result) == 'table' and result.message then
+            -- [FIX] Several server callbacks return plain `true` (e.g. trade
+            -- confirm/accept); indexing a boolean crashed this handler.
             exports.sunset_ui:Notify(result.message, result.kind or 'success')
         end
     end)

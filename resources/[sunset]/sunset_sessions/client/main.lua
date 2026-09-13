@@ -80,8 +80,10 @@ function EmergencyCleanup(reason)
     DestroyAllCams(true)
     RenderScriptCams(false, false, 0, true, false)
 
-    -- routing bucket (properties)
-    SetPlayerRoutingBucket(PlayerId(), 0)
+    -- routing bucket: SetPlayerRoutingBucket is a SERVER-only native — on the
+    -- client it is nil ("attempt to call a nil value"). Ask the owning
+    -- resources to reset it instead (properties/interiors route via server).
+    pcall(function() TriggerServerEvent('sunset:sessions:resetRoutingBucket') end)
 
     -- NUI: close session modals + force-release focus
     if GetResourceState('sunset_ui') == 'started' then

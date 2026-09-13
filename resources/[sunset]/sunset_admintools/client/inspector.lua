@@ -27,14 +27,17 @@ end
 local function raycastEntity()
     local ped = PlayerPedId()
     local cam = GetGameplayCamCoord()
-    local dir = GetGameplayCamRot(2)
-    local rad = math.rad(dir.x)
-    local rotx = math.rad(dir.z)
-    dir.x = -math.sin(rotx) * math.abs(math.cos(rad))
-    dir.y = math.cos(rotx) * math.abs(math.cos(rad))
-    dir.z = math.sin(rad)
+    local rot = GetGameplayCamRot(2)
+    -- [FIX] vector3 values are IMMUTABLE in CfxLua ("attempt to mutate a
+    -- vector value"); compute the direction into plain locals instead of
+    -- writing back into `rot`.
+    local rad = math.rad(rot.x)
+    local rotx = math.rad(rot.z)
+    local dirX = -math.sin(rotx) * math.abs(math.cos(rad))
+    local dirY = math.cos(rotx) * math.abs(math.cos(rad))
+    local dirZ = math.sin(rad)
     local len = 120.0
-    local dest = vector3(cam.x + dir.x * len, cam.y + dir.y * len, cam.z + dir.z * len)
+    local dest = vector3(cam.x + dirX * len, cam.y + dirY * len, cam.z + dirZ * len)
     local ray = StartShapeTestRay(cam.x, cam.y, cam.z, dest.x, dest.y, dest.z, -1, ped, 4)
     local _, hit, endCoords, _, entity = GetShapeTestResult(ray)
     if hit == 1 and entity ~= 0 then

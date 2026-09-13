@@ -345,6 +345,16 @@ AddEventHandler('sunset:death:playerDowned', function(src)
     cancelForSource(tonumber(src), 'FAILED', 'player downed')
 end)
 
+-- [FIX] Client session cleanup used to call SetPlayerRoutingBucket locally
+-- (server-only native -> nil on client). It now asks us to reset the bucket.
+RegisterNetEvent('sunset:sessions:resetRoutingBucket', function()
+    local src = source
+    if GetResourceState('sunset_properties') == 'started' then
+        pcall(function() exports.sunset_properties:LeaveProperty(src) end)
+    end
+    SetPlayerRoutingBucket(src, 0)
+end)
+
 AddEventHandler('sunset:faction:playerJailed', function(src)
     cancelForSource(tonumber(src), 'FAILED', 'player jailed')
 end)
