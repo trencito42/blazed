@@ -34,3 +34,15 @@ body.nofx #screen-auth,
 body.nofx .screen {
     background: #0a0a0f !important;
 }
+
+/* [FIX] Notifications rely on the sunset-notify-in animation to go from
+   opacity:0 to opacity:1. With nofx killing all animations they would stay
+   invisible forever. Force the final state directly; is-leaving gets the
+   opposite so toasts still disappear after their timeout. */
+body.nofx .notification {
+    opacity: 1 !important;
+    transform: none !important;
+}
+body.nofx .notification.is-leaving {
+    opacity: 0 !important;
+}
