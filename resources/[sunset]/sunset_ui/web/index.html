@@ -3517,53 +3517,56 @@
         <div class="dmg-container" id="dmg-container"></div>
     </div>
 
-    <script defer src="js/world-tooltip.js?v=31"></script>
-    <script defer src="js/app.js?v=33"></script>
-    <!-- [AUDIT P8-22] courier/job_shift were never linked; their HUD windows were dead code -->
-    <script defer src="js/courier.js?v=31"></script>
-    <script defer src="js/quests.js?v=31"></script>
-    <script defer src="js/clanwar.js?v=31"></script>
-    <script defer src="js/job_shift.js?v=31"></script>
+    <!-- ═══ AUTH-ONLY SCRIPTS (loaded at boot) ═══ -->
+    <script defer src="js/app.js?v=34"></script>
     <script defer src="js/characters.js?v=31"></script>
-    <script defer src="js/forza_speedometer.js?v=31"></script>
-    <script defer src="js/hud.js?v=31"></script>
-    <script defer src="js/hud_editor.js?v=31"></script>
-    <script defer src="js/player_identity.js?v=31"></script>
-    <script defer src="js/scoreboard.js?v=31"></script>
-    <script defer src="js/store247.js?v=31"></script>
-    <script defer src="js/chat_settings.js?v=31"></script>
-    <script defer src="js/chat.js?v=31"></script>
-    <script defer src="js/properties-ui.js?v=31"></script>
-    <script defer src="js/menu.js?v=31"></script>
-    <!-- leaflet.js (144KB) is lazy-loaded on demand by phone-taxi-map.js ensureLeaflet() -->
-    <script defer src="js/phone-taxi-map.js?v=32"></script>
-    <script defer src="js/phone.js?v=31"></script>
-    <script defer src="js/dealership.js?v=31"></script>
-    <script defer src="js/hotbar.js?v=31"></script>
-    <script defer src="js/inventory-forza.js?v=31"></script>
-    <script defer src="js/panels.js?v=31"></script>
-    <script defer src="js/overlays.js?v=31"></script>
     <script defer src="js/auth_accounts.js?v=31"></script>
     <script defer src="js/auth_email.js?v=31"></script>
     <script defer src="js/auth_loading.js?v=31"></script>
     <script defer src="js/auth-forza.js?v=31"></script>
-    <script defer src="js/trade-forza.js?v=31"></script>
     <script defer src="js/spawn.js?v=31"></script>
-    <script defer src="js/damage-indicators.js?v=31"></script>
-    <script defer src="js/fuel_pump.js?v=31"></script>
-    <script defer src="js/job_icons.js?v=31"></script>
-    <script defer src="js/fishing.js?v=31"></script>
-    <script defer src="js/license_test.js?v=31"></script>
-    <script defer src="js/license_quiz.js?v=31"></script>
-    <script defer src="js/radar.js?v=31"></script>
-    <script defer src="js/factions.js?v=31"></script>
-    <script defer src="js/clans.js?v=31"></script>
-    <script defer src="js/businesses.js?v=31"></script>
-    <script defer src="js/wardrobe.js?v=31"></script>
-    <script defer src="js/mdc_tablet.js?v=31"></script>
-    <script defer src="js/player_interaction.js?v=31"></script>
-    <script defer src="js/atm.js?v=31"></script>
-    <script defer src="js/battlepass.js?v=31"></script>
-    <script defer src="js/helpdesk.js?v=1"></script>
+    <script defer src="js/overlays.js?v=31"></script>
+    <script defer src="js/player_identity.js?v=31"></script>
+
+    <!-- ═══ GAMEPLAY SCRIPTS (lazy-loaded at enterGameplay — NUI perf fix) ═══
+         These are type="text/plain" so they do NOT parse/execute at boot.
+         app.js injects them as real <script> tags when the player enters gameplay. -->
+    <script type="text/plain" data-lazy-src="js/world-tooltip.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/courier.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/quests.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/clanwar.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/job_shift.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/forza_speedometer.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/hud.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/hud_editor.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/scoreboard.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/store247.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/chat_settings.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/chat.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/properties-ui.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/menu.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/phone-taxi-map.js?v=32"></script>
+    <script type="text/plain" data-lazy-src="js/phone.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/dealership.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/hotbar.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/inventory-forza.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/panels.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/trade-forza.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/damage-indicators.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/fuel_pump.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/job_icons.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/fishing.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/license_test.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/license_quiz.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/radar.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/factions.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/clans.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/businesses.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/wardrobe.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/mdc_tablet.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/player_interaction.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/atm.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/battlepass.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/helpdesk.js?v=1"></script>
 </body>
 </html>

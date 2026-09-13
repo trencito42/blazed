@@ -456,6 +456,24 @@ function applyNofx() {
     document.body.classList.add('nofx');
 }
 
+// [NUI PERF] Lazy-load gameplay scripts at enterGameplay instead of at boot.
+// Scripts are stored as <script type="text/plain" data-lazy-src="..."> in
+// index.html; this converts them to real executable <script> tags.
+let lazyScriptsLoaded = false;
+function loadLazyScripts() {
+    if (lazyScriptsLoaded) return;
+    lazyScriptsLoaded = true;
+    const pending = document.querySelectorAll('script[type="text/plain"][data-lazy-src]');
+    pending.forEach((el) => {
+        const s = document.createElement('script');
+        s.src = el.dataset.lazySrc;
+        s.defer = true;
+        document.body.appendChild(s);
+        el.remove();
+    });
+    __btracePost(`lazy scripts injected: ${pending.length}`);
+}
+
 // NUI message handler
 window.addEventListener('message', (event) => {
     const { action, screen, data, message, type, duration, label } = event.data;
@@ -603,6 +621,7 @@ window.addEventListener('message', (event) => {
         }
 
         case 'enterGameplay': {
+            loadLazyScripts();
             if (window.AuthLoading) {
                 AuthLoading._pending = false;
                 AuthLoading.clearSafety();
