@@ -58,8 +58,18 @@ def post(embed):
     if not WEBHOOK:
         return
     body = json.dumps({"embeds": [embed]}).encode()
+    # Cloudflare (error 1010) blocks the default Python-urllib UA; spoof a
+    # browser UA so the Discord webhook accepts the request.
     req = urllib.request.Request(
-        WEBHOOK, data=body, headers={"Content-Type": "application/json"}
+        WEBHOOK,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+            ),
+        },
     )
     try:
         urllib.request.urlopen(req, timeout=10).read()
