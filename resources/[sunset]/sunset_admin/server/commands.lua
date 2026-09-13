@@ -815,6 +815,16 @@ registerServerCommand('setw', function(source, args)
 end)
 
 -- /setadmin [id|username] [level]
+-- [STAFF BROADCAST] Admin promotions/demotions are announced to all online
+-- staff (never to the public chat — doxxing admins invites targeting).
+local function announceStaffChange(bySource, targetName, level)
+    local byName = bySource == 0 and 'CONSOLE' or (GetPlayerName(bySource) or '?')
+    local title = (SunsetAdmin.Levels and SunsetAdmin.Levels[tonumber(level) or 0]) or 'Player'
+    local verb = (tonumber(level) or 0) > 0 and 'is now' or 'was removed from staff — now'
+    local text = ('[STAFF] %s %s %s (level %d).'):format(targetName, verb, title, tonumber(level) or 0)
+    pcall(function() exports.sunset_admin:BroadcastStaff(('^5%s^7 — by %s'):format(text, byName)) end)
+end
+
 registerServerCommand('setadmin', function(source, args)
     if source ~= 0 and not requirePerm(source, 'setadmin') then return end
 
@@ -829,7 +839,14 @@ registerServerCommand('setadmin', function(source, args)
     if target and GetPlayerName(target) then
         local license = Sunset.GetIdentifier(target, 'license')
         SetAdmin(license, level, GetPlayerName(target), source == 0 and 'console' or GetPlayerName(source))
-        notify(source ~= 0 and source or target, 'Admin level set to ' .. level, 'success')
+        local title = (SunsetAdmin.Levels and SunsetAdmin.Levels[level]) or 'level ' .. level
+        if level > 0 then
+            notify(target, ('Your staff level is now %d (%s).'):format(level, title), 'success', 10000)
+        else
+            notify(target, 'Your staff level was removed.', 'warning', 10000)
+        end
+        if source ~= 0 then notify(source, ('Admin level for %s set to %d (%s).'):format(GetPlayerName(target), level, title), 'success') end
+        announceStaffChange(source, exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target) or ('#' .. target), level)
         return
     end
 
@@ -848,10 +865,16 @@ registerServerCommand('setadmin', function(source, args)
         if player and player.account_id == account.id then
             player.admin_level = level
             loadAdmin(src)
-            notify(src, 'Your admin level is now ' .. level, 'success')
+            local title = (SunsetAdmin.Levels and SunsetAdmin.Levels[level]) or 'level ' .. level
+            if level > 0 then
+                notify(src, ('Your staff level is now %d (%s).'):format(level, title), 'success', 10000)
+            else
+                notify(src, 'Your staff level was removed.', 'warning', 10000)
+            end
         end
     end
     if source ~= 0 then notify(source, 'Admin set for account ' .. account.username, 'success') end
+    announceStaffChange(source, account.username, level)
 end, false)
 
 -- /coords [v4] — client also registers /getpos and /pos for NUI chat
