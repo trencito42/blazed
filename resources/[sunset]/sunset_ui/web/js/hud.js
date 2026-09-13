@@ -225,19 +225,6 @@ const Hud = {
             $('#hud-heading').textContent = heading;
         }
 
-        // Waypoint distance
-        const wpEl = $('#hud-waypoint');
-        const wpDist = $('#hud-waypoint-dist');
-        if (wpEl && wpDist) {
-            const dist = data.waypointDist != null ? Number(data.waypointDist) : null;
-            if (dist != null && dist > 0) {
-                wpEl.classList.remove('hidden');
-                wpDist.textContent = dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${dist}m`;
-            } else {
-                wpEl.classList.add('hidden');
-            }
-        }
-
         if (street == null || street === '' || street === '—') return;
 
         const streetChanged = street !== this._lastStreet;
@@ -255,18 +242,12 @@ const Hud = {
         if (data.health !== undefined) {
             const health = Math.round(this.clamp(data.health));
             $('#hud-health').style.width = `${health}%`;
-            const vitalHealth = $('#hud-vital-health');
-            if (vitalHealth) vitalHealth.style.width = `${health}%`;
         }
         if (data.armor !== undefined) {
             const armor = Math.round(this.clamp(data.armor));
             const armorWrap = document.querySelector('.vital-row--armor');
             if (armorWrap) armorWrap.classList.toggle('hidden', armor <= 0);
             $('#hud-armor').style.width = `${armor}%`;
-            const vitalArmor = $('#hud-vital-armor');
-            const vitalArmorRow = $('#hud-vital-armor-row');
-            if (vitalArmor) vitalArmor.style.width = `${armor}%`;
-            if (vitalArmorRow) vitalArmorRow.classList.toggle('hidden', armor <= 0);
         }
         if (data.cash !== undefined) $('#hud-cash').textContent = formatMoney(data.cash);
         if (data.bank !== undefined) $('#hud-bank').textContent = formatMoney(data.bank);

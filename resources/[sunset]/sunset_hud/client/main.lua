@@ -274,7 +274,8 @@ CreateThread(function()
             HideHudComponentThisFrame(1)
             HideHudComponentThisFrame(2)
             HideHudComponentThisFrame(3)
-            HideHudComponentThisFrame(4)
+            -- [FIX] Component 4 hidden = HP/armor bars gone. Removed so native
+            -- GTA health/armor bars show under the minimap.
             HideHudComponentThisFrame(6)
             HideHudComponentThisFrame(7)
             HideHudComponentThisFrame(8)
