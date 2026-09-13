@@ -169,6 +169,13 @@ function FactionRoster.kickMember(source, characterId, options)
                 { factionId, characterId, char.id, 'Removed from faction (FP)' }
             )
         end)
+        -- [FP SYSTEM] Apply the actual faction punish (60 FP, decays 1/payday,
+        -- blocks joining any faction until cleared/pardoned).
+        if FactionManagement then
+            pcall(function()
+                FactionManagement.setFP(characterId, 60, 'Kicked from faction with FP by ' .. tostring(char.id), char.id)
+            end)
+        end
     end
 
     local targetName = FactionCore.memberDisplayName(characterId)

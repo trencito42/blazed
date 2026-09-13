@@ -36,6 +36,7 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/core.lua',
     'server/faction_labels.lua',
+    'server/management.lua',
     'server/detention.lua',
     'server/main.lua',
     'server/chat.lua',

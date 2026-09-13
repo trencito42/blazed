@@ -536,6 +536,22 @@ AddEventHandler('sunset:nui:factionManage', function(data)
     elseif action == 'gradeLabels' then
         ok, err = Sunset.AwaitCallback('sunset:factionSetGradeLabels', data.labels or {})
         if ok then exports.sunset_ui:Notify('Rank names saved.', 'success') end
+    elseif action == 'resign' then
+        -- [FP SYSTEM] Member submits a resignation request for the leader.
+        ok, err = Sunset.AwaitCallback('sunset:factionResignSubmit', data.reason or '')
+        if ok then exports.sunset_ui:Notify('Resignation submitted. The leader can accept it cleanly (no FP) or with FP.', 'success', 12000) end
+    elseif action == 'resignAccept' then
+        ok, err = Sunset.AwaitCallback('sunset:factionResignHandle', tonumber(data.resignationId), 'accept')
+        if ok then exports.sunset_ui:Notify('Resignation accepted (clean, no FP).', 'success') end
+    elseif action == 'resignAcceptFp' then
+        ok, err = Sunset.AwaitCallback('sunset:factionResignHandle', tonumber(data.resignationId), 'accept_fp')
+        if ok then exports.sunset_ui:Notify('Resignation accepted with FP (60).', 'warning') end
+    elseif action == 'resignDecline' then
+        ok, err = Sunset.AwaitCallback('sunset:factionResignHandle', tonumber(data.resignationId), 'decline')
+        if ok then exports.sunset_ui:Notify('Resignation declined.', 'info') end
+    elseif action == 'pardonFp' then
+        ok, err = Sunset.AwaitCallback('sunset:factionPardonFP', tonumber(data.characterId))
+        if ok then exports.sunset_ui:Notify('FP pardoned.', 'success') end
     else
         return exports.sunset_ui:Notify('Unknown faction action.', 'error')
     end

@@ -109,6 +109,12 @@ local function leaveFactionForSource(source)
         return nil, 'Could not leave faction — try again'
     end
 
+    -- [FP SYSTEM] Instant self-leave without a resignation request = +60 FP
+    -- (decays 1/payday; blocks joining any faction until cleared/pardoned).
+    if FactionManagement then
+        pcall(function() FactionManagement.applySelfLeaveFP(source, char, oldFaction) end)
+    end
+
     FactionCore.broadcastManagement(oldFaction, source, 'left the faction.', {
         omitRank = true,
     })
@@ -149,6 +155,12 @@ local function performFactionInvite(source, targetId)
     if targetFaction then
         local label = Sunset.Factions[targetFaction] and Sunset.Factions[targetFaction].label or targetFaction
         return nil, ('That player is already a member of %s.'):format(label)
+    end
+    -- [FP SYSTEM] Block inviting faction-punished characters early, so the
+    -- leader learns why instead of the invite failing silently on accept.
+    if FactionManagement then
+        local fpOk, fpErr = FactionManagement.assertCanJoin(target.id)
+        if not fpOk then return nil, fpErr end
     end
     if FactionCore.distBetween(FactionCore.playerCoords(source), FactionCore.playerCoords(targetId)) > 10.0 then
         return nil, 'Meet the accepted applicant first; they must be within 10 metres when you invite them.'
@@ -197,6 +209,11 @@ local function performFactionAcceptInvite(source)
         return nil, 'The invitation belongs to a different or unloaded character.'
     end
     if getFactionOf(char) then return nil, 'You are already a member of a faction.' end
+    -- [FP SYSTEM] Faction-punished characters cannot join any faction.
+    if FactionManagement then
+        local fpOk, fpErr = FactionManagement.assertCanJoin(char.id)
+        if not fpOk then return nil, fpErr end
+    end
     local inviter = getChar(invite.inviterSource)
     if not inviter or select(1, getFactionOf(inviter)) ~= invite.factionId then
         return nil, 'The inviting faction member is no longer available. Ask them to send a new invitation.'
@@ -815,6 +832,8 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
     if not activityOk then return nil, 'Weekly faction report could not be read. Please try again.' end
     local rosterOk, roster = pcall(factionRoster, factionId)
     if not rosterOk then return nil, 'Faction roster could not be read. Please try again.' end
+    -- [FP SYSTEM] batch-attach join days + FP to every roster member.
+    pcall(function() roster = FactionManagement.enrichRoster(roster) end)
     local isLeader = FactionCore.isFactionLeader(char.id, factionId)
     local permissions = {
         leader = isLeader,
@@ -827,6 +846,8 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         renameRanks = isLeader,
         rankMembers = isLeader or memberManagePerm(source, 'giverank') or memberManagePerm(source, 'promote'),
         kickMembers = isLeader or memberManagePerm(source, 'uninvite'),
+        manageResignations = isLeader or memberManagePerm(source, 'uninvite'),
+        pardonFp = isLeader or memberManagePerm(source, 'uninvite'),
     }
     local grades = FactionLabels.listForFaction(factionId)
     local societyBalance = nil
@@ -836,6 +857,35 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
             societyBalance = row and tonumber(row.balance) or 0
         end)
     end
+    -- [FP SYSTEM] pending resignations for leaders/managers
+    local pendingResignations = {}
+    if permissions.manageResignations and FactionManagement then
+        local okR, rows = pcall(function()
+            return MySQL.query.await([[
+                SELECT fr.id, fr.character_id, fr.reason, fr.created_at,
+                       c.firstname, c.lastname, fm.joined_at
+                FROM faction_resignations fr
+                LEFT JOIN characters c ON c.id = fr.character_id
+                LEFT JOIN faction_membership fm ON fm.character_id = fr.character_id
+                WHERE fr.faction_id = ? AND fr.status = 'pending'
+                ORDER BY fr.created_at ASC LIMIT 50
+            ]], { factionId })
+        end)
+        if okR and rows then
+            local now = os.time()
+            for _, row in ipairs(rows) do
+                local joinedAt = row.joined_at and tonumber(row.joined_at) or nil
+                pendingResignations[#pendingResignations + 1] = {
+                    id = tonumber(row.id),
+                    characterId = tonumber(row.character_id),
+                    name = (('%s %s'):format(row.firstname or '', row.lastname or '')):gsub('^%s+', ''):gsub('%s+$', ''),
+                    reason = row.reason or '',
+                    daysInFaction = joinedAt and math.floor((now - joinedAt) / 86400) or nil,
+                }
+            end
+        end
+    end
+
     return {
         id = factionId,
         label = faction.label,
@@ -855,6 +905,8 @@ exports.sunset_core:RegisterCallback('sunset:factionDashboard', function(source)
         societyBalance = societyBalance,
         report = { current = tonumber(activity and activity.total) or 0, target = faction.weeklyReportTarget or 0 },
         members = roster,
+        pendingResignations = pendingResignations,
+        myFp = FactionManagement and select(1, FactionManagement.getFP(char.id)) or 0,
         viewerCharacterId = char.id,
         viewerGrade = grade,
     }

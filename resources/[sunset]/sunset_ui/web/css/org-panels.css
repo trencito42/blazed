@@ -209,8 +209,8 @@
 }
 
 .org-member-badge.is-online { border-color: rgba(0, 255, 102, 0.35); color: #6dffb0; }
-.org-member-badge.is-duty { border-color: rgba(255, 177, 28, 0.45); color: #ffd27a; }
-.org-member-badge.is-leader { border-color: rgba(0, 255, 204, 0.55); color: #ffb86a; }
+.org-member-badge.is-duty { border-color: rgba(0, 255, 204, 0.45); color: #7dffe4; }
+.org-member-badge.is-leader { border-color: rgba(0, 255, 204, 0.55); color: #00ffcc; }
 .org-member-badge.is-offline { color: rgba(255, 255, 255, 0.38); }
 
 .org-directory-row {

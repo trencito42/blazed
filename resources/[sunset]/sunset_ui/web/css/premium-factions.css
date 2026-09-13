@@ -138,8 +138,8 @@
 }
 
 .premium-clan__brand-icon {
-    background: rgba(255, 153, 0, 0.1);
-    border: 1px solid rgba(255, 153, 0, 0.35);
+    background: rgba(0, 255, 204, 0.1);
+    border: 1px solid rgba(0, 255, 204, 0.35);
     color: var(--pf-accent-orange);
 }
 
@@ -247,7 +247,7 @@
 
 .premium-clan__nav-item.is-active,
 .premium-clans-dir__nav-item.is-active {
-    background: rgba(255, 153, 0, 0.12);
+    background: rgba(0, 255, 204, 0.12);
     color: var(--pf-accent-orange);
 }
 
@@ -383,8 +383,8 @@
 }
 
 .premium-clan__motd {
-    background: rgba(255, 153, 0, 0.05);
-    border: 1px solid rgba(255, 153, 0, 0.25);
+    background: rgba(0, 255, 204, 0.05);
+    border: 1px solid rgba(0, 255, 204, 0.25);
 }
 
 .premium-faction__motd-title,
@@ -540,7 +540,7 @@
 
 .premium-clan__roster::-webkit-scrollbar-thumb,
 .premium-clans-dir__grid::-webkit-scrollbar-thumb {
-    background: rgba(255, 153, 0, 0.3);
+    background: rgba(0, 255, 204, 0.3);
 }
 
 .premium-faction__roster-item,
@@ -622,8 +622,72 @@
 
 .premium-clan__member-id {
     color: var(--pf-accent-orange);
-    background: rgba(255, 153, 0, 0.12);
+    background: rgba(0, 255, 204, 0.12);
 }
+
+/* [FP SYSTEM] Request badge on the sidebar tab */
+.pf-req-badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    border-radius: 9px;
+    background: var(--pf-danger, #ff3366);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 16px;
+    text-align: center;
+    vertical-align: middle;
+}
+.pf-req-badge.hidden { display: none; }
+
+/* [FP SYSTEM] FP note under stats */
+.premium-faction__fp-note {
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 51, 102, 0.4);
+    border-left: 3px solid var(--pf-danger, #ff3366);
+    background: rgba(255, 51, 102, 0.08);
+    border-radius: var(--pf-radius-md);
+    font-size: 12px;
+    font-weight: 600;
+    color: #ff8fab;
+}
+.premium-faction__fp-note.hidden { display: none; }
+
+/* [FP SYSTEM] Resignation box */
+.premium-faction__resign {
+    margin-top: 20px;
+    padding: 16px 18px;
+    background: var(--pf-bg-panel);
+    border: 1px solid var(--pf-border);
+    border-radius: var(--pf-radius-md);
+}
+.premium-faction__resign.hidden { display: none; }
+.pf-resign-hint {
+    font-size: 12px;
+    color: var(--pf-text-muted);
+    margin: 6px 0 12px;
+    line-height: 1.5;
+}
+.pf-resign-hint b { color: #ff8fab; }
+.premium-faction__resign .premium-faction__form-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.premium-faction__resign .premium-faction__form-control { flex: 1; }
+
+/* [FP SYSTEM] selected member info line */
+.pf-member-info {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--pf-text-muted);
+    line-height: 1.5;
+}
+.pf-member-info.hidden { display: none; }
 
 /* --- MANAGEMENT GRID --- */
 .premium-faction__manage-grid,
@@ -746,7 +810,7 @@
     color: #000;
 }
 .premium-clan__btn--primary:hover:not(:disabled) {
-    box-shadow: 0 0 15px rgba(255, 153, 0, 0.45);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.45);
     transform: translateY(-2px);
 }
 
@@ -888,7 +952,7 @@
 }
 
 .premium-clans-dir__card:hover {
-    border-color: rgba(255, 153, 0, 0.4);
+    border-color: rgba(0, 255, 204, 0.4);
 }
 
 .premium-factions-dir__card::before,
@@ -941,7 +1005,7 @@
 
 .premium-clans-dir__card:hover .premium-clans-dir__card-icon {
     color: var(--pf-accent-orange);
-    background: rgba(255, 153, 0, 0.12);
+    background: rgba(0, 255, 204, 0.12);
 }
 
 .premium-factions-dir__card-icon svg,
@@ -1106,8 +1170,8 @@
 }
 
 .premium-clans-dir__modal-banner {
-    background: rgba(255, 153, 0, 0.1);
-    border: 1px solid rgba(255, 153, 0, 0.25);
+    background: rgba(0, 255, 204, 0.1);
+    border: 1px solid rgba(0, 255, 204, 0.25);
     color: var(--pf-accent-orange);
 }
 
@@ -1196,8 +1260,8 @@
 }
 
 .premium-clans-dir__modal-motd {
-    background: rgba(255, 153, 0, 0.05);
-    border: 1px solid rgba(255, 153, 0, 0.2);
+    background: rgba(0, 255, 204, 0.05);
+    border: 1px solid rgba(0, 255, 204, 0.2);
 }
 
 .premium-factions-dir__modal-roster,
@@ -1248,7 +1312,7 @@
 
 .premium-clans-dir__toast {
     background: var(--pf-accent-orange);
-    box-shadow: 0 10px 25px rgba(255, 153, 0, 0.45);
+    box-shadow: 0 10px 25px rgba(0, 255, 204, 0.45);
 }
 
 .premium-factions-dir__toast.is-show,

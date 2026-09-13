@@ -41,6 +41,10 @@ const FactionPanels = {
         $('#faction-manage-promote')?.addEventListener('click', () => this.manageSelected('rankDelta', 1));
         $('#faction-manage-demote')?.addEventListener('click', () => this.manageSelected('rankDelta', -1));
         $('#faction-manage-kick')?.addEventListener('click', () => this.manageSelected('kick', 'online'));
+        // [FP SYSTEM] kick with 60 FP + pardon buttons
+        $('#faction-manage-kick-fp')?.addEventListener('click', () => this.manageSelected('kick', 'with_fp'));
+        $('#faction-manage-pardon')?.addEventListener('click', () => this.manageSelected('pardonFp'));
+        $('#faction-manage-select')?.addEventListener('change', () => this.renderSelectedMemberInfo());
 
         $('#faction-directory-modal-close')?.addEventListener('click', () => this.closeDirectoryModal());
         $('#faction-directory-close')?.addEventListener('click', () => post('factionPanelsClose'));
@@ -155,8 +159,10 @@ const FactionPanels = {
             if (action === 'invite') allowed = perms.invite;
             else if (action === 'motd') allowed = perms.motd;
             else if (action === 'warn') allowed = perms.warn;
+            else if (action === 'resign') allowed = !data?.leader;
             else allowed = true;
-            form.closest('.premium-faction__panel')?.classList.toggle('hidden', !allowed);
+            const scope = form.closest('.premium-faction__panel') || form.closest('.premium-faction__resign');
+            scope?.classList.toggle('hidden', !allowed);
         });
 
         const motdForm = document.querySelector('[data-faction-action="motd"]');
@@ -166,11 +172,19 @@ const FactionPanels = {
         const promoteBtn = $('#faction-manage-promote');
         const demoteBtn = $('#faction-manage-demote');
         const kickBtn = $('#faction-manage-kick');
+        const kickFpBtn = $('#faction-manage-kick-fp');
+        const pardonBtn = $('#faction-manage-pardon');
         const memberPanel = promoteBtn?.closest('.premium-faction__panel');
         if (memberPanel) memberPanel.classList.toggle('hidden', !(perms.rankMembers || perms.kickMembers));
         if (promoteBtn) promoteBtn.disabled = !perms.rankMembers;
         if (demoteBtn) demoteBtn.disabled = !perms.rankMembers;
         if (kickBtn) kickBtn.disabled = !perms.kickMembers;
+        // [FP SYSTEM]
+        if (kickFpBtn) kickFpBtn.disabled = !perms.kickMembers;
+        if (pardonBtn) {
+            pardonBtn.disabled = !perms.pardonFp;
+            pardonBtn.classList.toggle('hidden', !perms.pardonFp);
+        }
     },
 
     populateManageSelect(members, viewerCharacterId) {
@@ -206,8 +220,85 @@ const FactionPanels = {
             this.postAction('rankDelta', { characterId, delta: payload });
         } else if (action === 'kick') {
             const member = this._memberById(characterId);
-            this.postAction('kick', { characterId, mode: this._kickModeForMember(member) });
+            const mode = payload === 'with_fp' ? 'with_fp' : this._kickModeForMember(member);
+            this.postAction('kick', { characterId, mode });
+        } else if (action === 'pardonFp') {
+            this.postAction('pardonFp', { characterId });
         }
+    },
+
+    // [FP SYSTEM] Member detail line under the management select.
+    renderSelectedMemberInfo() {
+        const box = $('#faction-manage-info');
+        if (!box) return;
+        const characterId = Number($('#faction-manage-select')?.value);
+        const member = characterId ? this._memberById(characterId) : null;
+        if (!member) {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            return;
+        }
+        const days = member.daysInFaction;
+        const daysTxt = days == null ? 'joined: unknown' : `joined ${days}d ago${days < 14 ? ' (NEW - kick with FP if they leave early)' : ''}`;
+        const fpTxt = member.fp > 0 ? ` · FP: ${member.fp}` : '';
+        box.classList.remove('hidden');
+        box.innerHTML = `<span>${this.escape(member.name)}</span> · ${this.escape(member.gradeLabel || 'Member')} · ${this.escape(daysTxt)}${fpTxt}`;
+    },
+
+    // [FP SYSTEM] Resignation requests board (leaders/managers).
+    renderResignations(rows) {
+        const wrap = $('#faction-resignations');
+        const badge = $('#faction-req-badge');
+        const list = Array.isArray(rows) ? rows : [];
+        if (badge) {
+            badge.textContent = String(list.length);
+            badge.classList.toggle('hidden', list.length === 0);
+        }
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        if (!list.length) {
+            wrap.innerHTML = '<p class="premium-faction__empty">No pending resignation requests.</p>';
+            return;
+        }
+        list.forEach((req) => {
+            const row = document.createElement('article');
+            row.className = 'premium-faction__roster-item';
+
+            const info = document.createElement('div');
+            info.className = 'premium-faction__roster-info';
+            const text = document.createElement('div');
+            const name = document.createElement('div');
+            name.className = 'premium-faction__member-name';
+            name.textContent = req.name || `CID ${req.characterId}`;
+            const meta = document.createElement('div');
+            meta.className = 'premium-faction__member-rank';
+            const days = req.daysInFaction == null ? '' : ` · ${req.daysInFaction}d in faction`;
+            meta.textContent = `${req.reason ? this.escape(req.reason) : 'No reason given'}${days}`;
+            text.append(name, meta);
+            info.appendChild(text);
+
+            const actions = document.createElement('div');
+            actions.className = 'premium-faction__member-actions';
+            const ok = document.createElement('button');
+            ok.type = 'button';
+            ok.className = 'premium-faction__btn premium-faction__btn--primary';
+            ok.textContent = 'Accept (no FP)';
+            ok.addEventListener('click', () => this.postAction('resignAccept', { resignationId: req.id }));
+            const okFp = document.createElement('button');
+            okFp.type = 'button';
+            okFp.className = 'premium-faction__btn premium-faction__btn--warn';
+            okFp.textContent = 'Accept + FP';
+            okFp.addEventListener('click', () => this.postAction('resignAcceptFp', { resignationId: req.id }));
+            const no = document.createElement('button');
+            no.type = 'button';
+            no.className = 'premium-faction__btn premium-faction__btn--secondary';
+            no.textContent = 'Decline';
+            no.addEventListener('click', () => this.postAction('resignDecline', { resignationId: req.id }));
+            actions.append(ok, okFp, no);
+
+            row.append(info, actions);
+            wrap.appendChild(row);
+        });
     },
 
     renderRoster(members, permissions, viewerCharacterId) {
@@ -241,6 +332,9 @@ const FactionPanels = {
             if (member.leader) extras.push('LEADER');
             if (member.onDuty) extras.push('ON SHIFT');
             if (member.warns) extras.push(`${member.warns}/3 FW`);
+            // [FP SYSTEM] new-member badge + FP indicator for leaders.
+            if (member.daysInFaction != null && member.daysInFaction < 14 && !member.leader) extras.push('NEW');
+            if (member.fp > 0) extras.push(`FP ${member.fp}`);
             rank.textContent = `${member.gradeLabel || 'Member'} · G${member.grade ?? 0}${extras.length ? ` · ${extras.join(' · ')}` : ''}`;
             text.append(name, rank);
             info.append(dot, text);
@@ -256,15 +350,19 @@ const FactionPanels = {
             const lowerRank = Number(member.grade) < viewerGrade || Boolean(this.dashboard?.permissions?.leader);
 
             if (manageable && canRank && lowerRank) {
+                // [ICON FIX] ▲▼ arrows rendered as tofu/unstyled glyphs in CEF.
+                // Phosphor icons are already loaded font-wise and used everywhere else.
                 const up = document.createElement('button');
                 up.type = 'button';
                 up.className = 'premium-faction__btn premium-faction__btn--secondary';
-                up.textContent = '▲';
+                up.title = 'Promote';
+                up.innerHTML = '<i class="ph-bold ph-caret-up"></i>';
                 up.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: 1 }));
                 const down = document.createElement('button');
                 down.type = 'button';
                 down.className = 'premium-faction__btn premium-faction__btn--secondary';
-                down.textContent = '▼';
+                down.title = 'Demote';
+                down.innerHTML = '<i class="ph-bold ph-caret-down"></i>';
                 down.addEventListener('click', () => this.postAction('rankDelta', { characterId: member.characterId, delta: -1 }));
                 actions.append(up, down);
             }
@@ -272,19 +370,34 @@ const FactionPanels = {
                 const kick = document.createElement('button');
                 kick.type = 'button';
                 kick.className = 'premium-faction__btn premium-faction__btn--danger';
-                kick.textContent = 'Kick';
+                kick.innerHTML = '<i class="ph-bold ph-sign-out"></i> Kick';
+                kick.title = member.daysInFaction != null && member.daysInFaction < 14
+                    ? 'New member (<14d) - consider Kick + FP'
+                    : 'Remove without FP';
                 kick.disabled = !canKick;
                 kick.addEventListener('click', () => this.postAction('kick', {
                     characterId: member.characterId,
                     mode: this._kickModeForMember(member),
                 }));
                 actions.append(kick);
+                const kickFp = document.createElement('button');
+                kickFp.type = 'button';
+                kickFp.className = 'premium-faction__btn premium-faction__btn--warn';
+                kickFp.innerHTML = '<i class="ph-bold ph-gavel"></i> Kick + FP';
+                kickFp.title = 'Remove and apply 60 FP (faction punish)';
+                kickFp.disabled = !canKick;
+                kickFp.addEventListener('click', () => this.postAction('kick', {
+                    characterId: member.characterId,
+                    mode: 'with_fp',
+                }));
+                actions.append(kickFp);
             }
             if (manageable && canWarn && lowerRank && member.online) {
                 const warn = document.createElement('button');
                 warn.type = 'button';
                 warn.className = 'premium-faction__btn premium-faction__btn--warn';
-                warn.textContent = 'FW';
+                warn.innerHTML = '<i class="ph-bold ph-warning"></i> FW';
+                warn.title = 'Faction warning';
                 warn.addEventListener('click', () => this.postAction('warn', { characterId: member.characterId, reason: 'Faction disciplinary warning' }));
                 actions.append(warn);
             }
@@ -352,6 +465,26 @@ const FactionPanels = {
             const onDuty = members.filter((m) => m.onDuty).length;
             rosterMeta.textContent = `${online} online · ${onDuty} on shift · ${members.length} total`;
         }
+
+        // [FP SYSTEM] my FP card + note (any member with FP sees it).
+        const myFp = Math.max(0, Number(data.myFp) || 0);
+        const fpCard = $('#faction-fp-card');
+        if (fpCard) {
+            fpCard.classList.toggle('hidden', myFp <= 0);
+            const fpVal = $('#faction-my-fp');
+            if (fpVal) fpVal.textContent = String(myFp);
+        }
+        $('#faction-fp-note')?.classList.toggle('hidden', myFp <= 0);
+
+        // [FP SYSTEM] resignation box: any non-leader member can resign.
+        const resignBox = $('#faction-resign-box');
+        if (resignBox) resignBox.classList.toggle('hidden', Boolean(data.leader));
+
+        // [FP SYSTEM] requests tab for leaders/managers.
+        const reqTab = document.querySelector('.faction-tab--requests');
+        const canHandleResigns = Boolean(perms.manageResignations);
+        reqTab?.classList.toggle('hidden', !canHandleResigns);
+        if (canHandleResigns) this.renderResignations(data.pendingResignations);
 
         this.renderRoster(members, perms, data.viewerCharacterId);
         this.renderCommands(data.commands);
@@ -557,6 +690,7 @@ const FactionPanels = {
             payload.targetId = targetId;
         }
         if (action === 'motd') payload.message = String(data.get('message') || '').trim();
+        if (action === 'resign') payload.reason = String(data.get('reason') || '').trim();
         if (action === 'warn') {
             const targetId = Math.floor(Number(data.get('targetId')));
             if (!targetId || targetId < 1) {
