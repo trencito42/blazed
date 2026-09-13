@@ -1,3 +1,12 @@
+-- [FORMAT FIX] Lua's string.format does NOT support the %'d digit-grouping
+-- conversion (C99-only): it crashed with "invalid conversion '%'' to 'format'"
+-- on every /loto, /barbut and money Discord log. Helper instead:
+local function groupDigits(n)
+    local s = ('%d'):format(math.floor(tonumber(n) or 0))
+    local formatted = s:reverse():gsub('(%d%d%d)', '%1,'):reverse()
+    return (formatted:gsub('^,', ''))
+end
+
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Hourly Lottery Engine
 --  SA:MP-style RPG jackpot with roll-over and anti-inflation tax
@@ -89,7 +98,7 @@ function SunsetLottery.BuyTicket(source, number)
 
     TriggerClientEvent('sunset:client:notify', source,
         ('You bought ticket number #%d for $%d! Current jackpot: $%s.'):format(
-            number, cost, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
+            number, cost, groupDigits(CurrentJackpot)
         ), 'success', 6000)
 
     return true
@@ -148,7 +157,7 @@ function SunsetLottery.Draw()
                     exports.sunset_core:RefreshMoney(onlineSrc)
                     TriggerClientEvent('sunset:client:notify', onlineSrc,
                         ('YOU WON THE LOTTERY! $%s has been paid to your bank account!'):format(
-                            string.format('%\'d', draw.share):gsub('\'', ',')), 'success', 15000)
+                            groupDigits(draw.share)), 'success', 15000)
                     break
                 end
             end
@@ -159,7 +168,7 @@ function SunsetLottery.Draw()
 
         -- Server broadcast
         local msg = ('^2[LOTTO] ^7Winning number: ^3#%d^7! Congratulations to the winners: ^2%s^7! Total prize: ^2$%s^7!'):format(
-            winningNumber, namesStr, string.format('%\'d', draw.jackpot):gsub('\'', ',')
+            winningNumber, namesStr, groupDigits(draw.jackpot)
         )
         TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTTERY', msg } })
 
@@ -170,7 +179,7 @@ function SunsetLottery.Draw()
 
         -- Roll-over
         local msg = ('^3[LOTTO] ^7The drawn number was ^3#%d^7 (%d tickets played). No winner! The ^2$%s^7 jackpot rolls over to the next hour!'):format(
-            winningNumber, draw.total, string.format('%\'d', CurrentJackpot):gsub('\'', ',')
+            winningNumber, draw.total, groupDigits(CurrentJackpot)
         )
         TriggerClientEvent('chat:addMessage', -1, { color = { 0, 255, 204 }, args = { 'LOTTERY', msg } })
     end
@@ -195,7 +204,7 @@ local function runLotteryCommand(source, args)
         TriggerClientEvent('chat:addMessage', source, {
             color = { 0, 255, 204 },
             args = { 'LOTTERY', ('Current jackpot: ^2$%s^7 | Ticket price: ^3$%d^7 | Tickets sold: ^3%d^7 | Your tickets: ^2%s^7'):format(
-                string.format('%\'d', CurrentJackpot):gsub('\'', ','),
+                groupDigits(CurrentJackpot),
                 SunsetLottery.TicketPrice,
                 totalTickets,
                 myStr

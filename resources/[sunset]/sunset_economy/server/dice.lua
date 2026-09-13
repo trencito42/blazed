@@ -1,3 +1,12 @@
+-- [FORMAT FIX] Lua's string.format does NOT support the %'d digit-grouping
+-- conversion (C99-only): it crashed with "invalid conversion '%'' to 'format'"
+-- on every /loto, /barbut and money Discord log. Helper instead:
+local function groupDigits(n)
+    local s = ('%d'):format(math.floor(tonumber(n) or 0))
+    local formatted = s:reverse():gsub('(%d%d%d)', '%1,'):reverse()
+    return (formatted:gsub('^,', ''))
+end
+
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Dice / Barbut System
 --  Multiplayer wagering with anti-inflation house burn
@@ -193,8 +202,8 @@ local function executeDiceMatch(challengerSrc, targetSrc, bet)
 
         local broadcastMsg = ('^3%s^7 rolled ^2%s^7 vs ^3%s^7 rolled ^1%s^7. ^2%s won $%s^7! (Burned tax: $%s)'):format(
             winnerName, winnerScore, loserName, loserScore, winnerName,
-            string.format('%\'d', prize):gsub('\'', ','),
-            string.format('%\'d', tax):gsub('\'', ',')
+            groupDigits(prize),
+            groupDigits(tax)
         )
         broadcastNearby(winnerSrc, broadcastMsg)
     end)
@@ -250,7 +259,7 @@ RegisterCommand('barbut', function(source, args)
     end
 
     if bet > MAX_DICE_BET then
-        TriggerClientEvent('sunset:client:notify', source, ('The maximum bet is $%s.'):format(string.format('%\'d', MAX_DICE_BET):gsub('\'', ',')), 'error')
+        TriggerClientEvent('sunset:client:notify', source, ('The maximum bet is $%s.'):format(groupDigits(MAX_DICE_BET)), 'error')
         return
     end
 
@@ -291,13 +300,13 @@ RegisterCommand('barbut', function(source, args)
     local cName = (cCash.firstname or '') .. ' ' .. (cCash.lastname or '')
     TriggerClientEvent('sunset:client:notify', source, ('You sent a dice challenge to %s for $%s.'):format(
         (tCash.firstname or '') .. ' ' .. (tCash.lastname or ''),
-        string.format('%\'d', bet):gsub('\'', ',')
+        groupDigits(bet)
     ), 'info')
 
     TriggerClientEvent('chat:addMessage', targetId, {
         color = { 255, 180, 0 },
         args = { 'DICE', ('^2%s^7 challenged you to a dice game for ^2$%s^7! Type ^3/barbut accept^7 or ^1/barbut decline^7 (30s).'):format(
-            cName, string.format('%\'d', bet):gsub('\'', ',')
+            cName, groupDigits(bet)
         ) }
     })
 

@@ -1,3 +1,12 @@
+-- [FORMAT FIX] Lua's string.format does NOT support the %'d digit-grouping
+-- conversion (C99-only): it crashed with "invalid conversion '%'' to 'format'"
+-- on every /loto, /barbut and money Discord log. Helper instead:
+local function groupDigits(n)
+    local s = ('%d'):format(math.floor(tonumber(n) or 0))
+    local formatted = s:reverse():gsub('(%d%d%d)', '%1,'):reverse()
+    return (formatted:gsub('^,', ''))
+end
+
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Discord Webhook Surveillance Engine
 --  Rich embed logging for economy, staff, combat log, and anti-cheat
@@ -65,9 +74,9 @@ Sunset.LogMoneyTransaction = function(characterId, account, direction, amount, r
             { name = 'Caracter ID', value = tostring(characterId), inline = true },
             { name = 'Tip Cont', value = tostring(account):upper(), inline = true },
             { name = 'Operatiune', value = dirStr, inline = true },
-            { name = 'Suma', value = ('$%s'):format(string.format('%\'d', amount):gsub('\'', ',')), inline = true },
+            { name = 'Suma', value = ('$%s'):format(groupDigits(amount)), inline = true },
             { name = 'Motiv', value = tostring(reason), inline = true },
-            { name = 'Sold Dupa', value = ('$%s'):format(string.format('%\'d', balanceAfter):gsub('\'', ',')), inline = true },
+            { name = 'Sold Dupa', value = ('$%s'):format(groupDigits(balanceAfter)), inline = true },
         })
     end
 end
