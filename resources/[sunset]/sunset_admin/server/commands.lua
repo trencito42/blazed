@@ -1,3 +1,56 @@
+-- ── [ADMIN AUDIT] Full action log ─────────────────────────────
+-- Every staff command invocation (allowed or denied) is written to
+-- admin_action_log (sql/49): who, what command, with what args, when.
+-- Async fire-and-forget; a DB hiccup must never block the command.
+local ActionLogQueue = {}
+local ActionLogRunning = false
+
+local function flushActionLog()
+    ActionLogRunning = true
+    while #ActionLogQueue > 0 do
+        local rows = {}
+        for i = 1, math.min(#ActionLogQueue, 10) do
+            rows[#rows + 1] = table.remove(ActionLogQueue, 1)
+        end
+        local values, params = {}, {}
+        for _, r in ipairs(rows) do
+            values[#values + 1] = '(?, ?, ?, ?, ?, ?, ?)'
+            for _, v in ipairs(r) do params[#params + 1] = v end
+        end
+        pcall(function()
+            MySQL.query.await(('INSERT INTO admin_action_log (admin_source, admin_name, admin_account_id, command, args, allowed) VALUES %s')
+                :format(table.concat(values, ',')), params)
+        end)
+        Wait(0)
+    end
+    ActionLogRunning = false
+end
+
+local function recordActionLog(source, cmd, args, allowed)
+    if source == 0 then
+        -- console: no source row; still logged with name CONSOLE
+        ActionLogQueue[#ActionLogQueue + 1] = {
+            nil, 'CONSOLE', nil, tostring(cmd),
+            args and tostring(args):sub(1, 255) or '', allowed and 1 or 0,
+        }
+    else
+        local accountId = nil
+        pcall(function()
+            local player = exports.sunset_core:GetPlayer(source)
+            accountId = player and tonumber(player.account_id) or nil
+        end)
+        ActionLogQueue[#ActionLogQueue + 1] = {
+            source, GetPlayerName(source) or ('ID %d'):format(source), accountId,
+            tostring(cmd), args and tostring(args):sub(1, 255) or '', allowed and 1 or 0,
+        }
+    end
+    -- anti-flood: drop the oldest if the queue explodes (DB down)
+    if #ActionLogQueue > 500 then table.remove(ActionLogQueue, 1) end
+    if not ActionLogRunning then
+        CreateThread(flushActionLog)
+    end
+end
+
 local function hasPerm(source, cmd)
     local need = SunsetAdmin.Commands[cmd] or 99
     return IsAdmin(source, need)
@@ -12,6 +65,7 @@ local function notify(source, msg, type)
 end
 
 local function deny(source, cmd)
+    recordActionLog(source, cmd, nil, false)
     exports.sunset_core:CommandDenyAdmin(source, cmd)
 end
 
@@ -49,10 +103,23 @@ end
 
 SunsetAdmin.ServerHandlers = SunsetAdmin.ServerHandlers or {}
 
+local PLAYER_FACING_COMMANDS = { report = true, helpme = true, n = true }
+
 local function registerServerCommand(name, handler)
     name = string.lower(name)
-    SunsetAdmin.ServerHandlers[name] = handler
-    RegisterCommand(name, handler, false)
+    if PLAYER_FACING_COMMANDS[name] then
+        SunsetAdmin.ServerHandlers[name] = handler
+        RegisterCommand(name, handler, false)
+        return
+    end
+    local wrapped = function(source, args)
+        -- [ADMIN AUDIT] log every invocation (allowed or not) with full args
+        recordActionLog(source, name, args and table.concat(args, ' ') or nil,
+            source == 0 or hasPerm(source, name))
+        return handler(source, args)
+    end
+    SunsetAdmin.ServerHandlers[name] = wrapped
+    RegisterCommand(name, wrapped, false)
 end
 
 local function onlineIds()
