@@ -158,13 +158,13 @@ local function endWar(turfId, reason)
     if GetResourceState('sunset_death') == 'started' then
         for src in pairs(war.participants or {}) do
             if GetPlayerName(src) then
+                -- [FIX] IsPedFatallyInjured is a CLIENT-only native (crashed the
+                -- server-side endWar). Health <= 0 is the server-visible death
+                -- signal; the downed (bleedout) state comes from sunset_death.
                 local ped = GetPlayerPed(src)
-                local isDead = ped and ped ~= 0 and (GetEntityHealth(ped) <= 0 or IsPedFatallyInjured(ped))
-                local isDowned = false
-                if not isDead then
-                    local okD, downed = pcall(function() return exports.sunset_death:IsPlayerDowned(src) end)
-                    isDowned = okD and downed == true
-                end
+                local isDead = ped and ped ~= 0 and GetEntityHealth(ped) <= 0
+                local okD, downed = pcall(function() return exports.sunset_death:IsPlayerDowned(src) end)
+                local isDowned = okD and downed == true
                 if isDead or isDowned then
                     pcall(function() exports.sunset_death:RevivePlayer(src) end)
                 end
