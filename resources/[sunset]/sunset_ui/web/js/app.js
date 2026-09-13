@@ -881,6 +881,7 @@ window.addEventListener('message', (event) => {
             document.body.classList.remove('faction-panels-open');
             break;
         case 'playerInteractionShow':
+            __btracePost(`playerInteractionShow PI=${!!window.PlayerInteraction}`);
             if (window.PlayerInteraction) PlayerInteraction.show(data || event.data.data);
             break;
         case 'playerInteractionUpdate':
@@ -890,6 +891,7 @@ window.addEventListener('message', (event) => {
             if (window.PlayerInteraction) PlayerInteraction.hide();
             break;
         case 'playerInteractionPrompt':
+            __btracePost(`playerInteractionPrompt PI=${!!window.PlayerInteraction}`);
             if (window.PlayerInteraction) PlayerInteraction.showPrompt(data || event.data.data);
             break;
         case 'battlepassShow':

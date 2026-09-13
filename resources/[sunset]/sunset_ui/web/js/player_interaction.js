@@ -12,6 +12,15 @@
     const inputField = document.getElementById('pi-input-field');
     const inputSubmit = document.getElementById('pi-input-submit');
 
+    // [DIAG] Trace init state so we can see in server logs if elements are missing
+    try {
+        fetch(`https://${GetParentResourceName()}/nuiTrace`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ line: `[PlayerInteraction] init root=${!!root} menu=${!!screenMenu} items=${!!menuItemsEl} input=${!!inputPanel}` }),
+        }).catch(() => {});
+    } catch (_) {}
+
     const RING_RADIUS = 16;
     const HOLD_MS = 800;
     const circumference = 2 * Math.PI * RING_RADIUS;
@@ -327,4 +336,11 @@
         showPrompt,
         setProgress,
     };
+    try {
+        fetch(`https://${GetParentResourceName()}/nuiTrace`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ line: '[PlayerInteraction] ready, window.PlayerInteraction defined' }),
+        }).catch(() => {});
+    } catch (_) {}
 })();
