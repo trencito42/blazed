@@ -459,19 +459,34 @@ function applyNofx() {
 // [NUI PERF] Lazy-load gameplay scripts at enterGameplay instead of at boot.
 // Scripts are stored as <script type="text/plain" data-lazy-src="..."> in
 // index.html; this converts them to real executable <script> tags.
+// Strategy: wait 2s for the game to finish critical asset streaming, then
+// inject in batches of 4 with 80ms gaps to avoid blocking the CEF thread.
 let lazyScriptsLoaded = false;
 function loadLazyScripts() {
     if (lazyScriptsLoaded) return;
     lazyScriptsLoaded = true;
-    const pending = document.querySelectorAll('script[type="text/plain"][data-lazy-src]');
-    pending.forEach((el) => {
-        const s = document.createElement('script');
-        s.src = el.dataset.lazySrc;
-        s.defer = true;
-        document.body.appendChild(s);
-        el.remove();
-    });
-    __btracePost(`lazy scripts injected: ${pending.length}`);
+    const pending = Array.from(document.querySelectorAll('script[type="text/plain"][data-lazy-src]'));
+    const BATCH = 4;
+    const GAP = 80;
+    const INITIAL_DELAY = 2000;
+    let i = 0;
+    function injectBatch() {
+        const end = Math.min(i + BATCH, pending.length);
+        for (; i < end; i++) {
+            const el = pending[i];
+            const s = document.createElement('script');
+            s.src = el.dataset.lazySrc;
+            s.defer = true;
+            document.body.appendChild(s);
+            el.remove();
+        }
+        if (i < pending.length) {
+            setTimeout(injectBatch, GAP);
+        } else {
+            __btracePost(`lazy scripts injected: ${pending.length} (staggered, ${INITIAL_DELAY}ms delay)`);
+        }
+    }
+    setTimeout(injectBatch, INITIAL_DELAY);
 }
 
 // NUI message handler
