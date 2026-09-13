@@ -10,7 +10,30 @@ const TaxiPhoneMap = {
     onPick: null,
 
     // Los Santos bounds (game Y = lat, game X = lng)
-    bounds: L.latLngBounds(L.latLng(-5500, -4000), L.latLng(8000, 6000)),
+    // Lazy: leaflet.js is loaded on demand (boot perf), so L may be absent at parse time.
+    _bounds: null,
+    get bounds() {
+        if (!this._bounds) {
+            this._bounds = L.latLngBounds(L.latLng(-5500, -4000), L.latLng(8000, 6000));
+        }
+        return this._bounds;
+    },
+
+    // Load leaflet on first use instead of at boot (144KB off the login critical path).
+    _leafletLoading: null,
+    ensureLeaflet() {
+        if (typeof L !== 'undefined') return Promise.resolve();
+        if (!this._leafletLoading) {
+            this._leafletLoading = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'vendor/leaflet/leaflet.js';
+                s.onload = resolve;
+                s.onerror = () => { this._leafletLoading = null; reject(new Error('leaflet load failed')); };
+                document.head.appendChild(s);
+            });
+        }
+        return this._leafletLoading;
+    },
 
     crs: null,
 
@@ -50,7 +73,15 @@ const TaxiPhoneMap = {
     },
 
     mount(container, options = {}) {
-        if (!container || typeof L === 'undefined') return;
+        if (!container) return;
+        // Leaflet may still be loading (lazy). Retry the mount once it arrives —
+        // callers (phone.js) need no changes.
+        if (typeof L === 'undefined') {
+            this.ensureLeaflet()
+                .then(() => this.mount(container, options))
+                .catch(() => {});
+            return;
+        }
         if (this.container === container && this.map) {
             this.onPick = options.onPick || this.onPick;
             if (options.player) this.setPlayer(options.player);

@@ -1,5 +1,5 @@
 /* ═══ PREMIUM ORG UI — Factions & Clans (Dashboard & Directory 1:1 Mockup) ═══ */
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+/* Montserrat is served locally via css/fonts.css — remote Google Fonts @import removed (CEF stall) */
 
 :root {
     --pf-bg-base: rgba(13, 13, 20, 0.95);
