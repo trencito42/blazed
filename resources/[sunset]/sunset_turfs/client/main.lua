@@ -615,6 +615,41 @@ CreateThread(function()
     end
 end)
 
+-- [HUD STUCK FIX] Reconcile local war state with the server every 10s. If the
+-- war ended while we were alt-tabbed / disconnected and we missed the warEnd
+-- broadcast, the HUD/armory/scoreboard would stay stuck forever. When the
+-- server says "no war for you", force-hide everything locally.
+CreateThread(function()
+    Wait(15000)
+    while true do
+        if warParticipant then
+            local state = Sunset.AwaitCallback('sunset:turfs:warState')
+            if not state and warParticipant then
+                warParticipant = false
+                myWarRole = nil
+                respawnPending = false
+                TriggerEvent('sunset:turfs:warEndedLocal')
+                exports.sunset_ui:Send('warHudHide', {})
+                exports.sunset_ui:Send('warRespawnHide', {})
+                exports.sunset_ui:Send('warScoreboardHide', {})
+                exports.sunset_ui:Send('warArmoryHide', {})
+            elseif state then
+                -- keep the HUD truthful even if warTick broadcasts were missed
+                ActiveWar = ActiveWar or {}
+                ActiveWar.turfId = state.turfId
+                ActiveWar.turfName = state.turfName
+                ActiveWar.attackerName = state.attackerName
+                ActiveWar.defenderName = state.defenderName
+                ActiveWar.attackerScore = state.attackerScore
+                ActiveWar.defenderScore = state.defenderScore
+                ActiveWar.scoreTarget = state.scoreTarget
+                ActiveWar.remainingSec = state.remainingSec
+            end
+        end
+        Wait(10000)
+    end
+end)
+
 RegisterNetEvent('sunset:turfs:teleport', function(coords)
     local ped = PlayerPedId()
     if not coords then return end
@@ -623,10 +658,10 @@ end)
 
 CreateThread(function()
     Wait(1500)
-TriggerEvent('chat:addSuggestion', '/attackturf', 'Attack the territory you are standing in (clan rank 5+)')
-TriggerEvent('chat:addSuggestion', '/atac', 'Alias for /attackturf')
-TriggerEvent('chat:addSuggestion', '/intervene', 'Claim an unowned turf being captured - your clan becomes the defender (rank 5+)')
-TriggerEvent('chat:addSuggestion', '/armory', 'War loadout menu (alias: /armurie)')
+    TriggerEvent('chat:addSuggestion', '/attackturf', 'Attack the territory you are standing in (clan rank 5+)')
+    TriggerEvent('chat:addSuggestion', '/atac', 'Alias for /attackturf')
+    TriggerEvent('chat:addSuggestion', '/intervene', 'Claim an unowned turf being captured - your clan becomes the defender (rank 5+)')
+    TriggerEvent('chat:addSuggestion', '/armory', 'War loadout menu (alias: /armurie)')
     TriggerEvent('chat:addSuggestion', '/turflist', 'List territories + war status (admin)')
     TriggerEvent('chat:addSuggestion', '/gototurf', 'Teleport to a territory (admin)', { { name = 'id', help = '1-16' } })
     TriggerEvent('chat:addSuggestion', '/forceturf', 'Force-start a war (admin)', {
@@ -635,6 +670,7 @@ TriggerEvent('chat:addSuggestion', '/armory', 'War loadout menu (alias: /armurie
     })
     TriggerEvent('chat:addSuggestion', '/stopwar', 'Stop the active war (admin)', { { name = 'turfId', help = '1-16' } })
     TriggerEvent('chat:addSuggestion', '/resetturfcd', 'Reset territory cooldown (admin)', { { name = 'id|all' } })
+    TriggerEvent('chat:addSuggestion', '/blzresmon', 'Admin: per-player resmon/FPS/entity sample')
 end)
 
 -- [WAR REDESIGN] Client export so sunset_death can skip the downed/EMS flow

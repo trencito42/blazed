@@ -807,9 +807,28 @@ exports.sunset_core:RegisterCallback('sunset:turfs:warRespawn', function(source)
     return true
 end)
 
--- Scoreboard data (Z key during war).
-exports.sunset_core:RegisterCallback('sunset:turfs:warScoreboard', function(source)
+-- [HUD STUCK FIX] Reconciliation source for clients: returns the war state for
+-- this player (or nil when there is no war they belong to). The client polls it
+-- after focus changes / periodically so a warEnd broadcast missed while alt-tab
+-- cannot leave the war HUD stuck forever.
+exports.sunset_core:RegisterCallback('sunset:turfs:warState', function(source)
     local war = findActiveWarForSource(source)
+    if not war then return nil end
+    return {
+        turfId = war.turfId,
+        turfName = war.turfName,
+        attackerName = war.attackerName,
+        defenderName = war.defenderName,
+        attackerScore = war.attackerScore or 0,
+        defenderScore = war.defenderScore or 0,
+        scoreTarget = war.scoreTarget,
+        remainingSec = math.max(0, war.expiresAt - os.time()),
+        participant = true,
+    }
+end)
+
+-- Scoreboard data (Z key during war).
+exports.sunset_core:RegisterCallback('sunset:turfs:warScoreboard', function(source)    local war = findActiveWarForSource(source)
     if not war then return nil end
     local rows = {}
     for src, p in pairs(war.participants) do

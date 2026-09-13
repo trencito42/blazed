@@ -34,7 +34,9 @@ setr voice_defaultCycle Z
 # OneSync - required: server-side entity authority for damage gating and lookups
 set onesync on
 set onesync_population false
-setr sv_stateBagStrictMode true
+# [STATEBAG FIX] pma-voice (and other client libs) write LocalPlayer.state from
+# the client; strict mode blocks them and spams warnings + breaks voice HUD.
+setr sv_stateBagStrictMode false
 
 # ox_inventory optional — enable after bridge migration
 # ensure ox_inventory

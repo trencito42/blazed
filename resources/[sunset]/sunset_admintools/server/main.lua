@@ -41,8 +41,11 @@ AddEventHandler('playerDropped', function()
     Reports[source] = nil
 end)
 
--- /profiler [seconds] — ask all online clients for a sample, print table.
-RegisterCommand('profiler', function(source, args)
+-- /blzresmon [seconds] - ask all online clients for a sample, print table.
+-- [RENAME 2] Both "profiler" AND "resmon" are BUILT-IN FiveM console commands
+-- disabled in production mode, so they shadowed ours. The blz prefix avoids
+-- every current and future CFX builtin collision.
+RegisterCommand('blzresmon', function(source, args)
     if not isAdmin(source, 3) then
         if source ~= 0 then TriggerClientEvent('sunset:client:notify', source, 'Admin level 3+ required.', 'error') end
         return
@@ -65,7 +68,7 @@ RegisterCommand('profiler', function(source, args)
         end
         table.sort(lines)
         for _, line in ipairs(lines) do
-            if source == 0 then print(line) else TriggerClientEvent('chat:addMessage', source, { color = { 0, 255, 204 }, args = { 'PROFILER', line } }) end
+            if source == 0 then print(line) else TriggerClientEvent('chat:addMessage', source, { color = { 0, 255, 204 }, args = { 'BLZRESMON', line } }) end
         end
     end)
 end, false)
@@ -86,4 +89,4 @@ RegisterCommand('sweeporphans', function(source, args)
     end
 end, false)
 
-print('^2[sunset_admintools]^7 admin diagnostics online (profiler / inspector / sweeporphans / cinematic)')
+print('^2[sunset_admintools]^7 admin diagnostics online (blzresmon / inspector / sweeporphans / cinematic)')
