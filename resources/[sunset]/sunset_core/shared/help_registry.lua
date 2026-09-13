@@ -7,7 +7,6 @@ Sunset.HelpAdminDescriptions = {
     unban = 'Remove a ban by player ID or license:xxx',
     tp = 'Teleport to a player or x y z coordinates',
     bring = 'Bring a player to your location',
-    ['goto'] = 'Teleport to a player',
     car = 'Spawn a vehicle by model name',
     dv = 'Delete your current vehicle',
     heal = 'Heal yourself or another player',
@@ -136,7 +135,6 @@ Sunset.CommandUsage = {
     unban = { usage = '/unban [player id or license:xxx]', minArgs = 1 },
     tp = { usage = '/tp [server id] or /tp [x] [y] [z]', minArgs = 1 },
     bring = { usage = '/bring [server id]', minArgs = 1 },
-    ['goto'] = { usage = '/goto [server id]', minArgs = 1 },
     car = { usage = '/car [model]', minArgs = 0 },
     dv = { usage = '/dv', minArgs = 0 },
     heal = { usage = '/heal [server id]', minArgs = 0 },
@@ -250,6 +248,7 @@ Sunset.CommandUsage = {
     acheat = { usage = '/acheat [server id] — anticheat heat list / player tick detail (staff)', minArgs = 0 },
     achud = { usage = '/achud — toggle the on-screen Blaze Shield widget (staff)', minArgs = 0 },
     helpdesk = { usage = '/helpdesk — staff console: roster, heat, reports, quick actions (staff)', minArgs = 0 },
+    aduty = { usage = '/aduty — toggle on-duty staff mode with visible [HELPER] chat prefix', minArgs = 0 },
     -- [ADMIN SYSTEM] sanctions + presence tools (levels in SunsetAdmin.Commands)
     warn = { usage = '/warn [server id] [reason] — official warning (staff 1+)', minArgs = 2 },
     history = { usage = '/history [server id] — sanction history (staff 1+)', minArgs = 1 },

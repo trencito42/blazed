@@ -198,11 +198,22 @@ local function buildMenuData(forceExtras)
 end
 
 local function openMenu(initialTab, opts)
+    -- [P3.3 FIX] When switching between solo-mode (e.g. /v vehicle panel) and
+    -- normal M menu, do a FULL re-initialization instead of just swapping the
+    -- tab. The old early-return left stale data (vehicle list, fuel, engine
+    -- state) from the previous open. Same-mode + same-tab = no-op (toggle).
     if menuOpen then
-        if initialTab then
+        local wantSolo = opts and opts.solo or nil
+        if wantSolo ~= menuSoloMode then
+            -- Mode change (M ↔ /v): full re-initialization with fresh data
+            closeMenu()
+            Wait(0)
+        elseif initialTab then
             exports.sunset_ui:Send('menuSetTab', { tab = initialTab, soloMode = menuSoloMode })
+            return
+        else
+            return
         end
-        return
     end
     local char = exports.sunset_core and exports.sunset_core:GetCharacter()
     if not char then return end

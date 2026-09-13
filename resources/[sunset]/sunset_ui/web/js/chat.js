@@ -486,7 +486,7 @@ const Chat = {
             ...m,
             name: nameOverride != null ? nameOverride : m.name,
         };
-        if (window.SunsetPlayerIdentity && (row.clanTag || row.factionId)) {
+        if (window.SunsetPlayerIdentity && (row.clanTag || row.factionId || row.adminDuty)) {
             return SunsetPlayerIdentity.formatNameHtml(row);
         }
         return this.escapeHtml(this.nameWithId(row.name, row.id));
@@ -495,7 +495,7 @@ const Chat = {
     lineUsesHtml(m, type) {
         if (['c', 'clan_action', 'gov', 'say', 'ooc', 'me', ''].includes(type)) return true;
         if (['f', 'r', 'd', 'do', 'megaphone', 'faction_action', 'radar_alert'].includes(type)) {
-            return Boolean(m.clanTag || m.factionId);
+            return Boolean(m.clanTag || m.factionId || m.adminDuty);
         }
         return false;
     },

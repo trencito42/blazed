@@ -15,7 +15,6 @@ SunsetAdmin.Commands = {
     unban = 3,
     tp = 2,
     bring = 2,
-    ['goto'] = 2,
     car = 3,
     dv = 2,
     -- [HELPER SYSTEM] lowered to 1 per ADMIN_SYSTEM_SPEC §2.2
@@ -62,6 +61,7 @@ SunsetAdmin.Commands = {
     setw = 3,
     -- [HELPER SYSTEM] new commands (ADMIN_SYSTEM_SPEC §5)
     helpdesk = 1,
+    aduty = 1,
     warn = 1,
     history = 1,
     freeze = 1,

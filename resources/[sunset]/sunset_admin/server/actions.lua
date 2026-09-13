@@ -509,6 +509,38 @@ function A.setclan(source, args)
         ('Staff moved you to clan [%s] %s.'):format(resultOrErr.tag or '--', resultOrErr.name or '?'), 'info')
 end
 
+-- ── /aduty — toggle helper on-duty flag (ADMIN_SYSTEM_SPEC §2.3) ──
+-- Sets a statebag flag so sunset_chat can inject the [HELPER] prefix.
+-- Off-duty helpers act silently (same perms, no visible prefix).
+local AdminDuty = {} -- [src] = true
+
+function A.aduty(source, args)
+    if source == 0 then return end
+    if not hasPerm(source, 1) then
+        notify(source, 'Staff only.', 'error')
+        return
+    end
+    AdminDuty[source] = not AdminDuty[source] or nil
+    local on = AdminDuty[source] == true
+    pcall(function()
+        Player(source).state:set('adminDuty', on, true)
+    end)
+    notify(source, on
+        and 'You are now ON DUTY as staff. [HELPER] prefix visible in chat.'
+        or 'You are now OFF DUTY. Chat prefix removed.', 'info')
+    if GetResourceState('sunset_anticheat') == 'started' then
+        pcall(function() exports.sunset_anticheat:MarkAdminAction(source, 'aduty') end)
+    end
+end
+
+exports('IsOnAdminDuty', function(src)
+    return AdminDuty[tonumber(src or -1)] == true
+end)
+
+AddEventHandler('playerDropped', function()
+    AdminDuty[tonumber(source)] = nil
+end)
+
 -- ── registration (commands are registered here; requirePerm etc.
 --    are injected from commands.lua via SunsetAdmin.ActionsInit) ──
 function A.init(env)
@@ -536,6 +568,7 @@ function A.init(env)
     registerServerCommand('dvall', function(source, args) A.dvall(source, args) end, false)
     registerServerCommand('gotoid', function(source, args) A.gotoid(source, args) end, false)
     registerServerCommand('setclan', function(source, args) A.setclan(source, args) end, false)
+    registerServerCommand('aduty', function(source, args) A.aduty(source, args) end, false)
 end
 
 SunsetAdmin.Actions = A

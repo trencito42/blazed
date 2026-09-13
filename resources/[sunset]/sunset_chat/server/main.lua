@@ -69,6 +69,16 @@ local function chatIdentity(source)
             end
         end
     end
+    -- [ADUTY] On-duty staff get a visible [HELPER]/[STAFF] prefix in chat.
+    local okDuty, onDuty = pcall(function()
+        return Player(source).state.adminDuty == true
+    end)
+    if okDuty and onDuty then
+        local level = 0
+        pcall(function() level = exports.sunset_admin:GetAdminLevel(source) or 0 end)
+        payload.adminDuty = true
+        payload.adminLevel = level
+    end
     if GetResourceState('sunset_clans') == 'started' then
         local okMeta, meta = pcall(function()
             return exports.sunset_clans:GetClanChatMeta(source)
