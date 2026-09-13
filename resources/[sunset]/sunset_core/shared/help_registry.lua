@@ -248,7 +248,8 @@ Sunset.CommandUsage = {
     barbut = { usage = '/barbut [id|accept|decline] [bet] — dice game (min $100)', minArgs = 0 },
     dice = { usage = '/dice — alias for /barbut', minArgs = 0 },
     acheat = { usage = '/acheat [server id] — anticheat heat list / player tick detail (staff)', minArgs = 0 },
-    achud = { usage = '/achud — print the Blaze Shield live feed to chat (staff)', minArgs = 0 },
+    achud = { usage = '/achud — toggle the on-screen Blaze Shield widget (staff)', minArgs = 0 },
+    helpdesk = { usage = '/helpdesk — staff console: roster, heat, reports, quick actions (staff)', minArgs = 0 },
     -- [ADMIN SYSTEM] sanctions + presence tools (levels in SunsetAdmin.Commands)
     warn = { usage = '/warn [server id] [reason] — official warning (staff 1+)', minArgs = 2 },
     history = { usage = '/history [server id] — sanction history (staff 1+)', minArgs = 1 },

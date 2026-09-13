@@ -33,6 +33,8 @@ RegisterNetEvent('sunset:admin:spawnVehicle', function(model)
     local ped = PlayerPedId()
     local coords = GetEntityCoords(ped)
     local heading = GetEntityHeading(ped)
+    -- [ANTICHEAT] whitelist this spawn for the vehspawn ledger detector
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     local veh = CreateVehicle(hash, coords.x, coords.y, coords.z, heading, true, false)
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleHasBeenOwnedByPlayer(veh, true)

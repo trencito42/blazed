@@ -145,6 +145,8 @@ function JobClient.spawnVehicle(model, spawn, warp)
     local s = spawn
     local slot = #JobClient.vehicles
     local ox = (slot % 3) * 4.2
+    -- [ANTICHEAT] whitelist for the vehspawn ledger detector
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     local veh = CreateVehicle(hash, s.x + ox, s.y, s.z, s.w or 0.0, true, false)
     if veh == 0 then
         SetModelAsNoLongerNeeded(hash)
@@ -168,6 +170,7 @@ function JobClient.attachTrailer(truck, trailerModel, spawn)
     local thash = JobClient.loadModel(trailerModel)
     if not thash then return nil end
     local s = spawn
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     local trailer = CreateVehicle(thash, s.x, s.y, s.z, s.w or 0.0, true, false)
     if trailer == 0 then return nil end
     SetEntityAsMissionEntity(trailer, true, true)

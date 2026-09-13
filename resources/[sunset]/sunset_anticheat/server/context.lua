@@ -153,7 +153,8 @@ function Context.IsLegit(src, checkType)
     end
     if recentAdminAction(src) then
         if checkType == 'speed' or checkType == 'fly' or checkType == 'teleport'
-            or checkType == 'damage' or checkType == 'health' or checkType == 'vehicle_spawn' then
+            or checkType == 'damage' or checkType == 'health' or checkType == 'vehicle_spawn'
+            or checkType == 'weapons' or checkType == 'ammo' then
             return true
         end
     end
@@ -178,7 +179,8 @@ function Context.IsLegit(src, checkType)
     -- Active framework session (job/robbery/exam/taxi): legit spawns + movement.
     local session = activeSession(src)
     if session then
-        if checkType == 'teleport' or checkType == 'vehicle_spawn' or checkType == 'speed' then
+        if checkType == 'teleport' or checkType == 'vehicle_spawn' or checkType == 'speed'
+            or checkType == 'weapons' or checkType == 'ammo' then
             return true
         end
     end

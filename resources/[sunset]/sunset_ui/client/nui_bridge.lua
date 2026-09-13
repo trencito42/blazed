@@ -205,6 +205,10 @@ forward('fishingShopBuy')
 forward('fishingShopSell')
 forward('fishingShopClose')
 
+-- [HELPDESK] staff console (sunset_admin/client/helpdesk.lua)
+forward('helpdeskClose')
+forward('helpdeskAction')
+
 -- Quest log panel (sunset_quests)
 forward('questLogClose')
 forward('questClaim')

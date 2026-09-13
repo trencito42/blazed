@@ -29,6 +29,8 @@ local function spawnIncidentVehicle(inc)
     end
 
     local c = inc.coords
+    -- [ANTICHEAT] whitelist incident vehicle for the vehspawn ledger detector
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     local veh = CreateVehicle(model, c.x, c.y, c.z, c.w or 0.0, true, false)
     if veh == 0 then return nil end
 

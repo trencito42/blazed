@@ -25,10 +25,13 @@ server_scripts {
     'server/checkpoints.lua',
     'server/actions.lua',
     'server/commands.lua',
+    'server/helpdesk.lua',
 }
 
 client_scripts {
+    '@sunset_core/client/callbacks.lua',
     'client/main.lua',
+    'client/helpdesk.lua',
 }
 
 dependencies { 'sunset_core', 'sunset_ui', 'sunset_death', 'sunset_factions' }

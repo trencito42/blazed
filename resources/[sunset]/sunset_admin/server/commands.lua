@@ -1085,6 +1085,21 @@ end)
 
 -- ═══ REPORT & HELPME TICKETING SYSTEM ═══
 local ActiveReports = {}
+-- [HELPDESK] expose the live ticket table to the helpdesk panel
+exports('GetActiveReports', function()
+    local rows = {}
+    for id, t in pairs(ActiveReports) do
+        rows[#rows + 1] = {
+            id = id, reporter = t.reporter, reporterName = t.reporterName,
+            target = t.target, targetName = t.targetName, reason = t.reason,
+            isHelpme = t.isHelpme == true, status = t.status,
+            handlerName = t.handlerName, createdAt = t.createdAt,
+            reporterOnline = GetPlayerName(t.reporter) ~= nil,
+        }
+    end
+    table.sort(rows, function(a, b) return a.id > b.id end)
+    return rows
+end)
 local ReportSeq = 0
 local LastReportTime = {}
 

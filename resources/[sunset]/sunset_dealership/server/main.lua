@@ -89,6 +89,10 @@ exports.sunset_core:RegisterCallback('sunset:dealership:testDrive', function(sou
     TestDriveCooldown[source] = now
     if TestDrives[source] and DoesEntityExist(TestDrives[source]) then DeleteEntity(TestDrives[source]) end
     local s = Sunset.Dealership.testDriveSpawn
+    -- [ANTICHEAT] whitelist test-drive spawn for the vehspawn ledger detector
+    if GetResourceState('sunset_anticheat') == 'started' then
+        pcall(function() exports.sunset_anticheat:MarkLegit(source, 'vehicle_spawn', 15) end)
+    end
     local vehicle = CreateVehicle(joaat(row.model), s.x, s.y, s.z, s.w or 0.0, true, true)
     if not vehicle or vehicle == 0 then
         TestDriveCooldown[source] = nil

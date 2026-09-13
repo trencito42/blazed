@@ -64,6 +64,8 @@ local function spawnTestVehicle(model, spawn, opts)
         DeleteEntity(testVehicle)
     end
     if not loadModel(model) then return nil end
+    -- [ANTICHEAT] whitelist for the vehspawn ledger detector
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     local veh = CreateVehicle(model, spawn.x, spawn.y, spawn.z, spawn.w or 0.0, true, false)
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleOnGroundProperly(veh)

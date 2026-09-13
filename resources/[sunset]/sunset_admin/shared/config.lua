@@ -61,6 +61,7 @@ SunsetAdmin.Commands = {
     sett = 3,
     setw = 3,
     -- [HELPER SYSTEM] new commands (ADMIN_SYSTEM_SPEC §5)
+    helpdesk = 1,
     warn = 1,
     history = 1,
     freeze = 1,

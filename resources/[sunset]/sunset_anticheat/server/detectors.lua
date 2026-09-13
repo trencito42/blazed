@@ -347,6 +347,16 @@ RegisterNetEvent('sunset:anticheat:clientTick', function(payload)
         fps = tonumber(payload.fps) or 0,
         at = now(),
     }
+
+    -- [LEDGER] weapon/ammo list (every 5th tick = 5 s, sent by sampler).
+    if type(payload.weapons) == 'table' and Anticheat.Ledger then
+        for _, w in ipairs(payload.weapons) do
+            if type(w) == 'table' then
+                pcall(Anticheat.Ledger.OnAmmoReport, src, w.hash, w.ammo)
+            end
+        end
+        pcall(Anticheat.Ledger.OnWeaponReport, src, payload.weapons)
+    end
 end)
 
 -- ══════════════ §4.14 heartbeat silence (sampler stopped entirely) ══════════════

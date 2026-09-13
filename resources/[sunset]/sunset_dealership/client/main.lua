@@ -207,6 +207,8 @@ AddEventHandler('sunset:nui:dealershipTestDrive', function(data)
         SetModelAsNoLongerNeeded(hash)
         if testVehicle == 0 or not DoesEntityExist(testVehicle) then
             local s = Sunset.Dealership.testDriveSpawn
+            -- [ANTICHEAT] whitelist fallback test-drive spawn
+            TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
             testVehicle = CreateVehicle(hash, s.x, s.y, s.z, s.w or 0.0, true, false)
         end
         if testVehicle == 0 or not DoesEntityExist(testVehicle) then

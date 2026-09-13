@@ -93,6 +93,8 @@ local function spawnFleetVehicle(depot, factionId, vehicleModel)
 
     local s = depot.spawn
     local spawnZ = resolveSpawnZ(s.x, s.y, s.z)
+    -- [ANTICHEAT] whitelist fleet spawn for the vehspawn ledger detector
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     local veh = CreateVehicle(model, s.x, s.y, spawnZ, s.w, true, false)
     if veh == 0 then
         SetModelAsNoLongerNeeded(model)

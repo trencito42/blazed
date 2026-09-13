@@ -99,35 +99,76 @@ RegisterCommand('acheat', function(source, args)
     if shown == 0 then shieldLine(source, 'Nobody has active ticks. All clean.') end
 end, false)
 
--- ── /achud — Phase-1: prints the live-feed content to chat (the NUI corner
---    widget is a later phase; other agent owns sunset_ui web files). ──
+-- ── /achud — on-screen Blaze Shield widget (bZone-style corner HUD).
+--    Toggles a per-admin push feed: suspect+ players update every 3 s. ──
+local HudEnabled = {} -- [src] = true
+
+local function pushHud(src)
+    local rows = Strikes.GetAllHeats()
+    local feed = {}
+    for _, r in ipairs(rows) do
+        if r.band == 'suspect' or r.band == 'critical' then
+            feed[#feed + 1] = {
+                src = r.src, name = r.name, heat = math.floor(r.heat * 10) / 10,
+                band = r.band, ticks = r.ticks, top = r.topDetector or '?',
+            }
+        end
+    end
+    TriggerClientEvent('sunset:anticheat:shieldHud', src, {
+        enabled = true,
+        mode = Cfg.Mode,
+        watching = #rows,
+        feed = feed,
+    })
+end
+
 RegisterCommand('achud', function(source)
     if source ~= 0 and not isStaff(source) then
         pcall(function() exports.sunset_core:CommandDenyAdmin(source, 'achud') end)
         return
     end
-    local rows = Strikes.GetAllHeats()
-    local feed = {}
-    for _, r in ipairs(rows) do
-        -- Live feed only shows suspect+ (spec §6.1: keeps it quiet).
-        if r.band == 'suspect' or r.band == 'critical' then
-            feed[#feed + 1] = ('%s %s (#%d) %s x%d'):format(
-                r.band == 'critical' and '[RED]' or '[ORG]', r.name, r.src, tostring(r.topDetector or '?'), r.ticks)
-        end
-    end
     if source == 0 then
+        -- console: print the feed once (no HUD possible)
+        local rows = Strikes.GetAllHeats()
         print(('[SHIELD HUD] watching: %d'):format(#rows))
-        for _, line in ipairs(feed) do print('  ' .. line) end
+        for _, r in ipairs(rows) do
+            if r.band == 'suspect' or r.band == 'critical' then
+                print(('  [%s] %s (#%d) heat %.1f x%d top=%s'):format(
+                    r.band:upper(), r.name, r.src, r.heat, r.ticks, tostring(r.topDetector or '?')))
+            end
+        end
         return
     end
-    shieldLine(source, ('BLAZE SHIELD — WATCHING: %d'):format(#rows))
-    if #feed == 0 then
-        shieldLine(source, 'No suspect+ players right now.')
+    HudEnabled[source] = not HudEnabled[source] or nil
+    if HudEnabled[source] then
+        pushHud(source)
+        TriggerClientEvent('sunset:anticheat:shieldHudToggle', source, true)
     else
-        for _, line in ipairs(feed) do shieldLine(source, line) end
+        TriggerClientEvent('sunset:anticheat:shieldHudHide', source)
+        TriggerClientEvent('sunset:anticheat:shieldHudToggle', source, false)
     end
-    shieldLine(source, 'On-screen widget arrives with the NUI panel phase; use /acheat for detail.')
 end, false)
+
+AddEventHandler('playerDropped', function()
+    HudEnabled[tonumber(source)] = nil
+end)
+
+-- Live feed pusher (3 s) — only while at least one admin has the HUD on.
+CreateThread(function()
+    while true do
+        Wait(3000)
+        local any = false
+        for src in pairs(HudEnabled) do
+            if GetPlayerName(src) then
+                any = true
+                pcall(pushHud, src)
+            else
+                HudEnabled[src] = nil
+            end
+        end
+        if not any then Wait(2000) end
+    end
+end)
 
 -- ── Callbacks for the future NUI panel (level 1+) ──
 exports.sunset_core:RegisterCallback('sunset:anticheat:panel', function(source, targetId)
@@ -165,11 +206,46 @@ exports.sunset_core:RegisterCallback('sunset:anticheat:dismiss', function(source
     return { dismissed = n }
 end)
 
+-- ── Summary export for the admin helpdesk panel (read-only) ──
+exports('GetPanelSummary', function()
+    local heats = Strikes.GetAllHeats()
+    local suspect, critical = 0, 0
+    for _, r in ipairs(heats) do
+        if r.band == 'critical' then critical = critical + 1
+        elseif r.band == 'suspect' then suspect = suspect + 1 end
+    end
+    return {
+        mode = Cfg.Mode,
+        watching = #heats,
+        suspect = suspect,
+        critical = critical,
+        autoBan = Cfg.AutoBanAnything == true,
+    }
+end)
+
+-- ── Tick evidence for the helpdesk panel detail column ──
+exports('GetTicksForPanel', function(targetId)
+    targetId = tonumber(targetId)
+    local out = {}
+    if not targetId then return { ticks = out } end
+    local now = os.time()
+    for _, t in ipairs(Strikes.GetTicks(targetId)) do
+        out[#out + 1] = {
+            detector = t.detector,
+            severity = t.severity,
+            measured = t.measured,
+            context = t.context,
+            ageSec = now - t.at,
+        }
+    end
+    return { ticks = out }
+end)
+
 -- ── Boot banner ──
 CreateThread(function()
     Wait(500)
     print('^5[sunset_anticheat]^7 Blaze Shield online — mode: ^3' .. tostring(Cfg.Mode) .. '^7 | auto-ban: ' ..
-        tostring(Cfg.AutoBanAnything) .. ' (must stay false) | detectors: speed, teleport, fly, damage, health, spam, heartbeat')
+        tostring(Cfg.AutoBanAnything) .. ' (must stay false) | detectors: speed, teleport, fly, damage, health, spam, heartbeat, weapon ledger, ammo, vehspawn, economy')
     if Cfg.AutoBanAnything then
         print('^1[sunset_anticheat]^7 FATAL: AutoBanAnything must NEVER be true (spec §1). Disabling resource.')
         Cfg.Enabled = false

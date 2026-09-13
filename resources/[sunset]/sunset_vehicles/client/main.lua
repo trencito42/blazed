@@ -775,6 +775,8 @@ local function spawnOwnedVehicleEntity(vehData, spawnOpts)
     RequestCollisionAtCoord(sx, sy, sz)
 
     local vehicle = 0
+    -- [ANTICHEAT] whitelist this spawn for the vehspawn ledger detector
+    TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
     for i = 0, 4 do
         local ox = (i % 2 == 0) and (i * 2.2) or (-i * 2.2)
         local oy = math.floor(i / 2) * 2.2

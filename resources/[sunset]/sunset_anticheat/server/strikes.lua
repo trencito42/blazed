@@ -100,6 +100,11 @@ local function announceThreshold(src, band, heat, tick)
         broadcastStaff(('^1[SHIELD]^7 %s reached CRITICAL heat. /spectate %d and review with /acheat %d — NO auto-ban, staff decides.'):format(
             playerName(src), src, src), 'warning')
     end
+    -- [DISCORD] suspect+ crossings get an embed (rate-limited by the band
+    -- crossing logic itself — one embed per player per band climb).
+    if Anticheat.Discord then
+        pcall(Anticheat.Discord.HeatBand, src, playerName(src), band, heat, tick)
+    end
 end
 
 -- ── Identity resolution for persistence ──
