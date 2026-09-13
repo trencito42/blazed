@@ -102,9 +102,9 @@ add_ace group.admin command allow
 add_ace group.admin command.quit deny
 
 # ═══ DISCORD LOGGING (Blaze Shield + audit) ═══
-# Paste your Discord webhook URLs below (Server Settings > Integrations > Webhooks).
+# Webhook URL injected from .env (DISCORD_WEBHOOK) at deploy time.
 # discord_webhook_all is the fallback for any channel without its own webhook.
-set discord_webhook_anticheat "PASTE_ANTICHEAT_WEBHOOK_HERE"
-set discord_webhook_economy "PASTE_ECONOMY_WEBHOOK_HERE"
-set discord_webhook_admin "PASTE_ADMIN_WEBHOOK_HERE"
-set discord_webhook_all "PASTE_FALLBACK_WEBHOOK_HERE"
+set discord_webhook_anticheat "__DISCORD_WEBHOOK__"
+set discord_webhook_economy "__DISCORD_WEBHOOK__"
+set discord_webhook_admin "__DISCORD_WEBHOOK__"
+set discord_webhook_all "__DISCORD_WEBHOOK__"

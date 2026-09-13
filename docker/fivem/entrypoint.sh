@@ -29,6 +29,9 @@ if [ -f /config-mount/server.cfg.template ]; then
       *__LICENSE_KEY__*)
         line="sv_licenseKey \"${LICENSE_KEY}\""
         ;;
+      *__DISCORD_WEBHOOK__*)
+        line="${line//__DISCORD_WEBHOOK__/${DISCORD_WEBHOOK:-}}"
+        ;;
     esac
     printf '%s\n' "$line"
   done < /config-mount/server.cfg.template > /config/server.cfg
