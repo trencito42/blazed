@@ -145,9 +145,14 @@ RegisterNetEvent('sunset:server:playerDied', function()
     local source = source
     -- [AUDIT P2-07] Verify the ped is actually downed server-side; a live player
     -- must not be able to fake death to spam EMS dispatch or dodge activity.
+    -- [SERVER NATIVE FIX] IsPedDeadOrDying is CLIENT-ONLY (nil on server):
+    -- the old check crashed this handler mid-death, so downed players were
+    -- never registered server-side. Server-side death check: health <= 100
+    -- (fatal) or <= 160 (downed state sets the ped to exactly 150 client-side).
     local ped = GetPlayerPed(source)
     if ped and ped ~= 0 then
-        if GetEntityHealth(ped) > 100 and not IsPedDeadOrDying(ped, true) then return end
+        local hp = GetEntityHealth(ped)
+        if hp > 160 then return end
     end
     -- [WAR REDESIGN] Turf-war deaths use the war respawn loop (kill-feed style);
     -- skip the downed/EMS flow entirely for active war participants.
@@ -188,9 +193,12 @@ end)
 RegisterNetEvent('sunset:death:enteredDowned', function()
     local source = source
     -- [AUDIT P2-07] Same server-side verification as playerDied.
+    -- [SERVER NATIVE FIX] Client-only IsPedDeadOrDying replaced with the
+    -- health window check (downed = 150, fatal <= 100, healthy = 200).
     local ped = GetPlayerPed(source)
     if ped and ped ~= 0 then
-        if GetEntityHealth(ped) > 100 and not IsPedDeadOrDying(ped, true) then return end
+        local hp = GetEntityHealth(ped)
+        if hp > 160 then return end
     end
     if not Downed[source] then
         local now = os.time()
