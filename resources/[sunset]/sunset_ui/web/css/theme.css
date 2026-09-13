@@ -411,7 +411,7 @@ h5,
    hidden behind it; right offset moved left of the widget (264px + 16px margin). */
 .notifications {
     top: 290px;
-    right: 300px;
+    right: 40px;
     gap: 12px;
     width: min(380px, 34vw);
     pointer-events: none;

@@ -6,7 +6,7 @@
 }
 
 #chat {
-    top: 16px;
+    top: 56px;
     left: 16px;
     width: 680px;
     max-width: min(680px, 50vw);
@@ -561,7 +561,7 @@
 
 @media (max-width: 1280px) {
     #chat {
-        top: 18px;
+        top: 58px;
         left: 14px;
         width: min(480px, 46vw);
     }

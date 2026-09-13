@@ -225,6 +225,19 @@ const Hud = {
             $('#hud-heading').textContent = heading;
         }
 
+        // Waypoint distance
+        const wpEl = $('#hud-waypoint');
+        const wpDist = $('#hud-waypoint-dist');
+        if (wpEl && wpDist) {
+            const dist = data.waypointDist != null ? Number(data.waypointDist) : null;
+            if (dist != null && dist > 0) {
+                wpEl.classList.remove('hidden');
+                wpDist.textContent = dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${dist}m`;
+            } else {
+                wpEl.classList.add('hidden');
+            }
+        }
+
         if (street == null || street === '' || street === '—') return;
 
         const streetChanged = street !== this._lastStreet;

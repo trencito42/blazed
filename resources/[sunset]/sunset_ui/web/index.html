@@ -642,10 +642,6 @@
     <div id="hud" class="hud hidden">
         <div class="hud-tr premium-hud-tr hud-boot" data-hud-panel="tr">
             <div class="premium-top-row">
-                <div class="premium-unskew identity-container">
-                    <span class="identity-name" id="hud-identity-name">—</span>
-                    <span class="identity-id" id="hud-identity-id">(0)</span>
-                </div>
                 <div class="premium-unskew voice-container">
                     <div class="voice-icon" id="hud-voice-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
@@ -718,12 +714,20 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                     <span id="hud-zone-text">LOS SANTOS</span>
                 </div>
+                <div class="loc-waypoint hidden" id="hud-waypoint">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"></path></svg>
+                    <span id="hud-waypoint-dist">0m</span>
+                </div>
             </div>
         </div>
 
         <div class="hud-bottom-right hud-boot hud-boot--speed hidden" id="hud-speedo" data-hud-panel="speedo">
             <div class="speedo-panel speedo-panel--forza">
                 <canvas id="forza-speedo-canvas" class="forza-speedo-canvas" width="450" height="450" aria-label="Vehicle speedometer"></canvas>
+            </div>
+            <div class="identity-container" id="hud-identity">
+                <span class="identity-name" id="hud-identity-name">—</span>
+                <span class="identity-id" id="hud-identity-id">(0)</span>
             </div>
         </div>
 

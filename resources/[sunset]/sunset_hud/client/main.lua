@@ -93,6 +93,17 @@ local function buildHudData()
     local healthPct = maxHealth > 0 and (health / maxHealth) * 100 or 0
     local street, zone = getStreetName()
 
+    -- Waypoint distance (blip 8 = player-placed waypoint)
+    local waypointDist = nil
+    local wpBlip = GetFirstBlipInfoId(8)
+    if wpBlip and wpBlip ~= 0 and DoesBlipExist(wpBlip) then
+        local wpCoords = GetBlipCoords(wpBlip)
+        local pedCoords = GetEntityCoords(ped)
+        local dx = wpCoords.x - pedCoords.x
+        local dy = wpCoords.y - pedCoords.y
+        waypointDist = math.floor(math.sqrt(dx * dx + dy * dy))
+    end
+
     local playerData = exports.sunset_core:GetPlayer()
     local displayName = playerData and playerData.name
         or (char.firstname .. (char.lastname ~= '' and (' ' .. char.lastname) or ''))
@@ -123,6 +134,7 @@ local function buildHudData()
         street = street,
         zone = zone,
         heading = getCompassDirection(ped),
+        waypointDist = waypointDist,
         voiceTalking = (MumbleIsPlayerTalking and MumbleIsPlayerTalking(PlayerId())) or NetworkIsPlayerTalking(PlayerId()) == 1 or NetworkIsPlayerTalking(PlayerId()) == true,
         voiceRange = getVoiceRangeLabel(),
         inVehicle = false,
@@ -257,7 +269,7 @@ CreateThread(function()
     while true do
         if hudActive then
             BeginScaleformMovieMethod(minimap, 'SETUP_HEALTH_ARMOUR')
-            ScaleformMovieMethodAddParamInt(0)
+            ScaleformMovieMethodAddParamInt(2) -- 0=hidden, 1=health only, 2=health+armour bars
             EndScaleformMovieMethod()
             HideHudComponentThisFrame(1)
             HideHudComponentThisFrame(2)

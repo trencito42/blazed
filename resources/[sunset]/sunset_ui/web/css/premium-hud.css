@@ -41,12 +41,14 @@
     display: flex;
     flex-direction: row;
     align-items: baseline;
+    justify-content: center;
     gap: 6px;
-    margin-top: 5px;
-    text-align: right;
+    margin-top: 8px;
+    text-align: center;
+    width: 100%;
 }
 .identity-name {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--hud-text-main, #fff);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -54,7 +56,7 @@
     white-space: nowrap;
 }
 .identity-id {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--hud-accent, #00ffcc);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
@@ -496,6 +498,30 @@
 .loc-zone svg {
     width: 12px;
     height: 12px;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.loc-waypoint {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffd54f;
+    letter-spacing: 1px;
+    margin-top: 2px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-variant-numeric: tabular-nums;
+}
+.loc-waypoint.hidden { display: none; }
+.loc-waypoint svg {
+    width: 11px;
+    height: 11px;
     stroke: currentColor;
     stroke-width: 2.5;
     fill: none;
