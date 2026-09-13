@@ -573,6 +573,12 @@ AddEventHandler('sunset:nui:factionPanelsClose', function()
     factionPanelOpen = false
 end)
 
+-- [STALE FLAG FIX] Death/respawn force-closes every modal: clear the flag so
+-- ReleaseFocusUnlessModal is never blocked by a phantom faction panel.
+AddEventHandler('sunset:ui:forceCloseAll', function()
+    factionPanelOpen = false
+end)
+
 -- [AUDIT P8-12] Force-hidden by another modal: clear the flag only (no focus
 -- release; the superseding modal owns focus).
 AddEventHandler('sunset:nui:modalSuperseded', function(panel)

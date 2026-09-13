@@ -34,11 +34,15 @@ exports('Hide', Hide)
 function SetFocus(hasFocus, hasCursor, keepInput, owner)
     owner = type(owner) == 'string' and owner ~= '' and owner or 'legacy'
     if not hasFocus and focusOwner and focusOwner ~= owner and owner ~= 'force' then
+        -- [BOOT TRACE v2] blocked release attempt — this is the focus-owner trap
+        print(('^3[FOCUS]^7 blocked release: owner=%s current=%s'):format(owner, tostring(focusOwner)))
         return false
     end
     focusOwner = hasFocus and owner or nil
     SetNuiFocus(hasFocus, hasCursor == true)
     SetNuiFocusKeepInput(keepInput == true)
+    print(('^5[FOCUS %s]^7 ui: SetFocus(has=%s cursor=%s owner=%s)'):format(
+        tostring(GetBootEpoch and GetBootEpoch() or os.time()), tostring(hasFocus), tostring(hasCursor == true), owner))
     return true
 end
 exports('SetFocus', SetFocus)

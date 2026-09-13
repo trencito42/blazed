@@ -19,11 +19,18 @@ end
 local function closeAllModalUi()
     pcall(function() TriggerEvent('sunset:client:inventoryForceClose') end)
     pcall(function() TriggerEvent('sunset:phone:forceClose') end)
+    -- [STALE FLAG FIX] Broadcast a generic force-close so every panel-owning
+    -- resource clears its Lua open-flag (factionPanelOpen etc.). Without this,
+    -- respawn released NUI focus but left stale flags that re-trapped the
+    -- cursor later (ReleaseFocusUnlessModal saw a "still open" modal).
+    pcall(function() TriggerEvent('sunset:ui:forceCloseAll') end)
     if GetResourceState('sunset_ui') == 'started' then
         pcall(function()
             exports.sunset_ui:Send('tradeHide', {})
             exports.sunset_ui:Send('ticketReceiveHide', {})
             exports.sunset_ui:Send('mdcHide', {})
+            exports.sunset_ui:Send('factionPanelsHide', {})
+            exports.sunset_ui:Send('clanPanelsHide', {})
             exports.sunset_ui:SetFocus(false, false)
         end)
     end

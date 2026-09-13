@@ -213,6 +213,14 @@ AddEventHandler('sunset:nui:modalSuperseded', function(panel)
     end
 end)
 
+-- [STALE FLAG FIX] Death/respawn force-close: clear panel flags so
+-- ReleaseFocusUnlessModal is never blocked by a phantom properties panel.
+AddEventHandler('sunset:ui:forceCloseAll', function()
+    propertiesPanelOpen = false
+    panelSelectedId = nil
+    managePropertyId = nil
+end)
+
 AddEventHandler('sunset:nui:propertyOpenManage', function(data)
     CreateThread(function()
         local id = tonumber(data and data.propertyId)

@@ -37,6 +37,10 @@ set onesync_population false
 # [STATEBAG FIX] pma-voice (and other client libs) write LocalPlayer.state from
 # the client; strict mode blocks them and spams warnings + breaks voice HUD.
 setr sv_stateBagStrictMode false
+# [A/B NOFX] 1 = disable loadscreen/NUI animations, filters and big backgrounds
+# (login-freeze isolation test). Flip to 0 after the A/B run.
+# NOTE: setr (replicated) — the CLIENT reads it via GetConvar.
+setr sv_sunset_nofx 1
 
 # ox_inventory optional — enable after bridge migration
 # ensure ox_inventory

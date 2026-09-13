@@ -259,6 +259,13 @@ AddEventHandler('sunset:nui:modalSuperseded', function(panel)
     end
 end)
 
+-- [STALE FLAG FIX] Death/respawn force-close: clear the flag so
+-- ReleaseFocusUnlessModal is never blocked by a phantom menu.
+AddEventHandler('sunset:ui:forceCloseAll', function()
+    menuOpen = false
+    menuSoloMode = nil
+end)
+
 AddEventHandler('sunset:menu:refreshIfOpen', function()
     if not menuOpen then return end
     cachedExtras = nil

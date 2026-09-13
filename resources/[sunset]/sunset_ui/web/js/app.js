@@ -428,6 +428,24 @@ try {
     requestAnimationFrame(frame);
 })();
 
+// [INPUT TRACE] The "first input event 20s after auth render" anomaly: log
+// window focus/blur + document.hasFocus transitions so we can tell "input
+// never delivered (SetNuiFocus lost)" from "player clicked late".
+(function inputTrace() {
+    let loggedFocusOnce = false;
+    window.addEventListener('focus', () => window.__btrace(`window FOCUS (hasFocus=${document.hasFocus()})`));
+    window.addEventListener('blur', () => window.__btrace('window BLUR'));
+    const probe = () => {
+        const hf = document.hasFocus();
+        if (hf && !loggedFocusOnce) {
+            loggedFocusOnce = true;
+            window.__btrace('document.hasFocus() became true');
+        }
+        setTimeout(probe, 500);
+    };
+    probe();
+})();
+
 // [A/B NOFX MODE] 'bootNofx' from Lua (convar sv_sunset_nofx=1): disable all
 // animations/filters/backdrops/large backgrounds to measure compositor cost.
 window.__nofx = false;
@@ -1246,22 +1264,68 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
 }, true);
 
-// Close character screens on ESC (not menu/chat)
+// Universal ESC handler: close ANY visible gameplay modal. Each root maps to
+// its registered close callback (nui_bridge.lua) so focus always gets released.
+const MODAL_CLOSE_ACTIONS = {
+    '#menu': 'menuClose',
+    '#inventory': 'inventoryClose',
+    '#trade-window': 'inventoryTradeCancel',
+    '#store-forza': 'shopClose',
+    '#fishing-shop': 'fishingShopClose',
+    '#jobcenter': 'jobCenterClose',
+    '#atm-modal': 'atmClose',
+    '#mdc': 'mdcClose',
+    '#dispatch-112-modal': 'close112Modal',
+    '#ticket': 'ticketClose',
+    '#ticket-receive': 'ticketReceiveClose',
+    '#servicecalls': 'serviceCallsClose',
+    '#jobs-panel': 'jobsClose',
+    '#skills': 'skillsClose',
+    '#help': 'helpClose',
+    '#faction-panel': 'factionPanelsClose',
+    '#faction-directory': 'factionPanelsClose',
+    '#clan-panel': 'clanPanelsClose',
+    '#clan-directory': 'clanPanelsClose',
+    '#business-panel': 'businessPanelsClose',
+    '#garage': 'garageClose',
+    '#fleet-garage': 'fleetGarageClose',
+    '#properties': 'propertiesClose',
+    '#emotes': 'emotesClose',
+    '#clothing': 'clothingClose',
+    '#wardrobe': 'wardrobeClose',
+    '#phone-device': 'phoneClose',
+    '#documents': 'documentsClose',
+    '#dealership': 'dealershipClose',
+    '#player-interaction': 'playerInteractionClose',
+    '#crafting': 'craftingClose',
+    '#battlepass-modal': 'battlepassClose',
+    '#license-quiz-panel': 'licenseQuizClose',
+};
+
+// Close character screens on ESC (universal — any modal)
 document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (['auth', 'loading', 'spawn'].includes(App.currentScreen)) return;
+
     const passModal = $('#battlepass-modal');
-    if (passModal && !passModal.classList.contains('hidden') && e.key === 'Escape') {
+    if (passModal && !passModal.classList.contains('hidden')) {
         e.preventDefault();
         window.Battlepass?.close();
         return;
     }
 
-    if (e.key !== 'Escape') return;
-    if (['auth', 'loading', 'spawn'].includes(App.currentScreen)) return;
-    const dealership = $('#dealership');
-    if (dealership && !dealership.classList.contains('hidden')) {
-        post('dealershipClose');
+    // topmost visible modal wins (roots are z-ordered)
+    for (let i = GAMEPLAY_MODAL_ROOTS.length - 1; i >= 0; i--) {
+        const selector = GAMEPLAY_MODAL_ROOTS[i];
+        const root = $(selector);
+        if (!root || root.classList.contains('hidden')) continue;
+        const action = MODAL_CLOSE_ACTIONS[selector];
+        if (!action) continue;
+        e.preventDefault();
+        post(action);
         return;
     }
+
     const app = $('#app');
     if (app && !app.classList.contains('hidden')) {
         post('close');
