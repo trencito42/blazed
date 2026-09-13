@@ -40,7 +40,10 @@ local function openAuth()
     -- for re-opens). Always push the list explicitly so quick-login accounts
     -- render even when the auth screen was pre-shown by the loadscreen handoff.
     pushAuthAccounts()
-    exports.sunset_ui:SetFocus(true, true)
+    -- [LOGIN FOCUS GUARD] Claim focus as owner 'auth': sunset_ui now rejects
+    -- unrelated SetFocus(false,...) calls while the auth screen owns focus
+    -- (some resource was killing the login cursor ~13s in).
+    exports.sunset_ui:SetFocus(true, true, false, 'auth')
 end
 exports('OpenLogin', openAuth)
 

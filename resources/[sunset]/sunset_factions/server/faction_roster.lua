@@ -150,18 +150,9 @@ function FactionRoster.kickMember(source, characterId, options)
     local allowed, err = canManageMember(source, char, factionId, member.grade, characterId)
     if not allowed then return nil, err end
 
-    local targetSource = onlineSourceForCharacter(characterId)
-    if options.requireOnline == true and not targetSource then
-        return nil, 'That player is offline — use kick without FP for offline removal'
-    end
-    if not targetSource then
-        FactionCore.broadcastManagement(factionId, source,
-            ('removed %s from the faction (offline).'):format(FactionCore.memberDisplayName(characterId)))
-        exports.sunset_core:SetFactionByCharacterId(characterId, nil, 0)
-        FactionCore.auditLog(factionId, char.id, 'uninvite_offline', characterId, {})
-        return { offline = true }
-    end
-
+    -- [OFFLINE KICK FIX] FP is a pure DB record (faction_punish), so Kick + FP
+    -- works on offline members too. Apply it BEFORE the offline early-return;
+    -- previously offline members were removed without their FP penalty.
     if options.withFp == true then
         pcall(function()
             MySQL.insert.await(
@@ -176,6 +167,17 @@ function FactionRoster.kickMember(source, characterId, options)
                 FactionManagement.setFP(characterId, 60, 'Kicked from faction with FP by ' .. tostring(char.id), char.id)
             end)
         end
+    end
+
+    local targetSource = onlineSourceForCharacter(characterId)
+    if not targetSource then
+        FactionCore.broadcastManagement(factionId, source,
+            ('removed %s from the faction%s.'):format(
+                FactionCore.memberDisplayName(characterId),
+                options.withFp == true and ' (offline, with FP)' or ' (offline)'))
+        exports.sunset_core:SetFactionByCharacterId(characterId, nil, 0)
+        FactionCore.auditLog(factionId, char.id, options.withFp == true and 'uninvite_fp_offline' or 'uninvite_offline', characterId, {})
+        return { offline = true }
     end
 
     local targetName = FactionCore.memberDisplayName(characterId)

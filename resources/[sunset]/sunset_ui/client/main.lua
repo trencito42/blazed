@@ -33,6 +33,16 @@ exports('Hide', Hide)
 
 function SetFocus(hasFocus, hasCursor, keepInput, owner)
     owner = type(owner) == 'string' and owner ~= '' and owner or 'legacy'
+    -- [LOGIN FOCUS GUARD] While the auth (login) screen is up, ONLY the auth
+    -- flow ('auth' owner) or 'force' may release focus. Some resource was
+    -- calling SetFocus(false,...,'legacy') ~13s into the login screen, killing
+    -- the cursor ("cannot click for several seconds after login").
+    if not hasFocus and isOpen and currentScreen == 'auth'
+        and owner ~= 'auth' and owner ~= 'force' and focusOwner == 'auth' then
+        local tb = debug.traceback('', 2):gsub('\n', ' | '):sub(1, 300)
+        print(('^1[FOCUS]^7 BLOCKED release during auth screen: caller-owner=%s | %s'):format(owner, tb))
+        return false
+    end
     if not hasFocus and focusOwner and focusOwner ~= owner and owner ~= 'force' then
         -- [BOOT TRACE v2] blocked release attempt — this is the focus-owner trap
         print(('^3[FOCUS]^7 blocked release: owner=%s current=%s'):format(owner, tostring(focusOwner)))
@@ -41,8 +51,11 @@ function SetFocus(hasFocus, hasCursor, keepInput, owner)
     focusOwner = hasFocus and owner or nil
     SetNuiFocus(hasFocus, hasCursor == true)
     SetNuiFocusKeepInput(keepInput == true)
-    print(('^5[FOCUS %s]^7 ui: SetFocus(has=%s cursor=%s owner=%s)'):format(
-        tostring(GetBootEpoch and GetBootEpoch() or os.time()), tostring(hasFocus), tostring(hasCursor == true), owner))
+    -- [BOOT TRACE v3] include a short traceback so we can identify WHO steals
+    -- focus (the 13s login-screen release bug).
+    local tb = debug.traceback('', 2):gsub('\n', ' | '):sub(1, 220)
+    print(('^5[FOCUS %s]^7 ui: SetFocus(has=%s cursor=%s owner=%s) | %s'):format(
+        tostring(GetBootEpoch and GetBootEpoch() or os.time()), tostring(hasFocus), tostring(hasCursor == true), owner, tb))
     return true
 end
 exports('SetFocus', SetFocus)
