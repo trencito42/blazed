@@ -35,6 +35,7 @@ const TABLE_OWNER = {
     phone_messages: 'sunset_phone', phone_contacts: 'sunset_phone',
     payday_runs: 'sunset_economy', lottery_state: 'sunset_economy',
     lottery_tickets: 'sunset_economy', lottery_draws: 'sunset_economy',
+    anticheat_strikes: 'sunset_anticheat', anticheat_flags: 'sunset_anticheat',
 };
 
 // Documented cross-domain writers (RESOURCE_MAP.md §4 "Other writers" + audit fixes).

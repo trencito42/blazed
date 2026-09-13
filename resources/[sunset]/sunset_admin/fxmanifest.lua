@@ -21,7 +21,9 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/sanctions.lua',
     'server/checkpoints.lua',
+    'server/actions.lua',
     'server/commands.lua',
 }
 

@@ -88,6 +88,7 @@ ensure sunset_help
 ensure sunset_quests
 ensure sunset_testdriver
 ensure sunset_admintools
+ensure sunset_anticheat
 setr testdriver_autorun 1
 ensure sunset_jobs
 ensure sunset_carjack

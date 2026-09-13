@@ -24,6 +24,7 @@ server_scripts {
     'server/display.lua',
     'server/main.lua',
     'server/chat.lua',
+    'server/admin_ops.lua',
 }
 
 dependencies {

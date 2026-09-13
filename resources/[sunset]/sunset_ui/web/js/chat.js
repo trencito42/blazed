@@ -260,6 +260,15 @@ const Chat = {
             };
         }
 
+        // [SANCTIONS] public sanction broadcasts (warn/kick/ban/jail) from sunset_admin.
+        if (type === 'admin_action') {
+            return {
+                badge: { label: 'SANCTION', className: 'badge-error' },
+                author: null,
+                content: { html: `<span class="color-error">${esc(msg)}</span>`, className: '' },
+            };
+        }
+
         if (type === 'r' || type === 'd' || type === 'f') {
             const channel = type === 'r' ? 'RADIO' : (type === 'd' ? 'DEPT' : 'FACTION');
             let text = msg;

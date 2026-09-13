@@ -132,6 +132,138 @@ RegisterNetEvent('sunset:admin:toggleGod', function()
     exports.sunset_ui:Notify(godmode and 'Godmode ON' or 'Godmode OFF', 'info')
 end)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [ADMIN TOOLS] freeze / slap / pullout / spectate / tpcar / dvall
+-- ═══════════════════════════════════════════════════════════════
+local isFrozen = false
+
+RegisterNetEvent('sunset:admin:freeze', function(state)
+    isFrozen = state == true
+    local ped = PlayerPedId()
+    FreezeEntityPosition(ped, isFrozen)
+    if isFrozen then
+        ClearPedTasksImmediately(ped)
+        exports.sunset_ui:Notify('You have been FROZEN by staff. Do not disconnect.', 'error', 10000)
+    else
+        exports.sunset_ui:Notify('Unfrozen by staff.', 'success', 5000)
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if isFrozen then
+            DisableAllControlActions(0)
+            local ped = PlayerPedId()
+            local veh = GetVehiclePedIsIn(ped, false)
+            if veh ~= 0 then FreezeEntityPosition(veh, true) end
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)
+
+RegisterNetEvent('sunset:admin:slap', function(adminSrc)
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local dirX, dirY = 0.0, 0.0
+    local adminPed = adminSrc and GetPlayerPed(GetPlayerFromServerId(adminSrc)) or 0
+    if adminPed and adminPed ~= 0 and DoesEntityExist(adminPed) then
+        local ac = GetEntityCoords(adminPed)
+        local dx, dy = coords.x - ac.x, coords.y - ac.y
+        local len = math.sqrt(dx * dx + dy * dy)
+        if len > 0.1 then dirX, dirY = dx / len, dy / len end
+    end
+    ClearPedTasksImmediately(ped)
+    ApplyForceToEntity(ped, 1, dirX * 10.0, dirY * 10.0, 15.0, 0.0, 0.0, 0.0, 0, false, true, true, false, true)
+end)
+
+RegisterNetEvent('sunset:admin:pullout', function()
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then return end
+    TaskLeaveVehicle(ped, veh, 16) -- 16 = force out immediately
+end)
+
+-- /tpcar /bringcar: move ped AND vehicle together.
+RegisterNetEvent('sunset:admin:teleportVehicle', function(x, y, z)
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    CreateThread(function()
+        RequestCollisionAtCoord(x, y, z)
+        local groundZ = z
+        for _ = 1, 60 do
+            local found, gz = GetGroundZFor_3dCoord(x, y, z + 100.0, false)
+            if found then groundZ = gz + 1.0 break end
+            Wait(50)
+        end
+        DoScreenFadeOut(250)
+        Wait(300)
+        if veh ~= 0 and DoesEntityExist(veh) then
+            SetEntityCoords(veh, x, y, groundZ, false, false, false, false)
+            SetEntityHeading(veh, GetEntityHeading(veh))
+            if GetPedInVehicleSeat(veh, -1) ~= ped then
+                SetPedIntoVehicle(ped, veh, -1)
+            end
+        else
+            SetEntityCoords(ped, x, y, groundZ, false, false, false, false)
+        end
+        Wait(250)
+        DoScreenFadeIn(400)
+    end)
+end)
+
+-- ── Spectate (server pushes target coords at 1Hz) ──────────────
+local specTarget = nil
+local specLastCoords = nil
+local specLastSync = 0
+
+RegisterNetEvent('sunset:admin:spectateStart', function(targetSrc)
+    specTarget = targetSrc
+    local ped = PlayerPedId()
+    -- keep coords, invisible + frozen (per spec §4.1)
+    SetEntityVisible(ped, false, false)
+    FreezeEntityPosition(ped, true)
+    SetEntityCollision(ped, false, false)
+    NetworkSetInSpectatorMode(true, ped)
+    exports.sunset_ui:Notify(('Spectating #%d. /spectate off to exit.'):format(targetSrc), 'info', 8000)
+end)
+
+RegisterNetEvent('sunset:admin:spectateSync', function(targetSrc, coords)
+    if not specTarget or specTarget ~= targetSrc then return end
+    specLastCoords = coords
+    specLastSync = GetGameTimer()
+    local targetPed = GetPlayerPed(GetPlayerFromServerId(targetSrc))
+    if targetPed and targetPed ~= 0 and DoesEntityExist(targetPed) then
+        NetworkSetInSpectatorMode(true, targetPed)
+    end
+end)
+
+RegisterNetEvent('sunset:admin:spectateEnd', function()
+    specTarget = nil
+    specLastCoords = nil
+    local ped = PlayerPedId()
+    NetworkSetInSpectatorMode(false, ped)
+    SetEntityVisible(ped, true, false)
+    FreezeEntityPosition(ped, false)
+    SetEntityCollision(ped, true, true)
+    exports.sunset_ui:Notify('Spectate ended.', 'info', 4000)
+end)
+
+-- watchdog: no sync for 6s or target gone -> restore (spec failsafe)
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if specTarget then
+            local stale = specLastSync > 0 and (GetGameTimer() - specLastSync) > 6000
+            local targetPed = GetPlayerPed(GetPlayerFromServerId(specTarget))
+            if stale or not targetPed or targetPed == 0 then
+                TriggerEvent('sunset:admin:spectateEnd')
+            end
+        end
+    end
+end)
+
 local function hasCoordsPerm()
     local need = SunsetAdmin.Commands.coords or 2
     return adminLevel >= need

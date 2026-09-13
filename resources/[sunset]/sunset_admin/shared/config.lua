@@ -11,15 +11,17 @@ SunsetAdmin.Levels = {
 SunsetAdmin.Commands = {
     kick = 2,
     ban = 3,
+    tempban = 3,
     unban = 3,
     tp = 2,
     bring = 2,
     ['goto'] = 2,
     car = 3,
     dv = 2,
-    heal = 2,
-    revive = 2,
-    arespawn = 2,
+    -- [HELPER SYSTEM] lowered to 1 per ADMIN_SYSTEM_SPEC §2.2
+    heal = 1,
+    revive = 1,
+    arespawn = 1,
     noclip = 3,
     god = 3,
     announce = 3,
@@ -57,5 +59,33 @@ SunsetAdmin.Commands = {
     fix = 2,
     sett = 3,
     setw = 3,
+    -- [HELPER SYSTEM] new commands (ADMIN_SYSTEM_SPEC §5)
+    warn = 1,
+    history = 1,
+    freeze = 1,
+    unfreeze = 1,
+    pullout = 1,
+    spectate = 2,
+    slap = 2,
+    tpcar = 2,
+    bringcar = 2,
+    aclear = 2,
+    ajail = 2,
+    aunjail = 2,
+    ahealall = 3,
+    fixall = 3,
+    dvall = 3,
+    setclan = 3,
+    clearwarns = 3,
+    gotoid = 2,
 }
+
+-- [SANCTIONS] Public/staff broadcast config (§3.5)
+SunsetAdmin.Broadcast = {
+    warn = true, kick = true, ban = true, unban = false, jail = true,
+    showReason = { warn = true, kick = true, ban = true },
+    cooldownSec = 2,
+}
+SunsetAdmin.WarnsBeforeStaffAlert = 3
+SunsetAdmin.FreezeMaxSec = 600 -- auto-unfreeze failsafe
 

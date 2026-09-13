@@ -16,6 +16,12 @@ local function deny(source, cmd)
 end
 
 local function logAdminAction(source, cmd)
+    -- [SPEC §2.2] Helper (level-1) actions no longer fire a Discord embed per
+    -- call (spam); they are broadcast to staff chat + recorded in
+    -- admin_sanctions where it matters (warn/kick/ban/jail).
+    if source ~= 0 and IsAdmin(source, 2) ~= true and IsAdmin(source, 1) == true then
+        return
+    end
     local adminName = source == 0 and 'CONSOLE' or (GetPlayerName(source) or 'Unknown')
     pcall(function()
         exports.sunset_core:SendDiscordLog('admin', 'Comanda Admin Executata', ('Adminul **%s** (ID: %s) a apelat `/%s`'):format(adminName, tostring(source), cmd), 'orange', {
@@ -24,6 +30,11 @@ local function logAdminAction(source, cmd)
             { name = 'Comanda', value = '/' .. cmd, inline = true },
         })
     end)
+    -- [ANTICHEAT HOOK] Feed the admin-action window so anticheat context can
+    -- whitelist the recipient of admin teleports/spawns (G-spec §3).
+    if GetResourceState('sunset_anticheat') == 'started' then
+        pcall(function() exports.sunset_anticheat:MarkAdminAction(source, cmd) end)
+    end
 end
 
 local function requirePerm(source, cmd)
@@ -340,24 +351,70 @@ registerServerCommand('kick', function(source, args)
     if not target or not guardSelfTarget(source, target, args[1], 'kick') then return end
     local reason = table.concat(args, ' ', 2)
     if reason == '' then reason = 'No reason given' end
-    DropPlayer(target, 'You were kicked: ' .. reason)
+    -- [SANCTIONS] kick now records a sanction row + public/staff broadcast.
+    SunsetAdmin.Sanctions.kick(source, target, reason)
     if source ~= 0 then notify(source, 'Player kicked', 'success') end
 end, false)
 
--- /ban [id] [motiv]
+-- /ban [id] [30m|1h|6h|12h|1d|3d|7d|14d|30d|perm] [reason]
+-- Backward compatible: /ban [id] [reason] = permanent (old syntax).
 registerServerCommand('ban', function(source, args)
     if source ~= 0 and not requirePerm(source, 'ban') then return end
-    local target = getTarget(source, args[1], 'Usage: /ban [player id] [reason]')
+    local target = getTarget(source, args[1], 'Usage: /ban [player id] [30m|6h|7d|30d|perm] [reason]')
     if not target or not guardSelfTarget(source, target, args[1], 'ban') then return end
+    local durationMin, reason = SunsetAdmin.Sanctions.parseBanArgs(args)
+    local ok, err = SunsetAdmin.Sanctions.ban(source, target, durationMin, reason)
+    if not ok then
+        notify(source, err or 'Ban failed', 'error')
+        return
+    end
+    if source ~= 0 then notify(source, durationMin and ('Player banned for %d min'):format(durationMin) or 'Player permanently banned', 'success') end
+end, false)
+
+registerServerCommand('tempban', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'tempban') then return end
+    local target = getTarget(source, args[1], 'Usage: /tempban [player id] [30m|1h|6h|12h|1d|3d|7d|14d|30d] [reason]')
+    if not target or not guardSelfTarget(source, target, args[1], 'tempban') then return end
+    local durationMin, reason = SunsetAdmin.Sanctions.parseBanArgs(args)
+    if not durationMin then
+        notify(source, 'Duration required: /tempban [id] [30m|1h|6h|12h|1d|3d|7d|14d|30d] [reason]', 'error')
+        return
+    end
+    SunsetAdmin.Sanctions.ban(source, target, durationMin, reason)
+    if source ~= 0 then notify(source, ('Player banned for %d min'):format(durationMin), 'success') end
+end, false)
+
+-- /warn [id] [reason] — level 1+, sanction row + broadcast + auto-escalation.
+registerServerCommand('warn', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'warn') then return end
+    local target = getTarget(source, args[1], 'Usage: /warn [player id] [reason]')
+    if not target or not guardSelfTarget(source, target, args[1], 'warn') then return end
     local reason = table.concat(args, ' ', 2)
-    if reason == '' then reason = 'Ban permanent' end
+    local ok, err = SunsetAdmin.Sanctions.warn(source, target, reason)
+    if not ok then
+        notify(source, err or 'Warning failed', 'error')
+        return
+    end
+    if source ~= 0 then
+        notify(source, ('Warning issued to %s (%d warn(s) this week).'):format(GetPlayerName(target) or '?', ok.warns), 'success')
+    end
+end, false)
 
-    local license = Sunset.GetIdentifier(target, 'license')
-    local bannedBy = source == 0 and 'console' or GetPlayerName(source)
+-- /history [id] — sanction history for staff.
+registerServerCommand('history', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'history') then return end
+    local target = getTarget(source, args[1], 'Usage: /history [player id]')
+    if not target then return end
+    SunsetAdmin.Sanctions.history(source, target)
+end, false)
 
-    MySQL.insert.await('INSERT INTO bans (license, reason, banned_by) VALUES (?, ?, ?)', { license, reason, bannedBy })
-    DropPlayer(target, 'Banned: ' .. reason)
-    if source ~= 0 then notify(source, 'Player banned', 'success') end
+-- /clearwarns [id] — level 3+, resets the 7-day warn escalation counter.
+registerServerCommand('clearwarns', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'clearwarns') then return end
+    local target = getTarget(source, args[1], 'Usage: /clearwarns [player id]')
+    if not target then return end
+    SunsetAdmin.Sanctions.clearWarns(source, target)
+    notify(source, ('Warn history cleared for %s.'):format(GetPlayerName(target) or '?'), 'success')
 end, false)
 
 local function resolveUnbanLicense(source, arg)
@@ -399,6 +456,8 @@ registerServerCommand('unban', function(source, args)
     local adminName = source == 0 and 'console' or GetPlayerName(source)
 
     if removed and removed > 0 then
+        -- [SANCTIONS] record + optionally broadcast the unban.
+        SunsetAdmin.Sanctions.unbanRecord(source, license)
         print(('^2[SunsetAdmin]^7 %s unbanned %s (%d row(s))'):format(adminName, license, removed))
         if source ~= 0 then notify(source, 'Player unbanned', 'success') end
     else
@@ -413,6 +472,16 @@ end, false)
 local function scrubCoordToken(value)
     value = tostring(value or ''):gsub(',', ''):gsub('^%s+', ''):gsub('%s+$', '')
     return tonumber(value)
+end
+
+-- [G7 FIX] Teleporting into/out of a property routing bucket made players
+-- invisible (bucket mismatch). Normalize the moved player's bucket to the
+-- destination context: joining a target = their bucket; bringing someone to
+-- you = your bucket; raw coords = bucket 0 (open world).
+local function markAnticheatTarget(src, cmd)
+    if GetResourceState('sunset_anticheat') == 'started' then
+        pcall(function() exports.sunset_anticheat:MarkAdminAction(src, cmd) end)
+    end
 end
 
 local function parseTpCoords(args, rest)
@@ -444,6 +513,7 @@ registerServerCommand('tp', function(source, args)
     local rest = table.concat(args, ' ')
     local x, y, z = parseTpCoords(args, rest)
     if x and y and z then
+        SetPlayerRoutingBucket(source, 0)
         TriggerClientEvent('sunset:admin:teleport', source, x, y, z)
         return
     end
@@ -453,6 +523,8 @@ registerServerCommand('tp', function(source, args)
         if not target then return end
         local ped = GetPlayerPed(target)
         local coords = GetEntityCoords(ped)
+        -- [G7] join the target's bucket so a player inside a house stays visible
+        SetPlayerRoutingBucket(source, GetPlayerRoutingBucket(target) or 0)
         TriggerClientEvent('sunset:admin:teleport', source, coords.x, coords.y, coords.z)
         return
     end
@@ -468,7 +540,10 @@ registerServerCommand('bring', function(source, args)
     if not target then return end
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)
+    -- [G7] bring target into MY bucket (or 0 if I am in open world)
+    SetPlayerRoutingBucket(target, GetPlayerRoutingBucket(source) or 0)
     TriggerClientEvent('sunset:admin:teleport', target, coords.x, coords.y, coords.z)
+    markAnticheatTarget(target, 'bring')
     notify(source, 'Player brought to you', 'success')
 end, false)
 
@@ -478,6 +553,7 @@ registerServerCommand('car', function(source, args)
     if not requirePerm(source, 'car') then return end
     local model = args[1] or 'sultan'
     TriggerClientEvent('sunset:admin:spawnVehicle', source, model)
+    markAnticheatTarget(source, 'car')
 end, false)
 
 -- /giveitem [id] [item] [count]
@@ -532,6 +608,7 @@ registerServerCommand('givegun', function(source, args)
     if not weapon:find('^WEAPON_') then weapon = 'WEAPON_' .. weapon end
     local ammo = tonumber(args[3]) or 120
     TriggerClientEvent('sunset:admin:giveWeapon', target, weapon, ammo, source)
+    markAnticheatTarget(target, 'givegun')
     notify(source, ('Gave %s to ID %s'):format(weapon, target), 'success')
     if target ~= source then
         TriggerClientEvent('sunset:client:notify', target, ('You received %s'):format(weapon), 'success')
@@ -573,6 +650,10 @@ registerServerCommand('heal', function(source, args)
     local target = resolveTarget(source, args[1])
     if not target then return end
     TriggerClientEvent('sunset:admin:heal', target)
+    -- [ANTICHEAT] legit heal source: suppress health-injection detector.
+    if GetResourceState('sunset_anticheat') == 'started' then
+        pcall(function() exports.sunset_anticheat:MarkLegit(target, 'health', 10) end)
+    end
     notify(source, 'Healed ' .. (GetPlayerName(target) or '?') .. ' (ID ' .. target .. ')', 'success')
     if target ~= source then
         TriggerClientEvent('sunset:client:notify', target, 'You were healed by medical staff.', 'success')
@@ -1124,4 +1205,18 @@ RegisterNetEvent('sunset:admin:weaponGiveFailed', function(adminSource, weapon)
 end)
 
 exports('ExecutePlayerCommand', ExecutePlayerCommand)
+
+-- [ADMIN TOOLS] Presence commands (freeze/slap/spectate/tpcar/ajail/mass...)
+-- live in server/actions.lua; inject the local helpers it needs.
+if SunsetAdmin.Actions and SunsetAdmin.Actions.init then
+    SunsetAdmin.Actions.init({
+        hasPerm = hasPerm,
+        notify = notify,
+        requirePerm = requirePerm,
+        getTarget = getTarget,
+        guardSelfTarget = guardSelfTarget,
+        resolveTarget = resolveTarget,
+        registerServerCommand = registerServerCommand,
+    })
+end
 

@@ -1235,6 +1235,43 @@ end)
 
 exports('IsJailed', function(source) return Police.isJailed(source) end)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [ADMIN TOOLS] Thin wrappers so sunset_admin can jail/unjail/clear
+--  wanted through the SAME police pipeline (persistence, sessions,
+--  Bolingbroke spawn lock, payday suspension) without touching tables
+--  it does not own. Caller (sunset_admin) validates permissions.
+-- ═══════════════════════════════════════════════════════════════
+exports('AdminJail', function(targetId, minutes, reason, adminSource)
+    targetId = tonumber(targetId)
+    minutes = math.max(1, math.min(1440, math.floor(tonumber(minutes) or 5)))
+    if not targetId or not GetPlayerName(targetId) then
+        return false, 'That player is not online.'
+    end
+    beginJail(targetId, minutes * 60, tostring(reason or 'Admin jail'), adminSource)
+    return true
+end)
+
+exports('AdminUnjail', function(targetId)
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then
+        return false, 'That player is not online.'
+    end
+    if not JailedOnline[targetId] then
+        return false, 'That player is not in jail.'
+    end
+    endJail(targetId)
+    return true
+end)
+
+exports('AdminClearWanted', function(targetId)
+    targetId = tonumber(targetId)
+    if not targetId or not GetPlayerName(targetId) then
+        return false, 'That player is not online.'
+    end
+    clearWanted(targetId, nil)
+    return true
+end)
+
 AddEventHandler('sunset:police:autoWanted', function(targetId, reasonCode, reasonLabel)
     targetId = tonumber(targetId)
     if not targetId or not GetPlayerName(targetId) then return end

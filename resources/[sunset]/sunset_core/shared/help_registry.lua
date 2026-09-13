@@ -245,6 +245,28 @@ Sunset.CommandUsage = {
     lottery = { usage = '/lottery — alias for /loto', minArgs = 0 },
     barbut = { usage = '/barbut [id|accept|decline] [bet] — dice game (min $100)', minArgs = 0 },
     dice = { usage = '/dice — alias for /barbut', minArgs = 0 },
+    acheat = { usage = '/acheat [server id] — anticheat heat list / player tick detail (staff)', minArgs = 0 },
+    achud = { usage = '/achud — print the Blaze Shield live feed to chat (staff)', minArgs = 0 },
+    -- [ADMIN SYSTEM] sanctions + presence tools (levels in SunsetAdmin.Commands)
+    warn = { usage = '/warn [server id] [reason] — official warning (staff 1+)', minArgs = 2 },
+    history = { usage = '/history [server id] — sanction history (staff 1+)', minArgs = 1 },
+    clearwarns = { usage = '/clearwarns [server id] — clear warn history (staff 3+)', minArgs = 1 },
+    freeze = { usage = '/freeze [server id] — immobilize a player (staff 1+)', minArgs = 1 },
+    unfreeze = { usage = '/unfreeze [server id] — release a frozen player (staff 1+)', minArgs = 1 },
+    pullout = { usage = '/pullout [server id] — extract a player from their vehicle (staff 1+)', minArgs = 1 },
+    spectate = { usage = '/spectate [server id|off] — invisibly watch a player (staff 2+)', minArgs = 1 },
+    slap = { usage = '/slap [server id] — launch a player (staff 2+)', minArgs = 1 },
+    tpcar = { usage = '/tpcar [server id] — teleport to a player WITH your vehicle (staff 2+)', minArgs = 1 },
+    bringcar = { usage = '/bringcar [server id] — bring a player AND their vehicle to you (staff 2+)', minArgs = 1 },
+    ajail = { usage = '/ajail [server id] [minutes 1-1440] [reason] — admin jail (staff 2+)', minArgs = 2 },
+    aunjail = { usage = '/aunjail [server id] — release from jail (staff 2+)', minArgs = 1 },
+    aclear = { usage = '/aclear [server id] — clear wanted stars (staff 2+)', minArgs = 1 },
+    ahealall = { usage = '/ahealall — heal every player (staff 3+, double-tap confirm)', minArgs = 0 },
+    fixall = { usage = '/fixall — repair every vehicle (staff 3+, double-tap confirm)', minArgs = 0 },
+    dvall = { usage = '/dvall — delete unowned vehicles in 60m (staff 3+, double-tap confirm)', minArgs = 0 },
+    gotoid = { usage = '/gotoid [server id] — alias for /tp [id] (staff 2+)', minArgs = 1 },
+    setclan = { usage = '/setclan [server id] [clan id|none] [rank] — move a player between clans (staff 3+)', minArgs = 2 },
+    tempban = { usage = '/tempban [server id] [30m|1h|6h|1d|7d|30d] [reason] (staff 3+)', minArgs = 3 },
 }
 
 Sunset.HelpDispatchEntries = {

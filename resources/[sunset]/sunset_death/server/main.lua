@@ -64,6 +64,11 @@ function RevivePlayer(targetId)
     end
 
     Downed[targetId] = nil
+    -- [ANTICHEAT] legit heal source: the revive restores full HP; suppress the
+    -- health-injection detector for this window.
+    if GetResourceState('sunset_anticheat') == 'started' then
+        pcall(function() exports.sunset_anticheat:MarkLegit(targetId, 'health', 10) end)
+    end
     TriggerClientEvent('sunset:death:reviveInPlace', targetId)
     return true
 end

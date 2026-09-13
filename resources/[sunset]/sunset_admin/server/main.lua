@@ -66,6 +66,28 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
         return
     end
 
+    -- [BAN HARDENING] Also check hardware tokens: a banned player switching
+    -- to a fresh license on the same PC still trips this (sql/47 ban_tokens).
+    local tokenBan
+    pcall(function()
+        for i = 0, 4 do
+            local token = GetPlayerToken(src, i)
+            if token and token ~= '' then
+                tokenBan = MySQL.single.await([[
+                    SELECT b.reason FROM ban_tokens bt
+                    JOIN bans b ON b.id = bt.ban_id
+                    WHERE bt.token = ? AND (b.expires_at IS NULL OR b.expires_at > NOW())
+                    LIMIT 1
+                ]], { token })
+                if tokenBan then break end
+            end
+        end
+    end)
+    if tokenBan then
+        deferrals.done('You are banned: ' .. (tokenBan.reason or 'No reason given'))
+        return
+    end
+
     deferrals.done()
 end)
 
