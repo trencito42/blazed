@@ -90,10 +90,14 @@ local function ensureUnarmed(ped)
 end
 
 local function mayCarryWeapon(itemName)
-    if inWeaponTest() then return true end
-    if isFirearmItem(itemName) and not hasWeaponLicense() then
-        return false
-    end
+    -- [LICENSE GATE DISABLED] The firearm-license gate was flaky and is now
+    -- disabled by owner decision. Carrying simply mirrors the inventory:
+    -- the license is still enforced where it counts — buying (gunshop) and
+    -- receiving weapons (inventory AddItem) both check it SERVER-side, so a
+    -- weapon can only be in the inventory if it was obtained legally. Gating
+    -- the client-side ped sync on an async license round-trip caused weapons
+    -- to silently never appear on the weapon wheel until an ammo "use" forced
+    -- GiveWeaponToPed.
     return true
 end
 
@@ -120,6 +124,27 @@ function SyncInventoryWeapons(items)
         hotbarEquippedHash = nil
         SetCurrentPedWeapon(ped, UNARMED, true)
     end
+end
+
+-- [CARRY EXCEPTIONS] Weapons granted OUTSIDE the inventory (war loadouts,
+-- license range tests, faction duty kits) must not be stripped by the
+-- consistency loop. Owners register their hashes here and clear them when
+-- the granting context ends.
+local carryExceptions = {}
+
+function AddCarryException(hash, remove)
+    hash = tonumber(hash) or (type(hash) == 'string' and joaat(hash) or nil)
+    if not hash then return end
+    carryExceptions[hash] = not remove and true or nil
+end
+exports('AddCarryException', AddCarryException)
+exports('ClearCarryExceptions', function()
+    carryExceptions = {}
+end)
+
+local function warWeaponException(hash)
+    if inWeaponTest() then return true end
+    return carryExceptions[hash] == true
 end
 
 RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
@@ -194,31 +219,14 @@ RegisterNetEvent('sunset:licenses:refresh', function()
     end
 end)
 
-CreateThread(function()
-    while true do
-        if not inWeaponTest() and not hasWeaponLicense() then
-            local ped = PlayerPedId()
-            for _, def in pairs(Sunset.Items or {}) do
-                if def.weapon and isFirearmWeapon(def.weapon) then
-                    local hash = joaat(def.weapon)
-                    if HasPedGotWeapon(ped, hash, false) then
-                        RemoveWeaponFromPed(ped, hash)
-                    end
-                end
-            end
-            local testHash = joaat('WEAPON_PISTOL')
-            if HasPedGotWeapon(ped, testHash, false) then
-                RemoveWeaponFromPed(ped, testHash)
-            end
-            local selected = GetSelectedPedWeapon(ped)
-            if selected ~= UNARMED and not EXEMPT_WEAPON_HASHES[selected] then
-                RemoveWeaponFromPed(ped, selected)
-            end
-            SetCurrentPedWeapon(ped, UNARMED, true)
-        end
-        Wait(1500)
-    end
-end)
+-- [LICENSE GATE DISABLED] The old loop here stripped all firearms from the ped
+-- whenever the CLIENT-side license check said "no license". That check is an
+-- async round-trip and could answer false transiently -> weapons vanished from
+-- the wheel and shots got removed mid-fight. Carrying is now purely
+-- inventory-driven (SyncInventoryWeapons mirrors the inventory onto the ped).
+-- Banned/cheat weapons are still caught server-side by sunset_core security
+-- (BANNED_WEAPONS scan); faction duty kits and war loadouts are managed by
+-- their own resources, so nothing here strips them.
 
 CreateThread(function()
     while true do

@@ -469,6 +469,36 @@ body.trade-forza-active .inventory-forza .inv-cash-badge {
 .inventory-forza .inv-actions button.is-danger { border-color: rgba(255, 51, 102, 0.4); color: #ff8fab; }
 .inventory-forza .inv-actions button.is-danger:hover:not(:disabled) { border-color: var(--inv-danger); color: var(--inv-danger); }
 
+/* [DROP ZONE] Trash bin under the grid - drag items here to drop them */
+.inventory-forza .inv-trash {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 14px 18px;
+    background: var(--inv-bg-panel);
+    border: 2px dashed var(--inv-border-glass);
+    color: var(--inv-text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    backdrop-filter: blur(10px);
+    transition: 0.2s;
+}
+
+.inventory-forza .inv-trash i { font-size: 18px; }
+
+.inventory-forza .inv-trash.is-dragover {
+    border-color: var(--inv-danger);
+    border-style: solid;
+    color: var(--inv-danger);
+    background: rgba(255, 51, 102, 0.12);
+    box-shadow: inset 0 0 24px rgba(255, 51, 102, 0.25);
+    transform: scale(1.02);
+}
+
 .inventory-forza .inv-duty-row {
     background: var(--inv-bg-panel);
     border: 2px solid var(--inv-border-glass);

@@ -455,6 +455,11 @@ RegisterNetEvent('sunset:turfs:grantLoadout', function(payload)
         -- [WAR FIX] Track granted hashes so they can be stripped when the war
         -- ends (previously the sniper kit stayed forever after the war).
         warWeapons[hash] = true
+        -- [CARRY EXCEPTION] Register with the inventory weapon-consistency loop
+        -- so it does not strip war loadout weapons (they are not inventory rows).
+        if GetResourceState('sunset_inventory') == 'started' then
+            pcall(function() exports.sunset_inventory:AddCarryException(hash) end)
+        end
     end
 end)
 
@@ -466,6 +471,9 @@ local function stripWarWeapons()
             RemoveWeaponFromPed(ped, hash)
         end
         warWeapons[hash] = nil
+        if GetResourceState('sunset_inventory') == 'started' then
+            pcall(function() exports.sunset_inventory:AddCarryException(hash, true) end)
+        end
     end
     SetPedArmour(ped, 0)
     SetCurrentPedWeapon(ped, joaat('WEAPON_UNARMED'), true)

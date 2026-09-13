@@ -139,6 +139,12 @@ const Panels = {
             if (this._inventoryTrade) this._offerInventoryRow(row);
             else this._dropInventoryRow(row);
         });
+        // [DROP ZONE] click the trash bin to drop the currently selected item.
+        $('#inventory-trash-zone')?.addEventListener('click', () => {
+            const row = this._inventorySelected;
+            if (!row || this._inventoryTrade) return;
+            this._dropInventoryRow(row);
+        });
         $('#inventory-trade-confirm')?.addEventListener('click', () => post('inventoryTradeConfirm', {}));
         $('#inventory-trade-cancel')?.addEventListener('click', () => post('inventoryTradeCancel', {}));
         $('#inventory-trade-add-asset')?.addEventListener('click', () => this.openTradeAssetCatalog());
@@ -418,6 +424,7 @@ const Panels = {
             $('#inventory-my-offer')?.classList.remove('is-dragover');
             $('#inventory-cash-badge')?.classList.remove('is-dragover');
             $('#inventory-drop-selected')?.classList.remove('is-dragover');
+            $('#inventory-trash-zone')?.classList.remove('is-dragover');
             $$('.inv-slot.is-drop-target, .premium-slot.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
         };
 
@@ -447,11 +454,15 @@ const Panels = {
                 const el = stack[0] || null;
                 const offerZone = el?.closest('#inventory-my-offer');
                 const dropBtn = el?.closest('#inventory-drop-selected');
+                // [DROP ZONE] trash bin: drag any item onto it to drop it on the ground.
+                const trashZone = el?.closest('#inventory-trash-zone');
                 const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
 
                 if (offerZone && this._inventoryTrade) {
                     if (state.cash) this.openCashOfferModal(this._inventoryCash, (amount) => this._offerTradeCash(amount));
                     else this._offerInventoryRow(state.row);
+                } else if (trashZone && !this._inventoryTrade && !state.cash && state.row) {
+                    this._dropInventoryRow(state.row);
                 } else if (dropBtn) {
                     if (this._inventoryTrade) {
                         if (state.cash) this.openCashOfferModal(this._inventoryCash, (amount) => this._offerTradeCash(amount));
@@ -522,6 +533,8 @@ const Panels = {
                 $('#inventory-cash-badge')?.classList.add('is-dragover');
             } else if (el?.closest('#inventory-drop-selected')) {
                 $('#inventory-drop-selected')?.classList.add('is-dragover');
+            } else if (el?.closest('#inventory-trash-zone')) {
+                $('#inventory-trash-zone')?.classList.add('is-dragover');
             } else {
                 const slot = el?.closest('.inv-slot') || el?.closest('.premium-slot');
                 if (slot && !this._inventoryTrade) slot.classList.add('is-drop-target');
