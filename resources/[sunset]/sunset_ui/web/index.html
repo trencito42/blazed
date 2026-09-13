@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="css/style.css?v=16">
     <link rel="stylesheet" href="css/hud.css?v=30" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="css/premium-hud.css?v=32" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/premium-hud.css?v=33" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/scoreboard-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/store-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/chat.css?v=30" media="print" onload="this.media='all'">
@@ -719,6 +719,16 @@
                 <div class="loc-waypoint hidden" id="hud-waypoint">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"></path></svg>
                     <span id="hud-waypoint-dist">0m</span>
+                </div>
+                <div class="loc-vitals" id="hud-vitals">
+                    <div class="loc-vital-row loc-vital--health">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        <div class="loc-vital-bar"><div class="loc-vital-fill loc-vital-fill--health" id="hud-vital-health" style="width:100%"></div></div>
+                    </div>
+                    <div class="loc-vital-row loc-vital--armor hidden" id="hud-vital-armor-row">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <div class="loc-vital-bar"><div class="loc-vital-fill loc-vital-fill--armor" id="hud-vital-armor" style="width:0%"></div></div>
+                    </div>
                 </div>
             </div>
         </div>

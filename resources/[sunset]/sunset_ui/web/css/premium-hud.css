@@ -48,7 +48,7 @@
     width: 100%;
 }
 .identity-name {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--hud-text-main, #fff);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -56,7 +56,7 @@
     white-space: nowrap;
 }
 .identity-id {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--hud-accent, #00ffcc);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
@@ -529,6 +529,46 @@
     stroke-linejoin: round;
     flex-shrink: 0;
 }
+
+.loc-vitals {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    width: 160px;
+}
+.loc-vital-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.loc-vital-row.hidden { display: none; }
+.loc-vital-row svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+.loc-vital--health svg { color: #10b981; }
+.loc-vital--armor svg { color: #3b82f6; }
+.loc-vital-bar {
+    flex: 1;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.loc-vital-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+.loc-vital-fill--health { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+.loc-vital-fill--armor { background: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.5); }
 
 .hud.scoreboard-open .hud-tr.premium-hud-tr,
 .hud.scoreboard-open .hud-bl.premium-hud-bl {
