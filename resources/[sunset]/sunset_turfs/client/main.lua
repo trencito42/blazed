@@ -662,6 +662,7 @@ CreateThread(function()
     TriggerEvent('chat:addSuggestion', '/atac', 'Alias for /attackturf')
     TriggerEvent('chat:addSuggestion', '/intervene', 'Claim an unowned turf being captured - your clan becomes the defender (rank 5+)')
     TriggerEvent('chat:addSuggestion', '/armory', 'War loadout menu (alias: /armurie)')
+    TriggerEvent('chat:addSuggestion', '/armurie', 'Alias for /armory')
     TriggerEvent('chat:addSuggestion', '/turflist', 'List territories + war status (admin)')
     TriggerEvent('chat:addSuggestion', '/gototurf', 'Teleport to a territory (admin)', { { name = 'id', help = '1-16' } })
     TriggerEvent('chat:addSuggestion', '/forceturf', 'Force-start a war (admin)', {

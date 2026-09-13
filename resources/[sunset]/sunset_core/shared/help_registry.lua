@@ -222,6 +222,29 @@ Sunset.CommandUsage = {
     bizadmin = { usage = '/bizadmin — admin business panel (staff level 3+)', minArgs = 0 },
     bizhelp = { usage = '/bizhelp — list business commands', minArgs = 0 },
     ecudebug = { usage = '/ecudebug — ECU diagnostics (in vehicle, admin 2+)', minArgs = 0 },
+    -- [SUGGESTIONS] player-facing commands that had no usage entry (invisible
+    -- in the chat suggestion list until now).
+    ['112'] = { usage = '/112 — open the emergency call menu', minArgs = 0 },
+    acceptfare = { usage = '/acceptfare — accept a taxi ride offer', minArgs = 0 },
+    declinefare = { usage = '/declinefare — decline a taxi ride offer', minArgs = 0 },
+    battlepass = { usage = '/battlepass — open the Blaze Pass panel', minArgs = 0 },
+    lock = { usage = '/lock — lock/unlock your vehicle', minArgs = 0 },
+    proximity = { usage = '/proximity — set voice proximity range', minArgs = 0 },
+    trunk = { usage = '/trunk [put|take] [item] [count] — vehicle trunk', minArgs = 0 },
+    glovebox = { usage = '/glovebox [put|take] [item] [count] — vehicle glovebox', minArgs = 0 },
+    blzresmon = { usage = '/blzresmon [seconds] — per-player resmon sample (admin 3+)', minArgs = 0 },
+    spy = { usage = '/spy — admin 3+: see faction /f /r /d traffic', minArgs = 0 },
+    sweeporphans = { usage = '/sweeporphans [force] — admin 3+: report/delete orphaned entities', minArgs = 0 },
+    inspect = { usage = '/inspect — admin 3+: laser entity inspector', minArgs = 0 },
+    cinematic = { usage = '/cinematic — admin 3+: cinematic camera snapshots', minArgs = 0 },
+    intervene = { usage = '/intervene — rank 5+: claim an unowned turf being captured', minArgs = 0 },
+    armory = { usage = '/armory — war loadout menu (during a war)', minArgs = 0 },
+    armurie = { usage = '/armurie — alias for /armory', minArgs = 0 },
+    attackturf = { usage = '/attackturf — rank 5+: attack the turf you stand in', minArgs = 0 },
+    loto = { usage = '/loto [1-100|info] — buy an hourly lottery ticket', minArgs = 0 },
+    lottery = { usage = '/lottery — alias for /loto', minArgs = 0 },
+    barbut = { usage = '/barbut [id|accept|decline] [bet] — dice game (min $100)', minArgs = 0 },
+    dice = { usage = '/dice — alias for /barbut', minArgs = 0 },
 }
 
 Sunset.HelpDispatchEntries = {

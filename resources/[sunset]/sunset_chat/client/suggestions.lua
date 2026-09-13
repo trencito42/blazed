@@ -1,5 +1,34 @@
 local Suggestions = {}
 
+-- [ADMIN FILTER] Commands requiring admin levels (from SunsetAdmin.Commands,
+-- loaded via @sunset_admin/shared/config.lua in our manifest) plus extra
+-- admin-gated commands registered elsewhere. Players below the required level
+-- never SEE these in the suggestion list (server-side checks still enforce).
+local ExtraAdminCommands = {
+    spy = 3, sweeporphans = 3, blzresmon = 3, gototurf = 2, forceturf = 3,
+    stopwar = 2, resetturfcd = 2, turflist = 1, cinematic = 3, inspect = 3,
+    clothingdebug = 3, robdebug = 3, validateoutfit = 3, ecudebug = 2,
+    testall = 5, smoketest = 5, sessiontest = 5, integrity = 5, testradaralert = 5,
+    abusiness = 3, abiz = 3, bizadmin = 3,
+}
+
+local myAdminLevel = 0
+
+local function adminLevelFor(cmdName)
+    local name = tostring(cmdName or ''):lower():gsub('^/', '')
+    local fromAdminCfg = SunsetAdmin and SunsetAdmin.Commands and SunsetAdmin.Commands[name]
+    if fromAdminCfg then return tonumber(fromAdminCfg) or 0 end
+    return ExtraAdminCommands[name]
+end
+
+RegisterNetEvent('sunset:client:setAdmin', function(level)
+    myAdminLevel = tonumber(level) or 0
+    -- Re-push so admin suggestions appear/disappear immediately.
+    SetTimeout(50, function()
+        TriggerEvent('sunset:chat:rebuildSuggestions')
+    end)
+end)
+
 local function normalizeCommand(name)
     name = tostring(name or ''):lower():gsub('^%s+', ''):gsub('%s+$', '')
     if name == '' then return '' end
@@ -26,7 +55,11 @@ end
 local function sortedList()
     local list = {}
     for _, row in pairs(Suggestions) do
-        list[#list + 1] = row
+        -- [ADMIN FILTER] hide admin-gated commands from players below the level.
+        local need = adminLevelFor(row.name)
+        if not need or myAdminLevel >= need then
+            list[#list + 1] = row
+        end
     end
     table.sort(list, function(a, b)
         return (a.name or '') < (b.name or '')
