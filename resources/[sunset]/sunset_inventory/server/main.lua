@@ -344,6 +344,23 @@ function SetItemMetadata(source, item, metadata)
     return true
 end
 
+-- [AMMO PERSIST] Set metadata.ammo on a weapon row without a full inventory
+-- broadcast (used by the gunshop on purchase so an immediate relog keeps the
+-- starting magazine). Domain-correct: only sunset_inventory writes its table.
+function SetWeaponAmmo(source, item, ammo)
+    local row = findInventoryRow(source, item)
+    if not row then return false end
+    local def = Sunset.Items[item]
+    if not def or not def.weapon then return false end
+    ammo = math.max(0, math.min(3000, math.floor(tonumber(ammo) or 0)))
+    local meta = type(row.metadata) == 'table' and row.metadata or {}
+    meta.ammo = ammo
+    row.metadata = meta
+    MySQL.update.await('UPDATE character_inventory SET metadata = ? WHERE id = ?',
+        { json.encode(meta), row.id })
+    return true
+end
+
 function CountItem(source, item)
     local total = 0
     for _, row in ipairs(GetInventory(source)) do
@@ -502,6 +519,7 @@ exports('ReloadInventory', ReloadInventory)
 exports('HasItem', HasItem)
 exports('UseItem', UseItem)
 exports('SetItemMetadata', SetItemMetadata)
+exports('SetWeaponAmmo', SetWeaponAmmo)
 exports('CountItem', CountItem)
 exports('TakeAllItems', TakeAllItems)
 exports('GetGasCanLiters', function(source)
@@ -644,4 +662,40 @@ AddEventHandler('playerDropped', function()
     local char = exports.sunset_core:GetCharacter(source)
     if char then Inventories[char.id] = nil end
     CapacityBonus[source] = nil -- [DUFFEL BAG] never leak the bonus
+end)
+
+-- [AMMO PERSIST] Client reports live ammo counts for inventory-synced weapons
+-- (every 10s, only when changed). Server validates ownership + weapon def,
+-- then writes metadata.ammo on the weapon row. Silent (no inventoryUpdate
+-- broadcast) so the UI is not spammed; the value is restored on next
+-- SyncInventoryWeapons (relog/respawn/reopen).
+RegisterNetEvent('sunset:server:saveWeaponAmmo', function(payload)
+    local source = source
+    if type(payload) ~= 'table' or #payload == 0 or #payload > 20 then return end
+    if not exports.sunset_core:RateLimit(source, 'saveWeaponAmmo', 8000) then return end
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return end
+    local inv = GetInventory(source)
+    for _, entry in ipairs(payload) do
+        if type(entry) == 'table' and type(entry.item) == 'string' then
+            local def = Sunset.Items[entry.item]
+            local ammo = math.max(0, math.min(3000, math.floor(tonumber(entry.ammo) or 0)))
+            -- Must be a real weapon item and the player must own the row.
+            if def and def.weapon then
+                for _, row in ipairs(inv) do
+                    if row.item == entry.item then
+                        local meta = type(row.metadata) == 'table' and row.metadata or {}
+                        if tonumber(meta.ammo) ~= ammo then
+                            meta.ammo = ammo
+                            row.metadata = meta
+                            MySQL.update.await(
+                                'UPDATE character_inventory SET metadata = ? WHERE id = ? AND character_id = ?',
+                                { json.encode(meta), row.id, char.id })
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
 end)

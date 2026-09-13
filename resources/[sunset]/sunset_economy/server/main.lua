@@ -473,6 +473,14 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     if itemDef.weapon and not itemDef.ammoRounds then
         TriggerClientEvent('sunset:client:addWeaponAmmo', source, { itemDef.weapon },
             itemDef.startingAmmo or 60)
+        -- [AMMO PERSIST] Write the starting magazine into the weapon row's
+        -- metadata right away (the client only reports ammo every ~10s; an
+        -- immediate relog would otherwise lose the free ammo). Domain rule:
+        -- sunset_inventory owns character_inventory, so go through its export.
+        local startAmmo = math.floor(tonumber(itemDef.startingAmmo) or 60)
+        pcall(function()
+            exports.sunset_inventory:SetWeaponAmmo(source, itemName, startAmmo)
+        end)
     elseif itemDef.ammoRounds and type(itemDef.ammoWeapons) == 'table' then
         -- Load directly into a compatible owned weapon if the player has one.
         local compatible = {}

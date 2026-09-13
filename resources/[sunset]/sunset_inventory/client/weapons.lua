@@ -113,7 +113,13 @@ function SyncInventoryWeapons(items)
     for _, row in ipairs(items or {}) do
         local hash = weaponHashForItem(row.item)
         if hash and hash ~= UNARMED and mayCarryWeapon(row.item) then
-            GiveWeaponToPed(ped, hash, preservedAmmo[hash] or 0, false, false)
+            -- [AMMO PERSIST] Ammo lives in the weapon row's metadata (server
+            -- persisted). Live ped ammo wins while the session is running;
+            -- on relog/respawn the metadata restores it. Without this, ammo
+            -- bought at the gunshop vanished on every reconnect.
+            local metaAmmo = row.metadata and tonumber(row.metadata.ammo) or nil
+            local ammo = preservedAmmo[hash] or metaAmmo or 0
+            GiveWeaponToPed(ped, hash, ammo, false, false)
             syncedWeapons[hash] = true
         end
     end
@@ -163,6 +169,37 @@ RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
         end
         AddAmmoToPed(ped, hash, amount)
         return
+    end
+end)
+
+-- [AMMO PERSIST] Periodically report the live ammo of every inventory-synced
+-- weapon to the server, which stores it in the weapon row's metadata. On
+-- relog/respawn SyncInventoryWeapons restores it. Only sends when something
+-- changed since the last report (cheap: one small payload per 10s max).
+local lastReportedAmmo = {}
+CreateThread(function()
+    Wait(20000)
+    while true do
+        local ped = PlayerPedId()
+        local payload = {}
+        local dirty = false
+        for itemName, def in pairs(Sunset.Items or {}) do
+            if def.weapon then
+                local hash = joaat(def.weapon)
+                if syncedWeapons[hash] and HasPedGotWeapon(ped, hash, false) then
+                    local ammo = math.max(0, GetAmmoInPedWeapon(ped, hash))
+                    if lastReportedAmmo[itemName] ~= ammo then
+                        payload[#payload + 1] = { item = itemName, ammo = ammo }
+                        lastReportedAmmo[itemName] = ammo
+                        dirty = true
+                    end
+                end
+            end
+        end
+        if dirty and #payload > 0 then
+            TriggerServerEvent('sunset:server:saveWeaponAmmo', payload)
+        end
+        Wait(10000)
     end
 end)
 

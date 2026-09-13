@@ -33,7 +33,7 @@ client_scripts {
 server_exports {
     'GetInventory', 'AddItem', 'RemoveItem', 'HasItem', 'UseItem',
     'SetItemMetadata', 'GetGasCanLiters', 'CountItem', 'TakeAllItems',
-    'TryAddItem', 'RemoveItemById', 'ReloadInventory', 'SetCapacityBonus',
+    'TryAddItem', 'RemoveItemById', 'ReloadInventory', 'SetCapacityBonus', 'SetWeaponAmmo',
 }
 
 client_exports {
