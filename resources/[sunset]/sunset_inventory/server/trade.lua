@@ -541,6 +541,11 @@ exports.sunset_core:RegisterCallback('sunset:inventory:tradeRequest', function(s
     end
     if TradesByPlayer[source] or TradesByPlayer[target] then return nil, 'One of the players already has an active trade.' end
     if not closeEnough(source, target) then return nil, 'Move within 3.5 metres of that player.' end
+    -- [ANTI-SPAM] If this target already has a pending invite from this sender, refuse.
+    local existing = TradeInvites[target]
+    if existing and existing.from == source and existing.expiresAt >= os.time() then
+        return nil, 'You already sent a trade request — wait for them to accept or decline.'
+    end
     TradeInvites[target] = { from = source, expiresAt = os.time() + INVITE_SECONDS }
     TriggerClientEvent('sunset:inventory:tradeInvite', target, source, displayName(source))
     return { message = ('Trade request sent to %s.'):format(displayName(target)), kind = 'info' }

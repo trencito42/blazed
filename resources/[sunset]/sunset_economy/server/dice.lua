@@ -13,7 +13,7 @@ end
 -- ═══════════════════════════════════════════════════════════════
 
 local PendingChallenges = {}
-local DICE_TAX_RATE = 0.03 -- 3% burned
+local DICE_TAX_RATE = 0.0 -- no house burn — winner takes the full pot
 local MAX_DICE_BET = 500000 -- $500,000 max bet
 local MIN_DICE_BET = 100
 

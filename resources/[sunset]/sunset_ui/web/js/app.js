@@ -468,7 +468,7 @@ function loadLazyScripts() {
     const pending = Array.from(document.querySelectorAll('script[type="text/plain"][data-lazy-src]'));
     const BATCH = 4;
     const GAP = 80;
-    const INITIAL_DELAY = 2000;
+    const INITIAL_DELAY = 500;
     let i = 0;
     function injectBatch() {
         const end = Math.min(i + BATCH, pending.length);

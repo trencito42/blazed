@@ -632,6 +632,11 @@ local function handleClanManage(source, payload)
         local targetCid = charId(targetId)
         if not targetCid then return nil, 'That player has not loaded a character yet.' end
         if ClanDisplay.getMembership(targetCid) then return nil, 'That player is already in a clan.' end
+        -- [ANTI-SPAM] If this target already has a pending invite from this clan, refuse.
+        local existing = PendingInvites[targetId]
+        if existing and existing.clanId == row.clan_id and existing.expiresAt >= os.time() then
+            return nil, 'You already sent a clan invite — wait for them to accept or decline.'
+        end
 
         local expiresAt = os.time() + SunsetClans.InviteExpirySec
         MySQL.insert.await([[
