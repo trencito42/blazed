@@ -32,6 +32,7 @@ local SpamCount = {}     -- [src] = { window = at, count = n }
 local Nonces = {}        -- [src] = { expected = n, missed = n, ackAt }
 local LastTick = {}      -- [src] = os.time() of last clientTick (silence detection)
 local Telemetry = {}     -- [src] = last client sampler payload (advisory)
+local ClientVehClass = {} -- [src] = advisory vehicle class from clientTick (speed_check)
 
 local function now() return os.time() end
 
@@ -109,6 +110,7 @@ local function clearPlayer(src)
     Nonces[src] = nil
     LastTick[src] = nil
     Telemetry[src] = nil
+    ClientVehClass[src] = nil
 end
 
 AddEventHandler('playerDropped', function()
@@ -137,6 +139,11 @@ local function coordsOf(src)
 end
 
 -- ══════════════ §4.1 speed_check (1 Hz, per-player sample) ══════════════
+-- [FIX] GetVehicleClass is a CLIENT-only native (server calls crashed the
+-- whole detector loop). The vehicle class now arrives in the client sampler
+-- tick (advisory); the speed itself is still computed from SERVER coords, so
+-- lying about the class only buys the cheater the highest ceiling (62 m/s),
+-- never a clean pass.
 local function speedCheck(src, dt)
     if not detectorEnabled('speed') then return end
     local x, y, z = coordsOf(src)
@@ -144,7 +151,7 @@ local function speedCheck(src, dt)
 
     local veh = playerVehicle(src)
     local inVeh = veh ~= 0
-    local vehClass = inVeh and (GetVehicleClass(veh) or 1) or nil
+    local vehClass = inVeh and ClientVehClass[src] or nil
     local prev = LastSample[src]
     LastSample[src] = { x = x, y = y, z = z, veh = inVeh, class = vehClass, at = now() }
     if not prev then SpeedSustain[src] = nil return end
@@ -152,8 +159,8 @@ local function speedCheck(src, dt)
     -- Only judge vehicles here; on-foot movement is teleport_check's job.
     if not inVeh then SpeedSustain[src] = nil return end
     if vehClassExempt(vehClass) then SpeedSustain[src] = nil return end
-    -- Class change between samples (entered/exited, OneSync swap): resync.
-    if prev.class ~= vehClass then SpeedSustain[src] = nil return end
+    -- Class unknown (tick not arrived yet) or changed between samples: resync.
+    if not vehClass or prev.class ~= vehClass then SpeedSustain[src] = nil return end
 
     local classMax = ClassMax[vehClass]
     if not classMax then SpeedSustain[src] = nil return end
@@ -314,6 +321,10 @@ RegisterNetEvent('sunset:anticheat:clientTick', function(payload)
     end
 
     if type(payload) ~= 'table' then return end
+
+    -- [FIX] advisory vehicle class for speed_check (server native absent).
+    local vc = tonumber(payload.vehClass)
+    if vc and vc >= 0 and vc <= 23 then ClientVehClass[src] = vc end
 
     -- Heartbeat nonce: payload must echo the rotating nonce we acked with.
     if detectorEnabled('heartbeat') then

@@ -634,6 +634,10 @@ exports('SetHomeProperty', Sunset.SetHomeProperty)
 exports('RefreshMoney', Sunset.RefreshMoney)
 exports('SetJob', Sunset.SetJob)
 exports('SetFaction', Sunset.SetFaction)
+-- [BUGFIX] SetFactionByCharacterId was declared in fxmanifest + called by
+-- sunset_factions (offline kick/rank/core sync) but never actually exported,
+-- so every call hit "No such export" and offline kicks silently failed.
+exports('SetFactionByCharacterId', Sunset.SetFactionByCharacterId)
 exports('AddXP', Sunset.AddXP)
 -- [AUDIT P6-05] Shared incapacitation gate: downed or jailed players must not
 -- keep economic agency (trade, give cash, buy, gamble) or spawn vehicles.

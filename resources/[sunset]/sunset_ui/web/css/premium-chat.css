@@ -8,8 +8,8 @@
 #chat {
     top: 16px;
     left: 16px;
-    width: 550px;
-    max-width: min(550px, 44vw);
+    width: 680px;
+    max-width: min(680px, 50vw);
     font-family: 'Montserrat', sans-serif;
     pointer-events: none;
 }

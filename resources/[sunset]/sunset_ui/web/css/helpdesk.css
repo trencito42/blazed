@@ -7,7 +7,7 @@
 /* ── Blaze Shield corner widget (bZone-style) ─────────────────── */
 .shield-widget {
     position: fixed;
-    top: 84px;
+    top: 175px;
     right: 16px;
     width: 264px;
     z-index: 4200;

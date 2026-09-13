@@ -251,6 +251,14 @@ const Hud = {
         }
         if (data.cash !== undefined) $('#hud-cash').textContent = formatMoney(data.cash);
         if (data.bank !== undefined) $('#hud-bank').textContent = formatMoney(data.bank);
+        if (data.name !== undefined) {
+            const el = $('#hud-identity-name');
+            if (el) el.textContent = String(data.name || '—');
+        }
+        if (data.playerId !== undefined) {
+            const el = $('#hud-identity-id');
+            if (el) el.textContent = `ID ${Number(data.playerId) || 0}`;
+        }
         if (data.time) $('#hud-time').textContent = data.time;
         if (data.date) this.updateDateDisplay(data.date);
         if (data.street !== undefined || data.zone !== undefined || data.heading !== undefined) {
