@@ -445,7 +445,11 @@ local function completeTrade(trade)
         for _, asset in ipairs(rows) do
             local changed
             if asset.assetType == 'vehicle' then
-                changed = query.await([[UPDATE vehicles SET character_id = ?, stored = 1
+                -- [PARK FIX] A traded car must not inherit the previous owner's
+                -- parked location: clear parked_* so it spawns at the new
+                -- owner's garage until they /park it themselves.
+                changed = query.await([[UPDATE vehicles SET character_id = ?, stored = 1,
+                    parked_x = NULL, parked_y = NULL, parked_z = NULL, parked_h = NULL
                     WHERE id = ? AND character_id = ? AND stored = 1 AND (destroyed IS NULL OR destroyed = 0)]],
                     { toCharId, asset.id, fromCharId })
             elseif asset.assetType == 'property' then

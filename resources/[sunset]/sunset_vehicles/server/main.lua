@@ -358,13 +358,12 @@ local function storeOwnedVehicle(source, netId, plate, props, fuelLevel, garageI
         px = tonumber(parked.x)
     end
 
-    -- [SPAWN FIX] Garage store must NOT set a parked position: the user asked
-    -- that personal cars spawn ONLY at their garage spawn point or where they
-    -- were explicitly parked (/park in the car -> parkOwnedVehicle). The old
-    -- code stored the entity coords here, making every store a "park anywhere".
+    -- [PARK FIX] Store keeps the existing parked_* position: /park is the ONLY
+    -- writer of the parked location. Storing hides the car but it respawns
+    -- where the player parked it (front of the house, rented spot, anywhere).
+    -- The old "NULL on store" made every garage store forget the park location.
     local changed = MySQL.update.await([[
-        UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?,
-            parked_x = NULL, parked_y = NULL, parked_z = NULL, parked_h = NULL
+        UPDATE vehicles SET stored = 1, garage = ?, props = ?, fuel = ?, engine = ?, body = ?
         WHERE id = ? AND character_id = ?
     ]], {
         garageId or 'legion',
@@ -658,11 +657,12 @@ AddEventHandler('playerDropped', function()
                 -- If we can resolve the entity, persist where it was left and remove it;
                 -- otherwise just mark it stored so it doesn't dupe on next login.
                 if entityOk then
-                    -- [SPAWN FIX] Disconnect stores the car at its GARAGE (no
-                    -- parked coords): cars only respawn where /park put them.
+                    -- [PARK FIX] Disconnect stores the car but KEEPS its parked
+                    -- position: /park is the only writer of parked_* coords, so
+                    -- after reconnect the car respawns exactly where the player
+                    -- parked it (garage spawn only when no park was ever set).
                     MySQL.update.await([[
                         UPDATE vehicles SET stored = 1,
-                            parked_x = NULL, parked_y = NULL, parked_z = NULL, parked_h = NULL,
                             engine = ?, body = ?
                         WHERE id = ? AND character_id = ?
                     ]], {
