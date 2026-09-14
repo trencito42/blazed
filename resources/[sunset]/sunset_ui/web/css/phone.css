@@ -647,6 +647,7 @@
     padding: 0 8px;
     flex: 1;
     min-width: 0;
+    text-align: center;
 }
 
 .phone-chat-nav-avatar {
@@ -662,6 +663,7 @@
     margin-bottom: 2px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .ios-nav__center--chat h3 {
@@ -680,6 +682,11 @@
     font-size: 10px;
     color: rgba(255, 255, 255, 0.45);
     margin-top: 0;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
 }
 
 .phone-chat-call-btn {

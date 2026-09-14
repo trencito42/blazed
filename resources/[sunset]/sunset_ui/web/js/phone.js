@@ -265,7 +265,7 @@ const Phone = {
                 } else if (phone) {
                     sub.textContent = `${phone} · ${this.chatTarget.online ? 'iMessage' : 'Offline'}`;
                 } else {
-                    sub.textContent = this.chatTarget.online ? 'iMessage' : 'Offline — message queued';
+                    sub.textContent = this.chatTarget.online ? 'iMessage' : 'Offline';
                 }
             }
             this.renderChat(this.chatTarget);
@@ -713,7 +713,7 @@ const Phone = {
             } else if (target.phone) {
                 sub.textContent = `${target.phone} · ${online ? 'iMessage' : 'Offline'}`;
             } else {
-                sub.textContent = online ? 'iMessage' : 'Offline — message queued';
+                sub.textContent = online ? 'iMessage' : 'Offline';
             }
         }
 
