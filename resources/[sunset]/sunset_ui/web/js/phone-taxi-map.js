@@ -121,7 +121,13 @@ const TaxiPhoneMap = {
 
         requestAnimationFrame(() => {
             map.invalidateSize();
-            map.fitBounds(this.bounds, { animate: false, padding: [4, 4] });
+            // [FIX] Center on the player instead of fitting the whole map,
+            // so "Where to?" immediately shows your current location.
+            if (options.player && options.player.x != null) {
+                map.setView(L.latLng(options.player.y, options.player.x), 4, { animate: false });
+            } else {
+                map.fitBounds(this.bounds, { animate: false, padding: [4, 4] });
+            }
         });
 
         if (options.player) this.setPlayer(options.player);

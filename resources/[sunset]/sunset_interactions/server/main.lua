@@ -1,5 +1,5 @@
 local INTERACTION_RANGE = 3.5
-local MAX_CASH_TRANSFER = 50000
+local MAX_CASH_TRANSFER = 500000
 local RequestRate = {}
 
 local function notify(source, message, kind, duration)
