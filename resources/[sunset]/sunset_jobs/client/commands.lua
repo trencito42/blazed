@@ -178,9 +178,10 @@ CreateThread(function()
     if fishCfg and fishCfg.sellPoint then
         local sp = fishCfg.sellPoint
         local blip = AddBlipForCoord(sp.coords.x, sp.coords.y, sp.coords.z)
-        SetBlipSprite(blip, sp.blip.sprite or 280)
-        SetBlipColour(blip, sp.blip.color or 46)
-        SetBlipScale(blip, sp.blip.scale or 0.75)
+        local blipCfg = sp.blip or {}
+        SetBlipSprite(blip, blipCfg.sprite or 280)
+        SetBlipColour(blip, blipCfg.color or 46)
+        SetBlipScale(blip, blipCfg.scale or 0.75)
         SetBlipAsShortRange(blip, true)
         BeginTextCommandSetBlipName('STRING')
         AddTextComponentSubstringPlayerName('Fish Buyer')

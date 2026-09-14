@@ -79,6 +79,13 @@ Sunset.Items = {
     stolen_gold_chain = { label = 'Stolen Gold Chain', weight = 0.3, usable = false, category = 'misc', icon = 'metalscrap' },
     stolen_gold_bracelet = { label = 'Stolen Gold Bracelet', weight = 0.3, usable = false, category = 'misc', icon = 'metalscrap' },
     stolen_diamond_jewelry = { label = 'Stolen Designer Jewelry', weight = 0.4, usable = false, category = 'misc', icon = 'filled_evidence_bag' },
+    -- ═══ DRUGS (manufacture → process → sell) ═══
+    weed_leaf     = { label = 'Weed Leaf',       weight = 0.10, usable = false, category = 'drugs', icon = 'cocaineleaf' },
+    weed_brick    = { label = 'Weed Brick',      weight = 0.50, usable = false, category = 'drugs', icon = 'coke_small_brick' },
+    coke_leaf     = { label = 'Coca Leaf',        weight = 0.10, usable = false, category = 'drugs', icon = 'cocaineleaf' },
+    coke_brick    = { label = 'Coke Brick',       weight = 0.50, usable = false, category = 'drugs', icon = 'coke_brick' },
+    meth_chemical = { label = 'Meth Chemical',   weight = 0.15, usable = false, category = 'drugs', icon = 'acetone' },
+    meth_bag      = { label = 'Meth Bag',         weight = 0.30, usable = false, category = 'drugs', icon = 'cokebaggy' },
 }
 
 Sunset.Shops = {
@@ -263,14 +270,6 @@ Sunset.JobCenters = {
             { id = 'mechanic', label = 'Roadside Mechanic' },
         },
     },
-
-    -- ═══ DRUGS (manufacture → process → sell) ═══
-    weed_leaf = { label = 'Weed Leaf', weight = 0.1, usable = false, category = 'drugs', icon = 'cocaineleaf' },
-    weed_brick = { label = 'Weed Brick', weight = 0.5, usable = false, category = 'drugs', icon = 'coke_small_brick' },
-    coke_leaf = { label = 'Coca Leaf', weight = 0.1, usable = false, category = 'drugs', icon = 'cocaineleaf' },
-    coke_brick = { label = 'Coke Brick', weight = 0.5, usable = false, category = 'drugs', icon = 'coke_brick' },
-    meth_chemical = { label = 'Meth Chemical', weight = 0.15, usable = false, category = 'drugs', icon = 'acetone' },
-    meth_bag = { label = 'Meth Bag', weight = 0.3, usable = false, category = 'drugs', icon = 'cokebaggy' },
 }
 
 -- Blip presets for world map
