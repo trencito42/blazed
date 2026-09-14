@@ -243,14 +243,7 @@ end
 
 local function applyShiftBlips()
     JC.clearBlips()
-    -- GPS waypoint only — no minimap blip. The permanent Billy Ray and
-    -- Fishing Supply blips (added by sunset_fishingshop) are enough;
-    -- adding another hook here caused a duplicate on the pontoon.
-    local center = fishingZoneCenter()
-    if center then
-        JC.setWaypoint(center)
-    end
-    JC.showObjective('Go to the Paleto Bay fishing area', 'Follow the GPS — cast your line at the pontoon')
+    JC.showObjective('Go to the Paleto Bay fishing area', 'Cast your line at the pontoon')
     ensureFishermanShiftLoop()
 end
 
