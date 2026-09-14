@@ -549,17 +549,24 @@ local function tpToWaypoint()
         return
     end
     local coord = GetBlipInfoIdCoord(blip)
+    -- Teleport immediately at a safe height so there is no visible delay.
+    -- Pre-loading collision before moving caused up to 10s of apparent freeze
+    -- (100 iterations × 100ms Wait) while the game streamed distant terrain.
+    SetEntityCoords(PlayerPedId(), coord.x, coord.y, coord.z + 3.0, false, false, false, false)
+    exports.sunset_ui:Notify('Teleported to waypoint', 'success')
+    -- Silently snap to ground once collision has streamed in at the new location.
+    -- The player being on-site forces GTA to load terrain much faster than
+    -- requesting it remotely, so this usually resolves in 1-2 iterations.
     CreateThread(function()
-        RequestCollisionAtCoord(coord.x, coord.y, coord.z)
-        local found, groundZ = false, coord.z
-        for _ = 1, 100 do
+        local found, groundZ
+        for _ = 1, 30 do
+            Wait(100)
             found, groundZ = GetGroundZFor_3dCoord(coord.x, coord.y, coord.z + 100.0, false)
             if found then break end
-            Wait(100)
         end
-        local z = found and (groundZ + 0.5) or (coord.z + 5.0)
-        SetEntityCoords(PlayerPedId(), coord.x, coord.y, z, false, false, false, false)
-        exports.sunset_ui:Notify('Teleported to waypoint', 'success')
+        if found then
+            SetEntityCoords(PlayerPedId(), coord.x, coord.y, groundZ + 0.5, false, false, false, false)
+        end
     end)
 end
 
