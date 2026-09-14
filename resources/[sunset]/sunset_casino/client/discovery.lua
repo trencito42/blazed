@@ -130,9 +130,80 @@ local function scanEntities(radius)
     return matched, unmatched
 end
 
+-- [DISCOVERY] Enumerate interior entity sets. FiveM has NO count native and
+-- IsInteriorEntitySetActive takes the set NAME (string), so we probe a list of
+-- candidate names known from the community/vw IPL naming scheme. Sets that do
+-- not exist simply report false/error and are ignored.
+local ENTITY_SET_CANDIDATES = {
+    -- main floor shells/props (vw naming)
+    'Set_Slots', 'Set_Slot_Machines', 'set_slots', 'slots',
+    'Set_Main_Room', 'Set_Casino_Main', 'Set_Interior',
+    'Set_Tables', 'Set_Blackjack', 'Set_Roulette', 'Set_Poker',
+    'Set_Bar', 'Set_Bar_1', 'Set_Bar_2', 'Bar',
+    'Set_Lounge', 'Set_Lounge_1', 'Set_Lounge_2',
+    'Set_Cashier', 'Set_Cashier_1',
+    'Set_Lucky_Wheel', 'Set_Wheel', 'Set_Wheel_1', 'lucky_wheel',
+    'Set_Wheel_Anim', 'Set_Screen_1', 'Set_Screen_2', 'Set_Screens',
+    'Set_Dealers', 'Set_Dealer_1', 'Set_DLC_Guns',
+    'Set_Valet', 'Set_Valet_1',
+    -- heist variants
+    'Set_Casino_Shell', 'Set_Vault', 'Set_Vault_Door',
+}
+
+local function probeEntitySets(interiorId)
+    log(('entity sets: probing %d candidate names on interiorId=%d'):format(#ENTITY_SET_CANDIDATES, interiorId))
+    if type(IsInteriorEntitySetActive) ~= 'function' then
+        log('  IsInteriorEntitySetActive native unavailable')
+        return
+    end
+    for _, setName in ipairs(ENTITY_SET_CANDIDATES) do
+        local ok, active = pcall(IsInteriorEntitySetActive, interiorId, setName)
+        if ok then
+            log(('  set "%s": active=%s'):format(setName, tostring(active)))
+        end
+        -- silently skip names the interior does not know
+    end
+end
+
+local function probeInteriorDetails(coords)
+    local ok, interiorId = pcall(GetInteriorAtCoords, coords.x, coords.y, coords.z)
+    if not ok or not interiorId or interiorId == 0 then
+        log(('GetInteriorAtCoords(%.2f,%.2f,%.2f) -> none'):format(coords.x, coords.y, coords.z))
+        return 0
+    end
+    local groupName = ''
+    pcall(function() groupName = GetInteriorGroupName(interiorId) or '' end)
+    log(('GetInteriorAtCoords(%.2f,%.2f,%.2f) -> id=%d ready=%s group=%s'):format(
+        coords.x, coords.y, coords.z, interiorId, tostring(IsInteriorReady(interiorId)), groupName))
+    probeEntitySets(interiorId)
+    return interiorId
+end
+
 RegisterCommand('casinoprobe', function()
     CreateThread(function()
         log('=== FULL PROBE START ===')
+
+        -- Interior ID: from the player entity AND from the three verified
+        -- anchor coords (exit/bar/cashier) — they must all resolve to the same
+        -- main-floor interior.
+        local ped = PlayerPedId()
+        local pedCoords = GetEntityCoords(ped)
+        local pedInterior = GetInteriorFromEntity(ped)
+        log(('ped interior id=%d ready=%s at (%.2f,%.2f,%.2f)'):format(
+            pedInterior, tostring(IsInteriorReady(pedInterior)), pedCoords.x, pedCoords.y, pedCoords.z))
+        probeEntitySets(pedInterior)
+
+        local anchors = {
+            { name = 'interiorExit', coords = vector3(1089.63, 205.89, -49.00) },
+            { name = 'bar',          coords = vector3(1108.45, 208.87, -49.44) },
+            { name = 'cashier',      coords = vector3(1116.03, 219.69, -49.44) },
+            { name = 'floorCenter',  coords = vector3(1110.20, 216.60, -49.45) },
+        }
+        for _, a in ipairs(anchors) do
+            log(('--- anchor %s ---'):format(a.name))
+            probeInteriorDetails(a.coords)
+        end
+
         scanEntities(60.0)
         log('=== entity scan complete; run /casinoanim and /casinoprops next ===')
     end)

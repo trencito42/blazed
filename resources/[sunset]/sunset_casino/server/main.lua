@@ -407,9 +407,17 @@ AddEventHandler('playerDropped', function()
 end)
 
 -- [DISCOVERY] Mirror client probe output into the server log so it can be
--- read via `docker logs blazed-fivem-1 | grep CASINOPROBE`.
+-- read via `docker logs blazed-fivem-1 | grep CASINOPROBE`. Also append to a
+-- file inside the persistent config volume so probe results SURVIVE container
+-- recreation (docker logs of a recreated container are lost).
 RegisterNetEvent('sunset:casino:probeLog', function(line)
-    print(('^3[CASINOPROBE #%d]^7 %s'):format(source, tostring(line):sub(1, 400)))
+    local text = ('[CASINOPROBE #%d] %s'):format(source, tostring(line):sub(1, 400))
+    print('^3' .. text .. '^7')
+    local fh = io.open('/config/casino_probe.log', 'a')
+    if fh then
+        fh:write(os.date('%Y-%m-%d %H:%M:%S ') .. text .. '\n')
+        fh:close()
+    end
 end)
 
 print('^2[sunset_casino]^7 The Diamond Casino online (blackjack, slots, roulette)')
