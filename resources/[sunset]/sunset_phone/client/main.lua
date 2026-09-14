@@ -314,6 +314,69 @@ AddEventHandler('onResourceStop', function(res)
     removePhoneProp()
 end)
 
+-- [AVATAR] Capture the ped headshot ONCE at first spawn (civilian, no uniform)
+-- and store it permanently. Never re-captures on duty/uniform change.
+-- Flow: Lua captures headshot → sends txd to NUI → NUI fetches nui-img,
+-- converts to base64 → posts back → Lua saves to server DB.
+local avatarCaptured = false
+
+AddEventHandler('sunset:client:playerSpawned', function(character)
+    if avatarCaptured then return end
+    if not character then return end
+
+    CreateThread(function()
+        Wait(2000) -- let the ped model fully load (civilian appearance)
+        local char = exports.sunset_core:GetCharacter()
+        if not char then return end
+
+        -- Check if avatar already exists in DB
+        local hasAvatar = false
+        pcall(function()
+            hasAvatar = Sunset.AwaitCallback('sunset:phoneHasAvatar', char.id) == true
+        end)
+        if hasAvatar then
+            avatarCaptured = true
+            return
+        end
+
+        local ped = PlayerPedId()
+        if not ped or ped == 0 then return end
+
+        local handle = RegisterPedheadshot(ped)
+        local timeout = GetGameTimer() + 5000
+        while (not IsPedheadshotReady(handle) or not IsPedheadshotValid(handle)) and GetGameTimer() < timeout do
+            Wait(25)
+        end
+
+        if IsPedheadshotValid(handle) then
+            local txd = GetPedheadshotTxdString(handle)
+            -- Send txd to NUI — the browser will fetch nui-img and convert to base64
+            exports.sunset_ui:Send('phoneCaptureAvatar', {
+                characterId = char.id,
+                txd = txd,
+            })
+            -- avatarCaptured is set when the NUI posts back the base64
+            -- (see sunset:nui:phoneAvatarCaptured handler below)
+        end
+        UnregisterPedheadshot(handle)
+    end)
+end)
+
+-- NUI posts back the base64 avatar after fetching from nui-img
+AddEventHandler('sunset:nui:phoneAvatarCaptured', function(data)
+    data = data or {}
+    local charId = tonumber(data.characterId)
+    local base64 = tostring(data.avatar or '')
+    if not charId or #base64 < 100 then return end
+
+    CreateThread(function()
+        pcall(function()
+            Sunset.AwaitCallback('sunset:phoneSaveAvatar', charId, base64)
+        end)
+        avatarCaptured = true
+    end)
+end)
+
 exports('Open', openPhone)
 exports('Close', closePhone)
 exports('IsOpen', function() return phoneOpen end)

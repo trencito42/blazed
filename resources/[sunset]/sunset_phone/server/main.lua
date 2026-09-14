@@ -110,13 +110,15 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
         end
     end
 
-    -- Load personal saved contacts
+    -- Load personal saved contacts (with avatars)
     local contacts = {}
     local contactRows = MySQL.query.await([[
-        SELECT id, contact_name, phone_number, contact_character_id, created_at
-        FROM phone_contacts
-        WHERE character_id = ?
-        ORDER BY contact_name ASC
+        SELECT pc.id, pc.contact_name, pc.phone_number, pc.contact_character_id, pc.created_at,
+               c.avatar AS contact_avatar
+        FROM phone_contacts pc
+        LEFT JOIN characters c ON c.id = pc.contact_character_id
+        WHERE pc.character_id = ?
+        ORDER BY pc.contact_name ASC
     ]], { myCharId }) or {}
 
     for _, cRow in ipairs(contactRows) do
@@ -136,20 +138,34 @@ exports.sunset_core:RegisterCallback('sunset:getPhoneData', function(source)
             characterId = targetCid,
             online = isOnline,
             serverId = targetServerId,
+            avatar = cRow.contact_avatar or nil,
         }
     end
+
+    -- Load avatars for message threads (by character id)
+    local avatarsByChar = {}
+    pcall(function()
+        local avatarRows = MySQL.query.await([[
+            SELECT id, avatar FROM characters WHERE avatar IS NOT NULL AND avatar != ''
+        ]]) or {}
+        for _, row in ipairs(avatarRows) do
+            avatarsByChar[tonumber(row.id)] = row.avatar
+        end
+    end)
 
     return {
         myId = source,
         myCharacterId = myCharId,
         myName = exports.sunset_core:GetPlayerDisplayName(source),
         myPhoneNumber = myPhone,
+        myAvatar = avatarsByChar[myCharId] or nil,
         cash = char.cash or 0,
         bank = char.bank or 0,
         transactions = exports.sunset_core:GetMoneyHistory(myCharId, 30),
         messages = messages,
         contacts = contacts,
         onlineByChar = onlineByChar,
+        avatarsByChar = avatarsByChar,
     }
 end)
 
@@ -322,5 +338,30 @@ exports.sunset_core:RegisterCallback('sunset:phoneSend', function(source, target
         TriggerClientEvent('sunset:client:phoneMessage', targetSource)
     end
 
+    return true
+end)
+
+-- ═══ AVATAR (persistent ped headshot) ═══
+
+exports.sunset_core:RegisterCallback('sunset:phoneHasAvatar', function(source, characterId)
+    characterId = tonumber(characterId)
+    if not characterId then return false end
+    local row = MySQL.scalar.await('SELECT avatar FROM characters WHERE id = ? LIMIT 1', { characterId })
+    return row ~= nil and tostring(row) ~= ''
+end)
+
+exports.sunset_core:RegisterCallback('sunset:phoneSaveAvatar', function(source, characterId, base64)
+    characterId = tonumber(characterId)
+    if not characterId then return nil, 'Invalid character' end
+    base64 = tostring(base64 or '')
+    if #base64 < 100 or #base64 > 500000 then return nil, 'Invalid avatar data' end
+
+    -- Only allow saving your own avatar
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char or tonumber(char.id) ~= characterId then
+        return nil, 'You can only save your own avatar'
+    end
+
+    MySQL.update.await('UPDATE characters SET avatar = ? WHERE id = ?', { base64, characterId })
     return true
 end)

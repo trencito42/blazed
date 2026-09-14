@@ -346,6 +346,20 @@ const Phone = {
         return `linear-gradient(135deg, ${palettes[idx][0]} 0%, ${palettes[idx][1]} 100%)`;
     },
 
+    // [AVATAR] Returns avatar HTML: real image if available, gradient+initial fallback
+    avatarHtml(name, charId, isEmergency) {
+        const initial = (name || '?').charAt(0).toUpperCase();
+        const avatars = this.data?.avatarsByChar || {};
+        const avatar = charId ? avatars[charId] : null;
+        if (isEmergency) {
+            return `<div class="phone-thread__avatar phone-thread__avatar--emergency" style="background: linear-gradient(135deg, #ff3b30 0%, #d70015 100%);">🚨</div>`;
+        }
+        if (avatar) {
+            return `<div class="phone-thread__avatar"><img src="${avatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></div>`;
+        }
+        return `<div class="phone-thread__avatar" style="background: ${this.getIosAvatarGradient(name)};">${this.escapeHtml(initial)}</div>`;
+    },
+
     buildThreads() {
         const d = this.data || {};
         const myId = d.myCharacterId;
@@ -443,15 +457,11 @@ const Phone = {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = `phone-thread ${t.isEmergency ? 'phone-thread--emergency' : ''}`;
-            const initial = (t.name || '?').charAt(0).toUpperCase();
             const lastMsg = t.messages[0];
             const timeStr = lastMsg ? this.formatMsgTime(lastMsg.created_at) : '';
-            const avatarBg = t.isEmergency ? 'linear-gradient(135deg, #ff3b30 0%, #d70015 100%)' : this.getIosAvatarGradient(t.name);
 
             btn.innerHTML = `
-                <div class="phone-thread__avatar ${t.isEmergency ? 'phone-thread__avatar--emergency' : ''}" style="background: ${avatarBg};">
-                    ${t.isEmergency ? '🚨' : this.escapeHtml(initial)}
-                </div>
+                ${this.avatarHtml(t.name, t.charId, t.isEmergency)}
                 <div class="phone-thread__body">
                     <div class="phone-thread__row">
                         <span class="phone-thread__name">
@@ -483,7 +493,15 @@ const Phone = {
         const myCardAvatar = $('#phone-my-card-avatar');
         if (myCardName) myCardName.textContent = this.data?.myName || 'My Card';
         if (myCardPhone) myCardPhone.textContent = this.data?.myPhoneNumber || '555-0000';
-        if (myCardAvatar) myCardAvatar.textContent = (this.data?.myName || '?').charAt(0).toUpperCase();
+        if (myCardAvatar) {
+            const myAvatar = this.data?.myAvatar || null;
+            if (myAvatar) {
+                myCardAvatar.innerHTML = `<img src="${myAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                myCardAvatar.style.background = 'transparent';
+            } else {
+                myCardAvatar.textContent = (this.data?.myName || '?').charAt(0).toUpperCase();
+            }
+        }
 
         list.innerHTML = '';
         const rawContacts = this.data?.contacts || [];
@@ -583,15 +601,19 @@ const Phone = {
             const row = document.createElement('div');
             row.className = 'phone-contact-row';
             const label = this.contactLabel(c);
-            const initial = label.charAt(0).toUpperCase();
             const isOnline = c.online === true;
-            const avatarBg = this.getIosAvatarGradient(label);
             const phoneText = String(c.phone || '').trim();
+            // [AVATAR] Use real headshot if available, gradient fallback otherwise
+            const avatarImg = c.avatar || (this.data?.avatarsByChar || {})[c.characterId] || null;
+            const avatarContent = avatarImg
+                ? `<img src="${avatarImg}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                : this.escapeHtml(label.charAt(0).toUpperCase());
+            const avatarStyle = avatarImg ? '' : ` style="background: ${this.getIosAvatarGradient(label)};"`;
 
             row.innerHTML = `
                 <button type="button" class="phone-contact-row__main">
-                    <div class="phone-contact-row__avatar ${isOnline ? 'is-online' : ''}" style="background: ${avatarBg};">
-                        ${this.escapeHtml(initial)}
+                    <div class="phone-contact-row__avatar ${isOnline ? 'is-online' : ''}"${avatarStyle}>
+                        ${avatarContent}
                         <span class="phone-contact-row__status-dot ${isOnline ? 'is-online' : ''}"></span>
                     </div>
                     <div class="phone-contact-row__details">
@@ -700,9 +722,16 @@ const Phone = {
             if (is112) {
                 navAvatar.textContent = '🚨';
                 navAvatar.style.background = 'linear-gradient(135deg, #ff3b30 0%, #d70015 100%)';
+                navAvatar.innerHTML = '🚨';
             } else {
-                navAvatar.textContent = (target.name || '?').charAt(0).toUpperCase();
-                navAvatar.style.background = this.getIosAvatarGradient(target.name);
+                const avatarImg = (this.data?.avatarsByChar || {})[target.charId] || target.avatar || null;
+                if (avatarImg) {
+                    navAvatar.innerHTML = `<img src="${avatarImg}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    navAvatar.style.background = 'transparent';
+                } else {
+                    navAvatar.textContent = (target.name || '?').charAt(0).toUpperCase();
+                    navAvatar.style.background = this.getIosAvatarGradient(target.name);
+                }
             }
         }
 
@@ -907,7 +936,15 @@ const Phone = {
         $('#phone-settings-name').textContent = name;
         $('#phone-settings-id').textContent = `Player ID ${d.myId || '—'}`;
         const avatar = $('#phone-settings-avatar');
-        if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
+        if (avatar) {
+            const myAvatar = d.myAvatar || null;
+            if (myAvatar) {
+                avatar.innerHTML = `<img src="${myAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                avatar.style.background = 'transparent';
+            } else {
+                avatar.textContent = name.charAt(0).toUpperCase();
+            }
+        }
     },
 
     updateTaxi(payload) {

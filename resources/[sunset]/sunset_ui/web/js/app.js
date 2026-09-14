@@ -1152,6 +1152,25 @@ window.addEventListener('message', (event) => {
         case 'phoneShow':
             if (window.Phone) Phone.show(data || event.data.data);
             break;
+        case 'phoneCaptureAvatar': {
+            // [AVATAR] Fetch the ped headshot from nui-img, convert to base64,
+            // and post back to Lua for permanent DB storage.
+            const av = data || event.data.data || {};
+            if (av.txd && av.characterId) {
+                const url = `https://nui-img/${av.txd}/${av.txd}`;
+                fetch(url)
+                    .then((r) => r.blob())
+                    .then((blob) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            post('phoneAvatarCaptured', { characterId: av.characterId, avatar: reader.result });
+                        };
+                        reader.readAsDataURL(blob);
+                    })
+                    .catch(() => {});
+            }
+            break;
+        }
         case 'phoneUpdate':
             if (window.Phone) Phone.update(data || event.data.data);
             break;
