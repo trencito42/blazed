@@ -406,4 +406,10 @@ AddEventHandler('playerDropped', function()
     GameCooldowns[src] = nil
 end)
 
+-- [DISCOVERY] Mirror client probe output into the server log so it can be
+-- read via `docker logs blazed-fivem-1 | grep CASINOPROBE`.
+RegisterNetEvent('sunset:casino:probeLog', function(line)
+    print(('^3[CASINOPROBE #%d]^7 %s'):format(source, tostring(line):sub(1, 400)))
+end)
+
 print('^2[sunset_casino]^7 The Diamond Casino online (blackjack, slots, roulette)')
