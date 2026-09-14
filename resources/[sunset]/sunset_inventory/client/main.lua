@@ -158,13 +158,17 @@ end)
 RegisterNetEvent('sunset:inventory:tradeState', function(data)
     tradeActive = data and data.active == true
     if tradeActive then
-        -- Trade owns its own inventory catalogue. Never stack the standalone I
+        -- Trade owns its own inventory catalogue. Never stack the standalone
         -- inventory above it; that produced two competing modals and focus traps.
         if inventoryOpen then
             inventoryOpen = false
             exports.sunset_ui:Send('inventoryHide', {})
         end
-        exports.sunset_ui:SetFocus(true, true)
+        -- [FOCUS FIX] Use owner='trade' so ReleaseFocusUnlessModal('legacy')
+        -- called by playerInteraction menus closing cannot accidentally steal
+        -- focus away from the trade window (which leaves it visible but dead:
+        -- hover works but no buttons respond and the player must /reconnect).
+        exports.sunset_ui:SetFocus(true, true, false, 'trade')
     end
     exports.sunset_ui:Send('inventoryTradeState', data or {})
 end)
@@ -172,9 +176,10 @@ end)
 RegisterNetEvent('sunset:inventory:tradeEnded', function(message, kind)
     tradeActive = false
     exports.sunset_ui:Send('inventoryTradeEnded', {})
-    -- [BUGFIX] Focus was never released here: after a completed/cancelled
-    -- trade the cursor stayed captured and the game felt frozen.
-    exports.sunset_ui:SetFocus(false, false)
+    -- [FOCUS FIX] Match the 'trade' owner used on open so the release is not
+    -- blocked by the focus-owner guard (if it were 'legacy' here but 'trade'
+    -- set it, the guard would refuse the release and the cursor would stay stuck).
+    exports.sunset_ui:SetFocus(false, false, false, 'trade')
     if message then exports.sunset_ui:Notify(message, kind or 'info') end
 end)
 
