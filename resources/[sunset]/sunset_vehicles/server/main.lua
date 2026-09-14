@@ -1109,3 +1109,39 @@ function TransferVehicleOwnership(vehicleId, fromCharId, toCharId)
     return true
 end
 exports('TransferVehicleOwnership', TransferVehicleOwnership)
+
+-- ═══ IMPOUND SUPPORT EXPORTS ═══
+
+exports('GetVehicleById', function(vehicleId)
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return nil end
+    return MySQL.single.await('SELECT * FROM vehicles WHERE id = ? LIMIT 1', { vehicleId })
+end)
+
+exports('DeleteVehicleEntity', function(vehicleId)
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return end
+    -- Tell the client to delete the entity if it's in the world
+    for _, id in ipairs(GetPlayers()) do
+        TriggerClientEvent('sunset:vehicles:deleteEntity', tonumber(id), vehicleId)
+    end
+end)
+
+exports('SpawnVehicleAt', function(source, vehicleId, coords, heading)
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return false end
+    local veh = MySQL.single.await('SELECT * FROM vehicles WHERE id = ? LIMIT 1', { vehicleId })
+    if not veh then return false end
+    TriggerClientEvent('sunset:client:spawnOwnedVehicle', source, veh, {
+        coords = coords,
+        heading = heading or 0.0,
+    })
+    return true
+end)
+
+exports('DeleteVehicleRecord', function(vehicleId)
+    vehicleId = tonumber(vehicleId)
+    if not vehicleId then return false end
+    MySQL.update.await('DELETE FROM vehicles WHERE id = ?', { vehicleId })
+    return true
+end)

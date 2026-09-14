@@ -97,6 +97,13 @@ setr testdriver_autorun 1
 ensure sunset_jobs
 ensure sunset_carjack
 ensure sunset_fishingshop
+ensure sunset_casino
+ensure sunset_impound
+ensure sunset_racing
+ensure sunset_drugs
+ensure sunset_events
+ensure sunset_marriage
+ensure sunset_fishing_tournament
 
 add_ace group.admin command allow
 add_ace group.admin command.quit deny

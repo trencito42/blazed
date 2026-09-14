@@ -1,0 +1,409 @@
+-- ═══════════════════════════════════════════════════════════════
+--  SUNSETMP — The Diamond Casino (server/main.lua)
+--  Blackjack, Slots, Roulette — server-authoritative games.
+--  All bets/payouts go through sunset_core money API.
+-- ═══════════════════════════════════════════════════════════════
+
+local Cfg = SunsetCasino.Config
+local GameCooldowns = {}
+local DailyLosses = {}  -- [charId] = { date = 'YYYY-MM-DD', total = n }
+local ActiveBlackjack = {}  -- [src] = { deck, playerHand, dealerHand, bet, done }
+
+local function notify(source, msg, kind, duration)
+    TriggerClientEvent('sunset:client:notify', source, msg, kind or 'info', duration or 5000)
+end
+
+local function today()
+    return os.date('%Y-%m-%d')
+end
+
+local function checkDailyLoss(charId, amount)
+    local entry = DailyLosses[charId]
+    if not entry or entry.date ~= today() then
+        DailyLosses[charId] = { date = today(), total = 0 }
+        entry = DailyLosses[charId]
+    end
+    return entry.total + amount <= (Cfg.dailyLossLimit or 500000)
+end
+
+local function recordLoss(charId, amount)
+    local entry = DailyLosses[charId]
+    if not entry or entry.date ~= today() then
+        DailyLosses[charId] = { date = today(), total = 0 }
+        entry = DailyLosses[charId]
+    end
+    entry.total = entry.total + amount
+end
+
+local function checkCooldown(src)
+    local now = GetGameTimer()
+    if GameCooldowns[src] and now - GameCooldowns[src] < (Cfg.gameCooldownMs or 3000) then
+        return false
+    end
+    GameCooldowns[src] = now
+    return true
+end
+
+local function getCharId(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    return char and tonumber(char.id) or nil
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--  BLACKJACK
+-- ═══════════════════════════════════════════════════════════════
+
+local function buildDeck()
+    local deck = {}
+    local suits = { '♠', '♥', '♦', '♣' }
+    local ranks = { 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K' }
+    for _, suit in ipairs(suits) do
+        for _, rank in ipairs(ranks) do
+            local value = tonumber(rank)
+            if not value then
+                if rank == 'A' then value = 11
+                else value = 10 end
+            end
+            deck[#deck + 1] = { rank = rank, suit = suit, value = value }
+        end
+    end
+    -- Shuffle (Fisher-Yates)
+    for i = #deck, 2, -1 do
+        local j = math.random(i)
+        deck[i], deck[j] = deck[j], deck[i]
+    end
+    return deck
+end
+
+local function handValue(hand)
+    local total = 0
+    local aces = 0
+    for _, card in ipairs(hand) do
+        total = total + card.value
+        if card.rank == 'A' then aces = aces + 1 end
+    end
+    while total > 21 and aces > 0 do
+        total = total - 10
+        aces = aces - 1
+    end
+    return total
+end
+
+local function handToTable(hand)
+    local t = {}
+    for _, card in ipairs(hand) do
+        t[#t + 1] = { rank = card.rank, suit = card.suit }
+    end
+    return t
+end
+
+local function isBlackjack(hand)
+    return #hand == 2 and handValue(hand) == 21
+end
+
+local function dealerPlay(game)
+    while handValue(game.dealerHand) < (Cfg.dealerStandsOn or 17) do
+        table.insert(game.dealerHand, table.remove(game.deck, 1))
+    end
+end
+
+local function settleBlackjack(source, game)
+    local charId = getCharId(source)
+    if not charId then return nil end
+
+    local playerVal = handValue(game.playerHand)
+    local dealerVal = handValue(game.dealerHand)
+    local bet = game.bet
+    local payout = 0
+    local result = ''
+
+    if playerVal > 21 then
+        result = 'bust'
+        payout = 0
+        recordLoss(charId, bet)
+    elseif isBlackjack(game.playerHand) and not isBlackjack(game.dealerHand) then
+        result = 'blackjack'
+        payout = bet + math.floor(bet * (Cfg.blackjackPayout or 1.5))
+    elseif dealerVal > 21 then
+        result = 'dealer_bust'
+        payout = bet * 2
+    elseif playerVal > dealerVal then
+        result = 'win'
+        payout = bet * 2
+    elseif playerVal == dealerVal then
+        result = 'push'
+        payout = bet
+    else
+        result = 'lose'
+        payout = 0
+        recordLoss(charId, bet)
+    end
+
+    if payout > 0 then
+        exports.sunset_core:AddMoney(source, 'cash', payout, 'casino_blackjack')
+    end
+
+    ActiveBlackjack[source] = nil
+
+    return {
+        result = result,
+        payout = payout,
+        playerHand = handToTable(game.playerHand),
+        playerValue = playerVal,
+        dealerHand = handToTable(game.dealerHand),
+        dealerValue = dealerVal,
+    }
+end
+
+exports.sunset_core:RegisterCallback('sunset:casino:blackjackStart', function(source, bet)
+    bet = math.floor(tonumber(bet) or 0)
+    if bet < (Cfg.minBet or 100) or bet > (Cfg.maxBet or 50000) then
+        return nil, ('Bet must be between $%d and $%d.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
+    end
+    if not checkCooldown(source) then
+        return nil, 'Wait a moment between games.'
+    end
+    local charId = getCharId(source)
+    if not charId then return nil, 'No character loaded.' end
+    if not checkDailyLoss(charId, bet) then
+        return nil, ('Daily loss limit reached ($%s). Come back tomorrow.'):format(Cfg.dailyLossLimit or 500000)
+    end
+    if ActiveBlackjack[source] then
+        return nil, 'You already have an active blackjack hand.'
+    end
+    if not exports.sunset_core:RemoveMoney(source, 'cash', bet, 'casino_blackjack_bet') then
+        return nil, 'Not enough cash.'
+    end
+
+    local deck = buildDeck()
+    local game = {
+        deck = deck,
+        playerHand = { table.remove(deck, 1), table.remove(deck, 1) },
+        dealerHand = { table.remove(deck, 1), table.remove(deck, 1) },
+        bet = bet,
+        done = false,
+    }
+    ActiveBlackjack[source] = game
+
+    -- Check for instant blackjack
+    if isBlackjack(game.playerHand) then
+        dealerPlay(game)
+        local settled = settleBlackjack(source, game)
+        return { state = 'settled', settled = settled }
+    end
+
+    return {
+        state = 'playing',
+        playerHand = handToTable(game.playerHand),
+        playerValue = handValue(game.playerHand),
+        dealerHand = handToTable({ game.dealerHand[1] }), -- hide hole card
+        dealerValue = handValue({ game.dealerHand[1] }),
+        bet = bet,
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:casino:blackjackHit', function(source)
+    local game = ActiveBlackjack[source]
+    if not game or game.done then return nil, 'No active hand.' end
+
+    table.insert(game.playerHand, table.remove(game.deck, 1))
+    local val = handValue(game.playerHand)
+
+    if val > 21 then
+        dealerPlay(game)
+        local settled = settleBlackjack(source, game)
+        return { state = 'settled', settled = settled }
+    end
+
+    return {
+        state = 'playing',
+        playerHand = handToTable(game.playerHand),
+        playerValue = val,
+        dealerHand = handToTable({ game.dealerHand[1] }),
+        dealerValue = handValue({ game.dealerHand[1] }),
+    }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:casino:blackjackStand', function(source)
+    local game = ActiveBlackjack[source]
+    if not game or game.done then return nil, 'No active hand.' end
+
+    dealerPlay(game)
+    local settled = settleBlackjack(source, game)
+    return { state = 'settled', settled = settled }
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  SLOTS
+-- ═══════════════════════════════════════════════════════════════
+
+local SLOT_SYMBOLS = { '🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '🔔', '⭐' }
+
+exports.sunset_core:RegisterCallback('sunset:casino:slotsSpin', function(source, bet)
+    bet = math.floor(tonumber(bet) or 0)
+    if bet < (Cfg.minBet or 100) or bet > (Cfg.maxBet or 50000) then
+        return nil, ('Bet must be between $%d and $%d.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
+    end
+    if not checkCooldown(source) then
+        return nil, 'Wait a moment between games.'
+    end
+    local charId = getCharId(source)
+    if not charId then return nil, 'No character loaded.' end
+    if not checkDailyLoss(charId, bet) then
+        return nil, ('Daily loss limit reached ($%s). Come back tomorrow.'):format(Cfg.dailyLossLimit or 500000)
+    end
+    if not exports.sunset_core:RemoveMoney(source, 'cash', bet, 'casino_slots_bet') then
+        return nil, 'Not enough cash.'
+    end
+
+    -- Spin 3 reels
+    local reels = {}
+    for i = 1, 3 do
+        reels[i] = SLOT_SYMBOLS[math.random(#SLOT_SYMBOLS)]
+    end
+
+    -- Count matches
+    local counts = {}
+    for _, sym in ipairs(reels) do
+        counts[sym] = (counts[sym] or 0) + 1
+    end
+    local maxMatch = 0
+    for _, c in pairs(counts) do
+        if c > maxMatch then maxMatch = c end
+    end
+
+    local payouts = Cfg.slotsPayouts or { [3] = 10, [2] = 2 }
+    local multiplier = payouts[maxMatch] or 0
+    local payout = bet * multiplier
+
+    if payout > 0 then
+        exports.sunset_core:AddMoney(source, 'cash', payout, 'casino_slots')
+    else
+        recordLoss(charId, bet)
+    end
+
+    return {
+        reels = reels,
+        matches = maxMatch,
+        payout = payout,
+        bet = bet,
+    }
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  ROULETTE
+-- ═══════════════════════════════════════════════════════════════
+
+local RED_NUMBERS = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 }
+
+local function isRed(n)
+    for _, r in ipairs(RED_NUMBERS) do
+        if r == n then return true end
+    end
+    return false
+end
+
+exports.sunset_core:RegisterCallback('sunset:casino:rouletteSpin', function(source, bet, betType, betValue)
+    bet = math.floor(tonumber(bet) or 0)
+    if bet < (Cfg.minBet or 100) or bet > (Cfg.maxBet or 50000) then
+        return nil, ('Bet must be between $%d and $%d.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
+    end
+    if not checkCooldown(source) then
+        return nil, 'Wait a moment between games.'
+    end
+    local charId = getCharId(source)
+    if not charId then return nil, 'No character loaded.' end
+    if not checkDailyLoss(charId, bet) then
+        return nil, ('Daily loss limit reached ($%s). Come back tomorrow.'):format(Cfg.dailyLossLimit or 500000)
+    end
+    if not exports.sunset_core:RemoveMoney(source, 'cash', bet, 'casino_roulette_bet') then
+        return nil, 'Not enough cash.'
+    end
+
+    -- Spin: 0-36
+    local result = math.random(0, 36)
+    local resultColor = result == 0 and 'green' or (isRed(result) and 'red' or 'black')
+
+    -- Evaluate bet
+    local won = false
+    local payouts = Cfg.roulettePayouts or {}
+    local multiplier = 0
+
+    betType = tostring(betType or '')
+    betValue = tonumber(betValue)
+
+    if betType == 'straight' and betValue == result then
+        won = true
+        multiplier = payouts.straight or 35
+    elseif betType == 'red' and resultColor == 'red' then
+        won = true
+        multiplier = payouts.red_black or 1
+    elseif betType == 'black' and resultColor == 'black' then
+        won = true
+        multiplier = payouts.red_black or 1
+    elseif betType == 'odd' and result > 0 and result % 2 == 1 then
+        won = true
+        multiplier = payouts.odd_even or 1
+    elseif betType == 'even' and result > 0 and result % 2 == 0 then
+        won = true
+        multiplier = payouts.odd_even or 1
+    elseif betType == 'low' and result >= 1 and result <= 18 then
+        won = true
+        multiplier = payouts.low_high or 1
+    elseif betType == 'high' and result >= 19 and result <= 36 then
+        won = true
+        multiplier = payouts.low_high or 1
+    elseif betType == 'dozen' then
+        local dozen = math.ceil(result / 12)
+        if result > 0 and dozen == betValue then
+            won = true
+            multiplier = payouts.dozen or 2
+        end
+    elseif betType == 'column' then
+        if result > 0 and (result % 3) == (betValue % 3) then
+            won = true
+            multiplier = payouts.column or 2
+        end
+    end
+
+    local payout = won and (bet + bet * multiplier) or 0
+    if payout > 0 then
+        exports.sunset_core:AddMoney(source, 'cash', payout, 'casino_roulette')
+    else
+        recordLoss(charId, bet)
+    end
+
+    return {
+        result = result,
+        color = resultColor,
+        won = won,
+        payout = payout,
+        bet = bet,
+        betType = betType,
+    }
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  CASINO STATUS
+-- ═══════════════════════════════════════════════════════════════
+
+exports.sunset_core:RegisterCallback('sunset:casino:status', function(source)
+    local charId = getCharId(source)
+    if not charId then return nil end
+    local entry = DailyLosses[charId]
+    local dailyLoss = (entry and entry.date == today()) and entry.total or 0
+    return {
+        dailyLoss = dailyLoss,
+        dailyLimit = Cfg.dailyLossLimit or 500000,
+        minBet = Cfg.minBet or 100,
+        maxBet = Cfg.maxBet or 50000,
+    }
+end)
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    ActiveBlackjack[src] = nil
+    GameCooldowns[src] = nil
+end)
+
+print('^2[sunset_casino]^7 The Diamond Casino online (blackjack, slots, roulette)')

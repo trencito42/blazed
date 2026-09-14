@@ -1171,6 +1171,77 @@ window.addEventListener('message', (event) => {
             }
             break;
         }
+
+        // ═══ CASINO ═══
+        case 'casinoShow':
+            if (window.Casino) Casino.show(data || event.data.data);
+            break;
+        case 'casinoHide':
+            if (window.Casino) Casino.hide();
+            break;
+        case 'casinoBlackjackUpdate':
+            if (window.Casino) Casino.updateBlackjack(data || event.data.data);
+            break;
+        case 'casinoSlotsResult':
+            if (window.Casino) Casino.updateSlots(data || event.data.data);
+            break;
+        case 'casinoRouletteResult':
+            if (window.Casino) Casino.updateRoulette(data || event.data.data);
+            break;
+
+        // ═══ IMPOUND ═══
+        case 'impoundShow':
+            if (window.Impound) Impound.show(data || event.data.data);
+            break;
+        case 'impoundHide':
+            if (window.Impound) Impound.hide();
+            break;
+        case 'impoundUpdate':
+            if (window.Impound) Impound.update(data || event.data.data);
+            break;
+
+        // ═══ RACING ═══
+        case 'racingShow':
+            if (window.Racing) Racing.show(data || event.data.data);
+            break;
+        case 'racingHide':
+            if (window.Racing) Racing.hide();
+            break;
+        case 'racingHud':
+            if (window.Racing) Racing.showHud(data || event.data.data);
+            break;
+        case 'racingHudHide':
+            if (window.Racing) Racing.hideHud();
+            break;
+        case 'racingCountdown':
+            if (window.Racing) Racing.showCountdown((data || event.data.data)?.n);
+            break;
+        case 'racingGo':
+            if (window.Racing) Racing.showGo();
+            break;
+        case 'racingFinished':
+            if (window.Racing) Racing.showFinished(data || event.data.data);
+            break;
+
+        // ═══ DRUGS ═══
+        case 'drugsShow':
+            if (window.Drugs) Drugs.show(data || event.data.data);
+            break;
+        case 'drugsHide':
+            if (window.Drugs) Drugs.hide();
+            break;
+        case 'drugsUpdate':
+            if (window.Drugs) Drugs.update(data || event.data.data);
+            break;
+
+        // ═══ MARRIAGE ═══
+        case 'marriageProposal':
+            if (window.Marriage) Marriage.showProposal(data || event.data.data);
+            break;
+        case 'marriageHide':
+            if (window.Marriage) Marriage.hide();
+            break;
+
         case 'phoneUpdate':
             if (window.Phone) Phone.update(data || event.data.data);
             break;

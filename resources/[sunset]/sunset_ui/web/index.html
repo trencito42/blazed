@@ -74,6 +74,11 @@
     <link rel="stylesheet" href="css/quests.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/clanwar.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/helpdesk.css?v=2" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/casino.css?v=1" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/impound.css?v=1" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/racing.css?v=1" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/drugs.css?v=1" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/marriage.css?v=1" media="print" onload="this.media='all'">
     <!-- [CEF FIX] MUST stay last: disables backdrop-filter blur (renders as black
          edges/boxes in FiveM's Chromium). See _cef_overrides.css. -->
     <link rel="stylesheet" href="css/_cef_overrides.css?v=4">
@@ -3513,6 +3518,84 @@
         <div class="dmg-container" id="dmg-container"></div>
     </div>
 
+    <!-- ═══ CASINO ═══ -->
+    <div id="casino-overlay" class="casino-overlay hidden" aria-hidden="true">
+        <div class="casino-panel">
+            <div class="casino-header">
+                <div class="casino-header__logo">💎</div>
+                <div>
+                    <div class="casino-header__title" id="casino-title">Casino</div>
+                    <div class="casino-header__sub" id="casino-sub"></div>
+                </div>
+                <button type="button" class="casino-header__close" id="casino-close" title="Close (ESC)">✕</button>
+            </div>
+            <div class="casino-body" id="casino-body"></div>
+            <div class="casino-status" id="casino-status"></div>
+        </div>
+    </div>
+
+    <!-- ═══ IMPOUND ═══ -->
+    <div id="impound-overlay" class="impound-overlay hidden" aria-hidden="true">
+        <div class="impound-panel">
+            <div class="impound-header">
+                <div class="impound-header__logo">🚗</div>
+                <div>
+                    <div class="impound-header__title">Impound Lot</div>
+                    <div class="impound-header__sub">Recover your confiscated vehicles</div>
+                </div>
+                <button type="button" class="impound-header__close" id="impound-close" title="Close (ESC)">✕</button>
+            </div>
+            <div class="impound-body" id="impound-body"></div>
+        </div>
+    </div>
+
+    <!-- ═══ RACING ═══ -->
+    <div id="racing-overlay" class="racing-overlay hidden" aria-hidden="true">
+        <div class="racing-panel">
+            <div class="racing-header">
+                <div class="racing-header__logo">🏁</div>
+                <div>
+                    <div class="racing-header__title">Street Racing</div>
+                    <div class="racing-header__sub">Checkpoint races — entry fee, winner takes the pot</div>
+                </div>
+                <button type="button" class="racing-header__close" id="racing-close" title="Close (ESC)">✕</button>
+            </div>
+            <div class="racing-body" id="racing-body"></div>
+            <div class="racing-actions">
+                <button type="button" class="racing-btn" id="racing-join" disabled>JOIN RACE</button>
+                <button type="button" class="racing-btn racing-btn--secondary hidden" id="racing-leave">LEAVE LOBBY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ DRUGS ═══ -->
+    <div id="drugs-overlay" class="drugs-overlay hidden" aria-hidden="true">
+        <div class="drugs-panel">
+            <div class="drugs-header">
+                <div class="drugs-header__logo">🌿</div>
+                <div>
+                    <div class="drugs-header__title" id="drugs-title">Drugs</div>
+                    <div class="drugs-header__sub" id="drugs-sub"></div>
+                </div>
+                <button type="button" class="drugs-header__close" id="drugs-close" title="Close (ESC)">✕</button>
+            </div>
+            <div class="drugs-body" id="drugs-body"></div>
+        </div>
+    </div>
+
+    <!-- ═══ MARRIAGE PROPOSAL ═══ -->
+    <div id="marriage-overlay" class="marriage-overlay hidden" aria-hidden="true">
+        <div class="marriage-panel">
+            <div class="marriage-icon">💍</div>
+            <div class="marriage-title" id="marriage-title">Marriage Proposal</div>
+            <div class="marriage-text" id="marriage-text"></div>
+            <div class="marriage-actions">
+                <button type="button" class="marriage-btn marriage-btn--accept" id="marriage-accept">Accept</button>
+                <button type="button" class="marriage-btn marriage-btn--decline" id="marriage-decline">Decline</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ AUTH-ONLY SCRIPTS (loaded at boot) ═══ -->
     <script defer src="js/app.js?v=35"></script>
     <script defer src="js/characters.js?v=31"></script>
@@ -3564,5 +3647,10 @@
     <script type="text/plain" data-lazy-src="js/atm.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/battlepass.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/helpdesk.js?v=1"></script>
+    <script type="text/plain" data-lazy-src="js/casino.js?v=1"></script>
+    <script type="text/plain" data-lazy-src="js/impound.js?v=1"></script>
+    <script type="text/plain" data-lazy-src="js/racing.js?v=1"></script>
+    <script type="text/plain" data-lazy-src="js/drugs.js?v=1"></script>
+    <script type="text/plain" data-lazy-src="js/marriage.js?v=1"></script>
 </body>
 </html>

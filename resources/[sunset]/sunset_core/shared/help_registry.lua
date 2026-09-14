@@ -251,6 +251,7 @@ Sunset.CommandUsage = {
     helpdesk = { usage = '/helpdesk — staff console: roster, heat, reports, quick actions (staff)', minArgs = 0 },
     aduty = { usage = '/aduty — toggle on-duty staff mode with visible [HELPER] chat prefix', minArgs = 0 },
     a = { usage = '/a [message] — staff chat (visible to all online staff)', minArgs = 1 },
+    impound = { usage = '/impound [reason] — confiscate a nearby vehicle (law enforcement)', minArgs = 0 },
     -- [ADMIN SYSTEM] sanctions + presence tools (levels in SunsetAdmin.Commands)
     warn = { usage = '/warn [server id] [reason] — official warning (staff 1+)', minArgs = 2 },
     history = { usage = '/history [server id] — sanction history (staff 1+)', minArgs = 1 },
