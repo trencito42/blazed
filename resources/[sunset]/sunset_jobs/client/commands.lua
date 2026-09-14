@@ -54,7 +54,7 @@ local function startWork()
             if Sunset.Jobs and Sunset.Jobs.EnsureFishermanShift then
                 Sunset.Jobs.EnsureFishermanShift()
             end
-            JC.workFeedback('Fisherman shift is already active — stand in a blue marker and press E.', 'info')
+            JC.workFeedback('Fisherman shift is already active — stand in the fishing zone and press E.', 'info')
             return
         elseif JC.state ~= 'IDLE' then
             JC.workFeedback('Already on a shift — finish or /work cancel', 'error')
