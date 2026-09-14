@@ -22,9 +22,8 @@ local npcTooltipVisible   = false
 local truckerUnlockAt     = 0   -- 0 = unlocked immediately (no 60s dead-zone bug)
 
 local TRUCKER_ACTIONS = {
-    hire_trucker       = true,
-    start_trucker_shift = true,
-    end_trucker_shift  = true,
+    hire_trucker      = true,
+    end_trucker_shift = true,
 }
 
 -- ── Helpers ───────────────────────────────────────────────────
@@ -133,13 +132,13 @@ local function openTruckerNpcMenu()
         local actions = {}
         if data.job ~= 'trucker' then
             actions[#actions + 1] = { id = 'hire_trucker', label = 'Become a Trucker', group = 'CIVILIAN' }
-        end
-        if data.job == 'trucker' then
-            if data.onShift then
-                actions[#actions + 1] = { id = 'end_trucker_shift', label = 'End Shift', group = 'TRUCKER' }
-            else
-                actions[#actions + 1] = { id = 'start_trucker_shift', label = 'Start Shift', group = 'TRUCKER' }
-            end
+        elseif data.onShift then
+            actions[#actions + 1] = { id = 'end_trucker_shift', label = 'End Shift', group = 'TRUCKER' }
+        else
+            -- Trucker, not on shift: close, notify and set waypoint to the laptop
+            SetNewWaypoint(LAPTOP_COORDS.x, LAPTOP_COORDS.y)
+            exports.sunset_ui:Notify('Head to the ~y~Route Laptop~s~ to pick your delivery.', 'info', 5000)
+            return
         end
         if #actions == 0 then return end
 
@@ -336,21 +335,19 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         CreateThread(function()
             local ok, err = Sunset.AwaitCallback('sunset:hireJob', 'trucker')
             if ok then
-                exports.sunset_ui:Notify('You are now a Trucker! Use the laptop to pick a route.', 'success', 8000)
+                SetNewWaypoint(LAPTOP_COORDS.x, LAPTOP_COORDS.y)
+                exports.sunset_ui:Notify('You are now a Trucker! Head to the ~y~Route Laptop~s~ to pick your first delivery.', 'success', 8000)
             else
                 local msg = err or 'Hiring failed.'
                 if msg:find('already work', 1, true) or msg:find('already', 1, true) then
-                    exports.sunset_ui:Notify('You are already a Trucker! Use the laptop to pick a route.', 'info', 6000)
+                    SetNewWaypoint(LAPTOP_COORDS.x, LAPTOP_COORDS.y)
+                    exports.sunset_ui:Notify('You are already a Trucker! Head to the ~y~Route Laptop~s~ to pick a delivery.', 'info', 6000)
                 else
                     exports.sunset_ui:Notify(msg, 'error', 6000)
                 end
             end
             SetTimeout(2000, function() inCooldown = false end)
         end)
-
-    elseif action == 'start_trucker_shift' then
-        -- Opens the laptop UI directly from the NPC menu
-        openLaptopUi()
 
     elseif action == 'end_trucker_shift' then
         inCooldown = true
