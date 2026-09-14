@@ -63,8 +63,11 @@ const WorldTooltipLayer = {
                     el.innerHTML = this.renderNode(row);
                     el.dataset.contentSignature = signature;
                 }
-                el.style.left = `${Number(row.x) || 0}%`;
-                el.style.top = `${Number(row.y) || 0}%`;
+                // Use transform (compositor-only, no layout reflow) so position
+                // updates are GPU-accelerated and don't stutter at 60Hz.
+                const tx = Number(row.x) || 0;
+                const ty = Number(row.y) || 0;
+                el.style.transform = `translate(calc(${tx}vw - 50%), calc(${ty}vh - 100%))`;
                 el.classList.add('is-visible');
             } else {
                 el.classList.remove('is-visible');

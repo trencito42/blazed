@@ -282,7 +282,9 @@ local function shouldShowBillyRayPrompt()
     if menuOpen or shopOpen then return false end
     local pos = GetEntityCoords(PlayerPedId())
     if not isNearNpcPrompt(pos) then return false end
-    if anotherPlayerBlocksNpcPrompt(pos) then return false end
+    -- NOTE: anotherPlayerBlocksNpcPrompt check removed from here — the tooltip
+    -- should always show when you're in range; the block only applies to the
+    -- actual Hold-E interaction (prevents two menus opening at once).
     return true
 end
 

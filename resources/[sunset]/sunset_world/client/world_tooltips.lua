@@ -100,9 +100,10 @@ CreateThread(function()
                 end
             end
             sendSync(list)
-            -- Screen-space labels must follow camera motion smoothly. 30Hz keeps
-            -- them responsive without returning to the old per-frame NUI flood.
-            Wait(33)
+            -- Run every native frame so the tooltip tracks the NPC head with
+            -- zero visual lag. The payload is tiny (one JSON object per tooltip)
+            -- so 60Hz messaging doesn't flood the NUI bridge.
+            Wait(0)
         else
             Wait(250)
         end
