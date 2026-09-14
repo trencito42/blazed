@@ -476,7 +476,10 @@ CreateThread(function()
         local wasNpc       = nearNpc
         local wasBaitShop  = nearBaitShop
 
-        nearNpc      = isNearNpcMenu(pos)
+        -- Use prompt distance (4.5 m) so E is captured whenever the tooltip
+        -- is visible. Was isNearNpcMenu (2.15 m) — E wasn't disabled between
+        -- 2.15 m and 4.5 m, so the key did nothing despite the prompt showing.
+        nearNpc      = isNearNpcPrompt(pos)
         nearBaitShop = #(pos - BAIT_SHOP_COORDS) < BAIT_SHOP_DIST
 
         if wasNpc and not nearNpc and menuOpen then
@@ -498,7 +501,9 @@ CreateThread(function()
     while true do
         if nearNpc or nearBaitShop then
             local pos = GetEntityCoords(PlayerPedId())
-            local canPromptBilly = isNearNpcPrompt(pos) and not anotherPlayerBlocksNpcPrompt(pos)
+            -- Removed anotherPlayerBlocksNpcPrompt — it blocked interaction
+            -- whenever a second player was nearby even if they weren't using the NPC.
+            local canPromptBilly = isNearNpcPrompt(pos)
 
             if nearNpc or nearBaitShop then
                 DisableControlAction(0, INTERACT_KEY, true)
@@ -513,22 +518,10 @@ CreateThread(function()
                         menuCloseArmed = true
                     end
                 elseif billyInteractionsReady() and not inCooldown and not shopOpen then
-                    if IsDisabledControlJustPressed(0, INTERACT_KEY) then
-                        billyHoldStart = GetGameTimer()
-                        sendBillyHoldState(true)
-                    end
-
-                    if billyHoldStart and IsDisabledControlPressed(0, INTERACT_KEY) then
-                        if (GetGameTimer() - billyHoldStart) >= BILLY_HOLD_MS and isNearNpcMenu(pos) then
-                            billyHoldStart = nil
-                            sendBillyHoldState(false)
-                            openBillyRayMenu()
-                        end
-                    end
-
+                    -- Simple press (no hold required — hold had no visual feedback
+                    -- so players tapped E and got nothing; menu never opened).
                     if IsDisabledControlJustReleased(0, INTERACT_KEY) then
-                        billyHoldStart = nil
-                        sendBillyHoldState(false)
+                        openBillyRayMenu()
                     end
                 end
             elseif menuOpen and nearNpc then

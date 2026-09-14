@@ -58,6 +58,11 @@ function SunsetWorld.Tooltips.clear(id)
     if id then
         if active[id] then
             active[id] = nil
+            -- Immediately tell NUI to hide when the last tooltip is removed;
+            -- without this the slow-path Wait(250) keeps the element visible.
+            if next(active) == nil then
+                sendSync({})
+            end
         end
         return
     end
