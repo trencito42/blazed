@@ -1,6 +1,8 @@
 local Accounts = {}
 
-local MAX_ACCOUNTS = 6
+-- One saved slot per device: prevents duplicate account cards when the same
+-- player has logged in under multiple usernames on the same machine.
+local MAX_ACCOUNTS = 1
 local STORE_KEY = 'saved_accounts_v2'
 local LEGACY_PREFIX = 'auth_'
 

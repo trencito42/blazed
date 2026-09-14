@@ -148,9 +148,32 @@ RegisterNetEvent('sunset:client:sessionReady', function(data)
     print('^5[BOOT]^7 auth: sessionReady received (license=' .. tostring(data and data.license ~= nil) .. ')')
     sessionLicense = data and data.license
     if authenticated then return end
-    print('^5[BOOT]^7 auth: opening auth screen (sunset_ui)')
+
+    -- Attempt silent quick login before showing the auth screen.
+    -- If there is a saved account with a valid token on this device,
+    -- the player skips the screen entirely on every subsequent join.
+    local store = SunsetAuthAccounts.load(activeLicense())
+    local saved = SunsetAuthAccounts.mostRecent(store)
+    if saved and type(saved.token) == 'string' and saved.token ~= '' then
+        print('^5[BOOT]^7 auth: saved token found for ' .. tostring(saved.username) .. ', attempting silent quick login')
+        CreateThread(function()
+            local result, err = Sunset.AwaitCallback('sunset:authQuickLogin', saved.username, saved.token)
+            if result and not result.needsEmail then
+                print('^5[BOOT]^7 auth: silent quick login succeeded')
+                completeAuthentication(saved.username, result.quickToken, true)
+            else
+                -- Token expired or invalid — remove it and fall back to the form.
+                print('^5[BOOT]^7 auth: silent quick login failed (' .. tostring(err) .. '), showing auth screen')
+                SunsetAuthAccounts.remove(activeLicense(), saved.username)
+                openAuth()
+                scheduleAuthWatchdog()
+            end
+        end)
+        return
+    end
+
+    print('^5[BOOT]^7 auth: no saved token, opening auth screen')
     openAuth()
-    print('^5[BOOT]^7 auth: openAuth done')
     scheduleAuthWatchdog()
 end)
 
