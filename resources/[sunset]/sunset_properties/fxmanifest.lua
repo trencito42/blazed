@@ -6,7 +6,7 @@ name 'sunset_properties'
 description 'Buyable properties and home spawn'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_admin' }
+dependencies { 'sunset_core', 'sunset_world', 'sunset_admin' }
 
 shared_scripts {
     '@sunset_core/shared/config.lua',

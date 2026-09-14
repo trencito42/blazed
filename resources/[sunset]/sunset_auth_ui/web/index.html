@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>blaze.mp — Login</title>
+    <link rel="stylesheet" href="auth.css?v=2">
+</head>
+<body>
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-bg"></div>
+        <div class="auth-container">
+            <div class="auth-brand">
+                <div class="auth-logo">BLAZE<span>.MP</span></div>
+                <div class="auth-tagline">RPG ROLEPLAY · LOS SANTOS</div>
+            </div>
+
+            <!-- Login -->
+            <div class="auth-form" id="auth-login">
+                <h2 class="auth-title">SIGN IN</h2>
+                <div class="auth-field">
+                    <label>USERNAME</label>
+                    <input type="text" id="auth-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Your username">
+                </div>
+                <div class="auth-field">
+                    <label>PASSWORD</label>
+                    <input type="password" id="auth-pass" autocomplete="current-password" placeholder="••••••••">
+                </div>
+                <label class="auth-check">
+                    <input type="checkbox" id="auth-remember" checked>
+                    <span>Save this account for quick login</span>
+                </label>
+                <button type="button" class="auth-btn" id="auth-login-btn">SIGN IN</button>
+                <div class="auth-links">
+                    <button type="button" class="auth-link" id="auth-go-register">No account? Create one →</button>
+                </div>
+            </div>
+
+            <!-- Register -->
+            <div class="auth-form hidden" id="auth-register">
+                <h2 class="auth-title">REGISTER</h2>
+                <div class="auth-field">
+                    <label>USERNAME</label>
+                    <input type="text" id="reg-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Your username">
+                </div>
+                <div class="auth-field">
+                    <label>EMAIL</label>
+                    <input type="text" id="reg-email" maxlength="64" autocomplete="email" spellcheck="false" placeholder="you@email.com">
+                </div>
+                <div class="auth-field">
+                    <label>PASSWORD</label>
+                    <input type="password" id="reg-pass" autocomplete="new-password" placeholder="Min 6 characters">
+                </div>
+                <div class="auth-field">
+                    <label>CONFIRM PASSWORD</label>
+                    <input type="password" id="reg-pass2" autocomplete="new-password" placeholder="Repeat password">
+                </div>
+                <label class="auth-check">
+                    <input type="checkbox" id="reg-remember" checked>
+                    <span>Save this account for quick login</span>
+                </label>
+                <button type="button" class="auth-btn" id="auth-register-btn">CREATE ACCOUNT</button>
+                <div class="auth-links">
+                    <button type="button" class="auth-link" id="auth-go-login">← Back to sign in</button>
+                </div>
+            </div>
+
+            <!-- Email link (first login on a new account) -->
+            <div class="auth-form hidden" id="auth-email-form">
+                <h2 class="auth-title">LINK EMAIL</h2>
+                <div class="auth-field">
+                    <label>EMAIL</label>
+                    <input type="text" id="auth-email" maxlength="64" autocomplete="email" spellcheck="false" placeholder="you@email.com">
+                </div>
+                <button type="button" class="auth-btn" id="auth-email-btn">SAVE & CONTINUE</button>
+            </div>
+
+            <!-- Saved accounts -->
+            <div class="auth-accounts hidden" id="auth-accounts">
+                <h3 class="auth-accounts-title">QUICK LOGIN — SELECT ACCOUNT</h3>
+                <div class="auth-accounts-list" id="auth-accounts-list"></div>
+            </div>
+
+            <!-- Error -->
+            <div class="auth-error hidden" id="auth-error"></div>
+
+            <!-- Loading -->
+            <div class="auth-loading hidden" id="auth-loading">
+                <div class="auth-spinner"></div>
+                <p>Connecting...</p>
+            </div>
+        </div>
+    </div>
+    <script src="auth.js?v=2"></script>
+</body>
+</html>

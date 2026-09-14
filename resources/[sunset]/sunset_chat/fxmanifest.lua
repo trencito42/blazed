@@ -26,6 +26,6 @@ server_scripts {
     'server/connect_motd.lua',
 }
 
-dependencies { 'sunset_ui', 'sunset_core', 'sunset_admin', 'sunset_factions', 'sunset_clans' }
+dependencies { 'sunset_core', 'sunset_admin', 'sunset_factions', 'sunset_clans' }
 
 exports { 'IsChatOpen', 'GetChatSuggestions', 'SyncChatSuggestions' }

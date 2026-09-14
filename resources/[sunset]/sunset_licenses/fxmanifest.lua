@@ -33,7 +33,6 @@ server_scripts {
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_factions',
 }
 

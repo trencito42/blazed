@@ -16,7 +16,6 @@ shared_scripts {
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_factions',
     'sunset_dispatch',
 }

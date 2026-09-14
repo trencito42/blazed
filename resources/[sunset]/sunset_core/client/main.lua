@@ -25,28 +25,28 @@ CreateThread(function()
     -- animations, filters and big backgrounds for freeze A/B testing.
     local nofx = GetConvar('sv_sunset_nofx', '0') == '1'
 
-    -- Keep the same preloaded background underneath the FiveM loadscreen.
-    -- This prevents a world/black-frame flash while the independent NUIs swap.
+    -- [AUTH UI SPLIT] The login screen now lives in sunset_auth_ui (a tiny NUI
+    -- page). sunset_ui (the gameplay monolith) is started LAZILY after login.
+    -- The loadscreen handoff only needs the auth page ready.
     local uiDeadline = GetGameTimer() + 15000
-    while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < uiDeadline do
+    while GetResourceState('sunset_auth_ui') ~= 'started' and GetGameTimer() < uiDeadline do
         Wait(50)
     end
+    btrace('sunset_auth_ui state=' .. tostring(GetResourceState('sunset_auth_ui')))
+    local uiReady = GetResourceState('sunset_ui') == 'started'
     btrace('sunset_ui state=' .. tostring(GetResourceState('sunset_ui')))
-    -- [AUDIT P8-24] Guard the handoff so a sunset_ui export error can never kill
+    -- [AUDIT P8-24] Guard the handoff so a NUI export error can never kill
     -- this thread before ShutdownLoadingScreen (manual shutdown = stuck loadscreen).
     local handoffOk, handoffErr = pcall(function()
-        if GetResourceState('sunset_ui') == 'started' then
+        if uiReady then
             exports.sunset_ui:Show('handoff', {})
             btrace('Show(handoff) done')
-            if nofx then
-                exports.sunset_ui:Send('bootNofx', {})
-            end
-            exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
-            Wait(80)
-            -- [BOOT TRACE v2] Epoch calibration: sunset_ui caches the NUI's
-            -- Date.now() (sent as bootEpoch when app.js parses) and converts it
-            -- to a GetGameTimer() offset; GetBootEpoch() then returns current
-            -- epoch-ms so core/loadscreen/NUI logs share one timeline.
+        end
+        if nofx and uiReady then
+            exports.sunset_ui:Send('bootNofx', {})
+        end
+        -- [BOOT TRACE v2] Epoch calibration (only when sunset_ui is up).
+        if uiReady then
             local epochNow = exports.sunset_ui:GetBootEpoch()
             if epochNow and tonumber(epochNow) and tonumber(epochNow) > 0 then
                 epochOffset = tonumber(epochNow) - GetGameTimer()
@@ -54,15 +54,13 @@ CreateThread(function()
             else
                 btrace('epoch NOT calibrated yet (nui bootEpoch missing)')
             end
-            btrace('SEND_LOADING_SCREEN_MESSAGE sunsetHandoff')
-            SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
-            if nofx then
-                SendLoadingScreenMessage(json.encode({ eventName = 'nofx' }))
-            end
-            Wait(380)
-        else
-            print('^1[sunset_core]^7 sunset_ui was not ready before loadscreen shutdown; login UI may need /fixlogin')
         end
+        btrace('SEND_LOADING_SCREEN_MESSAGE sunsetHandoff')
+        SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
+        if nofx then
+            SendLoadingScreenMessage(json.encode({ eventName = 'nofx' }))
+        end
+        Wait(380)
     end)
     if not handoffOk then
         print('^1[sunset_core]^7 loadscreen handoff failed: ' .. tostring(handoffErr))

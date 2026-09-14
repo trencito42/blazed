@@ -11,7 +11,7 @@ shared_scripts {
     '@sunset_core/shared/items.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_world', 'sunset_appearance', 'oxmysql' }
+dependencies { 'sunset_core', 'sunset_world', 'sunset_appearance', 'oxmysql' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',

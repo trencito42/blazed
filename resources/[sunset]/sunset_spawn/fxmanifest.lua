@@ -19,7 +19,6 @@ client_scripts {
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_characters',
     'sunset_appearance',
 }

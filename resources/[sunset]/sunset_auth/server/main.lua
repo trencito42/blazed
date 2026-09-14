@@ -24,8 +24,25 @@ local function clearLoginFails(source)
     LoginFails[source] = nil
 end
 
+-- [AUTH UI SPLIT] Lazy sunset_ui start: only players who completed login may
+-- request the full game UI to start. Starting a resource is privileged, so
+-- this gate prevents unauthenticated clients from forcing it.
+local AuthenticatedPlayers = {}
+exports('IsPlayerAuthenticated', function(src)
+    return AuthenticatedPlayers[tonumber(src or -1)] == true
+end)
+
+RegisterNetEvent('sunset:auth:requestUiStart', function()
+    local src = source
+    if not AuthenticatedPlayers[src] then return end
+    if GetResourceState('sunset_ui') ~= 'started' then
+        StartResource('sunset_ui')
+    end
+end)
+
 AddEventHandler('playerDropped', function()
     LoginFails[source] = nil
+    AuthenticatedPlayers[source] = nil
 end)
 
 local function deviceHash(source)
@@ -134,6 +151,7 @@ exports.sunset_core:RegisterCallback('sunset:authRegister', function(source, use
     if not exports.sunset_core:CompleteAuthentication(source, accountId, normalized) then
         return nil, 'Could not establish authenticated session'
     end
+    AuthenticatedPlayers[source] = true
     return { username = normalized, needsEmail = false, quickToken = issueQuickToken(source, accountId) }
 end)
 exports.sunset_core:RegisterCallback('sunset:authLogin', function(source, username, password)
@@ -181,6 +199,7 @@ exports.sunset_core:RegisterCallback('sunset:authLogin', function(source, userna
     if not exports.sunset_core:CompleteAuthentication(source, account.id, account.username) then
         return nil, 'Could not establish authenticated session'
     end
+    AuthenticatedPlayers[source] = true
     return { username = account.username, needsEmail = false, quickToken = issueQuickToken(source, account.id) }
 end)
 
@@ -206,6 +225,7 @@ exports.sunset_core:RegisterCallback('sunset:authQuickLogin', function(source, u
     if not exports.sunset_core:CompleteAuthentication(source, row.id, row.username) then
         return nil, 'Could not establish authenticated session'
     end
+    AuthenticatedPlayers[source] = true
     return { username = row.username, needsEmail = emailMissing(row.email), quickToken = issueQuickToken(source, row.id) }
 end)
 

@@ -23,6 +23,6 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_phone', 'sunset_vehicles', 'sunset_tuning' }
+dependencies { 'sunset_core', 'sunset_phone', 'sunset_vehicles', 'sunset_tuning' }
 
 exports { 'OpenVehicle', 'IsMenuOpen', 'CloseMenu' }

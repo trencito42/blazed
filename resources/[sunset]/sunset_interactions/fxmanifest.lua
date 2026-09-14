@@ -10,7 +10,6 @@ version '1.0.0'
 dependencies {
     'oxmysql',
     'sunset_core',
-    'sunset_ui',
     'sunset_factions',
     'sunset_phone',
 }

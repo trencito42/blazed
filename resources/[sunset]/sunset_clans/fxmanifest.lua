@@ -29,8 +29,7 @@ server_scripts {
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
-}
+    }
 
 exports {
     'FormatDisplayName',

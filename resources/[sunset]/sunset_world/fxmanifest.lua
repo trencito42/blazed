@@ -31,4 +31,4 @@ server_scripts {
     'server/access.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui' }
+dependencies { 'sunset_core' }

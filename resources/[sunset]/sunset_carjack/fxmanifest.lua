@@ -8,7 +8,6 @@ version '1.0.1'
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_inventory',
     'oxmysql',
 }

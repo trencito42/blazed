@@ -24,4 +24,4 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_clans', 'sunset_factions' }
+dependencies { 'sunset_core', 'sunset_clans', 'sunset_factions' }

@@ -34,4 +34,4 @@ client_scripts {
     'client/helpdesk.lua',
 }
 
-dependencies { 'sunset_core', 'sunset_ui', 'sunset_death', 'sunset_factions' }
+dependencies { 'sunset_core', 'sunset_death', 'sunset_factions' }

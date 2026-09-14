@@ -23,7 +23,7 @@ server_scripts {
     'server/main.lua',
 }
 
-dependencies { 'sunset_ui', 'sunset_core', 'sunset_world' }
+dependencies { 'sunset_core', 'sunset_world' }
 
 exports {
     'GetVehicleState',

@@ -46,7 +46,6 @@ exports {
 -- gracefully via GetResourceState('pma-voice') checks, so the dependency is dropped.
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_vehicles',
     'sunset_admin',
 }

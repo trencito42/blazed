@@ -44,7 +44,6 @@ files {
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_vehicles',
     'sunset_factions',
     'sunset_admin',

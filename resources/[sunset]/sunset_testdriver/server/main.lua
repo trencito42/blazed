@@ -210,7 +210,9 @@ local function smokeChecks()
     print('^3[testdriver] smoke checks^7')
 
     -- required resources up
-    for _, res in ipairs({ 'oxmysql', 'sunset_core', 'sunset_ui', 'sunset_sessions',
+    -- [AUTH UI SPLIT] sunset_ui is now LAZY-started after login, so at boot the
+    -- smoke check covers sunset_auth_ui instead (sunset_ui = 'stopped' is OK).
+    for _, res in ipairs({ 'oxmysql', 'sunset_core', 'sunset_auth_ui', 'sunset_sessions',
                            'sunset_inventory', 'sunset_economy', 'sunset_jobs',
                            'sunset_factions', 'sunset_vehicles', 'sunset_admin' }) do
         record('resource started: ' .. res, GetResourceState(res) == 'started', GetResourceState(res))

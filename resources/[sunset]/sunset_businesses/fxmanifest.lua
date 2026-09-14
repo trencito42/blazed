@@ -6,7 +6,7 @@ name 'sunset_businesses'
 description 'Player-owned shop businesses'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_ui' }
+dependencies { 'sunset_core' }
 
 shared_scripts {
     '@sunset_core/shared/config.lua',

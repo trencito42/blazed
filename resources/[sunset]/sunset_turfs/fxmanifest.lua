@@ -26,7 +26,6 @@ client_scripts {
 dependencies {
     'sunset_core',
     'sunset_clans',
-    'sunset_ui',
     'sunset_chat',
     'oxmysql',
 }

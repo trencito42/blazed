@@ -146,6 +146,13 @@ local function autoEnterGame()
     inCharacterFlow = true
     trace('character_request_started')
 
+    -- [AUTH UI SPLIT] sunset_ui is started lazily after login; the character
+    -- list screen lives there, so wait for it before driving the flow.
+    local uiDeadline = GetGameTimer() + 15000
+    while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < uiDeadline do
+        Wait(100)
+    end
+
     local result, err = Sunset.AwaitCallback('sunset:enterGame')
     if result and result.character then
         trace('character_request_complete', result.character.id)

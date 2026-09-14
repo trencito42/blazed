@@ -6,7 +6,7 @@ name 'sunset_economy'
 description 'Payday, shops, ATM'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_inventory', 'sunset_ui', 'sunset_world', 'sunset_factions' }
+dependencies { 'sunset_core', 'sunset_inventory', 'sunset_world', 'sunset_factions' }
 
 shared_scripts {
     '@sunset_core/shared/config.lua',

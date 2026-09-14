@@ -26,7 +26,6 @@ server_scripts { 'server/main.lua' }
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_admin',
     'sunset_factions',
     'sunset_dispatch',

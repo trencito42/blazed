@@ -43,7 +43,6 @@ files {
 
 dependencies {
     'sunset_core',
-    'sunset_ui',
     'sunset_inventory',
 }
 

@@ -5,6 +5,18 @@ local authenticatedUsername = nil
 local loadedCharacter = nil
 local profileSaveRevision = 0
 
+-- [AUTH UI SPLIT] sunset_ui may NOT be started during login (lazy-loaded
+-- after auth). Every sunset_ui call must be guarded or it hard-errors.
+local function uiSend(action, data)
+    if GetResourceState('sunset_ui') ~= 'started' then return end
+    pcall(function() exports.sunset_ui:Send(action, data or {}) end)
+end
+
+local function uiNotify(msg, kind, dur)
+    if GetResourceState('sunset_ui') ~= 'started' then return end
+    pcall(function() exports.sunset_ui:Notify(msg, kind or 'info', dur or 4000) end)
+end
+
 local function isEnabled(value)
     if value == true or value == 1 then return true end
     if type(value) == 'string' then
@@ -30,29 +42,39 @@ local function authPayload()
 end
 
 local function pushAuthAccounts()
-    exports.sunset_ui:Send('authAccounts', authPayload())
+    -- [AUTH UI SPLIT] Auth screen now lives in sunset_auth_ui, not sunset_ui
+    if GetResourceState('sunset_auth_ui') == 'started' then
+        pcall(function() exports.sunset_auth_ui:Send('authAccounts', authPayload()) end)
+    end
 end
 
 local function openAuth()
-    exports.sunset_ui:Show('auth', authPayload())
-    -- [SAVED ACCOUNTS FIX] Show('auth') only initializes the account list when
-    -- the screen is NOT already open (Panels.showAuth skips AuthAccounts.init
-    -- for re-opens). Always push the list explicitly so quick-login accounts
-    -- render even when the auth screen was pre-shown by the loadscreen handoff.
-    pushAuthAccounts()
-    -- [LOGIN FOCUS GUARD] Claim focus as owner 'auth': sunset_ui now rejects
-    -- unrelated SetFocus(false,...) calls while the auth screen owns focus
-    -- (some resource was killing the login cursor ~13s in).
-    exports.sunset_ui:SetFocus(true, true, false, 'auth')
+    -- [AUTH UI SPLIT] Auth screen now lives in sunset_auth_ui
+    if GetResourceState('sunset_auth_ui') == 'started' then
+        pcall(function()
+            exports.sunset_auth_ui:Show('auth', authPayload())
+            exports.sunset_auth_ui:SetFocus(true, true, false, 'auth')
+        end)
+    end
 end
 exports('OpenLogin', openAuth)
 
 local function scheduleAuthWatchdog()
+    -- Retry until sunset_auth_ui is started AND the screen is actually open.
+    -- Covers both late resource start and dropped NUI messages.
     CreateThread(function()
-        Wait(1500)
-        if authenticated then return end
-        if not exports.sunset_ui:IsOpen() then
-            openAuth()
+        for i = 1, 20 do
+            Wait(1000)
+            if authenticated then return end
+            if GetResourceState('sunset_auth_ui') == 'started' then
+                local isOpen = false
+                pcall(function() isOpen = exports.sunset_auth_ui:IsAuthOpen() end)
+                if not isOpen then
+                    openAuth()
+                end
+                -- re-push saved accounts each retry (early sends can be dropped)
+                pushAuthAccounts()
+            end
         end
     end)
 end
@@ -72,9 +94,30 @@ local function completeAuthentication(username, quickToken, rememberQuickLogin)
     pendingAuth = nil
     authenticated = true
     authenticatedUsername = username
-    exports.sunset_ui:Send('authHide', {})
+    -- [AUTH UI SPLIT] Hide auth screen in sunset_auth_ui
+    if GetResourceState('sunset_auth_ui') == 'started' then
+        pcall(function() exports.sunset_auth_ui:Send('authHide', {}) end)
+        pcall(function() exports.sunset_auth_ui:SetFocus(false, false) end)
+    end
+    -- [LAZY UI] Start the full game UI NOW that login succeeded. The browser
+    -- never built the monolith page before this moment; character/spawn
+    -- screens below wait for it to reach 'started'.
+    if GetResourceState('sunset_ui') ~= 'started' then
+        print('^5[BOOT]^7 auth: starting sunset_ui (lazy) after successful login')
+        TriggerServerEvent('sunset:auth:requestUiStart')
+        local deadline = GetGameTimer() + 15000
+        while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < deadline do
+            Wait(100)
+        end
+        print('^5[BOOT]^7 auth: sunset_ui state=' .. tostring(GetResourceState('sunset_ui')))
+        -- Grace period: the NUI page needs to parse app.js before Send/Show
+        -- messages are delivered (messages sent before page load are dropped).
+        if GetResourceState('sunset_ui') == 'started' then
+            Wait(1200)
+        end
+    end
     if isEnabled(rememberQuickLogin) and not saved then
-        exports.sunset_ui:Notify('Login succeeded, but Quick Login could not be saved on this PC.', 'warning', 7000)
+        uiNotify('Login succeeded, but Quick Login could not be saved on this PC.', 'warning', 7000)
     end
     TriggerEvent('sunset:client:authenticationComplete')
 end
@@ -85,9 +128,9 @@ local function promptEmailSync(username, password, rememberQuickLogin)
         password = password,
         rememberQuickLogin = isEnabled(rememberQuickLogin),
     }
-    exports.sunset_ui:Send('authNeedsEmail', {
-        username = username,
-    })
+    if GetResourceState('sunset_auth_ui') == 'started' then
+        pcall(function() exports.sunset_auth_ui:Send('authNeedsEmail', { username = username }) end)
+    end
 end
 
 local function handleAuthResult(result, username, password, rememberQuickLogin)
@@ -102,13 +145,17 @@ end
 local function performLogin(username, password, rememberQuickLogin)
     local result, err = Sunset.AwaitCallback('sunset:authLogin', username, password)
     if not result then
-        exports.sunset_ui:Send('authError', { message = err })
-        exports.sunset_ui:Notify(err or 'Login failed', 'error')
+        if GetResourceState('sunset_auth_ui') == 'started' then
+            pcall(function() exports.sunset_auth_ui:Send('authError', { message = err }) end)
+        end
+        uiNotify(err or 'Login failed', 'error')
         pushAuthAccounts()
         return false
     end
     if result.needsEmail then
-        exports.sunset_ui:Send('authError', {})
+        if GetResourceState('sunset_auth_ui') == 'started' then
+            pcall(function() exports.sunset_auth_ui:Send('authError', {}) end)
+        end
         promptEmailSync(result.username or username, password, rememberQuickLogin)
         return false
     end
@@ -120,8 +167,7 @@ RegisterNetEvent('sunset:client:sessionReady', function(data)
     print('^5[BOOT]^7 auth: sessionReady received (license=' .. tostring(data and data.license ~= nil) .. ')')
     sessionLicense = data and data.license
     if authenticated then return end
-    exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
-    print('^5[BOOT]^7 auth: opening auth screen')
+    print('^5[BOOT]^7 auth: opening auth screen (sunset_auth_ui)')
     openAuth()
     print('^5[BOOT]^7 auth: openAuth done')
     scheduleAuthWatchdog()
@@ -141,7 +187,7 @@ end)
 
 RegisterCommand('fixlogin', function()
     if authenticated then
-        exports.sunset_ui:Notify('You are already logged in.', 'info')
+        uiNotify('You are already logged in.', 'info')
         return
     end
     openAuth()
@@ -150,7 +196,9 @@ TriggerEvent('chat:addSuggestion', '/fixlogin', 'Re-open the login screen if you
 
 RegisterNetEvent('sunset:client:playerReady', function()
     authenticated = true
-    exports.sunset_ui:SetFocus(false, false)
+    if GetResourceState('sunset_ui') == 'started' then
+        pcall(function() exports.sunset_ui:SetFocus(false, false) end)
+    end
 end)
 
 AddEventHandler('sunset:nui:authLogin', function(data)
@@ -170,25 +218,31 @@ AddEventHandler('sunset:nui:authRegister', function(data)
         data.email
     )
     if not result then
-        exports.sunset_ui:Send('authError', { message = err })
-        exports.sunset_ui:Notify(err or 'Registration failed', 'error')
+        if GetResourceState('sunset_auth_ui') == 'started' then
+            pcall(function() exports.sunset_auth_ui:Send('authError', { message = err }) end)
+        end
+        uiNotify(err or 'Registration failed', 'error')
         return
     end
-    exports.sunset_ui:Notify('Account created! Logging in...', 'success')
+    uiNotify('Account created! Logging in...', 'success')
     handleAuthResult(result, data.username, data.password, remember)
 end)
 
 AddEventHandler('sunset:nui:authSetEmail', function(data)
     local result, err = Sunset.AwaitCallback('sunset:authSetEmail', data and data.email)
     if not result then
-        exports.sunset_ui:Send('authEmailError', { message = err })
-        exports.sunset_ui:Notify(err or 'Could not save email', 'error')
+        if GetResourceState('sunset_auth_ui') == 'started' then
+            pcall(function() exports.sunset_auth_ui:Send('authEmailError', { message = err }) end)
+        end
+        uiNotify(err or 'Could not save email', 'error')
         return
     end
 
     local pending = pendingAuth or {}
-    exports.sunset_ui:Notify('Email saved. Welcome back!', 'success')
-    exports.sunset_ui:Send('authEmailSaved', {})
+    uiNotify('Email saved. Welcome back!', 'success')
+    if GetResourceState('sunset_auth_ui') == 'started' then
+        pcall(function() exports.sunset_auth_ui:Send('authEmailSaved', {}) end)
+    end
     completeAuthentication(
         pending.username or result.username,
         result.quickToken,
@@ -202,7 +256,7 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
 
     local license = activeLicense()
     if not license then
-        exports.sunset_ui:Notify('Session not ready — try again in a moment', 'error')
+        uiNotify('Session not ready — try again in a moment', 'error')
         return
     end
 
@@ -215,7 +269,9 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
 
     if type(row.token) == 'string' and row.token ~= '' then
         CreateThread(function()
-            exports.sunset_ui:Send('authQuickLoginStart', { username = row.username })
+            if GetResourceState('sunset_auth_ui') == 'started' then
+                pcall(function() exports.sunset_auth_ui:Send('authQuickLoginStart', { username = row.username }) end)
+            end
             local result, err = Sunset.AwaitCallback('sunset:authQuickLogin', row.username, row.token)
             if result and result.needsEmail then
                 promptEmailSync(row.username, nil, true)
@@ -223,17 +279,23 @@ AddEventHandler('sunset:nui:authPickAccount', function(data)
                 completeAuthentication(row.username, result.quickToken, store.quickLogin ~= false)
             else
                 SunsetAuthAccounts.remove(license, row.username)
-                exports.sunset_ui:Send('authError', { message = err or 'Saved login expired. Enter your password again.' })
+                if GetResourceState('sunset_auth_ui') == 'started' then
+                    pcall(function() exports.sunset_auth_ui:Send('authError', { message = err or 'Saved login expired. Enter your password again.' }) end)
+                end
                 pushAuthAccounts()
             end
         end)
         return
     end
 
-    exports.sunset_ui:Send('authAccountFill', {
-        username = row.username,
-        password = '',
-    })
+    if GetResourceState('sunset_auth_ui') == 'started' then
+        pcall(function()
+            exports.sunset_auth_ui:Send('authAccountFill', {
+                username = row.username,
+                password = '',
+            })
+        end)
+    end
 end)
 
 AddEventHandler('sunset:nui:authRemoveAccount', function(data)

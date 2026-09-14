@@ -6,7 +6,7 @@ name 'sunset_documents'
 description 'ID card and licenses viewer'
 version '1.0.0'
 
-dependencies { 'sunset_core', 'sunset_ui' }
+dependencies { 'sunset_core' }
 
 client_scripts {
     '@sunset_core/client/callbacks.lua',
