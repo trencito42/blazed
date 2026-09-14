@@ -6,7 +6,7 @@ name 'sunset_auth'
 description 'Username/password authentication'
 version '1.0.0'
 
-dependencies { 'sunset_core' }
+dependencies { 'sunset_core', 'sunset_ui' }
 
 shared_scripts {
     '@sunset_core/shared/config.lua',

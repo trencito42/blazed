@@ -33,11 +33,8 @@ exports('IsPlayerAuthenticated', function(src)
 end)
 
 RegisterNetEvent('sunset:auth:requestUiStart', function()
-    local src = source
-    if not AuthenticatedPlayers[src] then return end
-    if GetResourceState('sunset_ui') ~= 'started' then
-        StartResource('sunset_ui')
-    end
+    -- [REVERT] sunset_ui is ensured at boot again (original Forza auth design).
+    -- This handler is now a no-op; kept only so stray client events don't error.
 end)
 
 AddEventHandler('playerDropped', function()

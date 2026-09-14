@@ -52,10 +52,7 @@ ensure oxmysql
 ensure bob74_ipl
 ensure sunset_core
 ensure sunset_sessions
-# [AUTH UI SPLIT] sunset_ui (gameplay monolith) is NOT ensured at boot — it is
-# started lazily by sunset_auth after a successful login (StartResource via
-# sunset:auth:requestUiStart). Only the tiny auth page loads for the login.
-ensure sunset_auth_ui
+ensure sunset_ui
 ensure sunset_chat
 ensure sunset_world
 ensure sunset_factions
