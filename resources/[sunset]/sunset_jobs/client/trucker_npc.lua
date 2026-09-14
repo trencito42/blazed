@@ -135,9 +135,7 @@ local function openTruckerNpcMenu()
         elseif data.onShift then
             actions[#actions + 1] = { id = 'end_trucker_shift', label = 'End Shift', group = 'TRUCKER' }
         else
-            -- Trucker, not on shift: close, notify and set waypoint to the laptop
-            SetNewWaypoint(LAPTOP_COORDS.x, LAPTOP_COORDS.y)
-            exports.sunset_ui:Notify('Head to the ~y~Route Laptop~s~ to pick your delivery.', 'info', 5000)
+            -- Trucker, not on shift: NPC has nothing to offer — laptop handles route selection.
             return
         end
         if #actions == 0 then return end
@@ -355,6 +353,8 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
             local ok, err = Sunset.AwaitCallback('sunset:jobs:cancelWork')
             if ok then
                 if JC then JC.cleanup() ; JC.hideObjective() end
+                -- Clear any active GPS waypoint (e.g. laptop waypoint from hiring)
+                SetWaypointOff()
                 exports.sunset_ui:Notify('Shift cancelled.', 'info', 4000)
             else
                 exports.sunset_ui:Notify(err or 'Could not cancel shift.', 'error')

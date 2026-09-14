@@ -112,7 +112,8 @@ local function startTrucker(selectedRouteIdx)
         return
     end
     if data.hasTrailer then
-        local trailer = JC.attachTrailer(truck, cfg.trailerModel, cfg.depot.trailerSpawn)
+        local trailerModel = data.trailerModel or cfg.trailerModel
+        local trailer = JC.attachTrailer(truck, trailerModel, cfg.depot.trailerSpawn)
         if not trailer then
             JC.deleteVehicles()
             Sunset.AwaitCallback('sunset:jobs:cancelWork')
@@ -199,6 +200,7 @@ local function startTrucker(selectedRouteIdx)
                         busy = false
                         if ok then
                             JC.deleteVehicles()
+                            SetWaypointOff()   -- clear any leftover waypoint (laptop, pickup, etc.)
                             break
                         else
                             JC.notify(err3 or 'Could not return the truck to the depot', 'error')

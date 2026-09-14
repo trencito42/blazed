@@ -16,7 +16,7 @@ Sunset.JobsConfig = {
         -- hasTrailer = false → rigid box truck, no trailer.
         categoryTrucks = {
             convenience = { models = {'mule', 'mule3'},       hasTrailer = false },
-            fuel        = { models = {'phantom'},              hasTrailer = true  },
+            fuel        = { models = {'phantom'},              hasTrailer = true,  trailerModel = 'tanker' },
             restaurant  = { models = {'benson', 'benson2'},   hasTrailer = false },
             industrial  = { models = {'benson2', 'pounder2'}, hasTrailer = false },
             pharma      = { models = {'pounder', 'pounder2'}, hasTrailer = false },

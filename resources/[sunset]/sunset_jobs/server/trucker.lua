@@ -124,21 +124,23 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:start', function(sourc
     local route = cfg.routes[routeIdx]
 
     -- Pick truck model for this route's category
-    local catTrucks  = cfg.categoryTrucks or {}
-    local catData    = catTrucks[route.category or 'general'] or {}
-    local models     = catData.models or { cfg.truckModel or 'phantom' }
-    local truckModel = models[math.random(#models)]
-    local hasTrailer = catData.hasTrailer ~= false   -- default true if unset
+    local catTrucks    = cfg.categoryTrucks or {}
+    local catData      = catTrucks[route.category or 'general'] or {}
+    local models       = catData.models or { cfg.truckModel or 'phantom' }
+    local truckModel   = models[math.random(#models)]
+    local hasTrailer   = catData.hasTrailer ~= false   -- default true if unset
+    local trailerModel = catData.trailerModel or cfg.trailerModel or 'trailers2'
 
     local session, err = SunsetJobs_StartSession(source, 'trucker', {
-        routeIndex  = routeIdx,
-        pickup      = { x = route.pickup.x, y = route.pickup.y, z = route.pickup.z },
-        delivery    = { x = route.delivery.x, y = route.delivery.y, z = route.delivery.z },
-        pay         = route.pay,
-        label       = route.label,
-        stage       = 'to_pickup',
-        truckModel  = truckModel,
-        hasTrailer  = hasTrailer,
+        routeIndex    = routeIdx,
+        pickup        = { x = route.pickup.x, y = route.pickup.y, z = route.pickup.z },
+        delivery      = { x = route.delivery.x, y = route.delivery.y, z = route.delivery.z },
+        pay           = route.pay,
+        label         = route.label,
+        stage         = 'to_pickup',
+        truckModel    = truckModel,
+        hasTrailer    = hasTrailer,
+        trailerModel  = trailerModel,
     })
     if not session then return nil, err end
     return session.data
