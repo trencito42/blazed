@@ -362,6 +362,8 @@ const StoreUI = {
     // Server-authoritative purchase result from Lua.
     onBuyResult() {
         this.buyPending = false;
+        // Reset quantity to 1 only after a completed purchase, not on cancel.
+        if (this.state) this.state.qty = 1;
         this.resetBuyUi();
     },
 
@@ -411,10 +413,9 @@ const StoreUI = {
         }
         const btn = document.getElementById('store-buy');
         if (btn) btn.style.background = '';
-        if (this.state) {
-            this.state.qty = 1;
-            this.renderCheckout();
-        }
+        // qty is NOT reset here — only onBuyResult() resets it after a
+        // completed sale. Releasing ENTER early keeps the selected quantity.
+        if (this.state) this.renderCheckout();
     },
 
     stopBuy(force) {
