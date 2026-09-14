@@ -775,6 +775,9 @@ local function spawnOwnedVehicleEntity(vehData, spawnOpts)
     local vehFuel, vehEngine, vehBody = normalizeVehicleStats(vehData)
     local sx, sy, sz, heading = getSpawnPoint(spawnOpts)
     RequestCollisionAtCoord(sx, sy, sz)
+    -- [FIX] Set spawn grace BEFORE creating the vehicle so ground-collision
+    -- damage during spawn placement doesn't damage the engine/body.
+    spawnGraceUntil = GetGameTimer() + 4000
 
     local vehicle = 0
     -- [ANTICHEAT] whitelist this spawn for the vehspawn ledger detector

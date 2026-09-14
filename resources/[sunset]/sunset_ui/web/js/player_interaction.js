@@ -226,13 +226,15 @@
         actions.forEach((action) => {
             const item = document.createElement('button');
             item.type = 'button';
-            item.className = `pi-menu-item${action.danger ? ' danger' : ''}`;
+            item.className = `pi-menu-item${action.danger ? ' danger' : ''}${action.disabled ? ' disabled' : ''}`;
             item.dataset.action = action.id;
+            if (action.disabled) item.disabled = true;
             const icon = ACTION_ICONS[action.id] || (action.danger ? ACTION_ICONS.cuff : ACTION_ICONS.default);
             item.innerHTML = `<span>${esc(action.label)}</span>${icon}`;
 
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (action.disabled) return;
                 if (action.input) {
                     showInputPanel(action);
                     return;

@@ -67,7 +67,18 @@ exports.sunset_core:RegisterCallback('sunset:interactionContext', function(sourc
         input = { type = 'number', label = 'Amount', min = 1, max = MAX_CASH_TRANSFER, placeholder = '$ amount' },
     })
     addAction(actions, 'trade', 'CIVILIAN', 'Trade items', 'Propose a secure item trade with this player.')
-    addAction(actions, 'add_contact', 'CIVILIAN', 'Add to Contacts', 'Save the player to your phone contacts.')
+    -- [FIX] Show "Already in Contacts" if the contact exists, otherwise "Add to Contacts"
+    local alreadyContact = false
+    pcall(function()
+        local row = MySQL.scalar.await(
+            'SELECT 1 FROM phone_contacts WHERE character_id = ? AND contact_character_id = ? LIMIT 1',
+            { tonumber(sourceChar.id), tonumber(pair.targetChar.id) })
+        alreadyContact = row ~= nil
+    end)
+    addAction(actions, 'add_contact', 'CIVILIAN',
+        alreadyContact and 'Already in Contacts' or 'Add to Contacts',
+        alreadyContact and 'This player is already saved in your phone contacts.' or 'Save the player to your phone contacts.',
+        alreadyContact and { disabled = true } or nil)
 
     local isLeader = false
     local leaderOk, leaderResult = pcall(function()
