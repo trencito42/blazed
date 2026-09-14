@@ -294,7 +294,7 @@ const GAMEPLAY_MODAL_ROOTS = [
 
 const MODAL_ACTION_ROOT = {
     menuShow: '#menu', garageShow: '#menu', inventoryShow: '#inventory',
-    shopShow: '#store-forza', fishingShopShow: '#fishing-shop',
+    shopShow: '#store-forza', fishingShopShow: '#fishing-shop', truckerLaptopOpen: '#trucker-laptop',
     jobCenterShow: '#jobcenter', atmShow: '#atm-modal', mdcShow: '#mdc',
     dispatch112Show: '#dispatch-112-modal', ticketShow: '#ticket',
     ticketReceiveShow: '#ticket-receive', serviceCallsShow: '#servicecalls',
@@ -755,6 +755,9 @@ window.addEventListener('message', (event) => {
             break;
         case 'shopHide':
             if (window.Panels) Panels.hideShop();
+            break;
+        case 'truckerLaptopOpen':
+            if (window.TruckerLaptop) TruckerLaptop.open(data || event.data.data);
             break;
         case 'shopBuyResult':
             // [GUNSHOP FIX] Server answered the purchase; re-arm the buy button.
@@ -1401,6 +1404,7 @@ const MODAL_CLOSE_ACTIONS = {
     '#trade-window': 'inventoryTradeCancel',
     '#store-forza': 'shopClose',
     '#fishing-shop': 'fishingShopClose',
+    '#trucker-laptop': 'truckerLaptopClose',
     '#jobcenter': 'jobCenterClose',
     '#atm-modal': 'atmClose',
     '#mdc': 'mdcClose',

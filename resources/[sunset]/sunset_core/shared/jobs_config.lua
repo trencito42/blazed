@@ -13,10 +13,74 @@ Sunset.JobsConfig = {
         },
         truckModel = 'phantom',
         trailerModel = 'trailers2',
+        -- Delivery categories: convenience, fuel, restaurant, industrial, pharma, premium
+        -- minLevel 1-5 maps to the rank (level) from job_progress.
         routes = {
-            { pickup = vector3(892.15, -3204.55, 5.90), delivery = vector3(2673.27, 3513.14, 52.71), pay = 650, label = 'Terminal → Harmony Freight' },
-            { pickup = vector3(-424.88, -2789.33, 6.0), delivery = vector3(1702.55, 6416.12, 32.76), pay = 900, label = 'Docks → Paleto Bay' },
-            { pickup = vector3(2747.32, 3472.88, 55.67), delivery = vector3(-219.45, -2419.88, 6.0), pay = 750, label = 'Sandy Shores → South Docks' },
+            -- ── Rank 1 · Convenience (24/7 stores) ───────────────────────
+            { category = 'convenience', minLevel = 1, pay = 650,
+              pickup   = vector3(892.15, -3204.55, 5.90),
+              delivery = vector3(2673.27, 3513.14, 52.71),
+              label    = 'Terminal → Harmony 24/7' },
+            { category = 'convenience', minLevel = 1, pay = 600,
+              pickup   = vector3(-424.88, -2789.33, 6.0),
+              delivery = vector3(-706.0, -913.0, 19.2),
+              label    = 'Docks → Mirror Park 24/7' },
+
+            -- ── Rank 1 · Fuel (Gas Stations) ─────────────────────────────
+            { category = 'fuel', minLevel = 1, pay = 720,
+              pickup   = vector3(-424.88, -2789.33, 6.0),
+              delivery = vector3(1702.55, 6416.12, 32.76),
+              label    = 'Docks → Paleto Bay Gas Station' },
+            { category = 'fuel', minLevel = 1, pay = 680,
+              pickup   = vector3(892.15, -3204.55, 5.90),
+              delivery = vector3(1181.2, 2671.5, 37.9),
+              label    = 'Terminal → Sandy Shores Gas Station' },
+
+            -- ── Rank 2 · Restaurant ───────────────────────────────────────
+            { category = 'restaurant', minLevel = 2, pay = 850,
+              pickup   = vector3(892.15, -3204.55, 5.90),
+              delivery = vector3(-1037.27, -250.68, 37.29),
+              label    = 'Freight → Vinewood Restaurant' },
+            { category = 'restaurant', minLevel = 2, pay = 800,
+              pickup   = vector3(2747.32, 3472.88, 55.67),
+              delivery = vector3(-266.0, -715.0, 33.7),
+              label    = 'Sandy Shores → Rockford Hills Diner' },
+
+            -- ── Rank 2 · Industrial ───────────────────────────────────────
+            { category = 'industrial', minLevel = 2, pay = 950,
+              pickup   = vector3(2747.32, 3472.88, 55.67),
+              delivery = vector3(-219.45, -2419.88, 6.0),
+              label    = 'Sandy Shores → South Docks' },
+
+            -- ── Rank 3 · Industrial (Heavy) ───────────────────────────────
+            { category = 'industrial', minLevel = 3, pay = 1100,
+              pickup   = vector3(-195.46, -2530.22, 6.0),
+              delivery = vector3(438.10, -1990.69, 23.74),
+              label    = 'South Port → Construction Site' },
+            { category = 'industrial', minLevel = 3, pay = 1050,
+              pickup   = vector3(892.15, -3204.55, 5.90),
+              delivery = vector3(-337.0, -1513.0, 27.7),
+              label    = 'Terminal → Davis Lumber Yard' },
+
+            -- ── Rank 4 · Pharmaceutical ───────────────────────────────────
+            { category = 'pharma', minLevel = 4, pay = 1400,
+              pickup   = vector3(-195.46, -2530.22, 6.0),
+              delivery = vector3(307.73, -1569.00, 29.25),
+              label    = 'Cold Storage → Central Hospital' },
+            { category = 'pharma', minLevel = 4, pay = 1350,
+              pickup   = vector3(892.15, -3204.55, 5.90),
+              delivery = vector3(-248.0, 6329.0, 31.4),
+              label    = 'Terminal → Paleto Bay Clinic' },
+
+            -- ── Rank 5 · Premium ──────────────────────────────────────────
+            { category = 'premium', minLevel = 5, pay = 1800,
+              pickup   = vector3(892.15, -3204.55, 5.90),
+              delivery = vector3(-1626.00, 5191.00, 1.00),
+              label    = 'Terminal → Paleto Premium Depot' },
+            { category = 'premium', minLevel = 5, pay = 2000,
+              pickup   = vector3(-424.88, -2789.33, 6.0),
+              delivery = vector3(2747.32, 3472.88, 55.67),
+              label    = 'Docks → Sandy Shores Warehouse' },
         },
         xpPerDelivery = 45,
         timeoutSec = 1800,

@@ -89,8 +89,8 @@ local function recoverTrailer()
         recovery.remaining or 0), 'success')
 end
 
-local function startTrucker()
-    local data, err = Sunset.AwaitCallback('sunset:jobs:trucker:start')
+local function startTrucker(selectedRouteIdx)
+    local data, err = Sunset.AwaitCallback('sunset:jobs:trucker:start', selectedRouteIdx)
     if not data then
         JC.notify(err or 'Could not start trucker shift', 'error')
         return
@@ -204,7 +204,7 @@ local function startTrucker()
 end
 
 Sunset.Jobs = Sunset.Jobs or {}
-Sunset.Jobs.StartTrucker = startTrucker
+Sunset.Jobs.StartTrucker = startTrucker   -- called as StartTrucker(routeIndex)
 
 RegisterCommand('recovertrailer', function()
     recoverTrailer()

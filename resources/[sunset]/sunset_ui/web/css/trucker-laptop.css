@@ -1,0 +1,150 @@
+/* Trucker Laptop — delivery route selector
+   Reuses .store-forza CSS variables and base panel classes.
+   Only trucker-specific overrides live here.
+*/
+
+/* ── Routes panel (replaces items+checkout with one wider panel) ── */
+#trucker-laptop .tl-routes-panel {
+    display: flex;
+    flex-direction: column;
+    width: 540px;
+    background: var(--st-bg-panel);
+    border: 2px solid var(--st-border);
+    padding: 30px;
+    backdrop-filter: blur(10px);
+}
+
+/* ── Rank badge next to section title ── */
+#trucker-laptop .tl-rank-badge {
+    margin-left: auto;
+    background: var(--st-accent);
+    color: #000;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    padding: 2px 10px;
+    text-transform: uppercase;
+}
+
+/* ── Route list ── */
+#trucker-laptop .tl-route-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    max-height: 52vh;
+    padding-right: 6px;
+    margin-bottom: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--st-border) transparent;
+}
+
+#trucker-laptop .tl-route-list::-webkit-scrollbar { width: 4px; }
+#trucker-laptop .tl-route-list::-webkit-scrollbar-thumb { background: var(--st-border); }
+
+/* ── Route item ── */
+#trucker-laptop .tl-route-item {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--st-border);
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+#trucker-laptop .tl-route-item:hover:not(.is-locked) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+#trucker-laptop .tl-route-item.is-active {
+    border-color: var(--st-accent);
+    background: rgba(0, 255, 204, 0.08);
+}
+
+#trucker-laptop .tl-route-item.is-locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#trucker-laptop .tl-route-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+#trucker-laptop .tl-route-label {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--st-text-main);
+    letter-spacing: 1px;
+}
+
+#trucker-laptop .tl-route-pay {
+    font-size: 22px;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--st-success);
+    flex-shrink: 0;
+}
+
+#trucker-laptop .tl-route-meta {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+#trucker-laptop .tl-rank-lock { color: #ff6b6b; }
+#trucker-laptop .tl-rank-ok   { color: var(--st-success); }
+
+/* ── Empty state ── */
+#trucker-laptop .tl-empty {
+    color: var(--st-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    padding: 40px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* ── XP bar under rank badge ── */
+#trucker-laptop .tl-xp-bar-wrap {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#trucker-laptop .tl-xp-bar-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--st-text-muted);
+    text-transform: uppercase;
+}
+
+#trucker-laptop .tl-xp-bar-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    position: relative;
+}
+
+#trucker-laptop .tl-xp-bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--st-accent);
+    transition: width 0.4s ease;
+}
+
+@media (max-width: 1400px) {
+    #trucker-laptop .tl-routes-panel { width: 460px; }
+}

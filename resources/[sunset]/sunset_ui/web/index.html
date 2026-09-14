@@ -27,6 +27,7 @@
     <link rel="stylesheet" href="css/premium-hud.css?v=33" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/scoreboard-forza.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/store-forza.css?v=30" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/trucker-laptop.css?v=1" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/chat.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/premium-wanted.css?v=30" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/menu.css?v=30" media="print" onload="this.media='all'">
@@ -1104,6 +1105,32 @@
                     <i class="ph-fill ph-shopping-cart"></i>
                     <span>Select a product<br>from the shelf</span>
                 </div>
+            </div>
+        </div>
+        <div class="st-close-hint">Press ESC to close</div>
+    </div>
+
+    <!-- TRUCKER LAPTOP — delivery route selector -->
+    <div id="trucker-laptop" class="store-forza hidden" aria-hidden="true">
+        <div class="st-vignette"></div>
+        <div class="st-ui-layer">
+            <div class="st-categories-panel">
+                <div class="st-section-title">Delivery Categories</div>
+                <div class="st-cat-list" id="tl-cat-list"></div>
+            </div>
+            <div class="tl-routes-panel">
+                <div class="st-section-title">
+                    Available Routes
+                    <span id="tl-rank-badge" class="tl-rank-badge">Rank 1</span>
+                </div>
+                <div class="tl-xp-bar-wrap">
+                    <div class="tl-xp-bar-label"><span id="tl-xp-label">0 / 100 XP</span></div>
+                    <div class="tl-xp-bar-track"><div class="tl-xp-bar-fill" id="tl-xp-fill" style="width:0%"></div></div>
+                </div>
+                <div id="tl-route-list" class="tl-route-list"></div>
+                <button type="button" id="tl-accept-btn" class="st-btn-hold" disabled>
+                    <div class="st-btn-text">SELECT A ROUTE</div>
+                </button>
             </div>
         </div>
         <div class="st-close-hint">Press ESC to close</div>
@@ -3623,6 +3650,7 @@
     <script type="text/plain" data-lazy-src="js/hud_editor.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/scoreboard.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/store247.js?v=31"></script>
+    <script type="text/plain" data-lazy-src="js/trucker-laptop.js?v=1"></script>
     <script type="text/plain" data-lazy-src="js/chat_settings.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/chat.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/properties-ui.js?v=31"></script>
