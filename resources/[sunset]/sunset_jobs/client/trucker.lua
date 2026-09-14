@@ -34,6 +34,10 @@ local function inWorkTruck()
 end
 
 local function recoverTrailer()
+    -- Only valid on trailer routes (e.g. phantom/fuel routes)
+    if JC.sessionData and JC.sessionData.hasTrailer == false then
+        return JC.notify('This truck does not use a trailer.', 'info')
+    end
     local recovery, err = Sunset.AwaitCallback('sunset:jobs:recoverTrailer')
     if not recovery then
         return JC.notify(err or 'Trailer recovery is not available', 'error')
@@ -101,22 +105,25 @@ local function startTrucker(selectedRouteIdx)
     JC.clearBlips()
     JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Trucker Depot')
 
-    local truck = JC.spawnVehicle(cfg.truckModel, cfg.depot.spawn, true)
+    local truckModel = data.truckModel or cfg.truckModel
+    local truck = JC.spawnVehicle(truckModel, cfg.depot.spawn, true)
     if not truck then
         Sunset.AwaitCallback('sunset:jobs:cancelWork')
         return
     end
-    local trailer = JC.attachTrailer(truck, cfg.trailerModel, cfg.depot.trailerSpawn)
-    if not trailer then
-        JC.deleteVehicles()
-        Sunset.AwaitCallback('sunset:jobs:cancelWork')
-        return JC.notify('Could not create the assigned trailer — try again', 'error')
+    if data.hasTrailer then
+        local trailer = JC.attachTrailer(truck, cfg.trailerModel, cfg.depot.trailerSpawn)
+        if not trailer then
+            JC.deleteVehicles()
+            Sunset.AwaitCallback('sunset:jobs:cancelWork')
+            return JC.notify('Could not create the assigned trailer — try again', 'error')
+        end
     end
     local registered, registerErr = JC.registerVehiclesWithServer()
     if not registered then
         JC.deleteVehicles()
         Sunset.AwaitCallback('sunset:jobs:cancelWork')
-        return JC.notify(registerErr or 'Could not register the truck and trailer', 'error')
+        return JC.notify(registerErr or 'Could not register the truck', 'error')
     end
     JC.monitorVehicles()
 

@@ -6,6 +6,8 @@ local contextRequestActive = false
 local holdActive = false
 local menuCloseArmed = false
 local lastPromptVisible = false
+local contactBusy = false      -- prevents add-to-contacts spam
+local contactCooldownUntil = 0 -- timestamp; blocks rapid re-triggers
 
 local function notify(message, kind, duration)
     exports.sunset_ui:Notify(message, kind or 'info', duration)
@@ -290,7 +292,15 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
         end
         return
     elseif action == 'add_friend' or action == 'add_contact' then
+        -- Guard: one add-contact at a time, with a 4-second cooldown after completion.
+        if contactBusy or GetGameTimer() < contactCooldownUntil then
+            notify('Please wait before adding another contact.', 'warning', 3000)
+            return
+        end
+        contactBusy = true
         result, err = Sunset.AwaitCallback('sunset:interactionAddFriend', activeTarget)
+        contactBusy = false
+        contactCooldownUntil = GetGameTimer() + 4000
         if result then
             notify(('%s has been saved to your contacts (%s).'):format(result.name, result.phone), 'success')
             if GetResourceState('sunset_phone') == 'started' then

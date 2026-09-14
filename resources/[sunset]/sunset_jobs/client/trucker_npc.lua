@@ -216,6 +216,16 @@ CreateThread(function()
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentString('Trucker Dispatcher')
     EndTextCommandSetBlipName(blip)
+
+    -- Laptop blip (sprite 521 = radar_laptop)
+    local lapBlip = AddBlipForCoord(LAPTOP_COORDS.x, LAPTOP_COORDS.y, LAPTOP_COORDS.z)
+    SetBlipSprite(lapBlip, 521)
+    SetBlipColour(lapBlip, 5)
+    SetBlipScale(lapBlip, 0.7)
+    SetBlipAsShortRange(lapBlip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentString('Route Laptop')
+    EndTextCommandSetBlipName(lapBlip)
 end)
 
 -- ── Proximity loop (tooltip + laptop marker + auto-close) ─────

@@ -122,13 +122,23 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:start', function(sourc
         routeIdx = math.random(1, #cfg.routes)
     end
     local route = cfg.routes[routeIdx]
+
+    -- Pick truck model for this route's category
+    local catTrucks  = cfg.categoryTrucks or {}
+    local catData    = catTrucks[route.category or 'general'] or {}
+    local models     = catData.models or { cfg.truckModel or 'phantom' }
+    local truckModel = models[math.random(#models)]
+    local hasTrailer = catData.hasTrailer ~= false   -- default true if unset
+
     local session, err = SunsetJobs_StartSession(source, 'trucker', {
-        routeIndex = routeIdx,
-        pickup = { x = route.pickup.x, y = route.pickup.y, z = route.pickup.z },
-        delivery = { x = route.delivery.x, y = route.delivery.y, z = route.delivery.z },
-        pay = route.pay,
-        label = route.label,
-        stage = 'to_pickup',
+        routeIndex  = routeIdx,
+        pickup      = { x = route.pickup.x, y = route.pickup.y, z = route.pickup.z },
+        delivery    = { x = route.delivery.x, y = route.delivery.y, z = route.delivery.z },
+        pay         = route.pay,
+        label       = route.label,
+        stage       = 'to_pickup',
+        truckModel  = truckModel,
+        hasTrailer  = hasTrailer,
     })
     if not session then return nil, err end
     return session.data
@@ -140,11 +150,13 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:atPickup', function(so
     if session.data.stage ~= 'to_pickup' then return nil, 'Not heading to pickup' end
 
     local cfg = Sunset.GetJobConfig('trucker')
-    if not SunsetJobs_ValidateVehicle(source, cfg.truckModel, true, 20.0) then
+    if not SunsetJobs_ValidateVehicle(source, session.data.truckModel or cfg.truckModel, true, 20.0) then
         return nil, 'Use your assigned work truck'
     end
-    local trailerOk, trailerErr = SunsetJobs_ValidateTrailer(source, true, 18.0)
-    if not trailerOk then return nil, trailerErr end
+    if session.data.hasTrailer then
+        local trailerOk, trailerErr = SunsetJobs_ValidateTrailer(source, true, 18.0)
+        if not trailerOk then return nil, trailerErr end
+    end
     local route = cfg.routes[session.data.routeIndex]
     if not route then return nil, 'Route data is missing' end
     if not validateTruckerCoords(source, route.pickup, cfg) then
@@ -162,11 +174,13 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:deliver', function(sou
     if session.data.stage ~= 'to_delivery' then return nil, 'Cargo not loaded' end
 
     local cfg = Sunset.GetJobConfig('trucker')
-    if not SunsetJobs_ValidateVehicle(source, cfg.truckModel, true, 20.0) then
+    if not SunsetJobs_ValidateVehicle(source, session.data.truckModel or cfg.truckModel, true, 20.0) then
         return nil, 'Use your assigned work truck'
     end
-    local trailerOk, trailerErr = SunsetJobs_ValidateTrailer(source, true, 18.0)
-    if not trailerOk then return nil, trailerErr end
+    if session.data.hasTrailer then
+        local trailerOk, trailerErr = SunsetJobs_ValidateTrailer(source, true, 18.0)
+        if not trailerOk then return nil, trailerErr end
+    end
     local route = cfg.routes[session.data.routeIndex]
     if not route then return nil, 'Route data is missing' end
     if not validateTruckerCoords(source, route.delivery, cfg) then
@@ -212,11 +226,13 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:returnDepot', function
     if not session then return nil, err end
 
     local cfg = Sunset.GetJobConfig('trucker')
-    if not SunsetJobs_ValidateVehicle(source, cfg.truckModel, true, 20.0) then
+    if not SunsetJobs_ValidateVehicle(source, session.data.truckModel or cfg.truckModel, true, 20.0) then
         return nil, 'Return your assigned work truck'
     end
-    local trailerOk, trailerErr = SunsetJobs_ValidateTrailer(source, true, 18.0)
-    if not trailerOk then return nil, trailerErr end
+    if session.data.hasTrailer then
+        local trailerOk, trailerErr = SunsetJobs_ValidateTrailer(source, true, 18.0)
+        if not trailerOk then return nil, trailerErr end
+    end
     if not SunsetJobs_ValidateCoords(source, cfg.depot.coords, cfg.returnRadius or 25.0) then
         return nil, 'Return the truck to the depot'
     end

@@ -11,8 +11,19 @@ Sunset.JobsConfig = {
             trailerSpawn = vector4(1255.0, -3135.42, 5.54, 90.0),
             blip = { sprite = 477, color = 5, scale = 0.85 },
         },
-        truckModel = 'phantom',
-        trailerModel = 'trailers2',
+        -- Truck model pool per delivery category.
+        -- hasTrailer = true  → spawn + validate a cargo trailer (semi routes).
+        -- hasTrailer = false → rigid box truck, no trailer.
+        categoryTrucks = {
+            convenience = { models = {'mule', 'mule3'},       hasTrailer = false },
+            fuel        = { models = {'phantom'},              hasTrailer = true  },
+            restaurant  = { models = {'benson', 'benson2'},   hasTrailer = false },
+            industrial  = { models = {'benson2', 'pounder2'}, hasTrailer = false },
+            pharma      = { models = {'pounder', 'pounder2'}, hasTrailer = false },
+            premium     = { models = {'pounder2', 'pounder'}, hasTrailer = false },
+        },
+        truckModel   = 'phantom',   -- fallback if category not in categoryTrucks
+        trailerModel = 'trailers2', -- used only when hasTrailer = true
         -- Delivery categories: convenience, fuel, restaurant, industrial, pharma, premium.
         -- All routes are available from rank 1. Higher rank = pay bonus (see server/trucker.lua).
         routes = {
