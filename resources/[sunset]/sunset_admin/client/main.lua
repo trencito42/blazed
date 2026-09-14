@@ -313,6 +313,12 @@ RegisterNetEvent('sunset:admin:copyCoords', function(args)
 end)
 
 -- Noclip thread
+local noclipSpeedLevel = 0 -- 0 = normal, + = faster, - = slower
+local NOCLIP_SPEEDS = { 0.4, 0.8, 1.2, 1.8, 3.0, 5.0, 8.0, 12.0, 18.0, 25.0 }
+local NOCLIP_BASE_IDX = 4 -- index of 1.8 (normal speed)
+local lastShiftPress = 0
+local lastCtrlPress = 0
+
 CreateThread(function()
     while true do
         if noclip then
@@ -321,8 +327,20 @@ CreateThread(function()
             local cam = GetGameplayCamRot(2)
             local heading = cam.z
             local pitch = cam.x
-            local speed = 1.8
-            if IsControlPressed(0, 21) then speed = 6.0 end
+
+            -- [INCREMENTAL SPEED] Shift = speed up, Ctrl = slow down.
+            -- Each press steps one level; held keys repeat every 300ms.
+            local now = GetGameTimer()
+            if IsControlJustPressed(0, 21) or (IsControlPressed(0, 21) and now - lastShiftPress > 300) then
+                lastShiftPress = now
+                noclipSpeedLevel = math.min(noclipSpeedLevel + 1, #NOCLIP_SPEEDS - 1 - NOCLIP_BASE_IDX)
+            end
+            if IsControlJustPressed(0, 36) or (IsControlPressed(0, 36) and now - lastCtrlPress > 300) then
+                lastCtrlPress = now
+                noclipSpeedLevel = math.max(noclipSpeedLevel - 1, -(NOCLIP_BASE_IDX))
+            end
+            local speedIdx = NOCLIP_BASE_IDX + noclipSpeedLevel
+            local speed = NOCLIP_SPEEDS[speedIdx] or 1.8
 
             SetEntityVelocity(ped, 0.0, 0.0, 0.0)
             SetEntityCollision(ped, false, false)
@@ -348,6 +366,7 @@ CreateThread(function()
             SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z, false, false, false)
             Wait(0)
         else
+            noclipSpeedLevel = 0
             local ped = PlayerPedId()
             SetEntityCollision(ped, true, true)
             FreezeEntityPosition(ped, false)

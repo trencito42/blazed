@@ -23,6 +23,11 @@ local function playEmote(name)
     if not emote then return exports.sunset_ui:Notify('Unknown emote: ' .. tostring(name), 'error') end
 
     local ped = PlayerPedId()
+    -- [FIX] In a vehicle: only upper-body emotes (flag 49) are safe.
+    -- Full-body emotes (flag 1) override steering/brake controls.
+    if IsPedInAnyVehicle(ped, false) and emote.flag ~= 49 then
+        return exports.sunset_ui:Notify('That emote cannot be used while driving.', 'warning')
+    end
     if playing then ClearPedTasks(ped) playing = false end
 
     RequestAnimDict(emote.dict)

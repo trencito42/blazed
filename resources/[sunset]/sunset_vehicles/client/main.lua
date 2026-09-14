@@ -394,8 +394,10 @@ CreateThread(function()
             if previousVehicle == veh and not seatbelt and GetGameTimer() - lastEjectAt > 3000 then
                 local class = GetVehicleClass(veh)
                 local canEject = class ~= 8 and class ~= 13 and class ~= 14 and class ~= 15 and class ~= 16
-                local hardStop = previousSpeed >= 18.0 and (previousSpeed - speed) >= 10.0
-                local collisionDamage = previousBody - body >= 8.0
+                -- [FIX] Relaxed thresholds: frontal crashes decelerate over several
+                -- ticks, so a single-tick delta of 10 m/s was almost never met.
+                local hardStop = previousSpeed >= 13.0 and (previousSpeed - speed) >= 6.0
+                local collisionDamage = previousBody - body >= 5.0
                 if canEject and hardStop and collisionDamage then
                     lastEjectAt = GetGameTimer()
                     local forward = GetEntityForwardVector(veh)

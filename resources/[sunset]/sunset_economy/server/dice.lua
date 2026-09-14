@@ -200,10 +200,9 @@ local function executeDiceMatch(challengerSrc, targetSrc, bet)
             return
         end
 
-        local broadcastMsg = ('^3%s^7 rolled ^2%s^7 vs ^3%s^7 rolled ^1%s^7. ^2%s won $%s^7! (Burned tax: $%s)'):format(
+        local broadcastMsg = ('%s rolled %s vs %s rolled %s. %s won $%s!'):format(
             winnerName, winnerScore, loserName, loserScore, winnerName,
-            groupDigits(prize),
-            groupDigits(tax)
+            groupDigits(prize)
         )
         broadcastNearby(winnerSrc, broadcastMsg)
     end)

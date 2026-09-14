@@ -176,6 +176,7 @@ Sunset.CommandUsage = {
     lssiperformance = { usage = '/lssiperformance [server id]', minArgs = 0 },
     lssimark = { usage = '/lssimark [candidate id] [0.5|1] [observed mistake]', minArgs = 3 },
     lssiunmark = { usage = '/lssiunmark [candidate id]', minArgs = 1 },
+    issuelicense = { usage = '/issuelicense [player id] [pilot|boat|weapon] — LSSI instructor on duty only', minArgs = 2 },
     me = { usage = '/me [action text]', minArgs = 1 },
     ['do'] = { usage = '/do [scene text]', minArgs = 1 },
     gov = { usage = '/gov [announcement]', minArgs = 1 },

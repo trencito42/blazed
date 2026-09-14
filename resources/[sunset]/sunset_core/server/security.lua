@@ -166,8 +166,8 @@ AddEventHandler('explosionEvent', function(sender, ev)
         -- [AUDIT P7-10] One griefer could spam blocked explosions into a 429.
         if Sunset.Discord and Sunset.Discord.Send and not alertThrottled(sender, 'explosion', 300000) then
             pcall(function()
-                Sunset.Discord.Send('security', 'EXPLOZIE BLOCATA',
-                    ('Tip explozie **%d** blocat de la **%s** (id %d).'):format(expType, name, sender), 'red')
+                Sunset.Discord.Send('security', 'EXPLOSION BLOCKED',
+                    ('Explosion type **%d** blocked from **%s** (id %d).'):format(expType, name, sender), 'red')
             end)
         end
         CancelEvent()

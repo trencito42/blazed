@@ -9,7 +9,7 @@
     const menuItemsEl = document.getElementById('pi-menu-items');
     const inputPanel = document.getElementById('pi-input-panel');
     const inputLabel = document.getElementById('pi-input-label');
-    const inputField = document.getElementById('pi-input-field');
+    let inputField = document.getElementById('pi-input-field');
     const inputSubmit = document.getElementById('pi-input-submit');
 
     // [DIAG] Trace init state so we can see in server logs if elements are missing
@@ -151,14 +151,43 @@
     function hideInputPanel() {
         pendingInputAction = null;
         inputPanel?.classList.add('hidden');
-        if (inputField) inputField.value = '';
+        if (inputField) {
+            if (inputField.tagName === 'SELECT') {
+                inputField.innerHTML = '';
+            } else {
+                inputField.value = '';
+            }
+        }
     }
 
     function showInputPanel(action) {
         pendingInputAction = action;
         const input = action.input || {};
         if (inputLabel) inputLabel.textContent = action.label || 'Enter value';
-        if (inputField) {
+
+        if (input.type === 'select' && Array.isArray(input.options)) {
+            // [DROPDOWN] Replace text input with a <select> for predefined options
+            if (inputField) {
+                const select = document.createElement('select');
+                select.className = inputField.className;
+                select.id = inputField.id;
+                select.style.cssText = inputField.style.cssText;
+                select.innerHTML = input.options.map((opt) =>
+                    `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`
+                ).join('');
+                inputField.replaceWith(select);
+                inputField = select;
+            }
+        } else if (inputField) {
+            // Restore to text/number input if it was a select
+            if (inputField.tagName === 'SELECT') {
+                const text = document.createElement('input');
+                text.className = inputField.className;
+                text.id = inputField.id;
+                text.style.cssText = inputField.style.cssText;
+                inputField.replaceWith(text);
+                inputField = text;
+            }
             inputField.type = input.type === 'number' ? 'number' : 'text';
             inputField.placeholder = input.placeholder || input.label || '';
             if (input.min != null) inputField.min = String(input.min);

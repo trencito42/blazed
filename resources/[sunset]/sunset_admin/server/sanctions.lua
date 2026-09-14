@@ -49,6 +49,9 @@ local function broadcastPublic(text)
 end
 
 local function broadcastStaff(text)
+    -- [FIX] Strip FiveM color codes (^0-^9, ^~) — the NUI chat renders them
+    -- as raw text instead of interpreting them.
+    text = tostring(text):gsub('%^[0-9~]', '')
     for _, pid in ipairs(GetPlayers()) do
         local src = tonumber(pid)
         if src and IsAdmin(src, 1) then

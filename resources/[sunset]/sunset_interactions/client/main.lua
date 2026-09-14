@@ -274,7 +274,11 @@ AddEventHandler('sunset:nui:playerInteractionAction', function(data)
 
     if action == 'give_cash' then
         result, err = Sunset.AwaitCallback('sunset:interactionGiveCash', activeTarget, value)
-        if result then notify(('You gave $%s to %s.'):format(result.amount, result.target), 'success') end
+        if result then
+            notify(('You gave $%s to %s.'):format(result.amount, result.target), 'success')
+        else
+            notify(err or 'Could not transfer cash.', 'error', 6000)
+        end
     elseif action == 'trade' then
         local target = activeTarget
         closeMenu()
