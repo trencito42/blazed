@@ -286,8 +286,10 @@ CreateThread(function()
                         npcMenuCloseArmed = true
                     end
                 elseif truckerInteractionsReady() and not inCooldown and not laptopOpen then
-                    -- Simple press — matches Billy Ray (no hold required)
-                    if #(pos - npcCenter()) < NPC_MENU_DIST and IsDisabledControlJustReleased(0, INTERACT_KEY) then
+                    -- Simple press anywhere within tooltip range — same as Billy Ray.
+                    -- (NPC_MENU_DIST sub-check removed: players can't physically reach
+                    --  2.15 m due to ped collision, so menu never opened.)
+                    if IsDisabledControlJustReleased(0, INTERACT_KEY) then
                         openTruckerNpcMenu()
                     end
                 end
@@ -372,13 +374,30 @@ AddEventHandler('sunset:nui:truckerLaptopClose', function()
     armGrace(1500)
 end)
 
+-- Another modal superseded the laptop (single-modal rule in app.js)
+AddEventHandler('sunset:nui:modalSuperseded', function(panel)
+    if panel ~= 'truckerLaptop' then return end
+    if not laptopOpen then return end
+    laptopOpen = false
+    exports.sunset_ui:SetFocus(false, false)
+    armGrace(1000)
+end)
+
 -- Route picked from laptop
 AddEventHandler('sunset:nui:truckerPickRoute', function(data)
     if not data or not data.routeIndex then return end
     laptopOpen = false
     exports.sunset_ui:SetFocus(false, false)
     armGrace(2000)
-    if Sunset.Jobs and Sunset.Jobs.StartTrucker then
-        Sunset.Jobs.StartTrucker(data.routeIndex)
-    end
+    -- Run in a new thread so the NUI event handler finishes (and the browser
+    -- finishes closing the laptop overlay) before we spawn the truck and warp
+    -- the player. Running StartTrucker directly here caused the HUD to stay
+    -- hidden and the character to get stuck mid-animation.
+    local routeIdx = data.routeIndex
+    CreateThread(function()
+        Wait(150)
+        if Sunset.Jobs and Sunset.Jobs.StartTrucker then
+            Sunset.Jobs.StartTrucker(routeIdx)
+        end
+    end)
 end)

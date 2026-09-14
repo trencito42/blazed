@@ -1,11 +1,9 @@
 const TRUCKER_CATEGORY_DEFS = {
-    convenience: { label: 'Convenience',    icon: 'ph-storefront'  },
-    fuel:        { label: 'Fuel',           icon: 'ph-gas-pump'    },
-    restaurant:  { label: 'Restaurant',     icon: 'ph-fork-knife'  },
-    industrial:  { label: 'Industrial',     icon: 'ph-factory'     },
-    pharma:      { label: 'Pharmaceutical', icon: 'ph-first-aid'   },
-    premium:     { label: 'Premium',        icon: 'ph-star'        },
-    general:     { label: 'General',        icon: 'ph-package'     },
+    convenience: { label: 'Convenience', icon: 'ph-storefront' },
+    fuel:        { label: 'Fuel',        icon: 'ph-gas-pump'   },
+    restaurant:  { label: 'Restaurant',  icon: 'ph-fork-knife' },
+    industrial:  { label: 'Industrial',  icon: 'ph-factory'    },
+    general:     { label: 'General',     icon: 'ph-package'    },
 };
 
 const TruckerLaptop = {

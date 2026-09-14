@@ -289,7 +289,7 @@ const GAMEPLAY_MODAL_ROOTS = [
     '#business-panel', '#garage', '#fleet-garage', '#properties', '#emotes',
     '#clothing', '#wardrobe', '#phone-device', '#documents', '#dealership',
     '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal',
-    '#license-quiz-panel',
+    '#license-quiz-panel', '#trucker-laptop',
 ];
 
 const MODAL_ACTION_ROOT = {
@@ -320,6 +320,7 @@ const MODAL_FLAG_PANELS = {
     '#properties': 'properties',
     '#faction-panel': 'factionPanel',
     '#faction-directory': 'factionPanel',
+    '#trucker-laptop': 'truckerLaptop',
 };
 
 const MODAL_BODY_CLASSES = [
