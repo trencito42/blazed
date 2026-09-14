@@ -704,6 +704,9 @@ AddEventHandler('sunset:nui:fishingShopBuy', function(data)
     else
         exports.sunset_ui:Notify(tostring(err or 'Purchase failed.'), 'error')
     end
+    -- Re-arm the buy button. Without this the JS side stays locked in
+    -- "Processing..." until its 6s safety-net timer fires.
+    exports.sunset_ui:Send('shopBuyResult', {})
 end)
 
 AddEventHandler('sunset:nui:fishingShopSell', function(data)
@@ -715,6 +718,8 @@ AddEventHandler('sunset:nui:fishingShopSell', function(data)
     else
         exports.sunset_ui:Notify(tostring(err or 'Sale failed.'), 'error')
     end
+    -- Re-arm the sell button immediately after the server responds.
+    exports.sunset_ui:Send('shopBuyResult', {})
 end)
 
 RegisterCommand('sellfish', function()
