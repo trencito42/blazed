@@ -85,7 +85,7 @@
 }
 
 .phone-wallpaper--app {
-    background: #000;
+    background: #000 !important;
 }
 
 /* ── Status bar + Dynamic Island ── */
@@ -101,6 +101,9 @@
     font-size: 15px;
     font-weight: 600;
     letter-spacing: -0.02em;
+    /* [FIX] Opaque black background so the home-screen wallpaper never
+       bleeds through the status bar when an app is open. */
+    background: #000;
 }
 
 #phone-time {
@@ -909,6 +912,7 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 8px;
+    overflow: hidden;
 }
 
 .phone-thread__name {
@@ -918,6 +922,10 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .phone-thread__time {
@@ -1603,22 +1611,27 @@
 .phone-contact-row__meta {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 6px;
     font-size: 13px;
     color: rgba(255, 255, 255, 0.45);
     margin-top: 2px;
     line-height: 1.25;
+    overflow: hidden;
 }
 
 .phone-contact-num {
     font-family: monospace;
     color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
 }
 
 .phone-contact-desc {
     color: rgba(255, 255, 255, 0.5);
     font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .phone-contact-row__online-badge {
