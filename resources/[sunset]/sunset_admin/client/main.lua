@@ -318,6 +318,34 @@ local NOCLIP_SPEEDS = { 0.4, 0.8, 1.2, 1.8, 3.0, 5.0, 8.0, 12.0, 18.0, 25.0 }
 local NOCLIP_BASE_IDX = 4 -- index of 1.8 (normal speed)
 local lastShiftPress = 0
 local lastCtrlPress = 0
+local speedHudUntil = 0   -- GetGameTimer() until the speed HUD stays visible
+local speedHudValue = nil -- speed shown in the HUD
+
+-- [SPEED HUD] Temporary indicator + subtle tick sound on every speed change.
+local function setSpeedLevel(newLevel, speed)
+    if newLevel == noclipSpeedLevel and speedHudValue == speed then return end
+    noclipSpeedLevel = newLevel
+    speedHudValue = speed
+    speedHudUntil = GetGameTimer() + 1500 -- fade after 1.5s
+    PlaySoundFrontend(-1, 'NAV_UP_DOWN', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+end
+
+local function drawNoclipSpeedHud(speed)
+    -- Fade: alpha ramps down over the last 300ms of the 1.5s window.
+    local remaining = speedHudUntil - GetGameTimer()
+    if remaining <= 0 then return end
+    local alpha = remaining < 300 and math.floor(255 * (remaining / 300)) or 255
+
+    SetTextFont(4)
+    SetTextScale(0.42, 0.42)
+    SetTextCentre(true)
+    SetTextColour(255, 255, 255, alpha)
+    SetTextDropshadow(0, 0, 0, 0, 255)
+    SetTextOutline()
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(('NOCLIP SPEED: %.1f'):format(speed))
+    EndTextCommandDisplayText(0.5, 0.02)
+end
 
 CreateThread(function()
     while true do
@@ -333,14 +361,24 @@ CreateThread(function()
             local now = GetGameTimer()
             if IsControlJustPressed(0, 21) or (IsControlPressed(0, 21) and now - lastShiftPress > 300) then
                 lastShiftPress = now
-                noclipSpeedLevel = math.min(noclipSpeedLevel + 1, #NOCLIP_SPEEDS - 1 - NOCLIP_BASE_IDX)
+                local lvl = math.min(noclipSpeedLevel + 1, #NOCLIP_SPEEDS - 1 - NOCLIP_BASE_IDX)
+                if lvl ~= noclipSpeedLevel then
+                    setSpeedLevel(lvl, NOCLIP_SPEEDS[NOCLIP_BASE_IDX + lvl])
+                end
             end
             if IsControlJustPressed(0, 36) or (IsControlPressed(0, 36) and now - lastCtrlPress > 300) then
                 lastCtrlPress = now
-                noclipSpeedLevel = math.max(noclipSpeedLevel - 1, -(NOCLIP_BASE_IDX))
+                local lvl = math.max(noclipSpeedLevel - 1, -(NOCLIP_BASE_IDX))
+                if lvl ~= noclipSpeedLevel then
+                    setSpeedLevel(lvl, NOCLIP_SPEEDS[NOCLIP_BASE_IDX + lvl])
+                end
             end
             local speedIdx = NOCLIP_BASE_IDX + noclipSpeedLevel
             local speed = NOCLIP_SPEEDS[speedIdx] or 1.8
+
+            if speedHudValue and GetGameTimer() < speedHudUntil then
+                drawNoclipSpeedHud(speedHudValue)
+            end
 
             SetEntityVelocity(ped, 0.0, 0.0, 0.0)
             SetEntityCollision(ped, false, false)
