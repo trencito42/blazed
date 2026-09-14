@@ -1549,9 +1549,11 @@ const Panels = {
             const salaryText = job.salary ? `$${job.salary} / week` : 'Unpaid';
             detailEl.innerHTML = `
                 <p class="jobcenter-details__salary">${salaryText}</p>
+                ${job.isCurrent ? '<p class="jobcenter-details__current">✓ You currently work this job. Use /work to start your shift.</p>' : ''}
                 ${job.description ? `<p class="jobcenter-details__desc">${job.description}</p>` : ''}
             `;
-            hireBtn.disabled = false;
+            hireBtn.disabled = !!job.isCurrent;
+            hireBtn.textContent = job.isCurrent ? 'CURRENT JOB' : 'HIRE';
             if (job.npcCoords) {
                 waypointBtn.classList.remove('hidden');
             } else {
@@ -1561,8 +1563,8 @@ const Panels = {
 
         jobs.forEach(job => {
             const el = document.createElement('div');
-            el.className = 'jobcenter-job-item';
-            el.innerHTML = `<span class="jobcenter-job-item__label">${job.label}</span>` +
+            el.className = `jobcenter-job-item${job.isCurrent ? ' is-current' : ''}`;
+            el.innerHTML = `<span class="jobcenter-job-item__label">${job.label}${job.isCurrent ? ' <span class="jobcenter-current-badge">CURRENT</span>' : ''}</span>` +
                 (job.salary ? `<span class="jobcenter-job-item__salary">$${job.salary}/wk</span>` : '');
             el.addEventListener('click', () => selectJob(job, el));
             list.appendChild(el);
@@ -1572,6 +1574,7 @@ const Panels = {
         sideTitle.textContent = 'JOB DETAILS';
         detailEl.innerHTML = '<p class="jobcenter-details__hint">Select a job from the list</p>';
         hireBtn.disabled = true;
+        hireBtn.textContent = 'HIRE';
         waypointBtn.classList.add('hidden');
 
         hireBtn.onclick = () => {

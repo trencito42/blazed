@@ -1,10 +1,18 @@
-local function buildJobCenterJobs(center)
+local function buildJobCenterJobs(center, source)
     local jobs = {}
     local seen = {}
+    local currentJob = nil
+    if source then
+        local char = exports.sunset_core:GetCharacter(source)
+        if char then
+            currentJob = select(1, Sunset.GetCharacterJob(char))
+        end
+    end
 
     local function add(job)
         if not job or not job.id or seen[job.id] then return end
         seen[job.id] = true
+        job.isCurrent = (currentJob == job.id)
         jobs[#jobs + 1] = job
     end
 
@@ -69,7 +77,7 @@ end
 exports.sunset_core:RegisterCallback('sunset:jobs:getJobCenterJobs', function(source, centerId)
     local center = Sunset.JobCenters and Sunset.JobCenters[centerId]
     if not center then return nil, 'Unknown job center.' end
-    return buildJobCenterJobs(center)
+    return buildJobCenterJobs(center, source)
 end)
 
 local function hireCivilianJob(source, jobId)
