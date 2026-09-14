@@ -763,6 +763,9 @@ window.addEventListener('message', (event) => {
         case 'fishingShopShow':
             if (window.Panels) Panels.showFishingShop(data || event.data.data);
             break;
+        case 'fishingShopRefresh':
+            if (window.StoreUI) StoreUI.refreshItems(data || event.data.data);
+            break;
         case 'fishingShopHide':
             if (window.Panels) Panels.hideFishingShop();
             break;

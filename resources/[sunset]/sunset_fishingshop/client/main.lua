@@ -720,6 +720,12 @@ AddEventHandler('sunset:nui:fishingShopSell', function(data)
     end
     -- Re-arm the sell button immediately after the server responds.
     exports.sunset_ui:Send('shopBuyResult', {})
+    -- Refresh the item grid so sold fish disappear. If the inventory is
+    -- now empty the JS will close the window automatically.
+    local invData = Sunset.AwaitCallback('sunset:fishingshop:getFishInventory')
+    exports.sunset_ui:Send('fishingShopRefresh', {
+        items = (invData and invData.items) or {},
+    })
 end)
 
 RegisterCommand('sellfish', function()

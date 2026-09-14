@@ -359,10 +359,40 @@ const StoreUI = {
         this.buyRaf = requestAnimationFrame(tick);
     },
 
-    // [GUNSHOP FIX] Server-authoritative purchase result from Lua.
+    // Server-authoritative purchase result from Lua.
     onBuyResult() {
         this.buyPending = false;
         this.resetBuyUi();
+    },
+
+    // Refresh item list after a fishing sell. Removes sold items from the
+    // grid and closes the window when inventory hits zero.
+    refreshItems(data) {
+        if (!this.state) return;
+        const raw = Array.isArray(data?.items) ? data.items : [];
+        if (raw.length === 0) {
+            this.close();
+            return;
+        }
+        const isSell = this.state.uiMode === 'fishing-sell';
+        this.state.items = raw.map((row) => ({
+            ...row,
+            price: isSell ? (row.unitValue || row.price || 0) : (row.price || 0),
+        }));
+        // Keep selection only if the item still has stock.
+        if (this.state.selected) {
+            const still = this.state.items.find((r) => r.item === this.state.selected.item);
+            if (!still || (Number(still.count) || 0) <= 0) {
+                this.state.selected = null;
+                this.state.qty = 1;
+            } else {
+                this.state.selected = still;
+                this.state.maxQty = Math.max(1, Number(still.count) || 1);
+                this.state.qty = Math.min(this.state.qty, this.state.maxQty);
+            }
+        }
+        this.renderItems();
+        this.renderCheckout();
     },
 
     resetBuyUi() {
