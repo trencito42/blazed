@@ -67,6 +67,15 @@ SunsetPass.Missions = {
         icon = 'backpack',
     },
     {
+        id = 'trucker_delivery',
+        type = 'daily',
+        title = 'Long Hauler',
+        description = 'Complete 3 trucker deliveries.',
+        goal = 3,
+        xp = 600,
+        icon = 'cash_stack',
+    },
+    {
         id = 'paydays',
         type = 'daily',
         title = 'Steady Earner',

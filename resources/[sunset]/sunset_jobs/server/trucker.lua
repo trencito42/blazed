@@ -8,34 +8,103 @@ local function validateTruckerCoords(source, target, cfg)
     return math.abs(pos.z - t.z) <= (cfg.deliveryZTolerance or 8.0)
 end
 
+-- Pay bonus per rank (level): rank 1 = +0%, rank 5 = +5%
+local TRUCKER_RANK_BONUS = { [1] = 0.00, [2] = 0.01, [3] = 0.02, [4] = 0.035, [5] = 0.05 }
+
+-- XP thresholds per level (XP needed to go from level N to N+1).
+-- Mirrors the fisherman pattern; tuned so rank 5 requires ~30-35 deliveries.
+-- Level 1→2: 300 XP  (~3 basic deliveries at $600)
+-- Level 2→3: 700 XP  (~7 basic deliveries)
+-- Level 3→4: 1200 XP (~12 deliveries)
+-- Level 4→5: 2000 XP (~20 deliveries)
+-- Total to rank 5: 4200 XP ≈ 30-35 deliveries ≈ 10-12 hours trucking.
+local TRUCKER_XP_THRESHOLDS = { 300, 700, 1200, 2000 }
+
+local function truckerXpForLevel(level)
+    return TRUCKER_XP_THRESHOLDS[level] or math.max(100, level * 500)
+end
+
+-- Override job_progress XP for trucker only by hooking AddJobXP after PayReward.
+-- PayReward calls SunsetJobs_AddJobProgress(jobId, amount/10 ...) with the generic
+-- xpForLevel. We compensate by awarding an ADJUSTMENT after the fact so the
+-- effective threshold matches TRUCKER_XP_THRESHOLDS.
+-- NOTE: simpler approach — use a dedicated helper that bypasses the global formula.
+local function truckerAddXP(source, xpAmount)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return end
+    local row = MySQL.single.await(
+        'SELECT xp, level, completed_tasks, total_earned FROM job_progress WHERE character_id = ? AND job_id = ?',
+        { char.id, 'trucker' }
+    )
+    local xp     = (row and row.xp or 0) + xpAmount
+    local level  = row and row.level or 1
+    local tasks  = row and row.completed_tasks or 0
+    local earned = row and row.total_earned or 0
+
+    local needed = truckerXpForLevel(level)
+    while xp >= needed do
+        xp    = xp - needed
+        level = level + 1
+        needed = truckerXpForLevel(level)
+        TriggerClientEvent('sunset:client:notify', source,
+            ('Trucker rank %d!'):format(level), 'success', 5000)
+        TriggerEvent('sunset:quest:progress', char.id, 'job_level_up', 1, { jobId = 'trucker', level = level })
+    end
+
+    if row then
+        MySQL.update.await(
+            'UPDATE job_progress SET xp = ?, level = ?, completed_tasks = ?, total_earned = ? WHERE character_id = ? AND job_id = ?',
+            { xp, level, tasks, earned, char.id, 'trucker' }
+        )
+    else
+        MySQL.insert.await(
+            'INSERT INTO job_progress (character_id, job_id, xp, level, completed_tasks, total_earned) VALUES (?, ?, ?, ?, ?, ?)',
+            { char.id, 'trucker', xp, level, tasks, earned }
+        )
+    end
+end
+
+-- Returns NPC menu data (job status for building hire/start/end actions).
+exports.sunset_core:RegisterCallback('sunset:jobs:trucker:getNpcMenu', function(source)
+    local char = exports.sunset_core:GetCharacter(source)
+    if not char then return { job = nil, onShift = false } end
+    local job = select(1, Sunset.GetCharacterJob(char))
+    local session = SunsetJobs_GetSession(source)
+    local onShift = session and session.jobId == 'trucker' and session.state ~= 'IDLE'
+    return { job = job, onShift = onShift }
+end)
+
 -- Returns the player's trucker rank (level) and XP.
 exports.sunset_core:RegisterCallback('sunset:jobs:trucker:getRank', function(source)
     local char = exports.sunset_core:GetCharacter(source)
-    if not char then return { level = 1, xp = 0, xpNext = 100 } end
+    if not char then return { level = 1, xp = 0, xpNext = TRUCKER_XP_THRESHOLDS[1] } end
     local row = MySQL.single.await(
         'SELECT xp, level FROM job_progress WHERE character_id = ? AND job_id = ?',
         { char.id, 'trucker' }
     )
     local level  = (row and row.level) or 1
     local xp     = (row and row.xp) or 0
-    local xpNext = xpForLevel and xpForLevel(level) or (100 * level)
-    return { level = level, xp = xp, xpNext = xpNext }
+    local xpNext = truckerXpForLevel(level)
+    local bonus  = TRUCKER_RANK_BONUS[level] or 0
+    return { level = level, xp = xp, xpNext = xpNext, bonusPct = math.floor(bonus * 100) }
 end)
 
--- Returns the available routes with lock state based on the player's level.
+-- Returns all routes (no locking — all available; rank only affects pay bonus).
 exports.sunset_core:RegisterCallback('sunset:jobs:trucker:getRoutes', function(source)
     local cfg = Sunset.GetJobConfig('trucker')
     if not cfg or not cfg.routes then return {} end
     local level = SunsetJobs_GetJobLevel(source, 'trucker')
+    local bonus = TRUCKER_RANK_BONUS[level] or 0
     local routes = {}
     for i, route in ipairs(cfg.routes) do
+        local effectivePay = math.floor((route.pay or 500) * (1 + bonus))
         routes[#routes + 1] = {
-            index    = i,
-            label    = route.label,
-            category = route.category or 'general',
-            pay      = route.pay,
-            minLevel = route.minLevel or 1,
-            locked   = level < (route.minLevel or 1),
+            index      = i,
+            label      = route.label,
+            category   = route.category or 'general',
+            basePay    = route.pay,
+            pay        = effectivePay,   -- pay with rank bonus already applied
+            bonusPct   = math.floor(bonus * 100),
         }
     end
     return routes
@@ -49,14 +118,6 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:start', function(sourc
     local routeIdx
     if selectedRouteIdx and tonumber(selectedRouteIdx) then
         routeIdx = math.max(1, math.min(#cfg.routes, tonumber(selectedRouteIdx)))
-        -- Verify the player has the required rank for this route
-        local route = cfg.routes[routeIdx]
-        if route and route.minLevel then
-            local level = SunsetJobs_GetJobLevel(source, 'trucker')
-            if level < route.minLevel then
-                return nil, ('This route requires Rank %d (you are Rank %d)'):format(route.minLevel, level)
-            end
-        end
     else
         routeIdx = math.random(1, #cfg.routes)
     end
@@ -120,18 +181,30 @@ exports.sunset_core:RegisterCallback('sunset:jobs:trucker:deliver', function(sou
     if delivered then return nil, 'Cargo already delivered on this route.' end
     session.data.deliveredAt = os.time()
 
-    local pay = route.pay or 500
-    local paid = SunsetJobs_PayReward(source, 'trucker', pay, 'trucker_delivery', true)
+    -- Apply rank bonus to pay (rank 1 = +0%, rank 5 = +5%)
+    local level = SunsetJobs_GetJobLevel(source, 'trucker')
+    local bonus = TRUCKER_RANK_BONUS[level] or 0
+    local basePay = route.pay or 500
+    local pay     = math.floor(basePay * (1 + bonus))
+
+    -- Use AddMoney directly to avoid double-XP from SunsetJobs_PayReward.
+    -- XP is awarded separately via truckerAddXP (uses trucker-specific thresholds).
+    local paid = exports.sunset_core:AddMoney(source, 'cash', pay, 'trucker_delivery')
     if not paid then
-        -- Payout failed (no char/DB): allow retry, restore stage.
         session.data.stage = 'to_delivery'
         session.data.deliveredAt = nil
         return nil, 'Payment could not be processed. Try delivering once more.'
     end
-    SunsetJobs_AddJobXP(source, 'trucker', cfg.xpPerDelivery or 40)
+    -- XP = base pay / 10 (scales with route value, not fixed)
+    truckerAddXP(source, math.max(5, math.floor(basePay / 10)))
+
+    -- Battlepass mission progress
+    if GetResourceState('sunset_pass') == 'started' then
+        exports.sunset_pass:AddMissionProgress(source, 'trucker_delivery', 1)
+    end
 
     SunsetJobs_SetState(source, 'RETURNING')
-    return { pay = pay, stage = 'return_depot' }
+    return { pay = pay, basePay = basePay, bonusPct = math.floor(bonus * 100), stage = 'return_depot' }
 end)
 
 exports.sunset_core:RegisterCallback('sunset:jobs:trucker:returnDepot', function(source)

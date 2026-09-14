@@ -126,25 +126,27 @@ const TruckerLaptop = {
             return;
         }
         for (const route of routes) {
-            const locked = !!route.locked;
-            const el     = document.createElement('div');
-            el.className        = `tl-route-item${locked ? ' is-locked' : ''}`;
+            const bonus     = route.bonusPct || 0;
+            const hasBonus  = bonus > 0;
+            const el        = document.createElement('div');
+            el.className        = 'tl-route-item';
             el.dataset.routeIdx = route.index;
             el.innerHTML = `
                 <div class="tl-route-main">
                     <div class="tl-route-label">${route.label}</div>
                     <div class="tl-route-meta">
-                        ${locked
-                            ? `<span class="tl-rank-lock"><i class="ph-bold ph-lock"></i> Rank ${route.minLevel} required</span>`
-                            : `<span class="tl-rank-ok"><i class="ph-bold ph-check-circle"></i> Available</span>`
+                        ${hasBonus
+                            ? `<span class="tl-rank-bonus"><i class="ph-bold ph-trend-up"></i> +${bonus}% rank bonus</span>`
+                            : `<span class="tl-rank-base"><i class="ph-bold ph-check-circle"></i> Available</span>`
                         }
                     </div>
                 </div>
-                <div class="tl-route-pay">$${Number(route.pay).toLocaleString()}</div>
+                <div class="tl-route-pay">
+                    $${Number(route.pay).toLocaleString()}
+                    ${hasBonus ? `<span class="tl-base-pay">base $${Number(route.basePay).toLocaleString()}</span>` : ''}
+                </div>
             `;
-            if (!locked) {
-                el.addEventListener('click', () => this._selectRoute(route));
-            }
+            el.addEventListener('click', () => this._selectRoute(route));
             this._routeList.appendChild(el);
         }
     },

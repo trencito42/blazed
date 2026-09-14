@@ -174,7 +174,8 @@ local function startTrucker(selectedRouteIdx)
                                 JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
                                 JC.setWaypoint(cfg.depot.coords)
                                 JC.showObjective('Return the truck', 'Take the truck and trailer back to the depot', 90)
-                                JC.notify(('Delivered! +$%s — return truck to depot'):format(result.pay or 0), 'success')
+                                local bonusStr = (result.bonusPct and result.bonusPct > 0) and (' (+%d%% rank bonus)'):format(result.bonusPct) or ''
+                                JC.notify(('Delivered! +$%d%s — return truck to depot'):format(result.pay or 0, bonusStr), 'success')
                             else
                                 JC.notify(err2 or 'Could not deliver cargo', 'error')
                             end

@@ -56,7 +56,7 @@
     gap: 12px;
 }
 
-#trucker-laptop .tl-route-item:hover:not(.is-locked) {
+#trucker-laptop .tl-route-item:hover {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.2);
 }
@@ -64,11 +64,6 @@
 #trucker-laptop .tl-route-item.is-active {
     border-color: var(--st-accent);
     background: rgba(0, 255, 204, 0.08);
-}
-
-#trucker-laptop .tl-route-item.is-locked {
-    opacity: 0.4;
-    cursor: not-allowed;
 }
 
 #trucker-laptop .tl-route-main {
@@ -92,6 +87,18 @@
     font-style: italic;
     color: var(--st-success);
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+#trucker-laptop .tl-base-pay {
+    font-size: 10px;
+    font-weight: 700;
+    font-style: normal;
+    color: var(--st-text-muted);
+    letter-spacing: 1px;
 }
 
 #trucker-laptop .tl-route-meta {
@@ -102,8 +109,8 @@
     margin-top: 2px;
 }
 
-#trucker-laptop .tl-rank-lock { color: #ff6b6b; }
-#trucker-laptop .tl-rank-ok   { color: var(--st-success); }
+#trucker-laptop .tl-rank-bonus { color: var(--st-accent); }
+#trucker-laptop .tl-rank-base  { color: var(--st-success); }
 
 /* ── Empty state ── */
 #trucker-laptop .tl-empty {
