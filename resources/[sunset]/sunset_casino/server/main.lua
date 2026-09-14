@@ -410,13 +410,26 @@ end)
 -- read via `docker logs blazed-fivem-1 | grep CASINOPROBE`. Also append to a
 -- file inside the persistent config volume so probe results SURVIVE container
 -- recreation (docker logs of a recreated container are lost).
-RegisterNetEvent('sunset:casino:probeLog', function(line)
-    local text = ('[CASINOPROBE #%d] %s'):format(source, tostring(line):sub(1, 400))
+-- [OVERFLOW FIX] Client now sends lines in batches (max 5 per event) instead
+-- of one TriggerServerEvent per line — a 60m scan can enumerate hundreds of
+-- entities and the old per-line approach hit "Reliable network event overflow".
+local function writeProbeLine(text)
     print('^3' .. text .. '^7')
     local fh = io.open('/config/casino_probe.log', 'a')
     if fh then
         fh:write(os.date('%Y-%m-%d %H:%M:%S ') .. text .. '\n')
         fh:close()
+    end
+end
+
+RegisterNetEvent('sunset:casino:probeLog', function(line)
+    writeProbeLine(('[CASINOPROBE #%d] %s'):format(source, tostring(line):sub(1, 400)))
+end)
+
+RegisterNetEvent('sunset:casino:probeLogBatch', function(lines)
+    if type(lines) ~= 'table' then return end
+    for _, line in ipairs(lines) do
+        writeProbeLine(('[CASINOPROBE #%d] %s'):format(source, tostring(line):sub(1, 400)))
     end
 end)
 

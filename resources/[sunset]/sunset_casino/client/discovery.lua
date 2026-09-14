@@ -63,14 +63,39 @@ local ANIM_DICTS = {
     'anim@heists@money_grab@briefcase',
 }
 
+-- [OVERFLOW FIX] Each probe line used to fire its own TriggerServerEvent.
+-- A 60m scan can enumerate hundreds of entities -> hundreds of events ->
+-- "Reliable network event overflow". Buffer lines and flush in small batches
+-- (max 5 lines per event) with a small delay between flushes.
+local probeBuffer = {}
+local BATCH_SIZE = 5
+
+local function flushProbeBuffer()
+    while #probeBuffer > 0 do
+        local batch = {}
+        for i = 1, math.min(BATCH_SIZE, #probeBuffer) do
+            batch[#batch + 1] = table.remove(probeBuffer, 1)
+        end
+        TriggerServerEvent('sunset:casino:probeLogBatch', batch)
+        Wait(50)
+    end
+end
+
 local function serverPrint(line)
-    -- mirror to server log so the operator can read it via docker logs
-    TriggerServerEvent('sunset:casino:probeLog', line)
+    probeBuffer[#probeBuffer + 1] = line
 end
 
 local function log(line)
     print('^3[CASINOPROBE]^7 ' .. line)
     serverPrint(line)
+    -- Flush immediately for small outputs (anim/prop tests, interior IDs)
+    if #probeBuffer >= BATCH_SIZE then
+        CreateThread(flushProbeBuffer)
+    end
+end
+
+local function logFlush()
+    CreateThread(flushProbeBuffer)
 end
 
 local function scanEntities(radius)
@@ -93,6 +118,9 @@ local function scanEntities(radius)
 
     local matched, unmatched = 0, 0
     local matchedNames = {}
+    -- [OVERFLOW FIX] Aggregate UNMATCHED by hash instead of one line per
+    -- entity — a 60m casino scan can have hundreds of decor objects.
+    local unmatchedByHash = {}
     for _, ent in ipairs(pool) do
         local ok, ec = pcall(GetEntityCoords, ent)
         if ok and ec then
@@ -114,18 +142,27 @@ local function scanEntities(radius)
                         name, ent, model, ec.x, ec.y, ec.z, GetEntityHeading(ent), dist))
                 else
                     unmatched = unmatched + 1
-                    log(('UNMATCHED ent=%d hash=%d pos=(%.2f,%.2f,%.2f) h=%.1f d=%.1f'):format(
-                        ent, model, ec.x, ec.y, ec.z, GetEntityHeading(ent), dist))
+                    if not unmatchedByHash[model] then
+                        unmatchedByHash[model] = { count = 0, x = ec.x, y = ec.y, z = ec.z }
+                    end
+                    unmatchedByHash[model].count = unmatchedByHash[model].count + 1
                 end
             end
         end
     end
-    log(('scan done: matched=%d unmatched=%d'):format(matched, unmatched))
+    log(('scan done: matched=%d unmatched=%d unique_unmatched_hashes=%d'):format(
+        matched, unmatched, (function() local n = 0 for _ in pairs(unmatchedByHash) do n = n + 1 end return n end)()))
 
     -- summary per matched model
     for name, list in pairs(matchedNames) do
         log(('SUMMARY %s count=%d first=(%.2f,%.2f,%.2f)'):format(
             name, #list, list[1].x, list[1].y, list[1].z))
+    end
+
+    -- summary per unmatched hash (aggregated)
+    for model, info in pairs(unmatchedByHash) do
+        log(('UNMATCHED_HASH %d count=%d first_pos=(%.2f,%.2f,%.2f)'):format(
+            model, info.count, info.x, info.y, info.z))
     end
     return matched, unmatched
 end
@@ -206,12 +243,14 @@ RegisterCommand('casinoprobe', function()
 
         scanEntities(60.0)
         log('=== entity scan complete; run /casinoanim and /casinoprops next ===')
+        logFlush()
     end)
 end, false)
 
 RegisterCommand('casinoscan', function(_, args)
     CreateThread(function()
         scanEntities(args[1])
+        logFlush()
     end)
 end, false)
 
@@ -232,6 +271,7 @@ RegisterCommand('casinoanim', function()
             log(('  anim %s: %s'):format(dict, (ok and loaded) and 'AVAILABLE' or 'missing'))
         end
         log('=== anim probe complete ===')
+        logFlush()
     end)
 end, false)
 
@@ -245,6 +285,7 @@ RegisterCommand('casinoprops', function()
             log(('  prop %s: valid=%s incdimage=%s'):format(name, tostring(valid), tostring(inCd)))
         end
         log('=== prop probe complete ===')
+        logFlush()
     end)
 end, false)
 
