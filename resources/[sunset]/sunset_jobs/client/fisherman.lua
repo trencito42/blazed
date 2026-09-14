@@ -243,12 +243,11 @@ end
 
 local function applyShiftBlips()
     JC.clearBlips()
-    -- [FLOW FIX] Players had no idea where the invisible polygon was. On shift
-    -- start: GPS route + blip + objective pointing at the fishing area, then
-    -- the objective flips to the cast prompt once the player arrives.
+    -- GPS waypoint only — no minimap blip. The permanent Billy Ray and
+    -- Fishing Supply blips (added by sunset_fishingshop) are enough;
+    -- adding another hook here caused a duplicate on the pontoon.
     local center = fishingZoneCenter()
     if center then
-        JC.addBlip(center, { sprite = 68, color = 3, scale = 0.8 }, 'Paleto Bay Fishing Area')
         JC.setWaypoint(center)
     end
     JC.showObjective('Go to the Paleto Bay fishing area', 'Follow the GPS — cast your line at the pontoon')
