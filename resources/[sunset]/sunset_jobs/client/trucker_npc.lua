@@ -61,14 +61,27 @@ local function armGrace(ms)
     end
 end
 
+-- [CROSS-RESOURCE FIX] sunset_world's Lua globals are NOT visible from this
+-- resource (separate script environments). Use the exports.
+local function worldShowTooltip(id, ped, meta)
+    if GetResourceState('sunset_world') ~= 'started' then return false end
+    local ok, shown = pcall(function()
+        return exports.sunset_world:NpcShowTooltip(id, ped, meta)
+    end)
+    return ok and shown == true
+end
+
+local function worldHideTooltip(id)
+    if GetResourceState('sunset_world') ~= 'started' then return end
+    pcall(function() exports.sunset_world:NpcHideTooltip(id) end)
+end
+
 local function hideNpcPrompt()
     if not npcPromptVisible then return end
     npcPromptVisible = false
     npcHoldStart = nil
     npcHoldVisual = false
-    if SunsetWorld and SunsetWorld.Npc then
-        SunsetWorld.Npc.hideTooltip('trucker_horia')
-    end
+    worldHideTooltip('trucker_horia')
 end
 
 local function sendHoldState(_active)
@@ -81,9 +94,9 @@ local function showNpcPrompt()
         hideNpcPrompt()
         return
     end
-    npcPromptVisible = true
-    SunsetWorld.Npc.showTooltip('trucker_horia', ped, {
-        badge = 'JOB TRUCKER',
+    -- Only mark visible when the tooltip was actually accepted.
+    local shown = worldShowTooltip('trucker_horia', ped, {
+        badge = 'TRUCKER JOB',
         badgeClass = 'trucker',
         bodyClass = 'trucker',
         icon = 'ph-truck',
@@ -91,6 +104,12 @@ local function showNpcPrompt()
         desc = 'Interaction / Trucker Shift',
         key = 'E',
     })
+    npcPromptVisible = shown == true
+    if not shown then
+        BeginTextCommandDisplayHelp('STRING')
+        AddTextComponentSubstringPlayerName('~INPUT_CONTEXT~ — Horia (Hold E)')
+        EndTextCommandDisplayHelp(0, false, true, 100)
+    end
 end
 
 -- ── Build NPC menu actions ────────────────────────────────────

@@ -19,6 +19,10 @@ const SKIP = new Set(['Sunset', 'MySQL', 'SunsetClothing', 'SunsetAppearance', '
 function walk(dir) {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
         const p = path.join(dir, e.name);
+        // [FIXED] Skip vendored FiveM runtime artifacts (gitignored) — their
+        // doc-comment mentions look like forward refs and they are not part of
+        // the gamemode.
+        if (e.isDirectory() && ['citizen', 'cache', 'crashes', 'node_modules', '.git', 'server redesign'].includes(e.name)) continue;
         if (e.isDirectory()) walk(p);
         else if (e.name.endsWith('.lua')) check(p);
     }
@@ -29,6 +33,20 @@ function check(file) {
     const lines = fs.readFileSync(file, 'utf8').split('\n');
     // map: local name -> first declaration line
     const decls = new Map();
+    // [FIXED] Collect every function parameter name in the file. This scan is
+    // line-based (no scope analysis), so a reference inside a function body to
+    // one of that function's own parameters looked like a forward reference
+    // (false positive on sunset_licenses 'charId'). A name that is EVER a
+    // parameter anywhere in the file is skipped — the real bug pattern
+    // (fisherman.lua 'lastInventoryClose') is a file-scope local that is never
+    // a parameter, so this keeps true positives.
+    const paramNames = new Set();
+    lines.forEach((ln) => {
+        const noStr = ln.replace(/'[^']*'/g, "''").replace(/"[^"]*"/g, '""');
+        const m = noStr.match(/function\s*[A-Za-z_.:0-9]*\s*\(([^)]*)\)/)
+            || noStr.match(/function\s*\(([^)]*)\)/);
+        if (m) m[1].split(',').forEach((p) => { const t = p.trim(); if (t) paramNames.add(t); });
+    });
     lines.forEach((ln, i) => {
         const m = ln.match(/^local\s+(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)/);
         if (m && !decls.has(m[1])) decls.set(m[1], i + 1);
@@ -38,15 +56,27 @@ function check(file) {
     });
     for (const [name, declLine] of decls) {
         if (SKIP.has(name) || name.length < 3) continue;
+        if (paramNames.has(name)) continue;
         const re = new RegExp('(^|[^.:%w_"\'])' + name.replace(/[$]/g, '\\$') + '\\s*(\\[|\\.|=|\\)|,|\\s)', 'g');
         for (let i = 0; i < declLine - 1; i++) {
             const ln = lines[i];
             if (ln.trim().startsWith('--')) continue;
             // skip strings crudely
             const noStr = ln.replace(/'[^']*'/g, "''").replace(/"[^"]*"/g, '""').replace(/\[\[[\s\S]*?\]\]/g, '``');
-            if (re.test(noStr)) {
-                // only flag if the reference is an INDEX or CALL or ASSIGN of the bare name (typical table use)
-                const use = noStr.match(new RegExp('(^|[^.:%w_])' + name + '\\s*(\\[|=[^=]|\\()'));
+            // A parameter in this line's own function definition is not a
+            // forward reference (false positive, e.g. `function f(source, charId)`).
+            const params = noStr.match(/function\s+[A-Za-z_.:]*\s*\(([^)]*)\)/)
+                || noStr.match(/function\s*\(([^)]*)\)/);
+            const isParam = params && params[1].split(',').some((p) => p.trim() === name);
+            if (re.test(noStr) && !isParam) {
+                // [FIXED] The old rule only flagged `name[`, `name=` and `name(`,
+                // so an ARITHMETIC read like `(GetGameTimer() - lastInventoryClose)`
+                // slipped through — exactly the fisherman.lua regression that
+                // compiled the local as a nil global and killed the shift thread.
+                // Now also flag reads followed by a binary operator, a closing
+                // paren/bracket, a comma, or end-of-expression.
+                const use = noStr.match(new RegExp(
+                    '(^|[^.:%w_"\'])' + name + '\\s*(\\[|=[^=~]|\\(|[-+*/%%<>~]=?|\\)|\\]|,|$|\\s+and\\b|\\s+or\\b|\\s+then\\b)'));
                 if (use) {
                     fail++;
                     console.log(`FORWARD-REF ${file}:${i + 1} uses '${name}' declared later at line ${declLine}`);

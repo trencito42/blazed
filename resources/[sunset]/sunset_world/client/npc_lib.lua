@@ -55,10 +55,14 @@ function SunsetWorld.Npc.spawn(config)
     return ped
 end
 
+-- Returns TRUE only when the tooltip was actually handed to the sync layer.
+-- Callers must not mark their prompt "visible" on a silent early-return.
 function SunsetWorld.Npc.showTooltip(id, ped, meta)
-    if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld.Tooltips then return end
+    if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld.Tooltips then
+        return false, 'sunset_world or Tooltips unavailable'
+    end
     local coords = SunsetWorld.Tooltips.coordsFromEntity(ped, meta.offsetZ or 0.42)
-    if not coords then return end
+    if not coords then return false, 'coordsFromEntity returned nil (ped missing?)' end
     SunsetWorld.Tooltips.set(id, {
         coords = coords,
         badge = meta.badge or '',
@@ -69,6 +73,7 @@ function SunsetWorld.Npc.showTooltip(id, ped, meta)
         desc = meta.desc or 'Interaction',
         key = meta.key or 'E',
     })
+    return true
 end
 
 function SunsetWorld.Npc.hideTooltip(id)
@@ -76,3 +81,35 @@ function SunsetWorld.Npc.hideTooltip(id)
         SunsetWorld.Tooltips.clear(id)
     end
 end
+
+-- [CROSS-RESOURCE FIX] FiveM gives every resource its own Lua environment, so
+-- other resources could never read the `SunsetWorld` global — their
+-- `not SunsetWorld` guards always short-circuited and their NPC tooltips were
+-- silently never rendered (Billy Ray, trucker NPC). Expose real exports.
+exports('NpcShowTooltip', function(id, ped, meta)
+    return SunsetWorld.Npc.showTooltip(id, ped, type(meta) == 'table' and meta or {})
+end)
+
+exports('NpcHideTooltip', function(id)
+    SunsetWorld.Npc.hideTooltip(id)
+    return true
+end)
+
+exports('TooltipCoordsFromEntity', function(entity, offsetZ)
+    if not SunsetWorld.Tooltips then return nil end
+    return SunsetWorld.Tooltips.coordsFromEntity(entity, offsetZ)
+end)
+
+-- Generic tooltip set/clear for non-NPC callers (fuel pumps etc.) that live in
+-- other resources and therefore cannot reach SunsetWorld.Tooltips directly.
+exports('TooltipSet', function(id, data)
+    if not SunsetWorld.Tooltips then return false end
+    SunsetWorld.Tooltips.set(id, data)
+    return true
+end)
+
+exports('TooltipClear', function(id)
+    if not SunsetWorld.Tooltips then return false end
+    SunsetWorld.Tooltips.clear(id)
+    return true
+end)

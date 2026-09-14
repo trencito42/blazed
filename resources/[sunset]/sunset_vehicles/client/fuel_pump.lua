@@ -86,11 +86,21 @@ local function pumpBrand(station)
     return 'SUNSET FUEL INC.'
 end
 
+-- [CROSS-RESOURCE FIX] sunset_world's Lua globals are NOT visible from this
+-- resource (separate script environments), so `not SunsetWorld` was always
+-- true and pump tooltips never rendered. Route through the exports instead.
 local function worldTooltips()
-    if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld or not SunsetWorld.Tooltips then
+    if GetResourceState('sunset_world') ~= 'started' then
         return nil
     end
-    return SunsetWorld.Tooltips
+    return {
+        set = function(id, data)
+            pcall(function() exports.sunset_world:TooltipSet(id, data) end)
+        end,
+        clear = function(id)
+            pcall(function() exports.sunset_world:TooltipClear(id) end)
+        end,
+    }
 end
 
 local function clearAllPumpTooltips()
@@ -247,7 +257,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                         desc = 'Refuel Vehicle'
                     elseif onFoot then
                         key = 'E'
-                        desc = 'Umple Bidonul'
+                        desc = 'Fill Jerry Can'
                     end
                 end
                 local ownerLabel = getOwnerLabel(station)
@@ -259,7 +269,7 @@ local function syncPumpTooltips(playerPos, nearestStation, nearestPump, nearestS
                     icon = 'ph-gas-pump',
                     title = ('Gas Pump #%02d'):format(globalId),
                     desc = desc,
-                    meta = ('Proprietar: %s'):format(ownerLabel),
+                    meta = ('Owner: %s'):format(ownerLabel),
                     key = isActive and key or '',
                 })
             else

@@ -28,6 +28,12 @@ end
 local BAIT_SHOP_COORDS = vector3(-1602.11, 5203.87, 4.31)
 local BAIT_SHOP_RADIUS = 2.5
 
+-- [FIX] MUST be declared before canCastLine(). Previously it was declared
+-- AFTER the function, so the closure captured the GLOBAL (nil) instead of the
+-- local — every call raised "attempt to perform arithmetic on a nil value",
+-- which killed the shift thread and silently disabled E-to-fish + markers.
+local lastInventoryClose = 0
+
 local function isShopMenuOpen()
     if GetResourceState('sunset_fishingshop') ~= 'started' then return false end
     local ok, result = pcall(function() return exports.sunset_fishingshop:IsMenuOpen() end)
@@ -52,7 +58,6 @@ end
 
 -- Block E for 500ms after inventory closes so drop-pickup interaction
 -- doesn't accidentally trigger a fishing cast
-local lastInventoryClose = 0
 AddEventHandler('sunset:nui:inventoryClose', function()
     lastInventoryClose = GetGameTimer()
 end)
@@ -88,24 +93,10 @@ local function nearestSpotIndex()
     return best, bestDist
 end
 
--- Point-in-polygon client-side (ray casting) pentru zona de pescuit
-local function atFishingSpot()
-    local cfg = Sunset.GetJobConfig('fisherman')
-    local zone = cfg and cfg.fishZone
-    local pos  = GetEntityCoords(PlayerPedId())
-
-    if not zone or #zone < 3 then
-        -- fallback la radius
-        local spotIndex, distance = nearestSpotIndex()
-        local spot = cfg and cfg.spots and cfg.spots[spotIndex]
-        local zDistance = spot and verticalDist(pos, spot.coords) or math.huge
-        return distance <= catchRadius(cfg) and zDistance <= (cfg.catchZTolerance or 0.75)
-    end
-
-    local minZ = cfg.fishZoneMinZ or -5.0
-    local maxZ = cfg.fishZoneMaxZ or 12.0
-    if pos.z < minZ or pos.z > maxZ then return false end
-
+-- Point-in-polygon client-side (ray casting) pentru zona de pescuit.
+-- [DEBUG] Returns (inside, info) — info carries the same values the server
+-- checks so client/server agreement can be verified with /fishdebug.
+local function pointInZone(pos, zone)
     local inside = false
     local j = #zone
     for i = 1, #zone do
@@ -118,6 +109,46 @@ local function atFishingSpot()
         j = i
     end
     return inside
+end
+
+local function atFishingSpotDetailed()
+    local cfg = Sunset.GetJobConfig('fisherman') or {}
+    local zone = cfg.fishZone
+    local pos  = GetEntityCoords(PlayerPedId())
+    local spotIndex, spotDist = nearestSpotIndex()
+    local info = {
+        x = pos.x, y = pos.y, z = pos.z,
+        spotIndex = spotIndex,
+        spotDist = spotDist,
+        jobId = JC.jobId,
+        shiftState = JC.state,
+        minZ = cfg.fishZoneMinZ or -5.0,
+        maxZ = cfg.fishZoneMaxZ or 12.0,
+        mode = 'polygon',
+    }
+
+    if not zone or #zone < 3 then
+        info.mode = 'radius-fallback'
+        local spot = cfg.spots and cfg.spots[spotIndex]
+        local zDistance = spot and verticalDist(pos, spot.coords) or math.huge
+        info.zDist = zDistance
+        info.inside = (spotDist <= catchRadius(cfg)) and (zDistance <= (cfg.catchZTolerance or 0.75))
+        return info.inside, info
+    end
+
+    info.zoneVertices = #zone
+    if pos.z < info.minZ or pos.z > info.maxZ then
+        info.inside = false
+        info.zRejected = true
+        return false, info
+    end
+
+    info.inside = pointInZone(pos, zone)
+    return info.inside, info
+end
+
+local function atFishingSpot()
+    return atFishingSpotDetailed()
 end
 
 local function removeRod()
@@ -158,12 +189,30 @@ local function equipRod()
 end
 
 local function drawShiftMarkers(cfg)
-    if not cfg or not cfg.spots then return end
+    if not cfg then return end
     local pos = GetEntityCoords(PlayerPedId())
-    local drawRadius = markerDrawRadius(cfg)
-    for _, spot in ipairs(cfg.spots) do
-        if horizontalDist(pos, spot.coords) <= drawRadius then
-            JC.drawFishingMarker(spot.coords, 52, 152, 219, cfg.markerSize)
+
+    -- Spot marker(s)
+    if cfg.spots then
+        local drawRadius = markerDrawRadius(cfg)
+        for _, spot in ipairs(cfg.spots) do
+            if horizontalDist(pos, spot.coords) <= drawRadius then
+                JC.drawFishingMarker(spot.coords, 52, 152, 219, cfg.markerSize)
+            end
+        end
+    end
+
+    -- [ZONE FIX] Draw the fishing-zone boundary near the player so nobody has
+    -- to guess where the invisible polygon is. Edges at water level.
+    local zone = cfg.fishZone
+    if zone and #zone >= 3 then
+        local drawZ = 1.0
+        for i, p in ipairs(zone) do
+            local n = zone[(i % #zone) + 1]
+            local midX, midY = (p.x + n.x) / 2, (p.y + n.y) / 2
+            if #(pos - vector3(midX, midY, pos.z)) < 120.0 then
+                DrawLine(p.x, p.y, drawZ, n.x, n.y, drawZ, 0, 200, 255, 160)
+            end
         end
     end
 end
@@ -180,9 +229,29 @@ local function ensureFishermanShiftLoop()
     end)
 end
 
+local function fishingZoneCenter()
+    local cfg = Sunset.GetJobConfig('fisherman') or {}
+    local zone = cfg.fishZone
+    if zone and #zone >= 3 then
+        local sx, sy, n = 0.0, 0.0, #zone
+        for _, p in ipairs(zone) do sx = sx + p.x; sy = sy + p.y end
+        return vector3(sx / n, sy / n, 1.0)
+    end
+    local spot = cfg.spots and cfg.spots[1]
+    return spot and spot.coords or nil
+end
+
 local function applyShiftBlips()
     JC.clearBlips()
-    JC.hideObjective()
+    -- [FLOW FIX] Players had no idea where the invisible polygon was. On shift
+    -- start: GPS route + blip + objective pointing at the fishing area, then
+    -- the objective flips to the cast prompt once the player arrives.
+    local center = fishingZoneCenter()
+    if center then
+        JC.addBlip(center, { sprite = 68, color = 3, scale = 0.8 }, 'Paleto Bay Fishing Area')
+        JC.setWaypoint(center)
+    end
+    JC.showObjective('Go to the Paleto Bay fishing area', 'Follow the GPS — cast your line at the pontoon')
     ensureFishermanShiftLoop()
 end
 
@@ -200,6 +269,7 @@ local function stopShift()
         removeRod()
         hideFishingUi()
         JC.clearBlips()
+        JC.hideObjective()
     else
         JC.notify(err or 'Could not end shift.', 'error')
     end
@@ -222,7 +292,7 @@ local function startFisherman()
         JC.state = 'STARTING'
     end
     applyShiftBlips()
-    JC.notify('Shift started! Head to the Paleto Bay pontoon and press E to fish.', 'info', 7000)
+    JC.notify('Shift started! GPS set to the Paleto Bay fishing area. Press E once you are at the water to cast.', 'info', 8000)
 end
 
 local function attemptFish()
@@ -334,6 +404,64 @@ RegisterCommand('fish', function()
     CreateThread(attemptFish)
 end, false)
 
+-- ── [PHASE 1 DEBUG] /fishdebug — draws the fishing polygon in-world and dumps
+--    the SAME values the server checks, so client/server agreement is visible.
+local fishDebugEnabled = false
+RegisterCommand('fishdebug', function()
+    fishDebugEnabled = not fishDebugEnabled
+    JC.notify(fishDebugEnabled and 'Fish debug ON — polygon + values drawn.' or 'Fish debug OFF.', 'info')
+end, false)
+
+CreateThread(function()
+    while true do
+        if fishDebugEnabled then
+            local cfg = Sunset.GetJobConfig('fisherman') or {}
+            local zone = cfg.fishZone
+            local inside, info = atFishingSpotDetailed()
+
+            -- Vertices + edges (drawn at water level z=1.0)
+            if zone and #zone >= 3 then
+                local drawZ = 1.0
+                for i, p in ipairs(zone) do
+                    DrawMarker(1, p.x, p.y, drawZ, 0, 0, 0, 0, 0, 0,
+                        1.0, 1.0, 8.0, 255, 0, 0, 120, false, false, 2, false, nil, nil, false)
+                    DrawMarker(4, p.x, p.y, drawZ + 1.0, 0, 0, 0, 0, 0, 0,
+                        0.6, 0.6, 0.6, 255, 200, 0, 200, false, false, 2, false, nil, nil, false)
+                    local n = zone[(i % #zone) + 1]
+                    -- edge line between consecutive vertices
+                    DrawLine(p.x, p.y, drawZ + 0.5, n.x, n.y, drawZ + 0.5, 0, 255, 204, 255)
+                end
+            end
+
+            -- Live readout on screen (left side, stacked)
+            local lines = {
+                ('pos: %.2f, %.2f, %.2f'):format(info.x, info.y, info.z),
+                ('insideFishZone: %s'):format(tostring(inside)),
+                ('mode: %s  vertices: %s  zRange: %.1f..%.1f'):format(
+                    info.mode, tostring(info.zoneVertices or '-'), info.minZ, info.maxZ),
+                ('nearest spot: #%s  dist: %.1fm'):format(tostring(info.spotIndex), info.spotDist or 0),
+                ('job: %s  shiftState: %s'):format(tostring(info.jobId), tostring(info.shiftState)),
+                ('canCastLine: %s  isFishermanShift: %s'):format(
+                    tostring(canCastLine()), tostring(isFishermanShift())),
+            }
+            if info.zRejected then lines[#lines + 1] = 'REJECTED BY Z LIMIT' end
+            for i, line in ipairs(lines) do
+                SetTextFont(4)
+                SetTextScale(0.3, 0.3)
+                SetTextColour(0, 255, 204, 255)
+                SetTextDropshadow(0, 0, 0, 0, 255)
+                SetTextOutline()
+                BeginTextCommandDisplayText('STRING')
+                AddTextComponentSubstringPlayerName(('[FISHDEBUG] ' .. line))
+                EndTextCommandDisplayText(0.015, 0.30 + (i * 0.022))
+            end
+            Wait(0)
+        else
+            Wait(400)
+        end
+    end
+end)
+
 RegisterCommand('sw', function()
     CreateThread(stopShift)
 end, false)
@@ -343,24 +471,40 @@ RegisterCommand('stopwork', function()
 end, false)
 
 CreateThread(function()
+    local lastObjective = nil
+    local function setObjectiveOnce(title, sub)
+        local key = tostring(title) .. '|' .. tostring(sub)
+        if lastObjective == key then return end
+        lastObjective = key
+        JC.showObjective(title, sub)
+    end
     while true do
         if isFishermanShift() then
             ensureFishermanShiftLoop()
             if not fishing then
-                JC.hideObjective()
                 local atSpot = atFishingSpot()
                 if atSpot then
+                    -- [E FIX] Press E ONCE to cast (IsControlJustPressed OR the
+                    -- disabled variant, since fishingshop disables control 38
+                    -- near Billy Ray). canCastLine() gates focus/menus/NPC.
+                    setObjectiveOnce('Cast your line', '[E] Cast Fishing Rod')
                     if canCastLine() and contextJustPressed() then
                         CreateThread(attemptFish)
                     end
                     Wait(0)
                 else
+                    setObjectiveOnce('Go to the Paleto Bay fishing area',
+                        'Follow the GPS — cast your line at the pontoon')
                     Wait(200)
                 end
             else
+                setObjectiveOnce('Reel it in', 'Watch for the bite — press E in time')
                 Wait(0)
             end
         else
+            if lastObjective then
+                lastObjective = nil
+            end
             hideFishingUi()
             fishing = false
             Wait(400)

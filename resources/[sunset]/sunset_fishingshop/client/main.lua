@@ -80,10 +80,16 @@ local inCooldown     = false
 local billyPromptVisible = false
 local billyHoldStart = nil
 local billyHoldVisual = false
+local billyHelpPromptAt = 0
+local billyFallbackWarned = false
 local menuCloseArmed = false
 local BILLY_HOLD_MS  = 800
 local INTERACT_KEY   = 38
-local billyInteractUnlockAt = GetGameTimer() + 60000
+-- [LOCK FIX] was GetGameTimer() + 60000 — an unexplained 60s dead zone after
+-- every resource (re)start during which Billy ignored the player. Now starts
+-- unlocked; a short 3.5s grace is armed only on spawn/character-flow (see
+-- resetBillyUiOnEntry / characterFlowComplete below).
+local billyInteractUnlockAt = 0
 
 -- Forward declarations
 local hideBillyRayPrompt
@@ -202,14 +208,30 @@ local function anotherPlayerBlocksNpcPrompt(pos)
     return false
 end
 
+-- [CROSS-RESOURCE FIX] sunset_world's Lua globals are NOT visible from this
+-- resource (separate environments). Use the exports; keep a same-resource
+-- global fallback for safety.
+local function worldShowTooltip(id, ped, meta)
+    if GetResourceState('sunset_world') ~= 'started' then return false, 'sunset_world not started' end
+    local ok, shownOrErr, reason = pcall(function()
+        return exports.sunset_world:NpcShowTooltip(id, ped, meta)
+    end)
+    if not ok then return false, tostring(shownOrErr) end
+    if shownOrErr == true then return true end
+    return false, reason or 'showTooltip returned false'
+end
+
+local function worldHideTooltip(id)
+    if GetResourceState('sunset_world') ~= 'started' then return end
+    pcall(function() exports.sunset_world:NpcHideTooltip(id) end)
+end
+
 hideBillyRayPrompt = function()
     if not billyPromptVisible then return end
     billyPromptVisible = false
     billyHoldStart = nil
     billyHoldVisual = false
-    if GetResourceState('sunset_world') == 'started' and SunsetWorld and SunsetWorld.Npc then
-        SunsetWorld.Npc.hideTooltip('fisherman_billy')
-    end
+    worldHideTooltip('fisherman_billy')
 end
 
 sendBillyHoldState = function(_active)
@@ -222,12 +244,11 @@ local function sendBillyRayPrompt()
         hideBillyRayPrompt()
         return
     end
-    if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld or not SunsetWorld.Npc then
-        return
-    end
-    billyPromptVisible = true
-    SunsetWorld.Npc.showTooltip('fisherman_billy', ped, {
-        badge = 'JOB PESCAR',
+    -- [TOOLTIP FIX] Only claim the prompt is visible when the tooltip was
+    -- actually accepted by sunset_world. On failure, fall back to a native GTA
+    -- help prompt so the interaction is never silently invisible.
+    local shown, reason = worldShowTooltip('fisherman_billy', ped, {
+        badge = 'FISHING JOB',
         badgeClass = 'fishing',
         bodyClass = 'fishing',
         icon = 'ph-fish',
@@ -235,6 +256,25 @@ local function sendBillyRayPrompt()
         desc = 'Interaction / Fishing Job',
         key = 'E',
     })
+    if shown then
+        billyPromptVisible = true
+        billyHelpPromptAt = GetGameTimer()
+    else
+        billyPromptVisible = false
+        if not billyFallbackWarned then
+            billyFallbackWarned = true
+            print(('[sunset_fishingshop] world tooltip unavailable (%s) — using native help prompt'):format(tostring(reason)))
+        end
+    end
+end
+
+-- Native fallback prompt (drawn every frame while near Billy and the world
+-- tooltip could not be shown).
+local function drawBillyNativeHelp()
+    if billyPromptVisible then return end
+    BeginTextCommandDisplayHelp('STRING')
+    AddTextComponentSubstringPlayerName('~INPUT_CONTEXT~ — Billy Ray (Hold E)')
+    EndTextCommandDisplayHelp(0, false, true, 100)
 end
 
 local function shouldShowBillyRayPrompt()
@@ -419,6 +459,7 @@ CreateThread(function()
     while true do
         if shouldShowBillyRayPrompt() then
             sendBillyRayPrompt()
+            drawBillyNativeHelp()
             Wait(0)
         else
             hideBillyRayPrompt()

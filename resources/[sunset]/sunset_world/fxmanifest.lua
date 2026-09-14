@@ -31,4 +31,16 @@ server_scripts {
     'server/access.lua',
 }
 
+-- [CROSS-RESOURCE] NPC world tooltips must be driven through these exports:
+-- FiveM isolates Lua globals per resource, so `SunsetWorld.Npc.showTooltip`
+-- was unreachable from sunset_fishingshop / sunset_jobs (tooltips silently
+-- never rendered for Billy Ray and Horia).
+client_exports {
+    'NpcShowTooltip',
+    'NpcHideTooltip',
+    'TooltipCoordsFromEntity',
+    'TooltipSet',
+    'TooltipClear',
+}
+
 dependencies { 'sunset_core' }

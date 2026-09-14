@@ -96,16 +96,25 @@ Sunset.JobsConfig = {
     fisherman = {
         label = 'Fisherman',
         help = 'Fish in the Paleto Bay area near Billy Ray, then sell your catch at any 24/7 store.',
-        -- Poligon de pescuit: zona exacta Paleto Bay (pontoon + dig)
-        -- Punctele se conecteaza in ordine; Z ignorat la polygon check
+        -- [ZONE FIX] The fishing spot is the measured water/pontoon area, NOT the
+        -- NPC position. GPS/objective point here on shift start.
+        -- Derived from the centroid of the previously measured waterfront strip.
         spots = {
-            { coords = vector3(-1593.23, 5207.74, 3.31) }, -- pastrat pentru compatibilitate
+            { coords = vector3(-1600.56, 5237.43, 1.0) },
         },
+        -- [ZONE FIX] Old polygon spanned y=5211..5265 only — it lay entirely
+        -- NORTH of Billy Ray (y=5207.74) and the bait shop (y=5203.87), so the
+        -- ray-casting test returned false at every real fishing position and
+        -- /fish always answered "not in the Paleto Bay fishing area".
+        -- New zone covers both VERIFIED anchors (Billy Ray, bait shop) plus the
+        -- previously measured waterfront strip, i.e. the whole pier/waterfront.
+        -- Rectangle: x -1620..-1578, y 5195..5268.
+        -- Refine with /fishdebug in-game if the shoreline needs tightening.
         fishZone = {
-            { x = -1615.83, y = 5261.21 },
-            { x = -1607.67, y = 5264.90 },
-            { x = -1586.00, y = 5212.45 },
-            { x = -1592.73, y = 5211.15 },
+            { x = -1620.00, y = 5195.00 },
+            { x = -1578.00, y = 5195.00 },
+            { x = -1578.00, y = 5268.00 },
+            { x = -1620.00, y = 5268.00 },
         },
         fishZoneMinZ = -5.0,   -- include barca pe apa
         fishZoneMaxZ = 12.0,   -- include pontoon/dig ridicat
@@ -114,9 +123,9 @@ Sunset.JobsConfig = {
         reactionWindowMs = 1500,
         catchRadius    = 50.0,   -- fallback daca fishZone lipseste
         catchZTolerance = 8.0,   -- fallback Z tolerance
-        markerSize     = 0,      -- fara marker vizibil
-        markerDrawRadius = 0,    -- nu desena nimic
-        -- [BUGFIX] sellPoint was missing — cfg.sellPoint.coords crashed on
+        markerSize     = 2.0,    -- visible water marker at the fishing spot
+        markerDrawRadius = 80.0, -- draw it while approaching on shift
+        -- [FIX] sellPoint was missing — cfg.sellPoint.coords crashed on
         -- every sell attempt. Coordinates from items.lua 24/7 Paleto Bay.
         sellPoint = { coords = vector3(-54.37, 6244.70, 31.09) },
         sellRadius = 5.0,
