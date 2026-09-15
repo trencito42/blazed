@@ -77,7 +77,7 @@
     <link rel="stylesheet" href="css/helpdesk.css?v=2" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/casino.css?v=1" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/impound.css?v=1" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="css/racing.css?v=1" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/racing.css?v=2" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/drugs.css?v=1" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="css/marriage.css?v=1" media="print" onload="this.media='all'">
     <!-- [CEF FIX] MUST stay last: disables backdrop-filter blur (renders as black
@@ -3589,7 +3589,9 @@
             </div>
             <div class="racing-body" id="racing-body"></div>
             <div class="racing-actions">
-                <button type="button" class="racing-btn" id="racing-join" disabled>JOIN RACE</button>
+                <button type="button" class="racing-btn" id="racing-solo" disabled>START SOLO</button>
+                <button type="button" class="racing-btn racing-btn--secondary" id="racing-join" disabled>JOIN MULTIPLAYER</button>
+                <button type="button" class="racing-btn hidden" id="racing-start-multi">START RACE</button>
                 <button type="button" class="racing-btn racing-btn--secondary hidden" id="racing-leave">LEAVE LOBBY</button>
             </div>
         </div>
@@ -3677,7 +3679,7 @@
     <script type="text/plain" data-lazy-src="js/helpdesk.js?v=1"></script>
     <script type="text/plain" data-lazy-src="js/casino.js?v=1"></script>
     <script type="text/plain" data-lazy-src="js/impound.js?v=1"></script>
-    <script type="text/plain" data-lazy-src="js/racing.js?v=1"></script>
+    <script type="text/plain" data-lazy-src="js/racing.js?v=2"></script>
     <script type="text/plain" data-lazy-src="js/drugs.js?v=1"></script>
     <script type="text/plain" data-lazy-src="js/marriage.js?v=1"></script>
 </body>

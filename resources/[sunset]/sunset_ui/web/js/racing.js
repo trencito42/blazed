@@ -32,9 +32,9 @@ const Racing = {
         const inLobby = this.status.inLobby;
         const lobbyInfo = this.status.lobbyInfo;
         const entryFee = this.status.entryFee || 1000;
-        const minPlayers = this.status.minPlayers || 1;
-        const soloAvailable = this.status.soloAvailable !== false;
+        const minMulti = this.status.minMultiPlayers || 2;
         const soloReward = this.status.soloReward || 500;
+        const soloOnCooldown = this.status.soloOnCooldown;
         const raceNightActive = this.status.raceNightActive;
         const raceNightPoints = this.status.raceNightPoints || 0;
 
@@ -51,11 +51,13 @@ const Racing = {
             const players = (lobbyInfo.players || []).map((p) =>
                 `<span class="racing-lobby-player${p.isSelf ? ' is-self' : ''}">${this.esc(p.name)}</span>`
             ).join('');
+            const count = lobbyInfo.count || 0;
+            const canStart = count >= minMulti;
             body.innerHTML = `${banner}
                 <div class="racing-route is-selected">
-                    <div class="racing-route__name">Lobby — ${this.esc(lobbyInfo.routeId || '')}</div>
+                    <div class="racing-route__name">LOBBY — ${this.esc(lobbyInfo.routeId || '')}</div>
                     <div class="racing-route__meta">
-                        <span>Players: ${lobbyInfo.count || 0}/${minPlayers}</span>
+                        <span>${canStart ? 'READY TO START' : 'WAITING FOR RACERS'} — ${count}/${minMulti}</span>
                         <span>Entry: $${entryFee.toLocaleString()}</span>
                     </div>
                     <div class="racing-lobby-players">${players}</div>
@@ -69,15 +71,16 @@ const Racing = {
                         <div class="racing-route__desc">${this.esc(r.description || '')}</div>
                         <div class="racing-route__meta">
                             <span>${(r.checkpoints || []).length} CP</span>
-                            <span>Entry: $${entryFee.toLocaleString()}</span>
+                            <span>Solo: $${soloReward.toLocaleString()} · Multi entry: $${entryFee.toLocaleString()}</span>
                         </div>
                     </div>
                 `).join('')}
-                ${soloAvailable ? `
-                    <div class="racing-solo-note">
-                        Solo time trial available — reward $${soloReward.toLocaleString()} (5min cooldown)
-                    </div>
-                ` : ''}
+                <div class="racing-solo-note">
+                    ${soloOnCooldown
+                        ? 'Solo time trial on cooldown — try again later.'
+                        : `Solo time trial: free entry, reward $${soloReward.toLocaleString()} (5 min cooldown).`}
+                    Multiplayer: $${entryFee.toLocaleString()} entry, winner takes ${(entryFee * minMulti * 0.8 | 0).toLocaleString()}+ pot.
+                </div>
             `;
 
             $$('[data-racing-route]').forEach((el) => {
@@ -85,19 +88,47 @@ const Racing = {
                     $$('[data-racing-route]').forEach((e) => e.classList.remove('is-selected'));
                     el.classList.add('is-selected');
                     this.selectedRoute = el.dataset.racingRoute;
-                    $('#racing-join').disabled = false;
+                    this._updateButtons();
                 });
             });
         }
 
+        this._updateButtons(inLobby, lobbyInfo);
+    },
+
+    _updateButtons(inLobby, lobbyInfo) {
+        inLobby = inLobby ?? this.status?.inLobby;
+        lobbyInfo = lobbyInfo ?? this.status?.lobbyInfo;
+        const soloBtn = $('#racing-solo');
         const joinBtn = $('#racing-join');
+        const startBtn = $('#racing-start-multi');
         const leaveBtn = $('#racing-leave');
-        if (joinBtn) {
-            joinBtn.disabled = inLobby || !this.selectedRoute;
-            joinBtn.textContent = inLobby ? 'IN LOBBY' : 'JOIN RACE';
-        }
-        if (leaveBtn) {
-            leaveBtn.classList.toggle('hidden', !inLobby);
+
+        if (inLobby) {
+            const count = lobbyInfo?.count || 0;
+            const minMulti = this.status?.minMultiPlayers || 2;
+            if (soloBtn) { soloBtn.classList.add('hidden'); soloBtn.disabled = true; }
+            if (joinBtn) { joinBtn.classList.add('hidden'); joinBtn.disabled = true; }
+            if (startBtn) {
+                startBtn.classList.remove('hidden');
+                startBtn.disabled = count < minMulti;
+                startBtn.textContent = count >= minMulti ? `START RACE (${count}/${minMulti}+)` : `WAITING (${count}/${minMulti})`;
+            }
+            if (leaveBtn) leaveBtn.classList.remove('hidden');
+        } else {
+            const hasSel = !!this.selectedRoute;
+            const cooldown = this.status?.soloOnCooldown;
+            if (soloBtn) {
+                soloBtn.classList.remove('hidden');
+                soloBtn.disabled = !hasSel || cooldown;
+                soloBtn.textContent = cooldown ? 'SOLO ON COOLDOWN' : 'START SOLO';
+            }
+            if (joinBtn) {
+                joinBtn.classList.remove('hidden');
+                joinBtn.disabled = !hasSel;
+            }
+            if (startBtn) startBtn.classList.add('hidden');
+            if (leaveBtn) leaveBtn.classList.add('hidden');
         }
     },
 
@@ -157,8 +188,15 @@ window.Racing = Racing;
 
 // ── Close handlers ──
 $('#racing-close')?.addEventListener('click', () => post('racingClose'));
+$('#racing-solo')?.addEventListener('click', () => {
+    if (Racing.selectedRoute) post('racingStartSolo', { routeId: Racing.selectedRoute });
+});
 $('#racing-join')?.addEventListener('click', () => {
     if (Racing.selectedRoute) post('racingJoin', { routeId: Racing.selectedRoute });
+});
+$('#racing-start-multi')?.addEventListener('click', () => {
+    const lobbyInfo = Racing.status?.lobbyInfo;
+    if (lobbyInfo?.routeId) post('racingStartMulti', { routeId: lobbyInfo.routeId });
 });
 $('#racing-leave')?.addEventListener('click', () => post('racingLeave', {}));
 document.addEventListener('keydown', (e) => {

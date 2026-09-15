@@ -201,6 +201,12 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     if ActiveEvent then
+        -- If a race night was active, tell sunset_racing to finalize it —
+        -- otherwise RaceNightActive would stay true forever in the racing
+        -- resource (rewards never settled, banner never cleared).
+        if ActiveEvent.type == 'race_night' and GetResourceState('sunset_racing') == 'started' then
+            pcall(function() exports.sunset_racing:EndRaceNight() end)
+        end
         for _, id in ipairs(GetPlayers()) do
             TriggerClientEvent('sunset:events:end', tonumber(id), { type = ActiveEvent.type })
         end

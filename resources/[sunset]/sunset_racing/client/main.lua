@@ -1,21 +1,19 @@
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Street Racing (client/main.lua)
---  Race hub marker, checkpoint blips, race HUD, countdown, freeze.
---
---  OWNERSHIP: This resource owns the world interaction (marker + E) at the
---  race hub. sunset_events does NOT create a marker here — it integrates
---  through sunset_racing exports (StartRaceNight / EndRaceNight).
+--  Race hub marker, checkpoint blips (named), race HUD, countdown,
+--  freeze safety, checkpoint ACK model.
 -- ═══════════════════════════════════════════════════════════════
 
 local Cfg = SunsetRacing.Config
 local raceActive = false
 local raceData = nil
 local currentCheckpoint = 1
+local checkpointPending = false  -- waiting for server ACK
 local raceBlips = {}
 local hubBlip = nil
 local frozen = false
 
--- ── Forward declarations (fix Lua scope bug) ──
+-- ── Forward declarations ──
 local openRaceUI
 local closeRaceUI
 local clearRaceBlips
@@ -44,12 +42,12 @@ CreateThread(function()
     end
 end)
 
--- ── Hub blip (always visible) ──
+-- ── Hub blip ──
 CreateThread(function()
     Wait(3000)
     if hubBlip and DoesBlipExist(hubBlip) then RemoveBlip(hubBlip) end
     hubBlip = AddBlipForCoord(Cfg.raceHub.x, Cfg.raceHub.y, Cfg.raceHub.z)
-    SetBlipSprite(hubBlip, 562) -- racing flag
+    SetBlipSprite(hubBlip, 562)
     SetBlipColour(hubBlip, 0)
     SetBlipScale(hubBlip, 0.8)
     SetBlipAsShortRange(hubBlip, true)
@@ -82,31 +80,38 @@ clearRaceBlips = function()
     raceBlips = {}
 end
 
+-- [BUG 1 FIX] Single helper for checkpoint blip creation.
+-- Every blip ALWAYS gets an explicit name (never "Point of Interest").
+local function createCheckpointBlip(index, total, checkpoint, isActive)
+    local blip = AddBlipForCoord(checkpoint.x, checkpoint.y, checkpoint.z)
+    SetBlipSprite(blip, 1)
+    SetBlipColour(blip, isActive and 0 or 1)
+    SetBlipScale(blip, 0.9)
+    SetBlipRoute(blip, isActive)
+    SetBlipAsShortRange(blip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentString(('CP %d/%d'):format(index, total))
+    EndTextCommandSetBlipName(blip)
+    raceBlips[#raceBlips + 1] = blip
+    return blip
+end
+
 -- ── Race events ──
 RegisterNetEvent('sunset:racing:start', function(data)
     raceActive = true
     raceData = data
     currentCheckpoint = 1
+    checkpointPending = false
     closeRaceUI()
 
-    -- Create checkpoint blips
+    -- Create checkpoint blips (all with names)
     clearRaceBlips()
     if data.checkpoints then
         for i, cp in ipairs(data.checkpoints) do
-            local blip = AddBlipForCoord(cp.x, cp.y, cp.z)
-            SetBlipSprite(blip, 1)
-            SetBlipColour(blip, i == 1 and 0 or 1)
-            SetBlipScale(blip, 0.9)
-            SetBlipRoute(blip, i == 1)
-            SetBlipAsShortRange(blip, true)
-            BeginTextCommandSetBlipName('STRING')
-            AddTextComponentString(('CP %d/%d'):format(i, #data.checkpoints))
-            EndTextCommandSetBlipName(blip)
-            raceBlips[#raceBlips + 1] = blip
+            createCheckpointBlip(i, #data.checkpoints, cp, i == 1)
         end
     end
 
-    -- Show race HUD
     exports.sunset_ui:Send('racingHud', {
         raceId = data.raceId,
         label = data.label,
@@ -125,21 +130,16 @@ RegisterNetEvent('sunset:racing:go', function()
     exports.sunset_ui:Send('racingGo', {})
 end)
 
+-- [BUG 4 FIX] Client advances ONLY on server ACK.
 RegisterNetEvent('sunset:racing:checkpointReached', function(data)
+    checkpointPending = false
     currentCheckpoint = data.current + 1
 
-    -- Update blips
+    -- Update blips (only current + upcoming, all named)
     clearRaceBlips()
     if raceData and raceData.checkpoints then
         for i = currentCheckpoint, #raceData.checkpoints do
-            local cp = raceData.checkpoints[i]
-            local blip = AddBlipForCoord(cp.x, cp.y, cp.z)
-            SetBlipSprite(blip, 1)
-            SetBlipColour(blip, i == currentCheckpoint and 0 or 1)
-            SetBlipScale(blip, 0.9)
-            SetBlipRoute(blip, i == currentCheckpoint)
-            SetBlipAsShortRange(blip, true)
-            raceBlips[#raceBlips + 1] = blip
+            createCheckpointBlip(i, #raceData.checkpoints, raceData.checkpoints[i], i == currentCheckpoint)
         end
     end
 
@@ -159,6 +159,7 @@ RegisterNetEvent('sunset:racing:dnf', function(data)
     raceActive = false
     raceData = nil
     currentCheckpoint = 1
+    checkpointPending = false
     clearRaceBlips()
     exports.sunset_ui:Send('racingHudHide', {})
     exports.sunset_ui:Notify(data and data.reason or 'DNF — race over.', 'error', 8000)
@@ -168,26 +169,22 @@ RegisterNetEvent('sunset:racing:end', function(data)
     raceActive = false
     raceData = nil
     currentCheckpoint = 1
+    checkpointPending = false
     clearRaceBlips()
     exports.sunset_ui:Send('racingHudHide', {})
 end)
 
--- ── Vehicle freeze during countdown ──
+-- ── Vehicle freeze ──
 RegisterNetEvent('sunset:racing:freeze', function(freeze)
     local ped = PlayerPedId()
     local veh = GetVehiclePedIsIn(ped, false)
     if veh ~= 0 then
-        if freeze then
-            FreezeEntityPosition(veh, true)
-            frozen = true
-        else
-            FreezeEntityPosition(veh, false)
-            frozen = false
-        end
+        FreezeEntityPosition(veh, freeze == true)
+        frozen = freeze == true
     end
 end)
 
--- Safety: unfreeze on resource stop
+-- [BUG 10 FIX] Safety: unfreeze on resource stop
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     if frozen then
@@ -203,7 +200,9 @@ AddEventHandler('onResourceStop', function(res)
 end)
 
 -- ── Checkpoint proximity detection ──
--- Client detects proximity and sends to server; SERVER validates everything.
+-- [BUG 4 FIX] Client sends request but does NOT advance currentCheckpoint.
+-- Advancement happens ONLY in sunset:racing:checkpointReached handler.
+-- checkpointPending prevents spam while waiting for ACK.
 CreateThread(function()
     while true do
         if raceActive and raceData and raceData.checkpoints then
@@ -213,13 +212,16 @@ CreateThread(function()
             local coords = GetEntityCoords(target)
             local cp = raceData.checkpoints[currentCheckpoint]
 
-            if cp and #(coords - cp) < (Cfg.checkpointRadius or 25.0) then
+            if cp and not checkpointPending and #(coords - cp) < (Cfg.checkpointRadius or 25.0) then
+                checkpointPending = true
                 TriggerServerEvent('sunset:racing:checkpoint', currentCheckpoint, raceData.raceId)
-                currentCheckpoint = currentCheckpoint + 1
-
-                if currentCheckpoint > #raceData.checkpoints then
-                    Wait(2000)
-                end
+                -- Timeout: if no ACK within 3s, allow retry (handles lost UDP)
+                CreateThread(function()
+                    Wait(3000)
+                    if checkpointPending and raceActive then
+                        checkpointPending = false
+                    end
+                end)
             end
             Wait(200)
         else
@@ -233,15 +235,58 @@ AddEventHandler('sunset:nui:racingClose', function()
     closeRaceUI()
 end)
 
+-- [BUG 2 FIX] Defensive validation + preserve server errors verbatim.
 AddEventHandler('sunset:nui:racingJoin', function(data)
+    data = type(data) == 'table' and data or {}
+    local routeId = tostring(data.routeId or '')
+    if routeId == '' then
+        exports.sunset_ui:Notify('No route selected.', 'error')
+        return
+    end
     CreateThread(function()
-        local res, err = Sunset.AwaitCallback('sunset:racing:join', data.routeId)
+        local res, err = Sunset.AwaitCallback('sunset:racing:join', routeId)
         if not res then
-            exports.sunset_ui:Notify(err or 'Could not join the race.', 'error')
+            exports.sunset_ui:Notify(err or 'Race join failed unexpectedly. Check F8/server logs.', 'error')
             return
         end
         exports.sunset_ui:Notify(('Joined %s lobby (%d/%d players).'):format(
-            data.routeId, res.players, res.minPlayers), 'success')
+            routeId, res.players, res.minPlayers), 'success')
+        closeRaceUI()
+    end)
+end)
+
+-- Solo start
+AddEventHandler('sunset:nui:racingStartSolo', function(data)
+    data = type(data) == 'table' and data or {}
+    local routeId = tostring(data.routeId or '')
+    if routeId == '' then
+        exports.sunset_ui:Notify('No route selected.', 'error')
+        return
+    end
+    CreateThread(function()
+        local res, err = Sunset.AwaitCallback('sunset:racing:startSolo', routeId)
+        if not res then
+            exports.sunset_ui:Notify(err or 'Solo start failed unexpectedly. Check F8/server logs.', 'error')
+            return
+        end
+        closeRaceUI()
+    end)
+end)
+
+-- Multiplayer start (explicit)
+AddEventHandler('sunset:nui:racingStartMulti', function(data)
+    data = type(data) == 'table' and data or {}
+    local routeId = tostring(data.routeId or '')
+    if routeId == '' then
+        exports.sunset_ui:Notify('No route selected.', 'error')
+        return
+    end
+    CreateThread(function()
+        local res, err = Sunset.AwaitCallback('sunset:racing:startMulti', routeId)
+        if not res then
+            exports.sunset_ui:Notify(err or 'Multiplayer start failed.', 'error')
+            return
+        end
         closeRaceUI()
     end)
 end)
