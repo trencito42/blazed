@@ -108,6 +108,8 @@ end
 
 local function httpHandler(req, res)
     local path = req.path or ''
+    -- [DIAG] Prove the handler is actually invoked (remove once confirmed).
+    print(('^3[TESTAGENT HTTP]^7 request method=%s path=%s'):format(tostring(req.method), path))
 
     -- Only handle our prefix; everything else 404s.
     if path:sub(1, #Cfg.httpPrefix) ~= Cfg.httpPrefix then
@@ -234,6 +236,7 @@ end
 -- own port (40120); only its game-port proxy is displaced — acceptable on
 -- this box per the owner's explicit activation request.
 SetHttpHandler(httpHandler)
+print('^2[TESTAGENT HTTP]^7 SetHttpHandler called (claiming game-port HTTP)')
 TestAgentLog.event('http', 'SetHttpHandler registered for ' .. Cfg.httpPrefix)
 
 local lastReclaimWarn = 0
