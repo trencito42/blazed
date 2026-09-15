@@ -7,6 +7,8 @@
 
 local Cfg = SunsetTestAgent.Config
 
+TestAgentLog = TestAgentLog or {}
+
 local buffer = {}       -- ring of structured entries
 local head = 0          -- next write index
 local total = 0         -- total written (monotonic)

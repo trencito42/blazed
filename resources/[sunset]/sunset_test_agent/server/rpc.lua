@@ -16,6 +16,8 @@
 
 local Cfg = SunsetTestAgent.Config
 
+RpcClient = RpcClient or {}
+
 local pending = {}   -- [id] = { promise, deadline, method, target }
 local idCounter = 0
 local reaperRunning = false

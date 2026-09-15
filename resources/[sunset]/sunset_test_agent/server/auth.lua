@@ -9,6 +9,8 @@
 
 local Cfg = SunsetTestAgent.Config
 
+TestAgentAuth = TestAgentAuth or {}
+
 local expectedToken = nil
 local testPlayerSource = nil
 local testPlayerCharId = nil
