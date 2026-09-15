@@ -135,6 +135,44 @@ function JobClient.deleteVehicles(keepTruck)
     JobClient.trailerLostSent = false
 end
 
+-- [NETWORK FIX] Make a freshly spawned entity explicitly networked and wait
+-- until its network ID is stable and non-zero. Under OneSync a client-created
+-- vehicle with networked=true normally registers immediately, but the net ID
+-- can be 0 for the first frames; asking the server to resolve it during that
+-- window is what produced the blind-retry "Could not network" loop.
+local function ensureNetworked(veh, timeoutMs)
+    if not veh or veh == 0 then return false end
+    timeoutMs = timeoutMs or 4000
+    local deadline = GetGameTimer() + timeoutMs
+    while GetGameTimer() < deadline do
+        if not DoesEntityExist(veh) then return false end
+        if not NetworkGetEntityIsNetworked(veh) then
+            NetworkRegisterEntityAsNetworked(veh)
+        else
+            local netId = NetworkGetNetworkIdFromEntity(veh)
+            if netId and netId ~= 0 then
+                -- Let the ID migrate normally under OneSync; do NOT force
+                -- ExistsOnAllMachines (that is for script-created persistent
+                -- entities and can stall scope updates).
+                SetNetworkIdCanMigrate(netId, true)
+                return true
+            end
+        end
+        Wait(50)
+    end
+    return false
+end
+
+local function jobsDebug()
+    return GetConvar('sv_sunset_jobs_debug', '0') == '1'
+end
+
+local function dlog(msg)
+    if jobsDebug() then
+        print(('[JOBS REG CLIENT] ' .. msg))
+    end
+end
+
 function JobClient.spawnVehicle(model, spawn, warp)
     local hash = JobClient.loadModel(model)
     if not hash then
@@ -161,6 +199,12 @@ function JobClient.spawnVehicle(model, spawn, warp)
     SetVehRadioStation(veh, 'OFF')
     SetModelAsNoLongerNeeded(hash)
 
+    -- [NETWORK FIX] Do not return the vehicle until it is actually networked
+    -- with a stable non-zero net ID.
+    if not ensureNetworked(veh) then
+        dlog(('spawnVehicle: entity %d never became networked'):format(veh))
+    end
+
     JobClient.vehicles[#JobClient.vehicles + 1] = veh
     if warp then TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1) end
     return veh
@@ -177,29 +221,74 @@ function JobClient.attachTrailer(truck, trailerModel, spawn)
     SetVehicleHasBeenOwnedByPlayer(trailer, true)
     protectJobVehicle(trailer)
     AttachVehicleToTrailer(truck, trailer, 1.0)
+    if not ensureNetworked(trailer) then
+        dlog(('attachTrailer: entity %d never became networked'):format(trailer))
+    end
     JobClient.vehicles[#JobClient.vehicles + 1] = trailer
     SetModelAsNoLongerNeeded(thash)
     return trailer
 end
 
+-- [NETWORK FIX] Registration handshake with error taxonomy:
+--   RETRYABLE: entity/trailer not propagated yet (server could not resolve)
+--   FATAL: everything else (session, driver, model, invalid entity)
+-- Bounded total window with small backoff; client-side readiness gate first.
+local RETRYABLE_ERRORS = {
+    ['Work vehicle not networked'] = true,
+    ['Work trailer is not networked'] = true,
+}
+
 function JobClient.registerVehiclesWithServer()
     local truck = JobClient.vehicles[1]
     if not truck or not DoesEntityExist(truck) then return false, 'Work vehicle is missing' end
+
+    -- Client-side readiness: both entities networked with stable IDs before
+    -- the first server round-trip.
+    if not ensureNetworked(truck) then
+        dlog('registration aborted: truck never networked client-side')
+        return false, 'Work vehicle did not become server-visible. Check OneSync/entity networking.'
+    end
     local trailer = JobClient.vehicles[2]
-    local tNet = trailer and DoesEntityExist(trailer) and NetworkGetNetworkIdFromEntity(trailer) or nil
-    for _ = 1, 8 do
+    if trailer and DoesEntityExist(trailer) then
+        if not ensureNetworked(trailer) then
+            dlog('registration aborted: trailer never networked client-side')
+            return false, 'Work trailer did not become server-visible. Check OneSync/entity networking.'
+        end
+    end
+
+    local totalDeadline = GetGameTimer() + 8000
+    local attempt, delay = 0, 200
+    local lastErr = nil
+    while GetGameTimer() < totalDeadline do
+        attempt = attempt + 1
+        if not DoesEntityExist(truck) then
+            return false, 'Work vehicle was destroyed'
+        end
         local truckNet = NetworkGetNetworkIdFromEntity(truck)
-        tNet = trailer and DoesEntityExist(trailer) and NetworkGetNetworkIdFromEntity(trailer) or nil
-        if truckNet and truckNet ~= 0 and (not trailer or (tNet and tNet ~= 0)) then
+        local tNet = nil
+        if trailer and DoesEntityExist(trailer) then
+            tNet = NetworkGetNetworkIdFromEntity(trailer)
+        end
+        if truckNet and truckNet ~= 0 and (not (trailer and DoesEntityExist(trailer)) or (tNet and tNet ~= 0)) then
             local ok, err = Sunset.AwaitCallback('sunset:jobs:registerVehicle', truckNet, tNet)
-            if ok then return true end
-            if err and err ~= 'Work vehicle not networked' and err ~= 'Work trailer is not networked' then
-                return false, err
+            if ok then
+                dlog(('registered on attempt %d'):format(attempt))
+                return true
+            end
+            lastErr = err
+            dlog(('attempt %d rejected: %s'):format(attempt, tostring(err)))
+            -- FATAL errors: do not retry.
+            if not err or not RETRYABLE_ERRORS[err] then
+                return false, err or 'Registration failed unexpectedly. Check F8/server logs.'
             end
         end
-        Wait(400)
+        Wait(delay)
+        -- Small backoff: 200ms for the first attempts, then 500ms.
+        if attempt >= 4 then delay = 500 end
     end
-    return false, 'Could not network the work vehicle'
+    return false, (lastErr and RETRYABLE_ERRORS[lastErr])
+        and 'Work vehicle has not propagated to the server yet. Check OneSync/entity networking.'
+        or (lastErr or 'Could not network the work vehicle')
 end
 
 function JobClient.playAnim(dict, anim, duration)
@@ -241,22 +330,30 @@ function JobClient.respawnTrailer(truck, trailerModel)
     local trailer = JobClient.attachTrailer(truck, trailerModel, spawn)
     if not trailer then return nil, 'Could not spawn replacement trailer' end
 
-    local tNet = NetworkGetNetworkIdFromEntity(trailer)
-    for _ = 1, 8 do
+    -- [NETWORK FIX] attachTrailer already ensures the entity is networked;
+    -- retry loop only covers server-side propagation delay, with taxonomy:
+    -- retryable = not propagated yet, fatal = anything else.
+    if not ensureNetworked(trailer) then
+        return nil, 'Replacement trailer did not become server-visible. Check OneSync/entity networking.'
+    end
+    local totalDeadline = GetGameTimer() + 8000
+    local delay = 200
+    while GetGameTimer() < totalDeadline do
+        local tNet = NetworkGetNetworkIdFromEntity(trailer)
         if tNet and tNet ~= 0 then
             local ok, err = Sunset.AwaitCallback('sunset:jobs:registerTrailer', tNet)
             if ok then
                 JobClient.trailerLostSent = false
                 return trailer
             end
-            if err and err ~= 'Trailer is not networked' then
+            if err ~= 'Trailer is not networked' then
                 return nil, err
             end
         end
-        Wait(400)
-        tNet = NetworkGetNetworkIdFromEntity(trailer)
+        Wait(delay)
+        delay = 500
     end
-    return nil, 'Could not register replacement trailer'
+    return nil, 'Work trailer has not propagated to the server yet. Check OneSync/entity networking.'
 end
 
 function JobClient.monitorVehicles()

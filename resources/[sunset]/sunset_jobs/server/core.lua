@@ -532,14 +532,43 @@ end)
 exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(source, vehicleNetId, trailerNetId)
     local session, err = SunsetJobs_RequireSession(source, nil, { 'STARTING', 'ACTIVE', 'RETURNING' })
     if not session then return nil, err end
+    local function dlog(msg)
+        if GetConvar('sv_sunset_jobs_debug', '0') == '1' then
+            print(('[JOBS REG] src=%d %s'):format(source, msg))
+        end
+    end
     vehicleNetId = tonumber(vehicleNetId)
     local entity = vehicleNetId and NetworkGetEntityFromNetworkId(vehicleNetId) or 0
-    if not entity or entity == 0 or not DoesEntityExist(entity) then return nil, 'Work vehicle not networked' end
+    if not entity or entity == 0 then
+        dlog('netId did not resolve to an entity (not propagated yet / invalid)')
+        return nil, 'Work vehicle not networked'
+    end
+    if not DoesEntityExist(entity) then
+        dlog('entity resolved but does not exist server-side')
+        return nil, 'Work vehicle not networked'
+    end
+    if GetEntityType(entity) ~= 2 then
+        dlog(('resolved entity is not a vehicle (type=%d)'):format(GetEntityType(entity)))
+        return nil, 'Invalid work vehicle'
+    end
     local ped = GetPlayerPed(source)
-    if not ped or ped == 0 or GetPedInVehicleSeat(entity, -1) ~= ped then return nil, 'You must drive the work vehicle' end
+    if not ped or ped == 0 then return nil, 'No ped found' end
+    if GetPedInVehicleSeat(entity, -1) ~= ped then
+        dlog('player is not in the driver seat of the resolved vehicle')
+        return nil, 'You must drive the work vehicle'
+    end
     local cfg = Sunset.GetJobConfig(session.jobId)
-    local expected = cfg and (cfg.truckModel or cfg.vehicleModel)
-    if expected and GetEntityModel(entity) ~= joaat(expected) then return nil, 'Invalid work vehicle' end
+    -- [MODEL FIX] The authoritative expected model is the one stored in the
+    -- SESSION DATA when the shift started (category-based pool for trucker:
+    -- mule/benson/pounder2/phantom/tanker). Falling back to cfg.truckModel
+    -- ('phantom') rejected EVERY non-fuel trucker route deterministically.
+    local expected = (session.data and session.data.truckModel)
+        or (session.data and session.data.vehicleModel)
+        or (cfg and (cfg.truckModel or cfg.vehicleModel))
+    if expected and GetEntityModel(entity) ~= joaat(expected) then
+        dlog(('model mismatch: entity=%s expected=%s'):format(GetEntityModel(entity), tostring(joaat(expected))))
+        return nil, 'Assigned truck model does not match'
+    end
     Entity(entity).state:set('sunsetProtectedVehicle', true, true)
     session.vehicleNetId = vehicleNetId
     session.trailerNetId = trailerNetId and tonumber(trailerNetId) or nil
@@ -548,26 +577,41 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
     if session.frameworkId then
         sessionsCall('SetEntity', session.frameworkId, 'vehicle', vehicleNetId, GetEntityModel(entity))
     end
-    if cfg and cfg.trailerModel then
-        if not session.trailerNetId then return nil, 'Work trailer was not registered' end
+    -- Trailer: only required when the session actually has one (fuel routes).
+    -- The expected model comes from session data ('tanker'), NOT cfg.trailerModel
+    -- ('trailers2' fallback) which never matched real trucker trailers.
+    local expectsTrailer = session.data and (session.data.trailerModel or (cfg and cfg.trailerModel and session.data.hasTrailer ~= false))
+    if expectsTrailer then
+        if not session.trailerNetId then
+            dlog('session expects a trailer but none was submitted')
+            return nil, 'Work trailer was not registered'
+        end
         local trailer = NetworkGetEntityFromNetworkId(session.trailerNetId)
         if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
             session.trailerNetId = nil
+            dlog('trailer netId did not resolve (not propagated yet)')
             return nil, 'Work trailer is not networked'
         end
-        if GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
+        local expectedTrailer = (session.data and session.data.trailerModel) or (cfg and cfg.trailerModel)
+        if expectedTrailer and GetEntityModel(trailer) ~= joaat(expectedTrailer) then
             session.trailerNetId = nil
+            dlog(('trailer model mismatch: entity=%s expected=%s'):format(GetEntityModel(trailer), tostring(joaat(expectedTrailer))))
             return nil, 'Invalid work trailer'
         end
         if #(GetEntityCoords(entity) - GetEntityCoords(trailer)) > 20.0 then
             session.trailerNetId = nil
+            dlog('trailer too far from truck')
             return nil, 'Work trailer is too far from the truck'
         end
         Entity(trailer).state:set('sunsetProtectedVehicle', true, true)
+        if session.frameworkId then
+            sessionsCall('SetEntity', session.frameworkId, 'trailer', session.trailerNetId, GetEntityModel(trailer))
+        end
     end
     if session.state == 'STARTING' then
         SunsetJobs_SetState(source, 'ACTIVE')
     end
+    dlog(('registered ok vehicle=%d trailer=%s'):format(vehicleNetId, tostring(session.trailerNetId)))
     return true
 end)
 
@@ -650,7 +694,11 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerTrailer', function(sou
     if not trailer or trailer == 0 or not DoesEntityExist(trailer) then
         return nil, 'Trailer is not networked'
     end
-    if cfg and cfg.trailerModel and GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
+    -- [MODEL FIX] Session data holds the real trailer model ('tanker' for fuel
+    -- routes); cfg.trailerModel is only the 'trailers2' fallback. Validating
+    -- against the fallback rejected every legitimate replacement trailer.
+    local expectedTrailer = (session.data and session.data.trailerModel) or (cfg and cfg.trailerModel)
+    if expectedTrailer and GetEntityModel(trailer) ~= joaat(expectedTrailer) then
         return nil, 'Invalid trailer model'
     end
 

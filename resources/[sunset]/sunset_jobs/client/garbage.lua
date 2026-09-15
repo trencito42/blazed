@@ -77,21 +77,14 @@ local function attachBag()
     end)
 end
 
+-- [NETWORK FIX] Consolidated onto the shared JobClient.registerVehiclesWithServer
+-- handshake (client-side networked gate + retryable/fatal taxonomy + bounded
+-- backoff) instead of a duplicated blind retry loop.
 local function registerTruckWithRetry(truck)
-    for _ = 1, 6 do
-        if not truck or not DoesEntityExist(truck) then return false end
-        local netId = NetworkGetNetworkIdFromEntity(truck)
-        if netId and netId ~= 0 then
-            local ok, err = Sunset.AwaitCallback('sunset:jobs:registerVehicle', netId, nil)
-            if ok then return true end
-            if err and err ~= 'Work vehicle not networked' then
-                JC.notify(err, 'error')
-                return false
-            end
-        end
-        Wait(400)
-    end
-    JC.notify('Could not register work truck — try /work again', 'error')
+    if not truck or not DoesEntityExist(truck) then return false end
+    local ok, err = JC.registerVehiclesWithServer()
+    if ok then return true end
+    JC.notify(err or 'Could not register work truck — try /work again', 'error')
     return false
 end
 
