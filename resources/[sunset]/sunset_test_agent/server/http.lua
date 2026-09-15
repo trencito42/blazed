@@ -123,6 +123,14 @@ local function httpHandler(req, res)
         return
     end
 
+    -- ── Ownership probe (NO AUTH — reveals only that sunset_test_agent owns
+    -- the game-port handler; used by the self-check loop to detect txAdmin
+    -- re-claiming SetHttpHandler). Must come BEFORE the bearer check. ──
+    if req.method == 'GET' and path == (Cfg.httpPrefix .. 'ping') then
+        sendJson(res, 200, { ok = true, owner = 'sunset_test_agent', at = os.date('%H:%M:%S') })
+        return
+    end
+
     local authOk, authErr = TestAgentAuth.checkBearer(header(req, 'Authorization'))
     if not authOk then
         sendError(res, nil, authErr, 401)
@@ -217,21 +225,55 @@ local function httpHandler(req, res)
 end
 
 -- [HTTP OWNER CONFLICT] SetHttpHandler is a SINGLE-owner native: only one
--- resource can hold it. txAdmin (monitor) also claims it and wins if it
--- registers after us. We re-register twice after boot to reclaim (no
--- endless war). FXServer serves /info.json + /players.json NATIVELY (before
--- any resource handler), so the container healthcheck is unaffected. The
--- txAdmin panel remains reachable on its own port (40120); only its
--- game-port proxy is displaced.
+-- resource can hold it. txAdmin (monitor) also claims it — often LATER than
+-- us (it boots on its own schedule). Strategy: claim, then self-probe every
+-- 20s via our unauthenticated /ping route; if the probe does not answer with
+-- our owner marker, re-claim. FXServer serves /info.json + /players.json
+-- NATIVELY (before any resource handler), so the container healthcheck and
+-- the server list are unaffected either way. The txAdmin panel stays on its
+-- own port (40120); only its game-port proxy is displaced — acceptable on
+-- this box per the owner's explicit activation request.
 SetHttpHandler(httpHandler)
 TestAgentLog.event('http', 'SetHttpHandler registered for ' .. Cfg.httpPrefix)
+
+local lastReclaimWarn = 0
 CreateThread(function()
-    for _, delay in ipairs({ 8000, 15000 }) do
-        Wait(delay == 8000 and 8000 or 7000)
-        SetHttpHandler(httpHandler)
-        TestAgentLog.debug('re-claimed SetHttpHandler (t+%dms)', delay)
-    end
-    if GetResourceState('monitor') == 'started' then
-        TestAgentLog.warn('txAdmin(monitor) is running: bridge re-claimed the game-port HTTP handler; txAdmin panel stays on its own port. If the bridge 404s with plain-text "Route not found", txAdmin re-claimed — restart sunset_test_agent.')
+    Wait(5000)
+    local port = GetConvarInt('sv_port', 30120)
+    while true do
+        Wait(20000)
+        if TestAgentAuth.enabled() then
+            -- Self-probe: do WE still own the game-port HTTP handler?
+            local settled = false
+            local ownsHandler = false
+            local p = promise.new()
+            pcall(function()
+                PerformHttpRequest(('http://127.0.0.1:%d%sping'):format(port, Cfg.httpPrefix),
+                    function(status, body)
+                        if settled then return end
+                        settled = true
+                        ownsHandler = status == 200 and type(body) == 'string'
+                            and body:find('sunset_test_agent', 1, true) ~= nil
+                        p:resolve()
+                    end, 'GET')
+            end)
+            -- Bound the wait so a dropped callback can never wedge the loop.
+            SetTimeout(4000, function()
+                if settled then return end
+                settled = true
+                p:resolve()
+            end)
+            Citizen.Await(p)
+            if not ownsHandler then
+                SetHttpHandler(httpHandler)
+                local now = GetGameTimer()
+                if now - lastReclaimWarn > 120000 then
+                    lastReclaimWarn = now
+                    TestAgentLog.warn('HTTP handler was NOT ours (txAdmin re-claimed?) — re-claimed SetHttpHandler')
+                else
+                    TestAgentLog.debug('re-claimed HTTP handler (silent)')
+                end
+            end
+        end
     end
 end)
