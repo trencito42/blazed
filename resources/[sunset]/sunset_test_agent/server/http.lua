@@ -106,7 +106,7 @@ local function header(req, name)
     return h[name] or h[name:lower()] or h[name:gsub('^%a', string.upper)]
 end
 
-SetHttpHandler(function(req, res)
+local function httpHandler(req, res)
     local path = req.path or ''
 
     -- Only handle our prefix; everything else 404s.
@@ -214,4 +214,24 @@ SetHttpHandler(function(req, res)
             sendJson(res, 200, { requestId = requestId, ok = true, result = result })
         end)
     end)
+end
+
+-- [HTTP OWNER CONFLICT] SetHttpHandler is a SINGLE-owner native: only one
+-- resource can hold it. txAdmin (monitor) also claims it and wins if it
+-- registers after us. We re-register twice after boot to reclaim (no
+-- endless war). FXServer serves /info.json + /players.json NATIVELY (before
+-- any resource handler), so the container healthcheck is unaffected. The
+-- txAdmin panel remains reachable on its own port (40120); only its
+-- game-port proxy is displaced.
+SetHttpHandler(httpHandler)
+TestAgentLog.event('http', 'SetHttpHandler registered for ' .. Cfg.httpPrefix)
+CreateThread(function()
+    for _, delay in ipairs({ 8000, 15000 }) do
+        Wait(delay == 8000 and 8000 or 7000)
+        SetHttpHandler(httpHandler)
+        TestAgentLog.debug('re-claimed SetHttpHandler (t+%dms)', delay)
+    end
+    if GetResourceState('monitor') == 'started' then
+        TestAgentLog.warn('txAdmin(monitor) is running: bridge re-claimed the game-port HTTP handler; txAdmin panel stays on its own port. If the bridge 404s with plain-text "Route not found", txAdmin re-claimed — restart sunset_test_agent.')
+    end
 end)
