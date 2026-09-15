@@ -55,6 +55,16 @@ const TruckerLaptop = {
         post('truckerLaptopClose');
     },
 
+    // Silent hide: visually close the laptop WITHOUT emitting truckerLaptopClose.
+    // Used by _acceptRoute so the Lua side owns the gameplay transition and
+    // focus cleanup via truckerPickRoute — no double-close race.
+    _silentHide() {
+        if (!this._el) return;
+        this._el.classList.add('hidden');
+        this._el.setAttribute('aria-hidden', 'true');
+        this._state = null;
+    },
+
     // ── Rank / XP display ────────────────────────────────────
 
     _renderRank() {
@@ -174,7 +184,9 @@ const TruckerLaptop = {
         if (!this._state?.selectedRoute) return;
         const route = this._state.selectedRoute;
         post('truckerPickRoute', { routeIndex: route.index });
-        this.close();
+        // Silent hide: Lua owns the transition + focus cleanup via
+        // truckerPickRoute. No truckerLaptopClose emitted — no double-close.
+        this._silentHide();
     },
 };
 
