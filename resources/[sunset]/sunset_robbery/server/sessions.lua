@@ -87,6 +87,10 @@ end)
 
 
 local function setDoors(session, unlocked)
+    -- [VAULT SYNC] Server records the authoritative door state per location
+    -- so late-joining/reconnecting clients can reconstruct it (doorSync).
+    RobberySessions.doorUnlocked = RobberySessions.doorUnlocked or {}
+    RobberySessions.doorUnlocked[session.locationId] = unlocked == true or nil
     TriggerClientEvent('sunset:robbery:doorState', -1, session.locationId, unlocked == true)
 end
 
@@ -94,6 +98,7 @@ local function scheduleDoorLock(session)
     local locationId = session.locationId
     SetTimeout(15000, function()
         if not RobberySessions.locationBusy[locationId] then
+            if RobberySessions.doorUnlocked then RobberySessions.doorUnlocked[locationId] = nil end
             TriggerClientEvent('sunset:robbery:doorState', -1, locationId, false)
         end
     end)
@@ -348,7 +353,12 @@ function RobberySessions.begin(source, locationId, skipGates)
     RobberySessions.bySource[source] = session
     RobberySessions.locationBusy[locationId] = source
     RobberySessions.starting[source] = nil
-    setDoors(session, true)
+    -- [VAULT GATE] Locations with vaultOnHackSuccess (Fleeca) keep doors
+    -- LOCKED until the hack succeeds — the vault is the reward for the
+    -- minigame, not a freebie at robbery start.
+    if not loc.vaultOnHackSuccess then
+        setDoors(session, true)
+    end
     -- [SESSIONS] mirror into the framework (ListSessions + deadline backstop).
     session.frameworkId = createFrameworkSession(source, session.characterId, session.id, locationId)
     -- [DUFFEL BAG] extend carry capacity for the duration of the robbery.
@@ -359,6 +369,23 @@ end
 
 function RobberySessions.setStage(session, stage)
     session.stage = stage
+end
+
+-- [VAULT GATE] Called by main.lua when the hack succeeds on a
+-- vaultOnHackSuccess location: broadcast the unlock so every client
+-- animates the vault open and late joiners sync via doorSync.
+function RobberySessions.openDoorsFor(session)
+    if not session then return end
+    setDoors(session, true)
+end
+
+-- Authoritative snapshot of currently unlocked locations (late-join sync).
+function RobberySessions.doorSnapshot()
+    local out = {}
+    for locationId, unlocked in pairs(RobberySessions.doorUnlocked or {}) do
+        out[locationId] = unlocked == true
+    end
+    return out
 end
 
 function RobberySessions.fail(source, reason)

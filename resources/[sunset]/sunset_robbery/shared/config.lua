@@ -146,6 +146,21 @@ SunsetRobbery.Locations = {
         doors = {
             { model = `v_ilev_gb_vauldoor`, coords = vector3(147.30, -1044.86, 29.36) },
         },
+        -- [VAULT PHYSICS] The DoorSystem unlock alone does NOT rotate the
+        -- vault door — it is an articulated prop that must be physically
+        -- rotated around its hinge. world.lua animates the heading from the
+        -- captured closed baseline by openDelta degrees over openMs.
+        -- QA NOTE: if the door swings INTO the wall instead of open, flip
+        -- openDelta to -90.0. Do not invent another value without /robdoor.
+        vaultOnHackSuccess = true, -- doors above only unlock AFTER a successful hack
+        vault = {
+            model = `v_ilev_gb_vauldoor`,
+            coords = vector3(147.30, -1044.86, 29.36),
+            searchRadius = 2.5,
+            openDelta = 90.0,
+            openMs = 2500,
+            closeMs = 2000,
+        },
         hackTerminal = {
             coords = vector3(147.20, -1042.20, 29.37),
             heading = 180.0,

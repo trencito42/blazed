@@ -53,6 +53,13 @@ local function applyHackResult(session, result)
     session.escalateAt = session.alertAt + (SunsetRobbery.PoliceEscalateSec or 20)
     session.vehicleAt = session.alertAt + (SunsetRobbery.PoliceVehicleSec or 40)
     RobberySessions.setStage(session, 'LOOTING')
+    -- [VAULT GATE] A successful hack physically opens the vault for
+    -- vaultOnHackSuccess locations (Fleeca). A FAILED hack must leave it
+    -- closed — no loot access without beating the minigame.
+    if result ~= 'failed' and session.location.vaultOnHackSuccess then
+        RobberySessions.openDoorsFor(session)
+        print(('[Fleeca] vault state bank=%s CLOSED -> OPENING'):format(session.locationId))
+    end
 end
 
 local function hackPayload(session)
@@ -74,6 +81,12 @@ local function sendHackProgress(source, hack, extra)
         burstMs = extra and extra.burstMs or nil,
     })
 end
+
+-- [VAULT SYNC] Late-join / reconnect / boot: clients ask for the current
+-- authoritative door state so an already-open vault renders open for them.
+exports.sunset_core:RegisterCallback('sunset:robbery:doorSync', function(source)
+    return RobberySessions.doorSnapshot()
+end)
 
 RegisterNetEvent('sunset:robbery:tryStart', function(locationId)
     local source = source
