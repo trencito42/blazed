@@ -113,6 +113,8 @@ local function httpHandler(req, res)
 
     -- Only handle our prefix; everything else 404s.
     if path:sub(1, #Cfg.httpPrefix) ~= Cfg.httpPrefix then
+        -- [DIAG] Log who else is hitting the game port (resource discovery).
+        print(('^3[TESTAGENT HTTP]^7 foreign path=%s method=%s'):format(path, tostring(req.method)))
         sendJson(res, 404, { ok = false, error = { code = 'NOT_FOUND', message = 'unknown path', retryable = false } })
         return
     end
