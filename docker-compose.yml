@@ -45,6 +45,10 @@ services:
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}
       DISCORD_WEBHOOK: ${DISCORD_WEBHOOK:-}
+      # DEV-ONLY test agent (MCP runtime bridge) — defaults locked/disabled
+      TEST_AGENT_ENABLED: ${TEST_AGENT_ENABLED:-false}
+      TEST_AGENT_TOKEN: ${TEST_AGENT_TOKEN:-}
+      TEST_AGENT_NUIDEBUG: ${TEST_AGENT_NUIDEBUG:-0}
     volumes:
       - ./config:/config-mount:ro
       - ./resources:/config/resources-custom:ro

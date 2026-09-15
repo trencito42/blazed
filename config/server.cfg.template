@@ -42,6 +42,16 @@ setr sv_stateBagStrictMode false
 # NOTE: setr (replicated) — the CLIENT reads it via GetConvar.
 setr sv_sunset_nofx 0
 
+# ═══ DEV-ONLY TEST AGENT (MCP runtime bridge) ═══
+# Injected from .env at deploy time (TEST_AGENT_ENABLED / TEST_AGENT_TOKEN).
+# Defaults: disabled + empty token = bridge fully locked (fail-safe).
+# Do NOT enable on production without understanding docs/testing/FIVEM_MCP.md.
+ensure sunset_test_agent
+setr sunset_test_agent_enabled "__TEST_AGENT_ENABLED__"
+set sunset_test_agent_token "__TEST_AGENT_TOKEN__"
+# Full NUI instrumentation (message/callback/error ring buffers for inspection)
+setr sv_sunset_nuidebug "__TEST_AGENT_NUIDEBUG__"
+
 # ox_inventory optional — enable after bridge migration
 # ensure ox_inventory
 

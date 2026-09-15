@@ -32,6 +32,15 @@ if [ -f /config-mount/server.cfg.template ]; then
       *__DISCORD_WEBHOOK__*)
         line="${line//__DISCORD_WEBHOOK__/${DISCORD_WEBHOOK:-}}"
         ;;
+      *__TEST_AGENT_ENABLED__*)
+        line="${line//__TEST_AGENT_ENABLED__/${TEST_AGENT_ENABLED:-false}}"
+        ;;
+      *__TEST_AGENT_NUIDEBUG__*)
+        line="${line//__TEST_AGENT_NUIDEBUG__/${TEST_AGENT_NUIDEBUG:-0}}"
+        ;;
+      *__TEST_AGENT_TOKEN__*)
+        line="${line//__TEST_AGENT_TOKEN__/${TEST_AGENT_TOKEN:-}}"
+        ;;
     esac
     printf '%s\n' "$line"
   done < /config-mount/server.cfg.template > /config/server.cfg
