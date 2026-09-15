@@ -374,6 +374,9 @@ AddEventHandler('sunset:nui:truckerLaptopClose', function()
     if not laptopOpen then return end
     laptopOpen = false
     exports.sunset_ui:SetFocus(false, false)
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    ClearPedTasksImmediately(PlayerPedId())
     armGrace(1500)
 end)
 
@@ -390,15 +393,19 @@ end)
 AddEventHandler('sunset:nui:truckerPickRoute', function(data)
     if not data or not data.routeIndex then return end
     laptopOpen = false
+    -- Belt-and-suspenders: export + direct native to guarantee focus is released.
+    -- The export goes through sunset_ui state tracking; the native call is
+    -- unconditional so a stale flag or async race can never leave the player frozen.
     exports.sunset_ui:SetFocus(false, false)
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    -- Clear any task/animation on the player ped (e.g. look-around idle from
+    -- standing near the laptop) so the vehicle warp doesn't fight a running task.
+    ClearPedTasksImmediately(PlayerPedId())
     armGrace(2000)
-    -- Run in a new thread so the NUI event handler finishes (and the browser
-    -- finishes closing the laptop overlay) before we spawn the truck and warp
-    -- the player. Running StartTrucker directly here caused the HUD to stay
-    -- hidden and the character to get stuck mid-animation.
     local routeIdx = data.routeIndex
     CreateThread(function()
-        Wait(150)
+        Wait(200)  -- let the browser fully close the overlay before spawning
         if Sunset.Jobs and Sunset.Jobs.StartTrucker then
             Sunset.Jobs.StartTrucker(routeIdx)
         end

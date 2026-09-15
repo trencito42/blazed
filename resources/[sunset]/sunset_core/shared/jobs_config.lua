@@ -7,9 +7,9 @@ Sunset.JobsConfig = {
         help = 'Go to the depot, spawn your rig, pick up cargo, deliver, then return the truck. Use /recovertrailer if your trailer detaches or is destroyed.',
         depot = {
             coords = vector3(1208.77, -3114.84, 5.54),
-            -- Road spawn outside the terminal so the truck spawns on a clear road.
-            spawn        = vector4(1186.0, -3048.0, 5.54, 155.0),
-            trailerSpawn = vector4(1190.0, -3064.0, 5.54, 155.0),
+            -- Road spawn just outside the terminal gate (confirmed open road).
+            spawn        = vector4(1220.0, -3076.0, 5.54, 180.0),
+            trailerSpawn = vector4(1220.0, -3091.0, 5.54, 180.0),
             blip = { sprite = 477, color = 5, scale = 0.85 },
         },
         -- Truck model pool per delivery category.

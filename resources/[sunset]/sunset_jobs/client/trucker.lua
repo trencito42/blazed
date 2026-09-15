@@ -108,6 +108,9 @@ local function startTrucker(selectedRouteIdx)
     JC.clearBlips()
     JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Trucker Depot')
 
+    -- Clear any task/animation before warping into the vehicle
+    ClearPedTasksImmediately(PlayerPedId())
+
     -- Spawn truck on road spawn (outside the terminal)
     local truckModel = data.truckModel or cfg.truckModel
     local truck = JC.spawnVehicle(truckModel, cfg.depot.spawn, true)
