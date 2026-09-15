@@ -32,8 +32,13 @@ CreateThread(function()
         Wait(50)
     end
     btrace('sunset_ui state=' .. tostring(GetResourceState('sunset_ui')))
-    -- [AUDIT P8-24] Guard the handoff so a NUI export error can never kill
-    -- this thread before ShutdownLoadingScreen (manual shutdown = stuck loadscreen).
+
+    -- [HANDOFF FIX] Deterministic ready handshake instead of magic Wait(80)/Wait(380).
+    -- 1) Show handoff screen in sunset_ui (technical state, not a visible loading page)
+    -- 2) Wait for NUI to confirm it parsed (bootEpoch callback from app.js)
+    -- 3) Tell the loadscreen to freeze + fade (cheap: opacity only, no blur)
+    -- 4) Shutdown loading screen
+    -- Failsafe: if NUI never confirms within 8s, shut down anyway (never stuck).
     local handoffOk, handoffErr = pcall(function()
         if GetResourceState('sunset_ui') == 'started' then
             exports.sunset_ui:Show('handoff', {})
@@ -42,24 +47,34 @@ CreateThread(function()
                 exports.sunset_ui:Send('bootNofx', {})
             end
             exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
-            Wait(80)
-            -- [BOOT TRACE v2] Epoch calibration: sunset_ui caches the NUI's
-            -- Date.now() (sent as bootEpoch when app.js parses) and converts it
-            -- to a GetGameTimer() offset; GetBootEpoch() then returns current
-            -- epoch-ms so core/loadscreen/NUI logs share one timeline.
-            local epochNow = exports.sunset_ui:GetBootEpoch()
-            if epochNow and tonumber(epochNow) and tonumber(epochNow) > 0 then
-                epochOffset = tonumber(epochNow) - GetGameTimer()
-                btrace(('epoch calibrated (offset=%d)'):format(epochOffset))
-            else
-                btrace('epoch NOT calibrated yet (nui bootEpoch missing)')
+
+            -- [READY HANDSHAKE] Wait for app.js to post bootEpoch (NUI parsed).
+            -- This replaces the old Wait(80) — we know the NUI is ready when
+            -- GetBootEpoch() returns a positive number.
+            local readyDeadline = GetGameTimer() + 8000
+            local nuiReady = false
+            while GetGameTimer() < readyDeadline do
+                local epochNow = exports.sunset_ui:GetBootEpoch()
+                if epochNow and tonumber(epochNow) and tonumber(epochNow) > 0 then
+                    epochOffset = tonumber(epochNow) - GetGameTimer()
+                    btrace(('epoch calibrated (offset=%d) — NUI ready'):format(epochOffset))
+                    nuiReady = true
+                    break
+                end
+                Wait(25)
             end
+            if not nuiReady then
+                btrace('NUI ready timeout (8s) — proceeding with failsafe shutdown')
+            end
+
             btrace('SEND_LOADING_SCREEN_MESSAGE sunsetHandoff')
             SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
             if nofx then
                 SendLoadingScreenMessage(json.encode({ eventName = 'nofx' }))
             end
-            Wait(380)
+            -- Minimal wait for the loadscreen fade to begin (opacity transition
+            -- is 300ms; we only need the fade to START before shutdown).
+            Wait(120)
         else
             print('^1[sunset_core]^7 sunset_ui was not ready before loadscreen shutdown; login UI may need /fixlogin')
         end

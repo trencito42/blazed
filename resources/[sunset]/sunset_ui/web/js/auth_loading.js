@@ -1,13 +1,5 @@
 const TOTAL_SEGMENTS = 25;
 
-const LOADING_TASKS = [
-    'Downloading audio packages',
-    'Loading custom vehicles',
-    'Syncing player data',
-    'Preparing map assets',
-    'Validating server connection',
-];
-
 const LOADING_TIPS = [
     'Stay in character at all times. Press G to open the quick interaction menu.',
     'Your voice range is shown on the HUD. Adjust voice settings in the pause menu.',
@@ -23,8 +15,6 @@ function createForzaLoadUI(screenId) {
         _interval: null,
         _finishTimer: null,
         _tipTimer: null,
-        _progress: 0,
-        _lastRenderedPct: -1,
         _segments: [],
         _tipIdx: 0,
 
@@ -53,17 +43,6 @@ function createForzaLoadUI(screenId) {
             this._segments = [...rpmBar.querySelectorAll('.rpm-segment')];
         },
 
-        _fileLabel(pct) {
-            if (pct >= 90) return 'COMPLETE';
-            const mbLoaded = Math.floor(pct * 14.5);
-            return `${mbLoaded} MB / 1450 MB`;
-        },
-
-        _taskLabel(pct) {
-            const taskIdx = Math.min(LOADING_TASKS.length - 1, Math.floor((pct / 100) * LOADING_TASKS.length));
-            return `${LOADING_TASKS[taskIdx]}...`;
-        },
-
         _updateRpmBar(pct) {
             const segmentsToLight = Math.floor((pct / 100) * TOTAL_SEGMENTS);
             this._segments.forEach((seg, idx) => {
@@ -76,16 +55,28 @@ function createForzaLoadUI(screenId) {
             });
         },
 
-        _setProgress(value, statusText) {
+        // [FIX] No fake percentage, no fake MB. Show indeterminate status
+        // with a pulsing RPM bar (all segments lit, gentle pulse).
+        _setIndeterminate(statusText) {
             const { pct, status, files } = this._els();
-            this._progress = Math.max(0, Math.min(100, value));
-            const floor = Math.floor(this._progress);
-            if (floor === this._lastRenderedPct && !statusText) return;
-            this._lastRenderedPct = floor;
-            if (pct) pct.innerHTML = `${floor}<span>%</span>`;
-            if (status) status.textContent = statusText || this._taskLabel(this._progress);
-            if (files) files.textContent = this._fileLabel(this._progress);
-            this._updateRpmBar(this._progress);
+            if (pct) pct.innerHTML = '<span class="forza-load-indeterminate">•••</span>';
+            if (status) status.textContent = statusText || 'Authenticating...';
+            if (files) files.textContent = '';
+            this._segments.forEach((seg) => {
+                seg.classList.add('active');
+                if (seg.classList.contains('is-redline')) seg.classList.add('redline');
+            });
+        },
+
+        _setComplete(statusText) {
+            const { pct, status, files } = this._els();
+            if (pct) pct.innerHTML = '100<span>%</span>';
+            if (status) status.textContent = statusText || 'Entering session...';
+            if (files) files.textContent = '';
+            this._segments.forEach((seg) => {
+                seg.classList.add('active');
+                if (seg.classList.contains('is-redline')) seg.classList.add('redline');
+            });
         },
 
         _stopTips() {
@@ -116,74 +107,31 @@ function createForzaLoadUI(screenId) {
             this._stopTips();
             this._interval = null;
             this._finishTimer = null;
-            this._progress = 0;
-            this._lastRenderedPct = -1;
             this._segments = [];
             root()?.classList.remove('is-fading');
-            this._setProgress(0, 'Initializing session...');
-            const { files } = this._els();
-            if (files) files.textContent = '';
+            this._setIndeterminate('Initializing session...');
         },
 
         showComplete(statusText = 'Entering session...') {
             this._ensureSegments();
-            this._setProgress(100, statusText);
-            const { files } = this._els();
-            if (files) files.textContent = '';
-            this._segments.forEach((seg) => {
-                seg.classList.add('active');
-                if (seg.classList.contains('is-redline')) seg.classList.add('redline');
-            });
+            this._setComplete(statusText);
         },
 
+        // [FIX] No fake 0→92% progress. Show indeterminate "Authenticating..."
+        // with real status text. The server callback determines when it's done.
         start(data = {}) {
-            if (!data.force && (this._interval || this._finishTimer || this._progress > 5)) return;
             this.reset();
             this._ensureSegments();
-            // This is a new phase, not a client restart: avoid the jarring 100 -> 0 flash.
-            this._setProgress(Math.max(3, Number(data.startAt) || 0), data.startText);
-
-            const steps = data.steps;
-            if (steps && steps.length) {
-                let i = 0;
-                this._startTips();
-                const next = () => {
-                    if (i >= steps.length) return;
-                    const step = steps[i++];
-                    this._setProgress(step.progress, step.text);
-                    setTimeout(next, data.stepDelay || 600);
-                };
-                next();
-                return;
-            }
-
+            this._setIndeterminate(data.startText || 'Authenticating...');
             this._startTips();
-            const totalMs = Math.max(2000, Number(data.duration) || 5000);
-            const tickMs = 180;
-            const increment = 100 / (totalMs / tickMs);
-            const holdAt = data.holdAt == null ? 92 : Number(data.holdAt);
-
-            this._interval = setInterval(() => {
-                let next = this._progress + increment;
-                if (next >= holdAt) {
-                    next = holdAt;
-                    clearInterval(this._interval);
-                    this._interval = null;
-                    this._setProgress(holdAt, data.holdText || 'Waiting for session...');
-                    return;
-                }
-                this._setProgress(next);
-            }, tickMs);
         },
 
-        finish(callback, delay = 900) {
-            clearInterval(this._interval);
-            this._interval = null;
-            this.showComplete('Entering session...');
+        finish(callback, delay = 600) {
+            this._stopTips();
+            this._setComplete('Entering session...');
             clearTimeout(this._finishTimer);
             this._finishTimer = setTimeout(() => {
                 this._finishTimer = null;
-                this._stopTips();
                 if (callback) callback();
             }, delay);
         },

@@ -462,14 +462,18 @@ function applyNofx() {
 // index.html; this converts them to real executable <script> tags.
 // Strategy: wait 2s for the game to finish critical asset streaming, then
 // inject in batches of 4 with 80ms gaps to avoid blocking the CEF thread.
+// [MESSAGE QUEUE] If a panel message (e.g. racingShow) arrives before its
+// script is loaded, it is queued and re-delivered after injection completes.
 let lazyScriptsLoaded = false;
+let pendingMessages = []; // queued messages waiting for lazy scripts
+
 function loadLazyScripts() {
     if (lazyScriptsLoaded) return;
     lazyScriptsLoaded = true;
     const pending = Array.from(document.querySelectorAll('script[type="text/plain"][data-lazy-src]'));
     const BATCH = 4;
     const GAP = 80;
-    const INITIAL_DELAY = 500;
+    const INITIAL_DELAY = 2000; // was 500 — avoids hitch right after spawn
     let i = 0;
     function injectBatch() {
         const end = Math.min(i + BATCH, pending.length);
@@ -485,9 +489,50 @@ function loadLazyScripts() {
             setTimeout(injectBatch, GAP);
         } else {
             __btracePost(`lazy scripts injected: ${pending.length} (staggered, ${INITIAL_DELAY}ms delay)`);
+            // [MESSAGE QUEUE] Re-deliver any messages that arrived before scripts loaded.
+            flushPendingMessages();
         }
     }
     setTimeout(injectBatch, INITIAL_DELAY);
+}
+
+// [MESSAGE QUEUE] Deliver queued messages after lazy scripts are ready.
+function flushPendingMessages() {
+    if (!pendingMessages.length) return;
+    const queue = pendingMessages;
+    pendingMessages = [];
+    // Small delay to let scripts finish parsing
+    setTimeout(() => {
+        for (const msg of queue) {
+            window.dispatchEvent(new MessageEvent('message', { data: msg }));
+        }
+        __btracePost(`flushed ${queue.length} queued messages`);
+    }, 100);
+}
+
+// [MESSAGE QUEUE] Check if a message targets a lazy-loaded module that isn't
+// ready yet. If so, queue it instead of dropping it.
+function shouldQueueMessage(action) {
+    if (lazyScriptsLoaded) return false; // scripts loaded, no queueing needed
+    // Map action prefixes to their window globals
+    const lazyModules = {
+        racing: 'Racing', casino: 'Casino', drugs: 'Drugs', impound: 'Impound',
+        marriage: 'Marriage', phone: 'Phone', mdc: 'Mdc', inventory: 'Inventory',
+        wardrobe: 'Wardrobe', dealership: 'Dealership', factions: 'Factions',
+        clans: 'Clans', businesses: 'Businesses', tuning: 'Tuning',
+        helpdesk: 'Helpdesk', fishing: 'Fishing', license: 'License',
+        battlepass: 'BattlePass', quests: 'Quests', scoreboard: 'Scoreboard',
+        store: 'Store', trade: 'Trade', fuel: 'Fuel', radar: 'Radar',
+        documents: 'Documents', emotes: 'Emotes', hotbar: 'Hotbar',
+        damage: 'Damage', world: 'World', job: 'Job', taxi: 'Taxi',
+        trucker: 'TruckerLaptop', fishingShop: 'Panels',
+    };
+    for (const [prefix, globalName] of Object.entries(lazyModules)) {
+        if (action.toLowerCase().startsWith(prefix) && !window[globalName]) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // NUI message handler
@@ -495,6 +540,16 @@ window.addEventListener('message', (event) => {
     const { action, screen, data, message, type, duration, label } = event.data;
     if (action === 'show') window.__btrace(`show screen=${screen}`);
     if (action === 'bootNofx') applyNofx();
+
+    // [MESSAGE QUEUE] If this message targets a lazy-loaded module that isn't
+    // ready yet, queue it instead of dropping it. It will be re-delivered
+    // after the lazy scripts finish injecting.
+    if (action && shouldQueueMessage(action)) {
+        pendingMessages.push(event.data);
+        __btracePost(`queued message: ${action} (waiting for lazy scripts)`);
+        return;
+    }
+
     activateGameplayModal(action, data || event.data.data || {});
 
     switch (action) {
