@@ -137,7 +137,7 @@ local function openTruckerNpcMenu()
             actions[#actions + 1] = { id = 'end_trucker_shift', label = 'End Shift', group = 'TRUCKER' }
         else
             -- Hired trucker not on shift: redirect to the laptop.
-            exports.sunset_ui:Notify('Head to the ~y~Route Laptop~s~ to pick a delivery.', 'info', 5000)
+            exports.sunset_ui:Notify('Head to the Route Laptop to pick a delivery.', 'info', 5000)
             SetNewWaypoint(LAPTOP_COORDS.x, LAPTOP_COORDS.y)
             return
         end
