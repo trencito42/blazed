@@ -468,8 +468,10 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
     -- freshly bought pistol was unusable until the player separately bought AND
     -- manually used an ammo box. Now:
     --  (a) buying a firearm grants a starting magazine for that weapon;
-    --  (b) buying an ammo box immediately loads it into an owned compatible
-    --      weapon (and consumes the box) instead of requiring a manual "use".
+    --  (b) buying an ammo box keeps it in inventory as a real item.
+    --      The player uses it from inventory to load rounds into a compatible
+    --      weapon. This makes the system understandable:
+    --      buy ammo → see ammo box → use ammo → rounds enter weapon.
     if itemDef.weapon and not itemDef.ammoRounds then
         TriggerClientEvent('sunset:client:addWeaponAmmo', source, { itemDef.weapon },
             itemDef.startingAmmo or 60)
@@ -481,28 +483,13 @@ exports.sunset_core:RegisterCallback('sunset:buyItem', function(source, shopId, 
         pcall(function()
             exports.sunset_inventory:SetWeaponAmmo(source, itemName, startAmmo)
         end)
-    elseif itemDef.ammoRounds and type(itemDef.ammoWeapons) == 'table' then
-        -- Load directly into a compatible owned weapon if the player has one.
-        local compatible = {}
-        for _, w in ipairs(itemDef.ammoWeapons) do compatible[string.upper(w)] = true end
-        local targetWeapon
-        for _, row in ipairs(exports.sunset_inventory:GetInventory(source) or {}) do
-            local rowDef = Sunset.Items[row.item]
-            if rowDef and rowDef.weapon and compatible[string.upper(rowDef.weapon)] then
-                targetWeapon = rowDef.weapon
-                break
-            end
-        end
-        if targetWeapon then
-            -- Consume the boxes just bought and grant the rounds straight to the gun.
-            if exports.sunset_inventory:RemoveItem(source, itemName, amount) then
-                TriggerClientEvent('sunset:client:addWeaponAmmo', source, { targetWeapon },
-                    (itemDef.ammoRounds or 0) * amount)
-            end
-        end
-        -- else: no compatible weapon owned -> ammo stays in inventory as an item
-        -- (player can use it later once they own the gun); no charge reversal.
     end
+    -- [AMMO BOX UX] Ammo boxes are NOT auto-consumed on purchase. They remain
+    -- in the inventory as real items. The player uses them from inventory
+    -- (UseItem) to load rounds into a compatible weapon. This ensures:
+    --   - boxes are visible in inventory
+    --   - persistence is immediate (UseItem updates metadata.ammo server-side)
+    --   - no ammo is lost on disconnect/crash before the 10s client save loop
 
     businessId = tonumber(businessId)
     if businessId and GetResourceState('sunset_businesses') == 'started' then

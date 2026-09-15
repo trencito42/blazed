@@ -417,21 +417,45 @@ function UseItem(source, item)
         end
         local compatible = {}
         for _, weaponName in ipairs(def.ammoWeapons) do compatible[string.upper(weaponName)] = true end
-        local ownsCompatibleWeapon = false
+
+        -- Find the FIRST compatible weapon the player owns
+        local targetWeaponItem = nil
+        local targetWeaponName = nil
         for _, row in ipairs(GetInventory(source)) do
             local rowDef = Sunset.Items[row.item]
             if rowDef and rowDef.weapon and compatible[string.upper(rowDef.weapon)] then
-                ownsCompatibleWeapon = true
+                targetWeaponItem = row.item
+                targetWeaponName = rowDef.weapon
                 break
             end
         end
-        if not ownsCompatibleWeapon then
+        if not targetWeaponItem then
             return false, ('You do not own a weapon compatible with %s. The box was not consumed.'):format(def.label or item)
         end
+
+        -- Consume exactly ONE box
         if not RemoveItem(source, item, 1) then
             return false, 'Your ammunition changed before it could be loaded. Reopen the inventory.'
         end
-        emitClient('sunset:client:addWeaponAmmo', source, def.ammoWeapons, def.ammoRounds)
+
+        -- [AMMO PERSIST] Immediately increment the weapon's metadata.ammo
+        -- server-side. This is the authoritative value — no reliance on the
+        -- 10s client save loop.
+        local roundsToAdd = math.floor(tonumber(def.ammoRounds) or 0)
+        local currentAmmo = 0
+        local inv = GetInventory(source)
+        for _, row in ipairs(inv) do
+            if row.item == targetWeaponItem then
+                local meta = type(row.metadata) == 'table' and row.metadata or {}
+                currentAmmo = math.floor(tonumber(meta.ammo) or 0)
+                break
+            end
+        end
+        local newAmmo = math.min(3000, currentAmmo + roundsToAdd)
+        SetWeaponAmmo(source, targetWeaponItem, newAmmo)
+
+        -- Tell the client the exact new ammo value (synchronized)
+        emitClient('sunset:client:setWeaponAmmo', source, { targetWeaponName }, newAmmo)
         return true
     end
 
@@ -665,10 +689,18 @@ AddEventHandler('playerDropped', function()
 end)
 
 -- [AMMO PERSIST] Client reports live ammo counts for inventory-synced weapons
--- (every 10s, only when changed). Server validates ownership + weapon def,
--- then writes metadata.ammo on the weapon row. Silent (no inventoryUpdate
--- broadcast) so the UI is not spammed; the value is restored on next
--- SyncInventoryWeapons (relog/respawn/reopen).
+-- (every 10s, only when changed).
+--
+-- [SECURITY FIX] The server CLAMPS the reported value: the client may only
+-- report the SAME or LOWER ammo (consumption from shooting). It can NEVER
+-- report an increase — that would be an ammo injection vulnerability.
+-- Legitimate increases come ONLY from server-authorized paths:
+--   - SetWeaponAmmo (gunshop purchase, ammo box use)
+--   - faction/loadout grants
+--   - admin give
+--
+-- Model: reportedAmmo <= authoritativeAmmo (stored metadata)
+-- If client reports MORE than stored, we keep the stored value (reject).
 RegisterNetEvent('sunset:server:saveWeaponAmmo', function(payload)
     local source = source
     if type(payload) ~= 'table' or #payload == 0 or #payload > 20 then return end
@@ -679,14 +711,17 @@ RegisterNetEvent('sunset:server:saveWeaponAmmo', function(payload)
     for _, entry in ipairs(payload) do
         if type(entry) == 'table' and type(entry.item) == 'string' then
             local def = Sunset.Items[entry.item]
-            local ammo = math.max(0, math.min(3000, math.floor(tonumber(entry.ammo) or 0)))
+            local reportedAmmo = math.max(0, math.min(3000, math.floor(tonumber(entry.ammo) or 0)))
             -- Must be a real weapon item and the player must own the row.
             if def and def.weapon then
                 for _, row in ipairs(inv) do
                     if row.item == entry.item then
                         local meta = type(row.metadata) == 'table' and row.metadata or {}
-                        if tonumber(meta.ammo) ~= ammo then
-                            meta.ammo = ammo
+                        local storedAmmo = math.floor(tonumber(meta.ammo) or 0)
+                        -- [SECURITY] Client can only report consumption (decrease).
+                        -- Never accept an increase from the client.
+                        if reportedAmmo <= storedAmmo and reportedAmmo ~= storedAmmo then
+                            meta.ammo = reportedAmmo
                             row.metadata = meta
                             MySQL.update.await(
                                 'UPDATE character_inventory SET metadata = ? WHERE id = ? AND character_id = ?',

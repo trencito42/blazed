@@ -42,8 +42,6 @@ local function inWeaponTest()
 end
 
 local function hasWeaponLicense()
-    -- Daca jucatorul e on-duty intr-o factiune, are clearance pentru arme
-    -- (armele de factiune sunt date/luate de sunset_factions/client/loadout.lua)
     if GetResourceState('sunset_factions') == 'started' then
         local ok, onDuty = pcall(function() return exports.sunset_factions:IsOnDuty() end)
         if ok and onDuty == true then
@@ -90,39 +88,72 @@ local function ensureUnarmed(ped)
 end
 
 local function mayCarryWeapon(itemName)
-    -- [LICENSE GATE DISABLED] The firearm-license gate was flaky and is now
-    -- disabled by owner decision. Carrying simply mirrors the inventory:
-    -- the license is still enforced where it counts — buying (gunshop) and
-    -- receiving weapons (inventory AddItem) both check it SERVER-side, so a
-    -- weapon can only be in the inventory if it was obtained legally. Gating
-    -- the client-side ped sync on an async license round-trip caused weapons
-    -- to silently never appear on the weapon wheel until an ammo "use" forced
-    -- GiveWeaponToPed.
     return true
 end
 
+-- ═══════════════════════════════════════════════════════════════
+--  [AMMO FIX] Explicit ownership semantics for weapon/ammo sync.
+--
+--  FRESH SPAWN (relog, respawn, character switch, resource restart):
+--    → persisted metadata ammo is AUTHORITATIVE
+--    → live ped ammo is 0 (fresh ped) and must NOT override metadata
+--
+--  LIVE RESYNC (inventory update while same ped is alive):
+--    → live ped ammo may be NEWER (shots fired since last DB flush)
+--    → live ammo is authoritative IF the weapon was already on the ped
+--
+--  The old code used `preservedAmmo[hash] or metaAmmo or 0` which is
+--  BROKEN because Lua 0 is truthy: a fresh ped reports 0, which
+--  overrides the persisted 84 rounds.
+-- ═══════════════════════════════════════════════════════════════
+
+-- Tracks whether this is a fresh ped (no weapons were on it before sync)
+local isFreshPed = true
+
 function SyncInventoryWeapons(items)
     local ped = PlayerPedId()
-    local preservedAmmo = {}
-    for hash in pairs(syncedWeapons) do
-        preservedAmmo[hash] = math.max(0, GetAmmoInPedWeapon(ped, hash))
-    end
-    clearSyncedWeapons(ped)
-    ensureUnarmed(ped)
 
+    -- [DIFFERENTIAL SYNC] Build the set of weapon hashes we SHOULD have
+    local desiredWeapons = {}
     for _, row in ipairs(items or {}) do
         local hash = weaponHashForItem(row.item)
         if hash and hash ~= UNARMED and mayCarryWeapon(row.item) then
-            -- [AMMO PERSIST] Ammo lives in the weapon row's metadata (server
-            -- persisted). Live ped ammo wins while the session is running;
-            -- on relog/respawn the metadata restores it. Without this, ammo
-            -- bought at the gunshop vanished on every reconnect.
-            local metaAmmo = row.metadata and tonumber(row.metadata.ammo) or nil
-            local ammo = preservedAmmo[hash] or metaAmmo or 0
-            GiveWeaponToPed(ped, hash, ammo, false, false)
+            desiredWeapons[hash] = row
+        end
+    end
+
+    -- [DIFFERENTIAL SYNC] Remove weapons no longer owned
+    for hash, _ in pairs(syncedWeapons) do
+        if not desiredWeapons[hash] then
+            if HasPedGotWeapon(ped, hash, false) then
+                RemoveWeaponFromPed(ped, hash)
+            end
+            syncedWeapons[hash] = nil
+        end
+    end
+
+    -- [DIFFERENTIAL SYNC] Add/update weapons
+    for hash, row in pairs(desiredWeapons) do
+        local alreadyOnPed = syncedWeapons[hash] == true and HasPedGotWeapon(ped, hash, false)
+
+        if alreadyOnPed then
+            -- LIVE RESYNC: weapon was already on this ped. Live ammo is newer
+            -- (shots may have been fired since last DB flush). Do NOT re-give,
+            -- do NOT reset ammo. Leave it alone.
+            -- (The periodic saveWeaponAmmo loop handles persistence.)
+        else
+            -- FRESH GIVE: weapon was NOT on this ped (fresh spawn, or newly
+            -- acquired). Use persisted metadata ammo as authoritative.
+            local metaAmmo = 0
+            if row.metadata and type(row.metadata) == 'table' then
+                metaAmmo = math.max(0, math.floor(tonumber(row.metadata.ammo) or 0))
+            end
+            GiveWeaponToPed(ped, hash, metaAmmo, false, false)
             syncedWeapons[hash] = true
         end
     end
+
+    ensureUnarmed(ped)
 
     if hotbarEquippedHash and HasPedGotWeapon(ped, hotbarEquippedHash, false) then
         SetCurrentPedWeapon(ped, hotbarEquippedHash, true)
@@ -130,12 +161,13 @@ function SyncInventoryWeapons(items)
         hotbarEquippedHash = nil
         SetCurrentPedWeapon(ped, UNARMED, true)
     end
+
+    isFreshPed = false
 end
 
 -- [CARRY EXCEPTIONS] Weapons granted OUTSIDE the inventory (war loadouts,
 -- license range tests, faction duty kits) must not be stripped by the
--- consistency loop. Owners register their hashes here and clear them when
--- the granting context ends.
+-- consistency loop.
 local carryExceptions = {}
 
 function AddCarryException(hash, remove)
@@ -159,9 +191,6 @@ RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
     local amount = math.max(1, math.min(250, math.floor(tonumber(rounds) or 0)))
     for _, weaponName in ipairs(weaponNames) do
         local hash = joaat(tostring(weaponName))
-        -- [GUNSHOP FIX] If the weapon isn't on the ped yet (fresh purchase race:
-        -- inventory sync grants it separately), give it now. This event is only
-        -- sent by the server after confirming the player owns the weapon/box.
         if not HasPedGotWeapon(ped, hash, false) then
             GiveWeaponToPed(ped, hash, amount, false, true)
             syncedWeapons[hash] = true
@@ -172,10 +201,28 @@ RegisterNetEvent('sunset:client:addWeaponAmmo', function(weaponNames, rounds)
     end
 end)
 
+-- [AMMO FIX] Server-authoritative ammo set. Unlike addWeaponAmmo (which adds),
+-- this SETS the exact value the server computed. Used after ammo box use so
+-- the client ped matches the persisted metadata immediately.
+RegisterNetEvent('sunset:client:setWeaponAmmo', function(weaponNames, ammo)
+    if type(weaponNames) ~= 'table' then return end
+    local ped = PlayerPedId()
+    local amount = math.max(0, math.min(3000, math.floor(tonumber(ammo) or 0)))
+    for _, weaponName in ipairs(weaponNames) do
+        local hash = joaat(tostring(weaponName))
+        if HasPedGotWeapon(ped, hash, false) then
+            -- Set exact ammo: remove all then give the exact amount
+            RemoveWeaponFromPed(ped, hash)
+            GiveWeaponToPed(ped, hash, amount, false, true)
+            syncedWeapons[hash] = true
+            return
+        end
+    end
+end)
+
 -- [AMMO PERSIST] Periodically report the live ammo of every inventory-synced
--- weapon to the server, which stores it in the weapon row's metadata. On
--- relog/respawn SyncInventoryWeapons restores it. Only sends when something
--- changed since the last report (cheap: one small payload per 10s max).
+-- weapon to the server. The server CLAMPS the value (client can only report
+-- decreases from shooting, never increases).
 local lastReportedAmmo = {}
 CreateThread(function()
     Wait(20000)
@@ -214,7 +261,6 @@ local function equipHotbarWeapon(hash)
 end
 
 local function holsterHotbarWeapon()
-    local ped = PlayerPedId()
     hotbarEquippedHash = nil
     SetCurrentPedWeapon(ped, UNARMED, true)
     return true
@@ -229,6 +275,9 @@ RegisterNetEvent('sunset:client:inventoryUpdate', function(items)
 end)
 
 AddEventHandler('sunset:client:playerSpawned', function()
+    -- [FRESH SPAWN] Mark as fresh so SyncInventoryWeapons uses metadata ammo
+    isFreshPed = true
+    syncedWeapons = {}
     CreateThread(function()
         Wait(1500)
         local data = Sunset.AwaitCallback('sunset:getInventory')
@@ -255,15 +304,6 @@ RegisterNetEvent('sunset:licenses:refresh', function()
         SyncInventoryWeapons(data.items)
     end
 end)
-
--- [LICENSE GATE DISABLED] The old loop here stripped all firearms from the ped
--- whenever the CLIENT-side license check said "no license". That check is an
--- async round-trip and could answer false transiently -> weapons vanished from
--- the wheel and shots got removed mid-fight. Carrying is now purely
--- inventory-driven (SyncInventoryWeapons mirrors the inventory onto the ped).
--- Banned/cheat weapons are still caught server-side by sunset_core security
--- (BANNED_WEAPONS scan); faction duty kits and war loadouts are managed by
--- their own resources, so nothing here strips them.
 
 CreateThread(function()
     while true do
