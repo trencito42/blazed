@@ -384,6 +384,19 @@ end
 exports('PayReward', SunsetJobs_PayReward)
 exports('AddJobXP', SunsetJobs_AddJobXP)
 exports('GetJobLevel', SunsetJobs_GetJobLevel)
+-- [TEST AGENT] Read-only session snapshot for dev/test tooling. Returns a
+-- plain table (no functions) so it is safe across the export boundary and
+-- cannot be used to mutate state.
+exports('GetSessionSnapshot', function(source)
+    local s = Sessions[tonumber(source or -1)]
+    if not s then return nil end
+    return {
+        jobId = s.jobId,
+        state = s.state,
+        stage = s.data and s.data.stage or nil,
+        startedAt = s.startedAt,
+    }
+end)
 
 function SunsetJobs_StartSession(source, jobId, data)
     if Sessions[source] then

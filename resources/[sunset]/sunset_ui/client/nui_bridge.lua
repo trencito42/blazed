@@ -1,5 +1,7 @@
 local function forward(name)
     RegisterNUICallback(name, function(data, cb)
+        -- [TEST AGENT] record inbound callback (no-op unless sv_sunset_nuidebug 1)
+        if NuiDebugRecordCallback then NuiDebugRecordCallback(name) end
         TriggerEvent('sunset:nui:' .. name, data)
         cb('ok')
     end)
@@ -17,6 +19,10 @@ RegisterNUICallback('nuiError', function(data, cb)
     data = type(data) == 'table' and data or {}
     print(('^1[NUI ERROR]^7 %s @ %s:%s'):format(
         tostring(data.message or 'unknown'), tostring(data.file or '?'), tostring(data.line or 0)))
+    -- [TEST AGENT] record into the gated error buffer
+    if NuiDebugRecordError then
+        NuiDebugRecordError(data.message, data.file, data.line)
+    end
     cb('ok')
 end)
 

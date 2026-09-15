@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "fivem": {
+      "command": "node",
+      "args": ["tools/fivem-mcp/dist/index.js"],
+      "env": {
+        "FIVEM_TEST_HOST": "127.0.0.1",
+        "FIVEM_TEST_PORT": "30120"
+      }
+    }
+  }
+}

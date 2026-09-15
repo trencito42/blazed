@@ -388,6 +388,35 @@ function RobberySessions.doorSnapshot()
     return out
 end
 
+-- [TEST AGENT] Read-only session snapshot for dev/test tooling. Plain data
+-- only — cannot mutate robbery state.
+exports('GetTestSnapshot', function(source)
+    local session = RobberySessions.get(tonumber(source or -1))
+    if not session then return nil end
+    return {
+        id = session.id,
+        locationId = session.locationId,
+        stage = session.stage,
+        hackResult = session.hackResult,
+        bagUsed = session.bagUsed,
+        bagCap = session.bagCap,
+        estimated = session.estimated,
+        policeAlerted = session.policeAlerted == true,
+        startedAt = session.startedAt,
+        displaysSmashed = (function()
+            local n = 0
+            for _, d in pairs(session.displays or {}) do
+                if d.smashed then n = n + 1 end
+            end
+            return n
+        end)(),
+    }
+end)
+
+exports('GetDoorSnapshot', function()
+    return RobberySessions.doorSnapshot()
+end)
+
 function RobberySessions.fail(source, reason)
     local session = RobberySessions.bySource[source]
     if not session then return end

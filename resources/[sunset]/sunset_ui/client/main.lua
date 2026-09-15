@@ -87,7 +87,90 @@ function ReleaseFocusUnlessModal(owner)
 end
 exports('ReleaseFocusUnlessModal', ReleaseFocusUnlessModal)
 
+-- ═══════════════════════════════════════════════════════════════
+--  [TEST AGENT NUI INSTRUMENTATION] Gated by convar sv_sunset_nuidebug=1.
+--  When off (production default): zero overhead, zero behavior change.
+--  When on: ring buffers of outbound messages, focus transitions and
+--  inbound NUI callbacks for sunset_test_agent inspection.
+-- ═══════════════════════════════════════════════════════════════
+local NUI_DEBUG_CAP = 60
+local nuiMsgBuffer, nuiMsgHead, nuiMsgTotal = {}, 0, 0
+local nuiCbBuffer, nuiCbHead, nuiCbTotal = {}, 0, 0
+local nuiErrBuffer, nuiErrHead, nuiErrTotal = {}, 0, 0
+
+local function nuiDebugEnabled()
+    return GetConvar('sv_sunset_nuidebug', '0') == '1'
+end
+
+function NuiDebugRecordMessage(action)
+    if not nuiDebugEnabled() then return end
+    nuiMsgHead = (nuiMsgHead % NUI_DEBUG_CAP) + 1
+    nuiMsgTotal = nuiMsgTotal + 1
+    nuiMsgBuffer[nuiMsgHead] = { seq = nuiMsgTotal, action = tostring(action), at = os.date('%H:%M:%S') }
+end
+
+function NuiDebugRecordCallback(name)
+    if not nuiDebugEnabled() then return end
+    nuiCbHead = (nuiCbHead % NUI_DEBUG_CAP) + 1
+    nuiCbTotal = nuiCbTotal + 1
+    nuiCbBuffer[nuiCbHead] = { seq = nuiCbTotal, name = tostring(name), at = os.date('%H:%M:%S') }
+end
+
+function NuiDebugRecordError(message, file, line)
+    if not nuiDebugEnabled() then return end
+    nuiErrHead = (nuiErrHead % NUI_DEBUG_CAP) + 1
+    nuiErrTotal = nuiErrTotal + 1
+    nuiErrBuffer[nuiErrHead] = {
+        seq = nuiErrTotal, message = tostring(message), file = tostring(file),
+        line = tonumber(line), at = os.date('%H:%M:%S'),
+    }
+end
+
+local function bufferTail(buffer, head, total, limit)
+    limit = math.max(1, math.min(tonumber(limit) or 40, NUI_DEBUG_CAP))
+    local out = {}
+    local count = math.min(limit, total)
+    local start = head - count + 1
+    for k = 0, count - 1 do
+        local idx = ((start + k - 1) % NUI_DEBUG_CAP) + 1
+        if buffer[idx] then out[#out + 1] = buffer[idx] end
+    end
+    return out
+end
+
+exports('GetNuiDebugState', function()
+    return {
+        instrumented = true,
+        debugEnabled = nuiDebugEnabled(),
+        focus = { keyboard = IsNuiFocused(), keepInput = IsNuiFocusKeepingInput() },
+        uiOpen = isOpen,
+        currentScreen = currentScreen,
+        focusOwner = focusOwner,
+        openPanels = (function()
+            -- 'openPanels' = visible modal overlays known to sunset_ui state.
+            local out = {}
+            if isOpen and currentScreen then out[#out + 1] = currentScreen end
+            if focusOwner then out[#out + 1] = 'focus:' .. tostring(focusOwner) end
+            return out
+        end)(),
+        lastMessage = nuiMsgBuffer[nuiMsgHead],
+        lastCallback = nuiCbBuffer[nuiCbHead],
+    }
+end)
+
+exports('GetNuiDebugHistory', function(limit)
+    return {
+        messages = bufferTail(nuiMsgBuffer, nuiMsgHead, nuiMsgTotal, limit),
+        callbacks = bufferTail(nuiCbBuffer, nuiCbHead, nuiCbTotal, limit),
+    }
+end)
+
+exports('GetNuiDebugErrors', function(limit)
+    return bufferTail(nuiErrBuffer, nuiErrHead, nuiErrTotal, limit)
+end)
+
 function Send(action, data)
+    NuiDebugRecordMessage(action)
     SendNUIMessage({
         action = action,
         data = data or {},

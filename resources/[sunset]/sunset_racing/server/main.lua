@@ -639,5 +639,31 @@ end)
 exports('IsRaceNightActive', function() return RaceNightActive end)
 exports('GetRaceNightPoints', function(charId) return RaceNightPoints[charId] or 0 end)
 
+-- [TEST AGENT] Read-only racing snapshot for dev/test tooling.
+exports('GetTestSnapshot', function(source)
+    local src = tonumber(source or -1)
+    local out = { inLobby = PlayerLobby[src] ~= nil, lobbyRoute = PlayerLobby[src] }
+    local progress = PlayerProgress[src]
+    if progress then
+        out.inRace = ActiveRace ~= nil
+        out.raceId = ActiveRace and ActiveRace.raceId or nil
+        out.phase = ActiveRace and ActiveRace.phase or nil
+        out.nextCheckpoint = progress.nextCheckpoint
+        out.dnf = progress.dnf == true
+        out.finished = progress.finishedAtMs ~= nil
+    end
+    if ActiveRace then
+        out.activeRace = {
+            raceId = ActiveRace.raceId,
+            routeId = ActiveRace.routeId,
+            phase = ActiveRace.phase,
+            players = #ActiveRace.players,
+            finished = #ActiveRace.finished,
+            isSolo = ActiveRace.isSolo == true,
+        }
+    end
+    return out
+end)
+
 print(('^2[sunset_racing]^7 Street racing online (%d routes, hub at %.0f,%.0f,%.0f)'):format(
     #(Cfg.routes or {}), Cfg.raceHub.x, Cfg.raceHub.y, Cfg.raceHub.z))
