@@ -1,6 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Server Events (client/main.lua)
---  Event marker + participation.
+--  Event blip + participation marker.
+--
+--  OWNERSHIP: For race_night, sunset_racing owns the world interaction
+--  (marker + E) at the race hub. This resource only shows a blip and
+--  announces — it does NOT create a competing marker.
 -- ═══════════════════════════════════════════════════════════════
 
 local Cfg = SunsetEvents.Config
@@ -34,10 +38,11 @@ RegisterNetEvent('sunset:events:end', function(data)
     end
 end)
 
--- ── Event marker + join ──
+-- ── Event marker + join (NON-race events only) ──
+-- For race_night, sunset_racing owns the marker at the race hub.
 CreateThread(function()
     while true do
-        if eventData and eventData.location then
+        if eventData and eventData.location and eventData.type ~= 'race_night' then
             local ped = PlayerPedId()
             local coords = GetEntityCoords(ped)
             local loc = eventData.location
@@ -60,6 +65,15 @@ CreateThread(function()
         else
             Wait(1000)
         end
+    end
+end)
+
+-- Cleanup on resource stop
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    if eventBlip and DoesBlipExist(eventBlip) then
+        RemoveBlip(eventBlip)
+        eventBlip = nil
     end
 end)
 

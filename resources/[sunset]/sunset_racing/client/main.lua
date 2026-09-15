@@ -1,6 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Street Racing (client/main.lua)
---  Start marker, checkpoint tracking, race HUD, countdown.
+--  Race hub marker, checkpoint blips, race HUD, countdown, freeze.
+--
+--  OWNERSHIP: This resource owns the world interaction (marker + E) at the
+--  race hub. sunset_events does NOT create a marker here — it integrates
+--  through sunset_racing exports (StartRaceNight / EndRaceNight).
 -- ═══════════════════════════════════════════════════════════════
 
 local Cfg = SunsetRacing.Config
@@ -8,19 +12,26 @@ local raceActive = false
 local raceData = nil
 local currentCheckpoint = 1
 local raceBlips = {}
+local hubBlip = nil
+local frozen = false
 
--- ── Start marker ──
+-- ── Forward declarations (fix Lua scope bug) ──
+local openRaceUI
+local closeRaceUI
+local clearRaceBlips
+
+-- ── Race hub marker ──
 CreateThread(function()
     while true do
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
         local sleep = 500
 
-        if not raceActive and #(coords - Cfg.startMarker) < 5.0 then
+        if not raceActive and #(coords - Cfg.raceHub) < 8.0 then
             sleep = 0
-            DrawMarker(1, Cfg.startMarker.x, Cfg.startMarker.y, Cfg.startMarker.z - 1.0,
+            DrawMarker(1, Cfg.raceHub.x, Cfg.raceHub.y, Cfg.raceHub.z - 1.0,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                2.0, 2.0, 1.0,
+                2.5, 2.5, 1.0,
                 0, 200, 255, 100,
                 false, false, 2, false, nil, nil, false)
 
@@ -33,7 +44,21 @@ CreateThread(function()
     end
 end)
 
-local function openRaceUI()
+-- ── Hub blip (always visible) ──
+CreateThread(function()
+    Wait(3000)
+    if hubBlip and DoesBlipExist(hubBlip) then RemoveBlip(hubBlip) end
+    hubBlip = AddBlipForCoord(Cfg.raceHub.x, Cfg.raceHub.y, Cfg.raceHub.z)
+    SetBlipSprite(hubBlip, 562) -- racing flag
+    SetBlipColour(hubBlip, 0)
+    SetBlipScale(hubBlip, 0.8)
+    SetBlipAsShortRange(hubBlip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentString('Race Hub')
+    EndTextCommandSetBlipName(hubBlip)
+end)
+
+openRaceUI = function()
     local status = Sunset.AwaitCallback('sunset:racing:status')
     if not status then
         exports.sunset_ui:Notify('Could not load race status.', 'error')
@@ -43,9 +68,18 @@ local function openRaceUI()
     exports.sunset_ui:SetFocus(true, true, false, 'racing')
 end
 
-local function closeRaceUI()
+closeRaceUI = function()
     exports.sunset_ui:Send('racingHide', {})
     exports.sunset_ui:SetFocus(false, false, false, 'racing')
+end
+
+clearRaceBlips = function()
+    for _, blip in ipairs(raceBlips) do
+        if DoesBlipExist(blip) then
+            RemoveBlip(blip)
+        end
+    end
+    raceBlips = {}
 end
 
 -- ── Race events ──
@@ -74,10 +108,12 @@ RegisterNetEvent('sunset:racing:start', function(data)
 
     -- Show race HUD
     exports.sunset_ui:Send('racingHud', {
+        raceId = data.raceId,
         label = data.label,
         totalCheckpoints = data.checkpoints and #data.checkpoints or 0,
         currentCheckpoint = 0,
         countdown = data.countdown,
+        isSolo = data.isSolo,
     })
 end)
 
@@ -108,6 +144,7 @@ RegisterNetEvent('sunset:racing:checkpointReached', function(data)
     end
 
     exports.sunset_ui:Send('racingHud', {
+        raceId = data.raceId,
         label = raceData and raceData.label or 'Race',
         totalCheckpoints = raceData and raceData.checkpoints and #raceData.checkpoints or 0,
         currentCheckpoint = data.current,
@@ -118,6 +155,15 @@ RegisterNetEvent('sunset:racing:finished', function(data)
     exports.sunset_ui:Send('racingFinished', data)
 end)
 
+RegisterNetEvent('sunset:racing:dnf', function(data)
+    raceActive = false
+    raceData = nil
+    currentCheckpoint = 1
+    clearRaceBlips()
+    exports.sunset_ui:Send('racingHudHide', {})
+    exports.sunset_ui:Notify(data and data.reason or 'DNF — race over.', 'error', 8000)
+end)
+
 RegisterNetEvent('sunset:racing:end', function(data)
     raceActive = false
     raceData = nil
@@ -126,16 +172,38 @@ RegisterNetEvent('sunset:racing:end', function(data)
     exports.sunset_ui:Send('racingHudHide', {})
 end)
 
-function clearRaceBlips()
-    for _, blip in ipairs(raceBlips) do
-        if DoesBlipExist(blip) then
-            RemoveBlip(blip)
+-- ── Vehicle freeze during countdown ──
+RegisterNetEvent('sunset:racing:freeze', function(freeze)
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh ~= 0 then
+        if freeze then
+            FreezeEntityPosition(veh, true)
+            frozen = true
+        else
+            FreezeEntityPosition(veh, false)
+            frozen = false
         end
     end
-    raceBlips = {}
-end
+end)
+
+-- Safety: unfreeze on resource stop
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    if frozen then
+        local ped = PlayerPedId()
+        local veh = GetVehiclePedIsIn(ped, false)
+        if veh ~= 0 then
+            FreezeEntityPosition(veh, false)
+        end
+        frozen = false
+    end
+    clearRaceBlips()
+    if hubBlip and DoesBlipExist(hubBlip) then RemoveBlip(hubBlip) end
+end)
 
 -- ── Checkpoint proximity detection ──
+-- Client detects proximity and sends to server; SERVER validates everything.
 CreateThread(function()
     while true do
         if raceActive and raceData and raceData.checkpoints then
@@ -145,12 +213,11 @@ CreateThread(function()
             local coords = GetEntityCoords(target)
             local cp = raceData.checkpoints[currentCheckpoint]
 
-            if cp and #(coords - cp) < 15.0 then
-                TriggerServerEvent('sunset:racing:checkpoint', currentCheckpoint)
+            if cp and #(coords - cp) < (Cfg.checkpointRadius or 25.0) then
+                TriggerServerEvent('sunset:racing:checkpoint', currentCheckpoint, raceData.raceId)
                 currentCheckpoint = currentCheckpoint + 1
 
                 if currentCheckpoint > #raceData.checkpoints then
-                    -- All checkpoints done, wait for server confirmation
                     Wait(2000)
                 end
             end
@@ -173,7 +240,8 @@ AddEventHandler('sunset:nui:racingJoin', function(data)
             exports.sunset_ui:Notify(err or 'Could not join the race.', 'error')
             return
         end
-        exports.sunset_ui:Notify(('Joined race lobby (%d/%d players).'):format(res.players, res.minPlayers), 'success')
+        exports.sunset_ui:Notify(('Joined %s lobby (%d/%d players).'):format(
+            data.routeId, res.players, res.minPlayers), 'success')
         closeRaceUI()
     end)
 end)

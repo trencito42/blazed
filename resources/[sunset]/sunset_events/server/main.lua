@@ -1,12 +1,17 @@
 -- ═══════════════════════════════════════════════════════════════
 --  SUNSETMP — Server Events (server/main.lua)
 --  Scheduled events: car meet, race night, fishing tournament.
---  Announce + marker + participation tracking + rewards.
+--  Robust scheduler (idempotent, catches missed windows).
+--
+--  OWNERSHIP: sunset_events announces events and tracks participation.
+--  For race_night, it delegates to sunset_racing (StartRaceNight/EndRaceNight)
+--  and does NOT create its own marker at the race hub.
 -- ═══════════════════════════════════════════════════════════════
 
 local Cfg = SunsetEvents.Config
-local ActiveEvent = nil       -- { type, label, startTime, endTime, participants = {} }
+local ActiveEvent = nil       -- { type, label, startTime, endTime, location }
 local EventParticipants = {}  -- [src] = { type, joinedAt, score }
+local LastStartedHour = {}    -- [type] = hour (prevents double-start)
 
 local function notify(source, msg, kind, duration)
     TriggerClientEvent('sunset:client:notify', source, msg, kind or 'info', duration or 5000)
@@ -23,17 +28,26 @@ local function getCharId(source)
     return char and tonumber(char.id) or nil
 end
 
--- ═══ EVENT SCHEDULER ═══
+-- ═══ ROBUST SCHEDULER ═══
+-- Checks every 30s. Starts an event if:
+--   - current hour matches configured hour
+--   - event not already active
+--   - not already started this hour (idempotent)
+-- Catches missed windows (server started late, resource restarted).
 
 CreateThread(function()
-    Wait(60000) -- Wait for server to fully boot
+    Wait(30000) -- Wait for server to fully boot
     while true do
-        Wait(60000) -- Check every minute
+        Wait(30000) -- Check every 30s
         local srvHour = tonumber(os.date('%H'))
-        local srvMin = tonumber(os.date('%M'))
 
         for _, ev in ipairs(Cfg.schedule or {}) do
-            if srvHour == ev.hour and srvMin == 0 and (not ActiveEvent or ActiveEvent.type ~= ev.type) then
+            local shouldStart = srvHour == ev.hour
+                and (not ActiveEvent or ActiveEvent.type ~= ev.type)
+                and LastStartedHour[ev.type] ~= srvHour
+
+            if shouldStart then
+                LastStartedHour[ev.type] = srvHour
                 startEvent(ev)
             end
         end
@@ -55,10 +69,15 @@ function startEvent(ev)
         location = location,
     }
 
-    broadcast(('🎉 %s is starting! Head to the event marker on your map.'):format(ev.label), 'success')
+    broadcast(('🎉 %s is starting! Head to the event location.'):format(ev.label), 'success')
 
-    -- [SERVER-SIDE] Notify other server resources (e.g. fishing tournament tracker)
+    -- [SERVER-SIDE] Notify other server resources
     TriggerEvent('sunset:events:serverStart', ev)
+
+    -- Race Night: delegate to sunset_racing
+    if ev.type == 'race_night' and GetResourceState('sunset_racing') == 'started' then
+        pcall(function() exports.sunset_racing:StartRaceNight() end)
+    end
 
     -- Announce thread
     CreateThread(function()
@@ -86,23 +105,31 @@ function endEvent()
     if not ActiveEvent then return end
 
     local evType = ActiveEvent.type
-    local reward = Cfg.rewards[evType] or { cash = 1000, xp = 50 }
 
-    -- Reward participants
-    local participantCount = 0
-    for src, data in pairs(EventParticipants) do
-        if data.type == evType and GetPlayerName(src) then
-            participantCount = participantCount + 1
-            exports.sunset_core:AddMoney(src, 'cash', reward.cash, 'event_reward')
-            pcall(function()
-                exports.sunset_core:AddXP(src, reward.xp)
-            end)
-            notify(src, ('🏆 %s complete! Reward: $%s + %d XP.'):format(ActiveEvent.label, reward.cash, reward.xp), 'success', 10000)
-            TriggerClientEvent('sunset:events:end', src, { type = evType })
+    -- Race Night: delegate to sunset_racing for rewards
+    if evType == 'race_night' and GetResourceState('sunset_racing') == 'started' then
+        pcall(function() exports.sunset_racing:EndRaceNight() end)
+    else
+        -- Non-race events: reward participants based on score
+        local reward = Cfg.rewards[evType] or { cash = 1000, xp = 50 }
+        local participantCount = 0
+        for src, data in pairs(EventParticipants) do
+            if data.type == evType and GetPlayerName(src) then
+                participantCount = participantCount + 1
+                exports.sunset_core:AddMoney(src, 'cash', reward.cash, 'event_reward')
+                pcall(function()
+                    exports.sunset_core:AddXP(src, reward.xp)
+                end)
+                notify(src, ('🏆 %s complete! Reward: $%s + %d XP.'):format(ActiveEvent.label, reward.cash, reward.xp), 'success', 10000)
+            end
         end
+        broadcast(('🏁 %s has ended. %d participants rewarded.'):format(ActiveEvent.label, participantCount), 'info')
     end
 
-    broadcast(('🏁 %s has ended. %d participants rewarded.'):format(ActiveEvent.label, participantCount), 'info')
+    -- Notify all clients to clean up
+    for _, id in ipairs(GetPlayers()) do
+        TriggerClientEvent('sunset:events:end', tonumber(id), { type = evType })
+    end
 
     -- [SERVER-SIDE] Notify other server resources
     TriggerEvent('sunset:events:serverEnd', { type = evType })
@@ -112,10 +139,17 @@ function endEvent()
 end
 
 -- ═══ PARTICIPATION ═══
+-- For non-race events (car meet, fishing tournament).
+-- Race Night participation is tracked by sunset_racing (actual racing).
 
 exports.sunset_core:RegisterCallback('sunset:events:join', function(source)
     if not ActiveEvent then
         return nil, 'No event is currently active.'
+    end
+
+    -- Race Night: participation is through racing, not E-press
+    if ActiveEvent.type == 'race_night' then
+        return nil, 'Race Night participation is through racing. Press E at the race hub to join a race.'
     end
 
     local location = ActiveEvent.location
@@ -134,7 +168,7 @@ exports.sunset_core:RegisterCallback('sunset:events:join', function(source)
     end
 
     EventParticipants[source] = { type = ActiveEvent.type, joinedAt = os.time(), score = 0 }
-    notify(source, ('Joined %s! Stay in the area to earn your reward.'):format(ActiveEvent.label), 'success')
+    notify(source, ('Joined %s!'):format(ActiveEvent.label), 'success')
     return { type = ActiveEvent.type, label = ActiveEvent.label }
 end)
 
@@ -152,7 +186,6 @@ exports.sunset_core:RegisterCallback('sunset:events:status', function(source)
 end)
 
 -- ═══ FISHING TOURNAMENT SCORE ═══
--- Track fish caught during fishing tournament
 RegisterNetEvent('sunset:events:fishCaught', function()
     local src = source
     if ActiveEvent and ActiveEvent.type == 'fishing_tournament' and EventParticipants[src] then
@@ -162,6 +195,16 @@ end)
 
 AddEventHandler('playerDropped', function()
     EventParticipants[source] = nil
+end)
+
+-- Cleanup on resource stop
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    if ActiveEvent then
+        for _, id in ipairs(GetPlayers()) do
+            TriggerClientEvent('sunset:events:end', tonumber(id), { type = ActiveEvent.type })
+        end
+    end
 end)
 
 print('^2[sunset_events]^7 Server events online (car meet, race night, fishing tournament)')

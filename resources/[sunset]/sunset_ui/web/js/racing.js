@@ -30,31 +30,55 @@ const Racing = {
 
         const routes = this.status.routes || [];
         const inLobby = this.status.inLobby;
+        const lobbyInfo = this.status.lobbyInfo;
         const entryFee = this.status.entryFee || 1000;
-        const lobbyCount = this.status.lobbyCount || 0;
-        const minPlayers = this.status.minPlayers || 2;
+        const minPlayers = this.status.minPlayers || 1;
+        const soloAvailable = this.status.soloAvailable !== false;
+        const soloReward = this.status.soloReward || 500;
+        const raceNightActive = this.status.raceNightActive;
+        const raceNightPoints = this.status.raceNightPoints || 0;
 
-        if (inLobby) {
-            body.innerHTML = `
+        // Race Night banner
+        let banner = '';
+        if (raceNightActive) {
+            banner = `<div class="racing-banner racing-banner--active">
+                <span class="racing-banner__dot"></span>
+                RACE NIGHT LIVE — ${raceNightPoints} pts
+            </div>`;
+        }
+
+        if (inLobby && lobbyInfo) {
+            const players = (lobbyInfo.players || []).map((p) =>
+                `<span class="racing-lobby-player${p.isSelf ? ' is-self' : ''}">${this.esc(p.name)}</span>`
+            ).join('');
+            body.innerHTML = `${banner}
                 <div class="racing-route is-selected">
-                    <div class="racing-route__name">You are in the lobby</div>
+                    <div class="racing-route__name">Lobby — ${this.esc(lobbyInfo.routeId || '')}</div>
                     <div class="racing-route__meta">
-                        <span>Players: ${lobbyCount}/${minPlayers}</span>
+                        <span>Players: ${lobbyInfo.count || 0}/${minPlayers}</span>
                         <span>Entry: $${entryFee.toLocaleString()}</span>
                     </div>
+                    <div class="racing-lobby-players">${players}</div>
                 </div>
             `;
         } else {
-            body.innerHTML = routes.map((r) => `
-                <div class="racing-route" data-racing-route="${this.esc(r.id)}">
-                    <div class="racing-route__name">${this.esc(r.label)}</div>
-                    <div class="racing-route__desc">${this.esc(r.description || '')}</div>
-                    <div class="racing-route__meta">
-                        <span>${(r.checkpoints || []).length} checkpoints</span>
-                        <span>Entry: $${entryFee.toLocaleString()}</span>
+            body.innerHTML = `${banner}
+                ${routes.map((r) => `
+                    <div class="racing-route" data-racing-route="${this.esc(r.id)}">
+                        <div class="racing-route__name">${this.esc(r.label)}</div>
+                        <div class="racing-route__desc">${this.esc(r.description || '')}</div>
+                        <div class="racing-route__meta">
+                            <span>${(r.checkpoints || []).length} CP</span>
+                            <span>Entry: $${entryFee.toLocaleString()}</span>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('')}
+                ${soloAvailable ? `
+                    <div class="racing-solo-note">
+                        Solo time trial available — reward $${soloReward.toLocaleString()} (5min cooldown)
+                    </div>
+                ` : ''}
+            `;
 
             $$('[data-racing-route]').forEach((el) => {
                 el.addEventListener('click', () => {
@@ -87,8 +111,9 @@ const Racing = {
             document.body.appendChild(hud);
         }
         hud.classList.remove('hidden');
+        const soloTag = data.isSolo ? ' <span class="racing-hud__solo">TIME TRIAL</span>' : '';
         hud.innerHTML = `
-            <div class="racing-hud__label">${this.esc(data.label || 'Race')}</div>
+            <div class="racing-hud__label">${this.esc(data.label || 'Race')}${soloTag}</div>
             <div class="racing-hud__progress">${data.currentCheckpoint || 0} / ${data.totalCheckpoints || 0}</div>
         `;
     },
@@ -96,6 +121,8 @@ const Racing = {
     showCountdown(n) {
         let hud = $('#racing-hud');
         if (!hud) return;
+        const existing = hud.querySelector('.racing-hud__countdown');
+        if (existing) existing.remove();
         hud.innerHTML += `<div class="racing-hud__countdown">${n}</div>`;
     },
 
@@ -115,10 +142,8 @@ const Racing = {
         let hud = $('#racing-hud');
         if (!hud) return;
         const pos = data.position || 0;
-        const time = data.time || 0;
-        const mins = Math.floor(time / 60);
-        const secs = time % 60;
-        hud.innerHTML += `<div class="racing-hud__result">🏁 #${pos} — ${mins}:${String(secs).padStart(2, '0')}</div>`;
+        const timeStr = data.timeFormatted || '--:--.---';
+        hud.innerHTML += `<div class="racing-hud__result">🏁 #${pos} — ${timeStr}</div>`;
         setTimeout(() => this.hideHud(), 8000);
     },
 

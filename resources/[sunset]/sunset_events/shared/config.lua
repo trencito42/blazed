@@ -13,9 +13,11 @@ SunsetEvents.Config = {
     },
 
     -- Event locations
+    -- race_night uses the SAME hub as sunset_racing (LS Customs parking).
+    -- sunset_events does NOT create a marker there — sunset_racing owns it.
     locations = {
         car_meet = vector3(-1060.00, -2580.00, 20.00),   -- LS Customs parking
-        race_night = vector3(-75.00, -826.00, 243.00),     -- Racing start
+        race_night = vector3(-1060.00, -2580.00, 20.00),  -- Race hub (owned by sunset_racing)
         fishing_tournament = vector3(-1593.23, 5207.74, 3.31), -- Paleto Bay
     },
 
