@@ -8,14 +8,59 @@ local wheelSteerX, wheelSteerY = 0.0, 0.0
 local wheelEmoteCount, lastWheelEmoteIndex = 0, -1
 local WHEEL_STEER_MIN = 0.18
 
+-- [AMMO HUD FIX] Precomputed exclusion set for weapons that do NOT use normal
+-- magazine ammunition. Checked ONCE at load, not per-frame.
+local NON_AMMO_WEAPONS = {}
+for _, name in ipairs({
+    'WEAPON_UNARMED', 'WEAPON_KNIFE', 'WEAPON_SWITCHBLADE', 'WEAPON_BAT',
+    'WEAPON_CROWBAR', 'WEAPON_FLASHLIGHT', 'WEAPON_NIGHTSTICK', 'WEAPON_HAMMER',
+    'WEAPON_GOLFCLUB', 'WEAPON_BOTTLE', 'WEAPON_DAGGER', 'WEAPON_HATCHET',
+    'WEAPON_KNUCKLE', 'WEAPON_MACHETE', 'WEAPON_WRENCH', 'WEAPON_POOLCUE',
+    'WEAPON_BATTLEAXE', 'WEAPON_STONE_HATCHET',
+    -- Throwables / gadgets / special
+    'WEAPON_GRENADE', 'WEAPON_STICKYBOMB', 'WEAPON_PROXMINE', 'WEAPON_SMOKEGRENADE',
+    'WEAPON_BZGAS', 'WEAPON_MOLOTOV', 'WEAPON_FIREEXTINGUISHER', 'WEAPON_PETROLCAN',
+    'WEAPON_HAZARDCAN', 'WEAPON_FERTILIZERCAN', 'WEAPON_SNOWBALL', 'WEAPON_BALL',
+    'WEAPON_FLARE', 'WEAPON_PIPEBOMB', 'WEAPON_RAYPISTOL',
+    'GADGET_PARACHUTE',
+}) do
+    NON_AMMO_WEAPONS[joaat(name)] = true
+end
+
 local function blocked()
     return IsPauseMenuActive() or (IsNuiFocused() and not emoteWheelOpen)
 end
 
+-- [AMMO HUD FIX] Robust ammo-weapon detection.
+-- A weapon is ammo-capable if:
+--   1. It's not in the precomputed exclusion set
+--   2. GetMaxAmmoInClip returns > 0 (has a magazine)
+-- This correctly excludes melee, throwables, gadgets, and special weapons
+-- without hardcoding every single one.
+local function isAmmoWeapon(ped, hash)
+    if not hash or hash == 0 or hash == UNARMED then return false end
+    if NON_AMMO_WEAPONS[hash] then return false end
+    if not HasPedGotWeapon(ped, hash, false) then return false end
+    -- GetMaxAmmoInClip: returns the magazine size. Melee/special weapons
+    -- return 0 or -1, which correctly excludes them.
+    local maxClip = GetMaxAmmoInClip(ped, hash, true)
+    if not maxClip or maxClip <= 0 then return false end
+    return true
+end
+
+-- [AMMO HUD FIX] Returns { clip, reserve } where:
+--   clip    = ammo currently loaded in the magazine
+--   reserve = totalAmmo - clip (ammo NOT in the magazine)
+-- GetAmmoInPedWeapon() returns TOTAL ammo INCLUDING the clip, so we derive
+-- reserve by subtraction. This produces correct UX:
+--   12 | 48  → fire → 11 | 48  → reload → 12 | 36
 local function weaponAmmo(ped, hash)
-    if not hash or hash == 0 or hash == UNARMED or not HasPedGotWeapon(ped, hash, false) then return nil end
+    if not isAmmoWeapon(ped, hash) then return nil end
     local _, clip = GetAmmoInClip(ped, hash)
-    return { clip = math.max(0, tonumber(clip) or 0), total = math.max(0, tonumber(GetAmmoInPedWeapon(ped, hash)) or 0) }
+    clip = math.max(0, tonumber(clip) or 0)
+    local totalAmmo = math.max(0, tonumber(GetAmmoInPedWeapon(ped, hash)) or 0)
+    local reserve = math.max(0, totalAmmo - clip)
+    return { clip = clip, reserve = reserve }
 end
 
 local function isFiring(ped)
@@ -131,25 +176,25 @@ CreateThread(function()
 end)
 
 CreateThread(function()
-    local lastClip, lastTotal, lastVisible = -1, -1, false
+    local lastClip, lastReserve, lastVisible = -1, -1, false
     while true do
         if blocked() then
             if lastVisible then exports.sunset_ui:Send('weaponAmmoUpdate', { visible = false }) end
-            lastClip, lastTotal, lastVisible = -1, -1, false
+            lastClip, lastReserve, lastVisible = -1, -1, false
             Wait(250)
         else
             local ped, selected = PlayerPedId(), GetSelectedPedWeapon(PlayerPedId())
             if selected == UNARMED or selected == 0 then
                 if lastVisible then exports.sunset_ui:Send('weaponAmmoUpdate', { visible = false }) end
-                lastClip, lastTotal, lastVisible = -1, -1, false
+                lastClip, lastReserve, lastVisible = -1, -1, false
                 Wait(200)
             else
                 if isFiring(ped) or IsPlayerFreeAiming(PlayerId()) then ammoHudUntil = GetGameTimer() + AMMO_HUD_HOLD_MS end
                 local ammo = weaponAmmo(ped, selected)
                 local visible = ammo ~= nil and GetGameTimer() < ammoHudUntil
-                if ammo and (ammo.clip ~= lastClip or ammo.total ~= lastTotal or visible ~= lastVisible) then
-                    lastClip, lastTotal, lastVisible = ammo.clip, ammo.total, visible
-                    exports.sunset_ui:Send('weaponAmmoUpdate', { visible = visible, clip = ammo.clip, total = ammo.total })
+                if ammo and (ammo.clip ~= lastClip or ammo.reserve ~= lastReserve or visible ~= lastVisible) then
+                    lastClip, lastReserve, lastVisible = ammo.clip, ammo.reserve, visible
+                    exports.sunset_ui:Send('weaponAmmoUpdate', { visible = visible, clip = ammo.clip, reserve = ammo.reserve })
                 end
                 Wait(isFiring(ped) and 0 or 35)
             end

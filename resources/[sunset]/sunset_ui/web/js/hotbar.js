@@ -42,8 +42,8 @@ const HotbarUI = {
         }
 
         const clip = Number(data.clip);
-        const total = Number(data.total);
-        if (!Number.isFinite(clip) || !Number.isFinite(total)) {
+        const reserve = Number(data.reserve);
+        if (!Number.isFinite(clip) || !Number.isFinite(reserve)) {
             hud.classList.add('hidden');
             return;
         }
@@ -51,9 +51,9 @@ const HotbarUI = {
         hud.classList.remove('hidden');
         hud.setAttribute('aria-hidden', 'false');
         const clipEl = $('#wah-clip');
-        const totalEl = $('#wah-total');
+        const reserveEl = $('#wah-reserve');
         if (clipEl) clipEl.textContent = String(clip);
-        if (totalEl) totalEl.textContent = String(total);
+        if (reserveEl) reserveEl.textContent = String(reserve);
     },
 
     showEmoteWheel(emotes = []) {

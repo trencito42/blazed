@@ -70,6 +70,7 @@ body.in-vehicle .weapon-ammo-hud {
     margin: 0 1px;
 }
 
+.wah-reserve,
 .wah-total,
 .hotbar-slot-qty .ammo-total {
     color: rgba(255, 255, 255, 0.42);
