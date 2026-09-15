@@ -361,6 +361,39 @@ function SetWeaponAmmo(source, item, ammo)
     return true
 end
 
+local ConvertLocks = {} -- [source] = true while a ConvertItems is in flight
+-- [ATOMIC CONVERT] Safe inventory-domain conversion: remove N of item A,
+-- add M of item B. Used by crafting-style systems (drug processing) that
+-- must never lose the source item if the destination add fails.
+-- Order: validate source -> remove source -> add destination; on add
+-- failure, COMPENSATE by re-adding the source (there is guaranteed space
+-- since we just removed it) and return false. Never partial.
+-- A per-source lock rejects overlapping conversions (two quick clicks
+-- would otherwise interleave the awaited SQL and double-remove).
+function ConvertItems(source, removeItem, removeCount, addItem, addCount)
+    if ConvertLocks[source] then return false, 'Another conversion is in progress' end
+    ConvertLocks[source] = true
+    local ok, err = (function()
+        removeCount = math.floor(tonumber(removeCount) or 0)
+        addCount = math.floor(tonumber(addCount) or 0)
+        if removeCount < 1 or addCount < 1 then return false, 'invalid counts' end
+        if not Sunset.Items[removeItem] or not Sunset.Items[addItem] then return false, 'unknown item' end
+        if not HasItem(source, removeItem, removeCount) then return false, 'not enough source items' end
+        if not RemoveItem(source, removeItem, removeCount) then return false, 'could not remove source items' end
+        if AddItem(source, addItem, addCount) then return true end
+        -- Compensation: restore the removed source items (space is guaranteed —
+        -- we just freed it). If even this fails, the inventory is in a broken
+        -- state; log loudly for staff.
+        if not AddItem(source, removeItem, removeCount) then
+            print(('^1[sunset_inventory]^7 ConvertItems COMPENSATION FAILED src=%s item=%s x%d — manual intervention needed'):format(
+                tostring(source), tostring(removeItem), removeCount))
+        end
+        return false, 'not enough space for the product'
+    end)()
+    ConvertLocks[source] = nil
+    return ok, err
+end
+
 function CountItem(source, item)
     local total = 0
     for _, row in ipairs(GetInventory(source)) do
@@ -545,6 +578,7 @@ exports('UseItem', UseItem)
 exports('SetItemMetadata', SetItemMetadata)
 exports('SetWeaponAmmo', SetWeaponAmmo)
 exports('CountItem', CountItem)
+exports('ConvertItems', ConvertItems)
 exports('TakeAllItems', TakeAllItems)
 exports('GetGasCanLiters', function(source)
     return getGasCanLiters(findInventoryRow(source, 'gas_can'))
@@ -686,6 +720,7 @@ AddEventHandler('playerDropped', function()
     local char = exports.sunset_core:GetCharacter(source)
     if char then Inventories[char.id] = nil end
     CapacityBonus[source] = nil -- [DUFFEL BAG] never leak the bonus
+    ConvertLocks[source] = nil  -- [ATOMIC CONVERT] never leak the lock
 end)
 
 -- [AMMO PERSIST] Client reports live ammo counts for inventory-synced weapons

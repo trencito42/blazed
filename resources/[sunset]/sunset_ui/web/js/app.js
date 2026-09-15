@@ -1295,6 +1295,12 @@ window.addEventListener('message', (event) => {
         case 'drugsUpdate':
             if (window.Drugs) Drugs.update(data || event.data.data);
             break;
+        case 'drugsBusy':
+            if (window.Drugs) Drugs.setBusy((data || event.data.data || {}).busy);
+            break;
+        case 'drugsProgress':
+            if (window.Drugs) Drugs.showProgress(data || event.data.data);
+            break;
 
         // ═══ MARRIAGE ═══
         case 'marriageProposal':
