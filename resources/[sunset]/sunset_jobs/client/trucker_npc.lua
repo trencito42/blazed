@@ -38,7 +38,6 @@ end
 
 local function truckerInteractionsReady()
     if GetGameTimer() < truckerUnlockAt then return false end
-    if not NetworkIsPlayerActive(PlayerId()) then return false end
     if IsNuiFocused() or IsPauseMenuActive() then return false end
     return true
 end
@@ -127,7 +126,9 @@ local function openTruckerNpcMenu()
             if err then exports.sunset_ui:Notify(err, 'error', 5000) end
             return
         end
-        if npcMenuOpen or not truckerInteractionsReady() then return end
+        -- Do NOT re-run truckerInteractionsReady() here — an async callback
+        -- can temporarily leave IsNuiFocused true and silently kill the menu.
+        if npcMenuOpen then return end
 
         local actions = {}
         if data.job ~= 'trucker' then
@@ -135,7 +136,9 @@ local function openTruckerNpcMenu()
         elseif data.onShift then
             actions[#actions + 1] = { id = 'end_trucker_shift', label = 'End Shift', group = 'TRUCKER' }
         else
-            -- Trucker, not on shift: NPC has nothing to offer — laptop handles route selection.
+            -- Hired trucker not on shift: redirect to the laptop.
+            exports.sunset_ui:Notify('Head to the ~y~Route Laptop~s~ to pick a delivery.', 'info', 5000)
+            SetNewWaypoint(LAPTOP_COORDS.x, LAPTOP_COORDS.y)
             return
         end
         if #actions == 0 then return end

@@ -101,71 +101,84 @@ local function startTrucker(selectedRouteIdx)
     end
 
     local cfg = Sunset.GetJobConfig('trucker')
+    -- Wait a tick for sessionStarted to arrive so JC.jobId / JC.state are set
+    Wait(100)
+
     JC.sessionData = data
     JC.clearBlips()
     JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Trucker Depot')
 
+    -- Spawn truck on road spawn (outside the terminal)
     local truckModel = data.truckModel or cfg.truckModel
     local truck = JC.spawnVehicle(truckModel, cfg.depot.spawn, true)
     if not truck then
+        JC.notify('Could not spawn the truck — try again', 'error')
         Sunset.AwaitCallback('sunset:jobs:cancelWork')
         return
     end
+
     if data.hasTrailer then
         local trailerModel = data.trailerModel or cfg.trailerModel
         local trailer = JC.attachTrailer(truck, trailerModel, cfg.depot.trailerSpawn)
         if not trailer then
             JC.deleteVehicles()
             Sunset.AwaitCallback('sunset:jobs:cancelWork')
-            return JC.notify('Could not create the assigned trailer — try again', 'error')
+            JC.notify('Could not create the assigned trailer — try again', 'error')
+            return
         end
     end
+
     local registered, registerErr = JC.registerVehiclesWithServer()
     if not registered then
         JC.deleteVehicles()
         Sunset.AwaitCallback('sunset:jobs:cancelWork')
-        return JC.notify(registerErr or 'Could not register the truck', 'error')
+        JC.notify(registerErr or 'Could not register the truck', 'error')
+        return
     end
     JC.monitorVehicles()
 
-    JC.setWaypoint(data.pickup)
-    JC.addBlip(vector3(data.pickup.x, data.pickup.y, data.pickup.z), { sprite = 478, color = 5 }, 'Cargo Pickup')
-    JC.showObjective('Collect cargo', 'Drive the truck and trailer to ' .. (data.label or 'the pickup'), 0)
-    JC.notify('Drive to pickup: ' .. (data.label or ''), 'info')
+    -- No-collision with nearby players at spawn (prevents vehicles spawning into each other)
+    local spawnPos = vector3(cfg.depot.spawn.x, cfg.depot.spawn.y, cfg.depot.spawn.z)
+    local myPed   = PlayerPedId()
+    for _, pid in ipairs(GetActivePlayers()) do
+        if pid ~= PlayerId() then
+            local theirPed = GetPlayerPed(pid)
+            if DoesEntityExist(theirPed) then
+                SetEntityNoCollisionEntity(myPed,  theirPed, false)
+                SetEntityNoCollisionEntity(truck,  theirPed, false)
+                if IsPedInAnyVehicle(theirPed, false) then
+                    local theirVeh = GetVehiclePedIsIn(theirPed, false)
+                    if theirVeh ~= 0 and DoesEntityExist(theirVeh) then
+                        SetEntityNoCollisionEntity(truck, theirVeh, false)
+                    end
+                end
+            end
+        end
+    end
+    -- Lift collision once outside the 50 m spawn zone (or after 15 s)
+    CreateThread(function()
+        local deadline = GetGameTimer() + 15000
+        while GetGameTimer() < deadline do
+            if #(GetEntityCoords(PlayerPedId()) - spawnPos) > 50.0 then break end
+            Wait(500)
+        end
+    end)
 
+    -- Cargo is loaded at spawn — go straight to delivery
+    local delivery = vector3(data.delivery.x, data.delivery.y, data.delivery.z)
+    JC.addBlip(delivery, { sprite = 478, color = 2 }, 'Delivery')
+    JC.setWaypoint(data.delivery)
+    JC.showObjective('Deliver cargo', 'Follow the GPS to: ' .. (data.label or 'destination'), 30)
+    JC.notify('Deliver to: ' .. (data.label or 'destination') .. '. Follow the map.', 'info', 8000)
+
+    -- Job loop: delivery → return depot
     CreateThread(function()
         local busy = false
         while JC.jobId == 'trucker' and JC.state ~= 'IDLE' do
             local session = JC.sessionData
             local stage = session and session.stage
 
-            if stage == 'to_pickup' then
-                local p = routePoint(session, 'pickup')
-                if p then
-                    JC.drawMarker(p, 255, 180, 0)
-                    if isNearTruckerPoint(p, cfg) and inWorkTruck() and not busy then
-                        JC.showHelp('Press ~INPUT_CONTEXT~ to load cargo')
-                        if IsControlJustPressed(0, 38) then
-                            busy = true
-                            local newData, err2 = Sunset.AwaitCallback('sunset:jobs:trucker:atPickup')
-                            busy = false
-                            if newData then
-                                JC.sessionData = newData
-                                local delivery = routePoint(newData, 'delivery')
-                                if delivery then
-                                    JC.clearBlips()
-                                    JC.addBlip(delivery, { sprite = 478, color = 2 }, 'Delivery')
-                                    JC.setWaypoint(delivery)
-                                end
-                                JC.showObjective('Deliver cargo', 'Follow the GPS to the delivery point', 50)
-                                JC.notify('Cargo loaded — deliver to destination', 'success')
-                            else
-                                JC.notify(err2 or 'Could not load cargo at the pickup', 'error')
-                            end
-                        end
-                    end
-                end
-            elseif stage == 'to_delivery' then
+            if stage == 'to_delivery' then
                 local d = routePoint(session, 'delivery')
                 if d then
                     JC.drawMarker(d, 46, 204, 113)
@@ -181,9 +194,11 @@ local function startTrucker(selectedRouteIdx)
                                 JC.clearBlips()
                                 JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
                                 JC.setWaypoint(cfg.depot.coords)
-                                JC.showObjective('Return the truck', 'Take the truck and trailer back to the depot', 90)
-                                local bonusStr = (result.bonusPct and result.bonusPct > 0) and (' (+%d%% rank bonus)'):format(result.bonusPct) or ''
-                                JC.notify(('Delivered! +$%d%s — return truck to depot'):format(result.pay or 0, bonusStr), 'success')
+                                JC.showObjective('Return the truck', 'Drive back to the depot', 90)
+                                local bonusStr = (result.bonusPct and result.bonusPct > 0)
+                                    and (' (+%d%% rank bonus)'):format(result.bonusPct) or ''
+                                JC.notify(('Delivered! +$%d%s — return the truck to the depot'):format(
+                                    result.pay or 0, bonusStr), 'success', 8000)
                             else
                                 JC.notify(err2 or 'Could not deliver cargo', 'error')
                             end
@@ -200,7 +215,7 @@ local function startTrucker(selectedRouteIdx)
                         busy = false
                         if ok then
                             JC.deleteVehicles()
-                            SetWaypointOff()   -- clear any leftover waypoint (laptop, pickup, etc.)
+                            SetWaypointOff()
                             break
                         else
                             JC.notify(err3 or 'Could not return the truck to the depot', 'error')
