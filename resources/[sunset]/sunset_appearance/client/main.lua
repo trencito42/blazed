@@ -312,6 +312,12 @@ exports('ApplyComponent', function(ped, componentId, drawable, texture, collecti
     return SunsetAppearance.ApplyComponent(ped, tonumber(componentId), drawable, texture, collection)
 end)
 
+-- [CLOTHING LAB] Top compatibility registration API for addon packs /
+-- hot-loaded rules. No file edits needed for new clothing packs.
+exports('RegisterTopCompatibility', function(gender, topDrawable, rule)
+    return SunsetClothingRules.RegisterTopCompatibility(gender, topDrawable, rule)
+end)
+
 AddEventHandler('sunset:client:playerSpawned', function(char)
     if char and char.appearance then
         SunsetAppearance.apply(PlayerPedId(), char.appearance, char.gender or 0)
