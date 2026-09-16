@@ -117,6 +117,7 @@ ensure sunset_casino
 ensure sunset_blackjack
 ensure sunset_slots
 ensure sunset_roulette
+ensure sunset_luckywheel
 ensure sunset_impound
 ensure sunset_racing
 ensure sunset_drugs
