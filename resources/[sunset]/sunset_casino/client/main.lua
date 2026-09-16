@@ -88,12 +88,23 @@ CreateThread(function()
     EndTextCommandSetBlipName(casinoBlip)
 end)
 
+local function DrawText3D(coords, text)
+    local onScreen, _x, _y = World3dToScreen2d(coords.x, coords.y, coords.z)
+    if onScreen then
+        SetTextScale(0.35, 0.35)
+        SetTextFont(4)
+        SetTextProportional(1)
+        SetTextColour(255, 255, 255, 215)
+        SetTextEntry('STRING')
+        SetTextCentre(1)
+        AddTextComponentString(text)
+        DrawText(_x, _y)
+        local factor = string.len(text) / 370
+        DrawRect(_x, _y + 0.0125, 0.015 + factor, 0.03, 0, 0, 0, 140)
+    end
+end
+
 -- ── Entry/Exit markers ──
--- [EXIT FIX] The old version gated the exit marker ONLY on the `insideCasino`
--- boolean set at entry. Reconnecting inside, admin TP, or a resource restart
--- left the flag false and the player permanently stuck with no exit marker.
--- Now: the inside flag is re-synced from coordinates every tick, exit markers
--- exist at BOTH interior doors, and /leavecasino is a guaranteed escape hatch.
 CreateThread(function()
     while true do
         local ped = PlayerPedId()
@@ -108,46 +119,62 @@ CreateThread(function()
         end
 
         -- Entry marker (outside casino)
-        if not insideCasino and #(coords - Cfg.entrance) < 3.0 then
+        if not insideCasino and #(coords - Cfg.entrance) < 8.0 then
             sleep = 0
             DrawMarker(1, Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z - 1.0,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                 1.5, 1.5, 1.0,
                 0, 255, 204, 100,
                 false, false, 2, false, nil, nil, false)
+            DrawMarker(2, Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z + 0.3,
+                0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                0.3, 0.3, 0.3,
+                0, 255, 204, 180,
+                true, true, 2, false, nil, nil, false)
 
-            if IsControlJustReleased(0, 38) then -- E
-                insideCasino = true
-                DoScreenFadeOut(500)
-                Wait(600)
-                SetEntityCoords(ped, EXIT_ZONES[1].x, EXIT_ZONES[1].y, EXIT_ZONES[1].z, false, false, false, false)
-                SetEntityHeading(ped, 90.0)
-                -- Wait for interior to load
-                local interior = GetInteriorAtCoords(EXIT_ZONES[1].x, EXIT_ZONES[1].y, EXIT_ZONES[1].z)
-                if interior ~= 0 then
-                    local deadline = GetGameTimer() + 5000
-                    while not IsInteriorReady(interior) and GetGameTimer() < deadline do
-                        Wait(50)
+            if #(coords - Cfg.entrance) < 2.5 then
+                DrawText3D(vector3(Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z + 0.5), '~g~[E]~s~ Enter The Diamond Casino')
+                if IsControlJustReleased(0, 38) then -- E
+                    insideCasino = true
+                    DoScreenFadeOut(500)
+                    Wait(600)
+                    SetEntityCoords(ped, EXIT_ZONES[1].x, EXIT_ZONES[1].y, EXIT_ZONES[1].z, false, false, false, false)
+                    SetEntityHeading(ped, 90.0)
+                    -- Wait for interior to load
+                    local interior = GetInteriorAtCoords(EXIT_ZONES[1].x, EXIT_ZONES[1].y, EXIT_ZONES[1].z)
+                    if interior ~= 0 then
+                        local deadline = GetGameTimer() + 5000
+                        while not IsInteriorReady(interior) and GetGameTimer() < deadline do
+                            Wait(50)
+                        end
                     end
+                    Wait(300)
+                    DoScreenFadeIn(500)
                 end
-                Wait(300)
-                DoScreenFadeIn(500)
             end
         end
 
         -- Exit markers (inside casino) — both interior doors
         if insideCasino then
             for _, zone in ipairs(EXIT_ZONES) do
-                if #(coords - zone) < 3.0 then
+                if #(coords - zone) < 8.0 then
                     sleep = 0
                     DrawMarker(1, zone.x, zone.y, zone.z - 1.0,
                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         1.5, 1.5, 1.0,
                         255, 100, 100, 100,
                         false, false, 2, false, nil, nil, false)
+                    DrawMarker(2, zone.x, zone.y, zone.z + 0.3,
+                        0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                        0.3, 0.3, 0.3,
+                        255, 100, 100, 180,
+                        true, true, 2, false, nil, nil, false)
 
-                    if IsControlJustReleased(0, 38) then -- E
-                        CreateThread(function() leaveCasino() end)
+                    if #(coords - zone) < 2.5 then
+                        DrawText3D(vector3(zone.x, zone.y, zone.z + 0.5), '~r~[E]~s~ Exit Casino')
+                        if IsControlJustReleased(0, 38) then -- E
+                            CreateThread(function() leaveCasino() end)
+                        end
                     end
                 end
             end
@@ -164,87 +191,149 @@ CreateThread(function()
 
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
-        local sleep = 300
+        local sleep = 250
 
         -- Blackjack tables
         for _, pos in ipairs(Cfg.blackjackTables or {}) do
-            if #(coords - pos) < 2.5 then
+            local dist = #(coords - pos)
+            if dist < 8.0 then
                 sleep = 0
                 DrawMarker(1, pos.x, pos.y, pos.z - 1.0,
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     1.2, 1.2, 0.8,
                     0, 255, 204, 80,
                     false, false, 2, false, nil, nil, false)
-                if IsControlJustReleased(0, 38) and not casinoOpen then
-                    openGame('blackjack')
+                DrawMarker(2, pos.x, pos.y, pos.z + 0.2,
+                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                    0.25, 0.25, 0.25,
+                    0, 255, 204, 180,
+                    true, true, 2, false, nil, nil, false)
+                if dist < 2.5 then
+                    DrawText3D(vector3(pos.x, pos.y, pos.z + 0.4), '~b~[E]~s~ Play Blackjack')
+                    if IsControlJustReleased(0, 38) and not casinoOpen then
+                        openGame('blackjack')
+                    end
                 end
             end
         end
 
         -- Slot machines
         for _, pos in ipairs(Cfg.slotMachines or {}) do
-            if #(coords - pos) < 2.0 then
+            local dist = #(coords - pos)
+            if dist < 8.0 then
                 sleep = 0
                 DrawMarker(1, pos.x, pos.y, pos.z - 1.0,
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     1.0, 1.0, 0.8,
                     255, 200, 0, 80,
                     false, false, 2, false, nil, nil, false)
-                if IsControlJustReleased(0, 38) and not casinoOpen then
-                    openGame('slots')
+                DrawMarker(2, pos.x, pos.y, pos.z + 0.2,
+                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                    0.25, 0.25, 0.25,
+                    255, 200, 0, 180,
+                    true, true, 2, false, nil, nil, false)
+                if dist < 2.2 then
+                    DrawText3D(vector3(pos.x, pos.y, pos.z + 0.4), '~y~[E]~s~ Play Slots')
+                    if IsControlJustReleased(0, 38) and not casinoOpen then
+                        openGame('slots')
+                    end
                 end
             end
         end
 
         -- Roulette table
-        if Cfg.rouletteTable and #(coords - Cfg.rouletteTable) < 2.5 then
-            sleep = 0
-            DrawMarker(1, Cfg.rouletteTable.x, Cfg.rouletteTable.y, Cfg.rouletteTable.z - 1.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                1.2, 1.2, 0.8,
-                255, 50, 50, 80,
-                false, false, 2, false, nil, nil, false)
-            if IsControlJustReleased(0, 38) and not casinoOpen then
-                openGame('roulette')
+        if Cfg.rouletteTable then
+            local dist = #(coords - Cfg.rouletteTable)
+            if dist < 8.0 then
+                sleep = 0
+                DrawMarker(1, Cfg.rouletteTable.x, Cfg.rouletteTable.y, Cfg.rouletteTable.z - 1.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    1.2, 1.2, 0.8,
+                    255, 50, 50, 80,
+                    false, false, 2, false, nil, nil, false)
+                DrawMarker(2, Cfg.rouletteTable.x, Cfg.rouletteTable.y, Cfg.rouletteTable.z + 0.2,
+                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                    0.25, 0.25, 0.25,
+                    255, 50, 50, 180,
+                    true, true, 2, false, nil, nil, false)
+                if dist < 2.5 then
+                    DrawText3D(vector3(Cfg.rouletteTable.x, Cfg.rouletteTable.y, Cfg.rouletteTable.z + 0.4), '~r~[E]~s~ Play Roulette')
+                    if IsControlJustReleased(0, 38) and not casinoOpen then
+                        openGame('roulette')
+                    end
+                end
             end
         end
 
         -- Lucky Wheel
-        if Cfg.luckyWheel and #(coords - Cfg.luckyWheel) < 3.0 then
-            sleep = 0
-            DrawMarker(1, Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z - 1.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                2.0, 2.0, 1.0,
-                255, 0, 255, 100,
-                false, false, 2, false, nil, nil, false)
-            if IsControlJustReleased(0, 38) and not casinoOpen then
-                openGame('luckywheel')
+        if Cfg.luckyWheel then
+            local dist = #(coords - Cfg.luckyWheel)
+            if dist < 10.0 then
+                sleep = 0
+                DrawMarker(1, Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z - 1.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    2.0, 2.0, 1.0,
+                    255, 0, 255, 100,
+                    false, false, 2, false, nil, nil, false)
+                DrawMarker(2, Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z + 0.3,
+                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                    0.35, 0.35, 0.35,
+                    255, 0, 255, 180,
+                    true, true, 2, false, nil, nil, false)
+                if dist < 3.0 then
+                    DrawText3D(vector3(Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z + 0.5), '~p~[E]~s~ Spin Lucky Wheel')
+                    if IsControlJustReleased(0, 38) and not casinoOpen then
+                        openGame('luckywheel')
+                    end
+                end
             end
         end
 
         -- Cashier
-        if Cfg.cashier and #(coords - Cfg.cashier) < 2.5 then
-            sleep = 0
-            DrawMarker(1, Cfg.cashier.x, Cfg.cashier.y, Cfg.cashier.z - 1.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                1.2, 1.2, 0.8,
-                0, 255, 0, 80,
-                false, false, 2, false, nil, nil, false)
-            if IsControlJustReleased(0, 38) and not casinoOpen then
-                openGame('cashier')
+        if Cfg.cashier then
+            local dist = #(coords - Cfg.cashier)
+            if dist < 8.0 then
+                sleep = 0
+                DrawMarker(1, Cfg.cashier.x, Cfg.cashier.y, Cfg.cashier.z - 1.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    1.2, 1.2, 0.8,
+                    0, 255, 0, 80,
+                    false, false, 2, false, nil, nil, false)
+                DrawMarker(29, Cfg.cashier.x, Cfg.cashier.y, Cfg.cashier.z + 0.2,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    0.3, 0.3, 0.3,
+                    0, 255, 0, 180,
+                    false, true, 2, false, nil, nil, false)
+                if dist < 2.5 then
+                    DrawText3D(vector3(Cfg.cashier.x, Cfg.cashier.y, Cfg.cashier.z + 0.4), '~g~[E]~s~ Cashier (Exchange Chips)')
+                    if IsControlJustReleased(0, 38) and not casinoOpen then
+                        openGame('cashier')
+                    end
+                end
             end
         end
 
         -- Bar
-        if Cfg.bar and #(coords - Cfg.bar) < 2.5 then
-            sleep = 0
-            DrawMarker(1, Cfg.bar.x, Cfg.bar.y, Cfg.bar.z - 1.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                1.2, 1.2, 0.8,
-                255, 150, 0, 80,
-                false, false, 2, false, nil, nil, false)
-            if IsControlJustReleased(0, 38) and not casinoOpen then
-                openGame('bar')
+        if Cfg.bar then
+            local dist = #(coords - Cfg.bar)
+            if dist < 8.0 then
+                sleep = 0
+                DrawMarker(1, Cfg.bar.x, Cfg.bar.y, Cfg.bar.z - 1.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    1.2, 1.2, 0.8,
+                    255, 150, 0, 80,
+                    false, false, 2, false, nil, nil, false)
+                DrawMarker(2, Cfg.bar.x, Cfg.bar.y, Cfg.bar.z + 0.2,
+                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
+                    0.25, 0.25, 0.25,
+                    255, 150, 0, 180,
+                    true, true, 2, false, nil, nil, false)
+                if dist < 2.5 then
+                    DrawText3D(vector3(Cfg.bar.x, Cfg.bar.y, Cfg.bar.z + 0.4), '~o~[E]~s~ Casino Bar (Drinks)')
+                    if IsControlJustReleased(0, 38) and not casinoOpen then
+                        openGame('bar')
+                    end
+                end
             end
         end
 
