@@ -567,7 +567,9 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
     end
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil, 'No ped found' end
-    if GetPedInVehicleSeat(entity, -1) ~= ped then
+    local inDriverSeat = GetPedInVehicleSeat(entity, -1) == ped
+    local nearVehicle = #(GetEntityCoords(ped) - GetEntityCoords(entity)) <= 8.0
+    if not inDriverSeat and not nearVehicle then
         dlog('player is not in the driver seat of the resolved vehicle')
         return nil, 'You must drive the work vehicle'
     end

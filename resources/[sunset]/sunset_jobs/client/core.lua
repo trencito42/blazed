@@ -246,6 +246,7 @@ end
 local RETRYABLE_ERRORS = {
     ['Work vehicle not networked'] = true,
     ['Work trailer is not networked'] = true,
+    ['You must drive the work vehicle'] = true,
 }
 
 function JobClient.registerVehiclesWithServer()

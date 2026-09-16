@@ -131,6 +131,12 @@ local function startTrucker(selectedRouteIdx)
         end
     end
 
+    local warpDeadline = GetGameTimer() + 2500
+    while GetVehiclePedIsIn(PlayerPedId(), false) ~= truck and GetGameTimer() < warpDeadline do
+        TaskWarpPedIntoVehicle(PlayerPedId(), truck, -1)
+        Wait(100)
+    end
+
     local registered, registerErr = JC.registerVehiclesWithServer()
     if not registered then
         JC.deleteVehicles()
