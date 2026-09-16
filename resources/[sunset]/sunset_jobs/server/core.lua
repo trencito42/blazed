@@ -590,10 +590,12 @@ exports.sunset_core:RegisterCallback('sunset:jobs:registerVehicle', function(sou
     if session.frameworkId then
         sessionsCall('SetEntity', session.frameworkId, 'vehicle', vehicleNetId, GetEntityModel(entity))
     end
-    -- Trailer: only required when the session actually has one (fuel routes).
-    -- The expected model comes from session data ('tanker'), NOT cfg.trailerModel
-    -- ('trailers2' fallback) which never matched real trucker trailers.
-    local expectsTrailer = session.data and (session.data.trailerModel or (cfg and cfg.trailerModel and session.data.hasTrailer ~= false))
+    -- Trailer: only required when the session EXPLICITLY has one (fuel routes
+    -- set hasTrailer=true). The previous logic `session.data.trailerModel or
+    -- (cfg.trailerModel and hasTrailer ~= false)` was truthy for EVERY route
+    -- because cfg.trailerModel always exists ('trailers2' fallback), so every
+    -- non-fuel route demanded a trailer that was never spawned.
+    local expectsTrailer = session.data and session.data.hasTrailer == true
     if expectsTrailer then
         if not session.trailerNetId then
             dlog('session expects a trailer but none was submitted')
