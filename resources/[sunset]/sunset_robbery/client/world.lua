@@ -237,7 +237,7 @@ RegisterCommand('robdoor', function(source, args)
                     x = ec.x, y = ec.y, z = ec.z,
                     heading = GetEntityHeading(ent),
                     dist = dist,
-                    collision = GetEntityCollisionEnabled(ent),
+                    collision = not GetEntityCollisionDisabled(ent),
                     frozen = IsEntityPositionFrozen(ent),
                     networked = NetworkGetEntityIsNetworked(ent),
                     netId = NetworkGetNetworkIdFromEntity(ent),
@@ -289,7 +289,7 @@ RegisterCommand('robdoor', function(source, args)
                 print(('^3[ROBDOOR]^7 loc=%s model=%d FOUND ent=%d pos=(%.2f,%.2f,%.2f) heading=%.2f dist=%.2f collision=%s frozen=%s networked=%s netId=%d unlocked=%s'):format(
                     loc.id, door.model, obj, ec.x, ec.y, ec.z,
                     GetEntityHeading(obj), #(pos - ec),
-                    tostring(GetEntityCollisionEnabled(obj)), tostring(IsEntityPositionFrozen(obj)),
+                    tostring(not GetEntityCollisionDisabled(obj)), tostring(IsEntityPositionFrozen(obj)),
                     tostring(NetworkGetEntityIsNetworked(obj)), NetworkGetNetworkIdFromEntity(obj),
                     tostring(doorStates[loc.id] == true)))
             else

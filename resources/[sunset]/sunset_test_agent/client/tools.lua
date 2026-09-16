@@ -114,7 +114,7 @@ local function describeEntity(ent)
         type = GetEntityType(ent),   -- 1 ped, 2 vehicle, 3 object
         coords = { x = c.x, y = c.y, z = c.z },
         heading = GetEntityHeading(ent),
-        collisionEnabled = GetEntityCollisionEnabled(ent),
+        collisionEnabled = not GetEntityCollisionDisabled(ent),
         frozen = IsEntityPositionFrozen(ent),
         visible = IsEntityVisible(ent),
         networked = NetworkGetEntityIsNetworked(ent),
