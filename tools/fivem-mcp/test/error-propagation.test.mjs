@@ -102,6 +102,31 @@ test('resolveTarget errors are propagated under the same name', () => {
   }
 });
 
+// [REGRESSION] `os` does NOT exist in FiveM client-side Lua (server-only).
+// Any `os.date`/`os.time`/`os.clock` in a client_script crashes the entire
+// resource at runtime (the sunset_ui NUI-instrumentation outage). Scan every
+// client-side Lua file across the repo for this latent bug.
+import { execSync } from 'node:child_process';
+test('no os.* usage in client-side Lua scripts (server-only API)', () => {
+  // Find all client_scripts referenced by fxmanifest files, then grep them.
+  // Simpler + robust: scan every resources/**/client/*.lua for os.date/time/clock.
+  const out = execSync(
+    'node -e "const fs=require(\'fs\'),p=require(\'path\');' +
+    'function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){' +
+    'const f=p.join(d,e.name);if(e.isDirectory())walk(f);else if(/\\.lua$/.test(e.name)){' +
+    'const s=fs.readFileSync(f,\'utf8\');const m=s.match(/\\bos\\.(date|time|clock)\\b/);' +
+    'if(m)console.log(f+\' :: \'+m[0]);}}}' +
+    'walk(\'resources\');"',
+    { cwd: REPO_ROOT, encoding: 'utf8' },
+  ).trim();
+  // Filter: only flag files under a /client/ path (client-side scripts).
+  const clientHits = out.split('\n').filter((l) => l.includes('/client/') && l.trim().length > 0);
+  assert.equal(
+    clientHits.length, 0,
+    `os.* found in client-side Lua (will crash at runtime):\n${clientHits.join('\n')}`,
+  );
+});
+
 test('no bare "return nil" inside tool functions (would lose the error)', () => {
   // Predicate helpers legitimately use nil-as-absence (no error to propagate).
   const PREDICATES = new Set([

@@ -54,8 +54,9 @@ function SetFocus(hasFocus, hasCursor, keepInput, owner)
     -- [BOOT TRACE v3] include a short traceback so we can identify WHO steals
     -- focus (the 13s login-screen release bug).
     local tb = debug.traceback('', 2):gsub('\n', ' | '):sub(1, 220)
+    -- NOTE: `os` is server-only; GetGameTimer() is the client-safe clock.
     print(('^5[FOCUS %s]^7 ui: SetFocus(has=%s cursor=%s owner=%s) | %s'):format(
-        tostring(GetBootEpoch and GetBootEpoch() or os.time()), tostring(hasFocus), tostring(hasCursor == true), owner, tb))
+        tostring(GetBootEpoch and GetBootEpoch() or GetGameTimer()), tostring(hasFocus), tostring(hasCursor == true), owner, tb))
     return true
 end
 exports('SetFocus', SetFocus)
@@ -106,14 +107,16 @@ function NuiDebugRecordMessage(action)
     if not nuiDebugEnabled() then return end
     nuiMsgHead = (nuiMsgHead % NUI_DEBUG_CAP) + 1
     nuiMsgTotal = nuiMsgTotal + 1
-    nuiMsgBuffer[nuiMsgHead] = { seq = nuiMsgTotal, action = tostring(action), at = os.date('%H:%M:%S') }
+    -- NOTE: `os` does NOT exist in client-side Lua (server-only). Use
+    -- GetGameTimer() (ms since resource start) — always available client-side.
+    nuiMsgBuffer[nuiMsgHead] = { seq = nuiMsgTotal, action = tostring(action), at = GetGameTimer() }
 end
 
 function NuiDebugRecordCallback(name)
     if not nuiDebugEnabled() then return end
     nuiCbHead = (nuiCbHead % NUI_DEBUG_CAP) + 1
     nuiCbTotal = nuiCbTotal + 1
-    nuiCbBuffer[nuiCbHead] = { seq = nuiCbTotal, name = tostring(name), at = os.date('%H:%M:%S') }
+    nuiCbBuffer[nuiCbHead] = { seq = nuiCbTotal, name = tostring(name), at = GetGameTimer() }
 end
 
 function NuiDebugRecordError(message, file, line)
@@ -122,7 +125,7 @@ function NuiDebugRecordError(message, file, line)
     nuiErrTotal = nuiErrTotal + 1
     nuiErrBuffer[nuiErrHead] = {
         seq = nuiErrTotal, message = tostring(message), file = tostring(file),
-        line = tonumber(line), at = os.date('%H:%M:%S'),
+        line = tonumber(line), at = GetGameTimer(),
     }
 end
 

@@ -21,7 +21,7 @@ CreateThread(function()
         if kb ~= lastFocus.keyboard or mouse ~= lastFocus.mouse then
             head = head + 1
             focusChanges[((head - 1) % 20) + 1] = {
-                at = os.date('%H:%M:%S'),
+                at = GetGameTimer(),
                 keyboard = kb,
                 keepInput = mouse,
             }

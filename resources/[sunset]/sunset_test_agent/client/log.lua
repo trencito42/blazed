@@ -24,7 +24,7 @@ function ClientLog.push(kind, message, details)
         kind = tostring(kind or 'log'),
         message = tostring(message or ''),
         details = type(details) == 'table' and details or nil,
-        at = os.date('%H:%M:%S'),
+        at = GetGameTimer(),
         gameTimer = GetGameTimer(),
     }
 end
