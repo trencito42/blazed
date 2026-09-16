@@ -289,7 +289,7 @@ CreateThread(function()
                 DrawMarker(1, startAt.x, startAt.y, startAt.z - 1.05, 0, 0, 0, 0, 0, 0, 1.4, 1.4, 0.35, 255, 120, 40, 90, false, false, 2, false, nil, nil, false)
                 drawPrompt(startAt, loc.startHint or '[E] Start robbery')
                 if IsControlJustPressed(0, 38) then startRobbery(loc.id) end
-            elseif loc.hackTerminal and dist(pos, loc.hackTerminal.coords) <= 2.2 then
+            elseif loc.hackTerminal and dist(pos, loc.hackTerminal.coords) <= 3.5 then
                 sleep = 0
                 DrawMarker(2, loc.hackTerminal.coords.x, loc.hackTerminal.coords.y, loc.hackTerminal.coords.z + 0.35, 0, 0, 0, 0, 0, 0, 0.28, 0.28, 0.28, 255, 140, 40, 180, false, false, 2, false, nil, nil, false)
                 drawPrompt(loc.hackTerminal.coords, loc.hackTerminal.label or '[E] Hack vault keypad')
@@ -299,9 +299,9 @@ CreateThread(function()
 
         if session and session.stage == 'HACKING' then
             local term = session.location.hackTerminal
-            if dist(pos, term.coords) <= 2.2 then
+            if dist(pos, term.coords) <= 3.5 then
                 sleep = 0
-                drawPrompt(term.coords, term.label or '[E] Bypass security')
+                drawPrompt(term.coords, term.label or '[E] Hack vault keypad')
                 DrawMarker(2, term.coords.x, term.coords.y, term.coords.z + 0.35, 0, 0, 0, 0, 0, 0, 0.28, 0.28, 0.28, 255, 140, 40, 180, false, false, 2, false, nil, nil, false)
                 if IsControlJustPressed(0, 38) then
                     TriggerServerEvent('sunset:robbery:hackOpen')

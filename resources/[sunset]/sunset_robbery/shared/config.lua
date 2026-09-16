@@ -156,7 +156,7 @@ SunsetRobbery.Locations = {
             closeMs = 2000,
         },
         hackTerminal = {
-            coords = vector3(147.20, -1043.20, 29.37),
+            coords = vector3(147.89, -1043.29, 29.47),
             heading = 250.0,
             label = '[E] Hack vault keypad',
         },

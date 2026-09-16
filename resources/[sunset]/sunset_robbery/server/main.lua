@@ -130,7 +130,7 @@ RegisterNetEvent('sunset:robbery:hackOpen', function()
     local source = source
     local session = RobberySessions.get(source)
     if not session or session.stage ~= 'HACKING' then return end
-    if not nearPoint(source, session.location.hackTerminal.coords, 2.6) then
+    if not nearPoint(source, session.location.hackTerminal.coords, 4.0) then
         return RobberyAdapter.notify(source, 'Stay at the security terminal', 'error')
     end
     if not session.hack.startedAt then
@@ -146,7 +146,7 @@ RegisterNetEvent('sunset:robbery:hackClick', function(nodeId)
     if not RobberySessions.rateOk(source) then return end
     local session = RobberySessions.get(source)
     if not session or session.stage ~= 'HACKING' then return end
-    if not nearPoint(source, session.location.hackTerminal.coords, 2.6) then
+    if not nearPoint(source, session.location.hackTerminal.coords, 4.0) then
         return RobberyAdapter.notify(source, 'Stay at the security terminal', 'error')
     end
     local hack = session.hack
