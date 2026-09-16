@@ -9,28 +9,26 @@ local insideCasino = false
 local casinoOpen = false
 local casinoBlip = nil
 
--- ── IPL loading ──
--- bob74_ipl auto-loads vw_casino_main on build >= 2060.
--- 'casino_main' does NOT exist; we do NOT call RequestIpl on it.
+-- ── Coordinate-based inside detection ──
+-- The boolean flag alone is NOT reliable: reconnecting inside, admin TP, or a
+-- resource restart loses it and the exit marker would never show. Detect
+-- "inside the casino interior" from coordinates too (casino interiors live at
+-- Z ≈ -45..-53, X ≈ 1080..1160, Y ≈ 190..290), and re-sync the flag.
+local function isInCasinoInterior(coords)
+    if not coords then return false end
+    return coords.z < -40.0 and coords.z > -60.0
+        and coords.x > 1070.0 and coords.x < 1170.0
+        and coords.y > 180.0 and coords.y < 300.0
+end
 
--- ── Map blip ──
-CreateThread(function()
-    Wait(5000) -- wait for world to load
-    if casinoBlip and DoesBlipExist(casinoBlip) then RemoveBlip(casinoBlip) end
-    casinoBlip = AddBlipForCoord(Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z)
-    SetBlipSprite(casinoBlip, 617) -- casino chip icon
-    SetBlipColour(casinoBlip, 5)   -- yellow
-    SetBlipScale(casinoBlip, 0.9)
-    SetBlipAsShortRange(casinoBlip, true)
-    BeginTextCommandSetBlipName('STRING')
-    AddTextComponentSubstringPlayerName('The Diamond Casino')
-    EndTextCommandSetBlipName(casinoBlip)
-end)
+-- Exit zones (multiple: interior exit door + main floor near the entry).
+-- Verified interiorExit: 1089.63, 205.89, -49.00 (probe: ready=1, group empty).
+local EXIT_ZONES = {
+    vector3(1089.63, 205.89, -49.00), -- interior exit door
+    vector3(1093.31, 214.61, -49.53), -- interior entry area (probe: ready=1)
+}
 
--- ── Game table interactions ──
--- NOTE: closeCasinoUI/openGame are defined BEFORE the marker threads because
--- Lua closures capture locals lexically — a reference inside a thread created
--- before the `local function` declaration would resolve to a nil global.
+-- ── Game UI open/close (defined before leaveCasino which references it) ──
 local function openGame(gameType)
     if casinoOpen then return end
     casinoOpen = true
@@ -49,12 +47,65 @@ local function closeCasinoUI()
     exports.sunset_ui:SetFocus(false, false, false, 'casino')
 end
 
+local function leaveCasino()
+    local ped = PlayerPedId()
+    closeCasinoUI()
+    DoScreenFadeOut(400)
+    Wait(500)
+    insideCasino = false
+    SetEntityCoords(ped, Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z, false, false, false, false)
+    SetEntityHeading(ped, 270.0)
+    Wait(300)
+    DoScreenFadeIn(400)
+end
+
+-- Escape hatch: /leavecasino ALWAYS works while inside the interior, even if
+-- the marker/flag state got out of sync (reconnect inside, resource restart).
+RegisterCommand('leavecasino', function()
+    local coords = GetEntityCoords(PlayerPedId())
+    if insideCasino or isInCasinoInterior(coords) then
+        CreateThread(function() leaveCasino() end)
+    else
+        exports.sunset_ui:Notify('You are not inside the casino.', 'error')
+    end
+end, false)
+
+-- ── IPL loading ──
+-- bob74_ipl auto-loads vw_casino_main on build >= 2060.
+-- 'casino_main' does NOT exist; we do NOT call RequestIpl on it.
+
+-- ── Map blip ──
+CreateThread(function()
+    Wait(5000) -- wait for world to load
+    if casinoBlip and DoesBlipExist(casinoBlip) then RemoveBlip(casinoBlip) end
+    casinoBlip = AddBlipForCoord(Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z)
+    SetBlipSprite(casinoBlip, 617) -- casino chip icon
+    SetBlipColour(casinoBlip, 5)   -- yellow
+    SetBlipScale(casinoBlip, 0.9)
+    SetBlipAsShortRange(casinoBlip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName('The Diamond Casino')
+    EndTextCommandSetBlipName(casinoBlip)
+end)
+
 -- ── Entry/Exit markers ──
+-- [EXIT FIX] The old version gated the exit marker ONLY on the `insideCasino`
+-- boolean set at entry. Reconnecting inside, admin TP, or a resource restart
+-- left the flag false and the player permanently stuck with no exit marker.
+-- Now: the inside flag is re-synced from coordinates every tick, exit markers
+-- exist at BOTH interior doors, and /leavecasino is a guaranteed escape hatch.
 CreateThread(function()
     while true do
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
         local sleep = 500
+
+        -- Re-sync the inside flag from actual coordinates (authoritative)
+        local inInterior = isInCasinoInterior(coords)
+        if inInterior ~= insideCasino then
+            insideCasino = inInterior
+            if not inInterior then closeCasinoUI() end
+        end
 
         -- Entry marker (outside casino)
         if not insideCasino and #(coords - Cfg.entrance) < 3.0 then
@@ -69,10 +120,10 @@ CreateThread(function()
                 insideCasino = true
                 DoScreenFadeOut(500)
                 Wait(600)
-                SetEntityCoords(ped, Cfg.exit.x, Cfg.exit.y, Cfg.exit.z, false, false, false, false)
+                SetEntityCoords(ped, EXIT_ZONES[1].x, EXIT_ZONES[1].y, EXIT_ZONES[1].z, false, false, false, false)
                 SetEntityHeading(ped, 90.0)
                 -- Wait for interior to load
-                local interior = GetInteriorAtCoords(Cfg.exit.x, Cfg.exit.y, Cfg.exit.z)
+                local interior = GetInteriorAtCoords(EXIT_ZONES[1].x, EXIT_ZONES[1].y, EXIT_ZONES[1].z)
                 if interior ~= 0 then
                     local deadline = GetGameTimer() + 5000
                     while not IsInteriorReady(interior) and GetGameTimer() < deadline do
@@ -84,24 +135,21 @@ CreateThread(function()
             end
         end
 
-        -- Exit marker (inside casino)
-        if insideCasino and #(coords - Cfg.exit) < 3.0 then
-            sleep = 0
-            DrawMarker(1, Cfg.exit.x, Cfg.exit.y, Cfg.exit.z - 1.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                1.5, 1.5, 1.0,
-                255, 100, 100, 100,
-                false, false, 2, false, nil, nil, false)
+        -- Exit markers (inside casino) — both interior doors
+        if insideCasino then
+            for _, zone in ipairs(EXIT_ZONES) do
+                if #(coords - zone) < 3.0 then
+                    sleep = 0
+                    DrawMarker(1, zone.x, zone.y, zone.z - 1.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        1.5, 1.5, 1.0,
+                        255, 100, 100, 100,
+                        false, false, 2, false, nil, nil, false)
 
-            if IsControlJustReleased(0, 38) then -- E
-                insideCasino = false
-                closeCasinoUI()
-                DoScreenFadeOut(500)
-                Wait(600)
-                SetEntityCoords(ped, Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z, false, false, false, false)
-                SetEntityHeading(ped, 270.0)
-                Wait(300)
-                DoScreenFadeIn(500)
+                    if IsControlJustReleased(0, 38) then -- E
+                        CreateThread(function() leaveCasino() end)
+                    end
+                end
             end
         end
 
