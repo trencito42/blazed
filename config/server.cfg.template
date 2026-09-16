@@ -114,6 +114,7 @@ ensure sunset_jobs
 ensure sunset_carjack
 ensure sunset_fishingshop
 ensure sunset_casino
+ensure sunset_blackjack
 ensure sunset_impound
 ensure sunset_racing
 ensure sunset_drugs
