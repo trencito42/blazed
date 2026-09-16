@@ -38,19 +38,32 @@ local function draw3DText(coords, text)
     DrawText(sx, sy)
 end
 
+local function getGroundCoords(cp)
+    if not cp then return cp end
+    local found, groundZ = GetGroundZFor_3dCoord(cp.x, cp.y, cp.z + 50.0, false)
+    if not found then
+        found, groundZ = GetGroundZFor_3dCoord(cp.x, cp.y, cp.z + 150.0, false)
+    end
+    if found then
+        return vector3(cp.x, cp.y, groundZ)
+    end
+    return cp
+end
+
 local function drawTruckerMarker(coords, r, g, b)
     if not coords then return end
+    local pos = getGroundCoords(coords)
     r = r or 46
     g = g or 204
     b = b or 113
     -- Ground cylinder
-    DrawMarker(1, coords.x, coords.y, coords.z - 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    DrawMarker(1, pos.x, pos.y, pos.z - 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         6.0, 6.0, 1.5, r, g, b, 160, false, false, 2, false, nil, nil, false)
     -- Tall beacon column beam visible from far away
-    DrawMarker(1, coords.x, coords.y, coords.z - 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    DrawMarker(1, pos.x, pos.y, pos.z - 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         2.5, 2.5, 30.0, r, g, b, 70, false, false, 2, false, nil, nil, false)
     -- Floating chevron marker
-    DrawMarker(0, coords.x, coords.y, coords.z + 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    DrawMarker(0, pos.x, pos.y, pos.z + 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         2.0, 2.0, 1.5, r, g, b, 200, false, false, 2, false, nil, nil, false)
 end
 

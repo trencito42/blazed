@@ -356,4 +356,38 @@ CreateThread(function()
     end
 end)
 
+RegisterCommand('quitrace', function()
+    if not raceActive then
+        exports.sunset_ui:Notify('You are not currently in an active race.', 'info')
+        return
+    end
+    CreateThread(function()
+        local ok, err = Sunset.AwaitCallback('sunset:racing:quit')
+        raceActive = false
+        raceData = nil
+        currentCheckpoint = 1
+        checkpointPending = false
+        clearRaceBlips()
+        exports.sunset_ui:Send('racingHudHide', {})
+        if ok then
+            exports.sunset_ui:Notify('Race abandoned.', 'info')
+        else
+            exports.sunset_ui:Notify(err or 'Race cleared.', 'info')
+        end
+    end)
+end, false)
+RegisterCommand('cancelrace', function() ExecuteCommand('quitrace') end, false)
+TriggerEvent('chat:addSuggestion', '/quitrace', 'Abandon current race or time trial')
+TriggerEvent('chat:addSuggestion', '/cancelrace', 'Abandon current race or time trial')
+
 exports('IsRaceActive', function() return raceActive end)
+exports('CancelRace', function()
+    if raceActive then
+        raceActive = false
+        raceData = nil
+        currentCheckpoint = 1
+        checkpointPending = false
+        clearRaceBlips()
+        exports.sunset_ui:Send('racingHudHide', {})
+    end
+end)

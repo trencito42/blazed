@@ -403,6 +403,9 @@ function SunsetJobs_StartSession(source, jobId, data)
     if Sessions[source] then
         return nil, 'Already on a work shift'
     end
+    if GetResourceState('sunset_racing') == 'started' then
+        pcall(function() exports.sunset_racing:CancelPlayerRace(source, 'Started civilian job shift') end)
+    end
     local currentJob = charJob(source)
     if currentJob ~= jobId then
         return nil, 'You are not employed as ' .. (Sunset.CivilianJobs[jobId] and Sunset.CivilianJobs[jobId].label or jobId)

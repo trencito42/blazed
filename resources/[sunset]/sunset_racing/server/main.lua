@@ -322,10 +322,13 @@ function startRace(routeId, players, isSolo)
         settled = false,
     }
 
-    -- Clear lobbies
+    -- Clear lobbies and cancel any overlapping job session
     Lobbies[routeId] = nil
     for _, src in ipairs(players) do
         PlayerLobby[src] = nil
+        if GetResourceState('sunset_jobs') == 'started' then
+            pcall(function() exports.sunset_jobs:CancelSession(src, 'Cancelled (started race)') end)
+        end
     end
 
     -- Freeze vehicles
@@ -530,6 +533,30 @@ function endRace(reason)
     ActiveRace = nil
     dlog(('race ended id=%d reason=%s'):format(raceId, reason))
 end
+
+-- ═══ ABANDON / CANCEL RACE ═══
+
+local function cancelPlayerRace(src, reason)
+    src = tonumber(src)
+    if not src then return false end
+    if not ActiveRace then return false end
+    local p = PlayerProgress[src]
+    if not p or p.dnf or p.finishedAtMs then return false end
+    p.dnf = true
+    TriggerClientEvent('sunset:racing:dnf', src, { reason = reason or 'You abandoned the race.' })
+    dlog(('player cancelled race src=%d reason=%s'):format(src, tostring(reason)))
+    checkRaceEnd()
+    return true
+end
+exports('CancelPlayerRace', cancelPlayerRace)
+
+exports.sunset_core:RegisterCallback('sunset:racing:quit', function(source)
+    if not ActiveRace then return false, 'No race in progress' end
+    if cancelPlayerRace(source, 'You abandoned the race.') then
+        return true
+    end
+    return false, 'You are not actively racing'
+end)
 
 -- ═══ DISCONNECT ═══
 
