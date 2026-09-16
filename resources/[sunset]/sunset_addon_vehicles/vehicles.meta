@@ -121,7 +121,7 @@
       <animConvRoofName>null</animConvRoofName>
       <animConvRoofWindowsAffected />
       <ptfxAssetName>null</ptfxAssetName>
-      <audioNameHash>cometcup</audioNameHash>
+      <audioNameHash>comet3</audioNameHash>
       <layout>LAYOUT_LOW_RESTRICTED</layout>
       <coverBoundOffsets>COMET6_COVER_OFFSET_INFO</coverBoundOffsets>
       <explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>
@@ -573,7 +573,7 @@
       <animConvRoofName>null</animConvRoofName>
       <animConvRoofWindowsAffected />
       <ptfxAssetName>weap_xs_vehicle_weapons</ptfxAssetName>
-      <audioNameHash>KURUMAC</audioNameHash>
+      <audioNameHash>kuruma</audioNameHash>
       <layout>LAYOUT_KURUMAC</layout>
       <coverBoundOffsets>SULTAN_COVER_OFFSET_INFO</coverBoundOffsets>
       <explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>
