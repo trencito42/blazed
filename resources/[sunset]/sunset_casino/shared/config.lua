@@ -15,10 +15,13 @@ SunsetCasino.Config = {
     -- Exit marker (INSIDE the casino, verified interiorExit)
     exit = vector3(1089.63, 205.89, -49.00),
 
-    -- ── GAME TABLES (verified positions from /casinoprobe) ──
+    -- ── GAME TABLES (verified physical table positions in main pit) ──
     blackjackTables = {
-        vector3(1111.55, 211.61, -50.44),
-        vector3(1110.05, 211.08, -50.44),
+        vector3(1129.40, 262.35, -51.04),
+        vector3(1143.80, 267.50, -51.84),
+        vector3(1146.50, 260.60, -51.84),
+        vector3(1131.80, 247.60, -51.04),
+        vector3(1145.20, 252.30, -51.84),
     },
     -- Actual vw_prop_casino_slot_01a entity positions
     slotMachines = {
@@ -28,7 +31,11 @@ SunsetCasino.Config = {
         vector3(1108.94, 239.48, -50.84),
         vector3(1135.13, 256.70, -52.04),
     },
-    rouletteTable = vector3(1117.67, 218.64, -50.44),
+    rouletteTables = {
+        vector3(1134.40, 266.80, -51.04),
+        vector3(1150.00, 251.20, -51.84),
+    },
+    rouletteTable = vector3(1134.40, 266.80, -51.04),
 
     -- ── LUCKY WHEEL (frame exists baked in IPL at 1115.5, 248.5) ──
     -- The prize disc does NOT exist as a spawnable prop on this build.

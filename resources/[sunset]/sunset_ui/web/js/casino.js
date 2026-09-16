@@ -52,7 +52,7 @@ const Casino = {
         } else if (this.game === 'bar') {
             sub.textContent = `Cash: $${(this.status.cash || 0).toLocaleString()}`;
         } else {
-            sub.textContent = `Min $${(this.status.minBet || 100).toLocaleString()} · Max $${(this.status.maxBet || 50000).toLocaleString()}`;
+            sub.textContent = `Chips: ${(this.status.chips || 0).toLocaleString()} · Min ${(this.status.minBet || 100).toLocaleString()} · Max ${(this.status.maxBet || 50000).toLocaleString()}`;
         }
 
         if (this.game === 'blackjack') this.renderBlackjack(body);
@@ -68,21 +68,26 @@ const Casino = {
     renderStatus() {
         const el = $('#casino-status');
         if (!el) return;
+        const chips = this.status.chips || 0;
         const loss = this.status.dailyLoss || 0;
         const limit = this.status.dailyLimit || 500000;
-        el.innerHTML = `
-            <span>Daily loss: <strong>$${loss.toLocaleString()}</strong> / $${limit.toLocaleString()}</span>
-            <span>Bet: <strong>$${this.bet.toLocaleString()}</strong></span>
-        `;
+        if (this.game === 'cashier' || this.game === 'bar' || this.game === 'luckywheel') {
+            el.innerHTML = `<span>Chips: <strong>${chips.toLocaleString()}</strong></span>`;
+        } else {
+            el.innerHTML = `
+                <span>Chips: <strong>${chips.toLocaleString()}</strong></span>
+                <span>Bet: <strong>${this.bet.toLocaleString()} Chips</strong></span>
+            `;
+        }
     },
 
     betControls() {
         const chips = [100, 500, 1000, 5000, 10000, 25000];
         return `
             <div class="casino-bet-row">
-                <span class="casino-bet-label">Bet</span>
+                <span class="casino-bet-label">Bet Chips</span>
                 <input type="number" class="casino-bet-input" id="casino-bet" value="${this.bet}" min="${this.status.minBet || 100}" max="${this.status.maxBet || 50000}">
-                ${chips.map((c) => `<button type="button" class="casino-bet-chip" data-casino-chip="${c}">$${(c / 1000).toFixed(c < 1000 ? 0 : 0)}${c >= 1000 ? 'K' : ''}</button>`).join('')}
+                ${chips.map((c) => `<button type="button" class="casino-bet-chip" data-casino-chip="${c}">${(c / 1000).toFixed(c < 1000 ? 0 : 0)}${c >= 1000 ? 'K' : ''}</button>`).join('')}
             </div>
         `;
     },
@@ -144,19 +149,22 @@ const Casino = {
         renderCards($('#bj-player-cards'), data.playerHand || []);
         $('#bj-player-value').textContent = data.playerValue != null ? data.playerValue : '';
 
+        if (data.chips !== undefined) this.status.chips = data.chips;
+
         if (data.state === 'settled' && data.settled) {
             renderCards($('#bj-dealer-cards'), data.settled.dealerHand || []);
             $('#bj-dealer-value').textContent = data.settled.dealerValue != null ? data.settled.dealerValue : '';
 
             const s = data.settled;
+            if (s.chips !== undefined) this.status.chips = s.chips;
             const resultEl = $('#bj-result');
             const labels = {
-                blackjack: `🃏 BLACKJACK! +$${s.payout.toLocaleString()}`,
-                win: `✅ You win! +$${s.payout.toLocaleString()}`,
-                dealer_bust: `💥 Dealer busts! +$${s.payout.toLocaleString()}`,
+                blackjack: `🃏 BLACKJACK! +${s.payout.toLocaleString()} Chips`,
+                win: `✅ You win! +${s.payout.toLocaleString()} Chips`,
+                dealer_bust: `💥 Dealer busts! +${s.payout.toLocaleString()} Chips`,
                 push: '🤝 Push — bet returned',
-                lose: `❌ Dealer wins. -$${this.bet.toLocaleString()}`,
-                bust: `💀 Bust! -$${this.bet.toLocaleString()}`,
+                lose: `❌ Dealer wins. -${this.bet.toLocaleString()} Chips`,
+                bust: `💀 Bust! -${this.bet.toLocaleString()} Chips`,
             };
             const cls = (s.result === 'blackjack' || s.result === 'win' || s.result === 'dealer_bust') ? 'win'
                 : s.result === 'push' ? 'push' : 'lose';
@@ -185,6 +193,12 @@ const Casino = {
             $('#bj-hit')?.addEventListener('click', () => post('casinoBlackjackHit', {}));
             $('#bj-stand')?.addEventListener('click', () => post('casinoBlackjackStand', {}));
         }
+
+        const sub = $('#casino-sub');
+        if (sub && this.game === 'blackjack') {
+            sub.textContent = `Chips: ${(this.status.chips || 0).toLocaleString()} · Min ${(this.status.minBet || 100).toLocaleString()} · Max ${(this.status.maxBet || 50000).toLocaleString()}`;
+        }
+        this.renderStatus();
     },
 
     // ── SLOTS ──
@@ -215,16 +229,22 @@ const Casino = {
             const el = $(`#slot-${i + 1}`);
             if (el) el.textContent = reels[i] || '?';
         }
+        if (data.chips !== undefined) this.status.chips = data.chips;
         const resultEl = $('#slots-result');
         if (resultEl) {
             if (data.payout > 0) {
                 resultEl.className = 'slots-result slots-result--win';
-                resultEl.textContent = `🎉 ${data.matches} match! +$${data.payout.toLocaleString()}`;
+                resultEl.textContent = `🎉 ${data.matches} match! +${data.payout.toLocaleString()} Chips`;
             } else {
                 resultEl.className = 'slots-result slots-result--lose';
                 resultEl.textContent = 'No match. Try again!';
             }
         }
+        const sub = $('#casino-sub');
+        if (sub && this.game === 'slots') {
+            sub.textContent = `Chips: ${(this.status.chips || 0).toLocaleString()} · Min ${(this.status.minBet || 100).toLocaleString()} · Max ${(this.status.maxBet || 50000).toLocaleString()}`;
+        }
+        this.renderStatus();
     },
 
     // ── LUCKY WHEEL ──
@@ -397,16 +417,22 @@ const Casino = {
             wheel.textContent = data.result;
             wheel.className = `roulette-wheel roulette-wheel--${data.color}`;
         }
+        if (data.chips !== undefined) this.status.chips = data.chips;
         const resultEl = $('#roulette-result');
         if (resultEl) {
             if (data.won) {
                 resultEl.className = 'slots-result slots-result--win';
-                resultEl.textContent = `🎉 ${data.result} ${data.color}! +$${data.payout.toLocaleString()}`;
+                resultEl.textContent = `🎉 ${data.result} ${data.color}! +${data.payout.toLocaleString()} Chips`;
             } else {
                 resultEl.className = 'slots-result slots-result--lose';
                 resultEl.textContent = `${data.result} ${data.color}. Better luck next time.`;
             }
         }
+        const sub = $('#casino-sub');
+        if (sub && this.game === 'roulette') {
+            sub.textContent = `Chips: ${(this.status.chips || 0).toLocaleString()} · Min ${(this.status.minBet || 100).toLocaleString()} · Max ${(this.status.maxBet || 50000).toLocaleString()}`;
+        }
+        this.renderStatus();
     },
 };
 

@@ -49,6 +49,30 @@ local function getCharId(source)
     return char and tonumber(char.id) or nil
 end
 
+local function countChips(source)
+    if GetResourceState('sunset_inventory') ~= 'started' then return 0 end
+    local ok, count = pcall(function()
+        return exports.sunset_inventory:CountItem(source, 'casino_chips')
+    end)
+    return ok and (tonumber(count) or 0) or 0
+end
+
+local function giveChips(source, amount)
+    if GetResourceState('sunset_inventory') ~= 'started' then return false end
+    local ok, res = pcall(function()
+        return exports.sunset_inventory:AddItem(source, 'casino_chips', amount)
+    end)
+    return ok and res ~= false
+end
+
+local function takeChips(source, amount)
+    if GetResourceState('sunset_inventory') ~= 'started' then return false end
+    local ok, res = pcall(function()
+        return exports.sunset_inventory:RemoveItem(source, 'casino_chips', amount)
+    end)
+    return ok and res == true
+end
+
 -- ═══════════════════════════════════════════════════════════════
 --  BLACKJACK
 -- ═══════════════════════════════════════════════════════════════
@@ -140,7 +164,7 @@ local function settleBlackjack(source, game)
     end
 
     if payout > 0 then
-        exports.sunset_core:AddMoney(source, 'cash', payout, 'casino_blackjack')
+        giveChips(source, payout)
     end
 
     ActiveBlackjack[source] = nil
@@ -148,6 +172,7 @@ local function settleBlackjack(source, game)
     return {
         result = result,
         payout = payout,
+        chips = countChips(source),
         playerHand = handToTable(game.playerHand),
         playerValue = playerVal,
         dealerHand = handToTable(game.dealerHand),
@@ -158,7 +183,7 @@ end
 exports.sunset_core:RegisterCallback('sunset:casino:blackjackStart', function(source, bet)
     bet = math.floor(tonumber(bet) or 0)
     if bet < (Cfg.minBet or 100) or bet > (Cfg.maxBet or 50000) then
-        return nil, ('Bet must be between $%d and $%d.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
+        return nil, ('Bet must be between %d and %d chips.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
     end
     if not checkCooldown(source) then
         return nil, 'Wait a moment between games.'
@@ -171,8 +196,11 @@ exports.sunset_core:RegisterCallback('sunset:casino:blackjackStart', function(so
     if ActiveBlackjack[source] then
         return nil, 'You already have an active blackjack hand.'
     end
-    if not exports.sunset_core:RemoveMoney(source, 'cash', bet, 'casino_blackjack_bet') then
-        return nil, 'Not enough cash.'
+    if countChips(source) < bet then
+        return nil, 'You do not have enough chips. Buy chips at the Cashier.'
+    end
+    if not takeChips(source, bet) then
+        return nil, 'Could not take chips from your inventory.'
     end
 
     local deck = buildDeck()
@@ -242,7 +270,7 @@ local SLOT_SYMBOLS = { '🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '🔔'
 exports.sunset_core:RegisterCallback('sunset:casino:slotsSpin', function(source, bet)
     bet = math.floor(tonumber(bet) or 0)
     if bet < (Cfg.minBet or 100) or bet > (Cfg.maxBet or 50000) then
-        return nil, ('Bet must be between $%d and $%d.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
+        return nil, ('Bet must be between %d and %d chips.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
     end
     if not checkCooldown(source) then
         return nil, 'Wait a moment between games.'
@@ -252,8 +280,11 @@ exports.sunset_core:RegisterCallback('sunset:casino:slotsSpin', function(source,
     if not checkDailyLoss(charId, bet) then
         return nil, ('Daily loss limit reached ($%s). Come back tomorrow.'):format(Cfg.dailyLossLimit or 500000)
     end
-    if not exports.sunset_core:RemoveMoney(source, 'cash', bet, 'casino_slots_bet') then
-        return nil, 'Not enough cash.'
+    if countChips(source) < bet then
+        return nil, 'You do not have enough chips. Buy chips at the Cashier.'
+    end
+    if not takeChips(source, bet) then
+        return nil, 'Could not take chips from your inventory.'
     end
 
     -- Spin 3 reels
@@ -277,7 +308,7 @@ exports.sunset_core:RegisterCallback('sunset:casino:slotsSpin', function(source,
     local payout = bet * multiplier
 
     if payout > 0 then
-        exports.sunset_core:AddMoney(source, 'cash', payout, 'casino_slots')
+        giveChips(source, payout)
     else
         recordLoss(charId, bet)
     end
@@ -287,6 +318,7 @@ exports.sunset_core:RegisterCallback('sunset:casino:slotsSpin', function(source,
         matches = maxMatch,
         payout = payout,
         bet = bet,
+        chips = countChips(source),
     }
 end)
 
@@ -306,7 +338,7 @@ end
 exports.sunset_core:RegisterCallback('sunset:casino:rouletteSpin', function(source, bet, betType, betValue)
     bet = math.floor(tonumber(bet) or 0)
     if bet < (Cfg.minBet or 100) or bet > (Cfg.maxBet or 50000) then
-        return nil, ('Bet must be between $%d and $%d.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
+        return nil, ('Bet must be between %d and %d chips.'):format(Cfg.minBet or 100, Cfg.maxBet or 50000)
     end
     if not checkCooldown(source) then
         return nil, 'Wait a moment between games.'
@@ -316,8 +348,11 @@ exports.sunset_core:RegisterCallback('sunset:casino:rouletteSpin', function(sour
     if not checkDailyLoss(charId, bet) then
         return nil, ('Daily loss limit reached ($%s). Come back tomorrow.'):format(Cfg.dailyLossLimit or 500000)
     end
-    if not exports.sunset_core:RemoveMoney(source, 'cash', bet, 'casino_roulette_bet') then
-        return nil, 'Not enough cash.'
+    if countChips(source) < bet then
+        return nil, 'You do not have enough chips. Buy chips at the Cashier.'
+    end
+    if not takeChips(source, bet) then
+        return nil, 'Could not take chips from your inventory.'
     end
 
     -- Spin: 0-36
@@ -368,7 +403,7 @@ exports.sunset_core:RegisterCallback('sunset:casino:rouletteSpin', function(sour
 
     local payout = won and (bet + bet * multiplier) or 0
     if payout > 0 then
-        exports.sunset_core:AddMoney(source, 'cash', payout, 'casino_roulette')
+        giveChips(source, payout)
     else
         recordLoss(charId, bet)
     end
@@ -380,6 +415,7 @@ exports.sunset_core:RegisterCallback('sunset:casino:rouletteSpin', function(sour
         payout = payout,
         bet = bet,
         betType = betType,
+        chips = countChips(source),
     }
 end)
 
@@ -388,30 +424,6 @@ end)
 -- ═══════════════════════════════════════════════════════════════
 
 local WheelCooldowns = {}  -- [charId] = lastSpinTime
-
-local function countChips(source)
-    if GetResourceState('sunset_inventory') ~= 'started' then return 0 end
-    local ok, count = pcall(function()
-        return exports.sunset_inventory:CountItem(source, 'casino_chips')
-    end)
-    return ok and (tonumber(count) or 0) or 0
-end
-
-local function giveChips(source, amount)
-    if GetResourceState('sunset_inventory') ~= 'started' then return false end
-    local ok, res = pcall(function()
-        return exports.sunset_inventory:AddItem(source, 'casino_chips', amount)
-    end)
-    return ok and res ~= false
-end
-
-local function takeChips(source, amount)
-    if GetResourceState('sunset_inventory') ~= 'started' then return false end
-    local ok, res = pcall(function()
-        return exports.sunset_inventory:RemoveItem(source, 'casino_chips', amount)
-    end)
-    return ok and res == true
-end
 
 exports.sunset_core:RegisterCallback('sunset:casino:wheelSpin', function(source)
     local charId = getCharId(source)
