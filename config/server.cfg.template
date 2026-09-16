@@ -42,6 +42,10 @@ setr sv_stateBagStrictMode false
 # NOTE: setr (replicated) — the CLIENT reads it via GetConvar.
 setr sv_sunset_nofx 0
 
+# [JOBS DEBUG] 1 = enable verbose logging for job vehicle registration
+# (registerVehicle rejections, model mismatches, session state).
+set sv_sunset_jobs_debug 1
+
 # ═══ DEV-ONLY TEST AGENT (MCP runtime bridge) ═══
 # Injected from .env at deploy time (TEST_AGENT_ENABLED / TEST_AGENT_TOKEN).
 # Defaults: disabled + empty token = bridge fully locked (fail-safe).
