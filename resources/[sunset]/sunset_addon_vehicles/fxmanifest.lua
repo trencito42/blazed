@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'sunset_addon_vehicles'
 author 'SunsetMP'
-description 'Addon vehicles: vd_tenfrally, comets2cup, sentinel_rts, vd_buffalo4, elegysa, kurumac, d7cyp, H4RxST2'
+description 'Addon vehicles: vd_tenfrally, cometcup, sentinel_rts, vd_buffalo4, elegysa, kurumac, d7cyp, H4RxST2'
 version '1.0.0'
 
 files {

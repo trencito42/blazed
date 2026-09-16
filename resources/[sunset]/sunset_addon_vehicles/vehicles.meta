@@ -3,7 +3,7 @@
   <residentTxd>vehshare</residentTxd>
   <residentAnims />
   <InitDatas>
-    <Item>
+<Item>
       <modelName>vd_tenfrally</modelName>
       <txdName>vd_tenfrally</txdName>
       <handlingId>vd_tenfrally</handlingId>
@@ -88,13 +88,28 @@
       <extraIncludes />
       <doorsWithCollisionWhenClosed>
         <Item>VEH_EXT_BOOT</Item>
-    <Item>WHEEL_WIDE_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_WIDE_REAR_LEFT_CAMERA</Item>
-    <Item>RANGER_TERMINUS_FRONT_LEFT</Item>
-    <Item>RANGER_TERMINUS_FRONT_RIGHT</Item>
-    <Item>RANGER_TERMINUS_REAR_LEFT</Item>
-    <Item>RANGER_TERMINUS_REAR_RIGHT</Item>
-    <Item>
+      </doorsWithCollisionWhenClosed>
+      <driveableDoors />
+      <bumpersNeedToCollideWithMap value="false" />
+      <needsRopeTexture value="false" />
+      <requiredExtras>EXTRA_1</requiredExtras>
+      <rewards />
+      <cinematicPartCamera>
+        <Item>WHEEL_WIDE_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_WIDE_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet>Truck</NmBraceOverrideSet>
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+      <firstPersonDrivebyData>
+        <Item>RANGER_TERMINUS_FRONT_LEFT</Item>
+        <Item>RANGER_TERMINUS_FRONT_RIGHT</Item>
+		<Item>RANGER_TERMINUS_REAR_LEFT</Item>
+        <Item>RANGER_TERMINUS_REAR_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
+<Item>
       <modelName>cometcup</modelName>
       <txdName>cometcup</txdName>
       <handlingId>cometcup</handlingId>
@@ -184,12 +199,20 @@
       <rewards />
       <cinematicPartCamera>
         <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>LOW_COMET6_FRONT_LEFT</Item>
-    <Item>LOW_COMET6_FRONT_RIGHT</Item>
-    <Item>
+        <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+        <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet />
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+      <firstPersonDrivebyData>
+        <Item>LOW_COMET6_FRONT_LEFT</Item>
+        <Item>LOW_COMET6_FRONT_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
+<Item>
 		<modelName>sentinel_rts</modelName>
 		<txdName>sentinel_rts</txdName>
 		<handlingId>sentinel_rts</handlingId>
@@ -228,20 +251,91 @@
 			<Offset x="0.136000" y="0.156000" z="0.435000" />
 			<SeatIndex value="2" />
 		</Item>
-    <Item>
+		<Item>
 			<Offset x="0.136000" y="0.156000" z="0.435000" />
 			<SeatIndex value="3" />
 		</Item>
-    <Item>EXTRA_1 EXTRA_2 EXTRA_3 EXTRA_4 EXTRA_5</Item>
-    <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>STD_BUFFALO_FRONT_LEFT</Item>
-    <Item>STD_BUFFALO_FRONT_RIGHT</Item>
-    <Item>STD_BUFFALO_REAR_LEFT</Item>
-    <Item>STD_BUFFALO_REAR_RIGHT</Item>
-    <Item>
+		</FirstPersonMobilePhoneSeatIKOffset> 
+		<PovCameraOffset x="0.000000" y="-0.130000" z="0.640000" />
+		<PovCameraVerticalAdjustmentForRollCage value="0.000000" />
+		<PovPassengerCameraOffset x="0.000000" y="0.000000" z="0.000000" />
+		<PovRearPassengerCameraOffset x="0.000000" y="-0.050000" z="0.015000" />
+		<vfxInfoName>VFXVEHICLEINFO_CAR_GENERIC</vfxInfoName>
+		<shouldUseCinematicViewMode value="true" />
+		<shouldCameraTransitionOnClimbUpDown value="false" />
+		<shouldCameraIgnoreExiting value="false" />
+		<AllowPretendOccupants value="true" />
+		<AllowJoyriding value="true" />
+		<AllowSundayDriving value="true" />
+		<AllowBodyColorMapping value="true" />
+		<wheelScale value="0.296800" />
+		<wheelScaleRear value="0.296800" />
+		<dirtLevelMin value="0.000000" />
+		<dirtLevelMax value="0.550000" />
+		<envEffScaleMin value="0.000000" />
+		<envEffScaleMax value="1.000000" />
+		<envEffScaleMin2 value="0.000000" />
+		<envEffScaleMax2 value="1.000000" />
+		<damageMapScale value="0.900000" />
+		<damageOffsetScale value="0.700000" />
+		<diffuseTint value="0x00FFFFFF" />
+		<steerWheelMult value="1.000000" />
+		<HDTextureDist value="5.000000" />
+		<lodDistances content="float_array">
+			15.000000
+			30.000000
+			65.000000
+			130.000000
+			500.000000
+			500.000000
+		</lodDistances>
+		<minSeatHeight value="0.868" />
+		<identicalModelSpawnDistance value="20" />
+		<maxNumOfSameColor value="10" />
+		<defaultBodyHealth value="1000.000000" />
+		<pretendOccupantsScale value="1.000000" />
+		<visibleSpawnDistScale value="1.000000" />
+		<trackerPathWidth value="2.000000" />
+		<weaponForceMult value="1.000000" />
+		<frequency value="100" />
+		<swankness>SWANKNESS_3</swankness>
+		<maxNum value="999" />
+		<flags>FLAG_AVERAGE_CAR FLAG_RECESSED_HEADLIGHT_CORONAS FLAG_HAS_INTERIOR_EXTRAS</flags>
+		<type>VEHICLE_TYPE_CAR</type>
+		<plateType>VPT_BACK_PLATES</plateType>
+		<dashboardType>VDT_SULTAN</dashboardType>
+		<vehicleClass>VC_SPORT</vehicleClass>
+		<wheelType>VWT_SPORT</wheelType>
+		<trailers />
+		<additionalTrailers />
+		<drivers />
+		<extraIncludes>
+			<Item>EXTRA_1 EXTRA_2 EXTRA_3 EXTRA_4 EXTRA_5</Item>
+		</extraIncludes>
+		<doorsWithCollisionWhenClosed />
+		<driveableDoors />
+		<bumpersNeedToCollideWithMap value="false" />
+		<needsRopeTexture value="false" />
+		<requiredExtras>EXTRA_1</requiredExtras>
+		<rewards />
+		<cinematicPartCamera>
+			<Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
+			<Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+			<Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+			<Item>WHEEL_REAR_LEFT_CAMERA</Item>
+		</cinematicPartCamera>
+		<NmBraceOverrideSet />
+		<buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+		<buoyancySphereSizeScale value="1.000000" />
+		<pOverrideRagdollThreshold type="NULL" />
+		<firstPersonDrivebyData>
+			<Item>STD_BUFFALO_FRONT_LEFT</Item>
+			<Item>STD_BUFFALO_FRONT_RIGHT</Item>
+			<Item>STD_BUFFALO_REAR_LEFT</Item>
+			<Item>STD_BUFFALO_REAR_RIGHT</Item>
+			</firstPersonDrivebyData>
+		</Item>
+<Item>
       <modelName>vd_buffalo4</modelName>
       <txdName>vd_buffalo4</txdName>
       <handlingId>vd_buffalo4</handlingId>
@@ -280,19 +374,89 @@
 			<Offset x="0.136000" y="0.156000" z="0.455000" />
 			<SeatIndex value="2" />
 		</Item>
-    <Item>
+		<Item>
 			<Offset x="0.136000" y="0.156000" z="0.455000" />
 			<SeatIndex value="3" />
 		</Item>
-    <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>STANDARD_BUFFALO4_FRONT_LEFT</Item>
-    <Item>STANDARD_BUFFALO4_FRONT_RIGHT</Item>
-    <Item>STANDARD_BUFFALO4_REAR_LEFT</Item>
-    <Item>STANDARD_BUFFALO4_REAR_RIGHT</Item>
-    <Item>
+	  </FirstPersonMobilePhoneSeatIKOffset> 
+      <PovCameraOffset x="0.000000" y="-0.145000" z="0.680000" />
+      <PovCameraVerticalAdjustmentForRollCage value="-0.025000" />
+      <PovPassengerCameraOffset x="0.000000" y="-0.005000" z="-0.050000" />
+      <PovRearPassengerCameraOffset x="0.018000" y="-0.045000" z="0.000000" />
+      <vfxInfoName>VFXVEHICLEINFO_CAR_GENERIC</vfxInfoName>
+      <shouldUseCinematicViewMode value="true" />
+      <shouldCameraTransitionOnClimbUpDown value="false" />
+      <shouldCameraIgnoreExiting value="false" />
+      <AllowPretendOccupants value="true" />
+      <AllowJoyriding value="true" />
+      <AllowSundayDriving value="true" />
+      <AllowBodyColorMapping value="true" />
+      <wheelScale value="0.288000" />
+      <wheelScaleRear value="0.288000" />
+      <dirtLevelMin value="0.000000" />
+      <dirtLevelMax value="0.550000" />
+      <envEffScaleMin value="0.000000" />
+      <envEffScaleMax value="0.000000" />
+      <envEffScaleMin2 value="0.000000" />
+      <envEffScaleMax2 value="0.000000" />
+      <damageMapScale value="0.900000" />
+      <damageOffsetScale value="0.700000" />
+      <diffuseTint value="0x00FFFFFF" />
+      <steerWheelMult value="1.000000" />
+      <HDTextureDist value="5.000000" />
+      <lodDistances content="float_array">
+        500.00000
+        500.00000
+        500.00000
+        500.00000
+        500.000000
+        500.000000
+      </lodDistances>
+      <minSeatHeight value="0.818" />
+      <identicalModelSpawnDistance value="20" />
+      <maxNumOfSameColor value="10" />
+      <defaultBodyHealth value="1000.000000" />
+      <pretendOccupantsScale value="1.000000" />
+      <visibleSpawnDistScale value="1.000000" />
+      <trackerPathWidth value="2.000000" />
+      <weaponForceMult value="1.000000" />
+      <frequency value="100" />
+      <swankness>SWANKNESS_3</swankness>
+      <maxNum value="999" />
+      <flags>FLAG_AVERAGE_CAR FLAG_RECESSED_HEADLIGHT_CORONAS</flags>
+      <type>VEHICLE_TYPE_CAR</type>
+      <plateType>VPT_BACK_PLATES</plateType>
+	    <dashboardType>VDT_RACE</dashboardType>
+      <vehicleClass>VC_MUSCLE</vehicleClass>
+      <wheelType>VWT_SPORT</wheelType>
+      <trailers />
+      <additionalTrailers />
+      <drivers />
+      <extraIncludes />
+      <doorsWithCollisionWhenClosed />
+      <driveableDoors />
+      <bumpersNeedToCollideWithMap value="false" />
+      <needsRopeTexture value="false" />
+      <requiredExtras />
+      <rewards />
+      <cinematicPartCamera>
+        <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
+        <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+        <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet />
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+	  <firstPersonDrivebyData>
+        <Item>STANDARD_BUFFALO4_FRONT_LEFT</Item>
+        <Item>STANDARD_BUFFALO4_FRONT_RIGHT</Item>
+        <Item>STANDARD_BUFFALO4_REAR_LEFT</Item>
+        <Item>STANDARD_BUFFALO4_REAR_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
+<Item>
       <modelName>elegysa</modelName>
       <txdName>elegysa</txdName>
       <handlingId>elegysa</handlingId>
@@ -384,12 +548,20 @@
       <rewards />
       <cinematicPartCamera>
         <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>STD_DILETTANTE_FRONT_LEFT</Item>
-    <Item>STD_DILETTANTE_FRONT_RIGHT</Item>
-    <Item>
+        <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+        <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet />
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+      <firstPersonDrivebyData>
+        <Item>STD_DILETTANTE_FRONT_LEFT</Item>
+        <Item>STD_DILETTANTE_FRONT_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
+<Item>
 		<modelName>kurumac</modelName>
 		<txdName>kurumac</txdName>
 		<handlingId>kurumac</handlingId>
@@ -484,14 +656,22 @@
       <rewards />
       <cinematicPartCamera>
         <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>STD_KURUMA_FRONT_LEFT</Item>
-    <Item>STD_KURUMA_FRONT_RIGHT</Item>
-    <Item>STD_ASEA_REAR_LEFT</Item>
-    <Item>STD_ASEA_REAR_RIGHT</Item>
-    <Item>
+        <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+        <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet />
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+      <firstPersonDrivebyData>
+        <Item>STD_KURUMA_FRONT_LEFT</Item>
+        <Item>STD_KURUMA_FRONT_RIGHT</Item>
+        <Item>STD_ASEA_REAR_LEFT</Item>
+        <Item>STD_ASEA_REAR_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
+<Item>
       <modelName>d7cyp</modelName>
       <txdName>d7cyp</txdName>
       <handlingId>d7cyp</handlingId>
@@ -587,12 +767,20 @@
       <rewards />
       <cinematicPartCamera>
         <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>STD_DOMINATOR_FRONT_LEFT</Item>
-    <Item>STD_DOMINATOR_FRONT_RIGHT</Item>
-    <Item>
+        <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+        <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet />
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+	  <firstPersonDrivebyData>
+        <Item>STD_DOMINATOR_FRONT_LEFT</Item>
+        <Item>STD_DOMINATOR_FRONT_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
+<Item>
       <modelName>H4RxST2</modelName>
       <txdName>H4RxST2</txdName>
       <handlingId>H4RxST2</handlingId>
@@ -682,50 +870,58 @@
       <rewards />
       <cinematicPartCamera>
         <Item>WHEEL_FRONT_RIGHT_CAMERA</Item>
-    <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
-    <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
-    <Item>WHEEL_REAR_LEFT_CAMERA</Item>
-    <Item>LOW_RAPIDGT_FRONT_LEFT</Item>
-    <Item>LOW_RAPIDGT_FRONT_RIGHT</Item>
+        <Item>WHEEL_FRONT_LEFT_CAMERA</Item>
+        <Item>WHEEL_REAR_RIGHT_CAMERA</Item>
+        <Item>WHEEL_REAR_LEFT_CAMERA</Item>
+      </cinematicPartCamera>
+      <NmBraceOverrideSet />
+      <buoyancySphereOffset x="0.000000" y="0.000000" z="0.000000" />
+      <buoyancySphereSizeScale value="1.000000" />
+      <pOverrideRagdollThreshold type="NULL" />
+      <firstPersonDrivebyData>
+        <Item>LOW_RAPIDGT_FRONT_LEFT</Item>
+        <Item>LOW_RAPIDGT_FRONT_RIGHT</Item>
+      </firstPersonDrivebyData>
+    </Item>
   </InitDatas>
   <txdRelationships>
-    <Item>
+<Item>
       <parent>vehicles_itali_w_interior</parent>
       <child>vd_tenfrally</child>
     </Item>
-    <Item>
+<Item>
       <parent>vehicles_racecar</parent>
       <child>vehicles_race_interior</child>
     </Item>
-    <Item>
+<Item>
       <parent>vehicles_race_interior</parent>
       <child>vehicles_race_generic</child>
     </Item>
-    <Item>
+<Item>
       <parent>vehicles_race_generic</parent>
       <child>cometcup</child>
     </Item>
-    <Item>
+<Item>
 		<parent>vehicles_sultan_interior</parent>
 		<child>sentinel_rts</child>
 	</Item>
-    <Item>
+<Item>
       <parent>vehicles_muscle_n_w_interior</parent>
       <child>vd_buffalo4</child>
     </Item>
-    <Item>
+<Item>
       <parent>vehicles_dom_interior</parent>
       <child>elegysa</child>
     </Item>
-    <Item>
+<Item>
 		<parent>vehicles_sultan_interior</parent>
 		<child>kurumac</child>
 	</Item>
-    <Item>
+<Item>
        <parent>vehicles_race_generic</parent>
       <child>d7cyp</child>
     </Item>
-    <Item>
+<Item>
       <parent>vehicles_pfister_race_interior</parent>
       <child>H4RxST2</child>
     </Item>

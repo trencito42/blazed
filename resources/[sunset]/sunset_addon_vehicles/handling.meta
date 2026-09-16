@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CHandlingDataMgr>
   <HandlingData>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
       <handlingName>vd_tenfrally</handlingName>
       <fMass value="1650.000000" />
       <fInitialDragCoeff value="10.175000" />
@@ -57,11 +57,11 @@
         <Item type="CCarHandlingData">
           <strAdvancedFlags>14000000</strAdvancedFlags>
         </Item>
-    <Item type="NULL" />
+        <Item type="NULL" />
         <Item type="NULL" />
       </SubHandlingData>
     </Item>
-    <Item type="CHandlingData"> 
+<Item type="CHandlingData"> 
       <handlingName>cometcup</handlingName> 
       <fMass value="1290.000000" />
       <fInitialDragCoeff value="9.150000" />
@@ -120,10 +120,10 @@
           <fBackEndPopUpMaxDeltaSpeed value="0.600000" />
           <strAdvancedFlags>4008011</strAdvancedFlags>
         </Item>
-    <Item type="NULL" />
+        <Item type="NULL" />
       </SubHandlingData>
     </Item>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
 		<handlingName>sentinel_rts</handlingName>
       <fMass value="1200.000000" />
       <fInitialDragCoeff value="5.50000" />
@@ -181,11 +181,11 @@
 			<fBackEndPopUpBuildingImpulseMult value="0.030000" />
 			<fBackEndPopUpMaxDeltaSpeed value="0.600000" />
 		</Item>
-    <Item type="NULL" />
+			<Item type="NULL" />
 			<Item type="NULL" />
 		</SubHandlingData>
 		</Item>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
       <handlingName>vd_buffalo4</handlingName>
       <fMass value="1800.000000" />
       <fInitialDragCoeff value="10.20000" />
@@ -243,11 +243,11 @@
           <fBackEndPopUpMaxDeltaSpeed value="0.600000" />
 		  <strAdvancedFlags>14008000</strAdvancedFlags>
         </Item>
-    <Item type="NULL" />
+        <Item type="NULL" />
         <Item type="NULL" />
       </SubHandlingData>
     </Item>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
       <handlingName>elegysa</handlingName>
       <fMass value="1650.0" />
       <fInitialDragCoeff value="9.5" />
@@ -304,11 +304,11 @@
           <fBackEndPopUpBuildingImpulseMult value="0.25" />
           <fBackEndPopUpMaxDeltaSpeed value="1.75" />
         </Item>
-    <Item type="NULL" />
+        <Item type="NULL" />
         <Item type="NULL" />
       </SubHandlingData>
     </Item>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
 			<handlingName>kurumac</handlingName>
 			<fMass value="1700.000000" />
       <fInitialDragCoeff value="3.000000" />
@@ -363,11 +363,11 @@
         <Item type="CCarHandlingData">
 		  <strAdvancedFlags>14002000</strAdvancedFlags>
         </Item>
-    <Item type="NULL" />
+        <Item type="NULL" />
         <Item type="NULL" />
       </SubHandlingData>
     </Item>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
 	<handlingName>d7cyp</handlingName>
     <fMass value="1400.000000"/>
     <fInitialDragCoeff value="5.500000"/>
@@ -436,11 +436,11 @@
             <fIncreasedRammingForceScale value="1.000000"/>
             <strAdvancedFlags>00000000</strAdvancedFlags>
 		</Item>
-    <Item type="NULL" />
+		<Item type="NULL" />
 		<Item type="NULL" />
 		</SubHandlingData>
 		</Item>
-    <Item type="CHandlingData">
+<Item type="CHandlingData">
       <handlingName>H4RxST2</handlingName>
       <fMass value="1800.000000" />
       <fInitialDragCoeff value="3.500000" />
@@ -497,7 +497,7 @@
           <fBackEndPopUpBuildingImpulseMult value="0.030000" />
           <fBackEndPopUpMaxDeltaSpeed value="0.600000" />
         </Item>
-    <Item type="NULL" />
+        <Item type="NULL" />
         <Item type="NULL" />
       </SubHandlingData>
     </Item>
