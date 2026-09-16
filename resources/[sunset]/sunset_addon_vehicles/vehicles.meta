@@ -121,7 +121,7 @@
       <animConvRoofName>null</animConvRoofName>
       <animConvRoofWindowsAffected />
       <ptfxAssetName>null</ptfxAssetName>
-      <audioNameHash>cometcup</audioNameHash>
+      <audioNameHash>COMET6</audioNameHash>
       <layout>LAYOUT_LOW_RESTRICTED</layout>
       <coverBoundOffsets>COMET6_COVER_OFFSET_INFO</coverBoundOffsets>
       <explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>
@@ -224,7 +224,7 @@
 		<animConvRoofName>null</animConvRoofName>
 		<animConvRoofWindowsAffected />
 		<ptfxAssetName>null</ptfxAssetName>
-		<audioNameHash>verlierer2</audioNameHash>
+		<audioNameHash>SENTINEL</audioNameHash>
 		<layout>LAYOUT_STANDARD</layout>
 		<coverBoundOffsets>BUFFALO_COVER_OFFSET_INFO</coverBoundOffsets>
 		<explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>
@@ -573,7 +573,7 @@
       <animConvRoofName>null</animConvRoofName>
       <animConvRoofWindowsAffected />
       <ptfxAssetName>weap_xs_vehicle_weapons</ptfxAssetName>
-      <audioNameHash>KURUMAC</audioNameHash>
+      <audioNameHash>KURUMA</audioNameHash>
       <layout>LAYOUT_KURUMAC</layout>
       <coverBoundOffsets>SULTAN_COVER_OFFSET_INFO</coverBoundOffsets>
       <explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>
@@ -683,7 +683,7 @@
       <animConvRoofName>null</animConvRoofName>
       <animConvRoofWindowsAffected />
       <ptfxAssetName>null</ptfxAssetName>
-      <audioNameHash>sentinel5</audioNameHash>
+      <audioNameHash>CYPHER</audioNameHash>
       <layout>LAYOUT_STANDARD</layout>
       <coverBoundOffsets>DOMINATOR_COVER_OFFSET_INFO</coverBoundOffsets>
       <explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>
@@ -727,7 +727,7 @@
       <envEffScaleMax2 value="1.000000" />
       <damageMapScale value="0.600000" />
       <damageOffsetScale value="1.000000" />
-      <diffuseTint value="0x003b4646" />
+      <diffuseTint value="0x00FFFFFF" />
       <steerWheelMult value="1.000000" />
       <HDTextureDist value="5.000000" />
       <lodDistances content="float_array">
@@ -792,7 +792,7 @@
       <animConvRoofName>null</animConvRoofName>
       <animConvRoofWindowsAffected />
       <ptfxAssetName>null</ptfxAssetName>
-      <audioNameHash>OSIRIS</audioNameHash>
+      <audioNameHash>ZR350</audioNameHash>
       <layout>LAYOUT_LOW</layout>
       <coverBoundOffsets>COMET_COVER_OFFSET_INFO</coverBoundOffsets>
       <explosionInfo>EXPLOSION_INFO_DEFAULT</explosionInfo>

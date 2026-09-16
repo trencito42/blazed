@@ -206,7 +206,17 @@ function JobClient.spawnVehicle(model, spawn, warp)
     end
 
     JobClient.vehicles[#JobClient.vehicles + 1] = veh
-    if warp then TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1) end
+    if warp then
+        TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
+        -- [WARP FIX] TaskWarpPedIntoVehicle is async — the ped is NOT
+        -- immediately in the seat. Wait until the ped is actually inside
+        -- before returning, otherwise registerVehicle fails with
+        -- "player is not in the driver seat".
+        local warpDeadline = GetGameTimer() + 3000
+        while GetPedInVehicle(PlayerPedId(), false) ~= veh and GetGameTimer() < warpDeadline do
+            Wait(10)
+        end
+    end
     return veh
 end
 

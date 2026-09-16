@@ -205,7 +205,8 @@ function SunsetJobs_GetTrailerState(source, mustBeAttached, maxDistance)
     end
 
     local cfg = Sunset.GetJobConfig(session.jobId)
-    if cfg and cfg.trailerModel and GetEntityModel(trailer) ~= joaat(cfg.trailerModel) then
+    local expectedTrailer = (session.data and session.data.trailerModel) or (cfg and cfg.trailerModel)
+    if expectedTrailer and GetEntityModel(trailer) ~= joaat(expectedTrailer) then
         return 'wrong_model'
     end
     local dist = #(GetEntityCoords(truck) - GetEntityCoords(trailer))
