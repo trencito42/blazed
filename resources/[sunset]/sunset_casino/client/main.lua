@@ -8,11 +8,9 @@ local insideCasino = false
 local casinoOpen = false
 
 -- ── IPL loading ──
-CreateThread(function()
-    if not IsIplActive(Cfg.ipl) then
-        RequestIpl(Cfg.ipl)
-    end
-end)
+-- bob74_ipl auto-loads vw_casino_main on build >= 2060. We do NOT call
+-- RequestIpl('casino_main') — that IPL name does not exist (dead code).
+-- The interior is already loaded by bob74_ipl.
 
 -- ── Entry/Exit markers ──
 CreateThread(function()
@@ -21,7 +19,7 @@ CreateThread(function()
         local coords = GetEntityCoords(ped)
         local sleep = 500
 
-        -- Entry marker
+        -- Entry marker (outside casino)
         if not insideCasino and #(coords - Cfg.entrance) < 3.0 then
             sleep = 0
             DrawMarker(1, Cfg.entrance.x, Cfg.entrance.y, Cfg.entrance.z - 1.0,
@@ -34,14 +32,23 @@ CreateThread(function()
                 insideCasino = true
                 DoScreenFadeOut(500)
                 Wait(600)
+                -- Teleport inside the casino interior
                 SetEntityCoords(ped, Cfg.exit.x, Cfg.exit.y, Cfg.exit.z, false, false, false, false)
                 SetEntityHeading(ped, 90.0)
+                -- Wait for interior to load
+                local interior = GetInteriorAtCoords(Cfg.exit.x, Cfg.exit.y, Cfg.exit.z)
+                if interior ~= 0 then
+                    local deadline = GetGameTimer() + 5000
+                    while not IsInteriorReady(interior) and GetGameTimer() < deadline do
+                        Wait(50)
+                    end
+                end
                 Wait(300)
                 DoScreenFadeIn(500)
             end
         end
 
-        -- Exit marker
+        -- Exit marker (inside casino)
         if insideCasino and #(coords - Cfg.exit) < 3.0 then
             sleep = 0
             DrawMarker(1, Cfg.exit.x, Cfg.exit.y, Cfg.exit.z - 1.0,

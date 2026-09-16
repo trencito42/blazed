@@ -5,25 +5,30 @@
 SunsetCasino = SunsetCasino or {}
 
 SunsetCasino.Config = {
-    -- Casino interior IPL
-    ipl = 'casino_main',
+    -- Casino interior IPL — bob74_ipl auto-loads vw_casino_main on build >= 2060.
+    -- 'casino_main' does NOT exist; RequestIpl('casino_main') is dead code.
+    -- We keep the name for reference but do NOT call RequestIpl on it.
+    ipl = 'vw_casino_main',
 
-    -- Entry marker (outside the casino)
+    -- Entry marker (outside the casino, street level)
     entrance = vector3(924.64, 46.16, 81.06),
-    exit = vector3(925.50, 48.00, 80.90),
+    -- Exit marker (INSIDE the casino, near the interior exit door)
+    -- Verified via /casinoprobe: interiorExit = 1089.63, 205.89, -49.00
+    exit = vector3(1089.63, 205.89, -49.00),
 
-    -- Game tables inside the casino
+    -- Game tables inside the casino (Z ≈ -50.5, verified via /casinoprobe)
+    -- Slot machine positions from actual vw_prop_casino_slot_01a entities
     blackjackTables = {
-        vector3(1122.40, 258.50, -52.00),
-        vector3(1128.00, 258.50, -52.00),
+        vector3(1111.55, 211.61, -50.44),
+        vector3(1110.05, 211.08, -50.44),
     },
     slotMachines = {
-        vector3(1115.00, 262.00, -52.00),
-        vector3(1118.00, 262.00, -52.00),
-        vector3(1121.00, 262.00, -52.00),
-        vector3(1124.00, 262.00, -52.00),
+        vector3(1114.12, 235.08, -50.84),
+        vector3(1105.05, 230.84, -50.84),
+        vector3(1120.85, 233.16, -50.84),
+        vector3(1108.94, 239.48, -50.84),
     },
-    rouletteTable = vector3(1130.00, 262.00, -52.00),
+    rouletteTable = vector3(1117.67, 218.64, -50.44),
 
     -- Betting limits
     minBet = 100,
