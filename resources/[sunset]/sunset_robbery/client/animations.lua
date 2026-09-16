@@ -22,7 +22,10 @@ function RobberyAnims.play(name, duration)
 end
 
 function RobberyAnims.stop()
-    ClearPedTasks(PlayerPedId())
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then
+        ClearPedSecondaryTask(ped)
+    end
 end
 
 function RobberyAnims.sound(key)

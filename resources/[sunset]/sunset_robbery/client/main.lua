@@ -209,7 +209,6 @@ RegisterNetEvent('sunset:robbery:ended', function(payload)
     RobberyNui.send('lootHide', {})
     RobberyNui.send('hudHide', {})
     RobberyAnims.stop()
-    RobberyAnims.detachBag()
     clearEscapeGuide()
     session = nil
     if payload and payload.ok then
@@ -217,6 +216,7 @@ RegisterNetEvent('sunset:robbery:ended', function(payload)
         markFenceGps()
         notify(('ROBBERY COMPLETE — $%s est. GPS set to the dock fence. Sell there.'):format(payload.estimated or 0), 'success', 9000)
     else
+        RobberyAnims.detachBag()
         notify((payload and payload.reason) or 'Robbery ended', 'error', 6000)
     end
 end)
@@ -246,7 +246,14 @@ AddEventHandler('sunset:robbery:nuiFenceSell', function(data)
         if result then
             notify(('Fence paid $%s'):format(result.paid), 'success')
             local preview = Sunset.AwaitCallback('sunset:robbery:fencePreview')
-            if preview then RobberyNui.send('fenceShow', preview) end
+            if preview then
+                RobberyNui.send('fenceShow', preview)
+                if not preview.offers or #preview.offers == 0 then
+                    RobberyAnims.detachBag()
+                end
+            else
+                RobberyAnims.detachBag()
+            end
         else
             notify(err or 'Deal fell through', 'error')
         end
