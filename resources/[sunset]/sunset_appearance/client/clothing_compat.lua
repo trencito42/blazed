@@ -136,11 +136,28 @@ function SunsetClothing.setCategorySelection(appearance, ped, gender, categoryId
     drawable = math.max(0, math.min(math.floor(drawable or 0), maxDraw))
     local maxTex = textureMax(ped, cat.slot, drawable)
     texture = math.max(0, math.min(math.floor(texture or 0), maxTex))
-    appearance.components[key] = { drawable = drawable, texture = texture }
 
-    if cat.syncTorso or cat.slot == 8 or cat.slot == 11 then
-        appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+    if cat.slot == 11 then
+        if SunsetClothingRules and SunsetClothingRules.resolveTopSelection then
+            appearance = SunsetClothingRules.resolveTopSelection(appearance, ped, gender, drawable, texture)
+        else
+            appearance.components['11'] = { drawable = drawable, texture = texture }
+            appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+        end
+    elseif cat.slot == 8 then
+        if SunsetClothingRules and SunsetClothingRules.resolveUndershirtSelection then
+            appearance = SunsetClothingRules.resolveUndershirtSelection(appearance, ped, gender, drawable, texture)
+        else
+            appearance.components['8'] = { drawable = drawable, texture = texture }
+            appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+        end
+    else
+        appearance.components[key] = { drawable = drawable, texture = texture }
+        if cat.syncTorso then
+            appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+        end
     end
+
     return appearance
 end
 

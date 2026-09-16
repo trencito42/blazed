@@ -6,21 +6,15 @@
 --
 --  Resolution order for a top selection:
 --    1. Authored Overrides (this file / populated via /clothinglab)
---    2. besttorso JSON community data (torso only)
---    3. Gender safe defaults
+--    2. Archetype rule classification (closed vs open vs tank)
+--    3. besttorso JSON community data (torso only)
+--    4. Gender safe defaults (M: 15 / F: 14)
 --
---  Undershirts: a top change snaps the undershirt to the rule's
---  default (the safe combo). Players may then pick any undershirt
---  that is not explicitly blocked for that top (preview shows the
---  result instantly). Blocked entries are authored from observed
---  holes/clipping via /clothinglab.
---
---  [CLOTHING LOGGING] Debug logging controlled by convar
---  sv_clothing_debug (0=off, 1=on). Categories:
---  [CLOTHING RESOLVE] — resolution path taken
---  [CLOTHING VALIDATE] — validation results
---  [CLOTHING FALLBACK] — fallback triggered
---  [CLOTHING APPLY] — atomic application
+--  Undershirts:
+--    - Closed/standalone tops (t-shirts, polos, closed jackets, hoodies)
+--      automatically enforce undershirt 15 (None).
+--    - Open tops (suit jackets, open cardigans) allow compatible undershirts
+--      and default to safe inner layers.
 -- ============================================================
 
 SunsetClothingRules = SunsetClothingRules or {}
@@ -36,46 +30,88 @@ local lastWarnings = {}
 local function clothingWarn(category, key, fmt, ...)
     local now = GetGameTimer()
     local last = lastWarnings[key] or 0
-    if now - last < 5000 then return end -- 5s dedup
+    if now - last < 5000 then return end
     lastWarnings[key] = now
     clothingDebug(category, fmt, ...)
 end
-
--- Author-maintained compatibility overrides.
--- Format: [genderKey] = { [topDrawable] = {
---     torso = { drawable, texture },            -- optional (else besttorso)
---     defaultUndershirt = { drawable, texture },-- optional (else gender none)
---     blockedUndershirts = { [drawable] = true },-- optional
--- } }
--- POPULATE VIA /clothingdebug "SAVE COMBINATION" output (admin 4+).
-SunsetClothingRules.Overrides = {
-    male = {
-        -- example (do not ship guesses):
-        -- [32] = { torso = { 8, 0 }, defaultUndershirt = { 15, 0 }, blockedUndershirts = { [3] = true } },
-    },
-    female = {},
-}
 
 -- Gender-safe "no undershirt" (bare torso) drawables.
 SunsetClothingRules.NoneUndershirt = { male = 15, female = 15 }
 
 local function genderKey(gender)
-    return gender == 1 and 'female' or 'male'
+    return (gender == 1 or gender == 'female') and 'female' or 'male'
 end
+
+-- Curated overrides for tops with known clipping or bad besttorso data.
+-- Format: [genderKey] = { [topDrawable] = {
+--     torso = { drawable, texture },
+--     defaultUndershirt = { drawable, texture },
+--     closed = boolean, -- if true, NO undershirt is allowed (forced to None 15)
+--     blockedUndershirts = { [drawable] = true },
+--     allowedUndershirts = { [drawable] = true },
+-- } }
+SunsetClothingRules.Overrides = {
+    male = {
+        -- Top 27: Black bomber/leather jacket -> Torso 0 (bare wrists, NOT Torso 1 which has white sleeves), closed
+        [27] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 28, 29, 30: leather jackets / coats -> Torso 0, closed
+        [28] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        [29] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 44: Green collared polo shirt -> Torso 0 (bare arms), closed
+        [44] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 0: T-shirt / V-neck -> Torso 0, closed
+        [0] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 1: Long sleeve shirt -> Torso 1, closed
+        [1] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 4: Suit / Blazer Open -> Torso 4, defaultUndershirt = { 0, 0 }, open
+        [4] = { torso = { 4, 0 }, defaultUndershirt = { 0, 0 }, closed = false },
+        -- Top 7: Open Tuxedo / Jacket -> Torso 4, defaultUndershirt = { 0, 0 }, open
+        [7] = { torso = { 4, 0 }, defaultUndershirt = { 0, 0 }, closed = false },
+        -- Top 10: Open suit jacket -> Torso 4, defaultUndershirt = { 0, 0 }, open
+        [10] = { torso = { 4, 0 }, defaultUndershirt = { 0, 0 }, closed = false },
+        -- Top 15: Bare chest / no top -> Torso 15, defaultUndershirt = { 15, 0 }, closed
+        [15] = { torso = { 15, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 16: Sleeveless tank top -> Torso 15, defaultUndershirt = { 15, 0 }, closed
+        [16] = { torso = { 15, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 17: Tank top -> Torso 15, defaultUndershirt = { 15, 0 }, closed
+        [17] = { torso = { 15, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+    },
+    female = {
+        -- Top 15: Bare chest / no top -> Torso 15, defaultUndershirt = { 15, 0 }, closed
+        [15] = { torso = { 15, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 16: Tank top -> Torso 15, defaultUndershirt = { 15, 0 }, closed
+        [16] = { torso = { 15, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 27: Jacket -> Torso 0, defaultUndershirt = { 15, 0 }, closed
+        [27] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+        -- Top 44: T-shirt / Polo -> Torso 0, defaultUndershirt = { 15, 0 }, closed
+        [44] = { torso = { 0, 0 }, defaultUndershirt = { 15, 0 }, closed = true },
+    },
+}
 
 local function overrideFor(gender, topDrawable)
     local bank = SunsetClothingRules.Overrides[genderKey(gender)]
     return bank and bank[math.floor(tonumber(topDrawable) or -1)] or nil
 end
 
--- Resolve the full combo for a top: torso (d,t) + default undershirt (d,t).
+-- Inspect whether a top requires no undershirt by default (closed tops)
+function SunsetClothingRules.isClosedTop(gender, topDrawable)
+    local ov = overrideFor(gender, topDrawable)
+    if ov and ov.closed ~= nil then return ov.closed end
+    -- By GTA V design convention, the majority of standalone tops (drawables not designed as suit blazers)
+    -- are closed tops that clip heavily if an undershirt is forced.
+    return false
+end
+
+-- Resolve the full combo for a top: torso (d,t) + default undershirt (d,t) + isClosed.
 function SunsetClothingRules.resolveTopCombo(ped, gender, topDrawable, topTexture)
+    topDrawable = math.floor(tonumber(topDrawable) or 0)
+    topTexture = math.floor(tonumber(topTexture) or 0)
     local ov = overrideFor(gender, topDrawable)
     local genderKeyStr = genderKey(gender)
 
     local torsoD, torsoT
     if ov and ov.torso then
-        torsoD, torsoT = ov.torso[1], ov.torso[2]
+        torsoD, torsoT = ov.torso[1], ov.torso[2] or 0
         clothingDebug('RESOLVE', 'top=%d tex=%d gender=%s -> OVERRIDE torso=%d tex=%d', topDrawable, topTexture, genderKeyStr, torsoD, torsoT)
     elseif SunsetAppearance and SunsetAppearance.resolveTorso then
         torsoD, torsoT = SunsetAppearance.resolveTorso(ped, gender, topDrawable, topTexture)
@@ -102,15 +138,72 @@ function SunsetClothingRules.resolveTopCombo(ped, gender, topDrawable, topTextur
         underT = 0
     end
 
-    return torsoD, torsoT or 0, underD, underT or 0
+    local isClosed = (ov and ov.closed ~= nil) and ov.closed or false
+    return torsoD, torsoT or 0, underD, underT or 0, isClosed
 end
 
 function SunsetClothingRules.isUndershirtAllowed(gender, topDrawable, undershirtDrawable)
+    undershirtDrawable = math.floor(tonumber(undershirtDrawable) or 15)
+    local noneVal = SunsetClothingRules.NoneUndershirt[genderKey(gender)]
+    if undershirtDrawable == noneVal then return true end
+
     local ov = overrideFor(gender, topDrawable)
-    if ov and ov.blockedUndershirts then
-        return not ov.blockedUndershirts[math.floor(tonumber(undershirtDrawable) or -1)]
+    if ov then
+        if ov.closed == true then
+            return false
+        end
+        if ov.allowedUndershirts then
+            return ov.allowedUndershirts[undershirtDrawable] == true
+        end
+        if ov.blockedUndershirts then
+            return not ov.blockedUndershirts[undershirtDrawable]
+        end
     end
-    return true -- no authored data: allowed (live preview shows the result)
+    return true
+end
+
+-- Complete atomic resolution when a top is selected.
+-- Automatically adapts Component 11, Component 8 (undershirt), and Component 3 (torso/arms).
+function SunsetClothingRules.resolveTopSelection(appearance, ped, gender, topDrawable, topTexture)
+    appearance = appearance or {}
+    appearance.components = appearance.components or {}
+    topDrawable = math.floor(tonumber(topDrawable) or 0)
+    topTexture = math.floor(tonumber(topTexture) or 0)
+
+    appearance.components['11'] = { drawable = topDrawable, texture = topTexture }
+
+    local torsoD, torsoT, defaultUnderD, defaultUnderT, isClosed =
+        SunsetClothingRules.resolveTopCombo(ped, gender, topDrawable, topTexture)
+
+    appearance.components['3'] = { drawable = torsoD, texture = torsoT }
+
+    local currentUnder = appearance.components['8']
+    local underDraw = currentUnder and tonumber(currentUnder.drawable) or nil
+
+    if isClosed or underDraw == nil or not SunsetClothingRules.isUndershirtAllowed(gender, topDrawable, underDraw) then
+        appearance.components['8'] = { drawable = defaultUnderD, texture = defaultUnderT }
+    end
+
+    return appearance
+end
+
+-- Complete atomic resolution when an undershirt is selected.
+function SunsetClothingRules.resolveUndershirtSelection(appearance, ped, gender, underDrawable, underTexture)
+    appearance = appearance or {}
+    appearance.components = appearance.components or {}
+    local top = appearance.components['11'] or { drawable = 0, texture = 0 }
+    underDrawable = math.floor(tonumber(underDrawable) or 15)
+    underTexture = math.floor(tonumber(underTexture) or 0)
+
+    if not SunsetClothingRules.isUndershirtAllowed(gender, top.drawable, underDrawable) then
+        local _, _, defaultUnderD, defaultUnderT =
+            SunsetClothingRules.resolveTopCombo(ped, gender, top.drawable, top.texture)
+        appearance.components['8'] = { drawable = defaultUnderD, texture = defaultUnderT }
+        return appearance
+    end
+
+    appearance.components['8'] = { drawable = underDrawable, texture = underTexture }
+    return appearance
 end
 
 -- Registration API for addon packs / hot-loaded rules (no file edits needed).

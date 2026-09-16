@@ -203,16 +203,17 @@ function SunsetAppearance.resolveTorso(ped, gender, top, topTexture)
 end
 
 function SunsetAppearance.syncTorso(appearance, ped, gender)
+    appearance = appearance or {}
+    appearance.components = appearance.components or {}
     local top = appearance.components['11'] or { drawable = 0, texture = 0 }
-    -- [C4] Full combo resolution: torso from rules/besttorso + undershirt
-    -- validated against the top's blocked list. Changing a top can no longer
-    -- leave a stale incompatible undershirt (the hole-in-chest bug class).
-    if SunsetClothingRules and SunsetClothingRules.resolveTopCombo then
-        local torsoD, torsoT, underD, underT =
+    if SunsetClothingRules and SunsetClothingRules.resolveTopSelection then
+        return SunsetClothingRules.resolveTopSelection(appearance, ped, gender, top.drawable, top.texture)
+    elseif SunsetClothingRules and SunsetClothingRules.resolveTopCombo then
+        local torsoD, torsoT, underD, underT, isClosed =
             SunsetClothingRules.resolveTopCombo(ped, gender, top.drawable, top.texture)
         appearance.components['3'] = { drawable = torsoD, texture = torsoT }
         local currentUnder = appearance.components['8']
-        if not currentUnder
+        if isClosed or not currentUnder
             or not SunsetClothingRules.isUndershirtAllowed(gender, top.drawable, currentUnder.drawable) then
             appearance.components['8'] = { drawable = underD, texture = underT }
         end
@@ -224,6 +225,7 @@ function SunsetAppearance.syncTorso(appearance, ped, gender)
 end
 
 function SunsetAppearance.applyClothes(ped, appearance, gender)
+    appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
     local c = appearance.components
 
     -- [C10] Components may carry an optional `collection` (streamed DLC pack).
@@ -241,24 +243,25 @@ function SunsetAppearance.applyClothes(ped, appearance, gender)
         end
     end
 
-    applyComp(1)
-
-    local d, t = setComponentSafe(ped, 4, math.max(1, c['4'] and c['4'].drawable or 1))
+    -- 1. Base / Lower body
+    applyComp(1) -- mask
+    local d, t = setComponentSafe(ped, 4, math.max(0, c['4'] and c['4'].drawable or 0))
     if c['4'] then c['4'].drawable, c['4'].texture = d, t end
+    applyComp(6) -- shoes
 
-    applyComp(6)
-    applyComp(8)
-    applyComp(5)
-    applyComp(7)
-    applyComp(9)
-    applyComp(10)
+    -- 2. Inner upper layer
+    applyComp(8) -- undershirt
+    d, t = setComponentSafe(ped, 3, c['3'] and c['3'].drawable or 15, c['3'] and c['3'].texture or 0)
+    if c['3'] then c['3'].drawable, c['3'].texture = d, t end
 
-    appearance = SunsetAppearance.syncTorso(appearance, ped, gender)
+    -- 3. Outer upper layer
+    applyComp(11) -- top / jacket
 
-    d, t = setComponentSafe(ped, 3, c['3'].drawable, c['3'].texture)
-    c['3'].drawable, c['3'].texture = d, t
-
-    applyComp(11)
+    -- 4. Overlays & accessories
+    applyComp(10) -- decal
+    applyComp(9)  -- vest / body armor
+    applyComp(7)  -- accessory / neck / chains
+    applyComp(5)  -- bag / backpack
 
     return appearance
 end

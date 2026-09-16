@@ -12,6 +12,9 @@ local function nearbyPlayers(source, targetId, range)
         return nil, 'That player is no longer online. Close the menu and select them again.'
     end
     if targetId == source then return nil, 'You cannot interact with yourself from this menu.' end
+    if GetPlayerRoutingBucket(source) ~= GetPlayerRoutingBucket(targetId) then
+        return nil, 'That player is no longer in your session.'
+    end
 
     local sourcePed = GetPlayerPed(source)
     local targetPed = GetPlayerPed(targetId)
@@ -72,7 +75,7 @@ exports.sunset_core:RegisterCallback('sunset:interactionContext', function(sourc
     pcall(function()
         local row = MySQL.scalar.await(
             'SELECT 1 FROM phone_contacts WHERE character_id = ? AND contact_character_id = ? LIMIT 1',
-            { tonumber(sourceChar.id), tonumber(pair.targetChar.id) })
+            { tonumber(pair.sourceChar.id), tonumber(pair.targetChar.id) })
         alreadyContact = row ~= nil
     end)
     addAction(actions, 'add_contact', 'CIVILIAN',

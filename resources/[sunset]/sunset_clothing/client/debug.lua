@@ -231,3 +231,72 @@ RegisterCommand('repairoutfit', function()
         validateAndRepair(true)
     end)
 end, false)
+
+-- [CLOTHING TEST SUITE] Automated verification across tops, torsos, and undershirts
+RegisterCommand('clothingtest', function(source, args)
+    CreateThread(function()
+        local ok = Sunset.AwaitCallback('sunset:clothing:debug')
+        if not ok then
+            exports.sunset_ui:Notify('clothingtest: admin level 4+ required.', 'error')
+            return
+        end
+
+        local ped = PlayerPedId()
+        local char = exports.sunset_core:GetCharacter()
+        if not char then
+            print('^1[clothingtest] ERROR: No character loaded.^7')
+            return
+        end
+
+        local gender = char.gender or 0
+        local genderKey = gender == 1 and 'female' or 'male'
+        local snapshot = SunsetAppearance.GetClothingSnapshot(ped)
+        local baseAppearance = char.appearance or SunsetAppearance.default(gender)
+
+        local count = tonumber(args[1]) or 50
+        local maxTop = GetNumberOfPedDrawableVariations(ped, 11) - 1
+        count = math.min(count, maxTop)
+
+        print(('^3[clothingtest] Starting automated clothing compatibility audit (%s, %d tops)...^7'):format(genderKey, count))
+
+        local passed = 0
+        local failed = 0
+        local issues = {}
+
+        for top = 0, count do
+            local testApp = SunsetClothing.normalizeWardrobe(baseAppearance, gender)
+            testApp = SunsetClothing.setCategorySelection(testApp, ped, gender, 'top', top, 0)
+
+            local torso = testApp.components['3'] and testApp.components['3'].drawable
+            local under = testApp.components['8'] and testApp.components['8'].drawable
+
+            if torso == nil or torso < 0 then
+                failed = failed + 1
+                issues[#issues + 1] = ('Top %03d: Invalid torso (%s)'):format(top, tostring(torso))
+            elseif under == nil or under < 0 then
+                failed = failed + 1
+                issues[#issues + 1] = ('Top %03d: Invalid undershirt (%s)'):format(top, tostring(under))
+            elseif not SunsetClothingRules.isUndershirtAllowed(gender, top, under) then
+                failed = failed + 1
+                issues[#issues + 1] = ('Top %03d: Incompatible undershirt retained (%d)'):format(top, under)
+            else
+                passed = passed + 1
+            end
+        end
+
+        -- Restore original appearance
+        SunsetAppearance.ApplyClothingSnapshot(ped, snapshot)
+
+        print(('^2[clothingtest] Results: %d PASSED, %d FAILED (Total tested: %d)^7'):format(passed, failed, count + 1))
+        if #issues > 0 then
+            print('^1[clothingtest] Failures detected:^7')
+            for _, err in ipairs(issues) do
+                print('  - ' .. err)
+            end
+            exports.sunset_ui:Notify(('Clothing test completed: %d failed'):format(failed), 'error')
+        else
+            print('^2[clothingtest] ALL CLOTHING COMPATIBILITY CHECKS PASSED!^7')
+            exports.sunset_ui:Notify('All clothing compatibility checks passed!', 'success')
+        end
+    end)
+end, false)
