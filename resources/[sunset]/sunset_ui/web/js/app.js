@@ -22,7 +22,10 @@ function post(action, data = {}) {
 }
 window.post = post;
 
-const ENTRY_SUNSET_BG = 'assets/bg_loading.webp?v=9';
+// Keep this URL byte-for-byte identical to the initial <img> in index.html.
+// A version mismatch made CEF decode and cross-fade the same background again
+// during the loadscreen -> auth handoff.
+const ENTRY_SUNSET_BG = 'assets/bg_loading.webp?v=10';
 const ENTRY_BACKGROUNDS = {
     auth: ENTRY_SUNSET_BG,
     handoff: ENTRY_SUNSET_BG,
@@ -114,7 +117,9 @@ function setBrandLogo(img) {
     img.src = 'assets/logoblaze.svg?v=1';
 }
 
+let screenTransitionFrame = 0;
 function showScreen(name) {
+    if (screenTransitionFrame) cancelAnimationFrame(screenTransitionFrame);
     $$('.screen').forEach((candidate) => {
         candidate.classList.remove('screen--entering');
         candidate.classList.add('hidden');
@@ -124,9 +129,12 @@ function showScreen(name) {
     if (screen) {
         screen.classList.remove('hidden');
         screen.setAttribute('aria-hidden', 'false');
-        // The shared background stays mounted while only the stage content fades.
-        void screen.offsetWidth;
-        screen.classList.add('screen--entering');
+        // Do not force a synchronous layout across the entire 3,600-line NUI.
+        // Add the transition class on the next frame instead.
+        screenTransitionFrame = requestAnimationFrame(() => {
+            screenTransitionFrame = 0;
+            if (!screen.classList.contains('hidden')) screen.classList.add('screen--entering');
+        });
         App.currentScreen = name;
         const app = $('#app');
         if (app) app.dataset.screen = name;
@@ -457,24 +465,71 @@ function applyNofx() {
     document.body.classList.add('nofx');
 }
 
-// [NUI PERF] Lazy-load gameplay scripts at enterGameplay instead of at boot.
+// [NUI PERF] Prime gameplay assets gradually behind the entry UI.
 // Scripts are stored as <script type="text/plain" data-lazy-src="..."> in
 // index.html; this converts them to real executable <script> tags.
-// Strategy: wait 2s for the game to finish critical asset streaming, then
-// inject in batches of 4 with 80ms gaps to avoid blocking the CEF thread.
+// Small idle batches avoid one large parse/style pass during or just after spawn.
 // [MESSAGE QUEUE] If a panel message (e.g. racingShow) arrives before its
 // script is loaded, it is queued and re-delivered after injection completes.
+let deferredStylesLoading = false;
+let deferredStylesLoaded = false;
+
+function loadDeferredStyles(immediate = false) {
+    if (deferredStylesLoaded || deferredStylesLoading) return;
+    deferredStylesLoading = true;
+    const pending = Array.from(document.querySelectorAll('link[data-deferred-style]'));
+    if (!pending.length) {
+        deferredStylesLoaded = true;
+        deferredStylesLoading = false;
+        return;
+    }
+    const BATCH = immediate ? pending.length : 3;
+    const GAP = 70;
+    let i = 0;
+    const run = () => {
+        const end = Math.min(i + BATCH, pending.length);
+        for (; i < end; i++) {
+            pending[i].media = 'all';
+            pending[i].removeAttribute('data-deferred-style');
+        }
+        if (i < pending.length) {
+            setTimeout(() => requestAnimationFrame(run), GAP);
+        } else {
+            deferredStylesLoaded = true;
+            deferredStylesLoading = false;
+            __btracePost(`deferred styles activated: ${pending.length}`);
+        }
+    };
+    requestAnimationFrame(run);
+}
+
 let lazyScriptsLoaded = false;
+let lazyScriptsLoading = false;
 let pendingMessages = []; // queued messages waiting for lazy scripts
 
 function loadLazyScripts() {
-    if (lazyScriptsLoaded) return;
-    lazyScriptsLoaded = true;
+    if (lazyScriptsLoaded || lazyScriptsLoading) return;
+    lazyScriptsLoading = true;
     const pending = Array.from(document.querySelectorAll('script[type="text/plain"][data-lazy-src]'));
-    const BATCH = 4;
-    const GAP = 80;
-    const INITIAL_DELAY = 2000; // was 500 — avoids hitch right after spawn
+    if (!pending.length) {
+        lazyScriptsLoaded = true;
+        lazyScriptsLoading = false;
+        flushPendingMessages();
+        return;
+    }
+    const BATCH = 2;
+    const GAP = 90;
+    const INITIAL_DELAY = 180;
     let i = 0;
+    const schedule = (fn, delay = 0) => {
+        setTimeout(() => {
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(fn, { timeout: 120 });
+            } else {
+                fn();
+            }
+        }, delay);
+    };
     function injectBatch() {
         const end = Math.min(i + BATCH, pending.length);
         for (; i < end; i++) {
@@ -486,14 +541,16 @@ function loadLazyScripts() {
             el.remove();
         }
         if (i < pending.length) {
-            setTimeout(injectBatch, GAP);
+            schedule(injectBatch, GAP);
         } else {
+            lazyScriptsLoaded = true;
+            lazyScriptsLoading = false;
             __btracePost(`lazy scripts injected: ${pending.length} (staggered, ${INITIAL_DELAY}ms delay)`);
             // [MESSAGE QUEUE] Re-deliver any messages that arrived before scripts loaded.
             flushPendingMessages();
         }
     }
-    setTimeout(injectBatch, INITIAL_DELAY);
+    schedule(injectBatch, INITIAL_DELAY);
 }
 
 // [MESSAGE QUEUE] Deliver queued messages after lazy scripts are ready.
@@ -561,10 +618,16 @@ window.addEventListener('message', (event) => {
             if (screen === 'handoff') {
                 warmEntryBackground(ENTRY_BACKGROUNDS.auth);
                 if (window.HandoffScreen) HandoffScreen.show();
+                // Parse gameplay modules gradually while the entry UI is still
+                // covering the world, rather than hitching two seconds after spawn.
+                loadDeferredStyles();
+                loadLazyScripts();
             }
             if (screen === 'auth') {
                 warmEntryBackground(ENTRY_BACKGROUNDS.auth);
                 if (window.HandoffScreen) HandoffScreen.hide();
+                loadDeferredStyles();
+                loadLazyScripts();
                 showScreen('auth');
                 if (window.Panels) Panels.showAuth(data || {});
                 // [BOOT TRACE v2] 8) first rAF after auth paint = "responsive frame";
@@ -1533,6 +1596,8 @@ document.addEventListener('DOMContentLoaded', () => {
     entryBackgroundLayers();
     document.querySelectorAll('.auth-brand__logo, .panel-logo, .studio-logo').forEach(setBrandLogo);
     const qa = new URLSearchParams(window.location.search).get('qa');
+    // Browser QA pages do not receive the FiveM handoff message.
+    if (qa) loadDeferredStyles(true);
     if (qa === 'auth') {
         showApp(true);
         showScreen('auth');

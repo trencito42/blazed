@@ -215,6 +215,22 @@ const Hud = {
         const street = data.street != null ? String(data.street) : null;
         const zone = data.zone != null ? String(data.zone) : null;
         const heading = data.heading != null ? String(data.heading) : null;
+        const waypoint = document.getElementById('hud-waypoint');
+        const waypointDistance = document.getElementById('hud-waypoint-distance');
+        const rawDistance = Number(data.waypointDist);
+        const hasWaypoint = Number.isFinite(rawDistance) && rawDistance >= 0;
+
+        if (waypoint && waypointDistance) {
+            waypoint.classList.toggle('hidden', !hasWaypoint);
+            panel.classList.toggle('has-waypoint', hasWaypoint);
+            if (hasWaypoint) {
+                waypointDistance.textContent = rawDistance >= 1000
+                    ? `${(rawDistance / 1000).toFixed(rawDistance >= 10000 ? 0 : 1)} KM TO WAYPOINT`
+                    : `${Math.round(rawDistance)} M TO WAYPOINT`;
+            } else {
+                waypointDistance.textContent = '—';
+            }
+        }
 
         if (street != null) $('#hud-street').textContent = street;
         if (zone != null) {
@@ -261,7 +277,8 @@ const Hud = {
         }
         if (data.time) $('#hud-time').textContent = data.time;
         if (data.date) this.updateDateDisplay(data.date);
-        if (data.street !== undefined || data.zone !== undefined || data.heading !== undefined) {
+        if (data.street !== undefined || data.zone !== undefined || data.heading !== undefined
+            || data.waypointDist !== undefined) {
             this.updateLocation(data);
         }
 

@@ -31,7 +31,7 @@ local function streamSpawnArea(ped, pos)
     SetEntityCoordsNoOffset(ped, pos.x, pos.y, pos.z + 0.15, false, false, false)
     SetEntityHeading(ped, pos.w)
 
-    local deadline = GetGameTimer() + 12000
+    local deadline = GetGameTimer() + 8000
     local loaded = false
     while GetGameTimer() < deadline do
         RequestCollisionAtCoord(pos.x, pos.y, pos.z)
@@ -93,14 +93,16 @@ local function spawnPlayer(char, spawnPosition)
 
     TriggerServerEvent('sunset:server:characterSpawned', char.id)
 
-    exports.sunset_ui:Send('enterGameplay', { duration = 500 })
-    exports.sunset_ui:MarkGameplayEntered()
-    Wait(100)
-    DoScreenFadeIn(800)
-    Wait(800)
-
+    -- Bring the world up behind the still-opaque NUI, then let the NUI reveal
+    -- an already responsive player. Previously the ped stayed frozen for the
+    -- whole visible fade and characterFlowComplete hid the NUI a second time.
     FreezeEntityPosition(ped, false)
     SetEntityVisible(ped, true, false)
+    DoScreenFadeIn(650)
+    Wait(100)
+    exports.sunset_ui:Send('enterGameplay', { duration = 450 })
+    exports.sunset_ui:MarkGameplayEntered()
+    Wait(150)
 
     -- Streaming can still be evicted at the exact hand-off on slow clients.
     -- Recover before a bad position can be persisted as the next last location.

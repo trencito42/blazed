@@ -7,7 +7,8 @@
 /* ── Blaze Shield text feed (above minimap, bottom-left) ───────── */
 .shield-widget {
     position: fixed;
-    bottom: calc(22vh + 130px);
+    /* Below the transient location block and directly above the minimap. */
+    bottom: calc(22vh + 18px);
     left: 40px;
     z-index: 4200;
     font-family: var(--font-body, 'Outfit', sans-serif);

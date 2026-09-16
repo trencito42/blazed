@@ -16,6 +16,30 @@ local function showSpawnSelection(char, optional)
         local ok, decoded = pcall(json.decode, pos)
         if ok then pos = decoded end
     end
+    -- [AUTO SPAWN] On the normal login flow (optional == false) do NOT show the
+    -- picker: resolve the saved preference automatically with the priority
+    -- house > faction HQ > default, then spawn. The picker only appears when
+    -- the player explicitly types /spawnmenu (optional == true) or an admin
+    -- forces it. Last-location spawn was removed entirely.
+    if not optionalSpawnMenu then
+        -- resolveAutoSpawn already applies the jail lock. The old flow performed
+        -- a separate getJailSpawnLock round-trip first, serialising two callbacks
+        -- on every login and leaving the loading screen waiting unnecessarily.
+        local resolveStarted = GetGameTimer()
+        local resolved, err = Sunset.AwaitCallback('sunset:resolveAutoSpawn')
+        if resolved and resolved.x then
+            pendingSpawnCharacter = nil
+            trace('spawn_auto_resolved', ('%s | %dms'):format(
+                tostring(resolved.source or 'default'), GetGameTimer() - resolveStarted))
+            exports.sunset_ui:Show('loading', { holdText = 'Loading character...' })
+            TriggerEvent('sunset:client:spawnCharacter', char, resolved)
+            return
+        end
+        trace('spawn_auto_failed', err or 'no_resolution') -- fall through to picker
+    end
+
+    -- The explicit /spawnmenu still checks jail before offering choices. This
+    -- path is user-triggered and does not affect the normal login hot path.
     local jail = Sunset.AwaitCallback('sunset:getJailSpawnLock')
     if jail and jail.locked then
         pendingSpawnCharacter = char
@@ -24,23 +48,6 @@ local function showSpawnSelection(char, optional)
             x = jail.x, y = jail.y, z = jail.z, w = jail.w or 0.0,
         })
         return
-    end
-
-    -- [AUTO SPAWN] On the normal login flow (optional == false) do NOT show the
-    -- picker: resolve the saved preference automatically with the priority
-    -- house > faction HQ > default, then spawn. The picker only appears when
-    -- the player explicitly types /spawnmenu (optional == true) or an admin
-    -- forces it. Last-location spawn was removed entirely.
-    if not optionalSpawnMenu then
-        local resolved, err = Sunset.AwaitCallback('sunset:resolveAutoSpawn')
-        if resolved and resolved.x then
-            pendingSpawnCharacter = nil
-            trace('spawn_auto_resolved', tostring(resolved.source or 'default'))
-            exports.sunset_ui:Show('loading', { holdText = 'Loading character...' })
-            TriggerEvent('sunset:client:spawnCharacter', char, resolved)
-            return
-        end
-        trace('spawn_auto_failed', err or 'no_resolution') -- fall through to picker
     end
 
     local homes = Sunset.AwaitCallback('sunset:getSpawnHomes') or {}
@@ -186,7 +193,9 @@ AddEventHandler('sunset:client:characterFlowComplete', function()
     inCharacterFlow = false
     RenderScriptCams(false, true, 1000, true, true)
     DestroyAllCams(true)
-    exports.sunset_ui:Hide()
+    -- sunset_spawn sends enterGameplay, which owns the cross-fade and hides the
+    -- entry UI when that transition completes. Hiding it again here cut the
+    -- animation short and could expose a black/world frame between screens.
     DisplayRadar(true)
 end)
 
