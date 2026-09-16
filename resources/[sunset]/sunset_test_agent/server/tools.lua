@@ -748,9 +748,9 @@ function Tools.restart_resource(args)
     if GetResourceState(name) == 'missing' then
         return nil, { code = 'RESOURCE_NOT_STARTED', message = ('resource "%s" does not exist'):format(name), retryable = false }
     end
-    RestartResource(name)
+    ExecuteCommand(('restart %s'):format(name))
     TestAgentLog.event('resource', 'restarted', { resource = name })
-    -- NOTE: GetResourceState right after RestartResource is NOT final (the
+    -- NOTE: GetResourceState right after restart is NOT final (the
     -- resource reboots asynchronously). Consumers must wait_for/assert the
     -- started state separately — we return both fields honestly.
     return { requestedAction = 'restart', resource = name, immediateState = GetResourceState(name), finalStatePending = true }
@@ -762,7 +762,7 @@ function Tools.start_resource(args)
     if name == '' then return nil, invalid('resource name is required') end
     local guard = resourceGuard(name)
     if guard then return nil, guard end
-    StartResource(name)
+    ExecuteCommand(('start %s'):format(name))
     TestAgentLog.event('resource', 'started', { resource = name })
     return { requestedAction = 'start', resource = name, immediateState = GetResourceState(name), finalStatePending = true }
 end
@@ -773,7 +773,7 @@ function Tools.stop_resource(args)
     if name == '' then return nil, invalid('resource name is required') end
     local guard = resourceGuard(name)
     if guard then return nil, guard end
-    StopResource(name)
+    ExecuteCommand(('stop %s'):format(name))
     TestAgentLog.event('resource', 'stopped', { resource = name })
     return { requestedAction = 'stop', resource = name, immediateState = GetResourceState(name), finalStatePending = false }
 end
