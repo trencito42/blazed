@@ -133,7 +133,7 @@ function Tools.get_player_state(target)
         armour = GetPedArmour(ped),
         coords = { x = coords.x, y = coords.y, z = coords.z },
         heading = GetEntityHeading(ped),
-        interior = GetInteriorFromEntity(ped),
+        interior = (GetInteriorFromEntity and GetInteriorFromEntity(ped)) or 0,
         inVehicle = GetVehiclePedIsIn(ped, false) ~= 0,
         vehicleNetId = (function()
             local v = GetVehiclePedIsIn(ped, false)
