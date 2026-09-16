@@ -73,7 +73,7 @@ local function applyTurfBlipStyle(turf, row, atWar)
     end
 
     if row.area and DoesBlipExist(row.area) then
-        SetBlipDisplay(row.area, BLIP_DISPLAY_PAUSE_MAP)
+        SetBlipDisplay(row.area, BLIP_DISPLAY_BOTH)
         SetBlipAlpha(row.area, zoneAlpha)
         SetBlipColour(row.area, zoneColour)
         SetBlipAsShortRange(row.area, false)
@@ -82,7 +82,7 @@ local function applyTurfBlipStyle(turf, row, atWar)
 
     if row.center and DoesBlipExist(row.center) then
         SetBlipSprite(row.center, 437)
-        SetBlipDisplay(row.center, BLIP_DISPLAY_PAUSE_MAP)
+        SetBlipDisplay(row.center, BLIP_DISPLAY_BOTH)
         SetBlipScale(row.center, 0.7)
         SetBlipColour(row.center, zoneColour)
         SetBlipAlpha(row.center, atWar and 255 or 210)
