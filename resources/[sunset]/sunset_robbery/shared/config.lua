@@ -144,30 +144,23 @@ SunsetRobbery.Locations = {
         -- unlocked for 15s after the hack (sessions.scheduleDoorLock) and the
         -- world.lua 2s refresh keeps the state until then.
         doors = {
-            { model = `v_ilev_gb_vauldoor`, coords = vector3(147.30, -1044.86, 29.36) },
+            { model = `v_ilev_gb_vauldoor`, coords = vector3(148.03, -1044.36, 29.51) },
         },
-        -- [VAULT PHYSICS] The DoorSystem unlock alone does NOT rotate the
-        -- vault door — it is an articulated prop that must be physically
-        -- rotated around its hinge. world.lua animates the heading from the
-        -- captured closed baseline by openDelta degrees over openMs.
-        -- QA NOTE: if the door swings INTO the wall instead of open, flip
-        -- openDelta to -90.0. Do not invent another value without /robdoor.
-        vaultOnHackSuccess = true, -- doors above only unlock AFTER a successful hack
+        vaultOnHackSuccess = true, -- doors only unlock and swing AFTER a successful hack
         vault = {
             model = `v_ilev_gb_vauldoor`,
-            coords = vector3(147.30, -1044.86, 29.36),
-            searchRadius = 2.5,
-            openDelta = 90.0,
+            coords = vector3(148.03, -1044.36, 29.51),
+            searchRadius = 3.5,
+            openDelta = -90.0,
             openMs = 2500,
             closeMs = 2000,
         },
         hackTerminal = {
-            coords = vector3(147.20, -1042.20, 29.37),
-            heading = 180.0,
-            label = '[E] Bypass vault keypad',
+            coords = vector3(147.20, -1043.20, 29.37),
+            heading = 250.0,
+            label = '[E] Hack vault keypad',
         },
-        -- Loot points moved INSIDE the actual Fleeca Legion vault room
-        -- (past the vault door, south side), reachable floor positions.
+        -- Loot points inside the actual Fleeca Legion vault room
         displays = {
             { id = 'fb1', coords = vector3(146.70, -1048.90, 29.37), lootTable = 'vault', label = 'Safety Deposit Row A' },
             { id = 'fb2', coords = vector3(148.20, -1048.90, 29.37), lootTable = 'vault', label = 'Cash Safe Compartment' },
