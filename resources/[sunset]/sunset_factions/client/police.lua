@@ -549,20 +549,120 @@ RegisterCommand('unjail', function(_, args)
     else actionError(err, 'Prisoner could not be released.') end
 end, false)
 
+local activeTracking = nil -- { targetId = number, blip = blip, active = bool }
+
+local function stopTracking(showNotification)
+    if not activeTracking then return false end
+    if activeTracking.blip and DoesBlipExist(activeTracking.blip) then
+        RemoveBlip(activeTracking.blip)
+    end
+    local targetId = activeTracking.targetId
+    activeTracking = nil
+    SetWaypointOff()
+    if showNotification then
+        exports.sunset_ui:Notify(('GPS tracking stopped for suspect #%d.'):format(targetId or 0), 'info', 5000)
+    end
+    return true
+end
+
+local function startTracking(targetId)
+    targetId = tonumber(targetId)
+    if not targetId then return end
+
+    -- If already tracking this exact target, toggle off
+    if activeTracking and activeTracking.targetId == targetId then
+        stopTracking(true)
+        return
+    end
+
+    -- Stop any previous tracking
+    stopTracking(false)
+
+    local initial, err = Sunset.AwaitCallback('sunset:policeFindWanted', targetId)
+    if not initial then
+        return actionError(err, 'Could not track that suspect. Go on duty as law enforcement and use a valid wanted player ID.')
+    end
+
+    local trackObj = {
+        targetId = targetId,
+        active = true,
+        lastX = initial.x,
+        lastY = initial.y,
+        lastZ = initial.z,
+    }
+
+    -- Create tracking radar blip
+    local blip = AddBlipForCoord(initial.x, initial.y, initial.z)
+    SetBlipSprite(blip, 161) -- Radar tracking ping
+    SetBlipColour(blip, 1)   -- Red
+    SetBlipScale(blip, 1.0)
+    SetBlipAsShortRange(blip, false)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName(('Wanted #%d — %s'):format(targetId, initial.name or 'Suspect'))
+    EndTextCommandSetBlipName(blip)
+    trackObj.blip = blip
+
+    activeTracking = trackObj
+    SetNewWaypoint(initial.x + 0.0, initial.y + 0.0)
+
+    exports.sunset_ui:Notify(
+        ('Tracking started on %s (%d) — wanted ★%d (%s). Live GPS route active. Use /cfind to cancel.'):format(
+            initial.name or 'Suspect', targetId, initial.level or 1, initial.reason or 'active'),
+        'success', 8000)
+
+    CreateThread(function()
+        local current = trackObj
+        while activeTracking == current and current.active do
+            Wait(2500)
+            if activeTracking ~= current or not current.active then break end
+
+            local updated, updateErr = Sunset.AwaitCallback('sunset:policeFindWanted', current.targetId)
+            if not updated then
+                exports.sunset_ui:Notify(
+                    updateErr or ('Tracking lost on suspect #%d (suspect is no longer wanted or offline).'):format(current.targetId),
+                    'warning', 8000)
+                if activeTracking == current then
+                    stopTracking(false)
+                end
+                break
+            end
+
+            if activeTracking == current and current.active then
+                current.lastX = updated.x
+                current.lastY = updated.y
+                current.lastZ = updated.z
+                if current.blip and DoesBlipExist(current.blip) then
+                    SetBlipCoords(current.blip, updated.x, updated.y, updated.z)
+                end
+                SetNewWaypoint(updated.x + 0.0, updated.y + 0.0)
+            end
+        end
+    end)
+end
+
 RegisterCommand('find', function(_, args)
     local target = tonumber(args[1])
     if not target then
-        exports.sunset_ui:Notify('Usage: /find [id]', 'error')
+        if activeTracking then
+            stopTracking(true)
+            return
+        end
+        exports.sunset_ui:Notify('Usage: /find [id] (or /cfind to stop tracking)', 'error')
         return
     end
-    local result, err = Sunset.AwaitCallback('sunset:policeFindWanted', target)
-    if not result then
-        return actionError(err, 'Could not track that suspect. Go on duty as law enforcement and use a valid wanted player ID.')
+    startTracking(target)
+end, false)
+
+RegisterCommand('cfind', function()
+    if not stopTracking(true) then
+        exports.sunset_ui:Notify('No active suspect tracking to cancel.', 'info')
     end
-    SetNewWaypoint(result.x + 0.0, result.y + 0.0)
-    exports.sunset_ui:Notify(
-        ('GPS set on %s (%d) — wanted ★%d (%s).'):format(result.name or 'Suspect', target, result.level or 1, result.reason or 'active'),
-        'success', 10000)
+end, false)
+
+RegisterCommand('cancelfind', function()
+    if not stopTracking(true) then
+        exports.sunset_ui:Notify('No active suspect tracking to cancel.', 'info')
+    end
 end, false)
 
 RegisterCommand('wanted', function()
@@ -1183,6 +1283,7 @@ exports('IsJailed', function() return jailed end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
+    stopTracking(false)
     releaseRadarVehicle(radarVehicle)
     radarActive = false
     radarVehicle = 0
