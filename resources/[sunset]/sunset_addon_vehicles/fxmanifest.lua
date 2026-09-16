@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'sunset_addon_vehicles'
 author 'SunsetMP'
-description 'Addon vehicles: tempesta2, sentinel_rts, d7cyp'
+description 'Addon vehicles: tempesta2, sentinel_rts, d7cyp, schlagenstr, cometcup, H4RxST2'
 version '1.0.0'
 
 files {
