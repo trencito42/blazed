@@ -14,8 +14,8 @@ FiveM runtime through `tools/fivem-mcp`. Full docs: `docs/testing/FIVEM_MCP.md`.
   allowlist (status reads + safe leaves). Semantic interactions fire only allowlisted server events.
 - **Entity deletion** refuses anything not tagged test-spawned.
 - **Resource control** only touches `sunset_*`, never protected infra (core/sessions/oxmysql/itself).
-- Screenshots flow client → HTTP upload (bearer) → in-memory store (120s TTL) → MCP download.
-  Nothing is written to disk on the server.
+- Screenshots flow client → HTTP upload (auth = server-issued **one-shot requestId**, NOT the bearer token) → in-memory store (120s TTL, entry+byte bounded) → MCP download (bearer-authed).
+  The master token is never handed to the game client. Nothing is written to disk on the server.
 
 ## Enable on a DEV server (never production)
 

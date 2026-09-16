@@ -18,6 +18,8 @@ export interface Scenario {
   id: string;
   description: string;
   steps: Step[];
+  /** Runs even when steps fail — used for entity/state cleanup. */
+  cleanup?: Step[];
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -33,6 +35,7 @@ async function runScenario(client: TestAgentClient, scenario: Scenario) {
     error?: { code: string; message: string };
   }> = [];
 
+  let failedEarly = false;
   for (let i = 0; i < scenario.steps.length; i++) {
     const step = scenario.steps[i];
     const label = step.label ?? `${step.kind}:${i}`;
@@ -49,7 +52,7 @@ async function runScenario(client: TestAgentClient, scenario: Scenario) {
         const res = await runAssert(client, step.condition, step.params);
         report.push({ step: i, label, kind: `assert:${step.condition}`, ok: res.passed === true, durationMs: Date.now() - t0, result: res });
         if (res.passed !== true) {
-          // Fail-fast: a broken assertion means later steps are meaningless.
+          failedEarly = true;
           break;
         }
       }
@@ -57,20 +60,67 @@ async function runScenario(client: TestAgentClient, scenario: Scenario) {
       const err = e instanceof Error ? e : new Error(String(e));
       const code = 'code' in err ? String((err as { code?: string }).code ?? 'INTERNAL') : 'INTERNAL';
       report.push({ step: i, label, kind: step.kind, ok: false, durationMs: Date.now() - t0, error: { code, message: err.message } });
-      break; // fail-fast
+      failedEarly = true;
+      break; // fail-fast, but cleanup below still runs
     }
   }
 
-  const passed = report.every((r) => r.ok);
-  return { scenario: scenario.id, passed, steps: report };
+  // [CLEANUP ALWAYS] Cleanup steps run even when the scenario failed —
+  // leaked test entities/state are worse than a failed report.
+  for (let i = 0; i < (scenario.cleanup?.length ?? 0); i++) {
+    const step = scenario.cleanup![i];
+    const label = step.label ?? `cleanup:${i}`;
+    const t0 = Date.now();
+    try {
+      if (step.kind === 'tool') {
+        const res = await client.call(step.tool, step.args ?? {});
+        report.push({ step: 1000 + i, label, kind: `cleanup:${step.tool}`, ok: true, durationMs: Date.now() - t0, result: res });
+      } else if (step.kind === 'wait') {
+        await sleep(step.ms);
+        report.push({ step: 1000 + i, label, kind: 'cleanup:wait', ok: true, durationMs: Date.now() - t0 });
+      }
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      // Cleanup failure is recorded but does not flip scenario pass/fail —
+      // the primary steps already decided that.
+      report.push({ step: 1000 + i, label, kind: 'cleanup', ok: true, durationMs: Date.now() - t0, error: { code: 'CLEANUP_FAILED', message: err.message } });
+    }
+  }
+
+  const passed = !failedEarly && report.filter((r) => r.step < 1000).every((r) => r.ok);
+  return { scenario: scenario.id, passed, failedEarly, steps: report };
 }
 
 async function runAssert(client: TestAgentClient, condition: string, params: Record<string, unknown>) {
   const target = params.target ?? 'test';
   switch (condition) {
     case 'resource_started': {
-      const r = await client.call<{ state: string }>('get_resource_state', { args: { name: params.name } });
-      return { passed: r.state === 'started', expected: 'started', actual: r.state };
+      // Supports an explicit wait: restart actions return a non-final
+      // immediateState by design, so poll until started or timeout.
+      const timeoutMs = Number(params.timeoutMs ?? 0);
+      const deadline = Date.now() + timeoutMs;
+      for (;;) {
+        const r = await client.call<{ state: string }>('get_resource_state', { args: { name: params.name } });
+        if (r.state === 'started' || Date.now() >= deadline) {
+          return { passed: r.state === 'started', expected: 'started', actual: r.state };
+        }
+        await sleep(500);
+      }
+    }
+    case 'tool_rejected': {
+      // Assert a tool call FAILS with a specific structured error code —
+      // proves guardrails (protected resources, unknown tools) work.
+      try {
+        await client.call(String(params.tool), { args: params.args ?? {} });
+        return { passed: false, expected: `rejected with ${params.expectCode}`, actual: 'call SUCCEEDED (guardrail missing!)' };
+      } catch (e) {
+        const code = (e as { code?: string })?.code ?? 'UNKNOWN';
+        return { passed: code === params.expectCode, expected: params.expectCode, actual: code };
+      }
+    }
+    case 'vehicle_networked': {
+      const v = await client.call<{ inVehicle?: boolean; networked?: boolean }>('get_player_vehicle', { target });
+      return { passed: !!v.inVehicle && !!v.networked, expected: { inVehicle: true, networked: true }, actual: v };
     }
     case 'player_position': {
       const c = await client.call<{ x: number; y: number; z: number }>('get_player_coords', { target });

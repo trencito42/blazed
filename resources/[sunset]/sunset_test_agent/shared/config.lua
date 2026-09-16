@@ -37,11 +37,21 @@ SunsetTestAgent.Config = {
 
     -- Resource lifecycle guardrails: these may never be stopped/restarted
     -- by the bridge even when explicitly asked.
+    -- DELIBERATE DECISIONS:
+    --  - sunset_inventory/sunset_admin are NOT protected: restarting them is
+    --    a legitimate test action (inventory/admin state is rebuilt on boot
+    --    from DB) and scenarios may need it. Their restart cannot corrupt
+    --    persistent data (no in-flight write contracts beyond MySQL).
+    --  - sunset_auth/sunset_characters ARE protected: restarting them mid-
+    --    session can desync authentication state for EVERY connected player
+    --    and there is no legitimate test reason to restart them live.
     protectedResources = {
         ['sunset_test_agent'] = true,   -- never kill the bridge under itself
         ['sunset_sessions'] = true,     -- session manager (canonical lifecycle)
         ['oxmysql'] = true,             -- database
         ['sunset_core'] = true,         -- framework bus
+        ['sunset_auth'] = true,         -- auth state (all players)
+        ['sunset_characters'] = true,   -- character flow (all players)
         ['webadmin'] = true,
         ['monitor'] = true,
     },

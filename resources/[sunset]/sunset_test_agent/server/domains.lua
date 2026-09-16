@@ -27,22 +27,31 @@ TestAgentTools.registerDomain('get_robbery_state', {
     fn = function(target)
         local src, err = TestAgentAuth.resolveTarget(target)
         if not src then return nil, err end
-        local ok = requireResource('sunset_robbery')
-        if not ok then return nil, err end
+        local resOk, resErr = requireResource('sunset_robbery')
+        if not resOk then return nil, resErr end
         -- RobberySessions is a global in the sunset_robbery server context,
         -- NOT visible cross-resource (per-resource Lua environments). Use the
         -- exported snapshot instead (added for the test agent).
+        -- live = nil means "no active session" (valid state), NOT a failure:
+        -- exportOk distinguishes the two.
         local live = nil
+        local exportOk = false
         pcall(function()
             live = exports.sunset_robbery:GetTestSnapshot(src)
+            exportOk = true
+        end)
+        if not exportOk then
+            return nil, { code = 'INTERNAL', message = 'sunset_robbery GetTestSnapshot export failed', retryable = true }
+        end
+        local doorState = nil
+        local doorOk = false
+        pcall(function()
+            doorState = exports.sunset_robbery:GetDoorSnapshot()
+            doorOk = true
         end)
         return {
-            live = live,
-            doorState = (function()
-                local d = nil
-                pcall(function() d = exports.sunset_robbery:GetDoorSnapshot() end)
-                return d
-            end)(),
+            live = live,              -- nil = no active robbery (valid)
+            doorState = doorOk and doorState or nil,
         }
     end,
     target = true,
@@ -53,8 +62,8 @@ TestAgentTools.registerDomain('get_race_state', {
     fn = function(target)
         local src, err = TestAgentAuth.resolveTarget(target)
         if not src then return nil, err end
-        local ok = requireResource('sunset_racing')
-        if not ok then return nil, err end
+        local resOk, resErr = requireResource('sunset_racing')
+        if not resOk then return nil, resErr end
         local raceNightActive = nil
         pcall(function() raceNightActive = exports.sunset_racing:IsRaceNightActive() == true end)
         local points = nil
@@ -99,8 +108,8 @@ TestAgentTools.registerDomain('get_wanted_state', {
     fn = function(target)
         local src, err = TestAgentAuth.resolveTarget(target)
         if not src then return nil, err end
-        local ok = requireResource('sunset_factions')
-        if not ok then return nil, err end
+        local resOk, resErr = requireResource('sunset_factions')
+        if not resOk then return nil, resErr end
         local wanted = nil
         pcall(function() wanted = exports.sunset_factions:GetWantedState(src) end)
         local jailed = nil

@@ -334,17 +334,17 @@ ClientRpc.register('nuiErrors', function(payload)
 end)
 
 -- ── screenshot (screenshot-basic requestScreenshot -> base64 -> JSON upload) ──
--- screenshot-basic's requestScreenshotUpload cannot attach custom headers, so
--- we capture base64 and upload via PerformHttpRequest WITH the bearer header
--- (same auth as every other bridge route).
+-- [TOKEN HYGIENE] The master bearer token is NEVER sent to the game client.
+-- The upload route authenticates with the server-issued ONE-SHOT requestId
+-- (capability model: player-bound, single-use, 30s TTL). We capture base64
+-- via screenshot-basic and POST it as JSON.
 ClientRpc.register('screenshot', function(payload)
     if GetResourceState('screenshot_basic') ~= 'started' then
         return nil, err('SCREENSHOT_FAILED', 'screenshot_basic resource not started')
     end
     local requestId = tostring(payload.requestId or '')
-    local bearer = tostring(payload.bearer or '')
-    if requestId == '' or bearer == '' then
-        return nil, err('INVALID_ARGUMENT', 'screenshot payload incomplete')
+    if requestId == '' then
+        return nil, err('INVALID_ARGUMENT', 'screenshot payload missing requestId')
     end
     local endpoint = GetCurrentServerEndpoint()   -- host:port of THIS server
     -- FXServer routes HTTP per-resource: /<resource><path>.
@@ -365,13 +365,12 @@ ClientRpc.register('screenshot', function(payload)
         return nil, err('SCREENSHOT_FAILED', 'capture returned no image data')
     end
 
-    -- Step 2: upload as JSON with bearer auth
+    -- Step 2: upload as JSON; the one-shot requestId is the only credential.
     local uploaded = promise.new()
     PerformHttpRequest(uploadUrl, function(statusCode, body)
         uploaded:resolve({ status = statusCode, body = tostring(body or ''):sub(1, 200) })
     end, 'POST', json.encode({ requestId = requestId, base64 = data, mime = 'image/jpeg' }), {
         ['Content-Type'] = 'application/json',
-        ['Authorization'] = 'Bearer ' .. bearer,
     })
     local upRes = Citizen.Await(uploaded)
     if not upRes or upRes.status ~= 200 then

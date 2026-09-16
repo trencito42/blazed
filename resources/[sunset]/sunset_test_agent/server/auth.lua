@@ -132,6 +132,19 @@ function TestAgentAuth.register(source)
             retryable = false,
         }
     end
+    -- [DELIBERATE POLICY] one test player at a time. Re-registering from a
+    -- DIFFERENT player while the current one is still connected is refused:
+    -- silently stealing the slot could redirect mutation tools at another
+    -- player's session mid-test. The current holder must /testagent reset
+    -- (or disconnect, which clears registration) first.
+    if testPlayerSource and testPlayerSource ~= source and GetPlayerName(testPlayerSource) then
+        return false, {
+            code = 'OPERATION_NOT_ALLOWED',
+            message = ('ServerId %d is already the registered test player. Ask them to run /testagent reset first.')
+                :format(testPlayerSource),
+            retryable = false,
+        }
+    end
     testPlayerSource = source
     local char = exports.sunset_core:GetCharacter(source)
     testPlayerCharId = char and tonumber(char.id) or nil
@@ -163,17 +176,15 @@ function TestAgentAuth.hasTestPlayer()
     return (TestAgentAuth.testPlayer() ~= nil)
 end
 
--- Bearer value handed to the TEST CLIENT for its screenshot upload POST.
--- The client is a trusted dev machine already authenticated by admin level;
--- the token never reaches the MCP client through this path (MCP authenticates
--- with its own copy from env). Only valid while the kill switch is on.
-function TestAgentAuth.bearerForClient()
-    if not killSwitchOn() then return nil end
-    return expectedToken
-end
+-- [TOKEN HYGIENE] The master bearer token is NEVER handed to the game client.
+-- Screenshot uploads authenticate with the server-issued one-shot requestId
+-- (capability model) instead — see http.lua /screenshot route and
+-- TestAgentIssueScreenshotId in tools.lua. There is deliberately no
+-- bearerForClient() accessor.
 
 -- Resolve a requested target: nil/'test' → the registered test player;
 -- an explicit numeric id → that player (still must be connected).
+-- READ tools only. Mutating tools must use resolveMutationTarget below.
 function TestAgentAuth.resolveTarget(requested)
     if requested == nil or requested == 'test' or requested == 0 then
         local src = TestAgentAuth.testPlayer()
@@ -188,9 +199,61 @@ function TestAgentAuth.resolveTarget(requested)
     return src
 end
 
+-- [MUTATION SAFETY] Mutating tools (teleport, vitals, heading, spawn,
+-- delete, control actions, semantic interactions) may ONLY affect the
+-- registered test player. Bearer-token holders cannot use the bridge to
+-- grief other connected players. Reads stay permissive (explicit serverId).
+function TestAgentAuth.resolveMutationTarget(requested)
+    local testSrc = TestAgentAuth.testPlayer()
+    if not testSrc then return nil, SunsetTestAgent.Errors.TEST_PLAYER_NOT_CONNECTED end
+    if requested == nil or requested == 'test' or requested == 0 then
+        return testSrc
+    end
+    local src = tonumber(requested)
+    if not src then return nil, SunsetTestAgent.Errors.INVALID_ARGUMENT end
+    if src ~= testSrc then
+        return nil, {
+            code = 'OPERATION_NOT_ALLOWED',
+            message = ('Mutation tools may only target the registered test player (serverId %d); got %d.'):format(testSrc, src),
+            retryable = false,
+        }
+    end
+    if not GetPlayerName(src) then
+        return nil, SunsetTestAgent.Errors.TEST_PLAYER_NOT_CONNECTED
+    end
+    return src
+end
+
 AddEventHandler('playerDropped', function()
     if source == testPlayerSource then
         TestAgentLog.event('register', 'test player disconnected', { source = source })
         TestAgentAuth.clear()
     end
 end)
+
+-- [SELFTEST] Console-only verification of the constant-time compare
+-- (run: docker exec ... or rcon `testagent_selftest`). Proves the Lua 5.4
+-- native-operator implementation behaves correctly without exposing the
+-- real token: uses fixed literals.
+RegisterCommand('testagent_selftest', function(source)
+    if source ~= 0 then
+        print('[TESTAGENT] selftest is console-only')
+        return
+    end
+    local cases = {
+        { a = 'abc123', b = 'abc123', want = true,  name = 'same token' },
+        { a = 'abc123', b = 'abc124', want = false, name = 'same length, different' },
+        { a = 'abc123', b = 'abc12',  want = false, name = 'different length' },
+        { a = '',       b = '',       want = true,  name = 'empty equal' },
+        { a = 'x',      b = '',       want = false, name = 'empty vs non-empty' },
+    }
+    local pass = true
+    for _, c in ipairs(cases) do
+        local got = constTimeEquals(c.a, c.b)
+        local ok = got == c.want
+        pass = pass and ok
+        print(('[TESTAGENT SELFTEST] %s: %s (want=%s got=%s)'):format(
+            ok and 'PASS' or 'FAIL', c.name, tostring(c.want), tostring(got)))
+    end
+    print(('^%d[TESTAGENT SELFTEST]^7 %s'):format(pass and 2 or 1, pass and 'ALL PASS' or 'FAILURES PRESENT'))
+end, true) -- restricted=true: console/rcon only, players cannot call it

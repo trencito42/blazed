@@ -38,8 +38,37 @@ CreateThread(function()
         tostring(Cfg.minAdminLevel) .. '+).')
 end)
 
+-- [LEAK CLEANUP] Test-spawned entities are normally cleaned by the network
+-- when the owning client drops (client-created entities are despawned), but
+-- we still attempt explicit deletion for anything still server-visible and
+-- drop the tracking records so memory never grows.
+local function deleteTrackedEntities(src)
+    for _, entry in ipairs(TestAgentTrackedEntities(src)) do
+        local ent = NetworkGetEntityFromNetworkId(entry.netId)
+        if ent and ent ~= 0 and DoesEntityExist(ent) then
+            pcall(function()
+                -- Clear the tag BEFORE DeleteEntity (state bag access on a
+                -- deleted entity can error); tag removal is not a safety
+                -- gate here — deletion itself is server-driven cleanup.
+                Entity(ent).state:set(SunsetTestAgent.Config.testEntityStateKey, nil, true)
+            end)
+            pcall(function() DeleteEntity(ent) end)
+            TestAgentLog.event('cleanup', 'deleted leaked test entity', { netId = entry.netId, model = entry.model })
+        end
+    end
+    TestAgentClearTracked(src)
+end
+
+AddEventHandler('playerDropped', function()
+    deleteTrackedEntities(source)
+end)
+
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
+    -- Best-effort cleanup of every tracked test entity before we die.
+    for _, src in ipairs(TestAgentAllTrackedSources()) do
+        deleteTrackedEntities(src)
+    end
     -- Leave screenshot_basic running only while the agent is enabled.
     if GetConvar(Cfg.enabledConvar, 'false') ~= 'true' then
         if GetResourceState('screenshot_basic') == 'started' then

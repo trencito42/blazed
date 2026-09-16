@@ -113,11 +113,23 @@ export function registerWorldTools(server: McpServer, client: TestAgentClient): 
     'fivem_delete_test_entity',
     {
       title: 'Delete tagged test entity',
-      description: 'Delete an entity BY NETID only if it carries the test-spawned tag. Refuses production entities with OPERATION_NOT_ALLOWED.',
+      description: 'Delete an entity BY NETID only if it carries the test-spawned tag. Refuses production entities with OPERATION_NOT_ALLOWED. Mutation tool: test player only.',
       inputSchema: { netId: z.number(), ...targetSchema },
     },
     async ({ netId, target }) => {
       try { return ok(await client.call('delete_test_entity', { target: target ?? 'test', args: { netId } })); } catch (e) { return fail(e); }
+    },
+  );
+
+  server.registerTool(
+    'fivem_cleanup_test_entities',
+    {
+      title: 'Delete ALL tagged test entities',
+      description: 'Delete every entity the bridge tracked as test-spawned for the test player (scenario cleanup, leak recovery). Same tag policy as single delete. Mutation tool: test player only.',
+      inputSchema: { ...targetSchema },
+    },
+    async ({ target }) => {
+      try { return ok(await client.call('cleanup_test_entities', { target: target ?? 'test' })); } catch (e) { return fail(e); }
     },
   );
 }

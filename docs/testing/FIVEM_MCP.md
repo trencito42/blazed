@@ -86,23 +86,82 @@ the same power `/testagent`-registered staff already have.
 
 Keep the token in your shell environment, never in committed files.
 
-## Tools (46)
+## Tools (47)
 
 **Core:** `fivem_health` `fivem_wait_for` `fivem_assert` `fivem_list_scenarios` `fivem_run_scenario`
 **Player:** `fivem_get_players` `fivem_get_player_state` `fivem_get_player_coords` `fivem_teleport` `fivem_set_health` `fivem_get_vehicle_state` `fivem_get_player_inventory` `fivem_get_player_money` `fivem_get_player_status` `fivem_invoke_callback` `fivem_press_control`
-**World:** `fivem_get_nearby_entities` `fivem_get_nearby_objects` `fivem_get_nearby_vehicles` `fivem_inspect_entity` `fivem_find_object_by_model` `fivem_hash_model` `fivem_spawn_test_vehicle` `fivem_delete_test_entity`
+**World:** `fivem_get_nearby_entities` `fivem_get_nearby_objects` `fivem_get_nearby_vehicles` `fivem_inspect_entity` `fivem_find_object_by_model` `fivem_hash_model` `fivem_spawn_test_vehicle` `fivem_delete_test_entity` `fivem_cleanup_test_entities`
 **NUI:** `fivem_get_nui_state` `fivem_get_nui_focus` `fivem_get_open_panels` `fivem_get_nui_history` `fivem_get_nui_errors`
-**Media:** `fivem_take_screenshot` (returns real JPEG image content)
+**Media:** `fivem_take_screenshot` (returns real JPEG image content; requires screenshot_basic — optional)
 **Resources/logs:** `fivem_get_resource_state` `fivem_list_resources` `fivem_restart_resource` `fivem_start_resource` `fivem_stop_resource` `fivem_get_server_logs` `fivem_get_recent_errors` `fivem_get_client_logs` `fivem_clear_client_logs`
 **Domains:** `fivem_get_robbery_state` `fivem_get_race_state` `fivem_get_job_state` `fivem_get_drug_state` `fivem_get_wanted_state` `fivem_get_vehicles_db` `fivem_get_robbery_db`
 
-### Honest input semantics
+### Mutation-target policy (security)
 
-FiveM **cannot inject physical control presses**. `fivem_press_control` therefore
-either fires an allowlisted **semantic** server event (`interact_semantic` —
-exactly what the E-marker would fire, e.g. `sunset:robbery:tryStart`) or returns
-`OPERATION_NOT_ALLOWED` with guidance. Results are always marked `bypass: true`
-so no report can pretend a real key was pressed.
+- **READ tools** may target any connected player by explicit serverId.
+- **MUTATION tools** (teleport, heading, vitals, spawn/delete entity, control
+  actions, semantic interactions, screenshots, callbacks) may target ONLY the
+  registered test player. Any other target → `OPERATION_NOT_ALLOWED`.
+  Enforced server-side by `TestAgentAuth.resolveMutationTarget`.
+- One test player at a time; a second `/testagent register` while one is
+  active is REFUSED (must `/testagent reset` first). Disconnect clears
+  registration. Licenses are masked in logs.
+
+### Resource action semantics
+
+`restart/start/stop_resource` return `{requestedAction, immediateState,
+finalStatePending}` — `GetResourceState` right after RestartResource is NOT
+final. Use `fivem_wait_for resource_state` or the `resource_started` assertion
+with `timeoutMs` (the scenario runner does this).
+
+Protected (refused): sunset_test_agent, sunset_sessions, sunset_core, oxmysql,
+sunset_auth, sunset_characters, webadmin, monitor. Deliberately NOT protected:
+sunset_inventory, sunset_admin (restarting them is a legitimate test and
+cannot corrupt persistent data). Only `sunset_*` may be touched at all.
+
+### Honest input semantics + capability matrix
+
+FiveM **cannot inject physical control presses** (no `SetControlNormal` native
+exists). `fivem_health` reports this explicitly so no agent can over-claim:
+
+```jsonc
+"capabilities": {
+  "physicalInputInjection": false,   // ALWAYS false — runtime limitation
+  "semanticInteraction": true,       // allowlisted event/callback bypass
+  "screenshots": <bool>,             // true only if screenshot_basic started
+  "nuiInstrumentation": <bool>,      // true only if sv_sunset_nuidebug 1
+  "entityScans": <bool>              // true only if a test client answered ping
+}
+```
+
+**Consequence (documented limitation):** this bridge CANNOT prove the full
+`marker → IsControlJustReleased(38) → handler fired` interaction chain. Bugs
+that live specifically in the input layer (e.g. the historical drugs
+`openDrugsUI` forward-reference nil) are reachable only via `interact_semantic`
+(fires the same server event the marker would) — which exercises the server
+path but NOT the client marker/E-press code. Treat "E interaction works" as
+**REQUIRES MANUAL IN-GAME TEST**, never as bridge-proven.
+
+| Capability | Status |
+|---|---|
+| Read player/world/entity/NUI state | LIVE-VERIFIED via bridge |
+| Teleport, vitals, heading | LIVE (mutation, test-player only) |
+| Spawn/delete tagged vehicles | LIVE (tag policy enforced) |
+| Semantic interaction (allowlisted events) | LIVE, marked `bypass: true` |
+| Physical key injection | **UNSUPPORTED** (FiveM limitation) |
+| Callback invocation (allowlisted) | LIVE |
+| Screenshots | LIVE **only if** screenshot_basic installed; else clean `SCREENSHOT_FAILED` |
+| NUI message/callback/error history | LIVE **only if** `sv_sunset_nuidebug 1`; else focus-only fallback |
+| Resource restart/start/stop | LIVE (guarded, `finalStatePending`) |
+| DB reads (character/robbery/vehicles) | LIVE (read-only, domain-scoped) |
+| DB writes / eval / arbitrary events | **NEVER** (by design) |
+
+`fivem_press_control`:
+- returns `OPERATION_NOT_ALLOWED` (physical injection unavailable), OR
+- if `semanticEvent` is provided and allowlisted, fires it and returns
+  `{ fired, bypass: true }` (same path as the `interact_semantic` bridge tool).
+
+It NEVER claims a real E press happened.
 
 ### Error codes
 
@@ -119,12 +178,16 @@ per-step timings). Built-in:
 |---|---|
 | `player_connect_smoke` | bridge + players + core reads |
 | `teleport_and_state` | teleport → position assert |
-| `vehicle_spawn_and_network` | tagged spawn → networked → driver assert |
-| `nui_open_close` | NUI focus/history/js-errors |
+| `vehicle_spawn_and_network` | tagged spawn → networked **observed** (assert, not inferred) → cleanup deletes all tagged entities |
+| `nui_inspection_smoke` | NUI focus/history/js-errors — INSPECTION ONLY, renamed from nui_open_close because it does NOT open/close panels (that needs input injection) |
 | `callback_roundtrip` | every allowlisted status callback |
-| `screenshot_test` | capture → store pipeline |
-| `resource_restart_test` | restart sunset_drugs → callbacks alive |
-| `fleeca_robbery` | DOMAIN: entrance tp, vault prop lookup (`v_ilev_gb_vauldoor` found/heading/collision), screenshots before/during, semantic robbery start, HACKING stage assert, doorSync |
+| `screenshot_test` | capture → store pipeline; FAILS honestly if screenshot_basic missing |
+| `resource_restart_test` | restart sunset_drugs → **waits for actual started state** → callbacks alive |
+| `mcp_bridge_self_test` | full bridge: health, tp+assert, NUI, inventory/money, spawn+networked, logs, **protected-restart rejection**, **unknown-tool rejection**, cleanup-always |
+| `fleeca_robbery` | DOMAIN: vault prop lookup (`v_ilev_gb_vauldoor` found/heading), semantic start (**marked BYPASS**), HACKING stage assert, vault-closed-while-hacking, doorSync. Does NOT complete the hack (server-owned circuit) |
+
+Cleanup steps run **even when the scenario fails** (step numbers 1000+ in the
+report; cleanup failure is recorded but never flips the verdict).
 
 The Fleeca scenario deliberately does NOT auto-solve the hack minigame (the
 circuit solution is server-secret by design). It gives the agent everything

@@ -17,15 +17,64 @@ local function notAllowed(msg)
     return { code = 'OPERATION_NOT_ALLOWED', message = msg or E.OPERATION_NOT_ALLOWED.message, retryable = false }
 end
 
+-- ═══ TEST ENTITY TRACKING (leak cleanup) ═══
+-- [source] = { [netId] = { model, at } }. Bounded; cleaned on delete,
+-- disconnect and resource stop. Entities are ALWAYS client-tagged too —
+-- deletion still requires the state-bag tag, tracking only lets us attempt
+-- cleanup of orphans.
+local trackedEntities = {}
+local MAX_TRACKED_PER_SOURCE = 25
+
+function TestAgentTrackEntity(src, netId, model)
+    local list = trackedEntities[src]
+    if not list then list = {} trackedEntities[src] = list end
+    list[netId] = { model = tostring(model or ''), at = GetGameTimer() }
+    -- Bound: evict the oldest entry if over capacity.
+    local count = 0
+    for _ in pairs(list) do count = count + 1 end
+    if count > MAX_TRACKED_PER_SOURCE then
+        local oldestId, oldestAt
+        for id, info in pairs(list) do
+            if not oldestAt or info.at < oldestAt then oldestId, oldestAt = id, info.at end
+        end
+        if oldestId then list[oldestId] = nil end
+    end
+end
+
+function TestAgentUntrackEntity(src, netId)
+    if trackedEntities[src] then
+        trackedEntities[src][tonumber(netId or -1)] = nil
+    end
+end
+
+function TestAgentTrackedEntities(src)
+    local out = {}
+    for netId, info in pairs(trackedEntities[src] or {}) do
+        out[#out + 1] = { netId = netId, model = info.model }
+    end
+    return out
+end
+
+function TestAgentClearTracked(src)
+    trackedEntities[src] = nil
+end
+
+function TestAgentAllTrackedSources()
+    local out = {}
+    for src in pairs(trackedEntities) do out[#out + 1] = src end
+    return out
+end
+
 -- ═══ HEALTH / PLAYERS ═══
 
 function Tools.health()
     local testSrc = TestAgentAuth.testPlayer()
     local clientReady = false
     if testSrc then
-        local ok, res = RpcClient.await(testSrc, 'ping', {}, 3000)
-        clientReady = ok and type(res) == 'table' and res.pong == true
+        local pingOk, pingRes = RpcClient.await(testSrc, 'ping', {}, 3000)
+        clientReady = pingOk and type(pingRes) == 'table' and pingRes.pong == true
     end
+    local ssAvailable = GetResourceState('screenshot_basic') == 'started'
     return {
         bridge = 'ok',
         fxserver = 'ok',
@@ -37,9 +86,17 @@ function Tools.health()
         },
         sunsetCore = GetResourceState('sunset_core'),
         sunsetUi = GetResourceState('sunset_ui'),
-        screenshot = GetResourceState('screenshot_basic') == 'started' and 'available' or 'missing',
+        screenshot = ssAvailable and 'available' or 'missing (install screenshot_basic — optional)',
         players = #GetPlayers(),
         serverTime = os.date('%Y-%m-%dT%H:%M:%S'),
+        -- [HONEST CAPABILITIES] So no consumer can claim untested abilities.
+        capabilities = {
+            physicalInputInjection = false,   -- FiveM has no such native
+            semanticInteraction = true,       -- allowlisted event/callback bypass
+            screenshots = ssAvailable,
+            nuiInstrumentation = GetConvar('sv_sunset_nuidebug', '0') == '1',
+            entityScans = clientReady,
+        },
     }
 end
 
@@ -121,10 +178,11 @@ function Tools.teleport_player(target, args)
     if math.abs(x) > 12000 or math.abs(y) > 12000 or math.abs(z) > 2000 then
         return nil, invalid('coordinates out of world bounds')
     end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok = RpcClient.await(src, 'teleport', { x = x, y = y, z = z, heading = tonumber(args.heading) })
-    if not ok then return nil, err end
+    -- MUTATION: registered test player only.
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'teleport', { x = x, y = y, z = z, heading = tonumber(args.heading) })
+    if not rpcOk then return nil, rpcRes end
     return { teleported = true, x = x, y = y, z = z, heading = tonumber(args.heading) }
 end
 
@@ -132,10 +190,10 @@ function Tools.set_player_heading(target, args)
     args = type(args) == 'table' and args or {}
     local heading = tonumber(args.heading)
     if not heading then return nil, invalid('heading is required') end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok = RpcClient.await(src, 'setHeading', { heading = heading })
-    if not ok then return nil, err end
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'setHeading', { heading = heading })
+    if not rpcOk then return nil, rpcRes end
     return { heading = heading }
 end
 
@@ -154,10 +212,10 @@ function Tools.set_test_health(target, args)
     if health < 0 or health > 1000 or armour < 0 or armour > 100 then
         return nil, invalid('health 0-1000, armour 0-100')
     end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok = RpcClient.await(src, 'setVitals', { health = health, armour = armour })
-    if not ok then return nil, err end
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'setVitals', { health = health, armour = armour })
+    if not rpcOk then return nil, rpcRes end
     return { health = health, armour = armour }
 end
 
@@ -349,11 +407,12 @@ function Tools.interact_semantic(target, args)
     if not ALLOWED_SEMANTIC_EVENTS[eventName] then
         return nil, notAllowed(('semantic event "%s" is not on the allowlist'):format(eventName))
     end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok, res = RpcClient.await(src, 'interactNearMarker', { event = eventName, arg = args.arg })
-    if not ok then return nil, res end
-    return res
+    -- MUTATION: starts gameplay state on a player — test player only.
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'interactNearMarker', { event = eventName, arg = args.arg })
+    if not rpcOk then return nil, rpcRes end
+    return rpcRes
 end
 
 function Tools.spawn_test_vehicle(target, args)
@@ -364,39 +423,74 @@ function Tools.spawn_test_vehicle(target, args)
     if model:match('^weapon_') or model:match('^a_') or model:match('^cs_') or model:match('^ig_') then
         return nil, notAllowed('spawn_test_vehicle only spawns vehicle models')
     end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok, res = RpcClient.await(src, 'spawnTestVehicle', { model = model, warp = args.warp == true })
-    if not ok then return nil, res end
-    return res
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'spawnTestVehicle', { model = model, warp = args.warp == true })
+    if not rpcOk then return nil, rpcRes end
+    -- Track spawned entity for leak cleanup (test player disconnect / stop).
+    if rpcRes and tonumber(rpcRes.netId) then
+        TestAgentTrackEntity(src, tonumber(rpcRes.netId), model)
+    end
+    return rpcRes
 end
 
 function Tools.delete_test_entity(target, args)
     args = type(args) == 'table' and args or {}
     local netId = tonumber(args.netId)
     if not netId then return nil, invalid('netId is required') end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
     -- Server-side policy: only entities tagged as test-spawned may be deleted.
-    local ok, res = RpcClient.await(src, 'deleteTestEntity', { netId = netId })
-    if not ok then return nil, res end
-    return res
+    local rpcOk, rpcRes = RpcClient.await(src, 'deleteTestEntity', { netId = netId })
+    if not rpcOk then return nil, rpcRes end
+    TestAgentUntrackEntity(src, netId)
+    return rpcRes
+end
+
+-- Delete EVERY tracked test entity for the target (scenario cleanup step).
+-- Same tag policy as delete_test_entity: each deletion goes through the
+-- client handler that verifies the state-bag tag.
+function Tools.cleanup_test_entities(target)
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local tracked = TestAgentTrackedEntities(src)
+    local deleted, failures = 0, {}
+    for _, entry in ipairs(tracked) do
+        local rpcOk, rpcRes = RpcClient.await(src, 'deleteTestEntity', { netId = entry.netId })
+        if rpcOk then
+            deleted = deleted + 1
+        else
+            -- Keep the structured reason per entity (never nil,nil):
+            -- entity may already be gone (deleted by network cleanup).
+            failures[#failures + 1] = {
+                netId = entry.netId,
+                model = entry.model,
+                code = type(rpcRes) == 'table' and rpcRes.code or 'UNKNOWN',
+            }
+        end
+        TestAgentUntrackEntity(src, entry.netId)
+    end
+    return { deleted = deleted, failed = #failures, failures = failures, remainingTracked = #TestAgentTrackedEntities(src) }
 end
 
 -- ═══ INPUT / INTERACTION ═══
--- REAL control input (physical key simulation) is documented as such;
--- semantic actions that bypass input are named invoke_*.
+-- TRUTH: FiveM's scripting runtime has NO native to inject physical control
+-- presses (no SetControlNormal exists). press_control/hold_control therefore
+-- always return OPERATION_NOT_ALLOWED from the client with an explanation.
+-- Semantic alternatives: interact_semantic (allowlisted server events) and
+-- invoke_callback (allowlisted callbacks) — both are documented BYPASSES,
+-- never disguised as real input.
 
 function Tools.press_control(target, args)
     args = type(args) == 'table' and args or {}
     local control = tonumber(args.control)
     if not control or control < 0 or control > 600 then return nil, invalid('control must be 0-600') end
     local durationMs = math.min(math.max(tonumber(args.durationMs) or 100, 10), 3000)
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok, res = RpcClient.await(src, 'pressControl', { control = control, durationMs = durationMs })
-    if not ok then return nil, res end
-    return res
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'pressControl', { control = control, durationMs = durationMs })
+    if not rpcOk then return nil, rpcRes end
+    return rpcRes
 end
 
 function Tools.hold_control(target, args)
@@ -404,17 +498,17 @@ function Tools.hold_control(target, args)
     local control = tonumber(args.control)
     if not control or control < 0 or control > 600 then return nil, invalid('control must be 0-600') end
     local durationMs = math.min(math.max(tonumber(args.durationMs) or 1000, 10), 10000)
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok, res = RpcClient.await(src, 'holdControl', { control = control, durationMs = durationMs })
-    if not ok then return nil, res end
-    return res
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'holdControl', { control = control, durationMs = durationMs })
+    if not rpcOk then return nil, rpcRes end
+    return rpcRes
 end
 
 function Tools.interact(target)
-    -- Semantic: physically simulates the E (context, control 38) press used
-    -- by every Sunset interaction marker. This IS real input simulation
-    -- (SetControlNormal pressed-state injection), not a callback bypass.
+    -- SEMANTIC BYPASS (NOT a physical E press): FiveM cannot inject control
+    -- presses. This is an alias for the press_control path, which honestly
+    -- returns OPERATION_NOT_ALLOWED with guidance toward interact_semantic.
     return Tools.press_control(target, { control = 38, durationMs = 120 })
 end
 
@@ -435,50 +529,103 @@ local ALLOWED_INVOKE_CALLBACKS = {
 
 function Tools.invoke_callback(target, args)
     -- Semantic BYPASS (documented): calls a sunset_core callback directly
-    -- from the client, skipping world interaction. Allowlist restricts which
-    -- callback names may be invoked — no arbitrary callbacks.
+    -- from the client, skipping world interaction. Some allowlisted callbacks
+    -- have side-effects (e.g. racing:leave), so this is a MUTATION: test
+    -- player only. Allowlist restricts which callback names may be invoked.
     args = type(args) == 'table' and args or {}
     local name = tostring(args.name or '')
     if not ALLOWED_INVOKE_CALLBACKS[name] then
         return nil, notAllowed(('callback "%s" is not on the test-agent invoke allowlist'):format(name))
     end
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok, res = RpcClient.await(src, 'invokeCallback', {
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'invokeCallback', {
         name = name,
         args = type(args.args) == 'table' and args.args or {},
     })
-    if not ok then return nil, res end
-    return res
+    if not rpcOk then return nil, rpcRes end
+    return rpcRes
 end
 
 -- ═══ SCREENSHOTS ═══
 
+-- [SCREENSHOT HARDENING] Server-generated requestIds are tracked so the HTTP
+-- upload route can verify: (a) the id was actually issued by take_screenshot,
+-- (b) it has not already been used (replay/duplicate upload), (c) it is not
+-- expired. Without this, anything holding the bearer could fill the store
+-- with arbitrary ids.
+local PendingScreenshots = {}   -- [requestId] = { src, at }
+local SCREENSHOT_ISSUE_TTL_MS = 30000
+local MAX_PENDING_SCREENSHOTS = 20
+
+local function gcPendingScreenshots()
+    local now = GetGameTimer()
+    local count = 0
+    for rid, entry in pairs(PendingScreenshots) do
+        count = count + 1
+        if now - entry.at > SCREENSHOT_ISSUE_TTL_MS then
+            PendingScreenshots[rid] = nil
+            count = count - 1
+        end
+    end
+    -- Hard bound: if still over capacity, drop the oldest.
+    while count > MAX_PENDING_SCREENSHOTS do
+        local oldestId, oldestAt
+        for rid, entry in pairs(PendingScreenshots) do
+            if not oldestAt or entry.at < oldestAt then oldestId, oldestAt = rid, entry.at end
+        end
+        if not oldestId then break end
+        PendingScreenshots[oldestId] = nil
+        count = count - 1
+    end
+end
+
+function TestAgentIssueScreenshotId(src)
+    gcPendingScreenshots()
+    local requestId = ('ss_%d_%d_%06d'):format(GetGameTimer(), math.random(100000, 999999), math.random(0, 999999))
+    PendingScreenshots[requestId] = { src = src, at = GetGameTimer() }
+    return requestId
+end
+
+-- Consume (one-shot): returns true only the FIRST time for a valid pending id.
+function TestAgentConsumeScreenshotId(requestId, src)
+    local entry = PendingScreenshots[requestId]
+    if not entry then return false end
+    if entry.src ~= src then return false end
+    if GetGameTimer() - entry.at > SCREENSHOT_ISSUE_TTL_MS then
+        PendingScreenshots[requestId] = nil
+        return false
+    end
+    PendingScreenshots[requestId] = nil
+    return true
+end
+
 function Tools.take_screenshot(target, args)
     args = type(args) == 'table' and args or {}
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
+    -- Capture runs ON a client → treat like a mutation (test player only).
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
     if GetResourceState('screenshot_basic') ~= 'started' then
-        return nil, { code = 'SCREENSHOT_FAILED', message = 'screenshot_basic resource is not started', retryable = true }
+        return nil, {
+            code = 'SCREENSHOT_FAILED',
+            message = 'screenshot_basic is not installed/started. Screenshots are OPTIONAL: install it per docs/testing/FIVEM_MCP.md, everything else works without it.',
+            retryable = true,
+        }
     end
-    -- The server generates the requestId and tells the client where to upload
-    -- (the game-port HTTP endpoint). Bytes never cross the server script
-    -- thread: client → HTTP POST screenshot → ScreenshotStore; MCP GETs by id.
-    local requestId = tostring(args.requestId or ('ss_' .. GetGameTimer() .. '_' .. math.random(1000, 99999)))
-    -- The client builds its own upload URL from GetCurrentServerEndpoint()
-    -- (works whether the test client is local or remote); we only pass the
-    -- route + bearer.
-    local ok, res = RpcClient.await(src, 'screenshot', {
+    -- Server-generated, one-shot requestId (client cannot pick it).
+    -- [TOKEN HYGIENE] The requestId IS the upload capability (one-shot,
+    -- player-bound, 30s TTL) — the master bearer token is never sent to
+    -- the game client.
+    local requestId = TestAgentIssueScreenshotId(src)
+    local rpcOk, rpcRes = RpcClient.await(src, 'screenshot', {
         requestId = requestId,
-        uploadRoute = ('%sscreenshot'):format(Cfg.httpPrefix),
-        bearer = TestAgentAuth.bearerForClient(),
         source = src,
     }, Cfg.screenshotTimeoutMs)
-    if not ok then return nil, res end
+    if not rpcOk then PendingScreenshots[requestId] = nil return nil, rpcRes end
     return {
         requestId = requestId,
-        bytes = res and res.bytes or nil,
-        mime = res and res.mime or 'image/jpeg',
+        bytes = rpcRes and rpcRes.bytes or nil,
+        mime = rpcRes and rpcRes.mime or 'image/jpeg',
         downloadPath = ('%sscreenshot/%s'):format(Cfg.httpPrefix, requestId),
     }
 end
@@ -505,11 +652,12 @@ function Tools.get_client_logs(target, args)
 end
 
 function Tools.clear_client_logs(target)
-    local src, err = TestAgentAuth.resolveTarget(target)
-    if not src then return nil, err end
-    local ok, res = RpcClient.await(src, 'clearClientLogs', {})
-    if not ok then return nil, res end
-    return res
+    -- MUTATION (wipes the client log buffer): test player only.
+    local src, targetErr = TestAgentAuth.resolveMutationTarget(target)
+    if not src then return nil, targetErr end
+    local rpcOk, rpcRes = RpcClient.await(src, 'clearClientLogs', {})
+    if not rpcOk then return nil, rpcRes end
+    return rpcRes
 end
 
 -- ═══ NUI INSPECTION ═══
@@ -602,7 +750,10 @@ function Tools.restart_resource(args)
     end
     RestartResource(name)
     TestAgentLog.event('resource', 'restarted', { resource = name })
-    return { resource = name, state = GetResourceState(name) }
+    -- NOTE: GetResourceState right after RestartResource is NOT final (the
+    -- resource reboots asynchronously). Consumers must wait_for/assert the
+    -- started state separately — we return both fields honestly.
+    return { requestedAction = 'restart', resource = name, immediateState = GetResourceState(name), finalStatePending = true }
 end
 
 function Tools.start_resource(args)
@@ -613,7 +764,7 @@ function Tools.start_resource(args)
     if guard then return nil, guard end
     StartResource(name)
     TestAgentLog.event('resource', 'started', { resource = name })
-    return { resource = name, state = GetResourceState(name) }
+    return { requestedAction = 'start', resource = name, immediateState = GetResourceState(name), finalStatePending = true }
 end
 
 function Tools.stop_resource(args)
@@ -624,7 +775,7 @@ function Tools.stop_resource(args)
     if guard then return nil, guard end
     StopResource(name)
     TestAgentLog.event('resource', 'stopped', { resource = name })
-    return { resource = name, state = GetResourceState(name) }
+    return { requestedAction = 'stop', resource = name, immediateState = GetResourceState(name), finalStatePending = false }
 end
 
 -- ═══ DB (READ-ONLY, domain-specific) ═══
@@ -695,6 +846,7 @@ TestAgentTools = {
     interact_semantic = { fn = Tools.interact_semantic, target = true, args = true },
     spawn_test_vehicle = { fn = Tools.spawn_test_vehicle, target = true, args = true },
     delete_test_entity = { fn = Tools.delete_test_entity, target = true, args = true },
+    cleanup_test_entities = { fn = Tools.cleanup_test_entities, target = true },
     press_control = { fn = Tools.press_control, target = true, args = true },
     hold_control = { fn = Tools.hold_control, target = true, args = true },
     interact = { fn = Tools.interact, target = true },
