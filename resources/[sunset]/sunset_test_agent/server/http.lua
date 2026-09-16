@@ -104,7 +104,16 @@ local function runTool(toolName, requestId, body)
     local target = body.target
     local args = type(body.args) == 'table' and body.args or {}
     local started = TestAgentLog.nowMs()
-    local results = { pcall(spec.fn, target, args) }
+    -- [DISPATCH FIX] Signature-aware call: tools WITH spec.target take
+    -- (target, args); tools WITHOUT it take (args) only. Calling everything
+    -- as fn(target, args) made non-target tools read args from the target
+    -- slot (always nil) — "resource name is required" for valid requests.
+    local results
+    if spec.target then
+        results = { pcall(spec.fn, target, args) }
+    else
+        results = { pcall(spec.fn, args) }
+    end
     local duration = TestAgentLog.nowMs() - started
     local okCall = table.remove(results, 1)
     if not okCall then
