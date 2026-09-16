@@ -223,14 +223,28 @@ end
 function JobClient.attachTrailer(truck, trailerModel, spawn)
     local thash = JobClient.loadModel(trailerModel)
     if not thash then return nil end
-    local s = spawn
+    local heading = GetEntityHeading(truck)
+    local rearPos = GetOffsetFromEntityInWorldCoords(truck, 0.0, -10.5, 0.5)
+
     TriggerServerEvent('sunset:anticheat:markLegitLocal', 'vehicle_spawn', 15)
-    local trailer = CreateVehicle(thash, s.x, s.y, s.z, s.w or 0.0, true, false)
+    local trailer = CreateVehicle(thash, rearPos.x, rearPos.y, rearPos.z, heading, true, false)
     if trailer == 0 then return nil end
     SetEntityAsMissionEntity(trailer, true, true)
     SetVehicleHasBeenOwnedByPlayer(trailer, true)
     protectJobVehicle(trailer)
-    AttachVehicleToTrailer(truck, trailer, 1.0)
+
+    SetEntityCoordsNoOffset(trailer, rearPos.x, rearPos.y, rearPos.z, false, false, false)
+    SetEntityRotation(trailer, 0.0, 0.0, heading, 2, true)
+    SetEntityHeading(trailer, heading)
+    SetVehicleOnGroundProperly(trailer)
+    Wait(200)
+
+    AttachVehicleToTrailer(truck, trailer, 1.1)
+    Wait(200)
+    if not (IsVehicleAttachedToTrailer(truck) == 1 or IsVehicleAttachedToTrailer(truck) == true) then
+        AttachVehicleToTrailer(truck, trailer, 2.5)
+    end
+
     if not ensureNetworked(trailer) then
         dlog(('attachTrailer: entity %d never became networked'):format(trailer))
     end
