@@ -82,14 +82,15 @@ local function sit(slotData)
     isSitting = true
     TriggerServerEvent('sunset_slots:takePlace', id)
 
-    local offsetX = slotData.offsetX or 0.0
-    local offsetY = slotData.offsetY or -0.55
-    local offsetZ = slotData.offsetZ or -0.45
-    local posX = pos.x + offsetX
-    local posY = pos.y + offsetY
-    local posZ = pos.z - offsetZ
+    -- Calculate chair position in FRONT of the slot machine using its heading
+    local rad = math.rad(heading)
+    local forwardDist = 0.70 -- 0.70m in front of the slot machine
+    local posX = pos.x - math.sin(rad) * forwardDist
+    local posY = pos.y - math.cos(rad) * forwardDist
+    local posZ = pos.z - 0.45
+    local sitHeading = (heading + 180.0) % 360.0 -- Player faces the slot machine screen
 
-    TaskStartScenarioAtPosition(ped, 'PROP_HUMAN_SEAT_BENCH', posX, posY, posZ, heading, 0, true, true)
+    TaskStartScenarioAtPosition(ped, 'PROP_HUMAN_SEAT_BENCH', posX, posY, posZ, sitHeading, 0, true, true)
     Wait(1000)
 
     -- Prompt for bet chips
