@@ -40,6 +40,7 @@ files {
     'web/index.html',
     'web/style.css',
     'web/app.js',
+    'web/sounds/*.ogg',
 }
 
 dependencies {

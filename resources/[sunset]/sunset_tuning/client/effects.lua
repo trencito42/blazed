@@ -3,6 +3,7 @@ local EP = STC.ExhaustPtfx
 
 local lastThrottle = 0.0
 local lastRpm = 0.0
+local lastGear = 0
 local popCooldown = 0
 local twostepArmed = false
 local overrun = {
@@ -137,6 +138,7 @@ CreateThread(function()
         if not IsPedInAnyVehicle(ped, false) then
             lastThrottle = 0.0
             lastRpm = 0.0
+            lastGear = 0
             twostepArmed = false
             clearOverrun()
             Wait(400)
@@ -161,6 +163,7 @@ CreateThread(function()
         local mult = state.mult or STC.getStageMultipliers(tune)
         local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
         local rpm = GetVehicleCurrentRpm(veh)
+        local gear = GetVehicleCurrentGear(veh)
         local throttle = GetControlNormal(0, 71)
         local brake = GetControlNormal(0, 72)
         local speed = GetEntitySpeed(veh) * 3.6
@@ -172,6 +175,14 @@ CreateThread(function()
         local liftOff = lastThrottle > 0.28 and throttle < 0.20
         local wasHighRpm = lastRpm >= triggerThreshold
         local rpmFalling = (lastRpm - rpm) > 0.015
+
+        -- Pop on gear shift at high RPM
+        if (tune.pop.enabled or tune.antiLag.enabled) and gear ~= lastGear and lastGear ~= 0 and gear > 1 and rpm > 0.55 and not IsEntityInAir(veh) then
+            if now > popCooldown then
+                popCooldown = now + 120
+                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.35)
+            end
+        end
 
         -- Pop & bang: arm overrun on lift-off, then pops while RPM spins down.
         if tune.pop.enabled and liftOff and wasHighRpm then
@@ -234,6 +245,7 @@ CreateThread(function()
 
         lastThrottle = throttle
         lastRpm = rpm
+        lastGear = gear
         Wait(waitMs)
         ::continue::
     end

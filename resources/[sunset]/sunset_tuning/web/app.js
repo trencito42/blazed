@@ -780,6 +780,15 @@ window.addEventListener('message', (event) => {
         if (app) app.classList.remove('hidden');
         renderAll();
     }
+    if (action === 'playSound' || event.data?.transactionType === 'playSound') {
+        const soundFile = (data?.sound || event.data?.transactionFile || '1') + '.ogg';
+        const volume = Math.max(0.01, Math.min(1.0, data?.volume ?? event.data?.transactionVolume ?? 0.8));
+        try {
+            const audio = new Audio('sounds/' + soundFile);
+            audio.volume = volume;
+            audio.play().catch(() => {});
+        } catch (e) {}
+    }
 });
 
 if (new URLSearchParams(window.location.search).get('qa') === 'tuning') {

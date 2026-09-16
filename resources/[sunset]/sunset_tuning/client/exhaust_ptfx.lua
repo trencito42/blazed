@@ -214,10 +214,29 @@ local function playSoundLayer(veh, soundName)
     end)
 end
 
-function EP.playBackfireSound(veh, profile)
+local function playSpatialPopSound(veh, volume)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    local myCoords = GetEntityCoords(PlayerPedId())
+    local vehCoords = GetEntityCoords(veh)
+    local dist = #(myCoords - vehCoords)
+    local maxDist = 40.0
+    if dist <= maxDist then
+        local ratio = math.max(0.08, 1.0 - (dist / maxDist))
+        local finalVol = math.min(1.0, (volume or 0.85) * ratio)
+        local soundIdx = tostring(math.random(1, 6))
+        SendNUIMessage({
+            action = 'playSound',
+            sound = soundIdx,
+            volume = finalVol,
+        })
+    end
+end
+
+function EP.playBackfireSound(veh, profile, intensity)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
     local pool = profile == 'limiter' and LIMITER_SOUNDS or profile == 'bang' and BANG_SOUNDS or CRACKLE_SOUNDS
     playSoundLayer(veh, pool[math.random(1, #pool)])
+    playSpatialPopSound(veh, math.min(1.0, 0.65 + (intensity or 0.8) * 0.35))
 end
 
 function EP.burst(veh, kind, intensity, flameColor)
@@ -226,15 +245,27 @@ function EP.burst(veh, kind, intensity, flameColor)
     kind = kind or 'pop'
     local color = flameColor or DEFAULT_FLAME
 
+    -- Quick native nitro backfire boost
+    pcall(function()
+        SetVehicleNitroEnabled(veh, true)
+        SetVehicleBoostActive(veh, true)
+        SetTimeout(70, function()
+            if DoesEntityExist(veh) then
+                SetVehicleNitroEnabled(veh, false)
+                SetVehicleBoostActive(veh, false)
+            end
+        end)
+    end)
+
     if kind == 'pop' or kind == 'twostep' then
         EP.backfire(veh, 1.1 + intensity * 0.72, color)
         if kind == 'twostep' or intensity > 0.9 then EP.sparks(veh, 0.3 + intensity * 0.2, color) end
-        EP.playBackfireSound(veh, kind == 'twostep' and 'limiter' or (intensity > 0.82 and 'bang' or 'crackle'))
+        EP.playBackfireSound(veh, kind == 'twostep' and 'limiter' or (intensity > 0.82 and 'bang' or 'crackle'), intensity)
     end
     if kind == 'antilag' then
         EP.backfire(veh, 0.95 + intensity * 0.58, color)
         if intensity > 0.75 then EP.sparks(veh, 0.28 + intensity * 0.18, color) end
-        EP.playBackfireSound(veh, 'limiter')
+        EP.playBackfireSound(veh, 'limiter', intensity)
     end
     if kind == 'flame' or kind == 'extra' then
         EP.flames(veh, 0.75 + intensity * 0.55, color)
@@ -245,6 +276,6 @@ function EP.burst(veh, kind, intensity, flameColor)
     if kind == 'flash' then
         EP.backfire(veh, 1.65, color)
         EP.flames(veh, 1.45, color)
-        EP.playBackfireSound(veh, 'bang')
+        EP.playBackfireSound(veh, 'bang', intensity)
     end
 end
