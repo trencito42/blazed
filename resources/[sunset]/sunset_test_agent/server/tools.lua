@@ -784,9 +784,12 @@ function Tools.get_character_db_state(args)
     args = type(args) == 'table' and args or {}
     local charId = tonumber(args.characterId)
     if not charId then return nil, invalid('characterId is required') end
+    -- Columns verified against the live schema (DESCRIBE characters):
+    -- firstname/lastname (no underscore), cash/bank/job/job_grade.
+    -- No faction columns on characters (faction state lives in sunset_factions).
     local ok, row = pcall(function()
         return MySQL.single.await(
-            'SELECT id, first_name, last_name, cash, bank, job, faction_id, faction_grade FROM characters WHERE id = ?',
+            'SELECT id, firstname, lastname, cash, bank, job, job_grade, is_dead FROM characters WHERE id = ?',
             { charId })
     end)
     if not ok then return nil, E.INTERNAL end

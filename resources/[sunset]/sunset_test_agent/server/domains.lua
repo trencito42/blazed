@@ -128,7 +128,7 @@ TestAgentTools.registerDomain('get_vehicle_ownership_state', {
         if not char or not tonumber(char.id) then return nil, E.TEST_PLAYER_NOT_CONNECTED end
         local ok, rows = pcall(function()
             return MySQL.query.await(
-                'SELECT id, model, plate, garage, parked_x, parked_y, parked_z FROM vehicles WHERE owner_id = ? LIMIT 25',
+                'SELECT id, model, plate, garage, stored, destroyed, parked_x, parked_y, parked_z, parked_h FROM vehicles WHERE character_id = ? LIMIT 25',
                 { tonumber(char.id) })
         end)
         if not ok then return nil, E.INTERNAL end
@@ -144,12 +144,14 @@ TestAgentTools.registerDomain('get_clan_state', {
         if not src then return nil, err end
         local char = exports.sunset_core:GetCharacter(src)
         if not char or not tonumber(char.id) then return nil, E.TEST_PLAYER_NOT_CONNECTED end
+        -- Clan membership lives in clan_members (verified schema), not on characters.
         local ok, row = pcall(function()
             return MySQL.single.await(
-                'SELECT clan_id FROM characters WHERE id = ?', { tonumber(char.id) })
+                'SELECT clan_id, rank, warns FROM clan_members WHERE character_id = ? LIMIT 1',
+                { tonumber(char.id) })
         end)
         if not ok then return nil, E.INTERNAL end
-        return { clanId = row and row.clan_id or nil }
+        return { clanId = row and row.clan_id or nil, rank = row and row.rank or nil, warns = row and row.warns or nil }
     end,
     target = true,
 })
@@ -166,11 +168,11 @@ TestAgentTools.registerDomain('get_house_state', {
         local ok, rows
         if houseId then
             ok, rows = pcall(function()
-                return MySQL.query.await('SELECT * FROM properties WHERE id = ? LIMIT 1', { houseId })
+                return MySQL.query.await('SELECT id, label, owner_character_id, locked, for_sale, rent_enabled FROM properties WHERE id = ? LIMIT 1', { houseId })
             end)
         else
             ok, rows = pcall(function()
-                return MySQL.query.await('SELECT id, label, owner_id FROM properties WHERE owner_id = ? LIMIT 10',
+                return MySQL.query.await('SELECT id, label, owner_character_id FROM properties WHERE owner_character_id = ? LIMIT 10',
                     { tonumber(char.id) })
             end)
         end
