@@ -347,7 +347,8 @@ ClientRpc.register('screenshot', function(payload)
         return nil, err('INVALID_ARGUMENT', 'screenshot payload incomplete')
     end
     local endpoint = GetCurrentServerEndpoint()   -- host:port of THIS server
-    local uploadUrl = ('http://%s/testagent/screenshot'):format(endpoint)
+    -- FXServer routes HTTP per-resource: /<resource><path>.
+    local uploadUrl = ('http://%s/sunset_test_agent/testagent/screenshot'):format(endpoint)
 
     -- Step 1: capture (base64 string)
     local capture = promise.new()

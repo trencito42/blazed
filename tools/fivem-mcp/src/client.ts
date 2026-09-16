@@ -31,7 +31,11 @@ export class TestAgentClient {
   constructor() {
     const host = process.env.FIVEM_TEST_HOST ?? '127.0.0.1';
     const port = process.env.FIVEM_TEST_PORT ?? '30120';
-    this.baseUrl = process.env.FIVEM_TEST_URL ?? `http://${host}:${port}/testagent`;
+    // FXServer routes HTTP per-resource: /<resource><path>. The bridge serves
+    // /testagent/* inside sunset_test_agent, so the external URL is
+    // /sunset_test_agent/testagent/*.
+    const resource = process.env.FIVEM_TEST_RESOURCE ?? 'sunset_test_agent';
+    this.baseUrl = process.env.FIVEM_TEST_URL ?? `http://${host}:${port}/${resource}/testagent`;
     this.token = process.env.FIVEM_TEST_TOKEN ?? '';
     this.timeoutMs = Number(process.env.FIVEM_TEST_TIMEOUT_MS ?? 20000);
   }

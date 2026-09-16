@@ -108,13 +108,10 @@ end
 
 local function httpHandler(req, res)
     local path = req.path or ''
-    -- [DIAG] Prove the handler is actually invoked (remove once confirmed).
-    print(('^3[TESTAGENT HTTP]^7 request method=%s path=%s'):format(tostring(req.method), path))
+    TestAgentLog.debug('HTTP request method=%s path=%s', tostring(req.method), path)
 
     -- Only handle our prefix; everything else 404s.
     if path:sub(1, #Cfg.httpPrefix) ~= Cfg.httpPrefix then
-        -- [DIAG] Log who else is hitting the game port (resource discovery).
-        print(('^3[TESTAGENT HTTP]^7 foreign path=%s method=%s'):format(path, tostring(req.method)))
         sendJson(res, 404, { ok = false, error = { code = 'NOT_FOUND', message = 'unknown path', retryable = false } })
         return
     end
@@ -247,6 +244,9 @@ local lastReclaimWarn = 0
 CreateThread(function()
     Wait(8000)
     local port = GetConvarInt('sv_port', 30120)
+    -- FXServer routes HTTP per-resource: /<resourceName><req.path>. The probe
+    -- must include our resource prefix or it never reaches this handler.
+    local probeUrl = ('http://127.0.0.1:%d/%s%sping'):format(port, GetCurrentResourceName(), Cfg.httpPrefix)
     while true do
         Wait(20000)
         if TestAgentAuth.enabled() then
@@ -255,7 +255,7 @@ CreateThread(function()
             local ownsHandler = false
             local p = promise.new()
             pcall(function()
-                PerformHttpRequest(('http://127.0.0.1:%d%sping'):format(port, Cfg.httpPrefix),
+                PerformHttpRequest(probeUrl,
                     function(status, body)
                         if settled then return end
                         settled = true
