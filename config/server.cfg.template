@@ -84,7 +84,6 @@ ensure sunset_economy
 ensure sunset_needs
 ensure sunset_death
 ensure sunset_vehicles
-ensure sunset_addon_vehicles
 ensure sunset_tuning
 ensure sunset_admin
 ensure sunset_properties
