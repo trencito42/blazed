@@ -49,14 +49,55 @@ local function setStoreDoors(loc, unlocked)
 end
 
 -- ── Vault entity lookup + baseline ──
+local VAULT_MODEL_CANDIDATES = {
+    `v_ilev_gb_vauldr`,
+    `v_ilev_gb_vauldoor`,
+    `v_ilev_bk_vaultdoor`,
+    2121050683,
+    1809936997,
+    763497189,
+}
+
 local function findVaultEntity(loc)
     local vault = loc.vault
     if not vault then return nil end
     local c = vault.coords
-    local obj = GetClosestObjectOfType(c.x, c.y, c.z, vault.searchRadius or 2.5,
-        vault.model, false, false, false)
-    if obj ~= 0 and DoesEntityExist(obj) then return obj end
+    local radius = vault.searchRadius or 6.0
+
+    -- 1. Try configured model first, then candidate hashes
+    local modelsToTry = { vault.model }
+    for _, m in ipairs(VAULT_MODEL_CANDIDATES) do
+        if m ~= vault.model then modelsToTry[#modelsToTry + 1] = m end
+    end
+
+    for _, model in ipairs(modelsToTry) do
+        local obj = GetClosestObjectOfType(c.x, c.y, c.z, radius, model, false, false, false)
+        if obj ~= 0 and DoesEntityExist(obj) then return obj end
+    end
+
+    -- 2. Fallback: scan game CObject pool near vault coords
+    for _, ent in ipairs(GetGamePool('CObject') or {}) do
+        if DoesEntityExist(ent) then
+            local em = GetEntityModel(ent)
+            for _, model in ipairs(modelsToTry) do
+                if em == model then
+                    local ec = GetEntityCoords(ent)
+                    if #(ec - c) <= radius + 3.0 then
+                        return ent
+                    end
+                end
+            end
+        end
+    end
+
     return nil
+end
+
+local function setVaultHeading(entity, heading)
+    if not DoesEntityExist(entity) then return end
+    SetEntityHeading(entity, heading)
+    SetEntityRotation(entity, 0.0, 0.0, heading, 2, true)
+    FreezeEntityPosition(entity, true)
 end
 
 -- Capture the CLOSED heading baseline. If closedHeading is configured, use it;
@@ -112,16 +153,15 @@ CreateThread(function()
             if DoesEntityExist(anim.entity) then
                 local t = (GetGameTimer() - anim.startTime) / anim.durationMs
                 if t >= 1.0 then
-                    SetEntityHeading(anim.entity, anim.to)
-                    FreezeEntityPosition(anim.entity, true)
+                    setVaultHeading(anim.entity, anim.to)
                     vaultAnim[id] = nil
                     rlog('vault anim done loc=%s heading=%.1f', id, anim.to)
                 else
                     anyActive = true
                     -- ease-out cubic: heavy vault door decelerates into place
                     local eased = 1.0 - ((1.0 - t) ^ 3)
-                    SetEntityHeading(anim.entity, anim.from + (anim.to - anim.from) * eased)
-                    FreezeEntityPosition(anim.entity, true)
+                    local cur = anim.from + (anim.to - anim.from) * eased
+                    setVaultHeading(anim.entity, cur)
                 end
             else
                 vaultAnim[id] = nil
@@ -316,3 +356,14 @@ RegisterCommand('robdoor', function(source, args)
         end
     end
 end, false)
+
+RegisterCommand('testvault', function(source, args)
+    local action = string.lower(tostring(args[1] or 'open'))
+    local open = action ~= 'close'
+    local loc = SunsetRobbery.Locations['fleeca_legion']
+    if loc and loc.vault then
+        applyDoorState('fleeca_legion', open, false)
+        print(('^2[TESTVAULT]^7 fleeca_legion door state -> %s'):format(open and 'OPEN' or 'CLOSED'))
+    end
+end, false)
+

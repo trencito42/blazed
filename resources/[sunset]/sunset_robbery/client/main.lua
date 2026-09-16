@@ -152,6 +152,9 @@ RegisterNetEvent('sunset:robbery:hackResult', function(payload)
         notify('TRACE COMPLETE — alarm going out now', 'error', 7000)
         RobberyAnims.sound('alarm')
     end
+    if payload.result ~= 'failed' and session.location and session.location.vaultOnHackSuccess then
+        TriggerEvent('sunset:robbery:doorState', session.location.id, true)
+    end
     if payload.hud then RobberyNui.send('hudShow', payload.hud) end
 end)
 

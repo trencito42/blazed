@@ -141,12 +141,14 @@ SunsetRobbery.Locations = {
         -- [FLEECA FIX] Vault door (v_ilev_gb_vauldoor) is articulated and animated
         -- manually via world.lua heading rotation. Normal doors array is empty so
         -- DoorSystem does not fight the manual rotation.
-        doors = {},
+        doors = {
+            { model = `v_ilev_gb_teldr`, coords = vector3(145.42, -1041.81, 29.64) },
+        },
         vaultOnHackSuccess = true, -- doors only unlock and swing AFTER a successful hack
         vault = {
-            model = `v_ilev_gb_vauldoor`,
+            model = `v_ilev_gb_vauldr`,
             coords = vector3(148.03, -1044.36, 29.51),
-            searchRadius = 3.5,
+            searchRadius = 5.0,
             closedHeading = 249.85,
             openDelta = -90.0,
             openMs = 2500,
