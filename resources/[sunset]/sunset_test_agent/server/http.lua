@@ -228,22 +228,24 @@ local function httpHandler(req, res)
     end)
 end
 
--- [HTTP OWNER CONFLICT] SetHttpHandler is a SINGLE-owner native: only one
--- resource can hold it. txAdmin (monitor) also claims it — often LATER than
--- us (it boots on its own schedule). Strategy: claim, then self-probe every
--- 20s via our unauthenticated /ping route; if the probe does not answer with
--- our owner marker, re-claim. FXServer serves /info.json + /players.json
--- NATIVELY (before any resource handler), so the container healthcheck and
--- the server list are unaffected either way. The txAdmin panel stays on its
--- own port (40120); only its game-port proxy is displaced — acceptable on
--- this box per the owner's explicit activation request.
-SetHttpHandler(httpHandler)
-print('^2[TESTAGENT HTTP]^7 SetHttpHandler called (claiming game-port HTTP)')
-TestAgentLog.event('http', 'SetHttpHandler registered for ' .. Cfg.httpPrefix)
+-- [HTTP OWNER CONFLICT + BOOT ORDER] Two lessons learned live:
+--  1. SetHttpHandler called at script top-level runs DURING environment
+--     creation (before "Started resource") and the registration is DROPPED —
+--     FXServer keeps answering its default "Route ... not found." The claim
+--     must happen from a thread AFTER the resource is fully started.
+--  2. txAdmin (monitor) also claims the single handler when enabled; the
+--     self-check loop below re-claims when the unauthenticated /ping probe
+--     stops answering with our owner marker.
+CreateThread(function()
+    Wait(2000)
+    SetHttpHandler(httpHandler)
+    print('^2[TESTAGENT HTTP]^7 SetHttpHandler claimed (post-start)')
+    TestAgentLog.event('http', 'SetHttpHandler registered for ' .. Cfg.httpPrefix)
+end)
 
 local lastReclaimWarn = 0
 CreateThread(function()
-    Wait(5000)
+    Wait(8000)
     local port = GetConvarInt('sv_port', 30120)
     while true do
         Wait(20000)
