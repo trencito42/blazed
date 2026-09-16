@@ -138,19 +138,16 @@ SunsetRobbery.Locations = {
             coords = vector3(149.20, -1040.50, 29.37),
             radius = 4.0,
         },
-        -- [FLEECA FIX] doors was EMPTY: the vault door never unlocked on hack
-        -- success, so players couldn't enter and the loot markers sat behind/
-        -- inside the wall. The Fleeca vault door is v_ilev_gb_vauldoor; it is
-        -- unlocked for 15s after the hack (sessions.scheduleDoorLock) and the
-        -- world.lua 2s refresh keeps the state until then.
-        doors = {
-            { model = `v_ilev_gb_vauldoor`, coords = vector3(148.03, -1044.36, 29.51) },
-        },
+        -- [FLEECA FIX] Vault door (v_ilev_gb_vauldoor) is articulated and animated
+        -- manually via world.lua heading rotation. Normal doors array is empty so
+        -- DoorSystem does not fight the manual rotation.
+        doors = {},
         vaultOnHackSuccess = true, -- doors only unlock and swing AFTER a successful hack
         vault = {
             model = `v_ilev_gb_vauldoor`,
             coords = vector3(148.03, -1044.36, 29.51),
             searchRadius = 3.5,
+            closedHeading = 249.85,
             openDelta = -90.0,
             openMs = 2500,
             closeMs = 2000,

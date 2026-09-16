@@ -59,24 +59,25 @@ local function findVaultEntity(loc)
     return nil
 end
 
--- Capture the CLOSED heading baseline only while the door is locked and not
--- animating. First sighting at boot is closed by definition (server state
--- starts locked); re-capture is refused once known so an open heading can
--- never become the baseline.
-local function ensureBaseline(loc, allowCapture)
+-- Capture the CLOSED heading baseline. If closedHeading is configured, use it;
+-- otherwise capture from the entity if available.
+local function ensureBaseline(loc)
     local id = loc.id
     local known = vaultBaseline[id]
     if known and DoesEntityExist(known.entity) then return known end
     if known then vaultBaseline[id] = nil end -- entity went away (map reload)
-    -- New capture only allowed while the door is known-closed (or state
-    -- unknown at boot). Never baseline from an unlocked door's heading.
-    if allowCapture == false then return nil end
-    if doorStates[id] == true then return nil end -- open state — cannot baseline
     local entity = findVaultEntity(loc)
     if not entity then return nil end
-    local heading = GetEntityHeading(entity)
-    vaultBaseline[id] = { entity = entity, closedHeading = heading }
-    rlog('vault baseline loc=%s entity=%d closedHeading=%.2f', id, entity, heading)
+    local closedHeading = (loc.vault and loc.vault.closedHeading)
+    if not closedHeading then
+        if doorStates[id] == true then
+            closedHeading = GetEntityHeading(entity) - (loc.vault and loc.vault.openDelta or -90.0)
+        else
+            closedHeading = GetEntityHeading(entity)
+        end
+    end
+    vaultBaseline[id] = { entity = entity, closedHeading = closedHeading }
+    rlog('vault baseline loc=%s entity=%d closedHeading=%.2f', id, entity, closedHeading)
     return vaultBaseline[id]
 end
 
@@ -90,7 +91,7 @@ local function animateVault(loc, open)
             id, vault.coords.x, vault.coords.y, vault.coords.z, tostring(vault.model))
         return
     end
-    local target = open and (base.closedHeading + (vault.openDelta or 90.0)) or base.closedHeading
+    local target = open and (base.closedHeading + (vault.openDelta or -90.0)) or base.closedHeading
     vaultAnim[id] = {
         entity = base.entity,
         from = GetEntityHeading(base.entity),
@@ -112,6 +113,7 @@ CreateThread(function()
                 local t = (GetGameTimer() - anim.startTime) / anim.durationMs
                 if t >= 1.0 then
                     SetEntityHeading(anim.entity, anim.to)
+                    FreezeEntityPosition(anim.entity, true)
                     vaultAnim[id] = nil
                     rlog('vault anim done loc=%s heading=%.1f', id, anim.to)
                 else
@@ -119,6 +121,7 @@ CreateThread(function()
                     -- ease-out cubic: heavy vault door decelerates into place
                     local eased = 1.0 - ((1.0 - t) ^ 3)
                     SetEntityHeading(anim.entity, anim.from + (anim.to - anim.from) * eased)
+                    FreezeEntityPosition(anim.entity, true)
                 end
             else
                 vaultAnim[id] = nil
@@ -134,23 +137,17 @@ local function applyDoorState(locationId, unlocked, instant)
     if not loc then return end
     unlocked = unlocked == true
     local prev = doorStates[loc.id] == true
-    -- [ORDER FIX] Capture the closed baseline BEFORE flipping doorStates —
-    -- at this moment the physical door is still where the server left it
-    -- (closed at boot), so the heading we read now is the closed heading.
-    -- Doing it after the flag flip would make ensureBaseline refuse.
-    if loc.vault and unlocked and not prev then
-        ensureBaseline(loc)
-    end
     doorStates[loc.id] = unlocked
     setStoreDoors(loc, unlocked)
-    if loc.vault and unlocked ~= prev then
+    if loc.vault and (unlocked ~= prev or instant) then
         if instant then
-            -- Late join / reconnect: snap without animation
-            local base = vaultBaseline[loc.id]
+            -- Late join / reconnect / sync: snap without animation
+            local base = ensureBaseline(loc)
             if base and DoesEntityExist(base.entity) then
                 local vault = loc.vault
-                SetEntityHeading(base.entity,
-                    unlocked and (base.closedHeading + (vault.openDelta or 90.0)) or base.closedHeading)
+                local target = unlocked and (base.closedHeading + (vault.openDelta or -90.0)) or base.closedHeading
+                SetEntityHeading(base.entity, target)
+                FreezeEntityPosition(base.entity, true)
             end
         else
             animateVault(loc, unlocked)
@@ -190,13 +187,28 @@ RegisterNetEvent('sunset:client:playerSpawned', function()
     syncDoorStates()
 end)
 
--- ── Periodic DoorSystem refresh (keeps lock state sticky vs other scripts) ──
+-- ── Periodic DoorSystem + Vault refresh (keeps lock/heading state sticky vs GTA map streaming) ──
 CreateThread(function()
     while true do
         for _, loc in pairs(SunsetRobbery.Locations or {}) do
-            if loc.doors then setStoreDoors(loc, doorStates[loc.id] == true) end
+            if loc.doors and #loc.doors > 0 then
+                setStoreDoors(loc, doorStates[loc.id] == true)
+            end
+            if loc.vault and not vaultAnim[loc.id] then
+                local base = ensureBaseline(loc)
+                if base and DoesEntityExist(base.entity) then
+                    local targetHeading = (doorStates[loc.id] == true)
+                        and (base.closedHeading + (loc.vault.openDelta or -90.0))
+                        or base.closedHeading
+                    local curHeading = GetEntityHeading(base.entity)
+                    if math.abs(curHeading - targetHeading) > 0.5 then
+                        SetEntityHeading(base.entity, targetHeading)
+                        FreezeEntityPosition(base.entity, true)
+                    end
+                end
+            end
         end
-        Wait(2000)
+        Wait(1500)
     end
 end)
 
