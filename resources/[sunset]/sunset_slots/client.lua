@@ -41,7 +41,36 @@ local function KeyboardInput(textEntry, inputText, maxLength)
     end
 end
 
+local slotCam = nil
+
+local function createSlotCam(prop, pos, heading)
+    if slotCam then DestroyCam(slotCam, false) slotCam = nil end
+    local camPos = nil
+    local lookPos = nil
+    if DoesEntityExist(prop) then
+        camPos = GetOffsetFromEntityInWorldCoords(prop, 0.0, -0.85, 0.55)
+        lookPos = GetOffsetFromEntityInWorldCoords(prop, 0.0, 0.0, 0.35)
+    else
+        local rad = math.rad(heading)
+        camPos = vector3(pos.x + math.sin(rad) * 0.85, pos.y - math.cos(rad) * 0.85, pos.z + 0.55)
+        lookPos = vector3(pos.x, pos.y, pos.z + 0.35)
+    end
+    slotCam = CreateCamWithParams('DEFAULT_SCRIPTED_CAMERA', camPos.x, camPos.y, camPos.z, 0.0, 0.0, 0.0, 50.0, true, 2)
+    PointCamAtCoord(slotCam, lookPos.x, lookPos.y, lookPos.z)
+    SetCamActive(slotCam, true)
+    RenderScriptCams(true, true, 800, true, true)
+end
+
+local function destroySlotCam()
+    if slotCam then
+        RenderScriptCams(false, true, 600, true, true)
+        DestroyCam(slotCam, false)
+        slotCam = nil
+    end
+end
+
 local function unsit()
+    destroySlotCam()
     if isSitting then
         local playerPed = PlayerPedId()
         ClearPedTasks(playerPed)
@@ -78,29 +107,45 @@ local function sit(slotData)
         return
     end
 
+    -- Find closest casino chair
+    local chair = GetClosestObjectOfType(pos.x, pos.y, pos.z, 1.4, GetHashKey('vw_prop_casino_chair_02a'), false, false, false)
+    if not DoesEntityExist(chair) then
+        chair = GetClosestObjectOfType(pos.x, pos.y, pos.z, 1.4, GetHashKey('vw_prop_casino_chair_01a'), false, false, false)
+    end
+
+    local chairPos = nil
+    local chairHeading = nil
+
+    if DoesEntityExist(chair) then
+        chairPos = GetEntityCoords(chair)
+        chairHeading = GetEntityHeading(chair)
+    else
+        chairPos = DoesEntityExist(prop) and GetOffsetFromEntityInWorldCoords(prop, 0.0, -0.75, -0.45) or vector3(pos.x, pos.y, pos.z - 0.45)
+        chairHeading = (heading + 180.0) % 360.0
+    end
+
     currentSitObj = id
     isSitting = true
     TriggerServerEvent('sunset_slots:takePlace', id)
 
-    -- Calculate chair position in FRONT of the slot machine using its heading
-    local rad = math.rad(heading)
-    local forwardDist = 0.70 -- 0.70m in front of the slot machine
-    local posX = pos.x - math.sin(rad) * forwardDist
-    local posY = pos.y - math.cos(rad) * forwardDist
-    local posZ = pos.z - 0.45
-    local sitHeading = (heading + 180.0) % 360.0 -- Player faces the slot machine screen
+    -- Sit ped directly on chair facing the slot machine
+    TaskStartScenarioAtPosition(ped, 'PROP_HUMAN_SEAT_BENCH', chairPos.x, chairPos.y, chairPos.z, chairHeading, 0, true, true)
+    
+    -- Smoothly transition camera to slot machine screen
+    createSlotCam(prop, pos, heading)
+    Wait(600)
 
-    TaskStartScenarioAtPosition(ped, 'PROP_HUMAN_SEAT_BENCH', posX, posY, posZ, sitHeading, 0, true, true)
-    Wait(1000)
+    -- Prompt for bet chips using ox_lib modal
+    local input = lib.inputDialog('Diamond Slot Machine', {
+        { type = 'number', label = 'Starting Chips Bet', default = 500, min = Config.MinBet or 50, max = 50000, required = true }
+    })
 
-    -- Prompt for bet chips
-    local betInput = KeyboardInput('Enter starting chips bet (e.g. 500):', '500', 6)
-    local betAmount = tonumber(betInput)
+    local betAmount = input and tonumber(input[1])
     if betAmount and betAmount >= (Config.MinBet or 50) then
         TriggerServerEvent('sunset_slots:BetsAndMoney', betAmount)
     else
         unsit()
-        if betInput then
+        if input then
             exports.sunset_ui:Notify(('Invalid bet amount. Minimum bet is %d chips.'):format(Config.MinBet or 50), 'error')
         end
     end

@@ -25,14 +25,14 @@ local function DrawText3D(coords, text)
 end
 
 local function spawnWheel()
-    local wheelModel = w_prop_vw_luckywheel_02a
-    local baseModel = w_prop_vw_luckywheel_01a
+    local wheelModel = GetHashKey('vw_prop_vw_luckywheel_02a')
+    local baseModel = GetHashKey('vw_prop_vw_luckywheel_01a')
 
     RequestModel(baseModel)
     while not HasModelLoaded(baseModel) do Wait(10) end
 
     if not DoesEntityExist(basewheel) then
-        basewheel = CreateObject(baseModel, wheelPos.x, wheelPos.y, wheelPos.z - 0.27, false, false, true)
+        basewheel = CreateObject(baseModel, wheelPos.x, wheelPos.y, wheelPos.z, false, false, true)
         SetEntityHeading(basewheel, 0.0)
         FreezeEntityPosition(basewheel, true)
     end
