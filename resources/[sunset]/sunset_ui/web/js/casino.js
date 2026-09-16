@@ -41,13 +41,26 @@ const Casino = {
         const body = $('#casino-body');
         if (!title || !body) return;
 
-        const names = { blackjack: 'Blackjack', slots: 'Slot Machines', roulette: 'Roulette' };
+        const names = {
+            blackjack: 'Blackjack', slots: 'Slot Machines', roulette: 'Roulette',
+            luckywheel: 'Lucky Wheel', cashier: 'Cashier', bar: 'Bar',
+        };
         title.textContent = names[this.game] || 'Casino';
-        sub.textContent = `Min $${(this.status.minBet || 100).toLocaleString()} · Max $${(this.status.maxBet || 50000).toLocaleString()}`;
+
+        if (this.game === 'cashier') {
+            sub.textContent = `Cash: $${(this.status.cash || 0).toLocaleString()} · Chips: ${(this.status.chips || 0).toLocaleString()}`;
+        } else if (this.game === 'bar') {
+            sub.textContent = `Cash: $${(this.status.cash || 0).toLocaleString()}`;
+        } else {
+            sub.textContent = `Min $${(this.status.minBet || 100).toLocaleString()} · Max $${(this.status.maxBet || 50000).toLocaleString()}`;
+        }
 
         if (this.game === 'blackjack') this.renderBlackjack(body);
         else if (this.game === 'slots') this.renderSlots(body);
         else if (this.game === 'roulette') this.renderRoulette(body);
+        else if (this.game === 'luckywheel') this.renderWheel(body);
+        else if (this.game === 'cashier') this.renderCashier(body);
+        else if (this.game === 'bar') this.renderBar(body);
 
         this.renderStatus();
     },
@@ -212,6 +225,127 @@ const Casino = {
                 resultEl.textContent = 'No match. Try again!';
             }
         }
+    },
+
+    // ── LUCKY WHEEL ──
+    renderWheel(body) {
+        const prizes = this.status.prizes || [];
+        body.innerHTML = `
+            <div class="wheel-container">
+                <div class="wheel-disc" id="wheel-disc">
+                    ${prizes.map((p, i) => {
+                        const angle = (i / prizes.length) * 360;
+                        return `<div class="wheel-segment" style="transform: rotate(${angle}deg)"><span>${this.esc(p.label)}</span></div>`;
+                    }).join('')}
+                </div>
+                <div class="wheel-pointer">▼</div>
+            </div>
+            <div class="wheel-result" id="wheel-result"></div>
+            <button type="button" class="casino-btn casino-btn--primary" id="wheel-spin">SPIN THE WHEEL</button>
+            <p class="casino-hint">1 spin per hour · Free to spin</p>
+        `;
+        $('#wheel-spin')?.addEventListener('click', () => {
+            const btn = $('#wheel-spin');
+            if (btn) { btn.disabled = true; btn.textContent = 'SPINNING...'; }
+            post('casinoWheelSpin', {});
+        });
+    },
+
+    wheelResult(data) {
+        const resultEl = $('#wheel-result');
+        const disc = $('#wheel-disc');
+        if (disc && data.prizeIndex !== undefined) {
+            const prizes = this.status.prizes || [];
+            const angle = 360 - (data.prizeIndex / prizes.length) * 360;
+            disc.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+            disc.style.transform = `rotate(${angle + 1440}deg)`;
+        }
+        if (resultEl && data.prize) {
+            resultEl.className = 'slots-result slots-result--win';
+            resultEl.textContent = `🎉 You won: ${this.esc(data.prize.label)}!`;
+        }
+        const btn = $('#wheel-spin');
+        if (btn) { btn.disabled = true; btn.textContent = 'SPUN — COME BACK IN 1 HOUR'; }
+    },
+
+    // ── CASHIER ──
+    renderCashier(body) {
+        const cash = this.status.cash || 0;
+        const chips = this.status.chips || 0;
+        body.innerHTML = `
+            <div class="cashier-panel">
+                <div class="cashier-balance">
+                    <div class="cashier-balance__item"><span>Cash</span><strong>$${cash.toLocaleString()}</strong></div>
+                    <div class="cashier-balance__item"><span>Chips</span><strong>${chips.toLocaleString()}</strong></div>
+                </div>
+                <div class="cashier-section">
+                    <h3>Buy Chips</h3>
+                    <div class="cashier-row">
+                        <input type="number" class="casino-bet-input" id="chips-buy-amount" value="1000" min="100" max="100000">
+                        <button type="button" class="casino-btn casino-btn--primary" id="chips-buy">BUY</button>
+                    </div>
+                </div>
+                <div class="cashier-section">
+                    <h3>Sell Chips</h3>
+                    <div class="cashier-row">
+                        <input type="number" class="casino-bet-input" id="chips-sell-amount" value="1000" min="100">
+                        <button type="button" class="casino-btn casino-btn--sell" id="chips-sell">SELL</button>
+                    </div>
+                </div>
+                <p class="casino-hint">Exchange rate: $1 = 1 chip</p>
+            </div>
+        `;
+        $('#chips-buy')?.addEventListener('click', () => {
+            const amount = Number($('#chips-buy-amount')?.value) || 1000;
+            post('casinoBuyChips', { amount });
+        });
+        $('#chips-sell')?.addEventListener('click', () => {
+            const amount = Number($('#chips-sell-amount')?.value) || 1000;
+            post('casinoSellChips', { amount });
+        });
+    },
+
+    cashierUpdate(data) {
+        if (data.totalChips !== undefined) this.status.chips = data.totalChips;
+        if (data.remainingChips !== undefined) this.status.chips = data.remainingChips;
+        if (data.cash !== undefined) this.status.cash = data.cash;
+        // Re-render to refresh balance cards
+        const sub = $('#casino-sub');
+        if (sub) sub.textContent = `Cash: $${(this.status.cash || 0).toLocaleString()} · Chips: ${(this.status.chips || 0).toLocaleString()}`;
+        const body = $('#casino-body');
+        if (body) this.renderCashier(body);
+        this.renderStatus();
+    },
+
+    // ── BAR ──
+    renderBar(body) {
+        const drinks = this.status.drinks || [];
+        body.innerHTML = `
+            <div class="bar-panel">
+                ${drinks.map((d) => `
+                    <div class="bar-item">
+                        <div class="bar-item__info">
+                            <span class="bar-item__name">${this.esc(d.label)}</span>
+                            <span class="bar-item__effect">+${d.value} thirst</span>
+                        </div>
+                        <div class="bar-item__action">
+                            <span class="bar-item__price">$${d.price}</span>
+                            <button type="button" class="casino-btn casino-btn--primary" data-bar-drink="${this.esc(d.id)}">BUY</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        $$('[data-bar-drink]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                post('casinoBuyDrink', { drinkId: btn.dataset.barDrink });
+            });
+        });
+    },
+
+    barUpdate(data) {
+        this.status.cash = data.cash !== undefined ? data.cash : this.status.cash;
+        this.renderStatus();
     },
 
     // ── ROULETTE ──

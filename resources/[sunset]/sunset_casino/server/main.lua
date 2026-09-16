@@ -384,7 +384,170 @@ exports.sunset_core:RegisterCallback('sunset:casino:rouletteSpin', function(sour
 end)
 
 -- ═══════════════════════════════════════════════════════════════
---  CASINO STATUS
+--  LUCKY WHEEL
+-- ═══════════════════════════════════════════════════════════════
+
+local WheelCooldowns = {}  -- [charId] = lastSpinTime
+
+local function countChips(source)
+    if GetResourceState('sunset_inventory') ~= 'started' then return 0 end
+    local ok, count = pcall(function()
+        return exports.sunset_inventory:CountItem(source, 'casino_chips')
+    end)
+    return ok and (tonumber(count) or 0) or 0
+end
+
+local function giveChips(source, amount)
+    if GetResourceState('sunset_inventory') ~= 'started' then return false end
+    local ok, res = pcall(function()
+        return exports.sunset_inventory:AddItem(source, 'casino_chips', amount)
+    end)
+    return ok and res ~= false
+end
+
+local function takeChips(source, amount)
+    if GetResourceState('sunset_inventory') ~= 'started' then return false end
+    local ok, res = pcall(function()
+        return exports.sunset_inventory:RemoveItem(source, 'casino_chips', amount)
+    end)
+    return ok and res == true
+end
+
+exports.sunset_core:RegisterCallback('sunset:casino:wheelSpin', function(source)
+    local charId = getCharId(source)
+    if not charId then return nil end
+
+    -- Cooldown check (1 hour)
+    local now = GetGameTimer()
+    if WheelCooldowns[charId] and now - WheelCooldowns[charId] < (Cfg.luckyWheelCooldownMs or 3600000) then
+        local remaining = math.ceil(((Cfg.luckyWheelCooldownMs or 3600000) - (now - WheelCooldowns[charId])) / 60000)
+        return nil, ('Wheel on cooldown. Try again in %d minutes.'):format(remaining)
+    end
+
+    if not checkCooldown(source) then
+        return nil, 'Wait a moment before spinning again.'
+    end
+
+    -- Pick random prize
+    local prizes = Cfg.luckyWheelPrizes or {}
+    if #prizes == 0 then return nil, 'No prizes configured.' end
+    local prizeIdx = math.random(#prizes)
+    local prize = prizes[prizeIdx]
+
+    -- Apply prize
+    if prize.type == 'cash' then
+        exports.sunset_core:AddMoney(source, 'cash', prize.value, 'casino_wheel')
+    elseif prize.type == 'chips' then
+        giveChips(source, prize.value)
+    elseif prize.type == 'discount' then
+        notify(source, ('You won a %d%% vehicle discount!'):format(prize.value), 'success')
+    elseif prize.type == 'mystery' then
+        local mysteryCash = math.random(1000, 50000)
+        exports.sunset_core:AddMoney(source, 'cash', mysteryCash, 'casino_wheel_mystery')
+        prize = { label = ('$%s (Mystery)'):format(mysteryCash), type = 'cash', value = mysteryCash }
+    end
+
+    WheelCooldowns[charId] = now
+
+    return {
+        prizeIndex = prizeIdx,
+        prize = prize,
+        totalPrizes = #prizes,
+    }
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  CASHIER (cash ↔ chips)
+--  Chips are an INVENTORY ITEM (casino_chips), not a money account —
+--  sunset_core money only supports cash/bank (verified in player.lua).
+-- ═══════════════════════════════════════════════════════════════
+
+exports.sunset_core:RegisterCallback('sunset:casino:buyChips', function(source, amount)
+    amount = math.floor(tonumber(amount) or 0)
+    if amount < (Cfg.minChipExchange or 100) then
+        return nil, ('Minimum chip exchange is $%s.'):format(Cfg.minChipExchange or 100)
+    end
+    if amount > (Cfg.maxChipExchange or 100000) then
+        return nil, ('Maximum chip exchange is $%s.'):format(Cfg.maxChipExchange or 100000)
+    end
+
+    local rate = Cfg.chipExchangeRate or 1
+    local cost = math.floor(amount * rate)
+
+    if not exports.sunset_core:RemoveMoney(source, 'cash', cost, 'casino_buy_chips') then
+        return nil, ('Not enough cash. You need $%s.'):format(cost)
+    end
+
+    if not giveChips(source, amount) then
+        -- Inventory full/failed — refund
+        exports.sunset_core:AddMoney(source, 'cash', cost, 'casino_buy_chips_refund')
+        return nil, 'Inventory full. Make room for your chips.'
+    end
+
+    return { chips = amount, cost = cost, totalChips = countChips(source), cash = exports.sunset_core:GetMoney(source, 'cash') }
+end)
+
+exports.sunset_core:RegisterCallback('sunset:casino:sellChips', function(source, amount)
+    amount = math.floor(tonumber(amount) or 0)
+    if amount < 1 then return nil, 'Enter an amount to sell.' end
+
+    local current = countChips(source)
+    if current < amount then
+        return nil, ('You only have %s chips.'):format(current)
+    end
+
+    if not takeChips(source, amount) then
+        return nil, 'Could not take chips from your inventory.'
+    end
+
+    local rate = Cfg.chipExchangeRate or 1
+    local cash = math.floor(amount * rate)
+    if not exports.sunset_core:AddMoney(source, 'cash', cash, 'casino_sell_chips') then
+        -- Money add failed — return the chips
+        giveChips(source, amount)
+        return nil, 'Could not pay you. Try again.'
+    end
+
+    return { chips = amount, earned = cash, cash = exports.sunset_core:GetMoney(source, 'cash'), remainingChips = countChips(source) }
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  BAR
+--  Drinks are inventory items (drink defs in sunset_core items.lua
+--  with thirst effects). The bar sells them; the player consumes
+--  them from the inventory (thirst applied by sunset_inventory:UseItem
+--  — the ONLY domain allowed to write char.thirst).
+-- ═══════════════════════════════════════════════════════════════
+
+exports.sunset_core:RegisterCallback('sunset:casino:buyDrink', function(source, drinkId)
+    drinkId = tostring(drinkId or '')
+    local drink = nil
+    for _, d in ipairs(Cfg.barDrinks or {}) do
+        if d.id == drinkId then drink = d break end
+    end
+    if not drink then return nil, 'Unknown drink.' end
+
+    if not exports.sunset_core:RemoveMoney(source, 'cash', drink.price, 'casino_bar') then
+        return nil, ('Not enough cash. %s costs $%s.'):format(drink.label, drink.price)
+    end
+
+    local added = false
+    if GetResourceState('sunset_inventory') == 'started' then
+        local ok, res = pcall(function()
+            return exports.sunset_inventory:AddItem(source, drink.id, 1)
+        end)
+        added = ok and res ~= false
+    end
+    if not added then
+        exports.sunset_core:AddMoney(source, 'cash', drink.price, 'casino_bar_refund')
+        return nil, 'Inventory full. Could not hold the drink.'
+    end
+
+    return { label = drink.label, price = drink.price, cash = exports.sunset_core:GetMoney(source, 'cash') }
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  CASINO STATUS (cash + chips from inventory)
 -- ═══════════════════════════════════════════════════════════════
 
 exports.sunset_core:RegisterCallback('sunset:casino:status', function(source)
@@ -397,6 +560,11 @@ exports.sunset_core:RegisterCallback('sunset:casino:status', function(source)
         dailyLimit = Cfg.dailyLossLimit or 500000,
         minBet = Cfg.minBet or 100,
         maxBet = Cfg.maxBet or 50000,
+        chips = countChips(source),
+        cash = exports.sunset_core:GetMoney(source, 'cash'),
+        drinks = Cfg.barDrinks or {},
+        prizes = Cfg.luckyWheelPrizes or {},
+        wheelCooldownMs = Cfg.luckyWheelCooldownMs or 3600000,
     }
 end)
 

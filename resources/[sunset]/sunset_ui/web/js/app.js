@@ -1313,6 +1313,15 @@ window.addEventListener('message', (event) => {
         case 'casinoRouletteResult':
             if (window.Casino) Casino.updateRoulette(data || event.data.data);
             break;
+        case 'casinoWheelResult':
+            if (window.Casino) Casino.wheelResult(data || event.data.data);
+            break;
+        case 'casinoCashierUpdate':
+            if (window.Casino) Casino.cashierUpdate(data || event.data.data);
+            break;
+        case 'casinoBarUpdate':
+            if (window.Casino) Casino.barUpdate(data || event.data.data);
+            break;
 
         // ═══ IMPOUND ═══
         case 'impoundShow':
