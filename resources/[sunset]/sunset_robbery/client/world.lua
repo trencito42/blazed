@@ -212,26 +212,89 @@ AddEventHandler('onResourceStop', function(res)
     vaultAnim = {}
 end)
 
--- ── Dev inspection: /robdoor — dump vault/door entities near the player ──
-RegisterCommand('robdoor', function()
+-- ── Dev inspection: /robdoor — real world-object inspector ──
+-- Usage: /robdoor [radius]   (default 5m, max 30m)
+-- Scans ALL streamed CObjects within radius, prints full entity details,
+-- highlights likely door candidates, then verifies configured robbery doors.
+RegisterCommand('robdoor', function(source, args)
     local ped = PlayerPedId()
     local pos = GetEntityCoords(ped)
-    print('^3[ROBDOOR]^7 inspecting entities within 5m of player...')
+    local radius = math.min(30.0, math.max(1.0, tonumber(args[1]) or 5.0))
+
+    print(('^3[ROBDOOR]^7 player=(%.2f, %.2f, %.2f) heading=%.2f'):format(pos.x, pos.y, pos.z, GetEntityHeading(ped)))
+    print(('^3[ROBDOOR]^7 scanning CObjects within %.1fm...'):format(radius))
+
+    -- ── Section 1: Raw nearby CObject scan ──
+    local nearby = {}
+    for _, ent in ipairs(GetGamePool('CObject') or {}) do
+        if DoesEntityExist(ent) then
+            local ec = GetEntityCoords(ent)
+            local dist = #(ec - pos)
+            if dist <= radius then
+                nearby[#nearby + 1] = {
+                    ent = ent,
+                    model = GetEntityModel(ent),
+                    x = ec.x, y = ec.y, z = ec.z,
+                    heading = GetEntityHeading(ent),
+                    dist = dist,
+                    collision = GetEntityCollisionEnabled(ent),
+                    frozen = IsEntityPositionFrozen(ent),
+                    networked = NetworkGetEntityIsNetworked(ent),
+                    netId = NetworkGetNetworkIdFromEntity(ent),
+                }
+            end
+        end
+    end
+    -- Sort by distance ascending
+    table.sort(nearby, function(a, b) return a.dist < b.dist end)
+
+    if #nearby == 0 then
+        print('^3[ROBDOOR]^7 no CObjects found within radius')
+    else
+        print(('^3[ROBDOOR]^7 nearby CObjects within %.1fm: %d found'):format(radius, #nearby))
+        for _, o in ipairs(nearby) do
+            -- Highlight likely door candidates: close to any configured door/vault coords
+            local candidate = ''
+            for _, loc in pairs(SunsetRobbery.Locations or {}) do
+                for _, door in ipairs(loc.doors or {}) do
+                    local dc = door.coords
+                    local dToConfig = math.sqrt((o.x - dc.x)^2 + (o.y - dc.y)^2 + (o.z - dc.z)^2)
+                    if dToConfig < 2.0 then
+                        candidate = (' ^2POSSIBLE_MATCH(%s, %.2fm from config)^7'):format(loc.id, dToConfig)
+                    end
+                end
+                if loc.vault then
+                    local vc = loc.vault.coords
+                    local dToVault = math.sqrt((o.x - vc.x)^2 + (o.y - vc.y)^2 + (o.z - vc.z)^2)
+                    if dToVault < 2.0 then
+                        candidate = (' ^2POSSIBLE_MATCH(%s vault, %.2fm from config)^7'):format(loc.id, dToVault)
+                    end
+                end
+            end
+            print(('^3[ROBDOOR]^7 ent=%d model=%d pos=(%.2f,%.2f,%.2f) heading=%.1f dist=%.2f collision=%s frozen=%s networked=%s netId=%d%s'):format(
+                o.ent, o.model, o.x, o.y, o.z, o.heading, o.dist,
+                tostring(o.collision), tostring(o.frozen),
+                tostring(o.networked), o.netId, candidate))
+        end
+    end
+
+    -- ── Section 2: Configured robbery door verification ──
+    print('^3[ROBDOOR]^7 configured robbery doors:')
     for _, loc in pairs(SunsetRobbery.Locations or {}) do
         for _, door in ipairs(loc.doors or {}) do
             local c = door.coords
             local obj = GetClosestObjectOfType(c.x, c.y, c.z, 5.0, door.model, false, false, false)
             if obj ~= 0 and DoesEntityExist(obj) then
                 local ec = GetEntityCoords(obj)
-                print(('^3[ROBDOOR]^7 loc=%s model=%s ent=%d hash=%d pos=(%.2f,%.2f,%.2f) heading=%.2f dist=%.2f collision=%s frozen=%s networked=%s netId=%d unlocked=%s'):format(
-                    loc.id, tostring(door.model), obj, GetEntityModel(obj), ec.x, ec.y, ec.z,
+                print(('^3[ROBDOOR]^7 loc=%s model=%d FOUND ent=%d pos=(%.2f,%.2f,%.2f) heading=%.2f dist=%.2f collision=%s frozen=%s networked=%s netId=%d unlocked=%s'):format(
+                    loc.id, door.model, obj, ec.x, ec.y, ec.z,
                     GetEntityHeading(obj), #(pos - ec),
                     tostring(GetEntityCollisionEnabled(obj)), tostring(IsEntityPositionFrozen(obj)),
                     tostring(NetworkGetEntityIsNetworked(obj)), NetworkGetNetworkIdFromEntity(obj),
                     tostring(doorStates[loc.id] == true)))
             else
-                print(('^3[ROBDOOR]^7 loc=%s model=%s NOT FOUND near (%.2f,%.2f,%.2f)'):format(
-                    loc.id, tostring(door.model), c.x, c.y, c.z))
+                print(('^3[ROBDOOR]^7 loc=%s model=%d NOT FOUND near (%.2f,%.2f,%.2f) — inspect nearby CObjects above'):format(
+                    loc.id, door.model, c.x, c.y, c.z))
             end
         end
         local base = loc.vault and vaultBaseline[loc.id]
