@@ -25,12 +25,14 @@ function TestAgentAuth.enabled()
 end
 
 -- Constant-time string compare to avoid leaking the token via timing.
+-- NOTE: Lua 5.4 (lua54 'yes' in fxmanifest) has NO bit32 library — use the
+-- native bitwise operators instead.
 local function constTimeEquals(a, b)
     if type(a) ~= 'string' or type(b) ~= 'string' then return false end
     if #a ~= #b then return false end
     local diff = 0
     for i = 1, #a do
-        diff = bit32.bor(diff, bit32.bxor(a:byte(i), b:byte(i)))
+        diff = diff | (a:byte(i) ~ b:byte(i))
     end
     return diff == 0
 end
