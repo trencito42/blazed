@@ -56,17 +56,22 @@ CreateThread(function()
     EndTextCommandSetBlipName(hubBlip)
 end)
 
+local isRacingUiOpen = false
+
 openRaceUI = function()
     local status = Sunset.AwaitCallback('sunset:racing:status')
     if not status then
         exports.sunset_ui:Notify('Could not load race status.', 'error')
         return
     end
+    isRacingUiOpen = true
     exports.sunset_ui:Send('racingShow', status)
     exports.sunset_ui:SetFocus(true, true, false, 'racing')
 end
 
 closeRaceUI = function()
+    if not isRacingUiOpen then return end
+    isRacingUiOpen = false
     exports.sunset_ui:Send('racingHide', {})
     exports.sunset_ui:SetFocus(false, false, false, 'racing')
 end
