@@ -237,14 +237,13 @@ function SunsetClothing.buildCatalog(ped, appearance, gender, activeCategoryId)
         maxTexture = textureMax(ped, cat.slot, drawable)
     end
 
-    local categories = {}
-    for _, row in ipairs(SunsetClothing.Categories) do
-        categories[#categories + 1] = {
-            id = row.id,
-            label = row.label,
-            display = row.display,
-            icon = row.icon,
-        }
+    local itemName = SunsetClothing.itemName(cat, drawable)
+    if activeCategoryId == 'undershirt' then
+        local currentTop = appearance.components['11'] and appearance.components['11'].drawable or 0
+        if SunsetClothingRules and SunsetClothingRules.isClosedTop and SunsetClothingRules.isClosedTop(gender, currentTop) then
+            itemName = 'None (Closed Top)'
+            maxDrawable = 15
+        end
     end
 
     return {
@@ -260,7 +259,7 @@ function SunsetClothing.buildCatalog(ped, appearance, gender, activeCategoryId)
         maxTexture = maxTexture,
         -- [CLOTHING UX] Player-friendly names instead of raw drawable numbers:
         -- "Bomber Jacket 032" style. "None" for prop -1.
-        itemName = SunsetClothing.itemName(cat, drawable),
+        itemName = itemName,
         pricePerItem = PRICE_PER_ITEM,
         cartTotal = PRICE_PER_ITEM,
         camera = cat.camera or 'full',

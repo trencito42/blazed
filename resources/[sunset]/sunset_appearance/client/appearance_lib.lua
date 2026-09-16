@@ -197,26 +197,21 @@ end
 function SunsetAppearance.resolveTorso(ped, gender, top, topTexture)
     if TorsoData and TorsoData.getBestTorso then
         local torso, tex = TorsoData.getBestTorso(gender, top, topTexture or 0)
-        if torso then return torso, tex or 0 end
+        if torso and torso >= 0 then return torso, tex or 0, 'besttorso' end
     end
-    return gender == 1 and 14 or 15, 0
+    return (gender == 1 and 14 or 15), 0, 'fallback'
 end
 
 function SunsetAppearance.syncTorso(appearance, ped, gender)
     appearance = appearance or {}
     appearance.components = appearance.components or {}
     local top = appearance.components['11'] or { drawable = 0, texture = 0 }
-    if SunsetClothingRules and SunsetClothingRules.resolveTopSelection then
-        return SunsetClothingRules.resolveTopSelection(appearance, ped, gender, top.drawable, top.texture)
-    elseif SunsetClothingRules and SunsetClothingRules.resolveTopCombo then
-        local torsoD, torsoT, underD, underT, isClosed =
-            SunsetClothingRules.resolveTopCombo(ped, gender, top.drawable, top.texture)
-        appearance.components['3'] = { drawable = torsoD, texture = torsoT }
-        local currentUnder = appearance.components['8']
-        if isClosed or not currentUnder
-            or not SunsetClothingRules.isUndershirtAllowed(gender, top.drawable, currentUnder.drawable) then
-            appearance.components['8'] = { drawable = underD, texture = underT }
-        end
+    local under = appearance.components['8'] or { drawable = 15, texture = 0 }
+    if SunsetClothingRules and SunsetClothingRules.resolveUpperBody then
+        local bundle = SunsetClothingRules.resolveUpperBody(ped, gender, top.drawable, top.texture, under.drawable, under.texture, false)
+        appearance.components['11'] = bundle.top
+        appearance.components['3'] = bundle.torso
+        appearance.components['8'] = bundle.undershirt
         return appearance
     end
     local torso, tex = SunsetAppearance.resolveTorso(ped, gender, top.drawable, top.texture)
@@ -245,7 +240,7 @@ function SunsetAppearance.applyClothes(ped, appearance, gender)
 
     -- 1. Base / Lower body
     applyComp(1) -- mask
-    local d, t = setComponentSafe(ped, 4, math.max(0, c['4'] and c['4'].drawable or 0))
+    local d, t = setComponentSafe(ped, 4, math.max(0, c['4'] and c['4'].drawable or 0), c['4'] and c['4'].texture or 0)
     if c['4'] then c['4'].drawable, c['4'].texture = d, t end
     applyComp(6) -- shoes
 

@@ -50,7 +50,7 @@ local function printCompatEntry()
         genderKey, top, topTex, torso, torsoTex))
 end
 
--- [CLOTHING LAB] Coverage report: how many tops have besttorso data
+-- [CLOTHING LAB] Coverage report: how many tops have usable mapping data
 local function reportCoverage()
     local ped = PlayerPedId()
     local char = exports.sunset_core:GetCharacter()
@@ -59,31 +59,41 @@ local function reportCoverage()
     local maxTop = GetNumberOfPedDrawableVariations(ped, 11) - 1
 
     local bank = (gender == 1) and TorsoData.female or TorsoData.male
-    local mapped = 0
-    local unmapped = {}
+    local overrides = SunsetClothingRules.Overrides[genderKey] or {}
+
+    local countOverride = 0
+    local countBestTorso = 0
+    local countFallback = 0
+
     for d = 0, maxTop do
-        local entry = bank[tostring(d)] or bank[d]
-        if entry then
-            mapped = mapped + 1
+        if overrides[d] then
+            countOverride = countOverride + 1
         else
-            unmapped[#unmapped + 1] = d
+            local topEntry = bank[tostring(d)] or bank[d]
+            local hasUsable = false
+            if topEntry then
+                for _, texVal in pairs(topEntry) do
+                    if type(texVal) == 'table' and texVal.BestTorsoDrawable and texVal.BestTorsoDrawable >= 0 then
+                        hasUsable = true
+                        break
+                    end
+                end
+            end
+            if hasUsable then
+                countBestTorso = countBestTorso + 1
+            else
+                countFallback = countFallback + 1
+            end
         end
     end
 
-    print(('^2[clothinglab] COVERAGE^7 gender=%s maxTop=%d mapped=%d unmapped=%d (%.1f%%)'):format(
-        genderKey, maxTop, mapped, #unmapped, (mapped / math.max(1, maxTop + 1)) * 100))
-    if #unmapped > 0 and #unmapped <= 30 then
-        print(('  Unmapped tops: %s'):format(table.concat(unmapped, ', ')))
-    elseif #unmapped > 30 then
-        print(('  Unmapped tops (first 30): %s ... (+%d more)'):format(
-            table.concat(unmapped, ', ', 1, 30), #unmapped - 30))
-    end
-
-    -- Overrides count
-    local ovCount = 0
-    local ovBank = SunsetClothingRules.Overrides[genderKey] or {}
-    for _ in pairs(ovBank) do ovCount = ovCount + 1 end
-    print(('  Authored overrides: %d'):format(ovCount))
+    local total = maxTop + 1
+    local totalMapped = countOverride + countBestTorso
+    print(('^2[clothinglab] COVERAGE^7 gender=%s maxTop=%d totalTops=%d'):format(genderKey, maxTop, total))
+    print(('  - Authored Overrides: %d (%.1f%%)'):format(countOverride, (countOverride / total) * 100))
+    print(('  - Usable BestTorso:    %d (%.1f%%)'):format(countBestTorso, (countBestTorso / total) * 100))
+    print(('  - Gender Fallback:     %d (%.1f%%)'):format(countFallback, (countFallback / total) * 100))
+    print(('  - Total Valid Mapped:  %d / %d (%.1f%%)'):format(totalMapped, total, (totalMapped / total) * 100))
 end
 
 -- [CLOTHING LAB] Validate current outfit and optionally repair
@@ -98,22 +108,34 @@ local function validateAndRepair(repair)
     local actualTorso = GetPedDrawableVariation(ped, 3)
     local actualTorsoTex = GetPedTextureVariation(ped, 3)
     local actualUnder = GetPedDrawableVariation(ped, 8)
+    local actualUnderTex = GetPedTextureVariation(ped, 8)
 
-    local expectedTorso, expectedTorsoTex, expectedUnder, expectedUnderTex =
-        SunsetClothingRules.resolveTopCombo(ped, gender, top, topTex)
+    local bundle = SunsetClothingRules.resolveUpperBody(ped, gender, top, topTex, actualUnder, actualUnderTex, false)
 
-    print(('^3[clothinglab] VALIDATE^7 top=(%d,%d)'):format(top, topTex))
-    print(('  Actual:   torso=(%d,%d) undershirt=(%d)'):format(actualTorso, actualTorsoTex, actualUnder))
-    print(('  Expected: torso=(%d,%d) undershirt=(%d)'):format(expectedTorso, expectedTorsoTex, expectedUnder))
+    local expectedTorso = bundle.torso.drawable
+    local expectedTorsoTex = bundle.torso.texture
+    local expectedUnder = bundle.undershirt.drawable
+    local expectedUnderTex = bundle.undershirt.texture
 
-    local valid = actualTorso == expectedTorso and actualUnder == expectedUnder
+    local torsoValid = (actualTorso == expectedTorso and actualTorsoTex == expectedTorsoTex)
+    local underValid = SunsetClothingRules.isUndershirtAllowed(gender, top, actualUnder)
+
+    print(('^3[clothinglab] VALIDATE^7 top=(%d,%d) source=%s'):format(top, topTex, bundle.source))
+    print(('  Actual:   torso=(%d,%d) undershirt=(%d,%d)'):format(actualTorso, actualTorsoTex, actualUnder, actualUnderTex))
+    print(('  Expected: torso=(%d,%d) undershirt=(%d,%d)'):format(expectedTorso, expectedTorsoTex, expectedUnder, expectedUnderTex))
+
+    local valid = torsoValid and underValid
     if valid then
         print('^2[clothinglab] STATUS: VALID^7')
     else
-        print('^1[clothinglab] STATUS: INVALID^7')
+        print(('^1[clothinglab] STATUS: INVALID (torsoValid=%s, underValid=%s)^7'):format(tostring(torsoValid), tostring(underValid)))
         if repair then
-            SetPedComponentVariation(ped, 3, expectedTorso, expectedTorsoTex, 2)
-            SetPedComponentVariation(ped, 8, expectedUnder, expectedUnderTex, 2)
+            if not torsoValid then
+                SetPedComponentVariation(ped, 3, expectedTorso, expectedTorsoTex, 2)
+            end
+            if not underValid then
+                SetPedComponentVariation(ped, 8, expectedUnder, expectedUnderTex, 2)
+            end
             print('^2[clothinglab] REPAIR APPLIED^7')
         end
     end
@@ -209,7 +231,7 @@ RegisterCommand('clothingdebug', function()
     ExecuteCommand('clothinglab')
 end, false)
 
--- Standalone validate command (no lab mode needed)
+-- Standalone validate command
 RegisterCommand('validateoutfit', function()
     CreateThread(function()
         local ok = Sunset.AwaitCallback('sunset:clothing:debug')
@@ -232,7 +254,7 @@ RegisterCommand('repairoutfit', function()
     end)
 end, false)
 
--- [CLOTHING TEST SUITE] Automated verification across tops, torsos, and undershirts
+-- [CLOTHING TEST SUITE] Comprehensive automated acceptance test suite
 RegisterCommand('clothingtest', function(source, args)
     CreateThread(function()
         local ok = Sunset.AwaitCallback('sunset:clothing:debug')
@@ -263,8 +285,11 @@ RegisterCommand('clothingtest', function(source, args)
         local failed = 0
         local issues = {}
 
+        -- Test 1: Start with a long sleeve undershirt (8=0 or 8=1), cycle tops -> verify no stale undershirt survives
         for top = 0, count do
             local testApp = SunsetClothing.normalizeWardrobe(baseAppearance, gender)
+            -- Simulate prior outfit with long sleeve undershirt (drawable 0)
+            testApp.components['8'] = { drawable = 0, texture = 0 }
             testApp = SunsetClothing.setCategorySelection(testApp, ped, gender, 'top', top, 0)
 
             local torso = testApp.components['3'] and testApp.components['3'].drawable
@@ -278,10 +303,27 @@ RegisterCommand('clothingtest', function(source, args)
                 issues[#issues + 1] = ('Top %03d: Invalid undershirt (%s)'):format(top, tostring(under))
             elseif not SunsetClothingRules.isUndershirtAllowed(gender, top, under) then
                 failed = failed + 1
-                issues[#issues + 1] = ('Top %03d: Incompatible undershirt retained (%d)'):format(top, under)
+                issues[#issues + 1] = ('Top %03d: Stale/incompatible undershirt retained (%d)'):format(top, under)
             else
                 passed = passed + 1
             end
+        end
+
+        -- Test 2: Specific check for Top 27
+        local top27App = SunsetClothing.normalizeWardrobe(baseAppearance, gender)
+        top27App = SunsetClothing.setCategorySelection(top27App, ped, gender, 'top', 27, 0)
+        if top27App.components['3'].drawable == 1 then
+            failed = failed + 1
+            issues[#issues + 1] = 'Top 027: Torso is 1 (clipping white sleeves); must be 0.'
+        end
+
+        -- Test 3: Specific check for Top 44
+        local top44App = SunsetClothing.normalizeWardrobe(baseAppearance, gender)
+        top44App.components['8'] = { drawable = 0, texture = 0 }
+        top44App = SunsetClothing.setCategorySelection(top44App, ped, gender, 'top', 44, 0)
+        if top44App.components['8'].drawable ~= 15 then
+            failed = failed + 1
+            issues[#issues + 1] = ('Top 044: Undershirt is %d; must be 15 None.'):format(top44App.components['8'].drawable)
         end
 
         -- Restore original appearance
@@ -295,7 +337,7 @@ RegisterCommand('clothingtest', function(source, args)
             end
             exports.sunset_ui:Notify(('Clothing test completed: %d failed'):format(failed), 'error')
         else
-            print('^2[clothingtest] ALL CLOTHING COMPATIBILITY CHECKS PASSED!^7')
+            print('^2[clothingtest] ALL CLOTHING COMPATIBILITY ACCEPTANCE TESTS PASSED!^7')
             exports.sunset_ui:Notify('All clothing compatibility checks passed!', 'success')
         end
     end)
