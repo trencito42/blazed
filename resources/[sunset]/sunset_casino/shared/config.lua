@@ -32,15 +32,13 @@ SunsetCasino.Config = {
         vector3(1135.13, 256.70, -52.04),
     },
     rouletteTables = {
-        vector3(1134.40, 266.80, -51.04),
-        vector3(1150.00, 251.20, -51.84),
+        vector3(1135.06, 242.50, -50.07),
+        vector3(1111.93, 201.87, -49.94),
     },
-    rouletteTable = vector3(1134.40, 266.80, -51.04),
+    rouletteTable = vector3(1135.06, 242.50, -50.07),
 
-    -- ── LUCKY WHEEL (frame exists baked in IPL at 1115.5, 248.5) ──
-    -- The prize disc does NOT exist as a spawnable prop on this build.
-    -- We use a NUI wheel overlay for the spin animation.
-    luckyWheel = vector3(1115.50, 248.50, -49.80),
+    -- ── LUCKY WHEEL (physical prop & podium at 1111.05, 229.85) ──
+    luckyWheel = vector3(1111.05, 228.70, -49.85),
 
     -- ── CASHIER (cash ↔ chips) ──
     cashier = vector3(1116.03, 219.69, -49.44),
