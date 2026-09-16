@@ -25,6 +25,29 @@ local function routePoint(session, key)
     return vector3(point.x, point.y, point.z)
 end
 
+local function draw3DText(coords, text)
+    local onScreen, sx, sy = World3dToScreen2d(coords.x, coords.y, coords.z + 1.2)
+    if not onScreen then return end
+    SetTextScale(0.35, 0.35)
+    SetTextFont(4)
+    SetTextProportional(1)
+    SetTextColour(255, 255, 255, 220)
+    SetTextEntry('STRING')
+    SetTextCentre(1)
+    AddTextComponentString(text)
+    DrawText(sx, sy)
+end
+
+local function drawTruckerMarker(coords, r, g, b)
+    if not coords then return end
+    -- Large ground cylinder for truck
+    DrawMarker(1, coords.x, coords.y, coords.z - 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        5.0, 5.0, 1.5, r or 46, g or 204, b or 113, 160, false, false, 2, false, nil, nil, false)
+    -- Floating chevron marker visible from distance
+    DrawMarker(0, coords.x, coords.y, coords.z + 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        1.5, 1.5, 1.2, r or 46, g or 204, b or 113, 180, false, false, 2, false, nil, nil, false)
+end
+
 local function inWorkTruck()
     local ped = PlayerPedId()
     if not IsPedInAnyVehicle(ped, false) then return false end
@@ -175,7 +198,10 @@ local function startTrucker(selectedRouteIdx)
 
     -- Cargo is loaded at spawn — go straight to delivery
     local delivery = vector3(data.delivery.x, data.delivery.y, data.delivery.z)
-    JC.addBlip(delivery, { sprite = 478, color = 2 }, 'Delivery')
+    JC.clearBlips()
+    local delivBlip = JC.addBlip(delivery, { sprite = 478, color = 2, scale = 0.95 }, 'Delivery: ' .. (data.label or 'Cargo'))
+    SetBlipRoute(delivBlip, true)
+    SetBlipRouteColour(delivBlip, 2)
     JC.setWaypoint(data.delivery)
     JC.showObjective('Deliver cargo', 'Follow the GPS to: ' .. (data.label or 'destination'), 30)
     JC.notify('Deliver to: ' .. (data.label or 'destination') .. '. Follow the map.', 'info', 8000)
@@ -190,7 +216,14 @@ local function startTrucker(selectedRouteIdx)
             if stage == 'to_delivery' then
                 local d = routePoint(session, 'delivery')
                 if d then
-                    JC.drawMarker(d, 46, 204, 113)
+                    local ppos = GetEntityCoords(PlayerPedId())
+                    local distToDeliv = #(ppos - d)
+                    if distToDeliv <= 150.0 then
+                        drawTruckerMarker(d, 46, 204, 113)
+                        if distToDeliv <= 35.0 then
+                            draw3DText(d, '[E] Deliver Cargo')
+                        end
+                    end
                     if isNearTruckerPoint(d, cfg) and inWorkTruck() and not busy then
                         JC.showHelp('Press ~INPUT_CONTEXT~ to deliver cargo')
                         if IsControlJustPressed(0, 38) then
@@ -201,7 +234,9 @@ local function startTrucker(selectedRouteIdx)
                                 JC.sessionData = JC.sessionData or {}
                                 JC.sessionData.stage = result.stage or 'return_depot'
                                 JC.clearBlips()
-                                JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
+                                local depBlip = JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
+                                SetBlipRoute(depBlip, true)
+                                SetBlipRouteColour(depBlip, 3)
                                 JC.setWaypoint(cfg.depot.coords)
                                 JC.showObjective('Return the truck', 'Drive back to the depot', 90)
                                 local bonusStr = (result.bonusPct and result.bonusPct > 0)
@@ -215,7 +250,14 @@ local function startTrucker(selectedRouteIdx)
                     end
                 end
             elseif stage == 'return_depot' then
-                JC.drawMarker(cfg.depot.coords, 52, 152, 219)
+                local ppos = GetEntityCoords(PlayerPedId())
+                local distToDepot = #(ppos - cfg.depot.coords)
+                if distToDepot <= 150.0 then
+                    drawTruckerMarker(cfg.depot.coords, 52, 152, 219)
+                    if distToDepot <= 35.0 then
+                        draw3DText(cfg.depot.coords, '[E] Return Truck')
+                    end
+                end
                 if JC.isNear(cfg.depot.coords, cfg.returnRadius or 25.0) and inWorkTruck() and not busy then
                     JC.showHelp('Press ~INPUT_CONTEXT~ to return the truck')
                     if IsControlJustPressed(0, 38) then
