@@ -199,6 +199,19 @@ AddEventHandler('onResourceStop', function(res)
     if hubBlip and DoesBlipExist(hubBlip) then RemoveBlip(hubBlip) end
 end)
 
+-- ── Ground snapping helper ──
+local function getGroundCoords(cp)
+    if not cp then return cp end
+    local found, groundZ = GetGroundZFor_3dCoord(cp.x, cp.y, cp.z + 50.0, false)
+    if not found then
+        found, groundZ = GetGroundZFor_3dCoord(cp.x, cp.y, cp.z + 150.0, false)
+    end
+    if found then
+        return vector3(cp.x, cp.y, groundZ)
+    end
+    return cp
+end
+
 -- ── Checkpoint proximity detection & 3D markers ──
 CreateThread(function()
     while true do
@@ -210,17 +223,22 @@ CreateThread(function()
             local cp = raceData.checkpoints[currentCheckpoint]
 
             if cp then
-                local dist = #(coords - cp)
-                if dist < 300.0 then
-                    -- 3D Checkpoint cylinder
-                    DrawMarker(1, cp.x, cp.y, cp.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        10.0, 10.0, 3.5, 241, 196, 15, 160, false, false, 2, false, nil, nil, false)
+                local markerPos = getGroundCoords(cp)
+                local dx, dy = coords.x - cp.x, coords.y - cp.y
+                local hDist = math.sqrt(dx * dx + dy * dy)
+                if hDist < 350.0 then
+                    -- 3D Checkpoint ground ring
+                    DrawMarker(1, markerPos.x, markerPos.y, markerPos.z - 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        12.0, 12.0, 2.5, 241, 196, 15, 170, false, false, 2, false, nil, nil, false)
+                    -- Tall vertical beacon column beam
+                    DrawMarker(1, markerPos.x, markerPos.y, markerPos.z - 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        3.0, 3.0, 30.0, 241, 196, 15, 65, false, false, 2, false, nil, nil, false)
                     -- Floating chevron arrow
-                    DrawMarker(0, cp.x, cp.y, cp.z + 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    DrawMarker(0, markerPos.x, markerPos.y, markerPos.z + 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         2.5, 2.5, 2.0, 241, 196, 15, 220, false, false, 2, false, nil, nil, false)
                 end
 
-                if not checkpointPending and dist < (Cfg.checkpointRadius or 25.0) then
+                if not checkpointPending and hDist < (Cfg.checkpointRadius or 30.0) and math.abs(coords.z - markerPos.z) < 20.0 then
                     checkpointPending = true
                     TriggerServerEvent('sunset:racing:checkpoint', currentCheckpoint, raceData.raceId)
                     -- Timeout: if no ACK within 3s, allow retry (handles lost UDP)

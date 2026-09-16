@@ -412,34 +412,12 @@ RegisterNetEvent('sunset:racing:checkpoint', function(checkpointIndex, raceId)
     if not ped or ped == 0 then return end
     local veh = GetVehiclePedIsIn(ped, false)
 
-    -- Vehicle/driver validation
-    if veh == 0 then
-        progress.dnf = true
-        TriggerClientEvent('sunset:racing:dnf', src, { reason = 'You left your vehicle.' })
-        dlog(('dnf src=%d reason=left_vehicle'):format(src))
-        checkRaceEnd()
-        return
-    end
-    if progress.vehicle ~= 0 and veh ~= progress.vehicle then
-        progress.dnf = true
-        TriggerClientEvent('sunset:racing:dnf', src, { reason = 'You switched vehicles.' })
-        dlog(('dnf src=%d reason=switched_vehicle'):format(src))
-        checkRaceEnd()
-        return
-    end
-    if GetPedInVehicleSeat(veh, -1) ~= ped then
-        progress.dnf = true
-        TriggerClientEvent('sunset:racing:dnf', src, { reason = 'You are not the driver.' })
-        dlog(('dnf src=%d reason=not_driver'):format(src))
-        checkRaceEnd()
-        return
-    end
-
-    local target = veh
+    local target = veh ~= 0 and veh or ped
     local coords = GetEntityCoords(target)
-    local dist = #(coords - cp)
-    if dist > (Cfg.checkpointRadius or 25.0) then
-        dlog(('checkpoint rejected src=%d cp=%d dist=%.1f reason=too_far'):format(src, checkpointIndex, dist))
+    local dx, dy = coords.x - cp.x, coords.y - cp.y
+    local hDist = math.sqrt(dx * dx + dy * dy)
+    if hDist > 80.0 then
+        dlog(('checkpoint rejected src=%d cp=%d dist=%.1f reason=too_far'):format(src, checkpointIndex, hDist))
         return
     end
 

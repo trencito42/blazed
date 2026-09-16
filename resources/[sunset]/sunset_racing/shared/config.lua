@@ -44,46 +44,54 @@ SunsetRacing.Config = {
         {
             id = 'downtown',
             label = 'Downtown Sprint',
-            description = 'Fast city circuit through Downtown LS',
+            description = 'Fast city circuit through South LS and Downtown',
             start = vector3(-1060.00, -2580.00, 20.00),
             checkpoints = {
-                vector3(-800.00, -2400.00, 14.00),
-                vector3(-500.00, -2200.00, 10.00),
-                vector3(-300.00, -1800.00, 10.00),
-                vector3(-400.00, -1400.00, 12.00),
-                vector3(-600.00, -1600.00, 14.00),
-                vector3(-800.00, -2000.00, 16.00),
-                vector3(-1060.00, -2580.00, 20.00),  -- finish at hub
-            },
-        },
-        {
-            id = 'vinewood',
-            label = 'Vinewood Hills',
-            description = 'Winding roads through the hills',
-            start = vector3(-1060.00, -2580.00, 20.00),
-            checkpoints = {
-                vector3(-800.00, -2400.00, 14.00),
-                vector3(-500.00, -2000.00, 20.00),
-                vector3(-300.00, -1500.00, 40.00),
-                vector3(-200.00, -1000.00, 80.00),
-                vector3(-400.00, -800.00, 100.00),
-                vector3(-700.00, -1200.00, 60.00),
-                vector3(-900.00, -1800.00, 30.00),
-                vector3(-1060.00, -2580.00, 20.00),  -- finish at hub
+                vector3(-1060.00, -2390.00, 14.00),  -- Dutch London St North
+                vector3(-1040.00, -2000.00, 13.20),  -- Dutch London St / Signal St
+                vector3(-920.00, -1530.00, 5.20),    -- Innocence Blvd entrance
+                vector3(-500.00, -1250.00, 14.50),   -- Strawberry Ave / Innocence
+                vector3(-100.00, -1000.00, 29.30),   -- Legion Square / Olympic on-ramp
+                vector3(150.00, -1100.00, 29.20),    -- Olympic Fwy heading West
+                vector3(-200.00, -1450.00, 31.00),   -- Olympic Fwy overpass
+                vector3(-600.00, -1950.00, 10.00),   -- La Puerta Fwy South
+                vector3(-900.00, -2350.00, 14.00),   -- Dutch London St approach
+                vector3(-1060.00, -2580.00, 20.00),  -- Finish line at hub
             },
         },
         {
             id = 'airport',
-            label = 'Airport Run',
-            description = 'High-speed run to the airport and back',
+            label = 'Airport High-Speed',
+            description = 'High-speed loop around Los Santos International Airport',
             start = vector3(-1060.00, -2580.00, 20.00),
             checkpoints = {
-                vector3(-1200.00, -2800.00, 14.00),
-                vector3(-1400.00, -3000.00, 13.00),
-                vector3(-1600.00, -3200.00, 13.00),
-                vector3(-1400.00, -3000.00, 13.00),
-                vector3(-1200.00, -2800.00, 14.00),
-                vector3(-1060.00, -2580.00, 20.00),  -- finish at hub
+                vector3(-1080.00, -2650.00, 19.80),  -- Exit LS Customs towards Greenwich
+                vector3(-1200.00, -2800.00, 13.90),  -- Greenwich Parkway Westbound
+                vector3(-1450.00, -2950.00, 13.90),  -- Exceptionalist Way / Airport approach
+                vector3(-1600.00, -3150.00, 13.90),  -- LSIA Terminal Loop entrance
+                vector3(-1400.00, -3250.00, 13.90),  -- LSIA Lower Terminal drive
+                vector3(-1150.00, -3150.00, 13.90),  -- LSIA Terminal Loop exit
+                vector3(-1000.00, -2950.00, 13.90),  -- New Empire Way Northbound
+                vector3(-1030.00, -2700.00, 19.50),  -- Approaching Hub
+                vector3(-1060.00, -2580.00, 20.00),  -- Finish line at hub
+            },
+        },
+        {
+            id = 'vinewood',
+            label = 'Vinewood Boulevard',
+            description = 'Sprint from docks through the heart of Vinewood and back',
+            start = vector3(-1060.00, -2580.00, 20.00),
+            checkpoints = {
+                vector3(-1060.00, -2390.00, 14.00),  -- Dutch London North
+                vector3(-800.00, -1800.00, 15.00),   -- La Puerta Freeway North
+                vector3(-500.00, -1000.00, 24.00),   -- San Andreas Blvd
+                vector3(-250.00, -400.00, 44.00),    -- Alta St / Hawick
+                vector3(100.00, 200.00, 88.00),      -- Vinewood Blvd East
+                vector3(350.00, 0.00, 75.00),        -- Power St Southbound
+                vector3(200.00, -800.00, 31.00),     -- Olympic Freeway on-ramp
+                vector3(-400.00, -1500.00, 18.00),   -- La Puerta Southbound
+                vector3(-850.00, -2200.00, 14.00),   -- Dutch London approach
+                vector3(-1060.00, -2580.00, 20.00),  -- Finish line at hub
             },
         },
     },
