@@ -126,6 +126,28 @@ local function openPanel(shop)
     SetNuiFocus(true, true)
     exports.sunset_ui:Send('tuningUiOpen', {})
 
+local function visualAvailability(veh)
+    SetVehicleModKit(veh, 0)
+    return {
+        spoiler = math.max(0, GetNumVehicleMods(veh, 0)),
+        frontBumper = math.max(0, GetNumVehicleMods(veh, 1)),
+        rearBumper = math.max(0, GetNumVehicleMods(veh, 2)),
+        sideSkirt = math.max(0, GetNumVehicleMods(veh, 3)),
+        exhaust = math.max(0, GetNumVehicleMods(veh, 4)),
+        rollCage = math.max(0, GetNumVehicleMods(veh, 5)),
+        grille = math.max(0, GetNumVehicleMods(veh, 6)),
+        hood = math.max(0, GetNumVehicleMods(veh, 7)),
+        leftFender = math.max(0, GetNumVehicleMods(veh, 8)),
+        rightFender = math.max(0, GetNumVehicleMods(veh, 9)),
+        roof = math.max(0, GetNumVehicleMods(veh, 10)),
+        wheels = math.max(0, GetNumVehicleMods(veh, 23)),
+        livery = math.max(GetNumVehicleMods(veh, 48), GetVehicleLiveryCount(veh)),
+        windowTint = 6,
+        neon = true,
+        xenon = true,
+    }
+end
+
     sendUi('open', {
         tune = draftTune,
         cosmetics = draftCosmetics,
@@ -143,6 +165,7 @@ local function openPanel(shop)
         stages = SunsetTuning.Stages,
         exhaustModes = SunsetTuning.ExhaustModes,
         hardwareAvailability = hardwareAvailability(veh),
+        visualAvailability = visualAvailability(veh),
         hardwareSlots = SunsetTuning.HardwareSlots,
         featureCosts = SunsetTuning.FeatureCosts,
     })

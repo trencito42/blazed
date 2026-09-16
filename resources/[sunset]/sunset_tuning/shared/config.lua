@@ -344,10 +344,39 @@ function SunsetTuning.CalculateInstallCost(oldRaw, newRaw, oldCosmetics, newCosm
     local oldCos = SunsetTuning.SanitizeCosmetics(oldCosmetics)
     local newCos = SunsetTuning.SanitizeCosmetics(newCosmetics)
     if not sameRgb(oldCos.primary, newCos.primary) or not sameRgb(oldCos.secondary, newCos.secondary)
-        or oldCos.pearl ~= newCos.pearl or oldCos.wheel ~= newCos.wheel then
+        or oldCos.pearl ~= newCos.pearl or oldCos.wheel ~= newCos.wheel or oldCos.windowTint ~= newCos.windowTint then
         cost = cost + feature.cosmetics
     end
     if newCos.plateText ~= '' and newCos.plateText ~= oldCos.plateText then cost = cost + feature.vanityPlate end
+
+    -- Neons cost
+    if newCos.neon and newCos.neon.enabled and not (oldCos.neon and oldCos.neon.enabled) then
+        cost = cost + 500
+    elseif newCos.neon and newCos.neon.enabled and not sameRgb(oldCos.neon.color, newCos.neon.color) then
+        cost = cost + 150
+    end
+
+    -- Xenon cost
+    if newCos.xenon and not oldCos.xenon then
+        cost = cost + 350
+    elseif newCos.xenon and newCos.xenonColor ~= oldCos.xenonColor then
+        cost = cost + 100
+    end
+
+    -- Wheels cost
+    if newCos.wheelType ~= oldCos.wheelType or (newCos.mods and oldCos.mods and newCos.mods.wheels ~= oldCos.mods.wheels) then
+        cost = cost + 400
+    end
+
+    -- Visual body mods cost
+    if newCos.mods and oldCos.mods then
+        for k, v in pairs(newCos.mods) do
+            if k ~= 'wheels' and v ~= oldCos.mods[k] then
+                cost = cost + 250
+            end
+        end
+    end
+
     return math.max(0, math.floor(cost))
 end
 
@@ -358,6 +387,33 @@ function SunsetTuning.DefaultCosmetics()
         pearl = 0,
         wheel = 0,
         plateText = '',
+        windowTint = 0,
+        xenon = false,
+        xenonColor = 0,
+        neon = {
+            enabled = false,
+            front = true,
+            back = true,
+            left = true,
+            right = true,
+            color = { r = 0, g = 150, b = 255 },
+        },
+        wheelType = 0,
+        mods = {
+            spoiler = -1,
+            frontBumper = -1,
+            rearBumper = -1,
+            sideSkirt = -1,
+            exhaust = -1,
+            rollCage = -1,
+            grille = -1,
+            hood = -1,
+            leftFender = -1,
+            rightFender = -1,
+            roof = -1,
+            wheels = -1,
+            livery = -1,
+        },
     }
 end
 
@@ -374,11 +430,45 @@ function SunsetTuning.SanitizeCosmetics(raw)
     end
     local plate = tostring(raw.plateText or ''):upper():gsub('[^A-Z0-9]', '')
     if #plate > 8 then plate = plate:sub(1, 8) end
+
+    local rawNeon = type(raw.neon) == 'table' and raw.neon or {}
+    local neon = {
+        enabled = rawNeon.enabled == true,
+        front = rawNeon.front ~= false,
+        back = rawNeon.back ~= false,
+        left = rawNeon.left ~= false,
+        right = rawNeon.right ~= false,
+        color = rgb(rawNeon.color, def.neon.color),
+    }
+
+    local rawMods = type(raw.mods) == 'table' and raw.mods or {}
+    local mods = {
+        spoiler = math.max(-1, math.min(100, math.floor(tonumber(rawMods.spoiler) or def.mods.spoiler))),
+        frontBumper = math.max(-1, math.min(100, math.floor(tonumber(rawMods.frontBumper) or def.mods.frontBumper))),
+        rearBumper = math.max(-1, math.min(100, math.floor(tonumber(rawMods.rearBumper) or def.mods.rearBumper))),
+        sideSkirt = math.max(-1, math.min(100, math.floor(tonumber(rawMods.sideSkirt) or def.mods.sideSkirt))),
+        exhaust = math.max(-1, math.min(100, math.floor(tonumber(rawMods.exhaust) or def.mods.exhaust))),
+        rollCage = math.max(-1, math.min(100, math.floor(tonumber(rawMods.rollCage) or def.mods.rollCage))),
+        grille = math.max(-1, math.min(100, math.floor(tonumber(rawMods.grille) or def.mods.grille))),
+        hood = math.max(-1, math.min(100, math.floor(tonumber(rawMods.hood) or def.mods.hood))),
+        leftFender = math.max(-1, math.min(100, math.floor(tonumber(rawMods.leftFender) or def.mods.leftFender))),
+        rightFender = math.max(-1, math.min(100, math.floor(tonumber(rawMods.rightFender) or def.mods.rightFender))),
+        roof = math.max(-1, math.min(100, math.floor(tonumber(rawMods.roof) or def.mods.roof))),
+        wheels = math.max(-1, math.min(250, math.floor(tonumber(rawMods.wheels) or def.mods.wheels))),
+        livery = math.max(-1, math.min(100, math.floor(tonumber(rawMods.livery) or def.mods.livery))),
+    }
+
     return {
         primary = rgb(raw.primary, def.primary),
         secondary = rgb(raw.secondary, def.secondary),
         pearl = math.max(0, math.min(160, math.floor(tonumber(raw.pearl) or def.pearl))),
         wheel = math.max(0, math.min(160, math.floor(tonumber(raw.wheel) or def.wheel))),
         plateText = plate,
+        windowTint = math.max(0, math.min(6, math.floor(tonumber(raw.windowTint) or def.windowTint))),
+        xenon = raw.xenon == true,
+        xenonColor = math.max(0, math.min(12, math.floor(tonumber(raw.xenonColor) or def.xenonColor))),
+        neon = neon,
+        wheelType = math.max(0, math.min(12, math.floor(tonumber(raw.wheelType) or def.wheelType))),
+        mods = mods,
     }
 end

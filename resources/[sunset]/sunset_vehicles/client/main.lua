@@ -819,12 +819,20 @@ local function spawnOwnedVehicleEntity(vehData, spawnOpts)
         SetVehicleColours(vehicle, tonumber(spawnProps.color1) or 0, tonumber(spawnProps.color2) or 0)
     end
     local cosmetics = spawnProps and spawnProps.cosmetics
-    if type(cosmetics) == 'table' and cosmetics.primary then
-        SetVehicleModColor_1(vehicle, 0)
-        SetVehicleModColor_2(vehicle, 0)
-        SetVehicleCustomPrimaryColour(vehicle, cosmetics.primary.r or 0, cosmetics.primary.g or 0, cosmetics.primary.b or 0)
-        SetVehicleCustomSecondaryColour(vehicle, cosmetics.secondary.r or 111, cosmetics.secondary.g or 111, cosmetics.secondary.b or 111)
-        if cosmetics.pearl then SetVehicleExtraColours(vehicle, cosmetics.pearl or 0, cosmetics.wheel or 0) end
+    if type(cosmetics) == 'table' then
+        if GetResourceState('sunset_tuning') == 'started' then
+            pcall(function() exports.sunset_tuning:ApplyCosmetics(vehicle, cosmetics, false) end)
+        else
+            SetVehicleModColor_1(vehicle, 0)
+            SetVehicleModColor_2(vehicle, 0)
+            if cosmetics.primary then
+                SetVehicleCustomPrimaryColour(vehicle, cosmetics.primary.r or 0, cosmetics.primary.g or 0, cosmetics.primary.b or 0)
+            end
+            if cosmetics.secondary then
+                SetVehicleCustomSecondaryColour(vehicle, cosmetics.secondary.r or 111, cosmetics.secondary.g or 111, cosmetics.secondary.b or 111)
+            end
+            if cosmetics.pearl then SetVehicleExtraColours(vehicle, cosmetics.pearl or 0, cosmetics.wheel or 0) end
+        end
     end
     Wait(50)
     SetVehicleEngineHealth(vehicle, vehEngine)
@@ -844,6 +852,9 @@ local function spawnOwnedVehicleEntity(vehData, spawnOpts)
             exports.sunset_tuning:CaptureModelBaseline(vehicle)
             if props and props.ecu and not exports.sunset_tuning:FormatVehicleInfo(props.ecu).stock then
                 exports.sunset_tuning:ApplyTune(vehicle, props.ecu, false, vehData.model)
+            end
+            if cosmetics then
+                exports.sunset_tuning:ApplyCosmetics(vehicle, cosmetics, false)
             end
         end)
     end

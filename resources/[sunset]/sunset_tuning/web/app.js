@@ -15,11 +15,12 @@ const TOTAL_SEGMENTS = 10;
 let tune = null;
 let cosmetics = null;
 let costs = { save: 750, flash: 150, dyno: 250 };
-let activeTab = 'powertrain';
+let activeTab = 'overview';
 let activePartId = null;
 let hasSavedMap = false;
 let previewDirty = false;
 let hardwareAvailability = {};
+let visualAvailability = {};
 let previewTimer = 0;
 let hardwareSlots = {};
 let featureCosts = {};
@@ -36,7 +37,10 @@ const categories = [
     { id: 'turbo', label: 'Turbo & ECU', icon: 'ph-fill ph-wind' },
     { id: 'handling', label: 'Handling', icon: 'ph-bold ph-steering-wheel' },
     { id: 'exhaust', label: 'Exhaust', icon: 'ph-bold ph-speaker-high' },
-    { id: 'visual', label: 'Visual', icon: 'ph-bold ph-palette' },
+    { id: 'bodykit', label: 'Body & Aero', icon: 'ph-bold ph-shield' },
+    { id: 'lighting', label: 'Neons & Lights', icon: 'ph-bold ph-sparkle' },
+    { id: 'wheels', label: 'Wheels & Rims', icon: 'ph-bold ph-circle' },
+    { id: 'visual', label: 'Paint & Tint', icon: 'ph-bold ph-palette' },
     { id: 'dyno', label: 'Dyno', icon: 'ph-bold ph-gauge' },
     { id: 'special', label: 'Special', icon: 'ph-bold ph-fire' },
 ];
@@ -50,10 +54,98 @@ const categoryTitles = {
     turbo: 'Turbo & ECU Map',
     handling: 'Handling Tuning',
     exhaust: 'Exhaust Profile',
-    visual: 'Paint & Plate',
-    dyno: 'Dyno',
+    bodykit: 'Body & Aerodynamics',
+    lighting: 'Underglow & Headlights',
+    wheels: 'Wheels, Rims & Stance',
+    visual: 'Paint, Pearlescent & Tint',
+    dyno: 'Dyno Testing',
     special: 'Special Features',
 };
+
+const BODYKIT_SLOTS = [
+    { key: 'spoiler', label: 'Spoiler / Wing' },
+    { key: 'frontBumper', label: 'Front Bumper' },
+    { key: 'rearBumper', label: 'Rear Bumper' },
+    { key: 'sideSkirt', label: 'Side Skirts' },
+    { key: 'exhaust', label: 'Exhaust Tips' },
+    { key: 'hood', label: 'Hood / Bonnet' },
+    { key: 'grille', label: 'Grille' },
+    { key: 'roof', label: 'Roof' },
+    { key: 'leftFender', label: 'Left Fender' },
+    { key: 'rightFender', label: 'Right Fender' },
+    { key: 'rollCage', label: 'Roll Cage / Interior' },
+    { key: 'livery', label: 'Livery / Decals' },
+];
+
+const WHEEL_TYPES = [
+    { id: 0, label: 'Sport' },
+    { id: 1, label: 'Muscle' },
+    { id: 2, label: 'Lowrider' },
+    { id: 3, label: 'SUV' },
+    { id: 4, label: 'Offroad' },
+    { id: 5, label: 'Tuner' },
+    { id: 7, label: 'High End' },
+    { id: 8, label: "Benny's Original" },
+    { id: 9, label: "Benny's Bespoke" },
+    { id: 10, label: 'Open Wheel' },
+    { id: 11, label: 'Street' },
+    { id: 12, label: 'Track' },
+];
+
+const WINDOW_TINTS = [
+    { id: 0, label: 'None (Stock)' },
+    { id: 1, label: 'Pure Black (5%)' },
+    { id: 2, label: 'Dark Smoke (15%)' },
+    { id: 3, label: 'Light Smoke (35%)' },
+    { id: 4, label: 'Stock Clear' },
+    { id: 5, label: 'Limo (1%)' },
+    { id: 6, label: 'Green Tint' },
+];
+
+const XENON_COLORS = [
+    { id: 0, label: 'White', color: '#ffffff' },
+    { id: 1, label: 'Blue', color: '#0055ff' },
+    { id: 2, label: 'Electric Blue', color: '#00d0ff' },
+    { id: 3, label: 'Mint Green', color: '#00ffaa' },
+    { id: 4, label: 'Lime Green', color: '#55ff00' },
+    { id: 5, label: 'Yellow', color: '#ffea00' },
+    { id: 6, label: 'Golden Shower', color: '#ffaa00' },
+    { id: 7, label: 'Orange', color: '#ff5500' },
+    { id: 8, label: 'Red', color: '#ff0000' },
+    { id: 9, label: 'Pony Pink', color: '#ff77aa' },
+    { id: 10, label: 'Hot Pink', color: '#ff007f' },
+    { id: 11, label: 'Purple', color: '#8800ff' },
+    { id: 12, label: 'Blacklight', color: '#3300ff' },
+];
+
+const NEON_PRESETS = [
+    { label: 'Electric Blue', r: 0, g: 150, b: 255 },
+    { label: 'Mint Green', r: 0, g: 255, b: 170 },
+    { label: 'Lime Green', r: 50, g: 255, b: 0 },
+    { label: 'Yellow', r: 255, g: 220, b: 0 },
+    { label: 'Orange', r: 255, g: 100, b: 0 },
+    { label: 'Crimson Red', r: 255, g: 0, b: 0 },
+    { label: 'Hot Pink', r: 255, g: 20, b: 147 },
+    { label: 'Purple', r: 138, g: 43, b: 226 },
+    { label: 'Blacklight', r: 50, g: 0, b: 255 },
+    { label: 'Ice White', r: 255, g: 255, b: 255 },
+    { label: 'Gold', r: 255, g: 180, b: 0 },
+];
+
+const PAINT_PRESETS = [
+    { label: 'Midnight Black', r: 10, g: 10, b: 10 },
+    { label: 'Pure White', r: 255, g: 255, b: 255 },
+    { label: 'Gunmetal Grey', r: 70, g: 70, b: 70 },
+    { label: 'Crimson Red', r: 180, g: 10, b: 10 },
+    { label: 'Sunset Orange', r: 235, g: 90, b: 15 },
+    { label: 'Racing Yellow', r: 240, g: 210, b: 20 },
+    { label: 'Kawasaki Green', r: 20, g: 190, b: 40 },
+    { label: 'Miami Blue', r: 0, g: 150, b: 230 },
+    { label: 'Midnight Blue', r: 15, g: 30, b: 90 },
+    { label: 'Royal Purple', r: 100, g: 20, b: 160 },
+    { label: 'Hot Pink', r: 230, g: 30, b: 130 },
+    { label: 'Rose Gold', r: 200, g: 140, b: 130 },
+];
 
 function cap(key) {
     return vehicleCapabilities && vehicleCapabilities[key] === true;
@@ -65,7 +157,7 @@ function powerLimit() {
 
 function tabAllowed(itemId) {
     if (!vehicleCapabilities) return true;
-    if (itemId === 'overview' || itemId === 'visual' || itemId === 'dyno') return true;
+    if (itemId === 'overview' || itemId === 'bodykit' || itemId === 'lighting' || itemId === 'wheels' || itemId === 'visual' || itemId === 'dyno') return true;
     if (itemId === 'powertrain' || itemId === 'transmission' || itemId === 'turbo') return cap('power') || cap('hardware');
     if (itemId === 'brakes' || itemId === 'suspension' || itemId === 'handling') return cap('hardware') || cap('tractionControl');
     if (itemId === 'exhaust') return cap('exhaustModes');
@@ -110,6 +202,33 @@ function stockCosmetics() {
         pearl: 0,
         wheel: 0,
         plateText: '',
+        windowTint: 0,
+        xenon: false,
+        xenonColor: 0,
+        neon: {
+            enabled: false,
+            front: true,
+            back: true,
+            left: true,
+            right: true,
+            color: { r: 0, g: 150, b: 255 },
+        },
+        wheelType: 0,
+        mods: {
+            spoiler: -1,
+            frontBumper: -1,
+            rearBumper: -1,
+            sideSkirt: -1,
+            exhaust: -1,
+            rollCage: -1,
+            grille: -1,
+            hood: -1,
+            leftFender: -1,
+            rightFender: -1,
+            roof: -1,
+            wheels: -1,
+            livery: -1,
+        },
     };
 }
 
@@ -121,6 +240,12 @@ function ensureCosmetics(raw) {
         ...src,
         primary: { ...base.primary, ...(src.primary || {}) },
         secondary: { ...base.secondary, ...(src.secondary || {}) },
+        neon: {
+            ...base.neon,
+            ...(src.neon || {}),
+            color: { ...(base.neon.color || {}), ...((src.neon && src.neon.color) || {}) },
+        },
+        mods: { ...base.mods, ...(src.mods || {}) },
     };
 }
 
@@ -172,10 +297,26 @@ function installQuote() {
         total += Math.abs(Number(get(next) || 0) - Number(get(old) || 0)) * Number(featureCosts.customMapStep || 0);
     });
     if (!sameColor(oldCos.primary, nextCos.primary) || !sameColor(oldCos.secondary, nextCos.secondary)
-        || Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)) {
-        total += Number(featureCosts.cosmetics || 0);
+        || Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)
+        || Number(oldCos.windowTint) !== Number(nextCos.windowTint)) {
+        total += Number(featureCosts.cosmetics || 600);
     }
-    if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) total += Number(featureCosts.vanityPlate || 0);
+    if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) total += Number(featureCosts.vanityPlate || 1800);
+
+    if (nextCos.neon?.enabled && !oldCos.neon?.enabled) total += 500;
+    else if (nextCos.neon?.enabled && !sameColor(oldCos.neon?.color, nextCos.neon?.color)) total += 150;
+
+    if (nextCos.xenon && !oldCos.xenon) total += 350;
+    else if (nextCos.xenon && nextCos.xenonColor !== oldCos.xenonColor) total += 100;
+
+    if (nextCos.wheelType !== oldCos.wheelType || (nextCos.mods?.wheels !== oldCos.mods?.wheels)) total += 400;
+
+    if (nextCos.mods && oldCos.mods) {
+        Object.keys(nextCos.mods).forEach((k) => {
+            if (k !== 'wheels' && nextCos.mods[k] !== oldCos.mods[k]) total += 250;
+        });
+    }
+
     return Math.max(0, Math.floor(total));
 }
 
@@ -248,206 +389,150 @@ function updateInstallButton() {
 function updateStatusBanner() {
     if (!ecuStatus) return;
     if (previewDirty) {
-        ecuStatus.textContent = 'PREVIEW — UNSAVED';
-        ecuStatus.className = 'ecu-status ecu-status--preview';
+        ecuStatus.textContent = 'PREVIEW';
+        ecuStatus.className = 'status-preview';
     } else if (hasSavedMap) {
-        ecuStatus.textContent = 'MAP SAVED';
-        ecuStatus.className = 'ecu-status ecu-status--saved';
+        ecuStatus.textContent = 'SAVED';
+        ecuStatus.className = 'status-saved';
     } else {
         ecuStatus.textContent = 'FACTORY MAP';
-        ecuStatus.className = 'ecu-status ecu-status--stock';
+        ecuStatus.className = 'status-factory';
     }
 }
 
 function preview() {
-    if (!tune) return;
     previewDirty = true;
     updateStatusBanner();
-    updateInstallButton();
     renderStatsPanel();
+    updateInstallButton();
     window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => {
-        post('tuningPreview', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics) });
-    }, 70);
+        post('tuningPreview', {
+            tune: ensureTune(tune),
+            cosmetics: ensureCosmetics(cosmetics),
+        });
+    }, 60);
 }
 
-function getTuneValue(key) {
-    return String(key).split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), tune);
+function getTuneValue(path) {
+    return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), tune);
 }
 
-function setTuneValue(key, value) {
-    const parts = String(key).split('.');
+function setTuneValue(path, value) {
+    tune = ensureTune(tune);
+    const parts = path.split('.');
     let ref = tune;
     for (let i = 0; i < parts.length - 1; i++) {
-        if (!ref[parts[i]] || typeof ref[parts[i]] !== 'object') ref[parts[i]] = {};
+        if (!ref[parts[i]]) ref[parts[i]] = {};
         ref = ref[parts[i]];
     }
     ref[parts[parts.length - 1]] = value;
 }
 
-function hwMax(key, configuredMax) {
-    const available = Number(hardwareAvailability[key]);
-    return Number.isFinite(available) ? Math.max(0, Math.min(configuredMax, available)) : configuredMax;
-}
-
-function hwUnitCost(key) {
-    return Number(hardwareSlots[key]?.unitCost || 0);
-}
-
-function formatPartPrice(amount) {
-    if (!amount || amount === 'Installed') return 'Installed';
-    if (typeof amount === 'string') return amount;
-    const n = Number(amount);
-    if (n >= 1000) return `$${Math.round(n / 1000)}k`;
-    return `$${n.toLocaleString('en-US')}`;
-}
-
-function createListItem(part, onSelect) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'list-item' + (activePartId === part.id ? ' active' : '');
-    const name = document.createElement('span');
-    name.textContent = part.label;
-    const price = document.createElement('span');
-    price.className = 'item-price';
-    price.textContent = formatPartPrice(part.price);
-    btn.append(name, price);
-    btn.addEventListener('click', () => {
-        activePartId = part.id;
-        if (onSelect) onSelect(part);
-        renderAll();
-    });
-    btn.addEventListener('mouseenter', () => {
-        if (part.preview) part.preview();
-    });
-    return btn;
-}
-
-function hardwareParts(key, label, configuredMax) {
-    const max = hwMax(key, configuredMax);
+function hardwareParts(categoryKey, slotKey, maxLevel) {
+    const slot = hardwareSlots[slotKey] || { unitCost: 1000 };
     const parts = [];
-    for (let level = 0; level <= max; level++) {
+    const count = Math.min(maxLevel || 0, hardwareAvailability[slotKey] || 0);
+    const current = Number(tune?.hardware?.[slotKey] || 0);
+
+    parts.push({
+        id: `${slotKey}_0`,
+        label: 'Stock Factory',
+        price: 'Installed',
+        apply: () => {
+            tune.hardware[slotKey] = 0;
+            preview();
+        },
+        isActive: () => current === 0,
+    });
+
+    for (let i = 1; i <= count; i++) {
+        const cost = slot.unitCost * i;
         parts.push({
-            id: `${key}_${level}`,
-            label: level === 0 ? `Stock ${label}` : `${label} Level ${level}`,
-            price: level === 0 ? 'Installed' : hwUnitCost(key) * level,
-            preview: () => {},
-            apply: () => { tune.hardware[key] = level; preview(); },
-            isActive: () => Number(tune.hardware[key] || 0) === level,
+            id: `${slotKey}_${i}`,
+            label: `Level ${i} Upgrade`,
+            price: `$${cost.toLocaleString('en-US')}`,
+            apply: () => {
+                tune.hardware[slotKey] = i;
+                preview();
+            },
+            isActive: () => current === i,
         });
     }
     return parts;
 }
 
-function toggleParts(id, label, key, cost) {
-    return [
-        {
-            id: `${id}_off`,
-            label: `${label} — Off`,
-            price: 'Installed',
-            apply: () => { setTuneValue(key, false); preview(); },
-            isActive: () => !getTuneValue(key),
-        },
-        {
-            id: `${id}_on`,
-            label: `${label} — On`,
-            price: cost,
-            apply: () => { setTuneValue(key, true); preview(); },
-            isActive: () => !!getTuneValue(key),
-        },
-    ];
-}
-
-function applyPreset(name) {
-    const dyno = { ...(tune.dyno || {}) };
-    const presets = {
-        stock: stockTune(),
-        street: {
-            ...stockTune(), stage: 'sport', power: 105, torque: 106,
-            hardware: { ...stockTune().hardware, engine: 2, brakes: 1, transmission: 1, suspension: 1, turbo: true },
-            handling: { steering: 104, brakePower: 110, suspension: 105, traction: 104 },
-        },
-        track: {
-            ...stockTune(), stage: 'race', power: 112, torque: 110,
-            hardware: { engine: 4, brakes: 3, transmission: 3, suspension: 3, armor: 1, turbo: true, launchControl: true },
-            handling: { steering: 110, brakePower: 130, suspension: 118, traction: 112 },
-            pop: { ...stockTune().pop, enabled: true, rpmMax: 84, secondBurst: true },
-            flames: { ...stockTune().flames, enabled: true },
-        },
-        drift: {
-            ...stockTune(), stage: 'sport', power: 108, torque: 112,
-            hardware: { engine: 3, brakes: 2, transmission: 2, suspension: 2, armor: 0, turbo: true, launchControl: true },
-            handling: { steering: 116, brakePower: 112, suspension: 108, traction: 84 },
-            drift: { enabled: true, grip: 38 },
-            pop: { ...stockTune().pop, enabled: true, rpmMax: 82 },
-        },
-    };
-    tune = ensureTune(presets[name] || presets.stock);
-    tune.dyno = dyno;
-    preview();
-    renderAll();
-}
-
-function buildPartsForCategory() {
+function toggleParts(id, label, path, cost) {
     const parts = [];
-    if (activeTab === 'overview') {
-        [
-            ['stock', 'Factory Setup', 'Stock map'],
-            ['street', 'Street Setup', 'Daily driver'],
-            ['track', 'Track Setup', 'Maximum grip'],
-            ['drift', 'Drift Setup', 'Reduced grip'],
-        ].forEach(([id, label, sub]) => {
-            parts.push({
-                id: `preset_${id}`,
-                label,
-                price: sub,
-                apply: () => applyPreset(id),
-                isActive: () => false,
-            });
+    const enabled = !!getTuneValue(path);
+    parts.push({
+        id: `${id}_off`,
+        label: `${label} (Disabled)`,
+        price: 'Stock',
+        apply: () => {
+            setTuneValue(path, false);
+            preview();
+        },
+        isActive: () => !enabled,
+    });
+    parts.push({
+        id: `${id}_on`,
+        label: `${label} (Enabled)`,
+        price: `$${(cost || 0).toLocaleString('en-US')}`,
+        apply: () => {
+            setTuneValue(path, true);
+            preview();
+        },
+        isActive: () => enabled,
+    });
+    return parts;
+}
+
+function renderOverviewParts() {
+    const parts = [];
+    ['civil', 'sport', 'race'].forEach((stage) => {
+        parts.push({
+            id: `stage_${stage}`,
+            label: `Stage ${stage.toUpperCase()} Tune`,
+            price: stage === 'civil' ? 'Stock' : `$${(stage === 'sport' ? featureCosts.sportMap : featureCosts.raceMap || 0).toLocaleString('en-US')}`,
+            apply: () => {
+                tune.stage = stage;
+                if (stage === 'race') {
+                    tune.power = Math.min(powerLimit(), 45);
+                    tune.torque = Math.min(powerLimit(), 40);
+                } else if (stage === 'sport') {
+                    tune.power = Math.min(powerLimit(), 25);
+                    tune.torque = Math.min(powerLimit(), 20);
+                } else {
+                    tune.power = 0;
+                    tune.torque = 0;
+                }
+                preview();
+            },
+            isActive: () => tune.stage === stage,
         });
-        return parts;
-    }
-    if (activeTab === 'powertrain') {
-        if (cap('presets')) {
-            ['civil', 'sport', 'race'].forEach((stage) => {
-                const labels = { civil: 'Factory ECU Map', sport: 'Sport ECU Map', race: 'Race ECU Map' };
-                parts.push({
-                    id: `stage_${stage}`,
-                    label: labels[stage],
-                    price: stage === 'civil' ? 'Installed' : (stage === 'race' ? featureCosts.raceMap : featureCosts.sportMap),
-                    apply: () => { tune.stage = stage; preview(); },
-                    isActive: () => tune.stage === stage,
-                });
-            });
+    });
+    return parts;
+}
+
+function renderPartList() {
+    if (!tunePartsList) return;
+    tunePartsList.innerHTML = '';
+    let parts = [];
+
+    if (activeTab === 'overview') parts = renderOverviewParts();
+    else if (activeTab === 'powertrain') parts = hardwareParts('powertrain', 'engine', 4);
+    else if (activeTab === 'transmission') parts = hardwareParts('transmission', 'transmission', 3);
+    else if (activeTab === 'brakes') parts = hardwareParts('brakes', 'brakes', 3);
+    else if (activeTab === 'suspension') parts = hardwareParts('suspension', 'suspension', 4);
+    else if (activeTab === 'turbo') {
+        if (cap('turboBoost') || cap('factoryTurbo')) {
+            parts.push(...toggleParts('turbo', 'Turbocharger', 'hardware.turbo', featureCosts.turbo));
         }
-        if (cap('hardware')) parts.push(...hardwareParts('engine', 'Engine', 4));
-        return parts;
-    }
-    if (activeTab === 'transmission' && cap('hardware')) return hardwareParts('transmission', 'Transmission', 3);
-    if (activeTab === 'brakes' && cap('hardware')) return hardwareParts('brakes', 'Brakes', 3);
-    if (activeTab === 'suspension' && cap('hardware')) {
-        parts.push(...hardwareParts('suspension', 'Suspension', 4));
-        parts.push(...hardwareParts('armor', 'Armor', 5));
-        return parts;
-    }
-    if (activeTab === 'turbo') {
-        if (cap('turboBoost')) parts.push(...toggleParts('turbo', 'Turbo', 'hardware.turbo', featureCosts.turbo));
-        if (cap('launchControl')) parts.push(...toggleParts('lc', 'Launch Control', 'hardware.launchControl', featureCosts.launchControl));
-        if (cap('power')) {
-            const maxP = powerLimit();
-            [0, Math.floor(maxP * 0.33), Math.floor(maxP * 0.66), maxP].forEach((val, idx) => {
-                parts.push({
-                    id: `power_${val}`,
-                    label: val === 0 ? 'Stock Power' : `Power Boost ${idx}`,
-                    price: val === 0 ? 'Installed' : featureCosts.customMapStep * val,
-                    apply: () => { tune.power = val; preview(); },
-                    isActive: () => Number(tune.power) === val,
-                });
-            });
+        if (cap('launchControl')) {
+            parts.push(...toggleParts('launch', 'Launch Control', 'hardware.launchControl', featureCosts.launchControl));
         }
-        return parts;
-    }
-    if (activeTab === 'exhaust' && cap('exhaustModes')) {
+    } else if (activeTab === 'exhaust' && cap('exhaustModes')) {
         [
             ['pop_bang', 'Pop & Bang'],
             ['flames', 'Flames'],
@@ -467,9 +552,116 @@ function buildPartsForCategory() {
                 isActive: () => tune.exhaust === mode,
             });
         });
-        return parts;
-    }
-    if (activeTab === 'dyno') {
+    } else if (activeTab === 'bodykit') {
+        BODYKIT_SLOTS.forEach((slot) => {
+            const avail = visualAvailability[slot.key] || 0;
+            const cur = cosmetics?.mods?.[slot.key] ?? -1;
+            const curLabel = cur === -1 ? 'Stock' : `Mod #${cur + 1}`;
+            parts.push({
+                id: `body_${slot.key}`,
+                label: slot.label,
+                price: avail > 0 ? `${curLabel} (${avail} opts)` : 'Unavailable',
+                apply: () => {
+                    activePartId = slot.key;
+                    renderDetailPanel();
+                },
+                isActive: () => activePartId === slot.key,
+            });
+        });
+    } else if (activeTab === 'lighting') {
+        const neonActive = cosmetics?.neon?.enabled === true;
+        parts.push({
+            id: 'neon_underglow',
+            label: 'Underglow Neons',
+            price: neonActive ? 'Enabled ($500)' : 'Disabled',
+            apply: () => {
+                activePartId = 'neon';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'neon',
+        });
+        const xenonActive = cosmetics?.xenon === true;
+        parts.push({
+            id: 'xenon_lights',
+            label: 'Xenon Headlights',
+            price: xenonActive ? 'Enabled ($350)' : 'Halogen (Stock)',
+            apply: () => {
+                activePartId = 'xenon';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'xenon',
+        });
+    } else if (activeTab === 'wheels') {
+        const wt = WHEEL_TYPES.find((w) => w.id === (cosmetics?.wheelType ?? 0))?.label || 'Sport';
+        parts.push({
+            id: 'wheel_type',
+            label: 'Wheel Category',
+            price: wt,
+            apply: () => {
+                activePartId = 'wheel_type';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'wheel_type',
+        });
+        const rimMod = cosmetics?.mods?.wheels ?? -1;
+        parts.push({
+            id: 'wheel_rim',
+            label: 'Rim Model',
+            price: rimMod === -1 ? 'Stock Rims' : `Rim #${rimMod + 1}`,
+            apply: () => {
+                activePartId = 'wheel_rim';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'wheel_rim',
+        });
+        parts.push({
+            id: 'wheel_color',
+            label: 'Wheel Paint Color',
+            price: 'Adjust below',
+            apply: () => {
+                activePartId = 'wheel_color';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'wheel_color',
+        });
+    } else if (activeTab === 'visual') {
+        parts.push({
+            id: 'paint_primary',
+            label: 'Primary Paint',
+            price: 'Adjust below',
+            apply: () => { activePartId = 'primary'; renderDetailPanel(); },
+            isActive: () => activePartId === 'primary',
+        });
+        parts.push({
+            id: 'paint_secondary',
+            label: 'Secondary Paint',
+            price: 'Adjust below',
+            apply: () => { activePartId = 'secondary'; renderDetailPanel(); },
+            isActive: () => activePartId === 'secondary',
+        });
+        parts.push({
+            id: 'paint_pearl',
+            label: 'Pearlescent Coat',
+            price: 'Adjust below',
+            apply: () => { activePartId = 'pearl'; renderDetailPanel(); },
+            isActive: () => activePartId === 'pearl',
+        });
+        const tint = WINDOW_TINTS.find((t) => t.id === (cosmetics?.windowTint ?? 0))?.label || 'Stock';
+        parts.push({
+            id: 'window_tint',
+            label: 'Window Tint',
+            price: tint,
+            apply: () => { activePartId = 'tint'; renderDetailPanel(); },
+            isActive: () => activePartId === 'tint',
+        });
+        parts.push({
+            id: 'plate_text',
+            label: 'Vanity License Plate',
+            price: cosmetics?.plateText || 'Stock',
+            apply: () => { activePartId = 'plate'; renderDetailPanel(); },
+            isActive: () => activePartId === 'plate',
+        });
+    } else if (activeTab === 'dyno') {
         parts.push({
             id: 'dyno_run',
             label: 'Start Dyno Run',
@@ -484,25 +676,32 @@ function buildPartsForCategory() {
             apply: () => {},
             isActive: () => true,
         });
-        return parts;
-    }
-    if (activeTab === 'special') {
+    } else if (activeTab === 'special') {
         if (cap('antiLag')) parts.push(...toggleParts('antilag', 'Anti-Lag', 'antiLag.enabled', featureCosts.antiLag));
         if (cap('drift')) parts.push(...toggleParts('drift', 'Drift Mode', 'drift.enabled', featureCosts.drift));
         if (cap('hud')) parts.push(...toggleParts('hud', 'ECU HUD', 'hud.enabled', featureCosts.hud));
-        return parts;
-    }
-    if (activeTab === 'handling' || activeTab === 'visual') {
+    } else if (activeTab === 'handling') {
         parts.push({
-            id: `${activeTab}_custom`,
-            label: activeTab === 'handling' ? 'Fine-Tune Handling' : 'Customize Paint',
+            id: 'handling_custom',
+            label: 'Fine-Tune Handling',
             price: 'Adjust below',
             apply: () => {},
             isActive: () => true,
         });
-        return parts;
     }
-    return parts;
+
+    parts.forEach((p) => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        if (p.isActive()) item.classList.add('active');
+        item.innerHTML = `<span class="item-label">${p.label}</span><span class="item-price">${p.price}</span>`;
+        item.addEventListener('click', () => {
+            p.apply();
+            renderPartList();
+            renderDetailPanel();
+        });
+        tunePartsList.appendChild(item);
+    });
 }
 
 function sliderField(label, key, min, max, suffix) {
@@ -552,6 +751,33 @@ function toggleRow(label, key) {
     return row;
 }
 
+function cosmeticsToggleRow(label, key, parentObj) {
+    const row = document.createElement('div');
+    row.className = 'toggle-row';
+    const span = document.createElement('span');
+    span.textContent = label;
+    const sw = document.createElement('label');
+    sw.className = 'switch';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    const curr = parentObj ? parentObj[key] : cosmetics[key];
+    input.checked = curr === true || curr === undefined;
+    input.addEventListener('change', () => {
+        cosmetics = ensureCosmetics(cosmetics);
+        if (parentObj) parentObj[key] = input.checked;
+        else cosmetics[key] = input.checked;
+        preview();
+        renderPartList();
+    });
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    sw.appendChild(input);
+    sw.appendChild(slider);
+    row.appendChild(span);
+    row.appendChild(sw);
+    return row;
+}
+
 function cosmeticsColorField(label, key) {
     const field = document.createElement('div');
     field.className = 'field color-field';
@@ -576,6 +802,26 @@ function cosmeticsColorField(label, key) {
     const lbl = document.createElement('label');
     lbl.innerHTML = `<span>${label}</span><span class="color-swatch" style="background:rgb(${c.r},${c.g},${c.b})"></span>`;
     field.appendChild(lbl);
+
+    const paletteGrid = document.createElement('div');
+    paletteGrid.className = 'palette-grid';
+    PAINT_PRESETS.forEach((preset) => {
+        const swatch = document.createElement('div');
+        swatch.className = 'palette-swatch';
+        swatch.style.background = `rgb(${preset.r},${preset.g},${preset.b})`;
+        swatch.title = preset.label;
+        swatch.addEventListener('click', () => {
+            cosmetics = ensureCosmetics(cosmetics);
+            let ref = cosmetics;
+            for (let i = 0; i < parts.length - 1; i++) ref = ref[parts[i]];
+            ref[parts[parts.length - 1]] = { r: preset.r, g: preset.g, b: preset.b };
+            preview();
+            renderDetailPanel();
+        });
+        paletteGrid.appendChild(swatch);
+    });
+    field.appendChild(paletteGrid);
+
     ['r', 'g', 'b'].forEach((ch) => {
         const row = document.createElement('div');
         row.className = 'color-row';
@@ -600,30 +846,303 @@ function cosmeticsColorField(label, key) {
 function renderDetailPanel() {
     if (!tuneDetail) return;
     tuneDetail.innerHTML = '';
+
     if (activeTab === 'handling') {
         tuneDetail.appendChild(sliderField('Steering Angle', 'handling.steering', 85, 120, '%'));
         tuneDetail.appendChild(sliderField('Brake Power', 'handling.brakePower', 85, 140, '%'));
         tuneDetail.appendChild(sliderField('Suspension Stiffness', 'handling.suspension', 80, 130, '%'));
         tuneDetail.appendChild(sliderField('Traction', 'handling.traction', 75, 120, '%'));
     }
-    if (activeTab === 'visual') {
-        tuneDetail.appendChild(cosmeticsColorField('Primary Color', 'primary'));
-        tuneDetail.appendChild(cosmeticsColorField('Secondary Color', 'secondary'));
-        const plateField = document.createElement('div');
-        plateField.className = 'field';
-        plateField.innerHTML = '<label><span>License Plate (max 8)</span></label>';
-        const plateInput = document.createElement('input');
-        plateInput.type = 'text';
-        plateInput.maxLength = 8;
-        plateInput.value = (cosmetics && cosmetics.plateText) || '';
-        plateInput.addEventListener('input', () => {
+
+    if (activeTab === 'bodykit') {
+        const slotKey = activePartId || 'spoiler';
+        const slotInfo = BODYKIT_SLOTS.find((s) => s.key === slotKey) || BODYKIT_SLOTS[0];
+        const count = visualAvailability[slotKey] || 0;
+
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = `${slotInfo.label} Options (${count} available)`;
+        tuneDetail.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'options-grid';
+
+        const curMod = cosmetics?.mods?.[slotKey] ?? -1;
+
+        const stockBtn = document.createElement('button');
+        stockBtn.className = `option-btn ${curMod === -1 ? 'active' : ''}`;
+        stockBtn.textContent = 'Stock (OEM)';
+        stockBtn.addEventListener('click', () => {
             cosmetics = ensureCosmetics(cosmetics);
-            cosmetics.plateText = plateInput.value.replace(/\s+/g, '').toUpperCase();
+            cosmetics.mods[slotKey] = -1;
             preview();
+            renderPartList();
+            renderDetailPanel();
         });
-        plateField.appendChild(plateInput);
-        tuneDetail.appendChild(plateField);
+        grid.appendChild(stockBtn);
+
+        for (let i = 0; i < count; i++) {
+            const btn = document.createElement('button');
+            btn.className = `option-btn ${curMod === i ? 'active' : ''}`;
+            btn.textContent = `Option #${i + 1}`;
+            btn.addEventListener('click', () => {
+                cosmetics = ensureCosmetics(cosmetics);
+                cosmetics.mods[slotKey] = i;
+                preview();
+                renderPartList();
+                renderDetailPanel();
+            });
+            grid.appendChild(btn);
+        }
+        tuneDetail.appendChild(grid);
     }
+
+    if (activeTab === 'lighting') {
+        if (!activePartId || activePartId === 'neon') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Neon Underglow Controls';
+            tuneDetail.appendChild(title);
+
+            tuneDetail.appendChild(cosmeticsToggleRow('Enable Underglow', 'enabled', cosmetics.neon));
+            tuneDetail.appendChild(cosmeticsToggleRow('Front Tube', 'front', cosmetics.neon));
+            tuneDetail.appendChild(cosmeticsToggleRow('Rear Tube', 'back', cosmetics.neon));
+            tuneDetail.appendChild(cosmeticsToggleRow('Left Side Tube', 'left', cosmetics.neon));
+            tuneDetail.appendChild(cosmeticsToggleRow('Right Side Tube', 'right', cosmetics.neon));
+
+            const lbl = document.createElement('label');
+            lbl.style.marginTop = '12px';
+            lbl.textContent = 'NEON COLOR PRESETS';
+            tuneDetail.appendChild(lbl);
+
+            const paletteGrid = document.createElement('div');
+            paletteGrid.className = 'palette-grid';
+            NEON_PRESETS.forEach((preset) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'palette-swatch';
+                swatch.style.background = `rgb(${preset.r},${preset.g},${preset.b})`;
+                swatch.title = preset.label;
+                swatch.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.neon.enabled = true;
+                    cosmetics.neon.color = { r: preset.r, g: preset.g, b: preset.b };
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                paletteGrid.appendChild(swatch);
+            });
+            tuneDetail.appendChild(paletteGrid);
+
+            ['r', 'g', 'b'].forEach((ch) => {
+                const row = document.createElement('div');
+                row.className = 'color-row';
+                row.innerHTML = `<span>${ch.toUpperCase()}</span>`;
+                const input = document.createElement('input');
+                input.type = 'range';
+                input.min = 0;
+                input.max = 255;
+                input.value = cosmetics?.neon?.color?.[ch] || 0;
+                input.addEventListener('input', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.neon.enabled = true;
+                    cosmetics.neon.color[ch] = Number(input.value);
+                    preview();
+                });
+                row.appendChild(input);
+                tuneDetail.appendChild(row);
+            });
+        } else if (activePartId === 'xenon') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Xenon Headlight System';
+            tuneDetail.appendChild(title);
+
+            tuneDetail.appendChild(cosmeticsToggleRow('Xenon Headlights', 'xenon', cosmetics));
+
+            const lbl = document.createElement('label');
+            lbl.style.marginTop = '12px';
+            lbl.textContent = 'XENON COLOR TEMPERATURE';
+            tuneDetail.appendChild(lbl);
+
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            XENON_COLORS.forEach((xc) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn ${cosmetics.xenonColor === xc.id ? 'active' : ''}`;
+                btn.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${xc.color};margin-right:6px"></span>${xc.label}`;
+                btn.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.xenon = true;
+                    cosmetics.xenonColor = xc.id;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                grid.appendChild(btn);
+            });
+            tuneDetail.appendChild(grid);
+        }
+    }
+
+    if (activeTab === 'wheels') {
+        if (!activePartId || activePartId === 'wheel_type') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Select Wheel Category';
+            tuneDetail.appendChild(title);
+
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            WHEEL_TYPES.forEach((wt) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn ${cosmetics.wheelType === wt.id ? 'active' : ''}`;
+                btn.textContent = wt.label;
+                btn.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.wheelType = wt.id;
+                    cosmetics.mods.wheels = -1;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                grid.appendChild(btn);
+            });
+            tuneDetail.appendChild(grid);
+        } else if (activePartId === 'wheel_rim') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Rim Models (Current Category)';
+            tuneDetail.appendChild(title);
+
+            const count = visualAvailability.wheels || 0;
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+
+            const curMod = cosmetics?.mods?.wheels ?? -1;
+            const stockBtn = document.createElement('button');
+            stockBtn.className = `option-btn ${curMod === -1 ? 'active' : ''}`;
+            stockBtn.textContent = 'Stock OEM Rims';
+            stockBtn.addEventListener('click', () => {
+                cosmetics = ensureCosmetics(cosmetics);
+                cosmetics.mods.wheels = -1;
+                preview();
+                renderPartList();
+                renderDetailPanel();
+            });
+            grid.appendChild(stockBtn);
+
+            for (let i = 0; i < count; i++) {
+                const btn = document.createElement('button');
+                btn.className = `option-btn ${curMod === i ? 'active' : ''}`;
+                btn.textContent = `Rim #${i + 1}`;
+                btn.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.mods.wheels = i;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                grid.appendChild(btn);
+            }
+            tuneDetail.appendChild(grid);
+        } else if (activePartId === 'wheel_color') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Rim Paint Color Index';
+            tuneDetail.appendChild(title);
+
+            const field = document.createElement('div');
+            field.className = 'field';
+            const lbl = document.createElement('label');
+            lbl.innerHTML = `<span>Wheel Paint Index</span><span>${cosmetics.wheel || 0}</span>`;
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.min = 0;
+            input.max = 159;
+            input.value = cosmetics.wheel || 0;
+            input.addEventListener('input', () => {
+                cosmetics = ensureCosmetics(cosmetics);
+                cosmetics.wheel = Number(input.value);
+                lbl.lastElementChild.textContent = String(input.value);
+                preview();
+            });
+            field.appendChild(lbl);
+            field.appendChild(input);
+            tuneDetail.appendChild(field);
+        }
+    }
+
+    if (activeTab === 'visual') {
+        if (!activePartId || activePartId === 'primary') {
+            tuneDetail.appendChild(cosmeticsColorField('Primary Body Paint', 'primary'));
+        } else if (activePartId === 'secondary') {
+            tuneDetail.appendChild(cosmeticsColorField('Secondary Trim Paint', 'secondary'));
+        } else if (activePartId === 'pearl') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Pearlescent Clearcoat Finish';
+            tuneDetail.appendChild(title);
+
+            const field = document.createElement('div');
+            field.className = 'field';
+            const lbl = document.createElement('label');
+            lbl.innerHTML = `<span>Pearlescent Index</span><span>${cosmetics.pearl || 0}</span>`;
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.min = 0;
+            input.max = 159;
+            input.value = cosmetics.pearl || 0;
+            input.addEventListener('input', () => {
+                cosmetics = ensureCosmetics(cosmetics);
+                cosmetics.pearl = Number(input.value);
+                lbl.lastElementChild.textContent = String(input.value);
+                preview();
+            });
+            field.appendChild(lbl);
+            field.appendChild(input);
+            tuneDetail.appendChild(field);
+        } else if (activePartId === 'tint') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Window Tint Level';
+            tuneDetail.appendChild(title);
+
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            WINDOW_TINTS.forEach((wt) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn ${cosmetics.windowTint === wt.id ? 'active' : ''}`;
+                btn.textContent = wt.label;
+                btn.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.windowTint = wt.id;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                grid.appendChild(btn);
+            });
+            tuneDetail.appendChild(grid);
+        } else if (activePartId === 'plate') {
+            const plateField = document.createElement('div');
+            plateField.className = 'field';
+            plateField.innerHTML = '<label><span>Custom Vanity License Plate (max 8)</span></label>';
+            const plateInput = document.createElement('input');
+            plateInput.type = 'text';
+            plateInput.maxLength = 8;
+            plateInput.value = (cosmetics && cosmetics.plateText) || '';
+            plateInput.addEventListener('input', () => {
+                cosmetics = ensureCosmetics(cosmetics);
+                cosmetics.plateText = plateInput.value.replace(/\\s+/g, '').toUpperCase();
+                preview();
+                renderPartList();
+            });
+            plateField.appendChild(plateInput);
+            tuneDetail.appendChild(plateField);
+        }
+    }
+
     if (activeTab === 'exhaust') {
         tuneDetail.appendChild(toggleRow('Exhaust Active', 'pop.enabled'));
         tuneDetail.appendChild(sliderField('Max RPM Pop', 'pop.rpmMax', 70, 100, '%'));
@@ -631,12 +1150,14 @@ function renderDetailPanel() {
             tuneDetail.appendChild(toggleRow('Exhaust Flames', 'flames.enabled'));
         }
     }
+
     if (activeTab === 'special' && cap('drift')) {
         tuneDetail.appendChild(sliderField('Drift Grip', 'drift.grip', 20, 80, '%'));
     }
     if (activeTab === 'special' && cap('antiLag')) {
         tuneDetail.appendChild(sliderField('Anti-Lag Intensity', 'antiLag.intensity', 0, 100, '%'));
     }
+
     if (activeTab === 'dyno') {
         const dyno = tune.dyno || stockTune().dyno;
         const stats = document.createElement('div');
@@ -659,44 +1180,23 @@ function renderCategories() {
     categories.forEach((cat) => {
         if (!tabAllowed(cat.id)) return;
         const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'cat-item' + (activeTab === cat.id ? ' active' : '');
-        btn.innerHTML = `<i class="${cat.icon}"></i> ${cat.label}`;
+        btn.className = 'cat-item';
+        if (cat.id === activeTab) btn.classList.add('active');
+        btn.innerHTML = `<i class="${cat.icon}"></i> <span>${cat.label}</span>`;
         btn.addEventListener('click', () => {
             activeTab = cat.id;
             activePartId = null;
-            renderAll();
+            if (tunePartsTitle) tunePartsTitle.textContent = categoryTitles[cat.id] || cat.label;
+            renderCategories();
+            renderPartList();
+            renderDetailPanel();
         });
         tuneCategories.appendChild(btn);
     });
 }
 
-function renderPartList() {
-    if (!tunePartsList) return;
-    if (tunePartsTitle) tunePartsTitle.textContent = categoryTitles[activeTab] || 'Upgrades';
-    tunePartsList.innerHTML = '';
-    const parts = buildPartsForCategory();
-    if (!parts.length) {
-        const empty = document.createElement('p');
-        empty.className = 'item-price';
-        empty.textContent = 'No upgrades available for this vehicle.';
-        tunePartsList.appendChild(empty);
-        return;
-    }
-    if (!activePartId) {
-        const active = parts.find((p) => p.isActive && p.isActive());
-        activePartId = active ? active.id : parts[0].id;
-    }
-    parts.forEach((part) => {
-        if (part.isActive && part.isActive()) activePartId = part.id;
-        tunePartsList.appendChild(createListItem(part, () => {
-            if (part.apply) part.apply();
-        }));
-    });
-}
-
 function renderAll() {
-    tune = ensureTune(tune);
+    if (tunePartsTitle) tunePartsTitle.textContent = categoryTitles[activeTab] || 'Upgrades';
     updateStatusBanner();
     renderCategories();
     renderPartList();
@@ -740,6 +1240,7 @@ window.addEventListener('message', (event) => {
         if (shopLabel) shopLabel.textContent = data.shop || 'ECU Bay';
         if (plateLabel) plateLabel.textContent = data.plate || cosmetics.plateText || '—';
         hardwareAvailability = data.hardwareAvailability || {};
+        visualAvailability = data.visualAvailability || {};
         vehicleCapabilities = data.capabilities || null;
         const drivetrainLabel = document.getElementById('drivetrainLabel');
         if (drivetrainLabel) {
@@ -790,29 +1291,3 @@ window.addEventListener('message', (event) => {
         } catch (e) {}
     }
 });
-
-if (new URLSearchParams(window.location.search).get('qa') === 'tuning') {
-    window.postMessage({
-        action: 'open',
-        data: {
-            plate: 'BLZ 2046',
-            shop: 'LS Customs — ECU Bay',
-            saved: true,
-            tune: {
-                ...stockTune(), stage: 'sport', power: 106, torque: 108,
-                hardware: { engine: 2, brakes: 1, transmission: 1, suspension: 1, armor: 0, turbo: true, launchControl: false },
-            },
-            cosmetics: stockCosmetics(),
-            costs: { save: 750, flash: 150, dyno: 250 },
-            hardwareAvailability: { engine: 4, brakes: 3, transmission: 3, suspension: 4, armor: 5, turbo: true },
-            hardwareSlots: {
-                engine: { unitCost: 1800 }, brakes: { unitCost: 1200 }, transmission: { unitCost: 1600 },
-                suspension: { unitCost: 1100 }, armor: { unitCost: 1500 },
-            },
-            featureCosts: {
-                turbo: 4500, launchControl: 2200, pop: 950, flames: 800, antiLag: 2400, drift: 1400,
-                hud: 350, sportMap: 2200, raceMap: 5200, customMapStep: 55, cosmetics: 600, vanityPlate: 1800,
-            },
-        },
-    }, '*');
-}
