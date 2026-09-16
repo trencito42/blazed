@@ -216,7 +216,9 @@ end
 
 function FactionCore.distBetween(a, b)
     if not a or not b then return 9999.0 end
-    return #(a - b)
+    local va = type(a) == 'vector3' and a or vector3(a.x or a[1] or 0.0, a.y or a[2] or 0.0, a.z or a[3] or 0.0)
+    local vb = type(b) == 'vector3' and b or vector3(b.x or b[1] or 0.0, b.y or b[2] or 0.0, b.z or b[3] or 0.0)
+    return #(va - vb)
 end
 
 function FactionCore.isOnline(target)

@@ -86,9 +86,9 @@ local function createCheckpointBlip(index, total, checkpoint, isActive)
     local blip = AddBlipForCoord(checkpoint.x, checkpoint.y, checkpoint.z)
     SetBlipSprite(blip, 1)
     SetBlipColour(blip, isActive and 0 or 1)
-    SetBlipScale(blip, 0.9)
+    SetBlipScale(blip, isActive and 1.1 or 0.8)
     SetBlipRoute(blip, isActive)
-    SetBlipAsShortRange(blip, true)
+    SetBlipAsShortRange(blip, false)
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentString(('CP %d/%d'):format(index, total))
     EndTextCommandSetBlipName(blip)
@@ -199,10 +199,7 @@ AddEventHandler('onResourceStop', function(res)
     if hubBlip and DoesBlipExist(hubBlip) then RemoveBlip(hubBlip) end
 end)
 
--- ── Checkpoint proximity detection ──
--- [BUG 4 FIX] Client sends request but does NOT advance currentCheckpoint.
--- Advancement happens ONLY in sunset:racing:checkpointReached handler.
--- checkpointPending prevents spam while waiting for ACK.
+-- ── Checkpoint proximity detection & 3D markers ──
 CreateThread(function()
     while true do
         if raceActive and raceData and raceData.checkpoints then
@@ -212,30 +209,56 @@ CreateThread(function()
             local coords = GetEntityCoords(target)
             local cp = raceData.checkpoints[currentCheckpoint]
 
-            if cp and not checkpointPending and #(coords - cp) < (Cfg.checkpointRadius or 25.0) then
-                checkpointPending = true
-                TriggerServerEvent('sunset:racing:checkpoint', currentCheckpoint, raceData.raceId)
-                -- Timeout: if no ACK within 3s, allow retry (handles lost UDP)
-                CreateThread(function()
-                    Wait(3000)
-                    if checkpointPending and raceActive then
-                        checkpointPending = false
-                    end
-                end)
+            if cp then
+                local dist = #(coords - cp)
+                if dist < 300.0 then
+                    -- 3D Checkpoint cylinder
+                    DrawMarker(1, cp.x, cp.y, cp.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        10.0, 10.0, 3.5, 241, 196, 15, 160, false, false, 2, false, nil, nil, false)
+                    -- Floating chevron arrow
+                    DrawMarker(0, cp.x, cp.y, cp.z + 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        2.5, 2.5, 2.0, 241, 196, 15, 220, false, false, 2, false, nil, nil, false)
+                end
+
+                if not checkpointPending and dist < (Cfg.checkpointRadius or 25.0) then
+                    checkpointPending = true
+                    TriggerServerEvent('sunset:racing:checkpoint', currentCheckpoint, raceData.raceId)
+                    -- Timeout: if no ACK within 3s, allow retry (handles lost UDP)
+                    CreateThread(function()
+                        Wait(3000)
+                        if checkpointPending and raceActive then
+                            checkpointPending = false
+                        end
+                    end)
+                end
             end
-            Wait(200)
+            Wait(0)
         else
             Wait(1000)
         end
     end
 end)
 
+-- ── Driver & Vehicle validation helper ──
+local function validateVehicleForRace()
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then
+        exports.sunset_ui:Notify('You must be inside a vehicle at the Race Hub.', 'error')
+        return false
+    end
+    if GetPedInVehicleSeat(veh, -1) ~= ped then
+        exports.sunset_ui:Notify('You must be the driver of the vehicle.', 'error')
+        return false
+    end
+    return true
+end
+
 -- ── NUI callbacks ──
 AddEventHandler('sunset:nui:racingClose', function()
     closeRaceUI()
 end)
 
--- [BUG 2 FIX] Defensive validation + preserve server errors verbatim.
 AddEventHandler('sunset:nui:racingJoin', function(data)
     data = type(data) == 'table' and data or {}
     local routeId = tostring(data.routeId or '')
@@ -243,10 +266,11 @@ AddEventHandler('sunset:nui:racingJoin', function(data)
         exports.sunset_ui:Notify('No route selected.', 'error')
         return
     end
+    if not validateVehicleForRace() then return end
     CreateThread(function()
         local res, err = Sunset.AwaitCallback('sunset:racing:join', routeId)
         if not res then
-            exports.sunset_ui:Notify(err or 'Race join failed unexpectedly. Check F8/server logs.', 'error')
+            exports.sunset_ui:Notify(err or 'Race join failed. Check F8/server logs.', 'error')
             return
         end
         exports.sunset_ui:Notify(('Joined %s lobby (%d/%d players).'):format(
@@ -263,10 +287,11 @@ AddEventHandler('sunset:nui:racingStartSolo', function(data)
         exports.sunset_ui:Notify('No route selected.', 'error')
         return
     end
+    if not validateVehicleForRace() then return end
     CreateThread(function()
         local res, err = Sunset.AwaitCallback('sunset:racing:startSolo', routeId)
         if not res then
-            exports.sunset_ui:Notify(err or 'Solo start failed unexpectedly. Check F8/server logs.', 'error')
+            exports.sunset_ui:Notify(err or 'Solo start failed. Check F8/server logs.', 'error')
             return
         end
         closeRaceUI()
@@ -281,6 +306,7 @@ AddEventHandler('sunset:nui:racingStartMulti', function(data)
         exports.sunset_ui:Notify('No route selected.', 'error')
         return
     end
+    if not validateVehicleForRace() then return end
     CreateThread(function()
         local res, err = Sunset.AwaitCallback('sunset:racing:startMulti', routeId)
         if not res then

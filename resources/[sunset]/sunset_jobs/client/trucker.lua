@@ -40,12 +40,18 @@ end
 
 local function drawTruckerMarker(coords, r, g, b)
     if not coords then return end
-    -- Large ground cylinder for truck
+    r = r or 46
+    g = g or 204
+    b = b or 113
+    -- Ground cylinder
     DrawMarker(1, coords.x, coords.y, coords.z - 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        5.0, 5.0, 1.5, r or 46, g or 204, b or 113, 160, false, false, 2, false, nil, nil, false)
-    -- Floating chevron marker visible from distance
-    DrawMarker(0, coords.x, coords.y, coords.z + 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        1.5, 1.5, 1.2, r or 46, g or 204, b or 113, 180, false, false, 2, false, nil, nil, false)
+        6.0, 6.0, 1.5, r, g, b, 160, false, false, 2, false, nil, nil, false)
+    -- Tall beacon column beam visible from far away
+    DrawMarker(1, coords.x, coords.y, coords.z - 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        2.5, 2.5, 30.0, r, g, b, 70, false, false, 2, false, nil, nil, false)
+    -- Floating chevron marker
+    DrawMarker(0, coords.x, coords.y, coords.z + 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        2.0, 2.0, 1.5, r, g, b, 200, false, false, 2, false, nil, nil, false)
 end
 
 local function inWorkTruck()
@@ -218,9 +224,9 @@ local function startTrucker(selectedRouteIdx)
                 if d then
                     local ppos = GetEntityCoords(PlayerPedId())
                     local distToDeliv = #(ppos - d)
-                    if distToDeliv <= 150.0 then
+                    if distToDeliv <= 350.0 then
                         drawTruckerMarker(d, 46, 204, 113)
-                        if distToDeliv <= 35.0 then
+                        if distToDeliv <= 45.0 then
                             draw3DText(d, '[E] Deliver Cargo')
                         end
                     end
@@ -252,9 +258,9 @@ local function startTrucker(selectedRouteIdx)
             elseif stage == 'return_depot' then
                 local ppos = GetEntityCoords(PlayerPedId())
                 local distToDepot = #(ppos - cfg.depot.coords)
-                if distToDepot <= 150.0 then
+                if distToDepot <= 350.0 then
                     drawTruckerMarker(cfg.depot.coords, 52, 152, 219)
-                    if distToDepot <= 35.0 then
+                    if distToDepot <= 45.0 then
                         draw3DText(cfg.depot.coords, '[E] Return Truck')
                     end
                 end
@@ -281,6 +287,34 @@ end
 
 Sunset.Jobs = Sunset.Jobs or {}
 Sunset.Jobs.StartTrucker = startTrucker   -- called as StartTrucker(routeIndex)
+
+RegisterCommand('truckroute', function()
+    if JC.jobId ~= 'trucker' or JC.state == 'IDLE' or not JC.sessionData then
+        return JC.notify('You are not currently on a trucker shift.', 'info')
+    end
+    local cfg = Sunset.GetJobConfig('trucker')
+    local session = JC.sessionData
+    local stage = session and session.stage
+    if stage == 'to_delivery' then
+        local d = routePoint(session, 'delivery')
+        if d then
+            JC.clearBlips()
+            local delivBlip = JC.addBlip(d, { sprite = 478, color = 2, scale = 0.95 }, 'Delivery: ' .. (session.label or 'Cargo'))
+            SetBlipRoute(delivBlip, true)
+            SetBlipRouteColour(delivBlip, 2)
+            JC.setWaypoint(d)
+            JC.notify('GPS route refreshed to: ' .. (session.label or 'Destination'), 'success')
+        end
+    elseif stage == 'return_depot' and cfg and cfg.depot then
+        JC.clearBlips()
+        local depBlip = JC.addBlip(cfg.depot.coords, cfg.depot.blip, 'Return Depot')
+        SetBlipRoute(depBlip, true)
+        SetBlipRouteColour(depBlip, 3)
+        JC.setWaypoint(cfg.depot.coords)
+        JC.notify('GPS route refreshed to Trucker Depot.', 'success')
+    end
+end, false)
+TriggerEvent('chat:addSuggestion', '/truckroute', 'Refresh GPS route to current delivery destination or depot')
 
 RegisterCommand('recovertrailer', function()
     recoverTrailer()

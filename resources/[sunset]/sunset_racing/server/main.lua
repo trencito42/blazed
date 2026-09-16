@@ -108,12 +108,13 @@ exports.sunset_core:RegisterCallback('sunset:racing:startSolo', function(source,
         end
     end
 
-    -- Driver validation
+    -- Ped validation
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil, 'No ped found.' end
-    local veh = GetVehiclePedIsIn(ped, false)
-    if veh == 0 then return nil, 'You must be in a vehicle to start a race.' end
-    if GetPedInVehicleSeat(veh, -1) ~= ped then return nil, 'You must be the DRIVER to start a race.' end
+    local pos = GetEntityCoords(ped)
+    if #(pos - Cfg.raceHub) > 100.0 then
+        return nil, 'You must be near the Race Hub at LS Customs.'
+    end
 
     -- Solo entry fee (default 0 = free)
     local soloFee = Cfg.soloEntryFee or 0
@@ -145,12 +146,13 @@ exports.sunset_core:RegisterCallback('sunset:racing:join', function(source, rout
         return nil, 'You are already in a lobby. Leave first.'
     end
 
-    -- Driver validation
+    -- Ped validation
     local ped = GetPlayerPed(source)
     if not ped or ped == 0 then return nil, 'No ped found.' end
-    local veh = GetVehiclePedIsIn(ped, false)
-    if veh == 0 then return nil, 'You must be in a vehicle to join a race.' end
-    if GetPedInVehicleSeat(veh, -1) ~= ped then return nil, 'You must be the DRIVER to join a race.' end
+    local pos = GetEntityCoords(ped)
+    if #(pos - Cfg.raceHub) > 100.0 then
+        return nil, 'You must be near the Race Hub at LS Customs.'
+    end
 
     -- Charge entry fee (once — guarded by PlayerLobby check)
     if not exports.sunset_core:RemoveMoney(source, 'cash', Cfg.entryFee or 1000, 'race_entry') then
