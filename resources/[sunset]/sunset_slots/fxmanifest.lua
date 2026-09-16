@@ -1,0 +1,30 @@
+fx_version 'cerulean'
+game 'gta5'
+lua54 'yes'
+
+name 'sunset_slots'
+description '5-Reel Sizzling Fruit Slot Machines for SunsetMP'
+author 'XeX / SunsetMP'
+
+ui_page 'html/ui.html'
+
+shared_scripts {
+    'config.lua',
+}
+
+client_scripts {
+    'client.lua',
+}
+
+server_scripts {
+    'server.lua',
+}
+
+files {
+    'html/ui.html',
+    'html/*.js',
+    'html/*.json',
+    'html/design.css',
+    'html/img/*.png',
+    'html/audio/*.mp3'
+}

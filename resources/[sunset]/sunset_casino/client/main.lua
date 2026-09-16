@@ -193,31 +193,7 @@ CreateThread(function()
         local coords = GetEntityCoords(ped)
         local sleep = 250
 
-        -- Blackjack tables are handled 3D in-world by sunset_blackjack (dealers, seats, physical cards & chips)
-
-        -- Slot machines
-        for _, pos in ipairs(Cfg.slotMachines or {}) do
-            local dist = #(coords - pos)
-            if dist < 8.0 then
-                sleep = 0
-                DrawMarker(1, pos.x, pos.y, pos.z - 1.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    1.0, 1.0, 0.8,
-                    255, 200, 0, 80,
-                    false, false, 2, false, nil, nil, false)
-                DrawMarker(2, pos.x, pos.y, pos.z + 0.2,
-                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
-                    0.25, 0.25, 0.25,
-                    255, 200, 0, 180,
-                    true, true, 2, false, nil, nil, false)
-                if dist < 2.2 then
-                    DrawText3D(vector3(pos.x, pos.y, pos.z + 0.4), '~y~[E]~s~ Play Slots')
-                    if IsControlJustReleased(0, 38) and not casinoOpen then
-                        openGame('slots')
-                    end
-                end
-            end
-        end
+        -- Blackjack & Slot machines are handled in-world by sunset_blackjack & sunset_slots (seats, 5-reels & chips)
 
         -- Roulette tables
         local rouletteList = Cfg.rouletteTables or (Cfg.rouletteTable and { Cfg.rouletteTable } or {})
