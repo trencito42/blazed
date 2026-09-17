@@ -241,7 +241,7 @@ function stockTune() {
         hardware: { engine: 0, brakes: 0, transmission: 0, suspension: 0, armor: 0, turbo: false, launchControl: false },
         handling: { steering: 100, brakePower: 100, suspension: 100, traction: 100 },
         hud: { enabled: false },
-        nitrous: { installed: false, level: 1, color: { r: 50, g: 120, b: 255 }, purgeEnabled: true },
+        nitrous: { installed: false, level: 1, color: { r: 0, g: 80, b: 255 }, purgeEnabled: true },
         dyno: { lastHp: 0, lastTorque: 0, lastRunAt: 0 },
     };
 }
@@ -333,7 +333,7 @@ function ensureTune(raw) {
         nitrous: {
             ...base.nitrous,
             ...(src.nitrous || {}),
-            color: { ...((base.nitrous && base.nitrous.color) || { r: 50, g: 120, b: 255 }), ...((src.nitrous && src.nitrous.color) || {}) },
+            color: { ...((base.nitrous && base.nitrous.color) || { r: 0, g: 80, b: 255 }), ...((src.nitrous && src.nitrous.color) || {}) },
         },
         dyno: { ...base.dyno, ...(src.dyno || {}) },
     };
@@ -1456,7 +1456,7 @@ function renderDetailPanel() {
                 tuneDetail.appendChild(flameTitle);
 
                 const nosPresets = [
-                    { label: 'Cobalt Blue', r: 50, g: 120, b: 255 },
+                    { label: 'Cobalt Blue', r: 0, g: 80, b: 255 },
                     { label: 'Cyan Ice', r: 0, g: 230, b: 255 },
                     { label: 'Deep Purple', r: 160, g: 30, b: 255 },
                     { label: 'Emerald Glow', r: 30, g: 255, b: 120 },

@@ -106,7 +106,7 @@ function SunsetTuning.StockTune()
         nitrous = {
             installed = false,
             level = 1,
-            color = { r = 50, g = 120, b = 255 },
+            color = { r = 0, g = 80, b = 255 },
             purgeEnabled = true,
         },
         dyno = { lastHp = 0, lastTorque = 0, lastRunAt = 0 },
@@ -384,8 +384,8 @@ function SunsetTuning.CalculateInstallCost(oldRaw, newRaw, oldCosmetics, newCosm
         if newTune.hud.enabled then partsCost = partsCost + feature.hud end
         hasChanges = true
     end
-    local oldNos = oldTune.nitrous or { installed = false, level = 1, color = { r = 50, g = 120, b = 255 } }
-    local newNos = newTune.nitrous or { installed = false, level = 1, color = { r = 50, g = 120, b = 255 } }
+    local oldNos = oldTune.nitrous or { installed = false, level = 1, color = { r = 0, g = 80, b = 255 } }
+    local newNos = newTune.nitrous or { installed = false, level = 1, color = { r = 0, g = 80, b = 255 } }
     if newNos.installed ~= oldNos.installed then
         if newNos.installed then
             partsCost = partsCost + (feature.nitrous or 3500)

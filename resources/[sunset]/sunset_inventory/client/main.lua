@@ -109,29 +109,54 @@ RegisterNetEvent('sunset:inventory:client:usedItem', function(item, category, ex
 
     if category == 'drinks' then
         local propModel = `prop_ld_can_01`
-        if item == 'beer' then
-            propModel = `prop_cs_beer_bot`
-        elseif item == 'coffee' then
-            propModel = `prop_fib_coffee`
-        elseif item == 'wine' or item == 'champagne' then
-            propModel = `prop_wine_bot_01`
-        elseif item == 'whiskey' or item == 'cocktail' then
-            propModel = `prop_drink_whisky`
-        elseif item == 'water' then
-            propModel = `prop_ld_flow_bottle`
-        end
-
         local animDict = 'mp_player_intdrink'
         local animName = 'loop_bottle'
+        local bone = GetPedBoneIndex(ped, 18905)
+        local pos = vector3(0.12, 0.008, 0.03)
+        local rot = vector3(-100.0, 0.0, -10.0)
+
+        if item == 'champagne' then
+            propModel = `prop_champ_01b`
+            bone = GetPedBoneIndex(ped, 18905)
+            pos = vector3(0.12, 0.028, 0.001)
+            rot = vector3(10.0, 175.0, 0.0)
+        elseif item == 'wine' then
+            propModel = `prop_wine_bot_01`
+            bone = GetPedBoneIndex(ped, 18905)
+            pos = vector3(0.12, 0.028, 0.001)
+            rot = vector3(10.0, 175.0, 0.0)
+        elseif item == 'beer' then
+            propModel = `prop_cs_beer_bot`
+            bone = GetPedBoneIndex(ped, 18905)
+            pos = vector3(0.12, 0.028, 0.001)
+            rot = vector3(10.0, 175.0, 0.0)
+        elseif item == 'water' then
+            propModel = `prop_ld_flow_bottle`
+            bone = GetPedBoneIndex(ped, 18905)
+            pos = vector3(0.12, 0.028, 0.001)
+            rot = vector3(10.0, 175.0, 0.0)
+        elseif item == 'coffee' then
+            propModel = `prop_fib_coffee`
+            animDict = 'amb@world_human_drinking@coffee@male@idle_a'
+            animName = 'idle_c'
+            bone = GetPedBoneIndex(ped, 28422)
+            pos = vector3(0.0, 0.0, 0.0)
+            rot = vector3(0.0, 0.0, 0.0)
+        elseif item == 'whiskey' or item == 'cocktail' then
+            propModel = `prop_drink_whisky`
+            bone = GetPedBoneIndex(ped, 18905)
+            pos = vector3(0.09, -0.01, -0.02)
+            rot = vector3(-20.0, 10.0, -10.0)
+        end
+
         RequestAnimDict(animDict)
         RequestModel(propModel)
         local timeout = GetGameTimer() + 2000
         while (not HasAnimDictLoaded(animDict) or not HasModelLoaded(propModel)) and GetGameTimer() < timeout do Wait(10) end
 
-        local bone = GetPedBoneIndex(ped, 18905)
         local coords = GetEntityCoords(ped)
         local prop = CreateObject(propModel, coords.x, coords.y, coords.z, true, true, false)
-        AttachEntityToEntity(prop, ped, bone, 0.12, 0.008, 0.03, -100.0, 0.0, -10.0, true, true, false, true, 1, true)
+        AttachEntityToEntity(prop, ped, bone, pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, true, true, false, true, 1, true)
         activeItemProp = prop
 
         TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 3200, 49, 0, false, false, false)

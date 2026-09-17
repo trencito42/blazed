@@ -65,33 +65,36 @@ local function spawnNosFlameLayers(veh, color)
     if not EP.ensureAssets() then return end
     if not HasNamedPtfxAssetLoaded('veh_xs_vehicle_mods') then return end
 
-    local c = EP.normalizeColor(color or { r = 50, g = 120, b = 255 })
+    local c = EP.normalizeColor(color or { r = 0, g = 80, b = 255 })
     EP.eachExhaustBone(veh, function(bone, off, pos)
-        -- Layer 1: Outer tinted nitrous jet
+        -- Layer 1: Outer high-intensity tinted nitrous jet
         UseParticleFxAssetNextCall('veh_xs_vehicle_mods')
         local outer = StartParticleFxLoopedOnEntityBone(
             'veh_nitrous', veh,
             0.0, -0.18, 0.0,
             0.0, 0.0, 0.0,
-            bone, 0.75, false, false, false
+            bone, 0.85, false, false, false
         )
         if outer and outer ~= 0 then
             SetParticleFxLoopedColour(outer, c.r / 255.0, c.g / 255.0, c.b / 255.0, false)
-            SetParticleFxLoopedAlpha(outer, 0.95)
+            SetParticleFxLoopedAlpha(outer, 1.0)
             activePtfx[#activePtfx + 1] = outer
         end
 
-        -- Layer 2: Hot white/ice core jet
+        -- Layer 2: Core jet with matching vivid tone instead of pure white wash
         UseParticleFxAssetNextCall('veh_xs_vehicle_mods')
         local core = StartParticleFxLoopedOnEntityBone(
             'veh_nitrous', veh,
-            0.0, -0.10, 0.0,
+            0.0, -0.06, 0.0,
             0.0, 0.0, 0.0,
-            bone, 0.42, false, false, false
+            bone, 0.48, false, false, false
         )
         if core and core ~= 0 then
-            SetParticleFxLoopedColour(core, 0.85, 0.95, 1.0, false)
-            SetParticleFxLoopedAlpha(core, 0.85)
+            local cr = (c.r / 255.0) * 0.35
+            local cg = (c.g / 255.0) * 0.65 + 0.05
+            local cb = math.min(1.0, (c.b / 255.0) * 1.0)
+            SetParticleFxLoopedColour(core, cr, cg, cb, false)
+            SetParticleFxLoopedAlpha(core, 0.95)
             activePtfx[#activePtfx + 1] = core
         end
     end)
@@ -269,18 +272,18 @@ RegisterNetEvent('sunset:tuning:client:nosState', function(netId, active, color,
         remote.ptfx = {}
 
         if EP.ensureAssets() and HasNamedPtfxAssetLoaded('veh_xs_vehicle_mods') then
-            local c = EP.normalizeColor(color or { r = 50, g = 120, b = 255 })
+            local c = EP.normalizeColor(color or { r = 0, g = 80, b = 255 })
             EP.eachExhaustBone(veh, function(bone)
                 UseParticleFxAssetNextCall('veh_xs_vehicle_mods')
                 local outer = StartParticleFxLoopedOnEntityBone(
                     'veh_nitrous', veh,
                     0.0, -0.18, 0.0,
                     0.0, 0.0, 0.0,
-                    bone, 0.70, false, false, false
+                    bone, 0.80, false, false, false
                 )
                 if outer and outer ~= 0 then
                     SetParticleFxLoopedColour(outer, c.r / 255.0, c.g / 255.0, c.b / 255.0, false)
-                    SetParticleFxLoopedAlpha(outer, 0.90)
+                    SetParticleFxLoopedAlpha(outer, 1.0)
                     table.insert(remote.ptfx, outer)
                 end
             end)
