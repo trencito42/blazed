@@ -554,22 +554,41 @@ CreateThread(function()
     end
 end)
 
+function GetVehicleTelemetry(targetVeh)
+    local veh = targetVeh or getVeh()
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return nil end
+
+    local rawRpm = GetVehicleCurrentRpm(veh)
+    local speedKmh = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
+    local gear = GetVehicleCurrentGear(veh)
+    local engineOn = engineEnabled[veh] == true
+    local throttle = GetControlNormal(0, 71)
+    local brake = GetControlNormal(0, 72)
+    local displayRpm = 0.0
+    if engineOn and not (throttle > 0.4 and brake > 0.4 and speedKmh < 3) then
+        displayRpm = math.max(0.0, math.min(1.0, (rawRpm - 0.2) / 0.8))
+    end
+
+    return {
+        veh = veh,
+        rawRpm = rawRpm,
+        displayRpm = displayRpm,
+        speedKmh = speedKmh,
+        gear = gear,
+        throttle = throttle,
+        brake = brake,
+        engineOn = engineOn,
+    }
+end
+exports('GetVehicleTelemetry', GetVehicleTelemetry)
+
 function GetVehicleState()
     local veh = getVeh()
     if veh == 0 or not isDriver() then return nil end
 
-    local speed = math.floor(GetEntitySpeed(veh) * 3.6 + 0.5)
-    local gear = GetVehicleCurrentGear(veh)
-    local rawRpm = GetVehicleCurrentRpm(veh)
-    local rpm = 0.0
-    local engineOn = engineEnabled[veh] == true
-    local throttle = GetControlNormal(0, 71)
-    local brake = GetControlNormal(0, 72)
-    if engineOn and not (throttle > 0.4 and brake > 0.4 and speed < 3) then
-        rpm = (rawRpm - 0.2) / 0.8
-        if rpm < 0.0 then rpm = 0.0 end
-        if rpm > 1.0 then rpm = 1.0 end
-    end
+    local tele = GetVehicleTelemetry(veh)
+    if not tele then return nil end
+
     local class = GetVehicleClass(veh)
     local fuelExempt = class == 13 or class == 14 or class == 15 or class == 16
 
@@ -585,16 +604,18 @@ function GetVehicleState()
     return {
         inVehicle = true,
         isDriver = isDriver(),
-        speed = speed,
-        gear = gear,
-        rpm = rpm,
+        speed = tele.speedKmh,
+        gear = tele.gear,
+        rpm = tele.displayRpm,
+        rawRpm = tele.rawRpm,
+        displayRpm = tele.displayRpm,
         fuel = fuelExempt and 100 or fuel,
         showFuel = not fuelExempt,
         engine = GetVehicleEngineHealth(veh),
         locked = locked,
         seatbelt = seatbelt,
         lightMode = lightMode,
-        engineOn = engineOn,
+        engineOn = tele.engineOn,
         odometer = isTrackedOwnedVehicle(veh) and (math.floor(odometerKm * 10) / 10) or nil,
         showOdometer = isTrackedOwnedVehicle(veh),
         vehicleClass = class,

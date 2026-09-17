@@ -179,101 +179,98 @@ function EP.smoke(veh, scale)
     end)
 end
 
--- Actual Los Santos Tuners tailpipe events. The former generic names were
--- mostly air/FX samples, which is why the result sounded like a hiss.
-local CRACKLE_SOUNDS = {
-    'zr350_exhaust_pops', 'calico_exhaust_pops', 'comet6_exhaust_pops',
-    'cypher_exhaust_pops', 'futo2_exhaust_pops', 'jester4_exhaust_pops',
-    'remus_exhaust_pops', 'rt3000_exhaust_pops', 'tailgater2_exhaust_pops',
-    'tuner_hatch02_exhaust_pops', 'tuner_hatch04_exhaust_pops',
-    'tuner_muscle01_exhaust_pops', 'vectre_exhaust_pops',
+-- Stable vehicle sound families mapped by entity model hash.
+-- Avoids random vehicle model switching every 80ms and ensures coherent 3D audio.
+local SOUND_FAMILIES = {
+    zr350 = { crackle = 'zr350_exhaust_pops', bang = 'zr350_exhaust_pops_upgraded', limiter = 'zr350_exhaust_pops_upgraded' },
+    calico = { crackle = 'calico_exhaust_pops', bang = 'calico_exhaust_pops_upgrade', limiter = 'calico_exhaust_pops_upgrade' },
+    comet6 = { crackle = 'comet6_exhaust_pops', bang = 'comet6_exhaust_pops_upgrade', limiter = 'comet6_exhaust_pops_upgrade' },
+    cypher = { crackle = 'cypher_exhaust_pops', bang = 'cypher_exhaust_pops_upgraded', limiter = 'cypher_limiter_pops' },
+    futo2 = { crackle = 'futo2_exhaust_pops', bang = 'calico_exhaust_pops_upgrade', limiter = 'tuner_hatch02_limiter_pops' },
+    jester4 = { crackle = 'jester4_exhaust_pops', bang = 'jester4_exhaust_pops_upgrade', limiter = 'jester4_exhaust_pops_upgrade' },
+    remus = { crackle = 'remus_exhaust_pops', bang = 'remus_exhaust_pops_upgraded', limiter = 'remus_limiter_pops' },
+    rt3000 = { crackle = 'rt3000_exhaust_pops', bang = 'rt3000_exhaust_pops_upgrade', limiter = 'rt3000_upgraded_limiter_pops' },
+    tailgater2 = { crackle = 'tailgater2_exhaust_pops', bang = 'tailgater2_exhaust_pops_upgraded', limiter = 'tailgater2_limiter_pops' },
+    vectre = { crackle = 'vectre_exhaust_pops', bang = 'vectre_exhaust_pops_upgrade', limiter = 'vectre_limiter_pops' },
+    tuner_muscle = { crackle = 'tuner_muscle01_exhaust_pops', bang = 'dominator7_exhaust_pops_upgrade', limiter = 'tuner_muscle01_limiter_pops' },
+    tuner_hatch = { crackle = 'tuner_hatch02_exhaust_pops', bang = 'tuner_hatch03_exhaust_pops_upgrade', limiter = 'tuner_hatch02_limiter_pops' },
 }
 
-local BANG_SOUNDS = {
-    'calico_exhaust_pops_upgrade', 'comet6_exhaust_pops_upgrade',
-    'cypher_exhaust_pops_upgraded', 'dominator7_exhaust_pops_upgrade',
-    'jester4_exhaust_pops_upgrade', 'remus_exhaust_pops_upgraded',
-    'rt3000_exhaust_pops_upgrade', 'tailgater2_exhaust_pops_upgraded',
-    'tuner_hatch03_exhaust_pops_upgrade', 'vectre_exhaust_pops_upgrade',
-    'zr350_exhaust_pops_upgraded',
-}
+local FAMILY_KEYS = { 'zr350', 'calico', 'comet6', 'cypher', 'futo2', 'jester4', 'remus', 'rt3000', 'tailgater2', 'vectre', 'tuner_muscle', 'tuner_hatch' }
 
-local LIMITER_SOUNDS = {
-    'cypher_limiter_pops', 'remus_limiter_pops', 'tailgater2_limiter_pops',
-    'tuner_hatch02_limiter_pops', 'tuner_hatch04_limiter_pops',
-    'tuner_muscle01_limiter_pops', 'vectre_limiter_pops',
-    'warrener2_limiter_pops', 'rt3000_upgraded_limiter_pops',
-}
+local function getVehicleSoundFamily(veh)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return SOUND_FAMILIES.calico end
+    local model = GetEntityModel(veh)
+    local idx = (math.abs(model) % #FAMILY_KEYS) + 1
+    local key = FAMILY_KEYS[idx] or 'calico'
+    return SOUND_FAMILIES[key] or SOUND_FAMILIES.calico
+end
 
 local function playSoundLayer(veh, soundName)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
     pcall(function()
         local sid = GetSoundId()
         PlaySoundFromEntity(sid, soundName, veh, 'DLC_TUNER_CAR_MEET_SOUNDS', false, 0)
-        SetTimeout(900, function() ReleaseSoundId(sid) end)
+        SetTimeout(800, function() ReleaseSoundId(sid) end)
     end)
 end
 
-local function playSpatialPopSound(veh, volume)
+function EP.playBackfireSound(veh, kind, intensity)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
-    local myCoords = GetEntityCoords(PlayerPedId())
-    local vehCoords = GetEntityCoords(veh)
-    local dist = #(myCoords - vehCoords)
-    local maxDist = 35.0
-    if dist <= maxDist then
-        local ratio = math.max(0.05, 1.0 - (dist / maxDist))
-        local finalVol = math.min(0.40, (volume or 0.6) * 0.45 * ratio)
-        local soundIdx = tostring(math.random(1, 6))
-        SendNUIMessage({
-            action = 'playSound',
-            sound = soundIdx,
-            volume = finalVol,
-        })
-    end
+    local fam = getVehicleSoundFamily(veh)
+    local sName = (kind == 'bang' or kind == 'gearshift') and fam.bang
+        or (kind == 'limiter' or kind == 'twostep' or kind == 'antilag') and fam.limiter
+        or fam.crackle
+    playSoundLayer(veh, sName)
 end
 
-function EP.playBackfireSound(veh, profile, intensity)
+--- Unified burst dispatcher.
+-- Pure exhaust backfire and flame: DOES NOT trigger SetVehicleNitroEnabled (nitrous is managed independently).
+function EP.burst(veh, kind, intensity, flameColor, withFlames)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
-    local pool = profile == 'limiter' and LIMITER_SOUNDS or profile == 'bang' and BANG_SOUNDS or CRACKLE_SOUNDS
-    playSoundLayer(veh, pool[math.random(1, #pool)])
-    playSpatialPopSound(veh, math.min(0.7, 0.4 + (intensity or 0.8) * 0.25))
-end
-
-function EP.burst(veh, kind, intensity, flameColor)
-    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
-    intensity = math.max(0.35, math.min(1.4, tonumber(intensity) or 0.85))
-    kind = kind or 'pop'
+    intensity = math.max(0.25, math.min(1.5, tonumber(intensity) or 0.75))
+    kind = kind or 'crackle'
     local color = flameColor or DEFAULT_FLAME
 
-    -- Visual exhaust backfire
-    pcall(function()
-        SetVehicleNitroEnabled(veh, true)
-        SetTimeout(70, function()
-            if DoesEntityExist(veh) then
-                SetVehicleNitroEnabled(veh, false)
-            end
-        end)
-    end)
-
-    if kind == 'pop' or kind == 'twostep' then
-        EP.backfire(veh, 1.1 + intensity * 0.72, color)
-        if kind == 'twostep' or intensity > 0.9 then EP.sparks(veh, 0.3 + intensity * 0.2, color) end
-        EP.playBackfireSound(veh, kind == 'twostep' and 'limiter' or (intensity > 0.82 and 'bang' or 'crackle'), intensity)
-    end
-    if kind == 'antilag' then
-        EP.backfire(veh, 0.95 + intensity * 0.58, color)
-        if intensity > 0.75 then EP.sparks(veh, 0.28 + intensity * 0.18, color) end
-        EP.playBackfireSound(veh, 'limiter', intensity)
-    end
-    if kind == 'flame' or kind == 'extra' then
-        EP.flames(veh, 0.75 + intensity * 0.55, color)
-    end
-    if kind == 'diesel' or kind == 'smoke' then
-        EP.smoke(veh, 0.85 + intensity * 0.4)
-    end
-    if kind == 'flash' then
-        EP.backfire(veh, 1.65, color)
-        EP.flames(veh, 1.45, color)
+    if kind == 'crackle' then
+        EP.backfire(veh, 0.65 + intensity * 0.40, color)
+        if withFlames and intensity > 0.6 then
+            tintedFlamePulse(veh, nil, 0.30 + intensity * 0.20, color, 40)
+        end
+        EP.playBackfireSound(veh, 'crackle', intensity)
+    elseif kind == 'bang' or kind == 'pop' then
+        EP.backfire(veh, 0.95 + intensity * 0.65, color)
+        if intensity > 0.75 then EP.sparks(veh, 0.25 + intensity * 0.20, color) end
+        if withFlames then
+            tintedFlamePulse(veh, nil, 0.45 + intensity * 0.25, color, 65)
+        end
         EP.playBackfireSound(veh, 'bang', intensity)
+    elseif kind == 'gearshift' then
+        EP.backfire(veh, 0.90 + intensity * 0.50, color)
+        if withFlames then
+            tintedFlamePulse(veh, nil, 0.40 + intensity * 0.20, color, 50)
+        end
+        EP.playBackfireSound(veh, 'gearshift', intensity)
+    elseif kind == 'twostep' then
+        EP.backfire(veh, 1.0 + intensity * 0.60, color)
+        EP.sparks(veh, 0.35 + intensity * 0.25, color)
+        if withFlames then
+            tintedFlamePulse(veh, nil, 0.50 + intensity * 0.25, color, 55)
+        end
+        EP.playBackfireSound(veh, 'twostep', intensity)
+    elseif kind == 'antilag' then
+        EP.backfire(veh, 0.85 + intensity * 0.45, color)
+        if intensity > 0.65 then EP.sparks(veh, 0.25 + intensity * 0.20, color) end
+        EP.playBackfireSound(veh, 'antilag', intensity)
+    elseif kind == 'flame' or kind == 'extra' then
+        EP.flames(veh, 0.75 + intensity * 0.55, color)
+        EP.playBackfireSound(veh, 'crackle', intensity)
+    elseif kind == 'diesel' or kind == 'smoke' then
+        EP.smoke(veh, 0.80 + intensity * 0.40)
+    elseif kind == 'flash' then
+        EP.backfire(veh, 1.45, color)
+        EP.flames(veh, 1.25, color)
+        EP.sparks(veh, 0.5, color)
+        EP.playBackfireSound(veh, 'bang', 1.0)
     end
 end

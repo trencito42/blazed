@@ -316,17 +316,17 @@ RegisterNetEvent('sunset:tuning:flashApplied', function(plate, tune)
     TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, plate, SunsetTuning.SanitizeTune(props.ecu))
 end)
 
-RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensity, color)
+RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensity, color, withFlames)
     local src = source
     local now = GetGameTimer()
-    if now - (FxRate[src] or 0) < 120 then return end
+    if now - (FxRate[src] or 0) < 60 then return end
     FxRate[src] = now
     netId = tonumber(netId)
     if not netId or netId == 0 then return end
-    local allowedFx = { pop = true, twostep = true, antilag = true, flame = true, extra = true, diesel = true, smoke = true, flash = true }
-    fxType = type(fxType) == 'string' and fxType or 'pop'
+    local allowedFx = { pop = true, crackle = true, bang = true, gearshift = true, twostep = true, antilag = true, flame = true, extra = true, diesel = true, smoke = true, flash = true }
+    fxType = type(fxType) == 'string' and fxType or 'crackle'
     if not allowedFx[fxType] then return end
-    intensity = math.max(0.1, math.min(1.0, tonumber(intensity) or 0.5))
+    intensity = math.max(0.1, math.min(1.5, tonumber(intensity) or 0.5))
     if type(color) ~= 'table' then color = { r = 255, g = 120, b = 40 } end
 
     local srcPed = GetPlayerPed(src)
@@ -342,7 +342,7 @@ RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensit
     local persistedTune = props.ecu and SunsetTuning.SanitizeTune(props.ecu) or nil
     if not persistedTune or SunsetTuning.IsStockTune(persistedTune) then return end
     local mode = SunsetTuning.ExhaustModes[persistedTune.exhaust] or {}
-    if (fxType == 'pop' and not persistedTune.pop.enabled)
+    if ((fxType == 'pop' or fxType == 'crackle' or fxType == 'bang' or fxType == 'gearshift') and not persistedTune.pop.enabled and not persistedTune.antiLag.enabled)
         or (fxType == 'twostep' and (not persistedTune.pop.enabled or not persistedTune.hardware.launchControl))
         or (fxType == 'antilag' and not persistedTune.antiLag.enabled)
         or ((fxType == 'flame' or fxType == 'extra' or fxType == 'flash') and not persistedTune.flames.enabled)
@@ -355,7 +355,29 @@ RegisterNetEvent('sunset:tuning:syncExhaustFx', function(netId, fxType, intensit
         if pid and pid ~= src then
             local ped = GetPlayerPed(pid)
             if ped and ped ~= 0 and #(coords - GetEntityCoords(ped)) < 90.0 then
-                TriggerClientEvent('sunset:tuning:client:exhaustFx', pid, netId, fxType, intensity, color)
+                TriggerClientEvent('sunset:tuning:client:exhaustFx', pid, netId, fxType, intensity, color, withFlames == true)
+            end
+        end
+    end
+end)
+
+RegisterNetEvent('sunset:tuning:syncNosState', function(netId, active, color, level)
+    local src = source
+    local srcPed = GetPlayerPed(src)
+    if not srcPed or srcPed == 0 then return end
+    netId = tonumber(netId)
+    if not netId or netId == 0 then return end
+    local entity = NetworkGetEntityFromNetworkId(netId)
+    if not entity or entity == 0 or GetEntityType(entity) ~= 2
+        or GetVehiclePedIsIn(srcPed, false) ~= entity or GetPedInVehicleSeat(entity, -1) ~= srcPed then return end
+
+    local coords = GetEntityCoords(srcPed)
+    for _, playerId in ipairs(GetPlayers()) do
+        local pid = tonumber(playerId)
+        if pid and pid ~= src then
+            local ped = GetPlayerPed(pid)
+            if ped and ped ~= 0 and #(coords - GetEntityCoords(ped)) < 110.0 then
+                TriggerClientEvent('sunset:tuning:client:nosState', pid, netId, active == true, color, level)
             end
         end
     end

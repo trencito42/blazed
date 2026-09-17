@@ -241,6 +241,7 @@ function stockTune() {
         hardware: { engine: 0, brakes: 0, transmission: 0, suspension: 0, armor: 0, turbo: false, launchControl: false },
         handling: { steering: 100, brakePower: 100, suspension: 100, traction: 100 },
         hud: { enabled: false },
+        nitrous: { installed: false, level: 1, color: { r: 50, g: 120, b: 255 }, purgeEnabled: true },
         dyno: { lastHp: 0, lastTorque: 0, lastRunAt: 0 },
     };
 }
@@ -329,6 +330,11 @@ function ensureTune(raw) {
         hardware: { ...base.hardware, ...(src.hardware || {}) },
         handling: { ...base.handling, ...(src.handling || {}) },
         hud: { ...base.hud, ...(src.hud || {}) },
+        nitrous: {
+            ...base.nitrous,
+            ...(src.nitrous || {}),
+            color: { ...((base.nitrous && base.nitrous.color) || { r: 50, g: 120, b: 255 }), ...((src.nitrous && src.nitrous.color) || {}) },
+        },
         dyno: { ...base.dyno, ...(src.dyno || {}) },
     };
 }
@@ -397,6 +403,11 @@ function categoryHasChanges(catId) {
         return Number(curT.hardware.suspension || 0) !== Number(oldT.hardware.suspension || 0);
     }
     if (catId === 'turbo') {
+        const oldNos = oldT.nitrous || { installed: false, level: 1 };
+        const curNos = curT.nitrous || { installed: false, level: 1 };
+        if (!!curNos.installed !== !!oldNos.installed) return true;
+        if (curNos.installed && Number(curNos.level || 1) !== Number(oldNos.level || 1)) return true;
+        if (curNos.installed && !sameColor(curNos.color, oldNos.color)) return true;
         return !!curT.hardware.turbo !== !!oldT.hardware.turbo
             || !!curT.hardware.launchControl !== !!oldT.hardware.launchControl
             || curT.topSpeed !== oldT.topSpeed;
@@ -481,6 +492,19 @@ function localInstallQuote() {
         ['hud', next.hud.enabled, old.hud.enabled]].forEach(([key, enabled, wasEnabled]) => {
         if (enabled && !wasEnabled) total += Number(featureCosts[key] || 0);
     });
+
+    const oldNos = old.nitrous || { installed: false, level: 1 };
+    const nextNos = next.nitrous || { installed: false, level: 1 };
+    if (nextNos.installed && !oldNos.installed) {
+        total += Number(featureCosts.nitrous || 3500);
+        if (nextNos.level === 2) total += Number(featureCosts.nitrousSport || 1500);
+        if (nextNos.level === 3) total += Number(featureCosts.nitrousRace || 3000);
+    } else if (nextNos.installed && oldNos.installed && nextNos.level > oldNos.level) {
+        const tierCost = (nextNos.level === 3 && oldNos.level === 1) ? Number(featureCosts.nitrousRace || 3000)
+            : (nextNos.level === 3 && oldNos.level === 2) ? (Number(featureCosts.nitrousRace || 3000) - Number(featureCosts.nitrousSport || 1500))
+            : Number(featureCosts.nitrousSport || 1500);
+        total += tierCost;
+    }
 
     if (next.stage !== old.stage) {
         total += Number(next.stage === 'race' ? featureCosts.raceMap : next.stage === 'sport' ? featureCosts.sportMap : 0);
@@ -819,6 +843,24 @@ function renderPartList() {
                     preview();
                 },
                 isActive: () => !!tune.hardware.launchControl,
+            });
+        }
+        if (cap('nitrous') || cap('propulsion') !== 'electric') {
+            const isInst = !!installedTune?.nitrous?.installed;
+            const cur = !!tune?.nitrous?.installed;
+            const curTier = tune?.nitrous?.level || 1;
+            const tierNames = ['Street (S1)', 'Sport (S2)', 'Race (S3)'];
+            parts.push({
+                id: 'nitrous_sys',
+                label: 'Nitrous Oxide System (NOS)',
+                price: isInst ? (cur ? `Installed · ${tierNames[curTier - 1]}` : 'Disable') : (cur ? `Selected ($${featureCosts.nitrous || 3500})` : 'Not Installed'),
+                isInstalled: isInst && cur,
+                isPreview: cur !== isInst || (cur && curTier !== (installedTune?.nitrous?.level || 1)),
+                apply: () => {
+                    activePartId = 'nitrous_sys';
+                    renderDetailPanel();
+                },
+                isActive: () => activePartId === 'nitrous_sys',
             });
         }
         parts.push({
@@ -1310,10 +1352,94 @@ function renderDetailPanel() {
     if (activeTab === 'turbo') {
         const title = document.createElement('div');
         title.className = 'section-title section-title--compact';
-        title.textContent = 'Forced Induction & Top Speed Limit';
+        title.textContent = 'Forced Induction & Nitrous Oxide (NOS)';
         tuneDetail.appendChild(title);
 
         tuneDetail.appendChild(sliderField('Top Speed Governor', 'topSpeed', -10, 40, ' km/h'));
+
+        if (activePartId === 'nitrous_sys' || !activePartId) {
+            const nosTitle = document.createElement('div');
+            nosTitle.className = 'section-title section-title--compact';
+            nosTitle.style.marginTop = '14px';
+            nosTitle.textContent = 'Nitrous Injection System Configuration';
+            tuneDetail.appendChild(nosTitle);
+
+            tuneDetail.appendChild(toggleRow('Nitrous System Installed', 'nitrous.installed'));
+
+            if (tune?.nitrous?.installed) {
+                const tierLabel = document.createElement('label');
+                tierLabel.style.marginTop = '10px';
+                tierLabel.textContent = 'NITROUS BOTTLE & INJECTION TIER';
+                tuneDetail.appendChild(tierLabel);
+
+                const tierGrid = document.createElement('div');
+                tierGrid.className = 'options-grid';
+                const tiers = [
+                    { id: 1, label: 'Tier 1: Street (+22% boost)' },
+                    { id: 2, label: 'Tier 2: Sport (+38% boost)' },
+                    { id: 3, label: 'Tier 3: Race (+55% boost)' },
+                ];
+                tiers.forEach((t) => {
+                    const btn = document.createElement('button');
+                    btn.className = `option-btn ${(tune?.nitrous?.level || 1) === t.id ? 'active' : ''}`;
+                    btn.textContent = t.label;
+                    btn.addEventListener('click', () => {
+                        tune.nitrous.level = t.id;
+                        preview();
+                        renderPartList();
+                        renderDetailPanel();
+                    });
+                    tierGrid.appendChild(btn);
+                });
+                tuneDetail.appendChild(tierGrid);
+
+                const flameTitle = document.createElement('label');
+                flameTitle.style.marginTop = '12px';
+                flameTitle.textContent = 'NITROUS EXHAUST FLAME COLOR';
+                tuneDetail.appendChild(flameTitle);
+
+                const nosPresets = [
+                    { label: 'Cobalt Blue', r: 50, g: 120, b: 255 },
+                    { label: 'Cyan Ice', r: 0, g: 230, b: 255 },
+                    { label: 'Deep Purple', r: 160, g: 30, b: 255 },
+                    { label: 'Emerald Glow', r: 30, g: 255, b: 120 },
+                    { label: 'Ghost White', r: 240, g: 250, b: 255 },
+                ];
+                const presetGrid = document.createElement('div');
+                presetGrid.className = 'palette-grid';
+                nosPresets.forEach((p) => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'palette-swatch';
+                    swatch.style.background = `rgb(${p.r},${p.g},${p.b})`;
+                    swatch.title = p.label;
+                    swatch.addEventListener('click', () => {
+                        tune.nitrous.color = { r: p.r, g: p.g, b: p.b };
+                        preview();
+                        renderDetailPanel();
+                    });
+                    presetGrid.appendChild(swatch);
+                });
+                tuneDetail.appendChild(presetGrid);
+
+                ['r', 'g', 'b'].forEach((ch) => {
+                    const row = document.createElement('div');
+                    row.className = 'color-row';
+                    row.innerHTML = `<span>${ch.toUpperCase()}</span>`;
+                    const input = document.createElement('input');
+                    input.type = 'range';
+                    input.min = 0;
+                    input.max = 255;
+                    input.value = tune?.nitrous?.color?.[ch] ?? 120;
+                    input.addEventListener('input', () => {
+                        if (!tune.nitrous.color) tune.nitrous.color = { r: 50, g: 120, b: 255 };
+                        tune.nitrous.color[ch] = Number(input.value);
+                        preview();
+                    });
+                    row.appendChild(input);
+                    tuneDetail.appendChild(row);
+                });
+            }
+        }
     }
 
     if (activeTab === 'handling') {

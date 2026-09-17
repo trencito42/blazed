@@ -33,6 +33,11 @@
         engineOn: false,
         locked: false,
         seatbelt: false,
+        gear: 1,
+        hasNos: false,
+        nosActive: false,
+        targetNos: 0,
+        currentNos: 0,
     };
 
     let canvas = null;
@@ -94,10 +99,12 @@
         if (!active) return;
         ctx.clearRect(0, 0, SIZE, SIZE);
 
-        state.currentSpeed = lerp(state.currentSpeed, state.targetSpeed, 0.1);
-        state.currentRpm = lerp(state.currentRpm, state.targetRpm, 0.14);
+        state.currentSpeed = lerp(state.currentSpeed, state.targetSpeed, 0.18);
+        const rpmLerp = state.targetRpm < state.currentRpm ? 0.38 : 0.28;
+        state.currentRpm = lerp(state.currentRpm, state.targetRpm, rpmLerp);
         state.currentFuel = lerp(state.currentFuel, state.targetFuel, 0.05);
         state.currentHealth = lerp(state.currentHealth, state.targetHealth, 0.05);
+        state.currentNos = lerp(state.currentNos, state.targetNos, 0.2);
 
         const speedPct = Math.min(state.currentSpeed / MAX_SPEED, 1);
         const speedAngle = START_ANGLE + ARC_RANGE * speedPct;
@@ -195,6 +202,21 @@
         ctx.font = "bold 11px Montserrat, 'Chakra Petch', sans-serif";
         ctx.textAlign = 'center';
         ctx.fillText(`ODO  ${state.odo.toFixed(1).padStart(7, '0')}`, CX, CY + 125);
+
+        if (state.hasNos) {
+            const nosBarWidth = 110;
+            const nosBarHeight = 4;
+            const nosX = CX - nosBarWidth / 2;
+            const nosY = CY + 102;
+            ctx.fillStyle = state.nosActive ? '#00e5ff' : theme.muted;
+            ctx.font = "bold 9px Montserrat, 'Chakra Petch', sans-serif";
+            ctx.textAlign = 'center';
+            ctx.fillText(state.nosActive ? 'N2O ACTIVE' : 'N2O', CX, nosY - 4);
+            drawRoundedRect(nosX, nosY, nosBarWidth, nosBarHeight, 2, 'rgba(255,255,255,0.1)');
+            const nosPct = clamp(state.currentNos / 100, 0, 1, 0);
+            drawRoundedRect(nosX, nosY, nosBarWidth * nosPct, nosBarHeight, 2,
+                state.nosActive ? '#00e5ff' : (state.currentNos < 20 ? theme.redline : '#3b82f6'));
+        }
     }
 
     function frame() {
@@ -229,8 +251,22 @@
                 state.currentSpeed = 0;
                 state.targetRpm = 0;
                 state.currentRpm = 0;
+                state.targetNos = 0;
+                state.currentNos = 0;
+                state.hasNos = false;
+                state.nosActive = false;
                 if (ctx) ctx.clearRect(0, 0, SIZE, SIZE);
             }
+        },
+        updateGauges(data = {}) {
+            if (!running && !init()) return;
+            if (data.speed !== undefined) state.targetSpeed = clamp(data.speed, 0, 999, 0);
+            if (data.rpm !== undefined) state.targetRpm = clamp(data.rpm, 0, 1, 0);
+            if (data.gear !== undefined) state.gear = data.gear;
+            if (data.engineOn !== undefined) state.engineOn = data.engineOn === true;
+            if (data.hasNos !== undefined) state.hasNos = data.hasNos === true;
+            if (data.nosActive !== undefined) state.nosActive = data.nosActive === true;
+            if (data.nosLevel !== undefined) state.targetNos = clamp(data.nosLevel, 0, 100, 0);
         },
         update(data = {}) {
             if (!running && !init()) return;
@@ -242,6 +278,9 @@
             state.engineOn = data.engineOn === true;
             state.locked = data.locked === true;
             state.seatbelt = data.seatbelt === true;
+            if (data.hasNos !== undefined) state.hasNos = data.hasNos === true;
+            if (data.nosActive !== undefined) state.nosActive = data.nosActive === true;
+            if (data.nosLevel !== undefined) state.targetNos = clamp(data.nosLevel, 0, 100, 0);
         },
     };
 

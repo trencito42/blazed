@@ -18,6 +18,9 @@ SunsetTuning.HardwareSlots = {
 SunsetTuning.FeatureCosts = {
     turbo = 4500,
     launchControl = 2200,
+    nitrous = 3500,
+    nitrousSport = 1500,
+    nitrousRace = 3000,
     pop = 950,
     flames = 800,
     antiLag = 2400,
@@ -100,6 +103,12 @@ function SunsetTuning.StockTune()
             traction = 100,
         },
         hud = { enabled = false },
+        nitrous = {
+            installed = false,
+            level = 1,
+            color = { r = 50, g = 120, b = 255 },
+            purgeEnabled = true,
+        },
         dyno = { lastHp = 0, lastTorque = 0, lastRunAt = 0 },
     }
 end
@@ -147,6 +156,8 @@ function SunsetTuning.SanitizeTune(raw, caps)
     local pop = type(raw.pop) == 'table' and raw.pop or {}
     local flames = type(raw.flames) == 'table' and raw.flames or {}
     local antiLag = type(raw.antiLag) == 'table' and raw.antiLag or {}
+    local nitrous = type(raw.nitrous) == 'table' and raw.nitrous or {}
+    local nitrousColor = type(nitrous.color) == 'table' and nitrous.color or {}
     local drift = type(raw.drift) == 'table' and raw.drift or {}
     local hardware = type(raw.hardware) == 'table' and raw.hardware or {}
     local handling = type(raw.handling) == 'table' and raw.handling or {}
@@ -159,6 +170,7 @@ function SunsetTuning.SanitizeTune(raw, caps)
     local popsAllowed = (caps == nil) or (caps.popsAndBangs ~= false)
     local flamesAllowed = (caps == nil) or (caps.flames ~= false)
     local antiLagAllowed = (caps == nil) or (caps.antiLag ~= false)
+    local nitrousAllowed = (caps == nil) or (caps.nitrous ~= false)
 
     return {
         profileVersion = SunsetTuning.ProfileVersion,
@@ -209,6 +221,16 @@ function SunsetTuning.SanitizeTune(raw, caps)
             traction = math.max(75, math.min(120, math.floor(tonumber(handling.traction) or 100))),
         },
         hud = { enabled = hud.enabled == true },
+        nitrous = {
+            installed = nitrousAllowed and nitrous.installed == true or false,
+            level = math.max(1, math.min(3, math.floor(tonumber(nitrous.level) or 1))),
+            color = {
+                r = math.max(0, math.min(255, math.floor(tonumber(nitrousColor.r) or 50))),
+                g = math.max(0, math.min(255, math.floor(tonumber(nitrousColor.g) or 120))),
+                b = math.max(0, math.min(255, math.floor(tonumber(nitrousColor.b) or 255))),
+            },
+            purgeEnabled = nitrous.purgeEnabled ~= false,
+        },
         dyno = {
             lastHp = math.max(0, math.floor(tonumber(dyno.lastHp) or 0)),
             lastTorque = math.max(0, math.floor(tonumber(dyno.lastTorque) or 0)),
@@ -223,6 +245,7 @@ function SunsetTuning.IsStockTune(raw)
     if tune.stage ~= 'civil' or tune.power ~= 0 or tune.torque ~= 0 then return false end
     if tune.throttleResponse ~= 0 or tune.topSpeed ~= 0 or tune.shiftSpeed ~= 0 or tune.regenBraking ~= 0 then return false end
     if tune.pop.enabled or tune.antiLag.enabled or tune.drift.enabled or tune.hud.enabled then return false end
+    if tune.nitrous and tune.nitrous.installed then return false end
     if tune.flames.enabled then return false end
     for key in pairs(SunsetTuning.HardwareSlots) do
         if (tune.hardware[key] or 0) > 0 then return false end
@@ -238,6 +261,7 @@ function SunsetTuning.HasPerformanceChanges(raw)
     local tune = SunsetTuning.SanitizeTune(raw)
     if tune.stage ~= 'civil' or tune.power ~= 0 or tune.torque ~= 0 or tune.drift.enabled then return true end
     if tune.throttleResponse ~= 0 or tune.topSpeed ~= 0 or tune.shiftSpeed ~= 0 or tune.regenBraking ~= 0 then return true end
+    if tune.nitrous and tune.nitrous.installed then return true end
     for key in pairs(SunsetTuning.HardwareSlots) do
         if (tune.hardware[key] or 0) > 0 then return true end
     end
@@ -269,6 +293,10 @@ function SunsetTuning.BuildVehicleInfo(raw)
     if tune.pop.enabled then chips[#chips + 1] = 'POP&BANG' end
     if tune.flames.enabled then chips[#chips + 1] = 'FLAMES' end
     if tune.antiLag.enabled then chips[#chips + 1] = 'ANTI-LAG' end
+    if tune.nitrous and tune.nitrous.installed then
+        local tiers = { [1] = 'NOS S1', [2] = 'NOS S2', [3] = 'NOS S3' }
+        chips[#chips + 1] = tiers[tune.nitrous.level] or 'NOS'
+    end
     if tune.drift.enabled then chips[#chips + 1] = 'DRIFT' end
     if tune.hud.enabled then chips[#chips + 1] = 'HUD' end
     if tune.hardware.turbo then chips[#chips + 1] = 'TURBO' end
@@ -285,6 +313,7 @@ function SunsetTuning.BuildVehicleInfo(raw)
         { label = 'FLAME COLOR', value = ('RGB %d/%d/%d'):format(tune.flames.color.r, tune.flames.color.g, tune.flames.color.b) },
         { label = 'RPM POP', value = tune.pop.rpmMax .. '%' },
         { label = 'ANTI-LAG', value = tune.antiLag.enabled and ('On (' .. tune.antiLag.intensity .. '%)') or 'Off' },
+        { label = 'NITROUS', value = (tune.nitrous and tune.nitrous.installed) and (({ [1] = 'Stage 1 (Street)', [2] = 'Stage 2 (Sport)', [3] = 'Stage 3 (Race)' })[tune.nitrous.level] or 'Installed') or 'None' },
         { label = 'DRIFT', value = tune.drift.enabled and ('On · grip ' .. tune.drift.grip .. '%') or 'Off' },
         { label = 'ENGINE', value = ('Level %d/4'):format(tune.hardware.engine) },
         { label = 'TURBO', value = tune.hardware.turbo and 'Installed' or 'Stock' },
@@ -354,6 +383,29 @@ function SunsetTuning.CalculateInstallCost(oldRaw, newRaw, oldCosmetics, newCosm
     if newTune.hud.enabled ~= oldTune.hud.enabled then
         if newTune.hud.enabled then partsCost = partsCost + feature.hud end
         hasChanges = true
+    end
+    local oldNos = oldTune.nitrous or { installed = false, level = 1, color = { r = 50, g = 120, b = 255 } }
+    local newNos = newTune.nitrous or { installed = false, level = 1, color = { r = 50, g = 120, b = 255 } }
+    if newNos.installed ~= oldNos.installed then
+        if newNos.installed then
+            partsCost = partsCost + (feature.nitrous or 3500)
+            if newNos.level == 2 then partsCost = partsCost + (feature.nitrousSport or 1500) end
+            if newNos.level == 3 then partsCost = partsCost + (feature.nitrousRace or 3000) end
+        end
+        hasChanges = true
+    elseif newNos.installed then
+        if newNos.level > oldNos.level then
+            local tierCost = (newNos.level == 3 and oldNos.level == 1) and (feature.nitrousRace or 3000)
+                or (newNos.level == 3 and oldNos.level == 2) and ((feature.nitrousRace or 3000) - (feature.nitrousSport or 1500))
+                or (feature.nitrousSport or 1500)
+            partsCost = partsCost + tierCost
+            hasChanges = true
+        elseif newNos.level ~= oldNos.level then
+            hasChanges = true
+        end
+        if not sameRgb(newNos.color, oldNos.color) then
+            hasChanges = true
+        end
     end
     if newTune.stage ~= oldTune.stage then
         partsCost = partsCost + (newTune.stage == 'race' and feature.raceMap or newTune.stage == 'sport' and feature.sportMap or 0)

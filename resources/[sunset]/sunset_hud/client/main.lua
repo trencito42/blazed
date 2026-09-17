@@ -240,11 +240,48 @@ CreateThread(function()
             local veh = nil
             pcall(function() veh = exports.sunset_vehicles:GetVehicleState() end)
             updateHud()
-            -- [AUDIT P7-03] 20Hz full-NUI-payload was the heaviest steady-state
-            -- NUI traffic; 10Hz is visually identical for gauges/street name.
-            Wait(veh and 100 or 500)
+            Wait(veh and 125 or 500)
         else
             Wait(1000)
+        end
+    end
+end)
+
+-- High-frequency (30 Hz) lightweight gauge loop for responsive RPM & speed
+CreateThread(function()
+    while true do
+        if hudActive and not pauseHidden then
+            local ped = PlayerPedId()
+            if IsPedInAnyVehicle(ped, false) then
+                local veh = GetVehiclePedIsIn(ped, false)
+                if GetPedInVehicleSeat(veh, -1) == ped then
+                    local tele = nil
+                    pcall(function() tele = exports.sunset_vehicles:GetVehicleTelemetry(veh) end)
+                    if tele then
+                        local nosData = nil
+                        if GetResourceState('sunset_tuning') == 'started' then
+                            pcall(function() nosData = exports.sunset_tuning:GetNitrousHudState(veh) end)
+                        end
+                        nui('updateVehicleGauges', {
+                            speed = tele.speedKmh,
+                            rpm = tele.displayRpm,
+                            rawRpm = tele.rawRpm,
+                            gear = tele.gear,
+                            engineOn = tele.engineOn,
+                            hasNos = nosData and nosData.installed == true,
+                            nosPct = nosData and nosData.bottle or 0,
+                            nosActive = nosData and nosData.active == true,
+                        })
+                    end
+                    Wait(33)
+                else
+                    Wait(250)
+                end
+            else
+                Wait(400)
+            end
+        else
+            Wait(800)
         end
     end
 end)

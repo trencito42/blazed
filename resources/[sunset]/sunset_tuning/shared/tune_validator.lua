@@ -18,6 +18,9 @@ function TV.Validate(tune, caps)
     if not caps.antiLag and tune.antiLag and tune.antiLag.enabled then
         return false, 'Anti-lag is not available on this vehicle.'
     end
+    if not caps.nitrous and tune.nitrous and tune.nitrous.installed then
+        return false, 'Nitrous is not available on this vehicle.'
+    end
     if not caps.turboBoost and tune.hardware and tune.hardware.turbo then
         return false, 'Turbo is not supported on this vehicle profile.'
     end

@@ -786,6 +786,12 @@ window.addEventListener('message', (event) => {
             if (window.Hud) Hud.update(data || event.data.data);
             break;
 
+        case 'updateVehicleGauges':
+            if (window.ForzaSpeedometer) {
+                window.ForzaSpeedometer.updateGauges(data || event.data.data);
+            }
+            break;
+
         case 'updateVoice':
             if (window.Hud) Hud.updateVoice(data || event.data.data);
             break;

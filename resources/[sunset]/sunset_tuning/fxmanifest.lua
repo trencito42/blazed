@@ -24,6 +24,7 @@ client_scripts {
     'client/exhaust_ptfx.lua',
     'client/cosmetics.lua',
     'client/effects.lua',
+    'client/nitrous.lua',
     'client/dyno.lua',
     'client/bootstrap.lua',
     'client/lsc_menu.lua',
@@ -60,4 +61,5 @@ exports {
     'FormatVehicleInfo',
     'GetVehicleTuningInfo',
     'GetVehicleCapabilities',
+    'GetNitrousHudState',
 }

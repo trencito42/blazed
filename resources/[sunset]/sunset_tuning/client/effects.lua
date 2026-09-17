@@ -6,23 +6,27 @@ local lastRpm = 0.0
 local lastGear = 0
 local popCooldown = 0
 local twostepArmed = false
+local exhaustDebug = false
+local lastDebugEvent = 'none'
+
 local overrun = {
     active = false,
     veh = 0,
     peakRpm = 0.0,
-    untilMs = 0,
+    budget = 0,
+    nextPopAt = 0,
 }
 
-local function syncFx(veh, kind, intensity, color)
+local function syncFx(veh, kind, intensity, color, withFlames)
     if not NetworkGetEntityIsNetworked(veh) then return end
     local netId = VehToNet(veh)
     if netId and netId ~= 0 then
-        TriggerServerEvent('sunset:tuning:syncExhaustFx', netId, kind, intensity, color)
+        TriggerServerEvent('sunset:tuning:syncExhaustFx', netId, kind, intensity, color, withFlames == true)
     end
 end
 
-function STC.PlayExhaustFx(veh, fxType, intensity, color)
-    EP.burst(veh, fxType, intensity, color)
+function STC.PlayExhaustFx(veh, fxType, intensity, color, withFlames)
+    EP.burst(veh, fxType, intensity, color, withFlames)
 end
 
 local function flamesActive(tune)
@@ -42,16 +46,16 @@ local function clearOverrun()
     overrun.active = false
     overrun.veh = 0
     overrun.peakRpm = 0.0
-    overrun.untilMs = 0
+    overrun.budget = 0
+    overrun.nextPopAt = 0
 end
 
-local function startOverrun(veh, rpm, now, tune)
-    local duration = tonumber(tune.pop.durationMs) or 100
-    local holdMs = 1800 + math.min(1400, duration * 8)
+local function startOverrun(veh, rpm, now, budget)
     overrun.active = true
     overrun.veh = veh
     overrun.peakRpm = math.max(overrun.peakRpm, rpm, lastRpm)
-    overrun.untilMs = now + holdMs
+    overrun.budget = math.max(1, tonumber(budget) or 2)
+    overrun.nextPopAt = now
 end
 
 local function burstExhaust(veh, tune, mult, kind, withFlames, intensityScale)
@@ -59,46 +63,35 @@ local function burstExhaust(veh, tune, mult, kind, withFlames, intensityScale)
     local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
     local color = flameColorOf(tune)
     local showFlames = withFlames and flamesActive(tune)
+    lastDebugEvent = ('%s (int: %.2f, flm: %s)'):format(kind, intensity, showFlames and 'Y' or 'N')
 
     if kind == 'antilag' then
-        EP.burst(veh, 'antilag', intensity * 0.85, color)
-        if showFlames and math.random() < 0.22 then
-            EP.burst(veh, 'flame', intensity * 0.65, color)
-        end
-        syncFx(veh, 'pop', intensity, color)
+        EP.burst(veh, 'antilag', intensity * 0.85, color, false)
+        syncFx(veh, 'antilag', intensity * 0.85, color, false)
         return
     end
 
     if kind == 'twostep' then
-        EP.burst(veh, 'twostep', math.min(1.2, intensity * 1.05), color)
-        if showFlames then EP.burst(veh, 'flame', intensity * 0.75, color) end
-        syncFx(veh, 'pop', intensity, color)
+        EP.burst(veh, 'twostep', math.min(1.2, intensity * 1.05), color, showFlames)
+        syncFx(veh, 'twostep', math.min(1.2, intensity * 1.05), color, showFlames)
         return
     end
 
-    EP.burst(veh, 'pop', intensity, color)
-    syncFx(veh, 'pop', intensity, color)
-
-    if showFlames then
-        EP.burst(veh, 'flame', intensity * 1.15, color)
-        syncFx(veh, 'flame', intensity, color)
+    if kind == 'gearshift' then
+        EP.burst(veh, 'gearshift', intensity, color, showFlames)
+        syncFx(veh, 'gearshift', intensity, color, showFlames)
+        return
     end
 
     if mode.diesel or kind == 'diesel' or tune.exhaust == 'diesel' then
-        EP.burst(veh, 'diesel', intensity, color)
-        syncFx(veh, 'diesel', intensity, color)
+        EP.burst(veh, 'diesel', intensity, color, false)
+        syncFx(veh, 'diesel', intensity, color, false)
+        return
     end
 
-    if tune.pop.secondBurst and kind == 'pop' then
-        SetTimeout(tonumber(tune.pop.durationMs) or 90, function()
-            if DoesEntityExist(veh) then
-                EP.burst(veh, 'pop', intensity * 0.9, color)
-                if showFlames and math.random() < 0.65 then
-                    EP.burst(veh, 'flame', intensity * 0.75, color)
-                end
-            end
-        end)
-    end
+    -- Normal pop / crackle / bang
+    EP.burst(veh, kind, intensity, color, showFlames)
+    syncFx(veh, kind, intensity, color, showFlames)
 end
 
 function STC.BurstExhaust(veh, kind, count)
@@ -109,18 +102,18 @@ function STC.BurstExhaust(veh, kind, count)
     local mult = state.mult or STC.getStageMultipliers(tune)
     count = math.max(1, math.min(6, tonumber(count) or 1))
     for i = 1, count do
-        SetTimeout((i - 1) * 160, function()
+        SetTimeout((i - 1) * 150, function()
             if DoesEntityExist(veh) then
-                burstExhaust(veh, tune, mult, kind or 'pop', true)
+                burstExhaust(veh, tune, mult, kind or 'crackle', true)
             end
         end)
     end
 end
 
-RegisterNetEvent('sunset:tuning:client:exhaustFx', function(netId, fxType, intensity, color)
+RegisterNetEvent('sunset:tuning:client:exhaustFx', function(netId, fxType, intensity, color, withFlames)
     local veh = NetworkGetEntityFromNetworkId(netId)
     if veh and veh ~= 0 and DoesEntityExist(veh) then
-        EP.burst(veh, fxType, intensity, color)
+        EP.burst(veh, fxType, intensity, color, withFlames)
     end
 end)
 
@@ -162,109 +155,143 @@ CreateThread(function()
 
         local mult = state.mult or STC.getStageMultipliers(tune)
         local mode = SunsetTuning.ExhaustModes[tune.exhaust] or SunsetTuning.ExhaustModes.pop_bang
-        local rpm = GetVehicleCurrentRpm(veh)
-        local gear = GetVehicleCurrentGear(veh)
-        local throttle = GetControlNormal(0, 71)
-        local brake = GetControlNormal(0, 72)
-        local speed = GetEntitySpeed(veh) * 3.6
         local now = GetGameTimer()
-        local rpmTarget = (tonumber(tune.pop.rpmMax) or 88) / 100.0
-        local triggerThreshold = math.max(0.40, math.min(0.68, rpmTarget * 0.72))
-        local minOverrunRpm = 0.22
 
-        local liftOff = (lastThrottle > 0.22 and throttle < 0.15) or (lastRpm >= triggerThreshold and rpmFalling and throttle < 0.20)
+        -- Canonical telemetry extraction
+        local telem = nil
+        if GetResourceState('sunset_vehicles') == 'started' then
+            pcall(function()
+                telem = exports.sunset_vehicles:GetVehicleTelemetry(veh)
+            end)
+        end
+
+        local rawRpm = telem and telem.rawRpm or GetVehicleCurrentRpm(veh)
+        local displayRpm = telem and telem.displayRpm or math.max(0.0, math.min(1.0, (rawRpm - 0.2) / 0.8))
+        local gear = telem and telem.gear or GetVehicleCurrentGear(veh)
+        local throttle = telem and telem.throttle or GetControlNormal(0, 71)
+        local brake = telem and telem.brake or GetControlNormal(0, 72)
+        local speed = telem and telem.speedKmh or (GetEntitySpeed(veh) * 3.6)
+
+        -- Metrics declared in order: no forward-local references
+        local rpmDrop = math.max(0.0, lastRpm - displayRpm)
+        local rpmFalling = rpmDrop > 0.015
+        local throttleDrop = lastThrottle - throttle
+        local rpmTarget = (tonumber(tune.pop.rpmMax) or 85) / 100.0
+        local triggerThreshold = math.max(0.42, rpmTarget - 0.10)
         local wasHighRpm = lastRpm >= triggerThreshold
-        local rpmFalling = (lastRpm - rpm) > 0.012
+        local liftOff = lastThrottle > 0.38 and throttle < 0.15 and throttleDrop > 0.22 and rpmFalling
+        local minOverrunRpm = 0.25
 
-        -- Pop on gear shift at high RPM
-        if (tune.pop.enabled or tune.antiLag.enabled) and gear ~= lastGear and lastGear ~= 0 and gear > 1 and rpm > 0.48 and not IsEntityInAir(veh) then
+        -- 1. Single crisp report on high-RPM upshift under load
+        if (tune.pop.enabled or tune.antiLag.enabled) and gear ~= lastGear and lastGear > 0 and gear > lastGear and displayRpm > 0.55 and lastThrottle > 0.45 and not IsEntityInAir(veh) then
             if now > popCooldown then
-                popCooldown = now + 120
-                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.15)
+                popCooldown = now + 250
+                burstExhaust(veh, tune, mult, 'gearshift', flamesActive(tune), 1.15)
             end
         end
 
-        -- Pop & bang: arm overrun on lift-off, then pops while RPM spins down.
-        if tune.pop.enabled and liftOff and wasHighRpm then
-            startOverrun(veh, rpm, now, tune)
+        -- 2. Lift-off overrun initiation with bounded event budget
+        if tune.pop.enabled and liftOff and wasHighRpm and not overrun.active then
+            local budget = 2
+            if tune.exhaust == 'extra' then
+                budget = math.random(4, 6)
+            elseif tune.exhaust == 'pop_bang' or tune.stage == 'race' then
+                budget = math.random(2, 5)
+            else
+                budget = math.random(1, 3)
+            end
+
+            startOverrun(veh, displayRpm, now, budget)
             if now > popCooldown then
                 popCooldown = now + 90
-                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.10)
+                burstExhaust(veh, tune, mult, 'crackle', flamesActive(tune), 0.95)
+                overrun.budget = overrun.budget - 1
+                overrun.nextPopAt = now + math.random(90, 140)
             end
         end
 
+        -- 3. Overrun sequence state machine
         if overrun.active then
-            if veh ~= overrun.veh or now > overrun.untilMs or rpm < minOverrunRpm or throttle > 0.45 or brake > 0.6 then
+            if veh ~= overrun.veh or displayRpm < minOverrunRpm or throttle > 0.25 or brake > 0.70 or overrun.budget <= 0 then
                 clearOverrun()
-            elseif tune.pop.enabled and throttle < 0.30 and rpm > minOverrunRpm and now > popCooldown then
-                local rpmRange = math.max(0.15, overrun.peakRpm - minOverrunRpm)
-                local rpmPos = math.max(0.0, math.min(1.0, (rpm - minOverrunRpm) / rpmRange))
-                local rpmDrop = math.max(0.0, lastRpm - rpm)
-                local chance = 0.25 + mult.popIntensity * 0.35
-                if rpmFalling then chance = chance + math.min(0.45, rpmDrop * 12.0) end
-                if rpmPos > 0.45 then chance = chance + 0.20 end
-                if tune.pop.secondBurst then chance = chance + 0.15 end
+            elseif tune.pop.enabled and now >= overrun.nextPopAt and now > popCooldown then
+                overrun.budget = overrun.budget - 1
+                local isBang = (overrun.budget == 1 and math.random() < 0.40) or (math.random() < 0.25)
+                local kind = isBang and 'bang' or 'crackle'
+                local strength = 0.70 + (displayRpm * 0.40)
 
-                if math.random() < chance then
-                    local gap = 85 + math.floor((1.0 - rpmPos) * 120) + math.random(0, 32)
-                    popCooldown = now + gap
-                    local strength = 0.85 + rpmPos * 0.50 + math.min(0.25, rpmDrop * 4.0)
-                    burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, strength)
+                burstExhaust(veh, tune, mult, kind, flamesActive(tune), strength)
+                popCooldown = now + 75
+                overrun.nextPopAt = now + math.random(95, 150)
+
+                if overrun.budget <= 0 then
+                    clearOverrun()
                 end
             end
         end
 
-        -- 2-step at standstill
-        if tune.pop.enabled and tune.hardware and tune.hardware.launchControl and speed < 6.0 and rpm > 0.82 then
-            if throttle < 0.12 and lastThrottle > 0.55 then twostepArmed = true end
-            if twostepArmed and now > popCooldown and throttle < 0.1 and rpm > 0.78 then
-                if math.random() < 0.6 then
-                    popCooldown = now + 200
-                    twostepArmed = false
-                    burstExhaust(veh, tune, mult, 'twostep', true)
-                end
+        -- 4. 2-step launch control at standstill (brake + full throttle)
+        if tune.pop.enabled and tune.hardware and tune.hardware.launchControl and speed < 5.0 and displayRpm > 0.75 then
+            if throttle > 0.75 and brake > 0.60 then
+                twostepArmed = true
+            end
+            if twostepArmed and now > popCooldown and throttle > 0.60 then
+                popCooldown = now + 160
+                burstExhaust(veh, tune, mult, 'twostep', flamesActive(tune), 1.05)
             end
         else
             twostepArmed = false
         end
 
-        if tune.antiLag.enabled and brake < 0.35 and not overrun.active then
-            local throttleBlip = lastThrottle > 0.42 and throttle < 0.28 and rpm > 0.38 and rpm < 0.82
-            if now > popCooldown and throttleBlip and math.random() < ((tonumber(tune.antiLag.intensity) or 55) / 280.0) then
-                popCooldown = now + 260
-                burstExhaust(veh, tune, mult, 'antilag', false)
+        -- 5. Anti-lag blip
+        if tune.antiLag.enabled and not overrun.active and brake < 0.30 and displayRpm > 0.40 and displayRpm < 0.85 then
+            if throttleDrop > 0.22 and lastThrottle > 0.45 and throttle < 0.28 and now > popCooldown then
+                popCooldown = now + 200
+                burstExhaust(veh, tune, mult, 'antilag', false, 0.95)
             end
         end
 
-        if mode.diesel and tune.pop.enabled and speed < 25 and throttle > 0.25 and rpm > 0.15 and rpm < 0.55 then
-            if now > popCooldown and math.random() < 0.03 then
-                popCooldown = now + 400
-                burstExhaust(veh, tune, mult, 'diesel', false)
+        -- 6. Diesel soot puff
+        if mode.diesel and tune.pop.enabled and speed < 30.0 and throttle > 0.30 and displayRpm > 0.20 and displayRpm < 0.60 then
+            if now > popCooldown and math.random() < 0.04 then
+                popCooldown = now + 450
+                burstExhaust(veh, tune, mult, 'diesel', false, 0.85)
             end
         end
 
         lastThrottle = throttle
-        lastRpm = rpm
+        lastRpm = displayRpm
         lastGear = gear
         Wait(waitMs)
         ::continue::
     end
 end)
 
+-- Developer telemetry overlay command
+RegisterCommand('exhaustdebug', function()
+    exhaustDebug = not exhaustDebug
+    TriggerEvent('chat:addMessage', {
+        args = { '^3[EXHAUST DEBUG]', exhaustDebug and '^2ENABLED' or '^1DISABLED' }
+    })
+end, false)
+
+-- On-screen HUD / Debug drawing
 CreateThread(function()
     while true do
         Wait(0)
         local ped = PlayerPedId()
         if not IsPedInAnyVehicle(ped, false) then
-            Wait(800)
+            Wait(600)
             goto continue
         end
 
         local veh = GetVehiclePedIsIn(ped, false)
         local state = STC.appliedVehicles[veh]
         local tune = state and state.tune
-        if not tune or not tune.hud.enabled then
-            Wait(500)
+        local showEcuHud = tune and tune.hud and tune.hud.enabled
+
+        if not showEcuHud and not exhaustDebug then
+            Wait(400)
             goto continue
         end
 
@@ -272,15 +299,56 @@ CreateThread(function()
         local speed = math.floor(GetEntitySpeed(veh) * 3.6)
         local boost = 0
         pcall(function() boost = math.floor((GetVehicleTurboPressure(veh) or 0.0) * 100) end)
-        local stage = SunsetTuning.Stages[tune.stage] and SunsetTuning.Stages[tune.stage].label or tune.stage
 
-        SetTextFont(4)
-        SetTextScale(0.32, 0.32)
-        SetTextColour(255, 153, 51, 215)
-        SetTextOutline()
-        SetTextEntry('STRING')
-        AddTextComponentSubstringPlayerName(('ECU %s  |  %d km/h  |  RPM %d%%  |  BOOST %d%%'):format(stage, speed, rpm, boost))
-        DrawText(0.015, 0.92)
+        if showEcuHud then
+            local stage = tune and SunsetTuning.Stages[tune.stage] and SunsetTuning.Stages[tune.stage].label or (tune and tune.stage or 'STOCK')
+            SetTextFont(4)
+            SetTextScale(0.32, 0.32)
+            SetTextColour(255, 153, 51, 215)
+            SetTextOutline()
+            SetTextEntry('STRING')
+            AddTextComponentSubstringPlayerName(('ECU %s  |  %d km/h  |  RPM %d%%  |  BOOST %d%%'):format(stage, speed, rpm, boost))
+            DrawText(0.015, 0.92)
+        end
+
+        if exhaustDebug then
+            local nosState = 'N/A'
+            if GetResourceState('sunset_tuning') == 'started' then
+                local ok, nState = pcall(function() return exports.sunset_tuning:GetNitrousHudState(veh) end)
+                if ok and type(nState) == 'table' then
+                    nosState = ('Installed: %s, Lvl: %d, Act: %s, Bottle: %d%%'):format(
+                        nState.installed and 'Y' or 'N',
+                        nState.tier or 1,
+                        nState.active and 'YES' or 'NO',
+                        math.floor(nState.level or 0)
+                    )
+                end
+            end
+
+            local lines = {
+                '~y~--- EXHAUST & TELEMETRY DEBUG ---~s~',
+                ('Veh: ~b~%d~s~ | Speed: ~g~%d km/h~s~ | Gear: ~g~%d~s~'):format(veh, speed, GetVehicleCurrentGear(veh)),
+                ('RPM: Raw ~c~%.2f~s~ | Disp ~y~%.2f~s~ (Target: ~o~%s%%~s~)'):format(
+                    GetVehicleCurrentRpm(veh),
+                    lastRpm,
+                    tune and tune.pop and tune.pop.rpmMax or 'N/A'
+                ),
+                ('Throttle: ~b~%.2f~s~ | Brake: ~r~%.2f~s~'):format(lastThrottle, GetControlNormal(0, 72)),
+                ('Overrun: ~p~%s~s~ | Budget: ~p~%d~s~'):format(overrun.active and 'ACTIVE' or 'IDLE', overrun.budget),
+                ('Last Event: ~w~%s~s~'):format(lastDebugEvent),
+                ('Nitrous: ~c~%s~s~'):format(nosState),
+            }
+
+            for idx, text in ipairs(lines) do
+                SetTextFont(0)
+                SetTextScale(0.28, 0.28)
+                SetTextColour(255, 255, 255, 230)
+                SetTextOutline()
+                SetTextEntry('STRING')
+                AddTextComponentSubstringPlayerName(text)
+                DrawText(0.015, 0.35 + (idx - 1) * 0.022)
+            end
+        end
 
         ::continue::
     end

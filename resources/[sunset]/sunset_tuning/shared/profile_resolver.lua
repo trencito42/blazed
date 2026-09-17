@@ -83,6 +83,7 @@ local function buildCapabilities(profile, modelName, classId)
         turboBoost = hasCombustion and factoryTurbo,
         turboResponse = hasCombustion and factoryTurbo,
         antiLag = hasCombustion and factoryTurbo,
+        nitrous = hasCombustion and not isBicycle,
         popsAndBangs = hasExhaust,
         flames = hasExhaust,
         revLimiter = hasCombustion,
@@ -130,6 +131,7 @@ function PR.Resolve(model, classId)
     caps.turboBoost = true
     caps.turboResponse = true
     caps.antiLag = true
+    caps.nitrous = true
     caps.popsAndBangs = true
     caps.flames = true
     caps.revLimiter = true

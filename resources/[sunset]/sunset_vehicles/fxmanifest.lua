@@ -27,6 +27,7 @@ dependencies { 'sunset_core', 'sunset_world' }
 
 exports {
     'GetVehicleState',
+    'GetVehicleTelemetry',
     'IsPlateInWorld',
     'IsProtectedVehicle',
     'SetFuelLevel',
