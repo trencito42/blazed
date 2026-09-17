@@ -1083,6 +1083,16 @@ RegisterNetEvent('sunset:admin:requestSpeed', function(arg)
     TriggerClientEvent('sunset:admin:setSpeed', source, mult)
 end)
 
+-- SA-MP-style /dl vehicle debug labels. Permission is enforced server-side;
+-- rendering itself stays client-only and has zero cost while disabled.
+registerServerCommand('dl', function(source)
+    if source == 0 then
+        return print('[SunsetAdmin] /dl is client-only')
+    end
+    if not requirePerm(source, 'dl') then return end
+    TriggerClientEvent('sunset:admin:toggleVehicleDebugLabels', source)
+end)
+
 -- ═══ REPORT & HELPME TICKETING SYSTEM ═══
 local ActiveReports = {}
 -- [HELPDESK] expose the live ticket table to the helpdesk panel
