@@ -1,6 +1,8 @@
 const WorldTooltipLayer = {
     root: null,
     nodes: {},
+    pendingList: null,
+    rafId: 0,
 
     ensureRoot() {
         if (this.root) return this.root;
@@ -40,6 +42,21 @@ const WorldTooltipLayer = {
     },
 
     sync(list) {
+        // SendNUIMessage can deliver several position samples before Chromium
+        // paints a frame. Mutating the DOM for every queued sample makes the
+        // tooltip visibly chase history. Keep only the newest sample and commit
+        // it once on the browser's next animation frame.
+        this.pendingList = Array.isArray(list) ? list : [];
+        if (this.rafId) return;
+        this.rafId = requestAnimationFrame(() => {
+            this.rafId = 0;
+            const latest = this.pendingList || [];
+            this.pendingList = null;
+            this.apply(latest);
+        });
+    },
+
+    apply(list) {
         const root = this.ensureRoot();
         if (!root) return;
         const seen = new Set();
@@ -63,11 +80,12 @@ const WorldTooltipLayer = {
                     el.innerHTML = this.renderNode(row);
                     el.dataset.contentSignature = signature;
                 }
-                // Use transform (compositor-only, no layout reflow) so position
-                // updates are GPU-accelerated and don't stutter at 60Hz.
-                const tx = Number(row.x) || 0;
-                const ty = Number(row.y) || 0;
-                el.style.transform = `translate(calc(${tx}vw - 50%), calc(${ty}vh - 100%))`;
+
+                // Pixel translate3d is cheaper than viewport calc() expressions
+                // and stays on the compositor path while the camera is moving.
+                const px = ((Number(row.x) || 0) / 100) * window.innerWidth;
+                const py = ((Number(row.y) || 0) / 100) * window.innerHeight;
+                el.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -100%)`;
                 el.classList.add('is-visible');
             } else {
                 el.classList.remove('is-visible');
