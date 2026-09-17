@@ -293,24 +293,68 @@ RegisterNetEvent('sunset:tuning:client:nosState', function(netId, active, color,
     end
 end)
 
+local function notify(msg, typ)
+    exports.sunset_ui:Notify(msg, typ or 'info')
+end
+
+function STC.RefillNitrous(veh, amount)
+    veh = (veh and veh ~= 0) and veh or currentVeh
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return false end
+    bottles[veh] = math.min(100.0, (bottles[veh] or 100.0) + (amount or 100.0))
+    return true
+end
+exports('RefillNitrous', STC.RefillNitrous)
+
 -- Export for HUD and Speedometer telemetry
 exports('GetNitrousHudState', function(veh)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return nil end
     local state = STC.appliedVehicles[veh]
     local tune = state and state.tune
     if not tune or not tune.nitrous or not tune.nitrous.installed then
-        return { installed = false, active = false, level = 0, tier = 1 }
+        return { installed = false, active = false, bottle = 0, level = 0, tier = 1 }
     end
 
-    local bottle = bottles[veh] or 100.0
+    local bottle = bottles[veh]
+    if bottle == nil then
+        bottle = 100.0
+        bottles[veh] = 100.0
+    end
+
     return {
         installed = true,
         active = isNosActive and currentVeh == veh,
+        bottle = math.floor(bottle),
         level = math.floor(bottle),
         tier = tune.nitrous.level or 1,
         color = tune.nitrous.color or { r = 50, g = 120, b = 255 },
     }
 end)
+
+-- Command to refill nitrous oxide bottle
+RegisterCommand('refillnos', function()
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if not veh or veh == 0 or GetPedInVehicleSeat(veh, -1) ~= ped then
+        notify('Sit in the driver seat to refill nitrous oxide.', 'error')
+        return
+    end
+
+    local state = STC.appliedVehicles[veh]
+    local tune = state and state.tune
+    if not tune or not tune.nitrous or not tune.nitrous.installed then
+        notify('This vehicle does not have a nitrous oxide system installed.', 'error')
+        return
+    end
+
+    local current = bottles[veh] or 100.0
+    if current >= 99.5 then
+        notify('Nitrous bottle is already full (100%).', 'info')
+        return
+    end
+
+    bottles[veh] = 100.0
+    notify('Nitrous bottle refilled to 100%.', 'success')
+end, false)
 
 -- Cleanup on resource stop
 AddEventHandler('onResourceStop', function(resName)

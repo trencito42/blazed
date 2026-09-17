@@ -387,17 +387,17 @@ function categoryHasChanges(catId) {
     }
     if (catId === 'powertrain') {
         return Number(curT.hardware.engine || 0) !== Number(oldT.hardware.engine || 0)
-            || curT.power !== oldT.power
-            || curT.torque !== oldT.torque
-            || curT.throttleResponse !== oldT.throttleResponse;
+            || Number(curT.power || 0) !== Number(oldT.power || 0)
+            || Number(curT.torque || 0) !== Number(oldT.torque || 0)
+            || Number(curT.throttleResponse || 0) !== Number(oldT.throttleResponse || 0);
     }
     if (catId === 'transmission') {
         return Number(curT.hardware.transmission || 0) !== Number(oldT.hardware.transmission || 0)
-            || curT.shiftSpeed !== oldT.shiftSpeed;
+            || Number(curT.shiftSpeed || 0) !== Number(oldT.shiftSpeed || 0);
     }
     if (catId === 'brakes') {
         return Number(curT.hardware.brakes || 0) !== Number(oldT.hardware.brakes || 0)
-            || curT.regenBraking !== oldT.regenBraking;
+            || Number(curT.regenBraking || 0) !== Number(oldT.regenBraking || 0);
     }
     if (catId === 'suspension') {
         return Number(curT.hardware.suspension || 0) !== Number(oldT.hardware.suspension || 0);
@@ -410,19 +410,23 @@ function categoryHasChanges(catId) {
         if (curNos.installed && !sameColor(curNos.color, oldNos.color)) return true;
         return !!curT.hardware.turbo !== !!oldT.hardware.turbo
             || !!curT.hardware.launchControl !== !!oldT.hardware.launchControl
-            || curT.topSpeed !== oldT.topSpeed;
+            || Number(curT.topSpeed || 0) !== Number(oldT.topSpeed || 0);
     }
     if (catId === 'handling') {
-        return curT.handling.steering !== oldT.handling.steering
-            || curT.handling.brakePower !== oldT.handling.brakePower
-            || curT.handling.suspension !== oldT.handling.suspension
-            || curT.handling.traction !== oldT.handling.traction;
+        return Number(curT.handling.steering || 100) !== Number(oldT.handling.steering || 100)
+            || Number(curT.handling.brakePower || 100) !== Number(oldT.handling.brakePower || 100)
+            || Number(curT.handling.suspension || 100) !== Number(oldT.handling.suspension || 100)
+            || Number(curT.handling.traction || 100) !== Number(oldT.handling.traction || 100);
     }
     if (catId === 'exhaust') {
         return curT.exhaust !== oldT.exhaust
             || !!curT.pop.enabled !== !!oldT.pop.enabled
             || Number(curT.pop.rpmMax || 0) !== Number(oldT.pop.rpmMax || 0)
-            || !!curT.flames.enabled !== !!oldT.flames.enabled;
+            || Number(curT.pop.durationMs || 0) !== Number(oldT.pop.durationMs || 0)
+            || !!curT.pop.secondBurst !== !!oldT.pop.secondBurst
+            || curT.pop.burstStage !== oldT.pop.burstStage
+            || !!curT.flames.enabled !== !!oldT.flames.enabled
+            || !sameColor(curT.flames.color, oldT.flames.color);
     }
     if (catId === 'bodykit') {
         if (!curC.mods || !oldC.mods) return false;
@@ -466,7 +470,52 @@ function categoryHasChanges(catId) {
 }
 
 function hasTuningChanges() {
-    return categories.some((cat) => categoryHasChanges(cat.id));
+    if (!installedTune || !tune) return false;
+    if (categories.some((cat) => categoryHasChanges(cat.id))) return true;
+
+    const oldT = ensureTune(installedTune);
+    const curT = ensureTune(tune);
+    if (Number(curT.power) !== Number(oldT.power)
+        || Number(curT.torque) !== Number(oldT.torque)
+        || Number(curT.throttleResponse) !== Number(oldT.throttleResponse)
+        || Number(curT.topSpeed) !== Number(oldT.topSpeed)
+        || Number(curT.shiftSpeed) !== Number(oldT.shiftSpeed)
+        || Number(curT.regenBraking) !== Number(oldT.regenBraking)
+        || curT.stage !== oldT.stage
+        || curT.exhaust !== oldT.exhaust
+        || !!curT.pop.enabled !== !!oldT.pop.enabled
+        || Number(curT.pop.rpmMax) !== Number(oldT.pop.rpmMax)
+        || Number(curT.pop.durationMs) !== Number(oldT.pop.durationMs)
+        || !!curT.pop.secondBurst !== !!oldT.pop.secondBurst
+        || curT.pop.burstStage !== oldT.pop.burstStage
+        || !!curT.flames.enabled !== !!oldT.flames.enabled
+        || !sameColor(curT.flames.color, oldT.flames.color)
+        || !!curT.antiLag.enabled !== !!oldT.antiLag.enabled
+        || Number(curT.antiLag.intensity) !== Number(oldT.antiLag.intensity)
+        || !!curT.drift.enabled !== !!oldT.drift.enabled
+        || Number(curT.drift.grip) !== Number(oldT.drift.grip)
+        || !!curT.hud.enabled !== !!oldT.hud.enabled) {
+        return true;
+    }
+
+    const oldCos = ensureCosmetics(installedCosmetics);
+    const curCos = ensureCosmetics(cosmetics);
+    if (Number(curCos.paintType) !== Number(oldCos.paintType)
+        || !sameColor(curCos.primary, oldCos.primary)
+        || !sameColor(curCos.secondary, oldCos.secondary)
+        || Number(curCos.pearl) !== Number(oldCos.pearl)
+        || Number(curCos.wheel) !== Number(oldCos.wheel)
+        || Number(curCos.windowTint) !== Number(oldCos.windowTint)
+        || curCos.wheelType !== oldCos.wheelType
+        || (curCos.plateText && curCos.plateText !== oldCos.plateText)
+        || !!curCos.xenon !== !!oldCos.xenon
+        || curCos.xenonColor !== oldCos.xenonColor
+        || !!curCos.tyreSmoke !== !!oldCos.tyreSmoke
+        || !sameColor(curCos.tyreSmokeColor, oldCos.tyreSmokeColor)) {
+        return true;
+    }
+
+    return false;
 }
 
 function localInstallQuote() {
@@ -770,12 +819,16 @@ function renderPartList() {
         parts = renderOverviewParts();
     } else if (activeTab === 'powertrain') {
         parts = hardwareParts('engine', 4);
+        const hasMappingInstalled = (Number(installedTune?.power || 0) > 0 || Number(installedTune?.torque || 0) > 0 || Number(installedTune?.throttleResponse || 0) !== 0);
+        const hasMappingPending = (Number(tune.power || 0) !== Number(installedTune?.power || 0)
+            || Number(tune.torque || 0) !== Number(installedTune?.torque || 0)
+            || Number(tune.throttleResponse || 0) !== Number(installedTune?.throttleResponse || 0));
         parts.push({
             id: 'engine_mapping',
             label: 'ECU Mapping & Output',
-            price: 'Adjust below',
-            isInstalled: false,
-            isPreview: (tune.power !== (installedTune?.power || 0) || tune.torque !== (installedTune?.torque || 0) || tune.throttleResponse !== (installedTune?.throttleResponse || 0)),
+            price: hasMappingPending ? 'Pending' : (hasMappingInstalled ? `${installedTune?.power || 0} HP / ${installedTune?.torque || 0} NM` : 'Stock'),
+            isInstalled: hasMappingInstalled && !hasMappingPending,
+            isPreview: hasMappingPending,
             apply: () => {
                 activePartId = 'engine_mapping';
                 renderDetailPanel();
@@ -784,12 +837,14 @@ function renderPartList() {
         });
     } else if (activeTab === 'transmission') {
         parts = hardwareParts('transmission', 3);
+        const hasTransInstalled = Number(installedTune?.shiftSpeed || 0) !== 0;
+        const hasTransPending = Number(tune.shiftSpeed || 0) !== Number(installedTune?.shiftSpeed || 0);
         parts.push({
             id: 'trans_shift_speed',
             label: 'Gear Shift Calibration',
-            price: 'Adjust below',
-            isInstalled: false,
-            isPreview: tune.shiftSpeed !== (installedTune?.shiftSpeed || 0),
+            price: hasTransPending ? 'Pending' : (hasTransInstalled ? `${Number(installedTune?.shiftSpeed || 0) > 0 ? '+' : ''}${installedTune?.shiftSpeed}%` : 'Stock'),
+            isInstalled: hasTransInstalled && !hasTransPending,
+            isPreview: hasTransPending,
             apply: () => {
                 activePartId = 'trans_shift_speed';
                 renderDetailPanel();
@@ -798,12 +853,14 @@ function renderPartList() {
         });
     } else if (activeTab === 'brakes') {
         parts = hardwareParts('brakes', 3);
+        const hasBrakeInstalled = Number(installedTune?.regenBraking || 0) > 0;
+        const hasBrakePending = Number(tune.regenBraking || 0) !== Number(installedTune?.regenBraking || 0);
         parts.push({
             id: 'brake_bias',
             label: 'Regen & Engine Braking',
-            price: 'Adjust below',
-            isInstalled: false,
-            isPreview: tune.regenBraking !== (installedTune?.regenBraking || 0),
+            price: hasBrakePending ? 'Pending' : (hasBrakeInstalled ? `${installedTune?.regenBraking}%` : 'Stock (0%)'),
+            isInstalled: hasBrakeInstalled && !hasBrakePending,
+            isPreview: hasBrakePending,
             apply: () => {
                 activePartId = 'brake_bias';
                 renderDetailPanel();
@@ -1961,7 +2018,6 @@ if (btnCancel) btnCancel.addEventListener('click', () => post('tuningClose'));
 if (btnSave) {
     btnSave.addEventListener('click', () => {
         if (!hasTuningChanges()) {
-            post('tuningClose');
             return;
         }
         post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false });
@@ -2010,8 +2066,6 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         if (hasTuningChanges()) {
             post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false });
-        } else {
-            post('tuningClose');
         }
         return;
     }

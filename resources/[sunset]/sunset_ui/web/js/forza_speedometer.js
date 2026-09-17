@@ -266,7 +266,8 @@
             if (data.engineOn !== undefined) state.engineOn = data.engineOn === true;
             if (data.hasNos !== undefined) state.hasNos = data.hasNos === true;
             if (data.nosActive !== undefined) state.nosActive = data.nosActive === true;
-            if (data.nosLevel !== undefined) state.targetNos = clamp(data.nosLevel, 0, 100, 0);
+            const rawNosGauges = data.nosLevel !== undefined ? data.nosLevel : data.nosPct;
+            if (rawNosGauges !== undefined) state.targetNos = clamp(rawNosGauges, 0, 100, 0);
         },
         update(data = {}) {
             if (!running && !init()) return;
@@ -280,7 +281,8 @@
             state.seatbelt = data.seatbelt === true;
             if (data.hasNos !== undefined) state.hasNos = data.hasNos === true;
             if (data.nosActive !== undefined) state.nosActive = data.nosActive === true;
-            if (data.nosLevel !== undefined) state.targetNos = clamp(data.nosLevel, 0, 100, 0);
+            const rawNosUpdate = data.nosLevel !== undefined ? data.nosLevel : data.nosPct;
+            if (rawNosUpdate !== undefined) state.targetNos = clamp(rawNosUpdate, 0, 100, 0);
         },
     };
 

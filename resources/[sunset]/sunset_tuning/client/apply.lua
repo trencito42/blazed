@@ -94,6 +94,10 @@ function ApplyTune(veh, tune, persist, modelName)
         model = modelName,
     }
 
+    if tune.nitrous and tune.nitrous.installed and STC.RefillNitrous then
+        STC.RefillNitrous(veh, 100.0)
+    end
+
     if plate ~= '' then
         STC.plateTunes[plate] = tune
         STC.plateModels[plate] = modelName

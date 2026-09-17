@@ -207,10 +207,10 @@ local function openPanel(shop)
 
     if type(payload) == 'table' and payload.tune then
         draftTune = SunsetTuning.SanitizeTune(payload.tune, caps)
-        hasSavedTune = payload.saved == true
+        hasSavedTune = payload.saved == true or not SunsetTuning.IsStockTune(draftTune)
         draftCosmetics = SunsetTuning.SanitizeCosmetics(payload.cosmetics or ReadCosmeticsFromVehicle(veh))
     else
-        draftTune = SunsetTuning.SanitizeTune(payload)
+        draftTune = SunsetTuning.SanitizeTune(payload, caps)
         hasSavedTune = not SunsetTuning.IsStockTune(draftTune)
         draftCosmetics = ReadCosmeticsFromVehicle(veh)
     end
@@ -329,8 +329,11 @@ RegisterNUICallback('tuningSave', function(data, cb)
         STC.plateTunes[oldPlate] = nil
         STC.persistedPlates[oldPlate] = nil
     end
-    ApplyTune(currentVeh, draftTune, true)
+    ApplyTune(currentVeh, draftTune, true, saved.model)
     ApplyCosmetics(currentVeh, draftCosmetics)
+    if draftTune.nitrous and draftTune.nitrous.installed and STC.RefillNitrous then
+        STC.RefillNitrous(currentVeh, 100.0)
+    end
     if data and data.testBurst == true and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 3) end
     local costVal = saved.cost or 0
     if costVal > 0 then

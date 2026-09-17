@@ -147,10 +147,18 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
     local newPlate = plate
     local vanity = sanitizedCosmetics and normalizePlate(sanitizedCosmetics.plateText)
     if vanity and vanity ~= '' then newPlate = vanity end
+    local paidAccount = nil
+    if cost > 0 then
+        if exports.sunset_core:RemoveMoney(source, 'bank', cost, 'ecu_tune_save') then
+            paidAccount = 'bank'
+        elseif exports.sunset_core:RemoveMoney(source, 'cash', cost, 'ecu_tune_save') then
+            paidAccount = 'cash'
+        else
+            return nil, ('You need $%d in bank or cash to install these modifications.'):format(cost)
+        end
+    end
+
     local failure
-    -- [AUDIT F6.3] Every query inside startTransaction MUST go through the
-    -- transaction handle (query.*); global MySQL.* ran on pool connections outside
-    -- the transaction, voiding the FOR UPDATE locks and atomicity.
     local committed = MySQL.startTransaction(function(query)
         local lockedVehicle = query.single.await(
             'SELECT id, model, props FROM vehicles WHERE id = ? AND character_id = ? FOR UPDATE',
@@ -162,22 +170,17 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
                 { newPlate, row.id })
             if taken then failure = 'That license plate is already in use.' error('plate_taken') end
         end
-        local lockedChar = query.single.await('SELECT bank FROM characters WHERE id = ? FOR UPDATE', { char.id })
-        if not lockedChar or (tonumber(lockedChar.bank) or 0) < cost then
-            failure = ('Need $%d in bank for ECU save.'):format(cost)
-            error('insufficient_funds')
-        end
         local latestProps = decodeProps(lockedVehicle.props)
         latestProps.ecu = SunsetTuning.IsStockTune(sanitized) and nil or sanitized
         latestProps.cosmetics = sanitizedCosmetics
-        if query.update.await('UPDATE characters SET bank = bank - ? WHERE id = ? AND bank >= ?', { cost, char.id, cost }) ~= 1 then error('debit_failed') end
         if query.update.await('UPDATE vehicles SET props = ?, plate = ? WHERE id = ? AND character_id = ?', { json.encode(latestProps), newPlate, row.id, char.id }) ~= 1 then error('save_failed') end
-        query.insert.await([[INSERT INTO money_transactions
-            (character_id, account, direction, amount, reason, balance_after)
-            SELECT id, 'bank', 'out', ?, 'ecu_tune_save', bank FROM characters WHERE id = ?]], { cost, char.id })
     end)
-    if not committed then return nil, failure or 'The tune was not saved and you were not charged. Try again.' end
-    exports.sunset_core:RefreshMoney(source)
+    if not committed then
+        if paidAccount and cost > 0 then
+            exports.sunset_core:AddMoney(source, paidAccount, cost, 'ecu_tune_refund')
+        end
+        return nil, failure or 'The tune was not saved and you were not charged. Try again.'
+    end
 
     TriggerClientEvent('sunset:tuning:client:applyByPlate', -1, newPlate or plate, sanitized, modelName)
     return { tune = sanitized, cost = cost, plate = newPlate or plate, cosmetics = sanitizedCosmetics, model = modelName }

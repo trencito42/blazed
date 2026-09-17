@@ -68,7 +68,7 @@ function TC.Compute(baseline, tune, caps)
     local throttleNorm = norm01(tune.throttleResponse or 50, 100)
     local topNorm = norm01(tune.topSpeed or 0, limits.topSpeed or 45)
     local shiftNorm = norm01(tune.shiftSpeed or 0, limits.shiftSpeed or 70)
-    local regenNorm = norm01(tune.regenBraking or 0, limits.regen or 80)
+    local regenNorm = norm01(tune.regenBraking or 0, limits.regen or 100)
 
     local isElectric = caps.propulsion == 'electric' or caps.propulsion == 'hybrid'
     local driveMult = stageCurve(tune.stage, powerNorm)
@@ -99,7 +99,8 @@ function TC.Compute(baseline, tune, caps)
         out.fTractionCurveLateral = (baseline.fTractionCurveLateral or 22.0) * (gripMult * 0.98)
 
         local handling = tune.handling or {}
-        out.fBrakeForce = (baseline.fBrakeForce or 1.0) * ((handling.brakePower or 100) / 100.0)
+        local engineBrakingBonus = regenNorm * 0.08
+        out.fBrakeForce = (baseline.fBrakeForce or 1.0) * ((handling.brakePower or 100) / 100.0) * (1.0 + engineBrakingBonus)
         out.fSteeringLock = (baseline.fSteeringLock or 40.0) * math.min(1.12, (handling.steering or 100) / 100.0)
         out.fSuspensionForce = (baseline.fSuspensionForce or 2.0) * ((handling.suspension or 100) / 100.0)
         out.fSuspensionReboundDamp = (baseline.fSuspensionReboundDamp or 1.0) * (0.95 + ((handling.suspension or 100) / 1000.0))

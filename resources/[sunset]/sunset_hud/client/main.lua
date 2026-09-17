@@ -262,6 +262,7 @@ CreateThread(function()
                         if GetResourceState('sunset_tuning') == 'started' then
                             pcall(function() nosData = exports.sunset_tuning:GetNitrousHudState(veh) end)
                         end
+                        local nosLevel = nosData and (nosData.bottle or nosData.level or 0) or 0
                         nui('updateVehicleGauges', {
                             speed = tele.speedKmh,
                             rpm = tele.displayRpm,
@@ -269,7 +270,8 @@ CreateThread(function()
                             gear = tele.gear,
                             engineOn = tele.engineOn,
                             hasNos = nosData and nosData.installed == true,
-                            nosPct = nosData and nosData.bottle or 0,
+                            nosPct = nosLevel,
+                            nosLevel = nosLevel,
                             nosActive = nosData and nosData.active == true,
                         })
                     end
