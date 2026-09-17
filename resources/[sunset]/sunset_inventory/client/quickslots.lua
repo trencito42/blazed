@@ -28,7 +28,7 @@ for _, name in ipairs({
 end
 
 local function blocked()
-    return IsPauseMenuActive() or (IsNuiFocused() and not emoteWheelOpen)
+    return IsPauseMenuActive() or (IsNuiFocused() and not emoteWheelOpen) or LocalPlayer.state.isCasinoSitting == true
 end
 
 -- [AMMO HUD FIX] Robust ammo-weapon detection.

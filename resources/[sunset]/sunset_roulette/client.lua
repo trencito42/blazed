@@ -34,15 +34,21 @@ local function idleScene(entity)
 end
 
 local function setupRoulette(index)
-    rouletteEntities[index] = CreateObject(`vw_prop_casino_roulette_01b`, RouletteLocations[index].coords.x, RouletteLocations[index].coords.y, RouletteLocations[index].coords.z, false, true, false)
-    SetEntityHeading(rouletteEntities[index], RouletteLocations[index].coords.w)
-    local pedCoordsX = -0.1 * Cos(RouletteLocations[index].coords.w) - 0.6 * Sin(RouletteLocations[index].coords.w)
-    local pedCoordsY = -0.1 * Sin(RouletteLocations[index].coords.w) + 0.6 * Cos(RouletteLocations[index].coords.w)
-    local pedCoords = vector3(pedCoordsX, pedCoordsY, 0.0) + RouletteLocations[index].coords.xyz
-    roulettePeds[index] = CreatePed(26, `s_f_y_casino_01`, pedCoords.x, pedCoords.y, pedCoords.z, RouletteLocations[index].coords.w - 180, false, true)
-    SetEntityCanBeDamaged(roulettePeds[index], false)
-    SetPedAsEnemy(roulettePeds[index], false)
-    SetBlockingOfNonTemporaryEvents(roulettePeds[index], true)
+    local loc = RouletteLocations[index].coords
+    local obj = CreateObject(`vw_prop_casino_roulette_01b`, loc.x, loc.y, loc.z, false, true, false)
+    SetEntityHeading(obj, loc.w)
+    FreezeEntityPosition(obj, true)
+    rouletteEntities[index] = obj
+
+    local pedCoordsX = -0.1 * Cos(loc.w) - 0.6 * Sin(loc.w)
+    local pedCoordsY = -0.1 * Sin(loc.w) + 0.6 * Cos(loc.w)
+    local pedCoords = vector3(pedCoordsX, pedCoordsY, 0.0) + loc.xyz
+    local ped = CreatePed(26, `s_f_y_casino_01`, pedCoords.x, pedCoords.y, pedCoords.z, loc.w - 180, false, true)
+    SetEntityCanBeDamaged(ped, false)
+    SetPedAsEnemy(ped, false)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    FreezeEntityPosition(ped, true)
+    roulettePeds[index] = ped
     SetPedResetFlag(roulettePeds[index], 249, true)
     SetPedConfigFlag(roulettePeds[index], 185, true)
     SetPedConfigFlag(roulettePeds[index], 108, true)
@@ -94,13 +100,19 @@ local function deleteRouletteTables()
     end
 end
 
-AddEventHandler('onResourceStop', deleteRouletteTables)
+AddEventHandler('onResourceStop', function(res)
+    if res == GetCurrentResourceName() then
+        LocalPlayer.state:set('isCasinoSitting', false, false)
+        deleteRouletteTables()
+    end
+end)
 
 local sittingInAChair, chairInfo, rouletteInfo, chosenBets = false, {}, {}, {}
 local randomExitScene = { 'sit_exit_left' }
 
 local function leaveChair()
     sittingInAChair = false
+    LocalPlayer.state:set('isCasinoSitting', false, false)
     TriggerServerEvent('dc-casino:roulette:server:syncChairs', 'leave', chairInfo.coords)
 end
 
@@ -328,6 +340,7 @@ local function enterClosestChair(rouletteIndex)
         if #(playerCoords - rouletteChairsOrdered[i].coords) <= 1.5 then
             if not isChairTaken(rouletteChairsOrdered[i].coords) and not sittingInAChair then
                 sittingInAChair = true
+                LocalPlayer.state:set('isCasinoSitting', true, false)
                 chairInfo = { coords = rouletteChairsOrdered[i].coords, rotation = rouletteChairsOrdered[i].rotation }
                 rouletteInfo = { coords = RouletteLocations[rouletteIndex].coords, rotation = GetEntityRotation(rouletteEntities[rouletteIndex]), entity = rouletteEntities[rouletteIndex] }
                 local enterScene = NetworkCreateSynchronisedScene(rouletteChairsOrdered[i].coords.x, rouletteChairsOrdered[i].coords.y, rouletteChairsOrdered[i].coords.z, rouletteChairsOrdered[i].rotation.x, rouletteChairsOrdered[i].rotation.y, rouletteChairsOrdered[i].rotation.z, 2, true, false, 1065353216, 13, 1.0)

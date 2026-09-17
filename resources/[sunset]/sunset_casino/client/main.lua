@@ -195,30 +195,7 @@ CreateThread(function()
 
         -- Blackjack & Slot machines are handled in-world by sunset_blackjack & sunset_slots (seats, 5-reels & chips)
 
-        -- Roulette tables
-        local rouletteList = Cfg.rouletteTables or (Cfg.rouletteTable and { Cfg.rouletteTable } or {})
-        for _, pos in ipairs(rouletteList) do
-            local dist = #(coords - pos)
-            if dist < 8.0 then
-                sleep = 0
-                DrawMarker(1, pos.x, pos.y, pos.z - 1.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    1.2, 1.2, 0.8,
-                    255, 50, 50, 80,
-                    false, false, 2, false, nil, nil, false)
-                DrawMarker(2, pos.x, pos.y, pos.z + 0.2,
-                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
-                    0.25, 0.25, 0.25,
-                    255, 50, 50, 180,
-                    true, true, 2, false, nil, nil, false)
-                if dist < 2.5 then
-                    DrawText3D(vector3(pos.x, pos.y, pos.z + 0.4), '~r~[E]~s~ Play Roulette')
-                    if IsControlJustReleased(0, 38) and not casinoOpen then
-                        openGame('roulette')
-                    end
-                end
-            end
-        end
+        -- Roulette tables are handled in-world by sunset_roulette (3D tables, dealers & bets)
 
         -- Lucky Wheel is handled in-world by sunset_luckywheel (3D prop, animations & synced spins)
 

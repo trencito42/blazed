@@ -72,6 +72,174 @@ RegisterNetEvent('sunset:client:inventoryForceClose', function()
     closeInventory()
 end)
 
+local activeItemProp = nil
+
+local function cleanupItemProp()
+    if activeItemProp and DoesEntityExist(activeItemProp) then
+        DeleteEntity(activeItemProp)
+    end
+    activeItemProp = nil
+end
+
+RegisterNetEvent('sunset:inventory:client:usedItem', function(item, category, extra1, extra2)
+    local ped = PlayerPedId()
+    if IsEntityDead(ped) then return end
+
+    cleanupItemProp()
+
+    if category == 'ammo' then
+        local weaponName = extra1
+        local rounds = extra2 or 24
+        if IsPedArmed(ped, 4) then
+            MakePedReload(ped)
+        else
+            local animDict = 'anim@weapons@first_person@aim_rng@generic@pistol@combatpistol@'
+            local animName = 'reload_str'
+            RequestAnimDict(animDict)
+            local timeout = GetGameTimer() + 2000
+            while not HasAnimDictLoaded(animDict) and GetGameTimer() < timeout do Wait(10) end
+            if HasAnimDictLoaded(animDict) then
+                TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 1200, 49, 0, false, false, false)
+            end
+        end
+        local cleanName = tostring(weaponName or 'weapon'):gsub('^WEAPON_', '')
+        exports.sunset_ui:Notify(('Loaded %d rounds into %s.'):format(rounds, cleanName), 'success')
+        return
+    end
+
+    if category == 'drinks' then
+        local propModel = `prop_ld_can_01`
+        if item == 'beer' then
+            propModel = `prop_cs_beer_bot`
+        elseif item == 'coffee' then
+            propModel = `prop_fib_coffee`
+        elseif item == 'wine' or item == 'champagne' then
+            propModel = `prop_wine_bot_01`
+        elseif item == 'whiskey' or item == 'cocktail' then
+            propModel = `prop_drink_whisky`
+        elseif item == 'water' then
+            propModel = `prop_ld_flow_bottle`
+        end
+
+        local animDict = 'mp_player_intdrink'
+        local animName = 'loop_bottle'
+        RequestAnimDict(animDict)
+        RequestModel(propModel)
+        local timeout = GetGameTimer() + 2000
+        while (not HasAnimDictLoaded(animDict) or not HasModelLoaded(propModel)) and GetGameTimer() < timeout do Wait(10) end
+
+        local bone = GetPedBoneIndex(ped, 18905)
+        local coords = GetEntityCoords(ped)
+        local prop = CreateObject(propModel, coords.x, coords.y, coords.z, true, true, false)
+        AttachEntityToEntity(prop, ped, bone, 0.12, 0.008, 0.03, -100.0, 0.0, -10.0, true, true, false, true, 1, true)
+        activeItemProp = prop
+
+        TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 3200, 49, 0, false, false, false)
+
+        CreateThread(function()
+            Wait(3200)
+            cleanupItemProp()
+            StopAnimTask(ped, animDict, animName, 1.0)
+            SetModelAsNoLongerNeeded(propModel)
+            RemoveAnimDict(animDict)
+        end)
+        return
+    end
+
+    if category == 'food' then
+        local propModel = `prop_cs_burger_01`
+        if item == 'sandwich' then
+            propModel = `prop_sandwich_01`
+        elseif item == 'hotdog' then
+            propModel = `prop_cs_hotdog_01`
+        elseif item == 'apple' then
+            propModel = `ng_proc_food_ap1`
+        elseif item == 'banana' then
+            propModel = `ng_proc_food_nana1a`
+        end
+
+        local animDict = 'mp_player_inteat@burger'
+        local animName = 'mp_player_int_eat_burger'
+        RequestAnimDict(animDict)
+        RequestModel(propModel)
+        local timeout = GetGameTimer() + 2000
+        while (not HasAnimDictLoaded(animDict) or not HasModelLoaded(propModel)) and GetGameTimer() < timeout do Wait(10) end
+
+        local bone = GetPedBoneIndex(ped, 18905)
+        local coords = GetEntityCoords(ped)
+        local prop = CreateObject(propModel, coords.x, coords.y, coords.z, true, true, false)
+        AttachEntityToEntity(prop, ped, bone, 0.13, 0.05, 0.02, -50.0, 16.0, 60.0, true, true, false, true, 1, true)
+        activeItemProp = prop
+
+        TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 3500, 49, 0, false, false, false)
+
+        CreateThread(function()
+            Wait(3500)
+            cleanupItemProp()
+            StopAnimTask(ped, animDict, animName, 1.0)
+            SetModelAsNoLongerNeeded(propModel)
+            RemoveAnimDict(animDict)
+        end)
+        return
+    end
+
+    if category == 'medical' or item == 'bandage' or item == 'painkillers' then
+        if item == 'painkillers' then
+            local animDict = 'mp_suicide'
+            local animName = 'pill'
+            RequestAnimDict(animDict)
+            local timeout = GetGameTimer() + 2000
+            while not HasAnimDictLoaded(animDict) and GetGameTimer() < timeout do Wait(10) end
+            TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 2000, 49, 0, false, false, false)
+            CreateThread(function()
+                Wait(2000)
+                StopAnimTask(ped, animDict, animName, 1.0)
+                RemoveAnimDict(animDict)
+            end)
+        else
+            local animDict = 'missheistdockssetup1clipboard@idle_a'
+            local animName = 'idle_a'
+            RequestAnimDict(animDict)
+            local timeout = GetGameTimer() + 2000
+            while not HasAnimDictLoaded(animDict) and GetGameTimer() < timeout do Wait(10) end
+            TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 2500, 49, 0, false, false, false)
+            CreateThread(function()
+                Wait(2500)
+                StopAnimTask(ped, animDict, animName, 1.0)
+                RemoveAnimDict(animDict)
+            end)
+        end
+        return
+    end
+
+    if item == 'cigarette' or category == 'supplies' then
+        local propModel = `prop_cs_ciggy_01`
+        local animDict = 'amb@world_human_smoking@male@male_a@enter'
+        local animName = 'enter'
+        RequestAnimDict(animDict)
+        RequestModel(propModel)
+        local timeout = GetGameTimer() + 2000
+        while (not HasAnimDictLoaded(animDict) or not HasModelLoaded(propModel)) and GetGameTimer() < timeout do Wait(10) end
+
+        local bone = GetPedBoneIndex(ped, 57005)
+        local coords = GetEntityCoords(ped)
+        local prop = CreateObject(propModel, coords.x, coords.y, coords.z, true, true, false)
+        AttachEntityToEntity(prop, ped, bone, 0.015, -0.009, 0.003, 55.0, 0.0, 110.0, true, true, false, true, 1, true)
+        activeItemProp = prop
+
+        TaskPlayAnim(ped, animDict, animName, 3.0, 3.0, 4000, 49, 0, false, false, false)
+
+        CreateThread(function()
+            Wait(4000)
+            cleanupItemProp()
+            StopAnimTask(ped, animDict, animName, 1.0)
+            SetModelAsNoLongerNeeded(propModel)
+            RemoveAnimDict(animDict)
+        end)
+        return
+    end
+end)
+
 AddEventHandler('sunset:nui:inventoryUse', function(data)
     local ok, err = Sunset.AwaitCallback('sunset:useItem', data.item)
     if not ok then exports.sunset_ui:Notify(err or 'Cannot use item', 'error') end
@@ -404,5 +572,6 @@ end)
 
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
+    cleanupItemProp()
     for dropId in pairs(dropObjects) do removeDropObject(dropId) end
 end)

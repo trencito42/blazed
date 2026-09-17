@@ -19,6 +19,10 @@ local function stopEmote()
 end
 
 local function playEmote(name)
+    if LocalPlayer.state.isCasinoSitting then
+        return exports.sunset_ui:Notify('You cannot use emotes while seated at a casino game.', 'warning')
+    end
+
     local emote = Emotes[name]
     if not emote then return exports.sunset_ui:Notify('Unknown emote: ' .. tostring(name), 'error') end
 
@@ -50,6 +54,9 @@ RegisterCommand('e', function(_, args)
 end, false)
 
 RegisterCommand('emotes', function()
+    if LocalPlayer.state.isCasinoSitting then
+        return exports.sunset_ui:Notify('You cannot open the emotes menu while seated at a casino game.', 'warning')
+    end
     exports.sunset_ui:Send('emotesShow', { emotes = Emotes })
     exports.sunset_ui:SetFocus(true, true)
 end, false)

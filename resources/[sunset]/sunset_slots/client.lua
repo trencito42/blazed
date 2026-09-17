@@ -110,6 +110,7 @@ end
 
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then
+        unsit()
         cleanupSlotChairs()
         destroySlotCam()
         if currentScene then
@@ -133,6 +134,7 @@ local function unsit()
             currentSitObj = nil
         end
         isSitting = false
+        LocalPlayer.state:set('isCasinoSitting', false, false)
     end
 end
 
@@ -153,13 +155,15 @@ local function sit(slotData)
 
     local pos = DoesEntityExist(prop) and GetEntityCoords(prop) or slotData.coords
     local heading = DoesEntityExist(prop) and GetEntityHeading(prop) or (slotData.heading or 0.0)
-    local id = ('%.2f_%.2f_%.2f'):format(pos.x, pos.y, pos.z)
+    local slotId = slotData.id or ('%.2f_%.2f_%.2f'):format(pos.x, pos.y, pos.z)
 
-    local occupied = Sunset.AwaitCallback('sunset:slots:getPlace', id)
-    if occupied then
-        exports.sunset_ui:Notify('This slot machine is currently in use.', 'error')
+    local ok, resOrErr = Sunset.AwaitCallback('sunset:slots:tryPlay', slotId)
+    if not ok then
+        exports.sunset_ui:Notify(resOrErr or 'Could not use this slot machine.', 'error')
         return
     end
+
+    local sessionChips = tonumber(resOrErr) or 50
 
     -- Find casino chair for this slot machine
     local chair = spawnedChairs[slotData.id]
@@ -181,9 +185,9 @@ local function sit(slotData)
         chairHeading = (heading + 180.0) % 360.0
     end
 
-    currentSitObj = id
+    currentSitObj = slotId
     isSitting = true
-    TriggerServerEvent('sunset_slots:takePlace', id)
+    LocalPlayer.state:set('isCasinoSitting', true, false)
 
     -- Play casino synchronized sitting scene (1:1 identical posture to blackjack)
     local animDict = 'anim_casino_b@amb@casino@games@shared@player@'
@@ -197,19 +201,15 @@ local function sit(slotData)
     
     -- Smoothly transition camera to slot machine screen
     createSlotCam(prop, pos, heading)
-    Wait(600)
+    Wait(500)
 
-    -- Prompt for bet chips using native GTA keyboard
-    local input = KeyboardInput('Enter Starting Bet (Chips):', '500', 7)
-    local betAmount = input and tonumber(input)
-    if betAmount and betAmount >= (Config.MinBet or 50) then
-        TriggerServerEvent('sunset_slots:BetsAndMoney', betAmount)
-    else
-        unsit()
-        if input and input ~= '' then
-            exports.sunset_ui:Notify(('Invalid bet amount. Minimum bet is %d chips.'):format(Config.MinBet or 50), 'error')
-        end
-    end
+    -- Open NUI directly with loaded chips (SAMP style, no annoying input prompts!)
+    SetNuiFocus(true, true)
+    open = true
+    SendNUIMessage({
+        showPacanele = 'open',
+        coinAmount = sessionChips
+    })
 end
 
 RegisterNetEvent('sunset_slots:UpdateSlots', function(chips)

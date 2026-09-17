@@ -1,6 +1,6 @@
 RouletteLocations = {
-    { coords = vector4(1135.06, 242.50, -50.07, 0.0), spawned = false, pedOutfit = 1, maxBets = 20, maxAmount = 200000 },
-    { coords = vector4(1111.93, 201.87, -49.94, 0.0), spawned = false, pedOutfit = 2, maxBets = 20, maxAmount = 200000 },
+    { coords = vector4(1135.06, 242.50, -51.03, 0.0), spawned = false, pedOutfit = 1, maxBets = 20, maxAmount = 200000 },
+    { coords = vector4(1111.93, 201.87, -50.94, 0.0), spawned = false, pedOutfit = 2, maxBets = 20, maxAmount = 200000 },
 }
 
 RouletteRewards = {

@@ -7,7 +7,7 @@ description '1:1 GTA Online 3D Diamond Casino Roulette for SunsetMP'
 version '1.0.0'
 
 shared_scripts {
-    '@ox_lib/init.lua',
+    'lib_shim.lua',
     'config.lua',
 }
 

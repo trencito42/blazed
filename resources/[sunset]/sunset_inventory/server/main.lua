@@ -489,6 +489,8 @@ function UseItem(source, item)
 
         -- Tell the client the exact new ammo value (synchronized)
         emitClient('sunset:client:setWeaponAmmo', source, { targetWeaponName }, newAmmo)
+        emitClient('sunset:client:inventoryForceClose', source)
+        emitClient('sunset:inventory:client:usedItem', source, item, 'ammo', targetWeaponName, roundsToAdd)
         return true
     end
 
@@ -511,6 +513,8 @@ function UseItem(source, item)
     end
 
     emitClient('sunset:client:updateCharacter', source, char)
+    emitClient('sunset:client:inventoryForceClose', source)
+    emitClient('sunset:inventory:client:usedItem', source, item, def.category, def)
     return true
 end
 

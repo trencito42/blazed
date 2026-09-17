@@ -1430,6 +1430,7 @@ function ProcessTables()
 								leavingBlackjack = false
 
 								TriggerServerEvent("BLACKJACK:PlayerSatDown", i, closestChair)
+								LocalPlayer.state:set('isCasinoSitting', true, false)
 
 								local endTime = GetGameTimer() + math.floor(GetAnimDuration("anim_casino_b@amb@casino@games@shared@player@", idleVar)*990)
 
@@ -1507,6 +1508,7 @@ function ProcessTables()
 										TriggerServerEvent("BLACKJACK:PlayerSatUp", i)
 										Wait(math.floor(GetAnimDuration("anim_casino_b@amb@casino@games@shared@player@", "sit_exit_left")*800))
 										ClearPedTasks(PlayerPedId())
+										LocalPlayer.state:set('isCasinoSitting', false, false)
 										break
 									else
 										local playerPed = PlayerPedId()
@@ -1515,6 +1517,7 @@ function ProcessTables()
 											TriggerServerEvent("BLACKJACK:PlayerRemove", i)
 											ClearPedTasks(playerPed)
 											leaveBlackjack()
+											LocalPlayer.state:set('isCasinoSitting', false, false)
 											if standUpCallback ~= nil then
 												standUpCallback()
 											end
@@ -1524,6 +1527,7 @@ function ProcessTables()
 												TriggerServerEvent("BLACKJACK:PlayerRemove", i)
 												ClearPedTasks(playerPed)
 												leaveBlackjack()
+												LocalPlayer.state:set('isCasinoSitting', false, false)
 												if standUpCallback ~= nil then
 													standUpCallback()
 												end
@@ -1559,3 +1563,9 @@ exports("SetSatDownCallback", SetSatDownCallback)
 exports("SetStandUpCallback", SetStandUpCallback)
 exports("SetLeaveCheckCallback", SetLeaveCheckCallback)
 exports("SetCanSitDownCallback", SetCanSitDownCallback)
+
+AddEventHandler('onResourceStop', function(res)
+    if res == GetCurrentResourceName() then
+        LocalPlayer.state:set('isCasinoSitting', false, false)
+    end
+end)

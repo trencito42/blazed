@@ -30,6 +30,35 @@ local function takeChips(source, amount)
     return ok and res == true
 end
 
+-- ── SEAT & SESSION LOCKING ──
+local ActiveSessions = {} -- [src] = { slotId = id, chips = amount }
+local SeatsTaken = {} -- [slotId] = src
+
+exports.sunset_core:RegisterCallback('sunset:slots:tryPlay', function(source, slotId)
+    local src = source
+    if not slotId then return false, 'Invalid slot machine.' end
+    local idStr = tostring(slotId)
+    if SeatsTaken[idStr] and SeatsTaken[idStr] ~= src then
+        return false, 'This slot machine is currently in use.'
+    end
+
+    local chips = countChips(src)
+    local minBet = Config.MinBet or 50
+    if chips < minBet then
+        return false, ('You need at least %d Casino Chips to play. Exchange cash for chips at the cashier.'):format(minBet)
+    end
+
+    -- Take up to 25,000 chips for the slot machine session (or all chips if player has fewer)
+    local sessionChips = math.min(chips, 25000)
+    if not takeChips(src, sessionChips) then
+        return false, 'Could not deduct chips from inventory.'
+    end
+
+    SeatsTaken[idStr] = src
+    ActiveSessions[src] = { slotId = idStr, chips = sessionChips }
+    return true, sessionChips
+end)
+
 RegisterServerEvent('sunset_slots:BetsAndMoney')
 AddEventHandler('sunset_slots:BetsAndMoney', function(bets)
     local src = source
@@ -65,17 +94,20 @@ end)
 RegisterServerEvent('sunset_slots:PayOutRewards')
 AddEventHandler('sunset_slots:PayOutRewards', function(amount)
     local src = source
-    amount = math.floor(tonumber(amount) or 0)
+    amount = math.max(0, math.floor(tonumber(amount) or 0))
+    local sess = ActiveSessions[src]
+    if sess then
+        SeatsTaken[sess.slotId] = nil
+        ActiveSessions[src] = nil
+    end
+
     if amount > 0 then
         giveChips(src, amount)
         notify(src, ('You cashed out %s chips from the slot machine!'):format(amount), 'success')
     else
-        notify(src, 'Better luck next time!', 'info')
+        notify(src, 'You finished playing the slot machine.', 'info')
     end
 end)
-
--- ── SEAT LOCKING ──
-local SeatsTaken = {} -- [id] = src
 
 RegisterServerEvent('sunset_slots:takePlace')
 AddEventHandler('sunset_slots:takePlace', function(object)
@@ -89,9 +121,15 @@ RegisterServerEvent('sunset_slots:leavePlace')
 AddEventHandler('sunset_slots:leavePlace', function(object)
     local src = source
     if object then
-        if SeatsTaken[tostring(object)] == src then
-            SeatsTaken[tostring(object)] = nil
+        local idStr = tostring(object)
+        if SeatsTaken[idStr] == src then
+            SeatsTaken[idStr] = nil
         end
+    end
+    if ActiveSessions[src] then
+        local sess = ActiveSessions[src]
+        SeatsTaken[sess.slotId] = nil
+        ActiveSessions[src] = nil
     end
 end)
 
@@ -102,6 +140,12 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
+    local sess = ActiveSessions[src]
+    if sess then
+        giveChips(src, sess.chips)
+        SeatsTaken[sess.slotId] = nil
+        ActiveSessions[src] = nil
+    end
     for id, playerSrc in pairs(SeatsTaken) do
         if playerSrc == src then
             SeatsTaken[id] = nil
