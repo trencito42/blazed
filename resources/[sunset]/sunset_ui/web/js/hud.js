@@ -222,11 +222,10 @@ const Hud = {
 
         if (waypoint && waypointDistance) {
             waypoint.classList.toggle('hidden', !hasWaypoint);
-            panel.classList.toggle('has-waypoint', hasWaypoint);
             if (hasWaypoint) {
                 waypointDistance.textContent = rawDistance >= 1000
-                    ? `${(rawDistance / 1000).toFixed(rawDistance >= 10000 ? 0 : 1)} KM TO WAYPOINT`
-                    : `${Math.round(rawDistance)} M TO WAYPOINT`;
+                    ? `${(rawDistance / 1000).toFixed(rawDistance >= 10000 ? 0 : 1)} KM`
+                    : `${Math.round(rawDistance)} M`;
             } else {
                 waypointDistance.textContent = '—';
             }

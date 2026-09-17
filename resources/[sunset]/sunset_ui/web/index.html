@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="css/fonts.css?v=6">
     <link rel="stylesheet" href="css/style.css?v=16">
     <link rel="stylesheet" href="css/hud.css?v=30" media="not all" data-deferred-style>
-    <link rel="stylesheet" href="css/premium-hud.css?v=35" media="not all" data-deferred-style>
+    <link rel="stylesheet" href="css/premium-hud.css?v=36" media="not all" data-deferred-style>
     <link rel="stylesheet" href="css/scoreboard-forza.css?v=30" media="not all" data-deferred-style>
     <link rel="stylesheet" href="css/store-forza.css?v=30" media="not all" data-deferred-style>
     <link rel="stylesheet" href="css/trucker-laptop.css?v=1" media="not all" data-deferred-style>
@@ -722,10 +722,16 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                     <span id="hud-zone-text">LOS SANTOS</span>
                 </div>
-                <div class="loc-waypoint hidden" id="hud-waypoint" aria-live="polite">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"></path></svg>
-                    <span id="hud-waypoint-distance">—</span>
-                </div>
+            </div>
+        </div>
+
+        <div class="premium-unskew hud-waypoint-widget hidden" id="hud-waypoint" aria-live="polite">
+            <div class="hud-waypoint-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"></path></svg>
+            </div>
+            <div class="hud-waypoint-body">
+                <span class="hud-waypoint-label">WAYPOINT</span>
+                <span class="hud-waypoint-distance" id="hud-waypoint-distance">—</span>
             </div>
         </div>
 
@@ -3653,7 +3659,7 @@
     <script type="text/plain" data-lazy-src="js/clanwar.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/job_shift.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/forza_speedometer.js?v=31"></script>
-    <script type="text/plain" data-lazy-src="js/hud.js?v=32"></script>
+    <script type="text/plain" data-lazy-src="js/hud.js?v=33"></script>
     <script type="text/plain" data-lazy-src="js/hud_editor.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/scoreboard.js?v=31"></script>
     <script type="text/plain" data-lazy-src="js/store247.js?v=31"></script>
