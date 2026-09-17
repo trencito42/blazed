@@ -61,10 +61,15 @@ function SunsetWorld.Npc.showTooltip(id, ped, meta)
     if GetResourceState('sunset_world') ~= 'started' or not SunsetWorld.Tooltips then
         return false, 'sunset_world or Tooltips unavailable'
     end
-    local coords = SunsetWorld.Tooltips.coordsFromEntity(ped, meta.offsetZ or 0.42)
-    if not coords then return false, 'coordsFromEntity returned nil (ped missing?)' end
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        return false, 'ped missing or invalid'
+    end
+    -- Keep the entity handle in the shared tooltip layer. The layer resolves the
+    -- head position on the render tick, so slow/irregular callers can never leave
+    -- an NPC tooltip visually trailing an old world coordinate.
     SunsetWorld.Tooltips.set(id, {
-        coords = coords,
+        entity = ped,
+        offsetZ = meta.offsetZ or 0.42,
         badge = meta.badge or '',
         badgeClass = meta.badgeClass or 'npc',
         bodyClass = meta.bodyClass or meta.badgeClass or 'npc',
