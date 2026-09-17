@@ -281,6 +281,15 @@ RegisterNUICallback('tuningTestFlame', function(_, cb)
     cb({ ok = true })
 end)
 
+RegisterNUICallback('tuningGetQuote', function(data, cb)
+    if not panelOpen or currentPlate == '' then cb({ ok = false, cost = 0 }) return end
+    local flash = data and data.flash == true
+    local quoteTune = data and data.tune or draftTune
+    local quoteCosmetics = data and data.cosmetics or draftCosmetics
+    local cost = Sunset.AwaitCallback('sunset:tuning:getInstallQuote', currentPlate, quoteTune, flash, quoteCosmetics)
+    cb({ ok = true, cost = tonumber(cost) or 0 })
+end)
+
 RegisterNUICallback('tuningCamRotate', function(data, cb)
     if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
     local dx = tonumber(data and data.deltaX) or 0

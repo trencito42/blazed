@@ -183,6 +183,28 @@ exports.sunset_core:RegisterCallback('sunset:tuning:saveTune', function(source, 
     return { tune = sanitized, cost = cost, plate = newPlate or plate, cosmetics = sanitizedCosmetics, model = modelName }
 end)
 
+exports.sunset_core:RegisterCallback('sunset:tuning:getInstallQuote', function(source, plate, newTune, flash, newCosmetics)
+    local char = getCharacter(source)
+    if not char then return 0 end
+    plate = normalizePlate(plate)
+    if plate == '' then return 0 end
+
+    local row = getOwnedVehicleRow(char.id, plate)
+    if not row then return 0 end
+
+    local modelName = tostring(row.model or ''):lower()
+    local caps = SunsetTuning.ProfileResolver.Resolve(modelName, nil)
+
+    local sanitizedTune = SunsetTuning.SanitizeTune(newTune, caps)
+    local sanitizedCos = SunsetTuning.SanitizeCosmetics(newCosmetics)
+
+    local props = decodeProps(row.props)
+    local oldTune = props.ecu or SunsetTuning.StockTune()
+    local oldCos = props.cosmetics or sanitizedCos
+
+    return SunsetTuning.CalculateInstallCost(oldTune, sanitizedTune, oldCos, sanitizedCos, flash == true)
+end)
+
 exports.sunset_core:RegisterCallback('sunset:tuning:beginDyno', function(source, plate)
     local char = getCharacter(source)
     if not char then return nil, 'No character' end

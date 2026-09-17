@@ -22,6 +22,8 @@ let previewDirty = false;
 let hardwareAvailability = {};
 let visualAvailability = {};
 let previewTimer = 0;
+let quoteTimer = 0;
+let serverQuotedCost = null;
 let hardwareSlots = {};
 let featureCosts = {};
 let installedTune = null;
@@ -47,19 +49,19 @@ const categories = [
 
 const categoryTitles = {
     overview: 'Quick Setup',
-    powertrain: 'Engine Upgrades',
-    transmission: 'Transmission',
-    brakes: 'Brake Upgrades',
-    suspension: 'Suspension',
-    turbo: 'Turbo & ECU Map',
-    handling: 'Handling Tuning',
-    exhaust: 'Exhaust Profile',
+    powertrain: 'Engine Upgrades & Mapping',
+    transmission: 'Transmission & Gearing',
+    brakes: 'Brake System & Dynamics',
+    suspension: 'Suspension & Stance',
+    turbo: 'Turbocharger & Top Speed',
+    handling: 'Handling Fine-Tuning',
+    exhaust: 'Exhaust Profile & Pops',
     bodykit: 'Body & Aerodynamics',
     lighting: 'Underglow & Headlights',
-    wheels: 'Wheels, Rims & Stance',
+    wheels: 'Wheels, Rims & Tyre Smoke',
     visual: 'Paint, Pearlescent & Tint',
     dyno: 'Dyno Testing',
-    special: 'Special Features',
+    special: 'Special ECU Features',
 };
 
 const BODYKIT_SLOTS = [
@@ -155,6 +157,36 @@ const PAINT_TYPES = [
     { id: 5, label: 'Chrome' },
 ];
 
+const PEARL_SHADES = [
+    { id: 111, label: 'Ice White', color: '#f0f0f0' },
+    { id: 70, label: 'Diamond Blue', color: '#cbe7f8' },
+    { id: 64, label: 'Ultra Blue', color: '#0055ff' },
+    { id: 145, label: 'Bright Purple', color: '#9933ff' },
+    { id: 135, label: 'Hot Pink', color: '#ff1493' },
+    { id: 27, label: 'Formula Red', color: '#ee1111' },
+    { id: 38, label: 'Sunset Orange', color: '#ff6600' },
+    { id: 88, label: 'Race Yellow', color: '#ffdd00' },
+    { id: 55, label: 'Lime Green', color: '#66ff00' },
+    { id: 92, label: 'Bright Green', color: '#00cc44' },
+    { id: 99, label: 'Midnight Blue', color: '#001a4d' },
+    { id: 158, label: 'Pure Gold', color: '#ffd700' },
+    { id: 107, label: 'Cream Pearl', color: '#fffdd0' },
+    { id: 0, label: 'None (Clear)', color: '#111111' },
+];
+
+const PEARL_COMBOS = [
+    { label: 'Midnight Blue Ice', primary: { r: 10, g: 15, b: 30 }, pearl: 70, type: 1 },
+    { label: 'Obsidian Ultra Blue', primary: { r: 5, g: 5, b: 8 }, pearl: 64, type: 1 },
+    { label: 'Dark Amethyst', primary: { r: 15, g: 8, b: 25 }, pearl: 145, type: 1 },
+    { label: 'Crimson Sunset', primary: { r: 90, g: 5, b: 10 }, pearl: 38, type: 1 },
+    { label: 'Toxic Lime Ghost', primary: { r: 10, g: 20, b: 10 }, pearl: 55, type: 1 },
+    { label: 'Golden Noir', primary: { r: 12, g: 12, b: 12 }, pearl: 158, type: 1 },
+    { label: 'Frost White Blue', primary: { r: 245, g: 245, b: 255 }, pearl: 64, type: 1 },
+    { label: 'Vampire Red Wine', primary: { r: 50, g: 0, b: 5 }, pearl: 27, type: 1 },
+    { label: 'Miami Sunset', primary: { r: 180, g: 20, b: 80 }, pearl: 88, type: 1 },
+    { label: 'Stealth Matte Carbon', primary: { r: 25, g: 25, b: 25 }, pearl: 0, type: 3 },
+];
+
 const TYRE_SMOKE_PRESETS = [
     { label: 'White Smoke', r: 255, g: 255, b: 255 },
     { label: 'Red Smoke', r: 255, g: 20, b: 20 },
@@ -178,7 +210,7 @@ function tabAllowed(itemId) {
     if (itemId === 'overview' || itemId === 'bodykit' || itemId === 'lighting' || itemId === 'wheels' || itemId === 'visual' || itemId === 'dyno') return true;
     if (itemId === 'powertrain' || itemId === 'transmission' || itemId === 'turbo') return cap('power') || cap('hardware');
     if (itemId === 'brakes' || itemId === 'suspension' || itemId === 'handling') return cap('hardware') || cap('tractionControl');
-    if (itemId === 'exhaust') return cap('exhaustModes');
+    if (itemId === 'exhaust') return cap('exhaustModes') || cap('popsAllowed') || cap('flamesAllowed');
     if (itemId === 'special') return cap('antiLag') || cap('drift') || cap('hud');
     return true;
 }
@@ -262,6 +294,10 @@ function ensureCosmetics(raw) {
         paintType: Number(src.paintType ?? base.paintType ?? 0),
         primary: { ...base.primary, ...(src.primary || {}) },
         secondary: { ...base.secondary, ...(src.secondary || {}) },
+        pearl: Number(src.pearl ?? base.pearl ?? 0),
+        wheel: Number(src.wheel ?? base.wheel ?? 0),
+        windowTint: Number(src.windowTint ?? base.windowTint ?? 0),
+        wheelType: Number(src.wheelType ?? base.wheelType ?? 0),
         neon: {
             ...base.neon,
             ...(src.neon || {}),
@@ -279,6 +315,13 @@ function ensureTune(raw) {
     return {
         ...base,
         ...src,
+        power: Number(src.power ?? base.power ?? 0),
+        torque: Number(src.torque ?? base.torque ?? 0),
+        throttleResponse: Number(src.throttleResponse ?? base.throttleResponse ?? 0),
+        topSpeed: Number(src.topSpeed ?? base.topSpeed ?? 0),
+        shiftSpeed: Number(src.shiftSpeed ?? base.shiftSpeed ?? 0),
+        regenBraking: Number(src.regenBraking ?? base.regenBraking ?? 0),
+        exhaust: String(src.exhaust ?? base.exhaust),
         pop: { ...base.pop, ...(src.pop || {}) },
         flames: { ...base.flames, ...(src.flames || {}), color: { ...(base.flames.color || {}), ...((src.flames && src.flames.color) || {}) } },
         antiLag: { ...base.antiLag, ...(src.antiLag || {}) },
@@ -311,66 +354,111 @@ function setCosmeticsValue(path, value) {
     ref[parts[parts.length - 1]] = value;
 }
 
-function hasTuningChanges() {
+function getTuneValue(path) {
+    return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), tune);
+}
+
+function setTuneValue(path, value) {
+    tune = ensureTune(tune);
+    const parts = path.split('.');
+    let ref = tune;
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (!ref[parts[i]]) ref[parts[i]] = {};
+        ref = ref[parts[i]];
+    }
+    ref[parts[parts.length - 1]] = value;
+}
+
+function categoryHasChanges(catId) {
     if (!installedTune || !tune) return false;
-    const old = ensureTune(installedTune);
-    const next = ensureTune(tune);
-    const oldCos = ensureCosmetics(installedCosmetics);
-    const nextCos = ensureCosmetics(cosmetics);
+    const oldT = ensureTune(installedTune);
+    const curT = ensureTune(tune);
+    const oldC = ensureCosmetics(installedCosmetics);
+    const curC = ensureCosmetics(cosmetics);
 
-    for (const key of Object.keys(hardwareSlots || {})) {
-        if (Number(next.hardware[key] || 0) !== Number(old.hardware[key] || 0)) return true;
+    if (catId === 'overview') {
+        return curT.stage !== oldT.stage;
     }
-    if (!!next.hardware.turbo !== !!old.hardware.turbo) return true;
-    if (!!next.hardware.launchControl !== !!old.hardware.launchControl) return true;
-    if (next.stage !== old.stage) return true;
-
-    if (!!next.pop.enabled !== !!old.pop.enabled) return true;
-    if (!!next.flames.enabled !== !!old.flames.enabled) return true;
-    if (!!next.antiLag.enabled !== !!old.antiLag.enabled) return true;
-    if (!!next.drift.enabled !== !!old.drift.enabled) return true;
-    if (!!next.hud.enabled !== !!old.hud.enabled) return true;
-    if (next.exhaust !== old.exhaust) return true;
-
-    const checkPaths = [['power'], ['torque'], ['handling', 'steering'], ['handling', 'brakePower'], ['handling', 'suspension'], ['handling', 'traction']];
-    for (const p of checkPaths) {
-        const get = (obj) => p.reduce((v, k) => v?.[k], obj);
-        if (Number(get(next) || 0) !== Number(get(old) || 0)) return true;
+    if (catId === 'powertrain') {
+        return Number(curT.hardware.engine || 0) !== Number(oldT.hardware.engine || 0)
+            || curT.power !== oldT.power
+            || curT.torque !== oldT.torque
+            || curT.throttleResponse !== oldT.throttleResponse;
     }
-
-    if (Number(nextCos.paintType || 0) !== Number(oldCos.paintType || 0)) return true;
-    if (!sameColor(oldCos.primary, nextCos.primary) || !sameColor(oldCos.secondary, nextCos.secondary)) return true;
-    if (Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)) return true;
-    if (Number(oldCos.windowTint) !== Number(nextCos.windowTint)) return true;
-    if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) return true;
-
-    if (!!nextCos.neon?.enabled !== !!oldCos.neon?.enabled) return true;
-    if (nextCos.neon?.enabled) {
-        if (!sameColor(oldCos.neon?.color, nextCos.neon?.color)) return true;
-        if (!!nextCos.neon.front !== !!oldCos.neon.front) return true;
-        if (!!nextCos.neon.back !== !!oldCos.neon.back) return true;
-        if (!!nextCos.neon.left !== !!oldCos.neon.left) return true;
-        if (!!nextCos.neon.right !== !!oldCos.neon.right) return true;
+    if (catId === 'transmission') {
+        return Number(curT.hardware.transmission || 0) !== Number(oldT.hardware.transmission || 0)
+            || curT.shiftSpeed !== oldT.shiftSpeed;
     }
-
-    if (!!nextCos.xenon !== !!oldCos.xenon) return true;
-    if (nextCos.xenon && nextCos.xenonColor !== oldCos.xenonColor) return true;
-
-    if (!!nextCos.tyreSmoke !== !!oldCos.tyreSmoke) return true;
-    if (nextCos.tyreSmoke && !sameColor(oldCos.tyreSmokeColor, nextCos.tyreSmokeColor)) return true;
-
-    if (nextCos.wheelType !== oldCos.wheelType) return true;
-    if (nextCos.mods?.wheels !== oldCos.mods?.wheels) return true;
-    if (nextCos.mods && oldCos.mods) {
-        for (const k of Object.keys(nextCos.mods)) {
-            if (nextCos.mods[k] !== oldCos.mods[k]) return true;
+    if (catId === 'brakes') {
+        return Number(curT.hardware.brakes || 0) !== Number(oldT.hardware.brakes || 0)
+            || curT.regenBraking !== oldT.regenBraking;
+    }
+    if (catId === 'suspension') {
+        return Number(curT.hardware.suspension || 0) !== Number(oldT.hardware.suspension || 0);
+    }
+    if (catId === 'turbo') {
+        return !!curT.hardware.turbo !== !!oldT.hardware.turbo
+            || !!curT.hardware.launchControl !== !!oldT.hardware.launchControl
+            || curT.topSpeed !== oldT.topSpeed;
+    }
+    if (catId === 'handling') {
+        return curT.handling.steering !== oldT.handling.steering
+            || curT.handling.brakePower !== oldT.handling.brakePower
+            || curT.handling.suspension !== oldT.handling.suspension
+            || curT.handling.traction !== oldT.handling.traction;
+    }
+    if (catId === 'exhaust') {
+        return curT.exhaust !== oldT.exhaust
+            || !!curT.pop.enabled !== !!oldT.pop.enabled
+            || Number(curT.pop.rpmMax || 0) !== Number(oldT.pop.rpmMax || 0)
+            || !!curT.flames.enabled !== !!oldT.flames.enabled;
+    }
+    if (catId === 'bodykit') {
+        if (!curC.mods || !oldC.mods) return false;
+        return Object.keys(curC.mods).some((k) => k !== 'wheels' && curC.mods[k] !== oldC.mods[k]);
+    }
+    if (catId === 'lighting') {
+        if (!!curC.neon?.enabled !== !!oldC.neon?.enabled) return true;
+        if (curC.neon?.enabled) {
+            if (!sameColor(curC.neon?.color, oldC.neon?.color)) return true;
+            if (!!curC.neon.front !== !!oldC.neon.front || !!curC.neon.back !== !!oldC.neon.back
+                || !!curC.neon.left !== !!oldC.neon.left || !!curC.neon.right !== !!oldC.neon.right) return true;
         }
+        if (!!curC.xenon !== !!oldC.xenon) return true;
+        if (curC.xenon && curC.xenonColor !== oldC.xenonColor) return true;
+        return false;
     }
-
+    if (catId === 'wheels') {
+        if (curC.wheelType !== oldC.wheelType) return true;
+        if (curC.mods?.wheels !== oldC.mods?.wheels) return true;
+        if (Number(curC.wheel || 0) !== Number(oldC.wheel || 0)) return true;
+        if (!!curC.tyreSmoke !== !!oldC.tyreSmoke) return true;
+        if (curC.tyreSmoke && !sameColor(curC.tyreSmokeColor, oldC.tyreSmokeColor)) return true;
+        return false;
+    }
+    if (catId === 'visual') {
+        if (Number(curC.paintType || 0) !== Number(oldC.paintType || 0)) return true;
+        if (!sameColor(curC.primary, oldC.primary) || !sameColor(curC.secondary, oldC.secondary)) return true;
+        if (Number(curC.pearl || 0) !== Number(oldC.pearl || 0)) return true;
+        if (Number(curC.windowTint || 0) !== Number(oldC.windowTint || 0)) return true;
+        if (curC.plateText && curC.plateText !== oldC.plateText) return true;
+        return false;
+    }
+    if (catId === 'special') {
+        return !!curT.antiLag.enabled !== !!oldT.antiLag.enabled
+            || Number(curT.antiLag.intensity || 0) !== Number(oldT.antiLag.intensity || 0)
+            || !!curT.drift.enabled !== !!oldT.drift.enabled
+            || Number(curT.drift.grip || 0) !== Number(oldT.drift.grip || 0)
+            || !!curT.hud.enabled !== !!oldT.hud.enabled;
+    }
     return false;
 }
 
-function installQuote() {
+function hasTuningChanges() {
+    return categories.some((cat) => categoryHasChanges(cat.id));
+}
+
+function localInstallQuote() {
     if (!installedTune || !tune) return 0;
     if (!hasTuningChanges()) return 0;
 
@@ -379,28 +467,35 @@ function installQuote() {
     const oldCos = ensureCosmetics(installedCosmetics);
     const nextCos = ensureCosmetics(cosmetics);
     let total = Number(costs.save || 0) + Number(costs.flash || 0);
+
     Object.entries(hardwareSlots || {}).forEach(([key, slot]) => {
         total += Math.max(0, Number(next.hardware[key] || 0) - Number(old.hardware[key] || 0)) * Number(slot.unitCost || 0);
     });
+
     ['turbo', 'launchControl'].forEach((key) => {
         if (next.hardware[key] && !old.hardware[key]) total += Number(featureCosts[key] || 0);
     });
+
     [['pop', next.pop.enabled, old.pop.enabled], ['flames', next.flames.enabled, old.flames.enabled],
         ['antiLag', next.antiLag.enabled, old.antiLag.enabled], ['drift', next.drift.enabled, old.drift.enabled],
         ['hud', next.hud.enabled, old.hud.enabled]].forEach(([key, enabled, wasEnabled]) => {
         if (enabled && !wasEnabled) total += Number(featureCosts[key] || 0);
     });
+
     if (next.stage !== old.stage) {
         total += Number(next.stage === 'race' ? featureCosts.raceMap : next.stage === 'sport' ? featureCosts.sportMap : 0);
     }
-    const tuningKeys = [['power'], ['torque'], ['handling', 'steering'], ['handling', 'brakePower'], ['handling', 'suspension'], ['handling', 'traction']];
+
+    const tuningKeys = [['power'], ['torque'], ['throttleResponse'], ['topSpeed'], ['shiftSpeed'], ['regenBraking'],
+        ['handling', 'steering'], ['handling', 'brakePower'], ['handling', 'suspension'], ['handling', 'traction']];
     tuningKeys.forEach((path) => {
         const get = (obj) => path.reduce((value, key) => value?.[key], obj);
-        total += Math.abs(Number(get(next) || 0) - Number(get(old) || 0)) * Number(featureCosts.customMapStep || 0);
+        total += Math.abs(Number(get(next) || 0) - Number(get(old) || 0)) * Number(featureCosts.customMapStep || 15);
     });
+
     if (!sameColor(oldCos.primary, nextCos.primary) || !sameColor(oldCos.secondary, nextCos.secondary)
-        || Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)
-        || Number(oldCos.windowTint) !== Number(nextCos.windowTint) || Number(oldCos.paintType || 0) !== Number(nextCos.paintType || 0)) {
+        || Number(oldCos.pearl || 0) !== Number(nextCos.pearl || 0) || Number(oldCos.wheel || 0) !== Number(nextCos.wheel || 0)
+        || Number(oldCos.windowTint || 0) !== Number(nextCos.windowTint || 0) || Number(oldCos.paintType || 0) !== Number(nextCos.paintType || 0)) {
         total += Number(featureCosts.cosmetics || 600);
     }
     if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) total += Number(featureCosts.vanityPlate || 1800);
@@ -425,10 +520,38 @@ function installQuote() {
     return Math.max(0, Math.floor(total));
 }
 
+function installQuote() {
+    if (!hasTuningChanges()) return 0;
+    if (serverQuotedCost !== null) return serverQuotedCost;
+    return localInstallQuote();
+}
+
+function requestServerQuote() {
+    if (!hasTuningChanges()) {
+        serverQuotedCost = 0;
+        updateInstallButton();
+        return;
+    }
+    window.clearTimeout(quoteTimer);
+    quoteTimer = window.setTimeout(() => {
+        post('tuningGetQuote', {
+            newTune: ensureTune(tune),
+            flash: false,
+            newCosmetics: ensureCosmetics(cosmetics),
+        }).then((res) => {
+            if (res && typeof res.cost === 'number') {
+                serverQuotedCost = res.cost;
+                updateInstallButton();
+            }
+        });
+    }, 120);
+}
+
 function computePerfStats(tuneObj) {
     const t = ensureTune(tuneObj);
     const accel = Math.min(10, 3 + (t.hardware.engine || 0) * 0.8 + (t.hardware.turbo ? 1.2 : 0)
-        + Math.floor((t.power || 0) / 22) + (t.stage === 'race' ? 1.5 : t.stage === 'sport' ? 0.8 : 0));
+        + Math.floor((t.power || 0) / 22) + Math.floor((t.throttleResponse || 0) / 15)
+        + (t.stage === 'race' ? 1.5 : t.stage === 'sport' ? 0.8 : 0));
     const speed = Math.min(10, 3 + (t.hardware.engine || 0) * 0.6 + Math.floor((t.topSpeed || 0) / 12)
         + (t.stage === 'race' ? 1.2 : t.stage === 'sport' ? 0.6 : 0));
     const hand = Math.min(10, Math.max(1, 5 + (t.hardware.suspension || 0) * 0.4
@@ -474,27 +597,40 @@ function renderStatsPanel() {
     updateTuneLabel('tune-accel-val', base.accel, delta.accel);
     updateTuneLabel('tune-speed-val', base.speed, delta.speed);
     updateTuneLabel('tune-hand-val', base.hand, delta.hand);
-    if (installCostEl) installCostEl.textContent = installQuote().toLocaleString('en-US');
     updatePriceLabel();
 }
 
 function updatePriceLabel() {
     const label = document.getElementById('tune-price-label');
     if (!label) return;
-    if (previewDirty) label.textContent = 'Install Cost · Preview';
-    else if (hasSavedMap) label.textContent = 'Install Cost · Saved';
-    else label.textContent = 'Install Cost';
+    if (hasTuningChanges()) {
+        label.textContent = 'Install Cost · Pending Changes';
+    } else if (hasSavedMap) {
+        label.textContent = 'Current Setup · Saved';
+    } else {
+        label.textContent = 'Factory Setup · No Changes';
+    }
 }
 
 function updateInstallButton() {
-    if (installCostEl) installCostEl.textContent = installQuote().toLocaleString('en-US');
+    const cost = installQuote();
+    if (installCostEl) installCostEl.textContent = cost.toLocaleString('en-US');
+    if (btnSave) {
+        if (!hasTuningChanges()) {
+            btnSave.classList.remove('btn-primary');
+            btnSave.title = 'No pending changes to install';
+        } else {
+            btnSave.classList.add('btn-primary');
+            btnSave.title = `Install pending upgrades for $${cost.toLocaleString('en-US')}`;
+        }
+    }
     updatePriceLabel();
 }
 
 function updateStatusBanner() {
     if (!ecuStatus) return;
-    if (previewDirty) {
-        ecuStatus.textContent = 'PREVIEW';
+    if (hasTuningChanges()) {
+        ecuStatus.textContent = 'PREVIEW · MODIFIED';
         ecuStatus.className = 'status-preview';
     } else if (hasSavedMap) {
         ecuStatus.textContent = 'SAVED';
@@ -507,9 +643,13 @@ function updateStatusBanner() {
 
 function preview() {
     previewDirty = true;
+    serverQuotedCost = null;
     updateStatusBanner();
+    renderCategories();
     renderStatsPanel();
     updateInstallButton();
+    requestServerQuote();
+
     window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => {
         post('tuningPreview', {
@@ -526,22 +666,7 @@ function preview() {
     }, 60);
 }
 
-function getTuneValue(path) {
-    return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), tune);
-}
-
-function setTuneValue(path, value) {
-    tune = ensureTune(tune);
-    const parts = path.split('.');
-    let ref = tune;
-    for (let i = 0; i < parts.length - 1; i++) {
-        if (!ref[parts[i]]) ref[parts[i]] = {};
-        ref = ref[parts[i]];
-    }
-    ref[parts[parts.length - 1]] = value;
-}
-
-function hardwareParts(categoryKey, slotKey, maxLevel) {
+function hardwareParts(slotKey, maxLevel) {
     const slot = hardwareSlots[slotKey] || { unitCost: 1000 };
     const parts = [];
     const count = Math.min(maxLevel || 0, hardwareAvailability[slotKey] || 0);
@@ -553,6 +678,7 @@ function hardwareParts(categoryKey, slotKey, maxLevel) {
         label: 'Stock Factory',
         price: installed === 0 ? 'Installed' : '$0',
         isInstalled: installed === 0,
+        isPreview: current === 0 && installed !== 0,
         apply: () => {
             tune.hardware[slotKey] = 0;
             preview();
@@ -563,11 +689,13 @@ function hardwareParts(categoryKey, slotKey, maxLevel) {
     for (let i = 1; i <= count; i++) {
         const cost = slot.unitCost * i;
         const isInst = (installed === i);
+        const isPrev = (current === i && !isInst);
         parts.push({
             id: `${slotKey}_${i}`,
             label: `Level ${i} Upgrade`,
             price: isInst ? 'Installed' : `$${cost.toLocaleString('en-US')}`,
             isInstalled: isInst,
+            isPreview: isPrev,
             apply: () => {
                 tune.hardware[slotKey] = i;
                 preview();
@@ -578,41 +706,17 @@ function hardwareParts(categoryKey, slotKey, maxLevel) {
     return parts;
 }
 
-function toggleParts(id, label, path, cost) {
-    const parts = [];
-    const enabled = !!getTuneValue(path);
-    parts.push({
-        id: `${id}_off`,
-        label: `${label} (Disabled)`,
-        price: 'Stock',
-        apply: () => {
-            setTuneValue(path, false);
-            preview();
-        },
-        isActive: () => !enabled,
-    });
-    parts.push({
-        id: `${id}_on`,
-        label: `${label} (Enabled)`,
-        price: `$${(cost || 0).toLocaleString('en-US')}`,
-        apply: () => {
-            setTuneValue(path, true);
-            preview();
-        },
-        isActive: () => enabled,
-    });
-    return parts;
-}
-
 function renderOverviewParts() {
     const parts = [];
     ['civil', 'sport', 'race'].forEach((stage) => {
         const isInst = installedTune?.stage === stage;
+        const isPrev = tune?.stage === stage && !isInst;
         parts.push({
             id: `stage_${stage}`,
             label: `Stage ${stage.toUpperCase()} Tune`,
             price: isInst ? 'Installed' : (stage === 'civil' ? 'Stock' : `$${(stage === 'sport' ? featureCosts.sportMap : featureCosts.raceMap || 0).toLocaleString('en-US')}`),
             isInstalled: isInst,
+            isPreview: isPrev,
             apply: () => {
                 tune.stage = stage;
                 if (stage === 'race') {
@@ -638,31 +742,112 @@ function renderPartList() {
     tunePartsList.innerHTML = '';
     let parts = [];
 
-    if (activeTab === 'overview') parts = renderOverviewParts();
-    else if (activeTab === 'powertrain') parts = hardwareParts('powertrain', 'engine', 4);
-    else if (activeTab === 'transmission') parts = hardwareParts('transmission', 'transmission', 3);
-    else if (activeTab === 'brakes') parts = hardwareParts('brakes', 'brakes', 3);
-    else if (activeTab === 'suspension') parts = hardwareParts('suspension', 'suspension', 4);
-    else if (activeTab === 'turbo') {
+    if (activeTab === 'overview') {
+        parts = renderOverviewParts();
+    } else if (activeTab === 'powertrain') {
+        parts = hardwareParts('engine', 4);
+        parts.push({
+            id: 'engine_mapping',
+            label: 'ECU Mapping & Output',
+            price: 'Adjust below',
+            isInstalled: false,
+            isPreview: (tune.power !== (installedTune?.power || 0) || tune.torque !== (installedTune?.torque || 0) || tune.throttleResponse !== (installedTune?.throttleResponse || 0)),
+            apply: () => {
+                activePartId = 'engine_mapping';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'engine_mapping',
+        });
+    } else if (activeTab === 'transmission') {
+        parts = hardwareParts('transmission', 3);
+        parts.push({
+            id: 'trans_shift_speed',
+            label: 'Gear Shift Calibration',
+            price: 'Adjust below',
+            isInstalled: false,
+            isPreview: tune.shiftSpeed !== (installedTune?.shiftSpeed || 0),
+            apply: () => {
+                activePartId = 'trans_shift_speed';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'trans_shift_speed',
+        });
+    } else if (activeTab === 'brakes') {
+        parts = hardwareParts('brakes', 3);
+        parts.push({
+            id: 'brake_bias',
+            label: 'Regen & Engine Braking',
+            price: 'Adjust below',
+            isInstalled: false,
+            isPreview: tune.regenBraking !== (installedTune?.regenBraking || 0),
+            apply: () => {
+                activePartId = 'brake_bias';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'brake_bias',
+        });
+    } else if (activeTab === 'suspension') {
+        parts = hardwareParts('suspension', 4);
+    } else if (activeTab === 'turbo') {
         if (cap('turboBoost') || cap('factoryTurbo')) {
-            parts.push(...toggleParts('turbo', 'Turbocharger', 'hardware.turbo', featureCosts.turbo));
+            const isInst = !!installedTune?.hardware?.turbo;
+            const cur = !!tune?.hardware?.turbo;
+            parts.push({
+                id: 'turbo_toggle',
+                label: 'Turbocharger System',
+                price: isInst ? (cur ? 'Installed' : 'Disable') : (cur ? 'Selected ($' + (featureCosts.turbo || 2500) + ')' : 'Stock (Off)'),
+                isInstalled: isInst && cur,
+                isPreview: cur !== isInst,
+                apply: () => {
+                    tune.hardware.turbo = !tune.hardware.turbo;
+                    preview();
+                },
+                isActive: () => !!tune.hardware.turbo,
+            });
         }
         if (cap('launchControl')) {
-            parts.push(...toggleParts('launch', 'Launch Control', 'hardware.launchControl', featureCosts.launchControl));
+            const isInst = !!installedTune?.hardware?.launchControl;
+            const cur = !!tune?.hardware?.launchControl;
+            parts.push({
+                id: 'launch_toggle',
+                label: 'Launch Control Mode',
+                price: isInst ? (cur ? 'Installed' : 'Disable') : (cur ? 'Selected ($' + (featureCosts.launchControl || 1200) + ')' : 'Stock (Off)'),
+                isInstalled: isInst && cur,
+                isPreview: cur !== isInst,
+                apply: () => {
+                    tune.hardware.launchControl = !tune.hardware.launchControl;
+                    preview();
+                },
+                isActive: () => !!tune.hardware.launchControl,
+            });
         }
-    } else if (activeTab === 'exhaust' && cap('exhaustModes')) {
+        parts.push({
+            id: 'top_speed_cal',
+            label: 'Top Speed Limiter Tuning',
+            price: 'Adjust below',
+            isInstalled: false,
+            isPreview: tune.topSpeed !== (installedTune?.topSpeed || 0),
+            apply: () => {
+                activePartId = 'top_speed_cal';
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'top_speed_cal',
+        });
+    } else if (activeTab === 'exhaust' && (cap('exhaustModes') || cap('popsAllowed') || cap('flamesAllowed'))) {
         [
-            ['pop_bang', 'Pop & Bang'],
-            ['flames', 'Flames'],
-            ['diesel', 'Diesel'],
-            ['extra', 'Extra Loud'],
+            ['pop_bang', 'Pop & Bang Profile'],
+            ['flames', 'Flame Spitting Profile'],
+            ['diesel', 'Diesel Performance Profile'],
+            ['extra', 'Extra Loud Aggressive'],
         ].forEach(([mode, label]) => {
             const isInst = installedTune?.exhaust === mode;
+            const isCur = tune?.exhaust === mode;
             parts.push({
                 id: `exhaust_${mode}`,
                 label,
                 price: isInst ? 'Installed' : 'Select',
-                isInstalled: isInst,
+                isInstalled: isInst && isCur,
+                isPreview: isCur && !isInst,
                 apply: () => {
                     tune.exhaust = mode;
                     if (mode === 'pop_bang' || mode === 'extra' || mode === 'diesel') tune.pop.enabled = true;
@@ -695,6 +880,7 @@ function renderPartList() {
                     label: slot.label,
                     price: `${curLabel} (${avail} opts)`,
                     isInstalled: isInst,
+                    isPreview: !isInst,
                     apply: () => {
                         activePartId = slot.key;
                         post('tuningFocusPart', { part: slot.key });
@@ -715,6 +901,7 @@ function renderPartList() {
             label: 'Underglow Neons',
             price: neonActive ? (neonInst ? 'Installed' : '$500') : 'Disabled',
             isInstalled: neonInst && neonActive,
+            isPreview: neonActive !== neonInst,
             apply: () => {
                 activePartId = 'neon';
                 post('tuningFocusPart', { part: 'lighting' });
@@ -729,6 +916,7 @@ function renderPartList() {
             label: 'Xenon Headlights',
             price: xenonActive ? (xenonInst ? 'Installed' : '$350') : 'Halogen (Stock)',
             isInstalled: xenonInst && xenonActive,
+            isPreview: xenonActive !== xenonInst,
             apply: () => {
                 activePartId = 'xenon';
                 post('tuningFocusPart', { part: 'lighting' });
@@ -738,10 +926,13 @@ function renderPartList() {
         });
     } else if (activeTab === 'wheels') {
         const wt = WHEEL_TYPES.find((w) => w.id === (cosmetics?.wheelType ?? 0))?.label || 'Sport';
+        const wtInst = (installedCosmetics?.wheelType ?? 0) === (cosmetics?.wheelType ?? 0);
         parts.push({
             id: 'wheel_type',
             label: 'Wheel Category',
             price: wt,
+            isInstalled: wtInst,
+            isPreview: !wtInst,
             apply: () => {
                 activePartId = 'wheel_type';
                 post('tuningFocusPart', { part: 'wheels' });
@@ -756,6 +947,7 @@ function renderPartList() {
             label: 'Rim Model',
             price: rimMod === -1 ? 'Stock Rims' : `Rim #${rimMod + 1}`,
             isInstalled: rimMod === instRim,
+            isPreview: rimMod !== instRim,
             apply: () => {
                 activePartId = 'wheel_rim';
                 post('tuningFocusPart', { part: 'wheels' });
@@ -766,7 +958,9 @@ function renderPartList() {
         parts.push({
             id: 'wheel_color',
             label: 'Wheel Paint Color',
-            price: 'Adjust below',
+            price: `Index #${cosmetics.wheel || 0}`,
+            isInstalled: (cosmetics.wheel || 0) === (installedCosmetics?.wheel || 0),
+            isPreview: (cosmetics.wheel || 0) !== (installedCosmetics?.wheel || 0),
             apply: () => {
                 activePartId = 'wheel_color';
                 post('tuningFocusPart', { part: 'wheels' });
@@ -781,6 +975,7 @@ function renderPartList() {
             label: 'Burnout Tyre Smoke',
             price: smokeActive ? (smokeInst ? 'Installed' : '$400') : 'Stock (Off)',
             isInstalled: smokeInst && smokeActive,
+            isPreview: smokeActive !== smokeInst,
             apply: () => {
                 activePartId = 'smoke';
                 post('tuningFocusPart', { part: 'wheels' });
@@ -790,33 +985,38 @@ function renderPartList() {
         });
     } else if (activeTab === 'visual') {
         parts.push({
+            id: 'paint_finish',
+            label: 'Paint Finish / Surface Style',
+            price: PAINT_TYPES.find((f) => f.id === (cosmetics?.paintType ?? 0))?.label || 'Gloss',
+            isInstalled: (installedCosmetics?.paintType ?? 0) === (cosmetics?.paintType ?? 0),
+            isPreview: (installedCosmetics?.paintType ?? 0) !== (cosmetics?.paintType ?? 0),
+            apply: () => { activePartId = 'finish'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
+            isActive: () => activePartId === 'finish',
+        });
+        parts.push({
             id: 'paint_primary',
-            label: 'Primary Paint',
+            label: 'Primary Body Paint',
             price: 'Adjust below',
+            isInstalled: sameColor(cosmetics.primary, installedCosmetics?.primary),
+            isPreview: !sameColor(cosmetics.primary, installedCosmetics?.primary),
             apply: () => { activePartId = 'primary'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'primary',
         });
         parts.push({
             id: 'paint_secondary',
-            label: 'Secondary Paint',
+            label: 'Secondary Trim Paint',
             price: 'Adjust below',
+            isInstalled: sameColor(cosmetics.secondary, installedCosmetics?.secondary),
+            isPreview: !sameColor(cosmetics.secondary, installedCosmetics?.secondary),
             apply: () => { activePartId = 'secondary'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'secondary',
         });
-        const finishLabel = PAINT_TYPES.find((f) => f.id === (cosmetics?.paintType ?? 0))?.label || 'Gloss';
-        const instFinish = (installedCosmetics?.paintType ?? 0) === (cosmetics?.paintType ?? 0);
-        parts.push({
-            id: 'paint_finish',
-            label: 'Paint Finish / Style',
-            price: finishLabel,
-            isInstalled: instFinish,
-            apply: () => { activePartId = 'finish'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
-            isActive: () => activePartId === 'finish',
-        });
         parts.push({
             id: 'paint_pearl',
-            label: 'Pearlescent Coat',
-            price: 'Adjust below',
+            label: 'Pearlescent Clearcoat',
+            price: `Index #${cosmetics.pearl || 0}`,
+            isInstalled: Number(cosmetics.pearl || 0) === Number(installedCosmetics?.pearl || 0),
+            isPreview: Number(cosmetics.pearl || 0) !== Number(installedCosmetics?.pearl || 0),
             apply: () => { activePartId = 'pearl'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'pearl',
         });
@@ -825,6 +1025,8 @@ function renderPartList() {
             id: 'window_tint',
             label: 'Window Tint',
             price: tint,
+            isInstalled: Number(cosmetics.windowTint || 0) === Number(installedCosmetics?.windowTint || 0),
+            isPreview: Number(cosmetics.windowTint || 0) !== Number(installedCosmetics?.windowTint || 0),
             apply: () => { activePartId = 'tint'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'tint',
         });
@@ -832,6 +1034,8 @@ function renderPartList() {
             id: 'plate_text',
             label: 'Vanity License Plate',
             price: cosmetics?.plateText || 'Stock',
+            isInstalled: (cosmetics?.plateText || '') === (installedCosmetics?.plateText || ''),
+            isPreview: (cosmetics?.plateText || '') !== (installedCosmetics?.plateText || ''),
             apply: () => { activePartId = 'plate'; post('tuningFocusPart', { part: 'rearBumper' }); renderDetailPanel(); },
             isActive: () => activePartId === 'plate',
         });
@@ -839,25 +1043,70 @@ function renderPartList() {
         parts.push({
             id: 'dyno_run',
             label: 'Start Dyno Run',
-            price: costs.dyno,
+            price: costs.dyno ? `$${costs.dyno}` : '$250',
             apply: () => post('tuningDyno'),
             isActive: () => false,
         });
         parts.push({
             id: 'dyno_view',
             label: 'Last Run Results',
-            price: `${tune?.dyno?.lastHp || 0} HP`,
+            price: `${tune?.dyno?.lastHp || 0} HP / ${tune?.dyno?.lastTorque || 0} NM`,
             apply: () => {},
             isActive: () => true,
         });
     } else if (activeTab === 'special') {
-        if (cap('antiLag')) parts.push(...toggleParts('antilag', 'Anti-Lag', 'antiLag.enabled', featureCosts.antiLag));
-        if (cap('drift')) parts.push(...toggleParts('drift', 'Drift Mode', 'drift.enabled', featureCosts.drift));
-        if (cap('hud')) parts.push(...toggleParts('hud', 'ECU HUD', 'hud.enabled', featureCosts.hud));
+        if (cap('antiLag')) {
+            const isInst = !!installedTune?.antiLag?.enabled;
+            const cur = !!tune?.antiLag?.enabled;
+            parts.push({
+                id: 'special_antilag',
+                label: 'Anti-Lag Turbo System',
+                price: isInst ? (cur ? 'Installed' : 'Disable') : (cur ? 'Selected' : 'Stock (Off)'),
+                isInstalled: isInst && cur,
+                isPreview: cur !== isInst,
+                apply: () => {
+                    tune.antiLag.enabled = !tune.antiLag.enabled;
+                    preview();
+                },
+                isActive: () => !!tune.antiLag.enabled,
+            });
+        }
+        if (cap('drift')) {
+            const isInst = !!installedTune?.drift?.enabled;
+            const cur = !!tune?.drift?.enabled;
+            parts.push({
+                id: 'special_drift',
+                label: 'Drift Assist Controller',
+                price: isInst ? (cur ? 'Installed' : 'Disable') : (cur ? 'Selected' : 'Stock (Off)'),
+                isInstalled: isInst && cur,
+                isPreview: cur !== isInst,
+                apply: () => {
+                    tune.drift.enabled = !tune.drift.enabled;
+                    preview();
+                },
+                isActive: () => !!tune.drift.enabled,
+            });
+        }
+        if (cap('hud')) {
+            const isInst = !!installedTune?.hud?.enabled;
+            const cur = !!tune?.hud?.enabled;
+            parts.push({
+                id: 'special_hud',
+                label: 'Live ECU Telemetry HUD',
+                price: isInst ? (cur ? 'Installed' : 'Disable') : (cur ? 'Selected' : 'Stock (Off)'),
+                isInstalled: isInst && cur,
+                isPreview: cur !== isInst,
+                apply: () => {
+                    tune.hud.enabled = !tune.hud.enabled;
+                    preview();
+                },
+                isActive: () => !!tune.hud.enabled,
+            });
+        }
     } else if (activeTab === 'handling') {
         parts.push({
             id: 'handling_custom',
-            label: 'Fine-Tune Handling',
+            label: 'Fine-Tune Handling Dynamics',
             price: 'Adjust below',
             apply: () => {},
             isActive: () => true,
@@ -868,8 +1117,15 @@ function renderPartList() {
         const item = document.createElement('div');
         item.className = 'list-item';
         if (p.isActive()) item.classList.add('active');
-        const instBadge = p.isInstalled ? '<span class="installed-badge">INSTALLED</span>' : '';
-        item.innerHTML = `<span class="item-label">${p.label}${instBadge}</span><span class="item-price">${p.price}</span>`;
+
+        let badgeHtml = '';
+        if (p.isInstalled) {
+            badgeHtml = '<span class="installed-badge">INSTALLED</span>';
+        } else if (p.isPreview) {
+            badgeHtml = '<span class="preview-badge">PENDING</span>';
+        }
+
+        item.innerHTML = `<span class="item-label">${p.label}${badgeHtml}</span><span class="item-price">${p.price}</span>`;
         item.addEventListener('click', () => {
             p.apply();
             renderPartList();
@@ -916,6 +1172,7 @@ function toggleRow(label, key) {
     input.addEventListener('change', () => {
         setTuneValue(key, input.checked);
         preview();
+        renderPartList();
     });
     const slider = document.createElement('span');
     slider.className = 'slider';
@@ -990,6 +1247,7 @@ function cosmeticsColorField(label, key) {
             ref[parts[parts.length - 1]] = { r: preset.r, g: preset.g, b: preset.b };
             preview();
             renderDetailPanel();
+            renderPartList();
         });
         paletteGrid.appendChild(swatch);
     });
@@ -1020,11 +1278,54 @@ function renderDetailPanel() {
     if (!tuneDetail) return;
     tuneDetail.innerHTML = '';
 
+    if (activeTab === 'powertrain') {
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Engine Output & ECU Mapping';
+        tuneDetail.appendChild(title);
+
+        tuneDetail.appendChild(sliderField('Horsepower Calibration', 'power', 0, powerLimit(), ' HP'));
+        tuneDetail.appendChild(sliderField('Torque Calibration', 'torque', 0, powerLimit(), ' NM'));
+        tuneDetail.appendChild(sliderField('Throttle Sensitivity', 'throttleResponse', -20, 30, '%'));
+    }
+
+    if (activeTab === 'transmission') {
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Transmission Gearing & Shift Rates';
+        tuneDetail.appendChild(title);
+
+        tuneDetail.appendChild(sliderField('Shift Speed Response', 'shiftSpeed', -30, 50, '%'));
+    }
+
+    if (activeTab === 'brakes') {
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Brake Dynamics & Energy Recovery';
+        tuneDetail.appendChild(title);
+
+        tuneDetail.appendChild(sliderField('Regen / Engine Braking', 'regenBraking', 0, 100, '%'));
+    }
+
+    if (activeTab === 'turbo') {
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Forced Induction & Top Speed Limit';
+        tuneDetail.appendChild(title);
+
+        tuneDetail.appendChild(sliderField('Top Speed Governor', 'topSpeed', -10, 40, ' km/h'));
+    }
+
     if (activeTab === 'handling') {
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Chassis & Handling Dynamics';
+        tuneDetail.appendChild(title);
+
         tuneDetail.appendChild(sliderField('Steering Angle', 'handling.steering', 85, 120, '%'));
         tuneDetail.appendChild(sliderField('Brake Power', 'handling.brakePower', 85, 140, '%'));
         tuneDetail.appendChild(sliderField('Suspension Stiffness', 'handling.suspension', 80, 130, '%'));
-        tuneDetail.appendChild(sliderField('Traction', 'handling.traction', 75, 120, '%'));
+        tuneDetail.appendChild(sliderField('Traction Control', 'handling.traction', 75, 120, '%'));
     }
 
     if (activeTab === 'bodykit') {
@@ -1074,7 +1375,7 @@ function renderDetailPanel() {
         if (!activePartId || activePartId === 'neon') {
             const title = document.createElement('div');
             title.className = 'section-title section-title--compact';
-            title.textContent = 'Neon Underglow Controls';
+            title.textContent = 'Neon Underglow System';
             tuneDetail.appendChild(title);
 
             tuneDetail.appendChild(cosmeticsToggleRow('Enable Underglow', 'neon.enabled'));
@@ -1239,6 +1540,7 @@ function renderDetailPanel() {
                 cosmetics.wheel = Number(input.value);
                 lbl.lastElementChild.textContent = String(input.value);
                 preview();
+                renderPartList();
             });
             field.appendChild(lbl);
             field.appendChild(input);
@@ -1298,15 +1600,16 @@ function renderDetailPanel() {
     }
 
     if (activeTab === 'visual') {
-        if (!activePartId || activePartId === 'primary') {
-            tuneDetail.appendChild(cosmeticsColorField('Primary Body Paint', 'primary'));
-        } else if (activePartId === 'secondary') {
-            tuneDetail.appendChild(cosmeticsColorField('Secondary Trim Paint', 'secondary'));
-        } else if (activePartId === 'finish') {
+        if (!activePartId || activePartId === 'finish') {
             const title = document.createElement('div');
             title.className = 'section-title section-title--compact';
             title.textContent = 'Paint Finish & Surface Style';
             tuneDetail.appendChild(title);
+
+            const note = document.createElement('div');
+            note.className = 'tune-card-note';
+            note.textContent = 'Applies surface specular shader: Gloss, Metallic, Matte, Metal, or Chrome.';
+            tuneDetail.appendChild(note);
 
             const grid = document.createElement('div');
             grid.className = 'options-grid';
@@ -1324,16 +1627,76 @@ function renderDetailPanel() {
                 grid.appendChild(btn);
             });
             tuneDetail.appendChild(grid);
+        } else if (activePartId === 'primary') {
+            tuneDetail.appendChild(cosmeticsColorField('Primary Body Paint', 'primary'));
+        } else if (activePartId === 'secondary') {
+            tuneDetail.appendChild(cosmeticsColorField('Secondary Trim Paint', 'secondary'));
         } else if (activePartId === 'pearl') {
             const title = document.createElement('div');
             title.className = 'section-title section-title--compact';
-            title.textContent = 'Pearlescent Clearcoat Finish';
+            title.textContent = 'Pearlescent Clearcoat & Color Combos';
             tuneDetail.appendChild(title);
+
+            const comboTitle = document.createElement('label');
+            comboTitle.style.marginTop = '8px';
+            comboTitle.textContent = 'CURATED PEARL COMBINATIONS (PRIMARY + PEARL)';
+            tuneDetail.appendChild(comboTitle);
+
+            const comboGrid = document.createElement('div');
+            comboGrid.className = 'pearl-combo-grid';
+            PEARL_COMBOS.forEach((combo) => {
+                const btn = document.createElement('button');
+                btn.className = 'pearl-combo-btn';
+                const shade = PEARL_SHADES.find((s) => s.id === combo.pearl);
+                const pearlColor = shade ? shade.color : '#ffffff';
+                btn.innerHTML = `
+                    <span class="pearl-preview-swatch" style="background: rgb(${combo.primary.r}, ${combo.primary.g}, ${combo.primary.b}); border-color: ${pearlColor}; box-shadow: 0 0 6px ${pearlColor}66;"></span>
+                    <span>${combo.label}</span>
+                `;
+                btn.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.primary = { ...combo.primary };
+                    cosmetics.pearl = combo.pearl;
+                    if (typeof combo.type === 'number') cosmetics.paintType = combo.type;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                comboGrid.appendChild(btn);
+            });
+            tuneDetail.appendChild(comboGrid);
+
+            const shadesTitle = document.createElement('label');
+            shadesTitle.style.marginTop = '14px';
+            shadesTitle.textContent = 'PEARL COAT SHADE PRESETS';
+            tuneDetail.appendChild(shadesTitle);
+
+            const paletteGrid = document.createElement('div');
+            paletteGrid.className = 'palette-grid';
+            PEARL_SHADES.forEach((shade) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'palette-swatch';
+                swatch.style.background = shade.color;
+                swatch.title = `${shade.label} (#${shade.id})`;
+                if (Number(cosmetics.pearl || 0) === shade.id) {
+                    swatch.style.outline = '2px solid #ffcc00';
+                }
+                swatch.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.pearl = shade.id;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                paletteGrid.appendChild(swatch);
+            });
+            tuneDetail.appendChild(paletteGrid);
 
             const field = document.createElement('div');
             field.className = 'field';
+            field.style.marginTop = '12px';
             const lbl = document.createElement('label');
-            lbl.innerHTML = `<span>Pearlescent Index</span><span>${cosmetics.pearl || 0}</span>`;
+            lbl.innerHTML = `<span>Fine Pearl Color Index</span><span>${cosmetics.pearl || 0}</span>`;
             const input = document.createElement('input');
             input.type = 'range';
             input.min = 0;
@@ -1344,6 +1707,7 @@ function renderDetailPanel() {
                 cosmetics.pearl = Number(input.value);
                 lbl.lastElementChild.textContent = String(input.value);
                 preview();
+                renderPartList();
             });
             field.appendChild(lbl);
             field.appendChild(input);
@@ -1390,18 +1754,29 @@ function renderDetailPanel() {
     }
 
     if (activeTab === 'exhaust') {
-        tuneDetail.appendChild(toggleRow('Exhaust Active', 'pop.enabled'));
-        tuneDetail.appendChild(sliderField('Max RPM Pop', 'pop.rpmMax', 70, 100, '%'));
-        if (tune.exhaust === 'flames' || tune.exhaust === 'extra') {
-            tuneDetail.appendChild(toggleRow('Exhaust Flames', 'flames.enabled'));
-        }
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Exhaust Pops, Bangs & Flames Calibration';
+        tuneDetail.appendChild(title);
+
+        tuneDetail.appendChild(toggleRow('Exhaust Pops & Bangs Active', 'pop.enabled'));
+        tuneDetail.appendChild(sliderField('Pop RPM Activation Threshold', 'pop.rpmMax', 70, 100, '%'));
+        tuneDetail.appendChild(sliderField('Pop Burst Duration', 'pop.durationMs', 50, 300, ' ms'));
+        tuneDetail.appendChild(toggleRow('Spit Flames On Decel / Shift', 'flames.enabled'));
     }
 
-    if (activeTab === 'special' && cap('drift')) {
-        tuneDetail.appendChild(sliderField('Drift Grip', 'drift.grip', 20, 80, '%'));
-    }
-    if (activeTab === 'special' && cap('antiLag')) {
-        tuneDetail.appendChild(sliderField('Anti-Lag Intensity', 'antiLag.intensity', 0, 100, '%'));
+    if (activeTab === 'special') {
+        const title = document.createElement('div');
+        title.className = 'section-title section-title--compact';
+        title.textContent = 'Special ECU Subsystems';
+        tuneDetail.appendChild(title);
+
+        if (cap('drift')) {
+            tuneDetail.appendChild(sliderField('Drift Mode Surface Grip', 'drift.grip', 20, 80, '%'));
+        }
+        if (cap('antiLag')) {
+            tuneDetail.appendChild(sliderField('Anti-Lag Turbo Boost Intensity', 'antiLag.intensity', 0, 100, '%'));
+        }
     }
 
     if (activeTab === 'dyno') {
@@ -1411,7 +1786,7 @@ function renderDetailPanel() {
         stats.innerHTML = `
             <div class="stat-box"><div class="val">${dyno.lastHp || 0}</div><div class="lbl">HP</div></div>
             <div class="stat-box"><div class="val">${dyno.lastTorque || 0}</div><div class="lbl">NM</div></div>
-            <div class="stat-box"><div class="val">$${costs.dyno}</div><div class="lbl">RUN COST</div></div>`;
+            <div class="stat-box"><div class="val">$${costs.dyno || 250}</div><div class="lbl">RUN COST</div></div>`;
         tuneDetail.appendChild(stats);
     }
 }
@@ -1428,7 +1803,11 @@ function renderCategories() {
         const btn = document.createElement('button');
         btn.className = 'cat-item';
         if (cat.id === activeTab) btn.classList.add('active');
-        btn.innerHTML = `<i class="${cat.icon}"></i> <span>${cat.label}</span>`;
+
+        const hasMod = categoryHasChanges(cat.id);
+        const modDot = hasMod ? '<span class="modified-dot" title="Pending changes in this category"></span>' : '';
+
+        btn.innerHTML = `<i class="${cat.icon}"></i> <span>${cat.label}</span>${modDot}`;
         btn.addEventListener('click', () => {
             activeTab = cat.id;
             activePartId = null;
@@ -1453,7 +1832,15 @@ function renderAll() {
 }
 
 if (btnCancel) btnCancel.addEventListener('click', () => post('tuningClose'));
-if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false }));
+if (btnSave) {
+    btnSave.addEventListener('click', () => {
+        if (!hasTuningChanges()) {
+            post('tuningClose');
+            return;
+        }
+        post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false });
+    });
+}
 
 let isDraggingCam = false;
 let lastMouseX = 0;
@@ -1495,7 +1882,11 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key === 'Enter' && !e.repeat) {
         e.preventDefault();
-        post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false });
+        if (hasTuningChanges()) {
+            post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false });
+        } else {
+            post('tuningClose');
+        }
         return;
     }
 
@@ -1520,6 +1911,7 @@ window.addEventListener('message', (event) => {
         cosmetics = ensureCosmetics(data.cosmetics);
         hasSavedMap = data.saved === true;
         previewDirty = false;
+        serverQuotedCost = null;
         costs = data.costs || costs;
         hardwareSlots = data.hardwareSlots || {};
         featureCosts = data.featureCosts || {};
@@ -1541,12 +1933,15 @@ window.addEventListener('message', (event) => {
     }
     if (action === 'close' && app) {
         window.clearTimeout(previewTimer);
+        window.clearTimeout(quoteTimer);
         app.classList.add('hidden');
         previewDirty = false;
+        serverQuotedCost = null;
     }
     if (action === 'saved') {
         hasSavedMap = true;
         previewDirty = false;
+        serverQuotedCost = 0;
         if (data?.tune) tune = ensureTune(data.tune);
         if (data?.cosmetics) cosmetics = ensureCosmetics(data.cosmetics);
         installedTune = ensureTune(tune);

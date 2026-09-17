@@ -359,7 +359,23 @@ function SunsetTuning.CalculateInstallCost(oldRaw, newRaw, oldCosmetics, newCosm
         partsCost = partsCost + (newTune.stage == 'race' and feature.raceMap or newTune.stage == 'sport' and feature.sportMap or 0)
         hasChanges = true
     end
+    if newTune.exhaust ~= oldTune.exhaust then
+        hasChanges = true
+    end
+    if (newTune.pop.rpmMax or 88) ~= (oldTune.pop.rpmMax or 88) then
+        hasChanges = true
+    end
+    if newTune.antiLag.intensity ~= oldTune.antiLag.intensity or newTune.drift.grip ~= oldTune.drift.grip then
+        hasChanges = true
+    end
+    if not sameRgb(newTune.flames.color, oldTune.flames.color) then
+        hasChanges = true
+    end
     local mapDelta = math.abs(newTune.power - oldTune.power) + math.abs(newTune.torque - oldTune.torque)
+        + math.abs((newTune.throttleResponse or 50) - (oldTune.throttleResponse or 50))
+        + math.abs((newTune.topSpeed or 0) - (oldTune.topSpeed or 0))
+        + math.abs((newTune.shiftSpeed or 0) - (oldTune.shiftSpeed or 0))
+        + math.abs((newTune.regenBraking or 0) - (oldTune.regenBraking or 0))
         + math.abs(newTune.handling.steering - oldTune.handling.steering)
         + math.abs(newTune.handling.brakePower - oldTune.handling.brakePower)
         + math.abs(newTune.handling.suspension - oldTune.handling.suspension)

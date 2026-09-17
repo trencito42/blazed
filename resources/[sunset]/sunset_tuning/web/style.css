@@ -365,6 +365,78 @@ html, body {
     vertical-align: middle;
 }
 
+.preview-badge {
+    font-size: 9px;
+    font-weight: 800;
+    font-style: normal;
+    background: rgba(255, 180, 0, 0.2);
+    color: #ffaa00;
+    border: 1px solid #ffaa00;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    letter-spacing: 1px;
+    vertical-align: middle;
+}
+
+.modified-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ffaa00;
+    margin-left: 6px;
+    box-shadow: 0 0 6px #ffaa00;
+    vertical-align: middle;
+}
+
+.pearl-combo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.pearl-combo-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.15s;
+    font-family: inherit;
+    text-align: left;
+}
+
+.pearl-combo-btn:hover, .pearl-combo-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+}
+
+.pearl-preview-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+}
+
+.tune-card-note {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 6px;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
 .tune-footer-hint {
     position: fixed;
     bottom: 12px;
