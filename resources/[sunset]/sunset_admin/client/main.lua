@@ -1,6 +1,8 @@
 local adminLevel = 0
 local noclip = false
 local godmode = false
+local vehicleDebugLabels = false
+local debugLabelVehicles = {}
 
 RegisterNetEvent('sunset:client:setAdmin', function(level)
     adminLevel = level or 0
@@ -127,6 +129,628 @@ RegisterNetEvent('sunset:admin:revive', function()
     NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, GetEntityHeading(ped), true, false)
     SetEntityHealth(ped, GetEntityMaxHealth(ped))
     ClearPedBloodDamage(ped)
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  SA-MP-style /dl vehicle debug labels
+--  Local entity diagnostics only; no DB queries and no work while disabled.
+-- ═══════════════════════════════════════════════════════════════
+local DL_RADIUS = 45.0
+local DL_MAX_VEHICLES = 32
+local DL_REFRESH_MS = 250
+
+local function trimPlate(value)
+    value = tostring(value or '')
+    return (value:gsub('^%s+', ''):gsub('%s+    noclip = not noclip
+    exports.sunset_ui:Notify(noclip and 'Noclip ON' or 'Noclip OFF', 'info')
+end)
+
+RegisterNetEvent('sunset:admin:toggleGod', function()
+    godmode = not godmode
+    SetEntityInvincible(PlayerPedId(), godmode)
+    exports.sunset_ui:Notify(godmode and 'Godmode ON' or 'Godmode OFF', 'info')
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--  [ADMIN TOOLS] freeze / slap / pullout / spectate / tpcar / dvall
+-- ═══════════════════════════════════════════════════════════════
+local isFrozen = false
+
+RegisterNetEvent('sunset:admin:freeze', function(state)
+    isFrozen = state == true
+    local ped = PlayerPedId()
+    FreezeEntityPosition(ped, isFrozen)
+    if isFrozen then
+        ClearPedTasksImmediately(ped)
+        exports.sunset_ui:Notify('You have been FROZEN by staff. Do not disconnect.', 'error', 10000)
+    else
+        exports.sunset_ui:Notify('Unfrozen by staff.', 'success', 5000)
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if isFrozen then
+            DisableAllControlActions(0)
+            local ped = PlayerPedId()
+            local veh = GetVehiclePedIsIn(ped, false)
+            if veh ~= 0 then FreezeEntityPosition(veh, true) end
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)
+
+RegisterNetEvent('sunset:admin:slap', function(adminSrc)
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local dirX, dirY = 0.0, 0.0
+    local adminPed = adminSrc and GetPlayerPed(GetPlayerFromServerId(adminSrc)) or 0
+    if adminPed and adminPed ~= 0 and DoesEntityExist(adminPed) then
+        local ac = GetEntityCoords(adminPed)
+        local dx, dy = coords.x - ac.x, coords.y - ac.y
+        local len = math.sqrt(dx * dx + dy * dy)
+        if len > 0.1 then dirX, dirY = dx / len, dy / len end
+    end
+    ClearPedTasksImmediately(ped)
+    ApplyForceToEntity(ped, 1, dirX * 10.0, dirY * 10.0, 15.0, 0.0, 0.0, 0.0, 0, false, true, true, false, true)
+end)
+
+RegisterNetEvent('sunset:admin:pullout', function()
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    if veh == 0 then return end
+    TaskLeaveVehicle(ped, veh, 16) -- 16 = force out immediately
+end)
+
+-- /tpcar /bringcar: move ped AND vehicle together.
+RegisterNetEvent('sunset:admin:teleportVehicle', function(x, y, z)
+    local ped = PlayerPedId()
+    local veh = GetVehiclePedIsIn(ped, false)
+    CreateThread(function()
+        RequestCollisionAtCoord(x, y, z)
+        local groundZ = z
+        for _ = 1, 60 do
+            local found, gz = GetGroundZFor_3dCoord(x, y, z + 100.0, false)
+            if found then groundZ = gz + 1.0 break end
+            Wait(50)
+        end
+        DoScreenFadeOut(250)
+        Wait(300)
+        if veh ~= 0 and DoesEntityExist(veh) then
+            SetEntityCoords(veh, x, y, groundZ, false, false, false, false)
+            SetEntityHeading(veh, GetEntityHeading(veh))
+            if GetPedInVehicleSeat(veh, -1) ~= ped then
+                SetPedIntoVehicle(ped, veh, -1)
+            end
+        else
+            SetEntityCoords(ped, x, y, groundZ, false, false, false, false)
+        end
+        Wait(250)
+        DoScreenFadeIn(400)
+    end)
+end)
+
+-- ── Spectate (server pushes target coords at 1Hz) ──────────────
+local specTarget = nil
+local specLastCoords = nil
+local specLastSync = 0
+
+RegisterNetEvent('sunset:admin:spectateStart', function(targetSrc)
+    specTarget = targetSrc
+    local ped = PlayerPedId()
+    -- keep coords, invisible + frozen (per spec §4.1)
+    SetEntityVisible(ped, false, false)
+    FreezeEntityPosition(ped, true)
+    SetEntityCollision(ped, false, false)
+    NetworkSetInSpectatorMode(true, ped)
+    exports.sunset_ui:Notify(('Spectating #%d. /spectate off to exit.'):format(targetSrc), 'info', 8000)
+end)
+
+RegisterNetEvent('sunset:admin:spectateSync', function(targetSrc, coords)
+    if not specTarget or specTarget ~= targetSrc then return end
+    specLastCoords = coords
+    specLastSync = GetGameTimer()
+    local targetPed = GetPlayerPed(GetPlayerFromServerId(targetSrc))
+    if targetPed and targetPed ~= 0 and DoesEntityExist(targetPed) then
+        NetworkSetInSpectatorMode(true, targetPed)
+    end
+end)
+
+RegisterNetEvent('sunset:admin:spectateEnd', function()
+    specTarget = nil
+    specLastCoords = nil
+    local ped = PlayerPedId()
+    NetworkSetInSpectatorMode(false, ped)
+    SetEntityVisible(ped, true, false)
+    FreezeEntityPosition(ped, false)
+    SetEntityCollision(ped, true, true)
+    exports.sunset_ui:Notify('Spectate ended.', 'info', 4000)
+end)
+
+-- watchdog: no sync for 6s or target gone -> restore (spec failsafe)
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if specTarget then
+            local stale = specLastSync > 0 and (GetGameTimer() - specLastSync) > 6000
+            local targetPed = GetPlayerPed(GetPlayerFromServerId(specTarget))
+            if stale or not targetPed or targetPed == 0 then
+                TriggerEvent('sunset:admin:spectateEnd')
+            end
+        end
+    end
+end)
+
+local function hasCoordsPerm()
+    local need = SunsetAdmin.Commands.coords or 2
+    return adminLevel >= need
+end
+
+local function coordChat(line)
+    exports.sunset_ui:Send('chatMessage', { id = 0, name = 'COORDS', message = line, time = '' })
+end
+
+local currentPosition
+
+local function showPosition(args)
+    if not hasCoordsPerm() then
+        exports.sunset_ui:Notify('No permission', 'error')
+        return
+    end
+
+    local x, y, z, heading = currentPosition()
+    local useV4 = args and args[1] and string.lower(tostring(args[1])) == 'v4'
+
+    if useV4 then
+        local line = ('vector4(%.2f, %.2f, %.2f, %.2f)'):format(x, y, z, heading)
+        print('[Sunset] ' .. line)
+        coordChat(line)
+    else
+        local v3 = ('vector3(%.2f, %.2f, %.2f)'):format(x, y, z)
+        local raw = ('%.2f, %.2f, %.2f, %.2f'):format(x, y, z, heading)
+        print('[Sunset] ' .. v3)
+        print('[Sunset] ' .. raw)
+        coordChat(v3)
+        coordChat(raw)
+    end
+
+    exports.sunset_ui:Notify('Position in chat and F8 (use /coords v4 for vector4)', 'info')
+end
+
+RegisterNetEvent('sunset:admin:copyCoords', function(args)
+    showPosition(args or {})
+end)
+
+-- Noclip thread
+local noclipSpeedLevel = 0 -- 0 = normal, + = faster, - = slower
+local NOCLIP_SPEEDS = { 0.4, 0.8, 1.2, 1.8, 3.0, 5.0, 8.0, 12.0, 18.0, 25.0 }
+local NOCLIP_BASE_IDX = 4 -- index of 1.8 (normal speed)
+local lastShiftPress = 0
+local lastCtrlPress = 0
+local speedHudUntil = 0   -- GetGameTimer() until the speed HUD stays visible
+local speedHudValue = nil -- speed shown in the HUD
+
+-- [SPEED HUD] Temporary indicator + subtle tick sound on every speed change.
+local function setSpeedLevel(newLevel, speed)
+    if newLevel == noclipSpeedLevel and speedHudValue == speed then return end
+    noclipSpeedLevel = newLevel
+    speedHudValue = speed
+    speedHudUntil = GetGameTimer() + 1500 -- fade after 1.5s
+    PlaySoundFrontend(-1, 'NAV_UP_DOWN', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+end
+
+local function drawNoclipSpeedHud(speed)
+    -- Fade: alpha ramps down over the last 300ms of the 1.5s window.
+    local remaining = speedHudUntil - GetGameTimer()
+    if remaining <= 0 then return end
+    local alpha = remaining < 300 and math.floor(255 * (remaining / 300)) or 255
+
+    SetTextFont(4)
+    SetTextScale(0.42, 0.42)
+    SetTextCentre(true)
+    SetTextColour(255, 255, 255, alpha)
+    SetTextDropshadow(0, 0, 0, 0, 255)
+    SetTextOutline()
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(('NOCLIP SPEED: %.1f'):format(speed))
+    EndTextCommandDisplayText(0.5, 0.02)
+end
+
+CreateThread(function()
+    while true do
+        if noclip then
+            local ped = PlayerPedId()
+            local coords = GetEntityCoords(ped)
+            local cam = GetGameplayCamRot(2)
+            local heading = cam.z
+            local pitch = cam.x
+
+            -- [INCREMENTAL SPEED] Shift = speed up, Ctrl = slow down.
+            -- Each press steps one level; held keys repeat every 300ms.
+            local now = GetGameTimer()
+            if IsControlJustPressed(0, 21) or (IsControlPressed(0, 21) and now - lastShiftPress > 300) then
+                lastShiftPress = now
+                local lvl = math.min(noclipSpeedLevel + 1, #NOCLIP_SPEEDS - 1 - NOCLIP_BASE_IDX)
+                if lvl ~= noclipSpeedLevel then
+                    setSpeedLevel(lvl, NOCLIP_SPEEDS[NOCLIP_BASE_IDX + lvl])
+                end
+            end
+            if IsControlJustPressed(0, 36) or (IsControlPressed(0, 36) and now - lastCtrlPress > 300) then
+                lastCtrlPress = now
+                local lvl = math.max(noclipSpeedLevel - 1, -(NOCLIP_BASE_IDX))
+                if lvl ~= noclipSpeedLevel then
+                    setSpeedLevel(lvl, NOCLIP_SPEEDS[NOCLIP_BASE_IDX + lvl])
+                end
+            end
+            local speedIdx = NOCLIP_BASE_IDX + noclipSpeedLevel
+            local speed = NOCLIP_SPEEDS[speedIdx] or 1.8
+
+            if speedHudValue and GetGameTimer() < speedHudUntil then
+                drawNoclipSpeedHud(speedHudValue)
+            end
+
+            SetEntityVelocity(ped, 0.0, 0.0, 0.0)
+            SetEntityCollision(ped, false, false)
+            FreezeEntityPosition(ped, true)
+            SetEntityHeading(ped, heading)
+
+            local function camForward()
+                local rz, rx = math.rad(heading), math.rad(pitch)
+                return vector3(-math.sin(rz) * math.cos(rx), math.cos(rz) * math.cos(rx), math.sin(rx))
+            end
+            local function camRight()
+                local rz = math.rad(heading)
+                return vector3(math.cos(rz), math.sin(rz), 0.0)
+            end
+
+            if IsControlPressed(0, 32) then coords = coords + camForward() * speed end
+            if IsControlPressed(0, 33) then coords = coords - camForward() * speed end
+            if IsControlPressed(0, 34) then coords = coords - camRight() * speed end
+            if IsControlPressed(0, 35) then coords = coords + camRight() * speed end
+            if IsControlPressed(0, 44) then coords = vector3(coords.x, coords.y, coords.z + speed) end
+            if IsControlPressed(0, 38) then coords = vector3(coords.x, coords.y, coords.z - speed) end
+
+            SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z, false, false, false)
+            Wait(0)
+        else
+            noclipSpeedLevel = 0
+            local ped = PlayerPedId()
+            SetEntityCollision(ped, true, true)
+            FreezeEntityPosition(ped, false)
+            Wait(500)
+        end
+    end
+end)
+
+exports('GetAdminLevel', function() return adminLevel end)
+
+local speedMultiplier = 1.0
+
+local function resetVehicleSpeed(veh)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    SetVehicleEnginePowerMultiplier(veh, 1.0)
+    SetVehicleEngineTorqueMultiplier(veh, 1.0)
+    SetVehicleCheatPowerIncrease(veh, 0.0)
+    ModifyVehicleTopSpeed(veh, 0.0)
+    SetVehicleMaxSpeed(veh, 0.0)
+end
+
+local function applyVehicleSpeedBoost(veh, mult)
+    if not veh or veh == 0 or not DoesEntityExist(veh) then return end
+    if mult <= 1.01 then
+        resetVehicleSpeed(veh)
+        return
+    end
+
+    SetVehicleMaxSpeed(veh, 0.0)
+    -- Power multiplier is additive in GTA; small values like 2.5 have almost no effect.
+    SetVehicleEnginePowerMultiplier(veh, (mult - 1.0) * 20.0)
+    SetVehicleEngineTorqueMultiplier(veh, mult)
+    SetVehicleCheatPowerIncrease(veh, (mult - 1.0) * 2.0)
+    ModifyVehicleTopSpeed(veh, mult - 1.0)
+end
+
+local function setSpeedMultiplier(mult)
+    mult = tonumber(mult) or 1.0
+    mult = math.max(0.5, math.min(mult, 10.0))
+    speedMultiplier = mult
+
+    local ped = PlayerPedId()
+    if IsPedInAnyVehicle(ped, false) then
+        applyVehicleSpeedBoost(GetVehiclePedIsIn(ped, false), mult)
+    end
+
+    if mult <= 1.01 then
+        exports.sunset_ui:Notify('Speed boost disabled', 'info')
+    else
+        exports.sunset_ui:Notify(('Speed boost: %.1fx'):format(mult), 'success')
+    end
+end
+
+RegisterNetEvent('sunset:admin:setSpeed', setSpeedMultiplier)
+
+-- GTA resets vehicle multipliers every frame while driving; re-apply while boosted.
+CreateThread(function()
+    while true do
+        if speedMultiplier > 1.01 then
+            local ped = PlayerPedId()
+            if IsPedInAnyVehicle(ped, false) then
+                local veh = GetVehiclePedIsIn(ped, false)
+                if GetPedInVehicleSeat(veh, -1) == ped then
+                    applyVehicleSpeedBoost(veh, speedMultiplier)
+                    Wait(0)
+                else
+                    Wait(250)
+                end
+            else
+                Wait(500)
+            end
+        else
+            Wait(500)
+        end
+    end
+end)
+
+CreateThread(function()
+    local lastVeh = 0
+    while true do
+        Wait(200)
+        local ped = PlayerPedId()
+        local veh = IsPedInAnyVehicle(ped, false) and GetVehiclePedIsIn(ped, false) or 0
+        if veh ~= lastVeh then
+            if lastVeh ~= 0 and DoesEntityExist(lastVeh) then
+                resetVehicleSpeed(lastVeh)
+            end
+            if veh ~= 0 and speedMultiplier > 1.01 then
+                applyVehicleSpeedBoost(veh, speedMultiplier)
+            end
+            lastVeh = veh
+        end
+    end
+end)
+
+currentPosition = function()
+    local ped = PlayerPedId()
+    local c = GetEntityCoords(ped)
+    return c.x, c.y, c.z, GetEntityHeading(ped)
+end
+
+local function registerCoordsCommand(name)
+    RegisterCommand(name, function(_, args)
+        showPosition(args)
+    end, false)
+end
+
+registerCoordsCommand('coords')
+registerCoordsCommand('getpos')
+registerCoordsCommand('pos')
+
+RegisterCommand('setcp', function(_, args)
+    local name = table.concat(args, ' ')
+    local x, y, z, heading = currentPosition()
+    TriggerServerEvent('sunset:admin:setcp', name, x, y, z, heading)
+end, false)
+
+RegisterCommand('delcp', function(_, args)
+    TriggerServerEvent('sunset:admin:delcp', table.concat(args, ' '))
+end, false)
+
+RegisterCommand('gotocp', function(_, args)
+    TriggerServerEvent('sunset:admin:gotocp', table.concat(args, ' '))
+end, false)
+
+RegisterCommand('gotoloc', function(_, args)
+    TriggerServerEvent('sunset:admin:gotoloc', table.concat(args, ' '))
+end, false)
+
+RegisterCommand('speed', function(_, args)
+    TriggerServerEvent('sunset:admin:requestSpeed', args[1])
+end, false)
+
+local function tpToWaypoint()
+    if adminLevel < 1 then
+        exports.sunset_ui:Notify('No permission', 'error')
+        return
+    end
+    local blip = GetFirstBlipInfoId(8) -- 8 = waypoint blip
+    if not DoesBlipExist(blip) then
+        exports.sunset_ui:Notify('No waypoint set on map', 'error')
+        return
+    end
+    local coord = GetBlipInfoIdCoord(blip)
+    -- Teleport immediately at a safe height so there is no visible delay.
+    -- Pre-loading collision before moving caused up to 10s of apparent freeze
+    -- (100 iterations × 100ms Wait) while the game streamed distant terrain.
+    SetEntityCoords(PlayerPedId(), coord.x, coord.y, coord.z + 3.0, false, false, false, false)
+    exports.sunset_ui:Notify('Teleported to waypoint', 'success')
+    -- Silently snap to ground once collision has streamed in at the new location.
+    -- The player being on-site forces GTA to load terrain much faster than
+    -- requesting it remotely, so this usually resolves in 1-2 iterations.
+    CreateThread(function()
+        local found, groundZ
+        for _ = 1, 30 do
+            Wait(100)
+            found, groundZ = GetGroundZFor_3dCoord(coord.x, coord.y, coord.z + 100.0, false)
+            if found then break end
+        end
+        if found then
+            SetEntityCoords(PlayerPedId(), coord.x, coord.y, groundZ + 0.5, false, false, false, false)
+        end
+    end)
+end
+
+RegisterCommand('tpwp', function() tpToWaypoint() end, false)
+
+RegisterKeyMapping('tpwp', 'Teleport to waypoint (admin)', 'keyboard', 'F7')
+
+CreateThread(function()
+    Wait(4000)
+    TriggerEvent('chat:addSuggestion', '/dl', 'Toggle SA-MP-style vehicle debug labels (admin)')
+    TriggerEvent('chat:addSuggestion', '/coords', 'Show your position for configs (admin)', {
+        { name = 'v4', help = 'Optional — output vector4 with heading' },
+    })
+    TriggerEvent('chat:addSuggestion', '/getpos', 'Alias for /coords (admin)')
+    TriggerEvent('chat:addSuggestion', '/pos', 'Alias for /coords (admin)')
+    TriggerEvent('chat:addSuggestion', '/setcp', 'Save your current position as a named checkpoint (admin)', {
+        { name = 'name', help = 'e.g. staging, event_spawn' },
+    })
+    TriggerEvent('chat:addSuggestion', '/delcp', 'Delete a saved checkpoint (admin)', {
+        { name = 'name', help = 'Checkpoint name saved with /setcp' },
+    })
+    TriggerEvent('chat:addSuggestion', '/gotocp', 'Teleport to a saved admin checkpoint', {
+        { name = 'name', help = 'Omit or use list to show saved checkpoints' },
+    })
+    TriggerEvent('chat:addSuggestion', '/gotoloc', 'Teleport to a predefined world location (admin)', {
+        { name = 'id or name', help = 'e.g. hq_medic, hospital — omit or use list' },
+    })
+    TriggerEvent('chat:addSuggestion', '/speed', 'Vehicle speed multiplier while driving (admin)', {
+        { name = 'multiplier', help = 'e.g. 2.5 — omit or use off/1 to reset' },
+    })
+    TriggerEvent('chat:addSuggestion', '/tpwp', 'Teleport to your map waypoint (admin)')
+    TriggerEvent('chat:addSuggestion', '/tp', 'Teleport to a player or coordinates (admin)', {
+        { name = 'id or x', help = 'Player server id, or X coordinate / vector3(...)' },
+        { name = 'y', help = 'Y coordinate (when using x y z)' },
+        { name = 'z', help = 'Z coordinate (when using x y z)' },
+    })
+end)
+, ''))
+end
+
+local function vehicleModelLabel(model)
+    local display = GetDisplayNameFromVehicleModel(model)
+    if not display or display == '' or display == 'NULL' then
+        return ('0x%08X'):format(model & 0xFFFFFFFF)
+    end
+    local label = GetLabelText(display)
+    if label and label ~= '' and label ~= 'NULL' then
+        return label
+    end
+    return display
+end
+
+local function networkOwnerServerId(veh)
+    if not NetworkGetEntityIsNetworked(veh) then return nil end
+    local owner = NetworkGetEntityOwner(veh)
+    if owner == nil or owner < 0 or not NetworkIsPlayerActive(owner) then return nil end
+    local sid = GetPlayerServerId(owner)
+    return sid and sid > 0 and sid or nil
+end
+
+local function drawVehicleDebugLabel(veh, distance)
+    if veh == 0 or not DoesEntityExist(veh) then return end
+
+    local model = GetEntityModel(veh)
+    local _, maxDim = GetModelDimensions(model)
+    local roofOffset = (maxDim and maxDim.z or 1.2) + 0.45
+    local pos = GetOffsetFromEntityInWorldCoords(veh, 0.0, 0.0, roofOffset)
+    local visible, sx, sy = World3dToScreen2d(pos.x, pos.y, pos.z)
+    if not visible then return end
+
+    local entityId = veh
+    local netId = NetworkGetEntityIsNetworked(veh) and NetworkGetNetworkIdFromEntity(veh) or 0
+    local plate = trimPlate(GetVehicleNumberPlateText(veh))
+    local modelName = vehicleModelLabel(model)
+    local speed = GetEntitySpeed(veh) * 3.6
+    local engine = GetVehicleEngineHealth(veh)
+    local body = GetVehicleBodyHealth(veh)
+    local ownerSid = networkOwnerServerId(veh)
+
+    local line1 = ('~b~V:%d~s~  ~p~N:%s~s~  ~y~%s~s~  [%s]'):format(
+        entityId,
+        netId > 0 and tostring(netId) or '-',
+        modelName,
+        plate ~= '' and plate or 'NO PLATE'
+    )
+    local line2 = ('%.1fm  |  %.0f km/h  |  ENG %.0f  BODY %.0f  |  NETOWN %s'):format(
+        distance,
+        speed,
+        engine,
+        body,
+        ownerSid and ('#' .. ownerSid) or '-'
+    )
+
+    local scale = math.max(0.24, math.min(0.34, 0.38 - distance * 0.003))
+    SetTextFont(0)
+    SetTextScale(scale, scale)
+    SetTextCentre(true)
+    SetTextColour(255, 255, 255, 235)
+    SetTextDropshadow(1, 0, 0, 0, 220)
+    SetTextOutline()
+
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(line1)
+    EndTextCommandDisplayText(sx, sy)
+
+    SetTextScale(math.max(0.22, scale - 0.025), math.max(0.22, scale - 0.025))
+    SetTextColour(220, 225, 232, 225)
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(line2)
+    EndTextCommandDisplayText(sx, sy + 0.015)
+end
+
+local function refreshVehicleDebugCache()
+    local ped = PlayerPedId()
+    local origin = GetEntityCoords(ped)
+    local candidates = {}
+
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if DoesEntityExist(veh) then
+            local distance = #(origin - GetEntityCoords(veh))
+            if distance <= DL_RADIUS then
+                candidates[#candidates + 1] = { veh = veh, distance = distance }
+            end
+        end
+    end
+
+    table.sort(candidates, function(a, b) return a.distance < b.distance end)
+    debugLabelVehicles = {}
+    for i = 1, math.min(#candidates, DL_MAX_VEHICLES) do
+        debugLabelVehicles[i] = candidates[i]
+    end
+end
+
+RegisterNetEvent('sunset:admin:toggleVehicleDebugLabels', function()
+    vehicleDebugLabels = not vehicleDebugLabels
+    if not vehicleDebugLabels then
+        debugLabelVehicles = {}
+    end
+    exports.sunset_ui:Notify(
+        vehicleDebugLabels and ('Vehicle debug labels ON (%dm radius)'):format(DL_RADIUS) or 'Vehicle debug labels OFF',
+        'info'
+    )
+end)
+
+CreateThread(function()
+    local nextRefresh = 0
+    while true do
+        if vehicleDebugLabels then
+            local now = GetGameTimer()
+            if now >= nextRefresh then
+                refreshVehicleDebugCache()
+                nextRefresh = now + DL_REFRESH_MS
+            end
+
+            local ped = PlayerPedId()
+            local origin = GetEntityCoords(ped)
+            for i = #debugLabelVehicles, 1, -1 do
+                local entry = debugLabelVehicles[i]
+                local veh = entry.veh
+                if veh == 0 or not DoesEntityExist(veh) then
+                    table.remove(debugLabelVehicles, i)
+                else
+                    local distance = #(origin - GetEntityCoords(veh))
+                    if distance <= DL_RADIUS then
+                        drawVehicleDebugLabel(veh, distance)
+                    end
+                end
+            end
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
 end)
 
 RegisterNetEvent('sunset:admin:toggleNoclip', function()
