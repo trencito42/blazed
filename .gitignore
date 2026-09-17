@@ -18,6 +18,7 @@ components.json
 
 # Secrets
 .env
+.mcp.json
 server.cfg
 server.local.cfg
 SETUP.local.md

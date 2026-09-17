@@ -5,7 +5,9 @@
 local isRolling = false
 local luckywheel = nil
 local basewheel = nil
-local wheelPos = vector3(1111.05, 229.85, -50.64)
+local createdBase = false
+local wheelPos = vector3(1111.052, 229.84, -50.38)
+local basePos = vector3(1111.052, 229.85, -50.64)
 local spinPos = vector3(1110.88, 228.87, -49.85)
 
 local function DrawText3D(coords, text)
@@ -28,15 +30,23 @@ local function spawnWheel()
     local wheelModel = GetHashKey('vw_prop_vw_luckywheel_02a')
     local baseModel = GetHashKey('vw_prop_vw_luckywheel_01a')
 
-    RequestModel(baseModel)
-    while not HasModelLoaded(baseModel) do Wait(10) end
-
+    -- Diamond Casino MLO typically pre-spawns the base stand (vw_prop_vw_luckywheel_01a).
+    -- Reuse the existing base if present to prevent z-fighting duplicate props.
     if not DoesEntityExist(basewheel) then
-        basewheel = CreateObject(baseModel, wheelPos.x, wheelPos.y, wheelPos.z, false, false, true)
-        SetEntityHeading(basewheel, 0.0)
-        FreezeEntityPosition(basewheel, true)
+        local existingBase = GetClosestObjectOfType(basePos.x, basePos.y, basePos.z, 2.0, baseModel, false, false, false)
+        if DoesEntityExist(existingBase) and existingBase ~= 0 then
+            basewheel = existingBase
+            createdBase = false
+        else
+            RequestModel(baseModel)
+            while not HasModelLoaded(baseModel) do Wait(10) end
+            basewheel = CreateObject(baseModel, basePos.x, basePos.y, basePos.z, false, false, true)
+            SetEntityHeading(basewheel, 0.0)
+            FreezeEntityPosition(basewheel, true)
+            createdBase = true
+            SetModelAsNoLongerNeeded(baseModel)
+        end
     end
-    SetModelAsNoLongerNeeded(baseModel)
 
     RequestModel(wheelModel)
     while not HasModelLoaded(wheelModel) do Wait(10) end
@@ -44,6 +54,7 @@ local function spawnWheel()
     if not DoesEntityExist(luckywheel) then
         luckywheel = CreateObject(wheelModel, wheelPos.x, wheelPos.y, wheelPos.z, false, false, true)
         SetEntityHeading(luckywheel, 0.0)
+        SetEntityRotation(luckywheel, 0.0, 0.0, 0.0, 2, true)
         FreezeEntityPosition(luckywheel, true)
     end
     SetModelAsNoLongerNeeded(wheelModel)
@@ -51,7 +62,7 @@ end
 
 local function cleanupWheel()
     if DoesEntityExist(luckywheel) then DeleteObject(luckywheel) luckywheel = nil end
-    if DoesEntityExist(basewheel) then DeleteObject(basewheel) basewheel = nil end
+    if createdBase and DoesEntityExist(basewheel) then DeleteObject(basewheel) basewheel = nil end
 end
 
 AddEventHandler('onResourceStop', function(res)
@@ -90,6 +101,8 @@ RegisterNetEvent('sunset:luckywheel:doRoll', function(priceIndex, spinnerPedNetI
     local spinnerPed = spinnerPedNetId and NetToPed(spinnerPedNetId) or nil
     if spinnerPed and DoesEntityExist(spinnerPed) then
         CreateThread(function()
+            SetEntityCoords(spinnerPed, spinPos.x, spinPos.y, spinPos.z, false, false, false, false)
+            SetEntityHeading(spinnerPed, 0.0)
             local isMale = IsPedMale(spinnerPed)
             local dict = isMale and 'anim_casino_a@amb@casino@games@lucky7wheel@male' or 'anim_casino_a@amb@casino@games@lucky7wheel@female'
             RequestAnimDict(dict)
@@ -106,7 +119,7 @@ RegisterNetEvent('sunset:luckywheel:doRoll', function(priceIndex, spinnerPedNetI
     end
 
     CreateThread(function()
-        SetEntityRotation(luckywheel, 0.0, 0.0, 0.0, 1, true)
+        SetEntityRotation(luckywheel, 0.0, 0.0, 0.0, 2, true)
         local speedIntCnt = 1
         local rollspeed = 1.0
         local winAngle = (priceIndex - 1) * 18.0
@@ -117,7 +130,7 @@ RegisterNetEvent('sunset:luckywheel:doRoll', function(priceIndex, spinnerPedNetI
         PlaySoundFromCoord(-1, 'Spin_Start', wheelPos.x, wheelPos.y, wheelPos.z, 'dlc_vw_casino_lucky_wheel_sounds', 0, 0, 0)
 
         while speedIntCnt > 0 do
-            local retval = GetEntityRotation(luckywheel, 1)
+            local retval = GetEntityRotation(luckywheel, 2)
             if rollAngle > midLength then
                 speedIntCnt = speedIntCnt + 1
             else
@@ -128,7 +141,7 @@ RegisterNetEvent('sunset:luckywheel:doRoll', function(priceIndex, spinnerPedNetI
             rollspeed = speedIntCnt / 10.0
             local _y = retval.y - rollspeed
             rollAngle = rollAngle - rollspeed
-            SetEntityRotation(luckywheel, 0.0, _y, 0.0, 1, true)
+            SetEntityRotation(luckywheel, 0.0, _y, 0.0, 2, true)
             Wait(0)
         end
 

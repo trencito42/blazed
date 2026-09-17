@@ -1,9 +1,9 @@
 Config = {}
 
-Config.WheelModel = w_prop_vw_luckywheel_02a
-Config.Vehicle = 	empesta
+Config.WheelModel = `vw_prop_vw_luckywheel_02a`
+Config.Vehicle = 	'tempesta'
 Config.Amount = 100 -- Chips required if not free spin
-Config.WheelPos = vector3(1111.05, 229.85, -50.64)
+Config.WheelPos = vector3(1111.052, 229.84, -50.38)
 Config.SpinPos = vector3(1110.88, 228.87, -49.85)
 Config.VehPos = vector4(1100.22, 220.04, -49.44, 0.0)
 Config.SpinCooldownMinutes = 60
