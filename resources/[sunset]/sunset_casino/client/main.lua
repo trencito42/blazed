@@ -220,29 +220,7 @@ CreateThread(function()
             end
         end
 
-        -- Lucky Wheel
-        if Cfg.luckyWheel then
-            local dist = #(coords - Cfg.luckyWheel)
-            if dist < 10.0 then
-                sleep = 0
-                DrawMarker(1, Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z - 1.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    2.0, 2.0, 1.0,
-                    255, 0, 255, 100,
-                    false, false, 2, false, nil, nil, false)
-                DrawMarker(2, Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z + 0.3,
-                    0.0, 0.0, 0.0, 0.0, 180.0, 0.0,
-                    0.35, 0.35, 0.35,
-                    255, 0, 255, 180,
-                    true, true, 2, false, nil, nil, false)
-                if dist < 3.0 then
-                    DrawText3D(vector3(Cfg.luckyWheel.x, Cfg.luckyWheel.y, Cfg.luckyWheel.z + 0.5), '~p~[E]~s~ Spin Lucky Wheel')
-                    if IsControlJustReleased(0, 38) and not casinoOpen then
-                        openGame('luckywheel')
-                    end
-                end
-            end
-        end
+        -- Lucky Wheel is handled in-world by sunset_luckywheel (3D prop, animations & synced spins)
 
         -- Cashier
         if Cfg.cashier then

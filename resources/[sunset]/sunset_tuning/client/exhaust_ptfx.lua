@@ -219,10 +219,10 @@ local function playSpatialPopSound(veh, volume)
     local myCoords = GetEntityCoords(PlayerPedId())
     local vehCoords = GetEntityCoords(veh)
     local dist = #(myCoords - vehCoords)
-    local maxDist = 40.0
+    local maxDist = 35.0
     if dist <= maxDist then
-        local ratio = math.max(0.08, 1.0 - (dist / maxDist))
-        local finalVol = math.min(1.0, (volume or 0.85) * ratio)
+        local ratio = math.max(0.05, 1.0 - (dist / maxDist))
+        local finalVol = math.min(0.40, (volume or 0.6) * 0.45 * ratio)
         local soundIdx = tostring(math.random(1, 6))
         SendNUIMessage({
             action = 'playSound',
@@ -236,7 +236,7 @@ function EP.playBackfireSound(veh, profile, intensity)
     if not veh or veh == 0 or not DoesEntityExist(veh) then return end
     local pool = profile == 'limiter' and LIMITER_SOUNDS or profile == 'bang' and BANG_SOUNDS or CRACKLE_SOUNDS
     playSoundLayer(veh, pool[math.random(1, #pool)])
-    playSpatialPopSound(veh, math.min(1.0, 0.65 + (intensity or 0.8) * 0.35))
+    playSpatialPopSound(veh, math.min(0.7, 0.4 + (intensity or 0.8) * 0.25))
 end
 
 function EP.burst(veh, kind, intensity, flameColor)
@@ -245,14 +245,12 @@ function EP.burst(veh, kind, intensity, flameColor)
     kind = kind or 'pop'
     local color = flameColor or DEFAULT_FLAME
 
-    -- Quick native nitro backfire boost
+    -- Visual exhaust backfire
     pcall(function()
         SetVehicleNitroEnabled(veh, true)
-        SetVehicleBoostActive(veh, true)
         SetTimeout(70, function()
             if DoesEntityExist(veh) then
                 SetVehicleNitroEnabled(veh, false)
-                SetVehicleBoostActive(veh, false)
             end
         end)
     end)

@@ -20,11 +20,6 @@ CreateThread(function()
 
         if STC.persistedPlates[plate] and STC.plateTunes[plate] then
             ApplyTune(veh, STC.plateTunes[plate], false)
-            if STC.BurstExhaust and not STC.dynoActive then
-                SetTimeout(600, function()
-                    if DoesEntityExist(veh) and not STC.dynoActive then STC.BurstExhaust(veh, 'flash', 3) end
-                end)
-            end
             goto continue
         end
 
@@ -34,11 +29,6 @@ CreateThread(function()
             STC.plateTunes[plate] = tune
             STC.persistedPlates[plate] = true
             ApplyTune(veh, tune, false)
-            if STC.BurstExhaust and not SunsetTuning.IsStockTune(tune) and not STC.dynoActive then
-                SetTimeout(600, function()
-                    if DoesEntityExist(veh) and not STC.dynoActive then STC.BurstExhaust(veh, 'flash', 3) end
-                end)
-            end
         end
 
         ::continue::

@@ -119,22 +119,22 @@ function PR.Resolve(model, classId)
         return buildCapabilities({ propulsion = 'human', archetype = 'bicycle', source = 'class_fallback' }, modelName, classId)
     end
 
-    -- Unknown add-on: hide combustion-specific extras until profile is configured
+    -- Unknown add-on: default to full combustion vehicle capabilities
     local caps = buildCapabilities({
         propulsion = 'petrol',
-        induction = 'naturally_aspirated',
+        induction = 'turbo',
         archetype = archetype,
         source = 'unknown_addon',
         limits = defaultLimits(archetype),
     }, modelName, classId)
-    caps.turboBoost = false
-    caps.turboResponse = false
-    caps.antiLag = false
-    caps.popsAndBangs = false
-    caps.flames = false
-    caps.revLimiter = false
-    caps.exhaustModes = false
-    caps.factoryTurbo = false
+    caps.turboBoost = true
+    caps.turboResponse = true
+    caps.antiLag = true
+    caps.popsAndBangs = true
+    caps.flames = true
+    caps.revLimiter = true
+    caps.exhaustModes = true
+    caps.factoryTurbo = true
     return caps
 end
 

@@ -410,6 +410,13 @@ function preview() {
         post('tuningPreview', {
             tune: ensureTune(tune),
             cosmetics: ensureCosmetics(cosmetics),
+        }).then((res) => {
+            if (res && typeof res.wheelsCount === 'number' && res.wheelsCount !== visualAvailability.wheels) {
+                visualAvailability.wheels = res.wheelsCount;
+                if (activeTab === 'wheels' && activePartId === 'wheel_rim') {
+                    renderDetailPanel();
+                }
+            }
         });
     }, 60);
 }
@@ -1239,8 +1246,8 @@ window.addEventListener('message', (event) => {
         installedCosmetics = ensureCosmetics(data.cosmetics);
         if (shopLabel) shopLabel.textContent = data.shop || 'ECU Bay';
         if (plateLabel) plateLabel.textContent = data.plate || cosmetics.plateText || '—';
-        hardwareAvailability = data.hardwareAvailability || {};
-        visualAvailability = data.visualAvailability || {};
+        hardwareAvailability = data.hardwareAvailability || data.hardware || {};
+        visualAvailability = data.visualAvailability || data.visual || {};
         vehicleCapabilities = data.capabilities || null;
         const drivetrainLabel = document.getElementById('drivetrainLabel');
         if (drivetrainLabel) {

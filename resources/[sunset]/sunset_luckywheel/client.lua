@@ -119,6 +119,8 @@ RegisterNetEvent('sunset:luckywheel:doRoll', function(priceIndex, spinnerPedNetI
     end
 
     CreateThread(function()
+        -- Wait for spinner ped arm to reach and pull the wheel
+        Wait(2000)
         SetEntityRotation(luckywheel, 0.0, 0.0, 0.0, 2, true)
         local speedIntCnt = 1
         local rollspeed = 1.0

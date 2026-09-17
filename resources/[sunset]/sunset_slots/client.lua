@@ -199,17 +199,14 @@ local function sit(slotData)
     createSlotCam(prop, pos, heading)
     Wait(600)
 
-    -- Prompt for bet chips using ox_lib modal
-    local input = lib.inputDialog('Diamond Slot Machine', {
-        { type = 'number', label = 'Starting Chips Bet', default = 500, min = Config.MinBet or 50, max = 50000, required = true }
-    })
-
-    local betAmount = input and tonumber(input[1])
+    -- Prompt for bet chips using native GTA keyboard
+    local input = KeyboardInput('Enter Starting Bet (Chips):', '500', 7)
+    local betAmount = input and tonumber(input)
     if betAmount and betAmount >= (Config.MinBet or 50) then
         TriggerServerEvent('sunset_slots:BetsAndMoney', betAmount)
     else
         unsit()
-        if input then
+        if input and input ~= '' then
             exports.sunset_ui:Notify(('Invalid bet amount. Minimum bet is %d chips.'):format(Config.MinBet or 50), 'error')
         end
     end

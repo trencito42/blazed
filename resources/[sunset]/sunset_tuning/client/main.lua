@@ -54,6 +54,28 @@ local function hardwareAvailability(veh)
     return out
 end
 
+local function visualAvailability(veh)
+    SetVehicleModKit(veh, 0)
+    return {
+        spoiler = math.max(0, GetNumVehicleMods(veh, 0)),
+        frontBumper = math.max(0, GetNumVehicleMods(veh, 1)),
+        rearBumper = math.max(0, GetNumVehicleMods(veh, 2)),
+        sideSkirt = math.max(0, GetNumVehicleMods(veh, 3)),
+        exhaust = math.max(0, GetNumVehicleMods(veh, 4)),
+        rollCage = math.max(0, GetNumVehicleMods(veh, 5)),
+        grille = math.max(0, GetNumVehicleMods(veh, 6)),
+        hood = math.max(0, GetNumVehicleMods(veh, 7)),
+        leftFender = math.max(0, GetNumVehicleMods(veh, 8)),
+        rightFender = math.max(0, GetNumVehicleMods(veh, 9)),
+        roof = math.max(0, GetNumVehicleMods(veh, 10)),
+        wheels = math.max(0, GetNumVehicleMods(veh, 23)),
+        livery = math.max(GetNumVehicleMods(veh, 48), GetVehicleLiveryCount(veh)),
+        windowTint = 6,
+        neon = true,
+        xenon = true,
+    }
+end
+
 local function closePanel(restoreStock)
     if not panelOpen then return end
     panelOpen = false
@@ -126,28 +148,6 @@ local function openPanel(shop)
     SetNuiFocus(true, true)
     exports.sunset_ui:Send('tuningUiOpen', {})
 
-local function visualAvailability(veh)
-    SetVehicleModKit(veh, 0)
-    return {
-        spoiler = math.max(0, GetNumVehicleMods(veh, 0)),
-        frontBumper = math.max(0, GetNumVehicleMods(veh, 1)),
-        rearBumper = math.max(0, GetNumVehicleMods(veh, 2)),
-        sideSkirt = math.max(0, GetNumVehicleMods(veh, 3)),
-        exhaust = math.max(0, GetNumVehicleMods(veh, 4)),
-        rollCage = math.max(0, GetNumVehicleMods(veh, 5)),
-        grille = math.max(0, GetNumVehicleMods(veh, 6)),
-        hood = math.max(0, GetNumVehicleMods(veh, 7)),
-        leftFender = math.max(0, GetNumVehicleMods(veh, 8)),
-        rightFender = math.max(0, GetNumVehicleMods(veh, 9)),
-        roof = math.max(0, GetNumVehicleMods(veh, 10)),
-        wheels = math.max(0, GetNumVehicleMods(veh, 23)),
-        livery = math.max(GetNumVehicleMods(veh, 48), GetVehicleLiveryCount(veh)),
-        windowTint = 6,
-        neon = true,
-        xenon = true,
-    }
-end
-
     sendUi('open', {
         tune = draftTune,
         cosmetics = draftCosmetics,
@@ -166,6 +166,8 @@ end
         exhaustModes = SunsetTuning.ExhaustModes,
         hardwareAvailability = hardwareAvailability(veh),
         visualAvailability = visualAvailability(veh),
+        hardware = hardwareAvailability(veh),
+        visual = visualAvailability(veh),
         hardwareSlots = SunsetTuning.HardwareSlots,
         featureCosts = SunsetTuning.FeatureCosts,
     })
@@ -194,7 +196,8 @@ RegisterNUICallback('tuningPreview', function(data, cb)
     local modelName = STC.appliedVehicles[currentVeh] and STC.appliedVehicles[currentVeh].model
     ApplyTune(currentVeh, draftTune, false, modelName)
     ApplyCosmetics(currentVeh, draftCosmetics, false)
-    cb({ ok = true })
+    local wheelsCount = math.max(0, GetNumVehicleMods(currentVeh, 23))
+    cb({ ok = true, wheelsCount = wheelsCount })
 end)
 
 RegisterNUICallback('tuningTestFlame', function(_, cb)

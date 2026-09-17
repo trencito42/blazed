@@ -9,7 +9,6 @@ author 'XeX / SunsetMP'
 ui_page 'html/ui.html'
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config.lua',
 }
 

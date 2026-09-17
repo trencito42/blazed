@@ -169,18 +169,18 @@ CreateThread(function()
         local speed = GetEntitySpeed(veh) * 3.6
         local now = GetGameTimer()
         local rpmTarget = (tonumber(tune.pop.rpmMax) or 88) / 100.0
-        local triggerThreshold = math.max(0.48, math.min(0.72, rpmTarget * 0.80))
-        local minOverrunRpm = 0.24
+        local triggerThreshold = math.max(0.40, math.min(0.68, rpmTarget * 0.72))
+        local minOverrunRpm = 0.22
 
-        local liftOff = lastThrottle > 0.28 and throttle < 0.20
+        local liftOff = (lastThrottle > 0.22 and throttle < 0.15) or (lastRpm >= triggerThreshold and rpmFalling and throttle < 0.20)
         local wasHighRpm = lastRpm >= triggerThreshold
-        local rpmFalling = (lastRpm - rpm) > 0.015
+        local rpmFalling = (lastRpm - rpm) > 0.012
 
         -- Pop on gear shift at high RPM
-        if (tune.pop.enabled or tune.antiLag.enabled) and gear ~= lastGear and lastGear ~= 0 and gear > 1 and rpm > 0.55 and not IsEntityInAir(veh) then
+        if (tune.pop.enabled or tune.antiLag.enabled) and gear ~= lastGear and lastGear ~= 0 and gear > 1 and rpm > 0.48 and not IsEntityInAir(veh) then
             if now > popCooldown then
                 popCooldown = now + 120
-                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.35)
+                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.15)
             end
         end
 
@@ -189,7 +189,7 @@ CreateThread(function()
             startOverrun(veh, rpm, now, tune)
             if now > popCooldown then
                 popCooldown = now + 90
-                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.25)
+                burstExhaust(veh, tune, mult, mode.diesel and 'diesel' or 'pop', true, 1.10)
             end
         end
 
