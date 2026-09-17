@@ -202,7 +202,7 @@ function cap(key) {
 }
 
 function powerLimit() {
-    return (vehicleCapabilities && vehicleCapabilities.limits && vehicleCapabilities.limits.power) || 65;
+    return (vehicleCapabilities && vehicleCapabilities.limits && vehicleCapabilities.limits.power) || 100;
 }
 
 function tabAllowed(itemId) {

@@ -62,7 +62,7 @@ function TC.Compute(baseline, tune, caps)
     end
 
     local limits = caps.limits or {}
-    local powerMax = limits.power or 65
+    local powerMax = limits.power or 100
     local powerNorm = norm01(tune.power, powerMax)
     local torqueNorm = norm01(tune.torque or tune.power, powerMax)
     local throttleNorm = norm01(tune.throttleResponse or 50, 100)

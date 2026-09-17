@@ -18,13 +18,13 @@ local function normalizeModel(model)
 end
 
 local function defaultLimits(archetype)
-    if archetype == 'super' then return { power = 80, topSpeed = 55, shiftSpeed = 80, regen = 100, throttle = 85 } end
-    if archetype == 'sport' or archetype == 'muscle' then return { power = 65, topSpeed = 45, shiftSpeed = 72, regen = 100, throttle = 80 } end
-    if archetype == 'motorcycle' then return { power = 68, topSpeed = 50, shiftSpeed = 75, regen = 100, throttle = 82 } end
-    if archetype == 'suv' then return { power = 52, topSpeed = 34, shiftSpeed = 58, regen = 100, throttle = 75 } end
-    if archetype == 'ev_super' then return { power = 88, topSpeed = 60, shiftSpeed = 0, regen = 100, throttle = 90 } end
-    if archetype == 'ev_sport' or archetype == 'ev_roadster' then return { power = 78, topSpeed = 52, shiftSpeed = 0, regen = 100, throttle = 88 } end
-    return { power = 50, topSpeed = 32, shiftSpeed = 58, regen = 100, throttle = 75 }
+    if archetype == 'super' then return { power = 100, topSpeed = 55, shiftSpeed = 80, regen = 100, throttle = 85 } end
+    if archetype == 'sport' or archetype == 'muscle' then return { power = 100, topSpeed = 45, shiftSpeed = 72, regen = 100, throttle = 80 } end
+    if archetype == 'motorcycle' then return { power = 100, topSpeed = 50, shiftSpeed = 75, regen = 100, throttle = 82 } end
+    if archetype == 'suv' then return { power = 100, topSpeed = 34, shiftSpeed = 58, regen = 100, throttle = 75 } end
+    if archetype == 'ev_super' then return { power = 100, topSpeed = 60, shiftSpeed = 0, regen = 100, throttle = 90 } end
+    if archetype == 'ev_sport' or archetype == 'ev_roadster' then return { power = 100, topSpeed = 52, shiftSpeed = 0, regen = 100, throttle = 88 } end
+    return { power = 100, topSpeed = 32, shiftSpeed = 58, regen = 100, throttle = 75 }
 end
 
 local function archetypeFromClass(classId)
