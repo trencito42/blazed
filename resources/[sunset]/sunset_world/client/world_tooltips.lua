@@ -34,13 +34,19 @@ function SunsetWorld.Tooltips.set(id, data)
     end
 
     local coords = data.coords
-    if not coords then
+    local entity = tonumber(data.entity)
+    if entity and (entity == 0 or not DoesEntityExist(entity)) then
+        entity = nil
+    end
+    if not coords and not entity then
         SunsetWorld.Tooltips.clear(id)
         return
     end
 
     active[id] = {
         coords = coords,
+        entity = entity,
+        offsetZ = tonumber(data.offsetZ) or 0.45,
         touchedAt = GetGameTimer(),
         maxDistance = tonumber(data.maxDistance) or TOOLTIP_MAX_DISTANCE,
         badge = data.badge or '',
@@ -92,8 +98,18 @@ CreateThread(function()
             local now = GetGameTimer()
             local playerCoords = GetEntityCoords(PlayerPedId())
             for id, row in pairs(active) do
-                local coords = row.coords
                 local stale = now - (row.touchedAt or 0) > TOOLTIP_TTL_MS
+                local coords = row.coords
+
+                if row.entity then
+                    if DoesEntityExist(row.entity) then
+                        coords = SunsetWorld.Tooltips.coordsFromEntity(row.entity, row.offsetZ)
+                    else
+                        active[id] = nil
+                        coords = nil
+                    end
+                end
+
                 local tooFar = coords and #(playerCoords - coords) > (row.maxDistance or TOOLTIP_MAX_DISTANCE)
                 if stale or tooFar then
                     active[id] = nil
@@ -105,9 +121,9 @@ CreateThread(function()
                 end
             end
             sendSync(list)
-            -- Run every native frame so the tooltip tracks the NPC head with
-            -- zero visual lag. The payload is tiny (one JSON object per tooltip)
-            -- so 60Hz messaging doesn't flood the NUI bridge.
+            -- Native projection stays frame-accurate. The NUI layer coalesces
+            -- inbound samples to its next requestAnimationFrame, so old CEF
+            -- messages are dropped instead of being painted late.
             Wait(0)
         else
             Wait(250)
