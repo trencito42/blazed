@@ -246,9 +246,14 @@ function SunsetClothing.buildCatalog(ped, appearance, gender, activeCategoryId)
         end
     end
 
+    local categories = SunsetClothing.Categories
+    if not categories or #categories == 0 then
+        print('[sunset_appearance] ERROR: SunsetClothing.Categories is missing or empty in buildCatalog!')
+    end
+
     return {
         type = 'wardrobe',
-        categories = categories,
+        categories = categories or SunsetClothing.Categories,
         activeCategory = cat.id,
         activeDisplay = cat.display,
         activeKind = cat.kind,

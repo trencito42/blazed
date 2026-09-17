@@ -129,8 +129,10 @@ local function openWardrobe()
     local ok, err = pcall(function()
         previewAppearance = SunsetClothing.syncFromPed(savedSnapshot.appearance, PlayerPedId(), savedSnapshot.gender)
         activeCategory = 'top'
-        local ped = PlayerPedId()
         local catalog = SunsetClothing.buildCatalog(ped, previewAppearance, savedSnapshot.gender, activeCategory)
+        if not catalog or not catalog.categories or #catalog.categories == 0 then
+            print('[sunset_clothing] WARNING: openWardrobe catalog is missing categories!')
+        end
         cartTotal = catalog.pricePerItem or 50
         hasChanges = false
 

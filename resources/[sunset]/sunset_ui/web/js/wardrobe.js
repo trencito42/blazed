@@ -62,8 +62,12 @@ const WardrobeUI = {
 
     show(data = {}) {
         this.init();
+        const categories = Array.isArray(data.categories) ? data.categories : [];
+        if (categories.length === 0) {
+            console.error('[wardrobe] ERROR: Wardrobe opened with zero categories in payload:', data);
+        }
         this.state = {
-            categories: data.categories || [],
+            categories: categories,
             activeCategory: data.activeCategory || 'top',
             activeDisplay: data.activeDisplay || 'Shirt / Jacket',
             drawable: Number(data.drawable) || 0,
@@ -87,6 +91,9 @@ const WardrobeUI = {
 
     update(data = {}) {
         if (!this.state) return this.show(data);
+        if (Array.isArray(data.categories) && data.categories.length > 0) {
+            this.state.categories = data.categories;
+        }
         Object.assign(this.state, {
             activeCategory: data.activeCategory ?? this.state.activeCategory,
             activeDisplay: data.activeDisplay ?? this.state.activeDisplay,
@@ -116,7 +123,11 @@ const WardrobeUI = {
         const list = this._$('#wardrobe-cat-list');
         if (!list || !this.state) return;
         list.innerHTML = '';
-        (this.state.categories || []).forEach((cat) => {
+        const cats = this.state.categories || [];
+        if (cats.length === 0) {
+            console.warn('[wardrobe] renderCategories: Categories list is empty!');
+        }
+        cats.forEach((cat) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'wr-cat-item' + (cat.id === this.state.activeCategory ? ' is-active' : '');
