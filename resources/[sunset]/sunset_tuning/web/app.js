@@ -147,6 +147,24 @@ const PAINT_PRESETS = [
     { label: 'Rose Gold', r: 200, g: 140, b: 130 },
 ];
 
+const PAINT_TYPES = [
+    { id: 0, label: 'Gloss / Standard' },
+    { id: 1, label: 'Metallic' },
+    { id: 3, label: 'Matte' },
+    { id: 4, label: 'Metal' },
+    { id: 5, label: 'Chrome' },
+];
+
+const TYRE_SMOKE_PRESETS = [
+    { label: 'White Smoke', r: 255, g: 255, b: 255 },
+    { label: 'Red Smoke', r: 255, g: 20, b: 20 },
+    { label: 'Blue Smoke', r: 20, g: 80, b: 255 },
+    { label: 'Yellow Smoke', r: 255, g: 220, b: 0 },
+    { label: 'Green Smoke', r: 20, g: 255, b: 50 },
+    { label: 'Purple Smoke', r: 180, g: 20, b: 255 },
+    { label: 'Black Smoke', r: 1, g: 1, b: 1 },
+];
+
 function cap(key) {
     return vehicleCapabilities && vehicleCapabilities[key] === true;
 }
@@ -197,6 +215,7 @@ function stockTune() {
 
 function stockCosmetics() {
     return {
+        paintType: 0,
         primary: { r: 0, g: 0, b: 0 },
         secondary: { r: 111, g: 111, b: 111 },
         pearl: 0,
@@ -213,6 +232,8 @@ function stockCosmetics() {
             right: true,
             color: { r: 0, g: 150, b: 255 },
         },
+        tyreSmoke: false,
+        tyreSmokeColor: { r: 255, g: 255, b: 255 },
         wheelType: 0,
         mods: {
             spoiler: -1,
@@ -238,6 +259,7 @@ function ensureCosmetics(raw) {
     return {
         ...base,
         ...src,
+        paintType: Number(src.paintType ?? base.paintType ?? 0),
         primary: { ...base.primary, ...(src.primary || {}) },
         secondary: { ...base.secondary, ...(src.secondary || {}) },
         neon: {
@@ -245,6 +267,8 @@ function ensureCosmetics(raw) {
             ...(src.neon || {}),
             color: { ...(base.neon.color || {}), ...((src.neon && src.neon.color) || {}) },
         },
+        tyreSmoke: !!(src.tyreSmoke ?? base.tyreSmoke),
+        tyreSmokeColor: { ...base.tyreSmokeColor, ...(src.tyreSmokeColor || {}) },
         mods: { ...base.mods, ...(src.mods || {}) },
     };
 }
@@ -267,11 +291,89 @@ function ensureTune(raw) {
 }
 
 function sameColor(a, b) {
-    return ['r', 'g', 'b'].every((key) => Number(a?.[key]) === Number(b?.[key]));
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return ['r', 'g', 'b'].every((key) => Number(a[key]) === Number(b[key]));
+}
+
+function getCosmeticsValue(path) {
+    return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), cosmetics);
+}
+
+function setCosmeticsValue(path, value) {
+    cosmetics = ensureCosmetics(cosmetics);
+    const parts = path.split('.');
+    let ref = cosmetics;
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (!ref[parts[i]]) ref[parts[i]] = {};
+        ref = ref[parts[i]];
+    }
+    ref[parts[parts.length - 1]] = value;
+}
+
+function hasTuningChanges() {
+    if (!installedTune || !tune) return false;
+    const old = ensureTune(installedTune);
+    const next = ensureTune(tune);
+    const oldCos = ensureCosmetics(installedCosmetics);
+    const nextCos = ensureCosmetics(cosmetics);
+
+    for (const key of Object.keys(hardwareSlots || {})) {
+        if (Number(next.hardware[key] || 0) !== Number(old.hardware[key] || 0)) return true;
+    }
+    if (!!next.hardware.turbo !== !!old.hardware.turbo) return true;
+    if (!!next.hardware.launchControl !== !!old.hardware.launchControl) return true;
+    if (next.stage !== old.stage) return true;
+
+    if (!!next.pop.enabled !== !!old.pop.enabled) return true;
+    if (!!next.flames.enabled !== !!old.flames.enabled) return true;
+    if (!!next.antiLag.enabled !== !!old.antiLag.enabled) return true;
+    if (!!next.drift.enabled !== !!old.drift.enabled) return true;
+    if (!!next.hud.enabled !== !!old.hud.enabled) return true;
+    if (next.exhaust !== old.exhaust) return true;
+
+    const checkPaths = [['power'], ['torque'], ['handling', 'steering'], ['handling', 'brakePower'], ['handling', 'suspension'], ['handling', 'traction']];
+    for (const p of checkPaths) {
+        const get = (obj) => p.reduce((v, k) => v?.[k], obj);
+        if (Number(get(next) || 0) !== Number(get(old) || 0)) return true;
+    }
+
+    if (Number(nextCos.paintType || 0) !== Number(oldCos.paintType || 0)) return true;
+    if (!sameColor(oldCos.primary, nextCos.primary) || !sameColor(oldCos.secondary, nextCos.secondary)) return true;
+    if (Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)) return true;
+    if (Number(oldCos.windowTint) !== Number(nextCos.windowTint)) return true;
+    if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) return true;
+
+    if (!!nextCos.neon?.enabled !== !!oldCos.neon?.enabled) return true;
+    if (nextCos.neon?.enabled) {
+        if (!sameColor(oldCos.neon?.color, nextCos.neon?.color)) return true;
+        if (!!nextCos.neon.front !== !!oldCos.neon.front) return true;
+        if (!!nextCos.neon.back !== !!oldCos.neon.back) return true;
+        if (!!nextCos.neon.left !== !!oldCos.neon.left) return true;
+        if (!!nextCos.neon.right !== !!oldCos.neon.right) return true;
+    }
+
+    if (!!nextCos.xenon !== !!oldCos.xenon) return true;
+    if (nextCos.xenon && nextCos.xenonColor !== oldCos.xenonColor) return true;
+
+    if (!!nextCos.tyreSmoke !== !!oldCos.tyreSmoke) return true;
+    if (nextCos.tyreSmoke && !sameColor(oldCos.tyreSmokeColor, nextCos.tyreSmokeColor)) return true;
+
+    if (nextCos.wheelType !== oldCos.wheelType) return true;
+    if (nextCos.mods?.wheels !== oldCos.mods?.wheels) return true;
+    if (nextCos.mods && oldCos.mods) {
+        for (const k of Object.keys(nextCos.mods)) {
+            if (nextCos.mods[k] !== oldCos.mods[k]) return true;
+        }
+    }
+
+    return false;
 }
 
 function installQuote() {
-    if (!installedTune || !tune) return Number(costs.save || 0) + Number(costs.flash || 0);
+    if (!installedTune || !tune) return 0;
+    if (!hasTuningChanges()) return 0;
+
     const old = ensureTune(installedTune);
     const next = ensureTune(tune);
     const oldCos = ensureCosmetics(installedCosmetics);
@@ -298,7 +400,7 @@ function installQuote() {
     });
     if (!sameColor(oldCos.primary, nextCos.primary) || !sameColor(oldCos.secondary, nextCos.secondary)
         || Number(oldCos.pearl) !== Number(nextCos.pearl) || Number(oldCos.wheel) !== Number(nextCos.wheel)
-        || Number(oldCos.windowTint) !== Number(nextCos.windowTint)) {
+        || Number(oldCos.windowTint) !== Number(nextCos.windowTint) || Number(oldCos.paintType || 0) !== Number(nextCos.paintType || 0)) {
         total += Number(featureCosts.cosmetics || 600);
     }
     if (nextCos.plateText && nextCos.plateText !== oldCos.plateText) total += Number(featureCosts.vanityPlate || 1800);
@@ -308,6 +410,9 @@ function installQuote() {
 
     if (nextCos.xenon && !oldCos.xenon) total += 350;
     else if (nextCos.xenon && nextCos.xenonColor !== oldCos.xenonColor) total += 100;
+
+    if (nextCos.tyreSmoke && !oldCos.tyreSmoke) total += 400;
+    else if (nextCos.tyreSmoke && !sameColor(oldCos.tyreSmokeColor, nextCos.tyreSmokeColor)) total += 150;
 
     if (nextCos.wheelType !== oldCos.wheelType || (nextCos.mods?.wheels !== oldCos.mods?.wheels)) total += 400;
 
@@ -441,11 +546,13 @@ function hardwareParts(categoryKey, slotKey, maxLevel) {
     const parts = [];
     const count = Math.min(maxLevel || 0, hardwareAvailability[slotKey] || 0);
     const current = Number(tune?.hardware?.[slotKey] || 0);
+    const installed = Number(installedTune?.hardware?.[slotKey] || 0);
 
     parts.push({
         id: `${slotKey}_0`,
         label: 'Stock Factory',
-        price: 'Installed',
+        price: installed === 0 ? 'Installed' : '$0',
+        isInstalled: installed === 0,
         apply: () => {
             tune.hardware[slotKey] = 0;
             preview();
@@ -455,10 +562,12 @@ function hardwareParts(categoryKey, slotKey, maxLevel) {
 
     for (let i = 1; i <= count; i++) {
         const cost = slot.unitCost * i;
+        const isInst = (installed === i);
         parts.push({
             id: `${slotKey}_${i}`,
             label: `Level ${i} Upgrade`,
-            price: `$${cost.toLocaleString('en-US')}`,
+            price: isInst ? 'Installed' : `$${cost.toLocaleString('en-US')}`,
+            isInstalled: isInst,
             apply: () => {
                 tune.hardware[slotKey] = i;
                 preview();
@@ -498,10 +607,12 @@ function toggleParts(id, label, path, cost) {
 function renderOverviewParts() {
     const parts = [];
     ['civil', 'sport', 'race'].forEach((stage) => {
+        const isInst = installedTune?.stage === stage;
         parts.push({
             id: `stage_${stage}`,
             label: `Stage ${stage.toUpperCase()} Tune`,
-            price: stage === 'civil' ? 'Stock' : `$${(stage === 'sport' ? featureCosts.sportMap : featureCosts.raceMap || 0).toLocaleString('en-US')}`,
+            price: isInst ? 'Installed' : (stage === 'civil' ? 'Stock' : `$${(stage === 'sport' ? featureCosts.sportMap : featureCosts.raceMap || 0).toLocaleString('en-US')}`),
+            isInstalled: isInst,
             apply: () => {
                 tune.stage = stage;
                 if (stage === 'race') {
@@ -546,10 +657,12 @@ function renderPartList() {
             ['diesel', 'Diesel'],
             ['extra', 'Extra Loud'],
         ].forEach(([mode, label]) => {
+            const isInst = installedTune?.exhaust === mode;
             parts.push({
                 id: `exhaust_${mode}`,
                 label,
-                price: 'Installed',
+                price: isInst ? 'Installed' : 'Select',
+                isInstalled: isInst,
                 apply: () => {
                     tune.exhaust = mode;
                     if (mode === 'pop_bang' || mode === 'extra' || mode === 'diesel') tune.pop.enabled = true;
@@ -560,40 +673,65 @@ function renderPartList() {
             });
         });
     } else if (activeTab === 'bodykit') {
-        BODYKIT_SLOTS.forEach((slot) => {
-            const avail = visualAvailability[slot.key] || 0;
-            const cur = cosmetics?.mods?.[slot.key] ?? -1;
-            const curLabel = cur === -1 ? 'Stock' : `Mod #${cur + 1}`;
+        const availableSlots = BODYKIT_SLOTS.filter((slot) => (visualAvailability[slot.key] || 0) > 0);
+        if (availableSlots.length === 0) {
             parts.push({
-                id: `body_${slot.key}`,
-                label: slot.label,
-                price: avail > 0 ? `${curLabel} (${avail} opts)` : 'Unavailable',
-                apply: () => {
-                    activePartId = slot.key;
-                    renderDetailPanel();
-                },
-                isActive: () => activePartId === slot.key,
+                id: 'no_aero',
+                label: 'No Aero Parts Available',
+                price: 'N/A',
+                isInstalled: false,
+                apply: () => {},
+                isActive: () => false,
             });
-        });
+        } else {
+            availableSlots.forEach((slot) => {
+                const avail = visualAvailability[slot.key] || 0;
+                const cur = cosmetics?.mods?.[slot.key] ?? -1;
+                const inst = installedCosmetics?.mods?.[slot.key] ?? -1;
+                const isInst = (cur === inst);
+                const curLabel = cur === -1 ? 'Stock' : `Mod #${cur + 1}`;
+                parts.push({
+                    id: `body_${slot.key}`,
+                    label: slot.label,
+                    price: `${curLabel} (${avail} opts)`,
+                    isInstalled: isInst,
+                    apply: () => {
+                        activePartId = slot.key;
+                        post('tuningFocusPart', { part: slot.key });
+                        renderDetailPanel();
+                    },
+                    isActive: () => activePartId === slot.key,
+                });
+            });
+            if (!activePartId || !availableSlots.some((s) => s.key === activePartId)) {
+                activePartId = availableSlots[0].key;
+            }
+        }
     } else if (activeTab === 'lighting') {
         const neonActive = cosmetics?.neon?.enabled === true;
+        const neonInst = installedCosmetics?.neon?.enabled === true;
         parts.push({
             id: 'neon_underglow',
             label: 'Underglow Neons',
-            price: neonActive ? 'Enabled ($500)' : 'Disabled',
+            price: neonActive ? (neonInst ? 'Installed' : '$500') : 'Disabled',
+            isInstalled: neonInst && neonActive,
             apply: () => {
                 activePartId = 'neon';
+                post('tuningFocusPart', { part: 'lighting' });
                 renderDetailPanel();
             },
             isActive: () => activePartId === 'neon',
         });
         const xenonActive = cosmetics?.xenon === true;
+        const xenonInst = installedCosmetics?.xenon === true;
         parts.push({
             id: 'xenon_lights',
             label: 'Xenon Headlights',
-            price: xenonActive ? 'Enabled ($350)' : 'Halogen (Stock)',
+            price: xenonActive ? (xenonInst ? 'Installed' : '$350') : 'Halogen (Stock)',
+            isInstalled: xenonInst && xenonActive,
             apply: () => {
                 activePartId = 'xenon';
+                post('tuningFocusPart', { part: 'lighting' });
                 renderDetailPanel();
             },
             isActive: () => activePartId === 'xenon',
@@ -606,17 +744,21 @@ function renderPartList() {
             price: wt,
             apply: () => {
                 activePartId = 'wheel_type';
+                post('tuningFocusPart', { part: 'wheels' });
                 renderDetailPanel();
             },
             isActive: () => activePartId === 'wheel_type',
         });
         const rimMod = cosmetics?.mods?.wheels ?? -1;
+        const instRim = installedCosmetics?.mods?.wheels ?? -1;
         parts.push({
             id: 'wheel_rim',
             label: 'Rim Model',
             price: rimMod === -1 ? 'Stock Rims' : `Rim #${rimMod + 1}`,
+            isInstalled: rimMod === instRim,
             apply: () => {
                 activePartId = 'wheel_rim';
+                post('tuningFocusPart', { part: 'wheels' });
                 renderDetailPanel();
             },
             isActive: () => activePartId === 'wheel_rim',
@@ -627,30 +769,55 @@ function renderPartList() {
             price: 'Adjust below',
             apply: () => {
                 activePartId = 'wheel_color';
+                post('tuningFocusPart', { part: 'wheels' });
                 renderDetailPanel();
             },
             isActive: () => activePartId === 'wheel_color',
+        });
+        const smokeActive = cosmetics?.tyreSmoke === true;
+        const smokeInst = installedCosmetics?.tyreSmoke === true;
+        parts.push({
+            id: 'tyre_smoke',
+            label: 'Burnout Tyre Smoke',
+            price: smokeActive ? (smokeInst ? 'Installed' : '$400') : 'Stock (Off)',
+            isInstalled: smokeInst && smokeActive,
+            apply: () => {
+                activePartId = 'smoke';
+                post('tuningFocusPart', { part: 'wheels' });
+                renderDetailPanel();
+            },
+            isActive: () => activePartId === 'smoke',
         });
     } else if (activeTab === 'visual') {
         parts.push({
             id: 'paint_primary',
             label: 'Primary Paint',
             price: 'Adjust below',
-            apply: () => { activePartId = 'primary'; renderDetailPanel(); },
+            apply: () => { activePartId = 'primary'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'primary',
         });
         parts.push({
             id: 'paint_secondary',
             label: 'Secondary Paint',
             price: 'Adjust below',
-            apply: () => { activePartId = 'secondary'; renderDetailPanel(); },
+            apply: () => { activePartId = 'secondary'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'secondary',
+        });
+        const finishLabel = PAINT_TYPES.find((f) => f.id === (cosmetics?.paintType ?? 0))?.label || 'Gloss';
+        const instFinish = (installedCosmetics?.paintType ?? 0) === (cosmetics?.paintType ?? 0);
+        parts.push({
+            id: 'paint_finish',
+            label: 'Paint Finish / Style',
+            price: finishLabel,
+            isInstalled: instFinish,
+            apply: () => { activePartId = 'finish'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
+            isActive: () => activePartId === 'finish',
         });
         parts.push({
             id: 'paint_pearl',
             label: 'Pearlescent Coat',
             price: 'Adjust below',
-            apply: () => { activePartId = 'pearl'; renderDetailPanel(); },
+            apply: () => { activePartId = 'pearl'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'pearl',
         });
         const tint = WINDOW_TINTS.find((t) => t.id === (cosmetics?.windowTint ?? 0))?.label || 'Stock';
@@ -658,14 +825,14 @@ function renderPartList() {
             id: 'window_tint',
             label: 'Window Tint',
             price: tint,
-            apply: () => { activePartId = 'tint'; renderDetailPanel(); },
+            apply: () => { activePartId = 'tint'; post('tuningFocusPart', { part: 'overview' }); renderDetailPanel(); },
             isActive: () => activePartId === 'tint',
         });
         parts.push({
             id: 'plate_text',
             label: 'Vanity License Plate',
             price: cosmetics?.plateText || 'Stock',
-            apply: () => { activePartId = 'plate'; renderDetailPanel(); },
+            apply: () => { activePartId = 'plate'; post('tuningFocusPart', { part: 'rearBumper' }); renderDetailPanel(); },
             isActive: () => activePartId === 'plate',
         });
     } else if (activeTab === 'dyno') {
@@ -701,7 +868,8 @@ function renderPartList() {
         const item = document.createElement('div');
         item.className = 'list-item';
         if (p.isActive()) item.classList.add('active');
-        item.innerHTML = `<span class="item-label">${p.label}</span><span class="item-price">${p.price}</span>`;
+        const instBadge = p.isInstalled ? '<span class="installed-badge">INSTALLED</span>' : '';
+        item.innerHTML = `<span class="item-label">${p.label}${instBadge}</span><span class="item-price">${p.price}</span>`;
         item.addEventListener('click', () => {
             p.apply();
             renderPartList();
@@ -758,7 +926,7 @@ function toggleRow(label, key) {
     return row;
 }
 
-function cosmeticsToggleRow(label, key, parentObj) {
+function cosmeticsToggleRow(label, path) {
     const row = document.createElement('div');
     row.className = 'toggle-row';
     const span = document.createElement('span');
@@ -767,12 +935,10 @@ function cosmeticsToggleRow(label, key, parentObj) {
     sw.className = 'switch';
     const input = document.createElement('input');
     input.type = 'checkbox';
-    const curr = parentObj ? parentObj[key] : cosmetics[key];
-    input.checked = curr === true || curr === undefined;
+    const curr = getCosmeticsValue(path);
+    input.checked = curr === true || (curr === undefined && path !== 'neon.enabled' && path !== 'tyreSmoke');
     input.addEventListener('change', () => {
-        cosmetics = ensureCosmetics(cosmetics);
-        if (parentObj) parentObj[key] = input.checked;
-        else cosmetics[key] = input.checked;
+        setCosmeticsValue(path, input.checked);
         preview();
         renderPartList();
     });
@@ -911,11 +1077,11 @@ function renderDetailPanel() {
             title.textContent = 'Neon Underglow Controls';
             tuneDetail.appendChild(title);
 
-            tuneDetail.appendChild(cosmeticsToggleRow('Enable Underglow', 'enabled', cosmetics.neon));
-            tuneDetail.appendChild(cosmeticsToggleRow('Front Tube', 'front', cosmetics.neon));
-            tuneDetail.appendChild(cosmeticsToggleRow('Rear Tube', 'back', cosmetics.neon));
-            tuneDetail.appendChild(cosmeticsToggleRow('Left Side Tube', 'left', cosmetics.neon));
-            tuneDetail.appendChild(cosmeticsToggleRow('Right Side Tube', 'right', cosmetics.neon));
+            tuneDetail.appendChild(cosmeticsToggleRow('Enable Underglow', 'neon.enabled'));
+            tuneDetail.appendChild(cosmeticsToggleRow('Front Tube', 'neon.front'));
+            tuneDetail.appendChild(cosmeticsToggleRow('Rear Tube', 'neon.back'));
+            tuneDetail.appendChild(cosmeticsToggleRow('Left Side Tube', 'neon.left'));
+            tuneDetail.appendChild(cosmeticsToggleRow('Right Side Tube', 'neon.right'));
 
             const lbl = document.createElement('label');
             lbl.style.marginTop = '12px';
@@ -965,7 +1131,7 @@ function renderDetailPanel() {
             title.textContent = 'Xenon Headlight System';
             tuneDetail.appendChild(title);
 
-            tuneDetail.appendChild(cosmeticsToggleRow('Xenon Headlights', 'xenon', cosmetics));
+            tuneDetail.appendChild(cosmeticsToggleRow('Xenon Headlights', 'xenon'));
 
             const lbl = document.createElement('label');
             lbl.style.marginTop = '12px';
@@ -1077,6 +1243,57 @@ function renderDetailPanel() {
             field.appendChild(lbl);
             field.appendChild(input);
             tuneDetail.appendChild(field);
+        } else if (activePartId === 'smoke') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Tyre Smoke Burnout Controls';
+            tuneDetail.appendChild(title);
+
+            tuneDetail.appendChild(cosmeticsToggleRow('Enable Tyre Smoke', 'tyreSmoke'));
+
+            const lbl = document.createElement('label');
+            lbl.style.marginTop = '12px';
+            lbl.textContent = 'SMOKE COLOR PRESETS';
+            tuneDetail.appendChild(lbl);
+
+            const paletteGrid = document.createElement('div');
+            paletteGrid.className = 'palette-grid';
+            TYRE_SMOKE_PRESETS.forEach((preset) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'palette-swatch';
+                swatch.style.background = `rgb(${preset.r},${preset.g},${preset.b})`;
+                swatch.title = preset.label;
+                swatch.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.tyreSmoke = true;
+                    cosmetics.tyreSmokeColor = { r: preset.r, g: preset.g, b: preset.b };
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                paletteGrid.appendChild(swatch);
+            });
+            tuneDetail.appendChild(paletteGrid);
+
+            ['r', 'g', 'b'].forEach((ch) => {
+                const row = document.createElement('div');
+                row.className = 'color-row';
+                row.innerHTML = `<span>${ch.toUpperCase()}</span>`;
+                const input = document.createElement('input');
+                input.type = 'range';
+                input.min = 0;
+                input.max = 255;
+                input.value = cosmetics?.tyreSmokeColor?.[ch] ?? 255;
+                input.addEventListener('input', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.tyreSmoke = true;
+                    if (!cosmetics.tyreSmokeColor) cosmetics.tyreSmokeColor = { r: 255, g: 255, b: 255 };
+                    cosmetics.tyreSmokeColor[ch] = Number(input.value);
+                    preview();
+                });
+                row.appendChild(input);
+                tuneDetail.appendChild(row);
+            });
         }
     }
 
@@ -1085,6 +1302,28 @@ function renderDetailPanel() {
             tuneDetail.appendChild(cosmeticsColorField('Primary Body Paint', 'primary'));
         } else if (activePartId === 'secondary') {
             tuneDetail.appendChild(cosmeticsColorField('Secondary Trim Paint', 'secondary'));
+        } else if (activePartId === 'finish') {
+            const title = document.createElement('div');
+            title.className = 'section-title section-title--compact';
+            title.textContent = 'Paint Finish & Surface Style';
+            tuneDetail.appendChild(title);
+
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            PAINT_TYPES.forEach((pt) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn ${(cosmetics.paintType ?? 0) === pt.id ? 'active' : ''}`;
+                btn.textContent = pt.label;
+                btn.addEventListener('click', () => {
+                    cosmetics = ensureCosmetics(cosmetics);
+                    cosmetics.paintType = pt.id;
+                    preview();
+                    renderPartList();
+                    renderDetailPanel();
+                });
+                grid.appendChild(btn);
+            });
+            tuneDetail.appendChild(grid);
         } else if (activePartId === 'pearl') {
             const title = document.createElement('div');
             title.className = 'section-title section-title--compact';
@@ -1193,6 +1432,7 @@ function renderCategories() {
         btn.addEventListener('click', () => {
             activeTab = cat.id;
             activePartId = null;
+            post('tuningFocusPart', { part: cat.id });
             if (tunePartsTitle) tunePartsTitle.textContent = categoryTitles[cat.id] || cat.label;
             renderCategories();
             renderPartList();
@@ -1213,19 +1453,60 @@ function renderAll() {
 }
 
 if (btnCancel) btnCancel.addEventListener('click', () => post('tuningClose'));
-if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: true }));
+if (btnSave) btnSave.addEventListener('click', () => post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false }));
+
+let isDraggingCam = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+document.addEventListener('mousedown', (e) => {
+    if (!app || app.classList.contains('hidden')) return;
+    if (e.target.closest('.tuning-wrapper') || e.target.closest('.stats-panel')) return;
+    isDraggingCam = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDraggingCam) return;
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    if (Math.abs(deltaX) > 0 || Math.abs(deltaY) > 0) {
+        post('tuningCamRotate', { deltaX: deltaX * 1.5, deltaY: deltaY * 1.5 });
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDraggingCam = false;
+});
 
 document.addEventListener('keydown', (e) => {
     if (!app || app.classList.contains('hidden')) return;
     if (e.key === 'Escape') {
         e.preventDefault();
         post('tuningClose');
+        return;
     }
+
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
     if (e.key === 'Enter' && !e.repeat) {
-        const tag = (e.target && e.target.tagName) || '';
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
         e.preventDefault();
-        post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: true });
+        post('tuningSave', { tune: ensureTune(tune), cosmetics: ensureCosmetics(cosmetics), flash: false });
+        return;
+    }
+
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        post('tuningCamRotate', { deltaX: -20, deltaY: 0 });
+    } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        post('tuningCamRotate', { deltaX: 20, deltaY: 0 });
+    } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        post('tuningCamRotate', { deltaX: 0, deltaY: -15 });
+    } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        post('tuningCamRotate', { deltaX: 0, deltaY: 15 });
     }
 });
 

@@ -76,9 +76,83 @@ local function visualAvailability(veh)
     }
 end
 
+local tuningCam = nil
+local camYaw = 45.0
+local camPitch = 12.0
+local camDist = 5.0
+local camOffset = vector3(0.0, 0.0, 0.25)
+
+local function updateTuningCam()
+    if not tuningCam or not DoesCamExist(tuningCam) or currentVeh == 0 or not DoesEntityExist(currentVeh) then return end
+    local vehHeading = GetEntityHeading(currentVeh)
+    local targetCoords = GetOffsetFromEntityInWorldCoords(currentVeh, camOffset.x, camOffset.y, camOffset.z)
+
+    local radYaw = math.rad((vehHeading + camYaw) % 360.0)
+    local radPitch = math.rad(camPitch)
+
+    local camX = targetCoords.x - math.sin(radYaw) * math.cos(radPitch) * camDist
+    local camY = targetCoords.y + math.cos(radYaw) * math.cos(radPitch) * camDist
+    local camZ = targetCoords.z + math.sin(radPitch) * camDist
+
+    SetCamCoord(tuningCam, camX, camY, camZ)
+    PointCamAtCoord(tuningCam, targetCoords.x, targetCoords.y, targetCoords.z)
+end
+
+local function focusTuningCam(partOrTab)
+    if not partOrTab then return end
+    local key = tostring(partOrTab):lower()
+    if key:find('front') or key == 'hood' or key == 'grille' then
+        camOffset = vector3(0.0, 1.6, 0.1)
+        camYaw = 0.0
+        camPitch = 8.0
+        camDist = 3.6
+    elseif key:find('rear') or key == 'exhaust' or key == 'spoiler' then
+        camOffset = vector3(0.0, -1.8, 0.2)
+        camYaw = 180.0
+        camPitch = 12.0
+        camDist = 3.8
+    elseif key:find('wheel') or key:find('skirt') or key == 'brakes' or key == 'suspension' then
+        camOffset = vector3(-1.1, 0.0, -0.1)
+        camYaw = -90.0
+        camPitch = 6.0
+        camDist = 3.2
+    elseif key == 'rollcage' or key == 'interior' then
+        camOffset = vector3(0.0, 0.0, 0.3)
+        camYaw = 45.0
+        camPitch = 15.0
+        camDist = 2.4
+    else
+        camOffset = vector3(0.0, 0.0, 0.25)
+        camYaw = 45.0
+        camPitch = 12.0
+        camDist = 5.0
+    end
+    updateTuningCam()
+end
+
+local function createTuningCam(veh)
+    if tuningCam and DoesCamExist(tuningCam) then
+        DestroyCam(tuningCam, false)
+        tuningCam = nil
+    end
+    tuningCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    focusTuningCam('overview')
+    SetCamActive(tuningCam, true)
+    RenderScriptCams(true, true, 800, true, true)
+end
+
+local function destroyTuningCam()
+    if tuningCam and DoesCamExist(tuningCam) then
+        RenderScriptCams(false, true, 600, true, true)
+        DestroyCam(tuningCam, false)
+        tuningCam = nil
+    end
+end
+
 local function closePanel(restoreStock)
     if not panelOpen then return end
     panelOpen = false
+    destroyTuningCam()
     SetNuiFocus(false, false)
     exports.sunset_ui:Send('tuningUiClose', {})
     sendUi('close')
@@ -103,6 +177,7 @@ local function openPanel(shop)
     end
 
     currentVeh = veh
+    createTuningCam(veh)
     currentPlate = STC.plateOf(veh)
     currentShop = shop or nearestShop()
     if not currentShop then
@@ -206,6 +281,22 @@ RegisterNUICallback('tuningTestFlame', function(_, cb)
     cb({ ok = true })
 end)
 
+RegisterNUICallback('tuningCamRotate', function(data, cb)
+    if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
+    local dx = tonumber(data and data.deltaX) or 0
+    local dy = tonumber(data and data.deltaY) or 0
+    camYaw = (camYaw - (dx * 0.45)) % 360.0
+    camPitch = math.max(-10.0, math.min(50.0, camPitch + (dy * 0.3)))
+    updateTuningCam()
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('tuningFocusPart', function(data, cb)
+    if not panelOpen or currentVeh == 0 then cb({ ok = false }) return end
+    focusTuningCam(data and (data.part or data.tab))
+    cb({ ok = true })
+end)
+
 RegisterNUICallback('tuningSave', function(data, cb)
     if not panelOpen or currentPlate == '' then cb({ ok = false }) return end
     local flash = data.flash == true
@@ -231,8 +322,13 @@ RegisterNUICallback('tuningSave', function(data, cb)
     end
     ApplyTune(currentVeh, draftTune, true)
     ApplyCosmetics(currentVeh, draftCosmetics)
-    if flash and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 5) end
-    notify(('ECU saved & flashed — $%d'):format(saved.cost or SunsetTuning.SaveBaseCost), 'success')
+    if data and data.testBurst == true and STC.BurstExhaust then STC.BurstExhaust(currentVeh, 'flash', 3) end
+    local costVal = saved.cost or 0
+    if costVal > 0 then
+        notify(('ECU & modifications saved — $%d'):format(costVal), 'success')
+    else
+        notify('Modifications saved successfully — $0', 'success')
+    end
     sendUi('saved', { saved = true, tune = draftTune, cosmetics = draftCosmetics, plate = currentPlate })
     cb({ ok = true, tune = draftTune })
 end)

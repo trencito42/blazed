@@ -156,6 +156,10 @@ function SunsetTuning.SanitizeTune(raw, caps)
     local turboAllowed = not caps or caps.turboBoost or caps.factoryTurbo
     local hardwareTurbo = hardware.turbo == true and turboAllowed
 
+    local popsAllowed = (caps == nil) or (caps.popsAndBangs ~= false)
+    local flamesAllowed = (caps == nil) or (caps.flames ~= false)
+    local antiLagAllowed = (caps == nil) or (caps.antiLag ~= false)
+
     return {
         profileVersion = SunsetTuning.ProfileVersion,
         stage = stage,
@@ -167,14 +171,14 @@ function SunsetTuning.SanitizeTune(raw, caps)
         regenBraking = math.max(0, math.min(regenMax, math.floor(tonumber(raw.regenBraking) or def.regenBraking))),
         exhaust = exhaust,
         pop = {
-            enabled = (caps and caps.popsAndBangs) and pop.enabled == true or false,
+            enabled = popsAllowed and pop.enabled == true or false,
             rpmMax = math.max(70, math.min(100, math.floor(tonumber(pop.rpmMax) or def.pop.rpmMax))),
             durationMs = math.max(40, math.min(250, math.floor(tonumber(pop.durationMs) or def.pop.durationMs))),
             secondBurst = pop.secondBurst == true,
             burstStage = SunsetTuning.Stages[tostring(pop.burstStage or stage)] and tostring(pop.burstStage or stage) or stage,
         },
         flames = {
-            enabled = (caps and caps.flames) and (flames.enabled == true or exhaust == 'flames' or exhaust == 'extra') or false,
+            enabled = flamesAllowed and (flames.enabled == true or exhaust == 'flames' or exhaust == 'extra') or false,
             color = {
                 r = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.r) or 255))),
                 g = math.max(0, math.min(255, math.floor(tonumber(flames.color and flames.color.g) or 120))),
@@ -182,7 +186,7 @@ function SunsetTuning.SanitizeTune(raw, caps)
             },
         },
         antiLag = {
-            enabled = (caps and caps.antiLag) and antiLag.enabled == true or false,
+            enabled = antiLagAllowed and antiLag.enabled == true or false,
             intensity = math.max(0, math.min(100, math.floor(tonumber(antiLag.intensity) or def.antiLag.intensity))),
         },
         drift = {
@@ -313,70 +317,121 @@ local function sameRgb(a, b)
 end
 
 -- Server-authoritative quote. Upgrades cost money; removing/rebalancing parts
+-- Server-authoritative quote. Upgrades cost money; removing/rebalancing parts
 -- only costs the workshop/flash fee, so a client cannot invent a cheap total.
 function SunsetTuning.CalculateInstallCost(oldRaw, newRaw, oldCosmetics, newCosmetics, flash)
     local oldTune = SunsetTuning.SanitizeTune(oldRaw)
     local newTune = SunsetTuning.SanitizeTune(newRaw)
     local feature = SunsetTuning.FeatureCosts
-    local cost = SunsetTuning.SaveBaseCost + (flash and SunsetTuning.FlashCost or 0)
+    local partsCost = 0
+    local hasChanges = false
 
     for key, slot in pairs(SunsetTuning.HardwareSlots) do
         local delta = math.max(0, (newTune.hardware[key] or 0) - (oldTune.hardware[key] or 0))
-        cost = cost + delta * slot.unitCost
+        if delta > 0 then
+            partsCost = partsCost + delta * slot.unitCost
+            hasChanges = true
+        end
     end
-    if newTune.hardware.turbo and not oldTune.hardware.turbo then cost = cost + feature.turbo end
-    if newTune.hardware.launchControl and not oldTune.hardware.launchControl then cost = cost + feature.launchControl end
-    if newTune.pop.enabled and not oldTune.pop.enabled then cost = cost + feature.pop end
-    if newTune.flames.enabled and not oldTune.flames.enabled then cost = cost + feature.flames end
-    if newTune.antiLag.enabled and not oldTune.antiLag.enabled then cost = cost + feature.antiLag end
-    if newTune.drift.enabled and not oldTune.drift.enabled then cost = cost + feature.drift end
-    if newTune.hud.enabled and not oldTune.hud.enabled then cost = cost + feature.hud end
+    if newTune.hardware.turbo and not oldTune.hardware.turbo then partsCost = partsCost + feature.turbo hasChanges = true end
+    if newTune.hardware.launchControl and not oldTune.hardware.launchControl then partsCost = partsCost + feature.launchControl hasChanges = true end
+    if newTune.pop.enabled ~= oldTune.pop.enabled then
+        if newTune.pop.enabled then partsCost = partsCost + feature.pop end
+        hasChanges = true
+    end
+    if newTune.flames.enabled ~= oldTune.flames.enabled then
+        if newTune.flames.enabled then partsCost = partsCost + feature.flames end
+        hasChanges = true
+    end
+    if newTune.antiLag.enabled ~= oldTune.antiLag.enabled then
+        if newTune.antiLag.enabled then partsCost = partsCost + feature.antiLag end
+        hasChanges = true
+    end
+    if newTune.drift.enabled ~= oldTune.drift.enabled then
+        if newTune.drift.enabled then partsCost = partsCost + feature.drift end
+        hasChanges = true
+    end
+    if newTune.hud.enabled ~= oldTune.hud.enabled then
+        if newTune.hud.enabled then partsCost = partsCost + feature.hud end
+        hasChanges = true
+    end
     if newTune.stage ~= oldTune.stage then
-        cost = cost + (newTune.stage == 'race' and feature.raceMap or newTune.stage == 'sport' and feature.sportMap or 0)
+        partsCost = partsCost + (newTune.stage == 'race' and feature.raceMap or newTune.stage == 'sport' and feature.sportMap or 0)
+        hasChanges = true
     end
     local mapDelta = math.abs(newTune.power - oldTune.power) + math.abs(newTune.torque - oldTune.torque)
         + math.abs(newTune.handling.steering - oldTune.handling.steering)
         + math.abs(newTune.handling.brakePower - oldTune.handling.brakePower)
         + math.abs(newTune.handling.suspension - oldTune.handling.suspension)
         + math.abs(newTune.handling.traction - oldTune.handling.traction)
-    cost = cost + mapDelta * feature.customMapStep
+    if mapDelta > 0 then
+        partsCost = partsCost + mapDelta * feature.customMapStep
+        hasChanges = true
+    end
 
     local oldCos = SunsetTuning.SanitizeCosmetics(oldCosmetics)
     local newCos = SunsetTuning.SanitizeCosmetics(newCosmetics)
     if not sameRgb(oldCos.primary, newCos.primary) or not sameRgb(oldCos.secondary, newCos.secondary)
-        or oldCos.pearl ~= newCos.pearl or oldCos.wheel ~= newCos.wheel or oldCos.windowTint ~= newCos.windowTint then
-        cost = cost + feature.cosmetics
+        or oldCos.pearl ~= newCos.pearl or oldCos.wheel ~= newCos.wheel or oldCos.windowTint ~= newCos.windowTint
+        or oldCos.paintType ~= newCos.paintType then
+        partsCost = partsCost + feature.cosmetics
+        hasChanges = true
     end
-    if newCos.plateText ~= '' and newCos.plateText ~= oldCos.plateText then cost = cost + feature.vanityPlate end
+    if newCos.plateText ~= '' and newCos.plateText ~= oldCos.plateText then
+        partsCost = partsCost + feature.vanityPlate
+        hasChanges = true
+    end
 
     -- Neons cost
     if newCos.neon and newCos.neon.enabled and not (oldCos.neon and oldCos.neon.enabled) then
-        cost = cost + 500
+        partsCost = partsCost + 500
+        hasChanges = true
     elseif newCos.neon and newCos.neon.enabled and not sameRgb(oldCos.neon.color, newCos.neon.color) then
-        cost = cost + 150
+        partsCost = partsCost + 150
+        hasChanges = true
+    elseif newCos.neon and oldCos.neon and (newCos.neon.front ~= oldCos.neon.front or newCos.neon.back ~= oldCos.neon.back or newCos.neon.left ~= oldCos.neon.left or newCos.neon.right ~= oldCos.neon.right) then
+        hasChanges = true
     end
 
     -- Xenon cost
     if newCos.xenon and not oldCos.xenon then
-        cost = cost + 350
+        partsCost = partsCost + 350
+        hasChanges = true
     elseif newCos.xenon and newCos.xenonColor ~= oldCos.xenonColor then
-        cost = cost + 100
+        partsCost = partsCost + 100
+        hasChanges = true
     end
 
     -- Wheels cost
     if newCos.wheelType ~= oldCos.wheelType or (newCos.mods and oldCos.mods and newCos.mods.wheels ~= oldCos.mods.wheels) then
-        cost = cost + 400
+        partsCost = partsCost + 400
+        hasChanges = true
+    end
+
+    -- Tyre smoke cost
+    if newCos.tyreSmoke and not oldCos.tyreSmoke then
+        partsCost = partsCost + 300
+        hasChanges = true
+    elseif newCos.tyreSmoke and not sameRgb(oldCos.tyreSmokeColor, newCos.tyreSmokeColor) then
+        partsCost = partsCost + 150
+        hasChanges = true
     end
 
     -- Visual body mods cost
     if newCos.mods and oldCos.mods then
         for k, v in pairs(newCos.mods) do
             if k ~= 'wheels' and v ~= oldCos.mods[k] then
-                cost = cost + 250
+                partsCost = partsCost + 250
+                hasChanges = true
             end
         end
     end
 
+    if not hasChanges then
+        return 0
+    end
+
+    local cost = partsCost + SunsetTuning.SaveBaseCost + (flash and SunsetTuning.FlashCost or 0)
     return math.max(0, math.floor(cost))
 end
 
@@ -384,6 +439,7 @@ function SunsetTuning.DefaultCosmetics()
     return {
         primary = { r = 0, g = 0, b = 0 },
         secondary = { r = 111, g = 111, b = 111 },
+        paintType = 0,
         pearl = 0,
         wheel = 0,
         plateText = '',
@@ -399,6 +455,8 @@ function SunsetTuning.DefaultCosmetics()
             color = { r = 0, g = 150, b = 255 },
         },
         wheelType = 0,
+        tyreSmoke = false,
+        tyreSmokeColor = { r = 255, g = 255, b = 255 },
         mods = {
             spoiler = -1,
             frontBumper = -1,
@@ -461,6 +519,7 @@ function SunsetTuning.SanitizeCosmetics(raw)
     return {
         primary = rgb(raw.primary, def.primary),
         secondary = rgb(raw.secondary, def.secondary),
+        paintType = math.max(0, math.min(5, math.floor(tonumber(raw.paintType) or 0))),
         pearl = math.max(0, math.min(160, math.floor(tonumber(raw.pearl) or def.pearl))),
         wheel = math.max(0, math.min(160, math.floor(tonumber(raw.wheel) or def.wheel))),
         plateText = plate,
@@ -469,6 +528,8 @@ function SunsetTuning.SanitizeCosmetics(raw)
         xenonColor = math.max(0, math.min(12, math.floor(tonumber(raw.xenonColor) or def.xenonColor))),
         neon = neon,
         wheelType = math.max(0, math.min(12, math.floor(tonumber(raw.wheelType) or def.wheelType))),
+        tyreSmoke = raw.tyreSmoke == true,
+        tyreSmokeColor = rgb(raw.tyreSmokeColor, def.tyreSmokeColor),
         mods = mods,
     }
 end

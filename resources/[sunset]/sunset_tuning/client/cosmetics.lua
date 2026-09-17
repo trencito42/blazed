@@ -34,9 +34,14 @@ function ReadCosmeticsFromVehicle(veh)
         mods.livery = GetVehicleLivery(veh)
     end
 
+    local paintType = GetVehicleModColor_1(veh)
+    local tyreSmoke = IsToggleModOn(veh, 20)
+    local tr, tg, tb = GetVehicleTyreSmokeColor(veh)
+
     return SunsetTuning.SanitizeCosmetics({
         primary = { r = pr, g = pg, b = pb },
         secondary = { r = sr, g = sg, b = sb },
+        paintType = paintType or 0,
         pearl = pearl,
         wheel = wheel,
         plateText = (GetVehicleNumberPlateText(veh) or ''):gsub('%s+', ''):upper(),
@@ -44,6 +49,8 @@ function ReadCosmeticsFromVehicle(veh)
         xenon = IsToggleModOn(veh, 22),
         xenonColor = GetVehicleXenonLightsColor(veh),
         wheelType = GetVehicleWheelType(veh),
+        tyreSmoke = tyreSmoke,
+        tyreSmokeColor = { r = tr, g = tg, b = tb },
         neon = {
             enabled = neonEnabled,
             left = IsVehicleNeonLightEnabled(veh, 0),
@@ -63,12 +70,21 @@ function ApplyCosmetics(veh, cosmetics, applyPlate)
     local p = cosmetics.primary
     local s = cosmetics.secondary
 
-    SetVehicleModColor_1(veh, 0)
-    SetVehicleModColor_2(veh, 0)
+    local paintType = tonumber(cosmetics.paintType) or 0
+    SetVehicleModColor_1(veh, paintType)
+    SetVehicleModColor_2(veh, paintType)
     SetVehicleCustomPrimaryColour(veh, p.r, p.g, p.b)
     SetVehicleCustomSecondaryColour(veh, s.r, s.g, s.b)
     if cosmetics.pearl then
         SetVehicleExtraColours(veh, cosmetics.pearl, cosmetics.wheel or 0)
+    end
+
+    -- Tyre smoke
+    if cosmetics.tyreSmoke ~= nil then
+        ToggleVehicleMod(veh, 20, cosmetics.tyreSmoke == true)
+        if cosmetics.tyreSmoke and cosmetics.tyreSmokeColor then
+            SetVehicleTyreSmokeColor(veh, cosmetics.tyreSmokeColor.r or 255, cosmetics.tyreSmokeColor.g or 255, cosmetics.tyreSmokeColor.b or 255)
+        end
     end
 
     -- Window tint

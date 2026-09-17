@@ -27,7 +27,7 @@ Sunset.Items = {
     whiskey = { label = 'Whiskey', weight = 0.3, usable = true, thirst = 30, stress = -12, category = 'drinks', icon = 'whiskey' },
     cocktail = { label = 'Cocktail', weight = 0.25, usable = true, thirst = 35, stress = -10, category = 'drinks', icon = 'glass' },
     champagne = { label = 'Champagne', weight = 0.3, usable = true, thirst = 50, stress = -15, category = 'drinks', icon = 'empty_bottle' },
-    casino_chips = { label = 'Casino Chips', weight = 0.01, usable = false, category = 'misc', icon = 'casinochips' },
+    casino_chips = { label = 'Casino Chips', weight = 0.0001, usable = false, category = 'misc', icon = 'casinochips' },
     phone = { label = 'Phone', weight = 0.1, usable = false, category = 'misc', icon = 'phone' },
     id_card = { label = 'ID Card', weight = 0.05, usable = false, category = 'misc', icon = 'id_card' },
     driver_license = { label = 'Driver License', weight = 0.05, usable = false, category = 'misc', icon = 'driver_license' },
