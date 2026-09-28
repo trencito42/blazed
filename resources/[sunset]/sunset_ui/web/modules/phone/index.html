@@ -1,0 +1,274 @@
+<div id="phone-device" class="phone-device hidden">
+        <div class="phone-frame">
+            <div class="phone-screen">
+                <div class="phone-wallpaper" id="phone-wallpaper"></div>
+                <div class="phone-status">
+                    <span id="phone-time">12:00</span>
+                    <div class="phone-dynamic-island"></div>
+                    <div class="phone-status-icons">
+                        <svg width="18" height="12" viewBox="0 0 18 12" fill="white"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5"/></svg>
+                        <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><path d="M8 2.4C10.4 2.4 12.5 3.4 14 5L15.5 3.5C13.6 1.3 10.9 0 8 0S2.4 1.3.5 3.5L2 5C3.5 3.4 5.6 2.4 8 2.4ZM8 6.4C9.2 6.4 10.3 6.9 11.1 7.7L12.6 6.2C11.4 5 9.8 4.2 8 4.2S4.6 5 3.4 6.2L4.9 7.7C5.7 6.9 6.8 6.4 8 6.4ZM8 10.4C8.7 10.4 9.3 10.7 9.8 11.1L8 13L6.2 11.1C6.7 10.7 7.3 10.4 8 10.4Z" transform="translate(0,-1)"/></svg>
+                        <svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="22" height="12" rx="3" stroke="white" stroke-opacity="0.4"/><rect x="2" y="2" width="17" height="9" rx="2" fill="white"/><path d="M24 4.5H25.5C26.05 4.5 26.5 4.95 26.5 5.5V7.5C26.5 8.05 26.05 8.5 25.5 8.5H24V4.5Z" fill="white" fill-opacity="0.4"/></svg>
+                    </div>
+                </div>
+
+                <div class="phone-content">
+                    <!-- Home -->
+                    <div class="phone-view is-active" data-view="home">
+                        <div class="phone-home-top">
+                            <div class="phone-home-date" id="phone-home-date">Thursday, September 3</div>
+                        </div>
+                        <div class="phone-home-grid">
+                            <button type="button" class="phone-app-icon" data-phone-app="messages">
+                                <div class="phone-app-icon__img phone-app-icon__img--messages">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                                </div>
+                                <span>Messages</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="contacts">
+                                <div class="phone-app-icon__img phone-app-icon__img--contacts">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                </div>
+                                <span>Contacts</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="bank">
+                                <div class="phone-app-icon__img phone-app-icon__img--bank">
+                                    <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" fill="#00ffcc"/><rect x="3" y="4" width="18" height="4" rx="1" fill="#00ffcc"/><rect x="6" y="11" width="4" height="2" rx="0.5" fill="white" opacity="0.8"/></svg>
+                                </div>
+                                <span>Wallet</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="taxi">
+                                <div class="phone-app-icon__img phone-app-icon__img--taxi">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
+                                </div>
+                                <span>Downtown Cab</span>
+                            </button>
+                            <button type="button" class="phone-app-icon" data-phone-app="settings">
+                                <div class="phone-app-icon__img phone-app-icon__img--settings">
+                                    <svg viewBox="0 0 24 24" fill="white"><path d="M19.4 13c0-.3 0-.7-.1-1l2-1.5-2-3.5-2.4 1c-.5-.4-1.1-.7-1.7-1l-.3-2.6H9.1l-.3 2.6c-.6.2-1.2.6-1.7 1l-2.4-1-2 3.5 2 1.5c0 .3-.1.7-.1 1s0 .7.1 1l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1l.3 2.6h5.8l.3-2.6c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+                                </div>
+                                <span>Settings</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="phone-view phone-threads" data-view="messages">
+                        <div class="ios-nav ios-nav--messages">
+                            <div class="ios-nav__top-row">
+                                <button type="button" class="ios-nav__back" id="phone-back-messages">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                    Home
+                                </button>
+                                <button type="button" class="phone-threads__compose-btn" id="phone-btn-new-msg" title="New Message">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <h1 class="ios-large-title">Messages</h1>
+                            <div class="phone-search-bar phone-search-bar--threads">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                <input type="text" id="phone-thread-search" placeholder="Search" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="phone-scroll" id="phone-thread-list"></div>
+                    </div>
+
+                    <!-- Chat -->
+                    <div class="phone-view phone-chat" data-view="chat">
+                        <div class="ios-nav ios-nav--chat ios-nav--blur">
+                            <button type="button" class="ios-nav__back" id="phone-back-chat">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Messages
+                            </button>
+                            <div class="ios-nav__center ios-nav__center--chat">
+                                <div class="phone-chat-nav-avatar" id="phone-chat-nav-avatar">?</div>
+                                <h3 id="phone-chat-title">Chat</h3>
+                                <div class="ios-nav__subtitle" id="phone-chat-subtitle">iMessage</div>
+                            </div>
+                            <button type="button" class="phone-chat-call-btn" id="phone-chat-call-btn" title="Call">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.053 15.053 0 01-6.59-6.59l2.2-2.21a.96.96 0 00.25-1A11.36 11.36 0 018.5 3.9c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-.99-1.02z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="phone-chat__messages" id="phone-chat-messages"></div>
+                        <div class="phone-chat__compose">
+                            <button type="button" class="phone-chat__plus" tabindex="-1">+</button>
+                            <div class="phone-chat__input-wrap">
+                                <input type="text" id="phone-chat-input" placeholder="iMessage" maxlength="256" autocomplete="off">
+                            </div>
+                            <button type="button" class="phone-chat__send" id="phone-chat-send" title="Send">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                                    <polyline points="5 12 12 5 19 12"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Contacts -->
+                    <div class="phone-view phone-contacts" data-view="contacts">
+                        <div class="ios-nav ios-nav--contacts">
+                            <div class="ios-nav__top-row">
+                                <button type="button" class="ios-nav__back" id="phone-back-contacts">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                    Home
+                                </button>
+                                <button type="button" class="phone-contacts__add-btn" id="phone-btn-add-contact" title="Add Contact">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                </button>
+                            </div>
+                            <h1 class="ios-large-title">Contacts</h1>
+                            <div class="phone-search-bar phone-search-bar--contacts">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                <input type="text" id="phone-contact-search" placeholder="Search" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="phone-scroll" id="phone-contacts-container">
+                            <!-- My Card (Current Player) -->
+                            <div class="phone-my-card" id="phone-my-card">
+                                <div class="phone-my-card__avatar" id="phone-my-card-avatar">?</div>
+                                <div class="phone-my-card__info">
+                                    <div class="phone-my-card__title" id="phone-my-card-name">My Card</div>
+                                    <div class="phone-my-card__sub">
+                                        <span class="phone-my-card__label">My Card</span>
+                                        <span class="phone-my-card__number" id="phone-my-card-phone">555-0000</span>
+                                    </div>
+                                </div>
+                                <span class="phone-my-card__chevron">›</span>
+                            </div>
+
+                            <div id="phone-contact-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Bank (Fleeca) -->
+                    <div class="phone-view" data-view="bank">
+                        <div class="phone-fleeca">
+                            <div class="phone-fleeca__notify" id="phone-bank-notify"></div>
+                            <div class="phone-fleeca__header">
+                                <div class="phone-fleeca__brand">Fleeca<span>Bank</span></div>
+                                <div class="phone-fleeca__profile">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </div>
+                            </div>
+                            <div class="phone-fleeca__card">
+                                <div class="phone-fleeca__card-label">Cont Curent</div>
+                                <div class="phone-fleeca__card-balance" id="phone-bank-bank">$0</div>
+                                <div class="phone-fleeca__card-footer">
+                                    <span>Cont Activ</span>
+                                    <span class="phone-fleeca__card-logo">FLEECA</span>
+                                </div>
+                            </div>
+                            <div class="phone-fleeca__cash">
+                                <span class="phone-fleeca__cash-label">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+                                    Bani Gheață (Cash)
+                                </span>
+                                <span class="phone-fleeca__cash-val" id="phone-bank-cash">$0</span>
+                            </div>
+                            <div class="phone-fleeca__actions">
+                                <button type="button" class="phone-fleeca__action-btn" id="phone-bank-transfer-open">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                    <span class="phone-fleeca__action-text">Transfer Bancar</span>
+                                </button>
+                            </div>
+                            <div class="phone-fleeca__history">
+                                <div class="phone-fleeca__history-title">Istoric Tranzacții</div>
+                                <div class="phone-fleeca__tx-list" id="phone-bank-tx-list"></div>
+                            </div>
+                            <div class="phone-fleeca__modal" id="phone-bank-transfer-modal">
+                                <div class="phone-fleeca__modal-content">
+                                    <div class="phone-fleeca__modal-header">
+                                        <div class="phone-fleeca__modal-title">Trimite Bani</div>
+                                        <button type="button" class="phone-fleeca__modal-close" id="phone-bank-transfer-close">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </div>
+                                    <form id="phone-bank-transfer-form">
+                                        <div class="phone-fleeca__form-group">
+                                            <label class="phone-fleeca__form-label">ID Jucător (Destinatar)</label>
+                                            <input type="number" class="phone-fleeca__form-input" id="phone-bank-target-id" placeholder="Ex: 12" required min="1">
+                                        </div>
+                                        <div class="phone-fleeca__form-group">
+                                            <label class="phone-fleeca__form-label">Sumă de transferat ($)</label>
+                                            <input type="number" class="phone-fleeca__form-input" id="phone-bank-amount" placeholder="0" required min="1">
+                                        </div>
+                                        <button type="submit" class="phone-fleeca__submit">Trimite Banii</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Downtown Cab -->
+                    <div class="phone-view phone-taxi" data-view="taxi">
+                        <div class="ios-nav ios-nav--taxi">
+                            <button type="button" class="ios-nav__back" id="phone-back-taxi">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#ffd60a" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Home
+                            </button>
+                            <h1 class="ios-large-title ios-large-title--taxi" id="phone-taxi-title">Downtown Cab</h1>
+                        </div>
+                        <div class="phone-scroll phone-taxi__body" id="phone-taxi-body"></div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div class="phone-view phone-settings" data-view="settings">
+                        <div class="ios-nav">
+                            <button type="button" class="ios-nav__back" id="phone-back-settings">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                                Home
+                            </button>
+                            <h1 class="ios-large-title">Settings</h1>
+                        </div>
+                        <div class="phone-scroll">
+                            <div class="phone-settings-profile">
+                                <div class="phone-settings-profile__avatar" id="phone-settings-avatar">T</div>
+                                <div>
+                                    <div class="phone-settings-name" id="phone-settings-name">Player</div>
+                                    <div class="phone-settings-id" id="phone-settings-id">Apple ID</div>
+                                </div>
+                            </div>
+                            <div class="phone-settings-group">
+                                <div class="phone-settings-row">blaze.mp<span>Los Santos Roleplay</span></div>
+                                <div class="phone-settings-row">Close Phone<span>Press P or swipe home bar</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="phone-add-contact-modal" class="phone-modal phone-modal--device hidden" aria-hidden="true">
+                    <div class="phone-modal__sheet">
+                        <div class="phone-modal__header">
+                            <button type="button" class="phone-modal__btn phone-modal__btn--cancel" id="phone-contact-cancel">Cancel</button>
+                            <h3>New Contact</h3>
+                            <button type="button" class="phone-modal__btn phone-modal__btn--done" id="phone-contact-save">Done</button>
+                        </div>
+                        <div class="phone-modal__body">
+                            <div class="phone-modal__avatar-preview" id="phone-new-avatar-preview">+</div>
+                            <div class="phone-form-group">
+                                <div class="phone-form-row">
+                                    <label for="phone-new-name">Name / Nickname</label>
+                                    <input type="text" id="phone-new-name" placeholder="Contact Name" maxlength="48" autocomplete="off">
+                                </div>
+                                <div class="phone-form-row">
+                                    <label for="phone-new-phone">Phone Number</label>
+                                    <input type="text" id="phone-new-phone" placeholder="e.g. 555-0042 or 42" maxlength="32" autocomplete="off">
+                                </div>
+                            </div>
+                            <p class="phone-form-hint">Enter their phone number to save them. You can message them and see when they are online.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="phone-home-zone" id="phone-home-zone">
+                    <div class="phone-home-indicator" id="phone-home-indicator"></div>
+                </div>
+            </div>
+        </div>
+    </div>

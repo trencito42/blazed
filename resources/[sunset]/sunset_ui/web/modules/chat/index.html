@@ -1,0 +1,42 @@
+<div id="chat-backdrop" class="chat-backdrop hidden"></div>
+    <div id="chat" class="chat">
+        <div id="chat-app">
+            <div class="chat-header">
+                <div class="chat-title">Chat &amp; Commands</div>
+                <button type="button" class="cog-btn" id="chat-settings-btn" title="Chat settings" aria-label="Chat settings">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-wrapper hidden" id="chat-input-wrap">
+                <div class="channel-selector-container">
+                    <div class="chat-channel" id="chat-channel-toggle">
+                        <span id="chat-channel-label">ALL</span>
+                        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="channel-dropdown" id="chat-channel-dropdown"></div>
+                </div>
+                <input type="text" class="chat-input" id="chat-input" placeholder="Local message — nearby players hear you" maxlength="256" autocomplete="off">
+                <div class="chat-suggestions hidden" id="chat-suggestions" aria-live="polite"></div>
+            </div>
+        </div>
+        <div class="chat-settings-panel" id="chat-settings-panel">
+            <div class="chat-settings-panel__header">
+                Chat appearance
+                <button type="button" class="chat-settings-close" id="chat-settings-close" aria-label="Close settings">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"></line><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"></line></svg>
+                </button>
+            </div>
+            <div class="chat-setting-group">
+                <div class="chat-setting-label">Font size <span class="chat-setting-val"><span id="chat-popover-font-val">13.5</span>px</span></div>
+                <input type="range" id="chat-popover-font" min="10" max="18" step="0.5" value="13.5">
+            </div>
+            <div class="chat-setting-group">
+                <div class="chat-setting-label">Chat height <span class="chat-setting-val"><span id="chat-popover-page-val">350</span>px</span></div>
+                <input type="range" id="chat-popover-page" min="150" max="600" step="10" value="350">
+            </div>
+            <button type="button" class="chat-settings-reset" id="chat-popover-reset">Reset defaults</button>
+        </div>
+    </div>
+
+    <div class="v-menu-close-hint" id="v-menu-close-hint" aria-hidden="true">APASĂ ESC SAU V PENTRU A ÎNCHIDE</div>

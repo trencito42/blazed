@@ -1,0 +1,298 @@
+<div id="clan-panel" class="premium-clan hidden" aria-hidden="true">
+        <div class="premium-clan__wrapper">
+            <aside class="premium-clan__sidebar">
+                <div class="premium-clan__brand">
+                    <div class="premium-clan__brand-icon">
+                        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    </div>
+                    <div class="premium-clan__brand-text">
+                        <h1 id="clan-panel-title">CLAN</h1>
+                        <span id="clan-panel-type">Private Organization</span>
+                    </div>
+                </div>
+                <nav class="premium-clan__nav" id="clan-tabs" aria-label="Clan sections">
+                    <button type="button" class="premium-clan__nav-item is-active" data-clan-tab="overview">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Dashboard
+                    </button>
+                    <button type="button" class="premium-clan__nav-item" data-clan-tab="roster">
+                        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Member List
+                    </button>
+                    <button type="button" class="premium-clan__nav-item clan-tab--tag hidden" data-clan-tab="tag">
+                        <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                        Settings &amp; Tag
+                    </button>
+                    <button type="button" class="premium-clan__nav-item clan-tab--actions hidden" data-clan-tab="manage">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Management
+                    </button>
+                    <button type="button" class="premium-clan__nav-item clan-tab--org hidden" data-clan-tab="ranks">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                        Ranks
+                    </button>
+                    <button type="button" class="premium-clan__nav-item clan-tab--create" data-clan-tab="create">
+                        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Register
+                    </button>
+                </nav>
+            </aside>
+            <div class="premium-clan__content">
+                <!-- TAB: OVERVIEW -->
+                <div class="premium-clan__tab is-active" data-clan-panel="overview">
+                    <div class="premium-clan__header">
+                        <h2>Overview</h2>
+                        <p>Information and statistics about your clan.</p>
+                    </div>
+                    <div class="premium-clan__stats">
+                        <div class="premium-clan__stat">
+                            <span class="premium-clan__stat-label">Your Rank</span>
+                            <span class="premium-clan__stat-value" id="clan-rank">—</span>
+                        </div>
+                        <div class="premium-clan__stat">
+                            <span class="premium-clan__stat-label">Members Online</span>
+                            <span class="premium-clan__stat-value"><span id="clan-online-count">0</span> / <span id="clan-member-count" style="color:var(--pf-text-muted);font-size:16px;">0</span></span>
+                        </div>
+                        <div class="premium-clan__stat">
+                            <span class="premium-clan__stat-label">Tag Style</span>
+                            <span class="premium-clan__stat-value" id="clan-tag-style-label">—</span>
+                        </div>
+                    </div>
+                    <div class="premium-clan__motd">
+                        <div class="premium-clan__motd-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            MESAJUL ZILEI (MOTD)
+                        </div>
+                        <div class="premium-clan__motd-text" id="clan-motd">No MOTD posted. Officers use /cmotd.</div>
+                    </div>
+                    <div class="premium-clan__extras">
+                        <article class="premium-clan__card">
+                            <span>CALLSIGN PREVIEW</span>
+                            <div id="clan-overview-preview" class="clan-preview-box" style="margin-top:8px;">—</div>
+                        </article>
+                        <article class="premium-clan__card">
+                            <span>DESCRIERE CLAN</span>
+                            <p id="clan-description" style="margin-top:8px;">—</p>
+                        </article>
+                    </div>
+                    <article class="premium-clan__card" id="clan-overview-membership" style="margin-top:14px;">
+                        <span>CLAN MEMBER</span>
+                        <p style="margin:8px 0 12px;font-size:12px;color:var(--pf-text-muted);">
+                            Leaders must disband the clan. Regular members can leave the unit.
+                        </p>
+                        <div class="premium-clan__btn-group">
+                            <button type="button" class="premium-clan__btn premium-clan__btn--secondary hidden" data-clan-leave>Leave Clan</button>
+                            <button type="button" class="premium-clan__btn premium-clan__btn--danger hidden" data-clan-dissolve>Disband Clan</button>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- TAB: ROSTER -->
+                <div class="premium-clan__tab" data-clan-panel="roster">
+                    <div class="premium-clan__header">
+                        <h2>Lista Membri</h2>
+                        <p id="clan-roster-meta">All active members in the unit.</p>
+                    </div>
+                    <div id="clan-roster" class="premium-clan__roster"></div>
+                </div>
+
+                <!-- TAB: SETTINGS & TAG -->
+                <div class="premium-clan__tab" data-clan-panel="tag">
+                    <div class="premium-clan__header">
+                        <h2>Settings &amp; Tag</h2>
+                        <p>Configure how your clan appears in chat and on the server.</p>
+                    </div>
+                    <form class="premium-clan__manage-grid" id="clan-settings-form" data-clan-action="settings">
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Visual Identity</div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Clan Tag (2-6 characters)</label>
+                                <input type="text" name="tag" class="premium-clan__form-control" minlength="2" maxlength="6" placeholder="e.g. uN" required>
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Tag Formatting Style</label>
+                                <select name="tagStyle" class="premium-clan__form-control" required></select>
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Tag Color</label>
+                                <input type="color" name="tagColor" class="premium-clan__form-control" value="#00ffcc" style="height:44px;padding:4px;cursor:pointer;">
+                            </div>
+                        </div>
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Description &amp; Preview</div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Clan Description</label>
+                                <textarea name="description" class="premium-clan__form-control" rows="3" maxlength="512" placeholder="Short clan description..."></textarea>
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">In-Game Name Preview</label>
+                                <div id="clan-settings-preview" class="clan-preview-box">—</div>
+                            </div>
+                            <button type="submit" class="premium-clan__btn premium-clan__btn--primary" style="margin-top:10px;">Save Settings</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB: MANAGEMENT -->
+                <div class="premium-clan__tab" data-clan-panel="manage">
+                    <div class="premium-clan__header">
+                        <h2>Administrare Clan</h2>
+                        <p>Actions for leadership and officers.</p>
+                    </div>
+                    <div class="premium-clan__manage-grid">
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Manage Member</div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Select Member from list</label>
+                                <select class="premium-clan__form-control" id="clan-manage-select"></select>
+                            </div>
+                            <div class="premium-clan__btn-group">
+                                <button type="button" class="premium-clan__btn premium-clan__btn--primary" id="clan-manage-promote">Promote</button>
+                                <button type="button" class="premium-clan__btn premium-clan__btn--secondary" id="clan-manage-demote">Demote</button>
+                            </div>
+                            <button type="button" class="premium-clan__btn premium-clan__btn--danger" id="clan-manage-kick" style="margin-top:6px;">Kick</button>
+                        </div>
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">MOTD Message</div>
+                            <form class="premium-clan__form-group" data-clan-action="motd">
+                                <label class="premium-clan__form-label">Update MOTD</label>
+                                <textarea class="premium-clan__form-control" name="message" rows="3" maxlength="512" placeholder="Write the new message..."></textarea>
+                                <button type="submit" class="premium-clan__btn premium-clan__btn--primary" style="margin-top:8px;">Save Message</button>
+                            </form>
+                        </div>
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Recruitment</div>
+                            <form data-clan-action="invite">
+                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invite an online player using their ID from the scoreboard (hold Z).</p>
+                                <input class="premium-clan__form-control" type="number" name="targetId" min="1" placeholder="Server ID (Z)" required>
+                                <button type="submit" class="premium-clan__btn premium-clan__btn--primary" style="margin-top:10px;">Send Invite</button>
+                            </form>
+                        </div>
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Discipline / Warning</div>
+                            <form data-clan-action="warn">
+                                <div class="premium-clan__btn-group" style="flex-direction:column;">
+                                    <select class="premium-clan__form-control" id="clan-warn-select"></select>
+                                    <input class="premium-clan__form-control" type="text" name="reason" maxlength="128" placeholder="Reason">
+                                    <button type="submit" class="premium-clan__btn premium-clan__btn--warn">Issue Strike (Warn)</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="premium-clan__panel" style="grid-column: 1 / -1;">
+                            <div class="premium-clan__panel-title">Leave / Disband Options</div>
+                            <div class="premium-clan__btn-group">
+                                <button type="button" class="premium-clan__btn premium-clan__btn--secondary hidden" data-clan-leave>Leave Clan</button>
+                                <button type="button" class="premium-clan__btn premium-clan__btn--danger hidden" data-clan-dissolve>Disband Clan</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: RANKS -->
+                <div class="premium-clan__tab" data-clan-panel="ranks">
+                    <div class="premium-clan__header">
+                        <h2>Rank Structure</h2>
+                        <p>Customize the rank names in your clan.</p>
+                    </div>
+                    <div class="premium-clan__panel" style="max-height: 400px; overflow-y: auto;">
+                        <form data-clan-action="rankLabels" id="clan-rank-labels-form">
+                            <div id="clan-rank-label-fields" class="clan-rank-grid"></div>
+                            <button type="submit" class="premium-clan__btn premium-clan__btn--primary" style="margin-top:15px;">Save Rank Names</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TAB: CREATE (Pentru jucători fără clan) -->
+                <div class="premium-clan__tab" data-clan-panel="create">
+                    <div class="premium-clan__header">
+                        <h2>Register New Clan</h2>
+                        <p id="clan-create-cost">Cost: 500 Blaze Points</p>
+                    </div>
+                    <form class="premium-clan__manage-grid" data-clan-action="create" style="align-items:start;">
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Organization Details</div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Clan Name (3-32 characters)</label>
+                                <input type="text" name="name" class="premium-clan__form-control" minlength="3" maxlength="32" placeholder="e.g. Sunset Syndicate" required>
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Clan Tag (2-6 characters)</label>
+                                <input type="text" name="tag" class="premium-clan__form-control" minlength="2" maxlength="6" placeholder="e.g. SS" required>
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Description</label>
+                                <textarea name="description" class="premium-clan__form-control" rows="3" maxlength="512" placeholder="Short description of the group..."></textarea>
+                            </div>
+                        </div>
+                        <div class="premium-clan__panel">
+                            <div class="premium-clan__panel-title">Tag Style &amp; Finalize</div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Tag Color</label>
+                                <input type="color" name="tagColor" class="premium-clan__form-control" value="#00ffcc" style="height:44px;padding:4px;cursor:pointer;">
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Tag Style</label>
+                                <select name="tagStyle" class="premium-clan__form-control" required></select>
+                            </div>
+                            <div class="premium-clan__form-group">
+                                <label class="premium-clan__form-label">Callsign Preview</label>
+                                <div id="clan-create-preview" class="clan-preview-box">—</div>
+                            </div>
+                            <button type="submit" class="premium-clan__btn premium-clan__btn--primary" style="margin-top:10px;">Register Clan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="premium-clan__close-hint">PRESS ESC TO CLOSE</div>
+        </div>
+    </div>
+
+    <!-- CLAN DIRECTORY (/clans) -->
+    <div id="clan-directory" class="premium-clans-dir hidden" aria-hidden="true">
+        <div class="premium-clans-dir__wrapper">
+            <button type="button" class="premium-clans-dir__panel-close" id="clan-directory-close" aria-label="Close"><span>ESC</span> ✕</button>
+            <aside class="premium-clans-dir__sidebar">
+                <div class="premium-clans-dir__brand">
+                    <h1>Server <span>Clans</span></h1>
+                    <p>Official list of active clans</p>
+                </div>
+                <nav class="premium-clans-dir__nav" id="clan-dir-filters">
+                    <button type="button" class="premium-clans-dir__nav-item is-active" data-clan-filter="all">
+                        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        Toate Clanurile
+                    </button>
+                </nav>
+            </aside>
+            <div class="premium-clans-dir__content">
+                <div class="premium-clans-dir__grid-wrap is-active">
+                    <div class="premium-clans-dir__header">
+                        <h2 id="clan-dir-title">Toate Clanurile</h2>
+                        <p>Pick a clan to view member details and information.</p>
+                    </div>
+                    <div class="premium-clans-dir__grid" id="clan-directory-list"></div>
+                </div>
+            </div>
+            <aside class="premium-clans-dir__modal" id="clan-directory-modal">
+                <button type="button" class="premium-clans-dir__modal-close" id="clan-directory-modal-close" aria-label="Close">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="premium-clans-dir__modal-banner" id="clan-dir-modal-icon"></div>
+                <h2 class="premium-clans-dir__modal-title" id="clan-dir-modal-title">—</h2>
+                <div class="premium-clans-dir__modal-desc" id="clan-dir-modal-desc">—</div>
+                <div class="premium-clans-dir__req-box">
+                    <div class="premium-clans-dir__req-title">Clan Leader</div>
+                    <div id="clan-dir-modal-leader" style="font-size:13px;font-weight:700;color:var(--pf-text-main);">—</div>
+                </div>
+                <div class="premium-clans-dir__req-box">
+                    <div class="premium-clans-dir__req-title">MOTD Public</div>
+                    <div class="premium-clans-dir__modal-motd" id="clan-dir-modal-motd">—</div>
+                </div>
+                <div class="premium-clans-dir__req-box" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+                    <div class="premium-clans-dir__req-title">Clan Members</div>
+                    <div class="premium-clans-dir__modal-roster" id="clan-dir-modal-roster"></div>
+                </div>
+            </aside>
+            <div id="clan-directory-toast" class="premium-clans-dir__toast"></div>
+            <div class="premium-clans-dir__close-hint">PRESS ESC TO CLOSE</div>
+        </div>
+    </div>

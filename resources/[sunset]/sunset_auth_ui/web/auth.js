@@ -1,7 +1,6 @@
-/* ═══ SUNSET AUTH UI — minimal auth page (login/register/accounts/email) ═══
-   Holds NO auth logic: every button posts to sunset_auth_ui's Lua which
-   forwards it as a 'sunset:nui:<name>' event to sunset_auth. State comes
-   back as window messages from sunset_auth via exports.sunset_auth_ui:Send. */
+/* ═══ SUNSET AUTH UI — Client Presentation Controller ═══
+   Only handles authentication presentation and posts events to Lua.
+   Double rAF ensures zero white/black flash during loadscreen handoff. */
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -16,43 +15,114 @@ function post(action, data = {}) {
 }
 
 const AuthUI = {
-    mode: 'login', // login | register | email
+    mode: 'login', // 'login' | 'register'
+    pendingSubmit: false,
 
     init() {
-        $('#auth-login-btn')?.addEventListener('click', () => this.login());
-        $('#auth-pass')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.login(); });
-        $('#auth-user')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#auth-pass')?.focus(); });
+        // Form switches
+        $('#auth-go-register')?.addEventListener('click', () => this.switchMode('register'));
+        $('#auth-go-login')?.addEventListener('click', () => this.switchMode('login'));
 
-        $('#auth-register-btn')?.addEventListener('click', () => this.register());
-        $('#reg-pass2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.register(); });
+        // Login
+        $('#auth-login-btn')?.addEventListener('click', () => this.submitLogin());
+        $('#auth-pass')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.submitLogin();
+        });
+        $('#auth-user')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') $('#auth-pass')?.focus();
+        });
 
-        $('#auth-go-register')?.addEventListener('click', () => this.showForm('register'));
-        $('#auth-go-login')?.addEventListener('click', () => this.showForm('login'));
+        // Register
+        $('#auth-register-btn')?.addEventListener('click', () => this.submitRegister());
+        $('#reg-pass2')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.submitRegister();
+        });
+        $('#reg-user')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') $('#reg-email')?.focus();
+        });
+        $('#reg-email')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') $('#reg-pass')?.focus();
+        });
+        $('#reg-pass')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') $('#reg-pass2')?.focus();
+        });
 
-        $('#auth-email-btn')?.addEventListener('click', () => this.saveEmail());
-        $('#auth-email')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveEmail(); });
+        // Email modal
+        $('#auth-email-submit')?.addEventListener('click', () => this.submitEmail());
+        $('#auth-email-input')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.submitEmail();
+        });
 
+        // Saved accounts list delegation
         $('#auth-accounts-list')?.addEventListener('click', (e) => {
             const card = e.target.closest('.auth-account-card');
             if (!card) return;
+
+            const username = card.dataset.username;
             if (e.target.closest('.auth-account-card__remove')) {
-                post('authRemoveAccount', { username: card.dataset.username });
+                e.stopPropagation();
+                post('authRemoveAccount', { username });
                 return;
             }
+
+            if (this.pendingSubmit) return;
             this.showLoading(true, 'Conectare rapidă...');
-            post('authPickAccount', { username: card.dataset.username });
+            this.pendingSubmit = true;
+            post('authPickAccount', { username });
         });
 
-        // Tell sunset_auth the page is live so it (re)pushes saved accounts.
+        // Ready notification & double rAF rendered confirmation
         post('authReady', {});
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                post('authRendered', { timestamp: performance.now() });
+            });
+        });
     },
 
-    showForm(name) {
-        this.mode = name;
-        $('#auth-login')?.classList.toggle('hidden', name !== 'login');
-        $('#auth-register')?.classList.toggle('hidden', name !== 'register');
-        $('#auth-email')?.closest('.auth-form')?.classList.toggle('hidden', name !== 'email');
+    show(data = {}) {
+        const panel = $('#auth-panel');
+        if (panel) panel.classList.add('active');
+        this.switchMode('login');
+        if (data.accounts) {
+            this.setAccounts(data.accounts);
+        }
+        if (data.quickLogin !== undefined) {
+            const rem = $('#auth-remember');
+            if (rem) rem.checked = data.quickLogin !== false;
+        }
+        setTimeout(() => {
+            const active = document.activeElement;
+            if (!active || active.tagName !== 'INPUT') {
+                $('#auth-user')?.focus({ preventScroll: true });
+            }
+        }, 100);
+    },
+
+    hide() {
+        const panel = $('#auth-panel');
+        if (panel) panel.classList.remove('active');
+        this.showLoading(false);
         this.hideError();
+        this.hideEmailModal();
+    },
+
+    switchMode(mode) {
+        this.mode = mode;
+        const isLogin = mode === 'login';
+        $('#auth-form-login')?.classList.toggle('hidden', !isLogin);
+        $('#auth-form-register')?.classList.toggle('hidden', isLogin);
+        $('#auth-main-title').textContent = isLogin ? 'Loghează-te' : 'Înregistrare';
+        this.hideError();
+
+        setTimeout(() => {
+            if (isLogin) {
+                $('#auth-user')?.focus({ preventScroll: true });
+            } else {
+                $('#reg-user')?.focus({ preventScroll: true });
+            }
+        }, 50);
     },
 
     showError(msg) {
@@ -64,24 +134,34 @@ const AuthUI = {
         } else {
             el.classList.add('hidden');
         }
+        this.showLoading(false);
+        this.pendingSubmit = false;
     },
 
-    hideError() { this.showError(null); },
+    hideError() {
+        this.showError(null);
+    },
 
     showLoading(show, label) {
         const el = $('#auth-loading');
         if (!el) return;
         el.classList.toggle('hidden', !show);
-        const p = el.querySelector('p');
-        if (p && label) p.textContent = label;
+        const text = $('#auth-loading-text');
+        if (text && label) text.textContent = label;
     },
 
-    login() {
+    submitLogin() {
+        if (this.pendingSubmit) return;
         const user = ($('#auth-user')?.value || '').trim();
         const pass = $('#auth-pass')?.value || '';
-        if (!user || !pass) return this.showError('Complete both fields.');
+        if (!user || !pass) {
+            return this.showError('Completează toate câmpurile obligatorii.');
+        }
+
         this.hideError();
-        this.showLoading(true, 'Connecting...');
+        this.showLoading(true, 'Se verifică datele...');
+        this.pendingSubmit = true;
+
         post('authLogin', {
             username: user,
             password: pass,
@@ -89,114 +169,150 @@ const AuthUI = {
         });
     },
 
-    register() {
+    submitRegister() {
+        if (this.pendingSubmit) return;
         const user = ($('#reg-user')?.value || '').trim();
         const email = ($('#reg-email')?.value || '').trim();
         const pass = $('#reg-pass')?.value || '';
         const pass2 = $('#reg-pass2')?.value || '';
-        if (!user || !email || !pass || !pass2) return this.showError('Complete all fields.');
-        if (!email.includes('@')) return this.showError('Enter a valid email.');
-        if (pass !== pass2) return this.showError('Passwords do not match.');
-        if (pass.length < 6) return this.showError('Password must be at least 6 characters.');
+
+        if (!user || !email || !pass || !pass2) {
+            return this.showError('Completează toate câmpurile obligatorii.');
+        }
+        if (!email.includes('@') || !email.includes('.')) {
+            return this.showError('Adresă de email invalidă.');
+        }
+        if (pass !== pass2) {
+            return this.showError('Parolele introduse nu coincid.');
+        }
+        if (pass.length < 6) {
+            return this.showError('Parola trebuie să aibă minim 6 caractere.');
+        }
+
         this.hideError();
-        this.showLoading(true, 'Creating account...');
+        this.showLoading(true, 'Se creează contul...');
+        this.pendingSubmit = true;
+
         post('authRegister', {
             username: user,
             email: email,
             password: pass,
-            passwordConfirm: pass2,
+            confirmPassword: pass2,
             rememberQuickLogin: $('#reg-remember')?.checked !== false,
         });
-    },
-
-    saveEmail() {
-        const email = ($('#auth-email')?.value || '').trim();
-        if (!email || !email.includes('@')) return this.showError('Enter a valid email.');
-        this.hideError();
-        this.showLoading(true, 'Saving email...');
-        post('authSetEmail', { email });
-    },
-
-    fillAccount(data) {
-        this.showForm('login');
-        const u = $('#auth-user');
-        if (u && data.username) u.value = data.username;
-        const p = $('#auth-pass');
-        if (p) { p.value = data.password || ''; if (!p.value) p.focus(); }
     },
 
     setAccounts(accounts) {
         const list = $('#auth-accounts-list');
         const wrap = $('#auth-accounts');
         if (!list || !wrap) return;
+
         const rows = Array.isArray(accounts) ? accounts : [];
         if (!rows.length) {
             wrap.classList.add('hidden');
             return;
         }
+
         wrap.classList.remove('hidden');
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+            { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+        ));
+
         list.innerHTML = rows.map((a) => {
-            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
-                { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-            ));
+            const username = String(a.username || '').trim();
+            const initial = (username || '?').slice(0, 2).toUpperCase();
+            const level = Number(a.level) >= 1 ? `LVL ${Math.floor(Number(a.level))}` : 'NOU';
+            const totalMoney = Number(a.cash || 0) + Number(a.bank || 0);
+            const funds = `$${Math.floor(totalMoney).toLocaleString('en-US')}`;
+
             return `
-            <div class="auth-account-card" data-username="${esc(a.username)}">
-                <div class="auth-account-card__avatar">${esc((a.username || '?').charAt(0).toUpperCase())}</div>
+            <div class="auth-account-card" data-username="${esc(username)}">
+                <div class="auth-account-card__avatar">${esc(initial)}</div>
                 <div class="auth-account-card__info">
-                    <div class="auth-account-card__name">${esc(a.username)}</div>
-                    <div class="auth-account-card__meta">${esc(a.characterName || '')}${a.level ? ` · LVL ${esc(a.level)}` : ''}</div>
+                    <div class="auth-account-card__name">${esc(username)}</div>
+                    <div class="auth-account-card__meta">${esc(level)} · ${esc(funds)}</div>
                 </div>
-                <button type="button" class="auth-account-card__remove" title="Remove">✕</button>
+                <button type="button" class="auth-account-card__remove" title="Șterge de pe acest PC">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>`;
         }).join('');
     },
 
-    hide() {
-        const screen = $('#auth-screen');
-        if (screen) screen.classList.add('hidden');
+    promptEmail(username) {
+        this.showLoading(false);
+        this.pendingSubmit = false;
+        $('#auth-email-username').textContent = username || 'tău';
+        $('#auth-email-input').value = '';
+        $('#auth-email-error')?.classList.add('hidden');
+        $('#auth-email-modal')?.classList.remove('hidden');
+        setTimeout(() => $('#auth-email-input')?.focus(), 100);
+    },
+
+    hideEmailModal() {
+        $('#auth-email-modal')?.classList.add('hidden');
+    },
+
+    submitEmail() {
+        const email = ($('#auth-email-input')?.value || '').trim();
+        const errEl = $('#auth-email-error');
+        if (!email || !email.includes('@') || !email.includes('.')) {
+            if (errEl) {
+                errEl.textContent = 'Introdu o adresă de email validă.';
+                errEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (errEl) errEl.classList.add('hidden');
+        this.showLoading(true, 'Se asociază emailul...');
+        post('authSetEmail', { email });
     },
 };
 
-// ── State messages from sunset_auth ──
+// Listen for incoming messages from sunset_auth / Lua
 window.addEventListener('message', (event) => {
-    const msg = event?.data || {};
-    const d = msg.data || {};
-    switch (msg.action) {
-        case 'authAccounts':
-            AuthUI.setAccounts(d.accounts || []);
-            break;
-        case 'authError':
-            AuthUI.showLoading(false);
-            AuthUI.showError(d.message || '');
-            break;
-        case 'authNeedsEmail':
-            AuthUI.showLoading(false);
-            AuthUI.showForm('email');
-            AuthUI.showError(`Welcome, ${d.username || ''}! Link an email to enable Quick Login.`);
-            break;
-        case 'authEmailError':
-            AuthUI.showLoading(false);
-            AuthUI.showError(d.message || 'Could not save email.');
-            break;
-        case 'authEmailSaved':
-            AuthUI.showLoading(true, 'Logging in...');
-            break;
-        case 'authQuickLoginStart':
-            AuthUI.showLoading(true, `Quick login: ${d.username || ''}...`);
-            break;
-        case 'authAccountFill':
-            AuthUI.fillAccount(d);
-            break;
+    const data = event.data || {};
+    const action = data.action;
+    const payload = data.data || {};
+
+    switch (action) {
         case 'authShow':
-            AuthUI.showLoading(false);
+            AuthUI.show(payload);
             break;
         case 'authHide':
-            AuthUI.showLoading(false);
             AuthUI.hide();
             break;
-        default:
+        case 'authAccounts':
+            if (payload.accounts) AuthUI.setAccounts(payload.accounts);
+            break;
+        case 'authError':
+            AuthUI.showError(payload.message || 'A apărut o eroare la autentificare.');
+            break;
+        case 'authNeedsEmail':
+            AuthUI.promptEmail(payload.username);
+            break;
+        case 'authEmailResult':
+            if (payload.ok) {
+                AuthUI.hideEmailModal();
+            } else if (payload.message) {
+                const errEl = $('#auth-email-error');
+                if (errEl) {
+                    errEl.textContent = payload.message;
+                    errEl.classList.remove('hidden');
+                }
+                AuthUI.showLoading(false);
+            }
+            break;
+        case 'authLoading':
+            AuthUI.showLoading(payload.loading !== false, payload.text);
+            break;
+        case 'authSuccess':
+            AuthUI.hide();
             break;
     }
 });
 
-AuthUI.init();
+document.addEventListener('DOMContentLoaded', () => {
+    AuthUI.init();
+});

@@ -1,1837 +1,384 @@
-const App = {
-    currentScreen: null,
-    data: {},
-};
-window.App = App;
+/* ═══════════════════════════════════════════════════════════════════
+   SUNSETMP — Modular UI Core Shell (app.js)
+   Clean action routing, on-demand module dispatching, and core runtime.
+   ═══════════════════════════════════════════════════════════════════ */
 
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-window.$ = $;
-window.$$ = $$;
+(function () {
+    'use strict';
 
-function post(action, data = {}) {
-    const resource = typeof GetParentResourceName === 'function' ? GetParentResourceName() : '';
-    if (!resource) return Promise.resolve({ ok: true, qa: true, action, data });
-    // [AUDIT P8-31] Swallow rejections centrally: ~150 call sites never .catch(),
-    // and a resource restart mid-POST produced unhandled promise rejections.
-    return fetch(`https://${resource}/${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    }).catch(() => ({}));
-}
-window.post = post;
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    window.$ = $;
+    window.$$ = $$;
 
-// Keep this URL byte-for-byte identical to the initial <img> in index.html.
-// A version mismatch made CEF decode and cross-fade the same background again
-// during the loadscreen -> auth handoff.
-const ENTRY_SUNSET_BG = 'assets/bg_loading.webp?v=10';
-const ENTRY_BACKGROUNDS = {
-    auth: ENTRY_SUNSET_BG,
-    handoff: ENTRY_SUNSET_BG,
-    loading: ENTRY_SUNSET_BG,
-    spawn: ENTRY_SUNSET_BG,
-    default: ENTRY_SUNSET_BG,
-};
-let entryBackgroundRequest = 0;
-const entryBackgroundCache = new Map();
-
-function warmEntryBackground(src) {
-    if (!src || entryBackgroundCache.get(src) === true) return Promise.resolve(true);
-    if (entryBackgroundCache.get(src) instanceof Promise) return entryBackgroundCache.get(src);
-    const pending = new Promise((resolve) => {
-        const image = new Image();
-        image.decoding = 'async';
-        image.onload = () => resolve(true);
-        image.onerror = () => resolve(false);
-        image.src = src;
-        if (image.complete) resolve(image.naturalWidth > 0);
-    }).then((ok) => {
-        entryBackgroundCache.set(src, ok === true);
-        return ok === true;
-    });
-    entryBackgroundCache.set(src, pending);
-    return pending;
-}
-
-function entryBackgroundLayers() {
-    const app = $('#app');
-    if (!app) return [];
-    let layers = Array.from(app.children).filter((child) => child.classList.contains('app-bg'));
-    if (layers.length === 1) {
-        const secondary = layers[0].cloneNode(false);
-        secondary.removeAttribute('src');
-        secondary.classList.remove('is-active');
-        layers[0].after(secondary);
-        layers.push(secondary);
-    }
-    if (layers[0] && !layers.some((layer) => layer.classList.contains('is-active'))) {
-        layers[0].classList.add('is-active');
-    }
-    return layers;
-}
-
-async function setEntryBackground(screenName) {
-    const desired = ENTRY_BACKGROUNDS[screenName] || ENTRY_BACKGROUNDS.default;
-    const layers = entryBackgroundLayers();
-    if (layers.length < 2) return;
-    const active = layers.find((layer) => layer.classList.contains('is-active')) || layers[0];
-    if (active.dataset.entrySource === desired) return;
-
-    const request = ++entryBackgroundRequest;
-    const next = layers.find((layer) => layer !== active) || layers[1];
-    next.dataset.entrySource = desired;
-    const load = async (src) => {
-        await warmEntryBackground(src);
-        return new Promise((resolve) => {
-            const complete = () => resolve(next.naturalWidth > 0);
-            next.onload = complete;
-            next.onerror = () => resolve(false);
-            next.src = src;
-            if (next.complete) complete();
-        });
-    };
-    let loaded = await load(desired);
-    if (!loaded && request === entryBackgroundRequest) {
-        next.dataset.entrySource = ENTRY_BACKGROUNDS.default;
-        loaded = await load(ENTRY_BACKGROUNDS.default);
-    }
-    if (request !== entryBackgroundRequest) return;
-    if (!loaded) return;
-    next.onload = null;
-    next.onerror = null;
-    requestAnimationFrame(() => {
-        next.classList.add('is-active');
-        active.classList.remove('is-active');
-    });
-}
-
-function preloadEntryBackgrounds() {
-    warmEntryBackground(ENTRY_BACKGROUNDS.auth);
-    warmEntryBackground(ENTRY_BACKGROUNDS.handoff);
-    warmEntryBackground(ENTRY_BACKGROUNDS.spawn);
-}
-
-function setBrandLogo(img) {
-    if (!img) return;
-    img.src = 'assets/logoblaze.svg?v=1';
-}
-
-let screenTransitionFrame = 0;
-function showScreen(name) {
-    if (screenTransitionFrame) cancelAnimationFrame(screenTransitionFrame);
-    $$('.screen').forEach((candidate) => {
-        candidate.classList.remove('screen--entering');
-        candidate.classList.add('hidden');
-        candidate.setAttribute('aria-hidden', 'true');
-    });
-    const screen = $(`#screen-${name}`);
-    if (screen) {
-        screen.classList.remove('hidden');
-        screen.setAttribute('aria-hidden', 'false');
-        // Do not force a synchronous layout across the entire 3,600-line NUI.
-        // Add the transition class on the next frame instead.
-        screenTransitionFrame = requestAnimationFrame(() => {
-            screenTransitionFrame = 0;
-            if (!screen.classList.contains('hidden')) screen.classList.add('screen--entering');
-        });
-        App.currentScreen = name;
-        const app = $('#app');
-        if (app) app.dataset.screen = name;
-    }
-    setEntryBackground(name);
-    if (window.AuthLoading) {
-        if (name === 'loading') {
-            AuthLoading.armSafety(120000);
-        } else {
-            AuthLoading.clearSafety();
-        }
-    }
-}
-
-function showApp(visible) {
-    const app = $('#app');
-    if (visible) {
-        app.classList.remove('app--enter-game');
-        app.classList.remove('hidden');
-    } else {
-        app.classList.add('hidden');
-    }
-}
-
-function showHud(visible) {
-    const hud = $('#hud');
-    if (visible) {
-        hud.classList.remove('hidden');
-        window.DamageIndicators?.setActive(true);
-    } else {
-        hud.classList.add('hidden');
-        window.DamageIndicators?.setActive(false);
-    }
-}
-
-const NOTIFY_META = {
-    info: {
-        label: 'NOTICE',
-        icon: '<circle cx="12" cy="12" r="9"/><path d="M12 8v1M12 11v5"/>',
-    },
-    success: {
-        label: 'CONFIRMED',
-        icon: '<path d="M5 12l5 5L19 7"/>',
-    },
-    warning: {
-        label: 'ATTENTION',
-        icon: '<path d="M12 3 2 21h20L12 3z"/><path d="M12 9v5M12 17h.01"/>',
-    },
-    error: {
-        label: 'ALERT',
-        icon: '<path d="M6 6l12 12M18 6L6 18"/>',
-    },
-};
-
-function notifyIconSvg(type) {
-    const meta = NOTIFY_META[type] || NOTIFY_META.info;
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'notification__icon');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2');
-    svg.setAttribute('stroke-linecap', 'square');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.innerHTML = meta.icon;
-    return svg;
-}
-
-function notify(message, type = 'info', duration = 4000) {
-    const container = $('#notifications');
-    if (!container) return;
-    const safeType = ['info', 'success', 'warning', 'error'].includes(type) ? type : 'info';
-    const meta = NOTIFY_META[safeType];
-
-    const el = document.createElement('div');
-    el.className = `notification notification--${safeType}`;
-    el.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
-
-    const wrap = document.createElement('div');
-    wrap.className = 'notification__wrap';
-
-    const title = document.createElement('div');
-    title.className = 'notification__title';
-    title.textContent = meta.label;
-
-    const copy = document.createElement('div');
-    copy.className = 'notification__message';
-    copy.textContent = String(message ?? '');
-
-    wrap.append(title, copy);
-    el.append(notifyIconSvg(safeType), wrap);
-    container.appendChild(el);
-
-    const maxVisible = 5;
-    while (container.children.length > maxVisible) {
-        container.firstElementChild?.remove();
-    }
-
-    setTimeout(() => {
-        el.classList.add('is-leaving');
-        setTimeout(() => el.remove(), 240);
-    }, duration);
-    // [ALT-TAB FIX] CEF throttles timers while unfocused; stamp the expiry so
-    // the visibility sweep below can drop stale notifications immediately.
-    el.dataset.expiresAt = String(Date.now() + duration);
-}
-
-// [ALT-TAB FIX] When the game regains focus, purge any notification whose
-// hide-timer was throttled away while alt-tabbed (stuck toasts on the HUD).
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    const now = Date.now();
-    document.querySelectorAll('#notifications .notification').forEach((el) => {
-        const exp = Number(el.dataset.expiresAt || 0);
-        if (exp && now > exp) el.remove();
-    });
-    const progress = document.getElementById('progress');
-    if (progress && !progress.classList.contains('hidden')) {
-        const exp = Number(progress.dataset.expiresAt || 0);
-        if (exp && now > exp) progress.classList.add('hidden');
-    }
-});
-
-function progressBar(label, duration) {
-    const progress = $('#progress');
-    if (!progress) return;
-    const fill = progress.querySelector('.progress__fill');
-    const labelEl = progress.querySelector('.progress__label');
-
-    labelEl.textContent = label;
-    fill.style.width = '0%';
-    fill.style.transition = 'none';
-    progress.classList.remove('hidden');
-    progress.dataset.expiresAt = String(Date.now() + duration + 500);
-
-    requestAnimationFrame(() => {
-        fill.style.transition = `width ${duration}ms linear`;
-        fill.style.width = '100%';
-    });
-
-    setTimeout(() => {
-        progress.classList.add('hidden');
-    }, duration);
-}
-
-function formatMoney(amount) {
-    if (amount === undefined || amount === null || isNaN(Number(amount))) return '$0';
-    const n = Math.floor(Number(amount) || 0);
-    return '$' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-// All gameplay modals live in one shared NUI document. Keep exactly one modal
-// root visible so a stale close/update message cannot leave two full-screen
-// backdrops stacked (inventory + trade, M + garage, phone + another panel).
-const GAMEPLAY_MODAL_ROOTS = [
-    '#menu', '#inventory', '#trade-window', '#store-forza', '#fishing-shop',
-    '#jobcenter', '#atm-modal', '#mdc', '#dispatch-112-modal', '#ticket',
-    '#ticket-receive', '#servicecalls', '#jobs-panel', '#skills', '#help',
-    '#faction-panel', '#faction-directory', '#clan-panel', '#clan-directory',
-    '#business-panel', '#garage', '#fleet-garage', '#properties', '#emotes',
-    '#clothing', '#wardrobe', '#phone-device', '#documents', '#dealership',
-    '#player-interaction', '#crafting', '#appearance-studio', '#battlepass-modal',
-    '#license-quiz-panel', '#trucker-laptop',
-];
-
-const MODAL_ACTION_ROOT = {
-    menuShow: '#menu', garageShow: '#menu', inventoryShow: '#inventory',
-    shopShow: '#store-forza', fishingShopShow: '#fishing-shop', truckerLaptopOpen: '#trucker-laptop',
-    jobCenterShow: '#jobcenter', atmShow: '#atm-modal', mdcShow: '#mdc',
-    dispatch112Show: '#dispatch-112-modal', ticketShow: '#ticket',
-    ticketReceiveShow: '#ticket-receive', serviceCallsShow: '#servicecalls',
-    jobsShow: '#jobs-panel', skillsShow: '#skills', helpShow: '#help',
-    factionPanelShow: '#faction-panel', factionDirectoryShow: '#faction-directory',
-    clanPanelShow: '#clan-panel', clanDirectoryShow: '#clan-directory',
-    clanProfileShow: '#clan-directory', businessPanelShow: '#business-panel',
-    fleetGarageShow: '#fleet-garage', propertiesShow: '#properties',
-    emotesShow: '#emotes', clothingShow: '#clothing', wardrobeShow: '#wardrobe',
-    phoneShow: '#phone-device', documentsShow: '#documents',
-    dealershipShow: '#dealership', playerInteractionShow: '#player-interaction',
-    craftingShow: '#crafting', appearanceShow: '#appearance-studio',
-    battlepassShow: '#battlepass-modal', licenseQuizShow: '#license-quiz-panel',
-    questLogShow: '#quest-log',
-};
-
-// [AUDIT P8-12] When the single-modal rule force-hides a panel that owns a Lua
-// open-flag (menu/properties/factions), notify Lua so the flag clears. Without
-// this, ReleaseFocusUnlessModal() stayed blocked by stale flags and the cursor
-// got stuck after closing the newer panel.
-const MODAL_FLAG_PANELS = {
-    '#menu': 'menu',
-    '#properties': 'properties',
-    '#faction-panel': 'factionPanel',
-    '#faction-directory': 'factionPanel',
-    '#trucker-laptop': 'truckerLaptop',
-};
-
-const MODAL_BODY_CLASSES = [
-    'menu-open', 'menu--solo-vehicle-active', 'inventory-open',
-    'inventory-trade-open', 'trade-forza-active', 'store-open',
-    'wardrobe-open', 'dealership-open', 'faction-panels-open',
-    'clan-panels-open', 'business-panels-open', 'player-interaction-open',
-];
-
-function activateGameplayModal(action, payload) {
-    let next = MODAL_ACTION_ROOT[action];
-    if (action === 'inventoryTradeState' && payload?.active === true) next = '#trade-window';
-    if (!next) return;
-
-    for (const selector of GAMEPLAY_MODAL_ROOTS) {
-        if (selector === next) continue;
-        const root = $(selector);
-        if (!root || root.classList.contains('hidden')) continue;
-        root.classList.add('hidden');
-        root.setAttribute('aria-hidden', 'true');
-        // [AUDIT P8-12] A panel owning a Lua open-flag was force-hidden: post the
-        // supersede callback so Lua clears the flag (prevents stuck-focus traps).
-        const flag = MODAL_FLAG_PANELS[selector];
-        if (flag) {
-            try {
-                fetch(`https://${GetParentResourceName()}/modalSuperseded`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-                    body: JSON.stringify({ panel: flag }),
-                }).catch(() => {});
-            } catch (_) { /* noop */ }
-        }
-    }
-    for (const className of MODAL_BODY_CLASSES) {
-        document.body.classList.remove(className);
-    }
-}
-
-// [BOOT TRACE v2] ABSOLUTE epoch-ms timestamps (Date.now()) shared with the
-// loadscreen CEF and (after calibration) the Lua side — one timeline for the
-// whole loadscreen->login->auth transition. Forwarded to the server console
-// (nuiTrace) + the game log so crash forensics survive a client crash.
-function __btracePost(line) {
-    try {
-        if (typeof GetParentResourceName === 'function') {
-            fetch(`https://${GetParentResourceName()}/nuiTrace`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ line }),
-            }).catch(() => {});
-        }
-    } catch (_) { /* noop */ }
-}
-window.__btrace = function btrace(stage, extra) {
-    const line = `[BOOT ${Date.now()}] nui: ${stage}${extra ? ' | ' + extra : ''}`;
-    console.log(line);
-    __btracePost(line);
-};
-window.addEventListener('error', (e) => {
-    try {
-        if (typeof GetParentResourceName === 'function') {
-            fetch(`https://${GetParentResourceName()}/nuiError`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: String(e.message || 'unknown'),
-                    file: String(e.filename || ''),
-                    line: Number(e.lineno || 0),
-                }),
-            }).catch(() => {});
-        }
-    } catch (_) { /* noop */ }
-});
-window.addEventListener('unhandledrejection', (e) => {
-    console.warn('[NUI] unhandled promise rejection:', e.reason);
-});
-window.__btrace('app.js parsed');
-
-// [BOOT TRACE v2] Epoch handshake: send Date.now() to Lua so sunset_core can
-// calibrate its GetGameTimer() onto this same epoch timeline.
-try {
-    if (typeof GetParentResourceName === 'function') {
-        fetch(`https://${GetParentResourceName()}/bootEpoch`, {
+    function post(action, data = {}) {
+        const resource = typeof GetParentResourceName === 'function' ? GetParentResourceName() : '';
+        if (!resource) return Promise.resolve({ ok: true, qa: true, action, data });
+        return fetch(`https://${resource}/${action}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ now: Date.now() }),
-        }).catch(() => {});
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify(data),
+        }).catch(() => ({}));
     }
-} catch (_) { /* noop */ }
+    window.post = post;
 
-// [FREEZE WATCHDOG] rAF frame-gap detector for the NUI CEF: gaps > 300ms mean
-// the main window stopped rendering (the 3-4s freeze the owner reports).
-(function nuiFrameWatchdog() {
-    let last = performance.now();
-    let gaps = 0;
-    function frame() {
-        const now = performance.now();
-        const gap = now - last;
-        last = now;
-        if (gap > 300) {
-            gaps += 1;
-            if (gaps <= 20) window.__btrace('NUI FRAME GAP', `${Math.round(gap)}ms frozen`);
-        }
-        requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-})();
+    const ACTION_MODULE_MAP = {
+        // Chat
+        chatMessage: 'chat',
+        chatOpen: 'chat',
+        chatClose: 'chat',
+        showChat: 'chat',
+        hideChat: 'chat',
+        chatSettings: 'chat',
+        chatClear: 'chat',
+        chatUpdateSuggestions: 'chat',
+        chatAddSuggestion: 'chat',
+        chatRemoveSuggestion: 'chat',
 
-// [INPUT TRACE] The "first input event 20s after auth render" anomaly: log
-// window focus/blur + document.hasFocus transitions so we can tell "input
-// never delivered (SetNuiFocus lost)" from "player clicked late".
-(function inputTrace() {
-    let loggedFocusOnce = false;
-    window.addEventListener('focus', () => window.__btrace(`window FOCUS (hasFocus=${document.hasFocus()})`));
-    window.addEventListener('blur', () => window.__btrace('window BLUR'));
-    const probe = () => {
-        const hf = document.hasFocus();
-        if (hf && !loggedFocusOnce) {
-            loggedFocusOnce = true;
-            window.__btrace('document.hasFocus() became true');
-        }
-        setTimeout(probe, 500);
+        // HUD & Speedometer
+        showHud: 'hud',
+        hideHud: 'hud',
+        hudUpdate: 'hud',
+        updateHud: 'hud',
+        speedometerUpdate: 'hud',
+        hudEditor: 'hud',
+        hudVoice: 'hud',
+        hudVitals: 'hud',
+        hudMoney: 'hud',
+        hudWanted: 'hud',
+        radarUpdate: 'hud',
+        damageIndicator: 'hud',
+
+        // Inventory & Hotbar
+        inventoryShow: 'inventory',
+        inventoryHide: 'inventory',
+        inventoryUpdate: 'inventory',
+        hotbarUpdate: 'inventory',
+        hotbarShow: 'inventory',
+        hotbarHide: 'inventory',
+
+        // Trade
+        tradeShow: 'trade',
+        tradeHide: 'trade',
+        tradeUpdate: 'trade',
+        tradeInvitation: 'trade',
+
+        // Menu (M)
+        menuShow: 'menu',
+        menuHide: 'menu',
+        menuUpdate: 'menu',
+        vehicleMenuShow: 'menu',
+
+        // Phone
+        phoneShow: 'phone',
+        phoneHide: 'phone',
+        phoneUpdate: 'phone',
+        phoneIncomingCall: 'phone',
+        phoneCallState: 'phone',
+        phoneMessage: 'phone',
+
+        // MDC Tablet
+        mdcShow: 'mdc',
+        mdcHide: 'mdc',
+        mdcUpdate: 'mdc',
+        dispatch112Show: 'mdc',
+
+        // Factions
+        factionPanelShow: 'factions',
+        factionPanelHide: 'factions',
+        factionDirectoryShow: 'factions',
+        factionUpdate: 'factions',
+
+        // Clans
+        clanPanelShow: 'clans',
+        clanPanelHide: 'clans',
+        clanDirectoryShow: 'clans',
+        clanUpdate: 'clans',
+        clanWarShow: 'clans',
+
+        // Businesses
+        businessPanelShow: 'businesses',
+        businessPanelHide: 'businesses',
+        businessUpdate: 'businesses',
+
+        // Properties / Housing
+        propertiesShow: 'properties',
+        propertiesHide: 'properties',
+        propertyManageRefresh: 'properties',
+        propertyRenters: 'properties',
+
+        // Dealership
+        dealershipShow: 'dealership',
+        dealershipHide: 'dealership',
+        dealershipUpdate: 'dealership',
+
+        // Wardrobe / Clothing
+        wardrobeShow: 'wardrobe',
+        wardrobeHide: 'wardrobe',
+        wardrobeUpdate: 'wardrobe',
+        clothingShow: 'wardrobe',
+        clothingHide: 'wardrobe',
+
+        // ATM
+        atmShow: 'atm',
+        atmHide: 'atm',
+        atmUpdate: 'atm',
+        fleecaShow: 'atm',
+
+        // 24/7 Store
+        storeShow: 'store',
+        storeHide: 'store',
+        store247Show: 'store',
+
+        // Trucker
+        truckerShow: 'trucker',
+        truckerHide: 'trucker',
+
+        // Fishing
+        fishingShopShow: 'fishing',
+        fishingHudShow: 'fishing',
+        fishingHudUpdate: 'fishing',
+
+        // Jobcenter
+        jobCenterShow: 'jobcenter',
+        jobCenterHide: 'jobcenter',
+
+        // Garage
+        garageShow: 'garage',
+        garageHide: 'garage',
+        fleetGarageShow: 'garage',
+
+        // Scoreboard
+        scoreboardShow: 'scoreboard',
+        scoreboardHide: 'scoreboard',
+
+        // Helpdesk
+        helpdeskShow: 'helpdesk',
+        helpdeskHide: 'helpdesk',
+        helpShow: 'helpdesk',
+
+        // Battlepass
+        battlepassShow: 'battlepass',
+        battlepassHide: 'battlepass',
+
+        // Casino
+        casinoShow: 'casino',
+        casinoHide: 'casino',
+
+        // Racing
+        racingShow: 'racing',
+        racingHide: 'racing',
+
+        // Drugs
+        drugsShow: 'drugs',
+        drugsHide: 'drugs',
+
+        // Marriage
+        marriageShow: 'marriage',
+        marriageHide: 'marriage',
+
+        // Impound
+        impoundShow: 'impound',
+        impoundHide: 'impound',
+
+        // Player Interaction
+        playerInteractionShow: 'player_interaction',
+        playerInteractionHide: 'player_interaction',
+
+        // Licenses
+        licenseTestShow: 'licenses',
+        licenseTestHide: 'licenses',
+        licenseQuizShow: 'licenses',
+        licenseQuizHide: 'licenses',
+
+        // Quests
+        questsShow: 'quests',
+        questsHide: 'quests',
+
+        // Courier
+        courierShow: 'courier',
+        courierHide: 'courier',
+
+        // Appearance Studio
+        appearanceShow: 'studio',
+        appearanceHide: 'studio',
+        appearanceCamera: 'studio',
+
+        // Characters & Spawn
+        charactersShow: 'characters',
+        spawnShow: 'characters',
+        spawnHide: 'characters',
+
+        // Generic Overlay Panels
+        ticketShow: 'panels',
+        ticketReceiveShow: 'panels',
+        documentsShow: 'panels',
+        serviceCallsShow: 'panels',
+        skillsShow: 'panels',
+        emotesShow: 'panels',
+        craftingShow: 'panels',
+        fuelPumpShow: 'panels',
     };
-    probe();
-})();
 
-// [A/B NOFX MODE] 'bootNofx' from Lua (convar sv_sunset_nofx=1): disable all
-// animations/filters/backdrops/large backgrounds to measure compositor cost.
-window.__nofx = false;
-function applyNofx() {
-    if (window.__nofx) return;
-    window.__nofx = true;
-    window.__btrace('nofx mode ON (animations/filters/big bg disabled)');
-    document.body.classList.add('nofx');
-}
+    const App = {
+        currentScreen: 'gameplay',
+        isGameplayReady: false,
 
-// [NUI PERF] Prime gameplay assets gradually behind the entry UI.
-// Scripts are stored as <script type="text/plain" data-lazy-src="..."> in
-// index.html; this converts them to real executable <script> tags.
-// Small idle batches avoid one large parse/style pass during or just after spawn.
-// [MESSAGE QUEUE] If a panel message (e.g. racingShow) arrives before its
-// script is loaded, it is queued and re-delivered after injection completes.
-let deferredStylesLoading = false;
-let deferredStylesLoaded = false;
+        init() {
+            // Send boot epoch calibration to Lua
+            post('bootEpoch', { epoch: performance.now() });
 
-function loadDeferredStyles(immediate = false) {
-    if (deferredStylesLoaded || deferredStylesLoading) return;
-    deferredStylesLoading = true;
-    const pending = Array.from(document.querySelectorAll('link[data-deferred-style]'));
-    if (!pending.length) {
-        deferredStylesLoaded = true;
-        deferredStylesLoading = false;
-        return;
-    }
-    const BATCH = immediate ? pending.length : 3;
-    const GAP = 70;
-    let i = 0;
-    const run = () => {
-        const end = Math.min(i + BATCH, pending.length);
-        for (; i < end; i++) {
-            pending[i].media = 'all';
-            pending[i].removeAttribute('data-deferred-style');
-        }
-        if (i < pending.length) {
-            setTimeout(() => requestAnimationFrame(run), GAP);
-        } else {
-            deferredStylesLoaded = true;
-            deferredStylesLoading = false;
-            __btracePost(`deferred styles activated: ${pending.length}`);
-        }
-    };
-    requestAnimationFrame(run);
-}
-
-let lazyScriptsLoaded = false;
-let lazyScriptsLoading = false;
-let pendingMessages = []; // queued messages waiting for lazy scripts
-
-function loadLazyScripts() {
-    if (lazyScriptsLoaded || lazyScriptsLoading) return;
-    lazyScriptsLoading = true;
-    const pending = Array.from(document.querySelectorAll('script[type="text/plain"][data-lazy-src]'));
-    if (!pending.length) {
-        lazyScriptsLoaded = true;
-        lazyScriptsLoading = false;
-        flushPendingMessages();
-        return;
-    }
-    const BATCH = 2;
-    const GAP = 90;
-    const INITIAL_DELAY = 180;
-    let i = 0;
-    const schedule = (fn, delay = 0) => {
-        setTimeout(() => {
-            if (typeof requestIdleCallback === 'function') {
-                requestIdleCallback(fn, { timeout: 120 });
-            } else {
-                fn();
-            }
-        }, delay);
-    };
-    function injectBatch() {
-        const end = Math.min(i + BATCH, pending.length);
-        for (; i < end; i++) {
-            const el = pending[i];
-            const s = document.createElement('script');
-            s.src = el.dataset.lazySrc;
-            s.defer = true;
-            document.body.appendChild(s);
-            el.remove();
-        }
-        if (i < pending.length) {
-            schedule(injectBatch, GAP);
-        } else {
-            lazyScriptsLoaded = true;
-            lazyScriptsLoading = false;
-            __btracePost(`lazy scripts injected: ${pending.length} (staggered, ${INITIAL_DELAY}ms delay)`);
-            // [MESSAGE QUEUE] Re-deliver any messages that arrived before scripts loaded.
-            flushPendingMessages();
-        }
-    }
-    schedule(injectBatch, INITIAL_DELAY);
-}
-
-// [MESSAGE QUEUE] Deliver queued messages after lazy scripts are ready.
-function flushPendingMessages() {
-    if (!pendingMessages.length) return;
-    const queue = pendingMessages;
-    pendingMessages = [];
-    // Small delay to let scripts finish parsing
-    setTimeout(() => {
-        for (const msg of queue) {
-            window.dispatchEvent(new MessageEvent('message', { data: msg }));
-        }
-        __btracePost(`flushed ${queue.length} queued messages`);
-    }, 100);
-}
-
-// [MESSAGE QUEUE] Check if a message targets a lazy-loaded module that isn't
-// ready yet. If so, queue it instead of dropping it.
-function shouldQueueMessage(action) {
-    if (lazyScriptsLoaded) return false; // scripts loaded, no queueing needed
-    // Map action prefixes to their window globals
-    const lazyModules = {
-        racing: 'Racing', casino: 'Casino', drugs: 'Drugs', impound: 'Impound',
-        marriage: 'Marriage', phone: 'Phone', mdc: 'Mdc', inventory: 'Inventory',
-        wardrobe: 'Wardrobe', dealership: 'Dealership', factions: 'Factions',
-        clans: 'Clans', businesses: 'Businesses', tuning: 'Tuning',
-        helpdesk: 'Helpdesk', fishing: 'Fishing', license: 'License',
-        battlepass: 'BattlePass', quests: 'Quests', scoreboard: 'Scoreboard',
-        store: 'Store', trade: 'Trade', fuel: 'Fuel', radar: 'Radar',
-        documents: 'Documents', emotes: 'Emotes', hotbar: 'Hotbar',
-        damage: 'Damage', world: 'World', job: 'Job', taxi: 'Taxi',
-        trucker: 'TruckerLaptop', fishingShop: 'Panels',
-    };
-    for (const [prefix, globalName] of Object.entries(lazyModules)) {
-        if (action.toLowerCase().startsWith(prefix) && !window[globalName]) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// NUI message handler
-window.addEventListener('message', (event) => {
-    const { action, screen, data, message, type, duration, label } = event.data;
-    if (action === 'show') window.__btrace(`show screen=${screen}`);
-    if (action === 'bootNofx') applyNofx();
-
-    // [MESSAGE QUEUE] If this message targets a lazy-loaded module that isn't
-    // ready yet, queue it instead of dropping it. It will be re-delivered
-    // after the lazy scripts finish injecting.
-    if (action && shouldQueueMessage(action)) {
-        pendingMessages.push(event.data);
-        __btracePost(`queued message: ${action} (waiting for lazy scripts)`);
-        return;
-    }
-
-    activateGameplayModal(action, data || event.data.data || {});
-
-    switch (action) {
-        case 'show':
-            showApp(true);
-            showHud(false);
-            App.data = data || {};
-            if (screen !== 'menu' && window.Menu) Menu.hide();
-            if (screen === 'handoff') {
-                warmEntryBackground(ENTRY_BACKGROUNDS.auth);
-                if (window.HandoffScreen) HandoffScreen.show();
-                // Parse gameplay modules gradually while the entry UI is still
-                // covering the world, rather than hitching two seconds after spawn.
-                loadDeferredStyles();
-                loadLazyScripts();
-            }
-            if (screen === 'auth') {
-                warmEntryBackground(ENTRY_BACKGROUNDS.auth);
-                if (window.HandoffScreen) HandoffScreen.hide();
-                loadDeferredStyles();
-                loadLazyScripts();
-                showScreen('auth');
-                if (window.Panels) Panels.showAuth(data || {});
-                // [BOOT TRACE v2] 8) first rAF after auth paint = "responsive frame";
-                // 9) first pointer/key event = UI actually interactive.
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => window.__btrace('auth first responsive frame'));
-                });
-                if (!window.__bootInputLogged) {
-                    window.__bootInputLogged = true;
-                    const logFirstInput = (ev) => {
-                        window.__btrace(`auth first input event (${ev.type})`);
-                        window.removeEventListener('pointerdown', logFirstInput, true);
-                        window.removeEventListener('keydown', logFirstInput, true);
-                    };
-                    window.addEventListener('pointerdown', logFirstInput, true);
-                    window.addEventListener('keydown', logFirstInput, true);
+            // Global Escape key handler
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    this.handleEscape();
                 }
-                // [SAVED ACCOUNTS FIX] Tell Lua the auth screen is actually
-                // rendered so it (re)pushes the saved-account list. SendNUIMessage
-                // before the page is interactive can be lost entirely, which is
-                // why the quick-login card only appeared after toggling the
-                // remember checkbox (that round-trip re-pushed the accounts).
-                post('authReady', {});
+            });
+        },
+
+        handleEscape() {
+            // Check if any open modal/panel can be closed
+            if (window.Menu && typeof Menu.close === 'function') Menu.close();
+            if (window.Phone && typeof Phone.close === 'function') Phone.close();
+            if (window.Panels && typeof Panels.closeActive === 'function') Panels.closeActive();
+            if (window.MDC && typeof MDC.close === 'function') MDC.close();
+            if (window.ClanPanels && typeof ClanPanels.close === 'function') ClanPanels.close();
+            if (window.WardrobeShop && typeof WardrobeShop.close === 'function') WardrobeShop.close();
+        },
+
+        notify(message, kind = 'info', duration = 4000) {
+            const root = document.getElementById('notifications-root');
+            if (!root) return;
+
+            const toast = document.createElement('div');
+            toast.className = `notification-toast toast--${kind}`;
+
+            const iconMap = {
+                success: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+                error: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
+                warning: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                info: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
+            };
+
+            toast.innerHTML = `
+                <span class="toast-icon">${iconMap[kind] || iconMap.info}</span>
+                <span class="toast-message">${String(message || '')}</span>
+            `;
+
+            root.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('toast--hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        },
+
+        progressBar(label, duration = 3000) {
+            const root = document.getElementById('progress-root');
+            const labelEl = document.getElementById('progress-label');
+            const fillEl = document.getElementById('progress-fill');
+            if (!root || !fillEl) return;
+
+            if (labelEl) labelEl.textContent = label || 'In progress...';
+            fillEl.style.transition = 'none';
+            fillEl.style.width = '0%';
+            root.classList.remove('hidden');
+
+            requestAnimationFrame(() => {
+                fillEl.style.transition = `width ${duration}ms linear`;
+                fillEl.style.width = '100%';
+            });
+
+            if (this._progressTimeout) clearTimeout(this._progressTimeout);
+            this._progressTimeout = setTimeout(() => {
+                root.classList.add('hidden');
+                post('progressComplete', {});
+            }, duration + 50);
+        },
+
+        cancelProgressBar() {
+            const root = document.getElementById('progress-root');
+            if (root) root.classList.add('hidden');
+            if (this._progressTimeout) clearTimeout(this._progressTimeout);
+        },
+
+        onEnterGameplay() {
+            this.isGameplayReady = true;
+            // Eagerly mount core essential gameplay modules: HUD and Chat
+            if (window.ModuleLoader) {
+                ModuleLoader.ensure('hud');
+                ModuleLoader.ensure('chat');
+            }
+        },
+
+        dispatchDirect(data) {
+            const action = data.action;
+            const payload = data.data || {};
+
+            // Global shell actions
+            if (action === 'notify' || action === 'notification') {
+                this.notify(payload.message || payload.text, payload.type || payload.kind, payload.duration || payload.dur);
                 return;
             }
-            showScreen(screen);
-            if (screen === 'characters' && window.Characters) {
-                Characters.init(data);
+            if (action === 'progressBar') {
+                this.progressBar(payload.label || payload.text, payload.duration || payload.dur);
+                return;
             }
-        if (screen === 'create' && window.Characters) {
-                Characters.initCreate(data);
+            if (action === 'cancelProgressBar') {
+                this.cancelProgressBar();
+                return;
             }
-            if (screen === 'loading') {
-                if (window.LoadingScreen) {
-                    const authPending = window.AuthLoading?._pending;
-                    LoadingScreen.start(authPending ? (data || {}) : { ...(data || {}), force: true });
-                }
+            if (action === 'enterGameplay' || action === 'playerSpawned' || action === 'playerReady') {
+                this.onEnterGameplay();
+                return;
             }
-            if (screen === 'spawn' && window.SpawnSelector) {
-                SpawnSelector.show(data || {});
+            if (action === 'showHud') {
+                if (window.HUD && typeof HUD.show === 'function') HUD.show(payload);
+                return;
             }
-            break;
 
-        case 'spawnSelectFailed':
-            if (window.SpawnSelector) SpawnSelector.reset();
-            break;
+            // Legacy window handler routing
+            const legacyEvent = new CustomEvent(`sunset:ui:${action}`, { detail: payload });
+            window.dispatchEvent(legacyEvent);
 
-        case 'preloadEntryBackground':
-            warmEntryBackground(ENTRY_BACKGROUNDS[data?.screen] || ENTRY_BACKGROUNDS.auth);
-            break;
-
-        case 'hide':
-            if (window.LoadingScreen) LoadingScreen.reset();
-            if (window.AuthLoading) {
-                AuthLoading._pending = false;
-                AuthLoading.clearSafety();
+            // Directly invoke module functions if bound on window
+            if (window.Chat && action.startsWith('chat') && typeof window.Chat[action] === 'function') {
+                window.Chat[action](payload);
+            } else if (window.HUD && action.startsWith('hud') && typeof window.HUD[action] === 'function') {
+                window.HUD[action](payload);
+            } else if (window.Menu && action.startsWith('menu') && typeof window.Menu[action] === 'function') {
+                window.Menu[action](payload);
+            } else if (window.Phone && action.startsWith('phone') && typeof window.Phone[action] === 'function') {
+                window.Phone[action](payload);
+            } else if (window.Panels && typeof window.Panels.handleAction === 'function') {
+                window.Panels.handleAction(action, payload);
             }
-            showApp(false);
-            break;
-
-        case 'sessionForceClose': {
-            // [AUDIT P2] Emergency cleanup from sunset_sessions: hide every
-            // gameplay modal so a cancelled/ended session can never leave a
-            // panel open with stranded focus.
-            for (const selector of GAMEPLAY_MODAL_ROOTS) {
-                const root = $(selector);
-                if (root && !root.classList.contains('hidden')) {
-                    root.classList.add('hidden');
-                    root.setAttribute('aria-hidden', 'true');
-                }
-            }
-            for (const className of MODAL_BODY_CLASSES) {
-                document.body.classList.remove(className);
-            }
-            break;
         }
+    };
 
-        case 'showHud':
-            showHud(true);
-            const hudData = data || {};
-            if (hudData.playerId && window.Scoreboard) Scoreboard.myId = hudData.playerId;
-            if (window.HudEditor && hudData.layout) HudEditor.apply(hudData.layout);
-            if (window.Hud) Hud.update(hudData);
-            break;
+    window.App = App;
 
-        case 'hideHud':
-            showHud(false);
-            break;
+    // Root Message Dispatcher
+    window.addEventListener('message', async (event) => {
+        const data = event.data || {};
+        const action = data.action;
+        if (!action) return;
 
-        case 'hudChromeHide':
-            document.body.classList.toggle('hud-chrome-hidden', !(data || event.data.data)?.show);
-            break;
+        const targetModule = ACTION_MODULE_MAP[action];
 
-        case 'tuningUiOpen':
-            document.body.classList.add('tuning-ui-open');
-            document.body.classList.add('hud-chrome-hidden');
-            break;
-
-        case 'tuningUiClose':
-            document.body.classList.remove('tuning-ui-open');
-            if (document.body.classList.contains('inventory-open')
-                || document.body.classList.contains('emote-wheel-open')) {
-                break;
-            }
-            document.body.classList.remove('hud-chrome-hidden');
-            break;
-
-        case 'pauseState': {
-            const paused = Boolean(data?.paused);
-            document.body.classList.toggle('game-paused', paused);
-            if (paused) {
-                if (window.Phone) Phone.hide();
-                if (window.Menu && !$('#menu')?.classList.contains('hidden')) {
-                    Menu.hide();
-                    post('menuClose');
-                }
-                if (window.Panels) {
-                    if (!$('#inventory')?.classList.contains('hidden')) {
-                        Panels.hideInventory();
-                        post('inventoryClose');
-                    }
-                }
-            }
-            break;
-        }
-
-        case 'enterGameplay': {
-            loadLazyScripts();
-            if (window.AuthLoading) {
-                AuthLoading._pending = false;
-                AuthLoading.clearSafety();
-            }
-            const app = $('#app');
-            const transitionMs = Math.max(250, Number(data?.duration) || 800);
-            const fadeOut = () => {
-                if (!app) {
-                    showApp(false);
-                    return;
-                }
-                app.style.setProperty('--enter-duration', `${transitionMs}ms`);
-                app.classList.add('app--enter-game');
-                setTimeout(() => {
-                    if (window.LoadingScreen) LoadingScreen.reset();
-                    showApp(false);
-                }, transitionMs);
-            };
-            if (window.LoadingScreen) {
-                LoadingScreen.finish(fadeOut, 350);
+        if (targetModule && window.ModuleLoader) {
+            if (ModuleLoader.isLoaded(targetModule)) {
+                App.dispatchDirect(data);
             } else {
-                fadeOut();
+                ModuleLoader.queue(targetModule, data);
+                await ModuleLoader.ensure(targetModule);
             }
-            break;
+        } else {
+            App.dispatchDirect(data);
         }
+    });
 
-        case 'updateHud':
-            if (window.Hud) Hud.update(data || event.data.data);
-            break;
-
-        case 'updateVehicleGauges':
-            if (window.ForzaSpeedometer) {
-                window.ForzaSpeedometer.updateGauges(data || event.data.data);
-            }
-            break;
-
-        case 'updateVoice':
-            if (window.Hud) Hud.updateVoice(data || event.data.data);
-            break;
-
-        case 'showTask':
-            if (window.Hud) Hud.showTask(data || event.data.data);
-            break;
-
-        case 'hideTask':
-            if (window.Hud) Hud.hideTask();
-            break;
-
-        case 'vehicleHint':
-            if (window.Hud) Hud.flashVehicleHint(data || event.data.data || {});
-            break;
-
-        case 'showScoreboard':
-            if (window.Scoreboard) Scoreboard.show(event.data.data || data);
-            $('#hud')?.classList.add('scoreboard-open');
-            break;
-
-        case 'hideScoreboard':
-            if (window.Scoreboard) Scoreboard.hide();
-            $('#hud')?.classList.remove('scoreboard-open');
-            break;
-
-        case 'chatToggle':
-            if (window.Chat) Chat.toggle(data?.open, data || event.data.data);
-            break;
-
-        case 'chatMessage':
-            if (window.Chat) Chat.add(data || event.data.data);
-            break;
-
-        case 'chatSetInput':
-            if (window.Chat) {
-                const row = data || event.data.data || {};
-                Chat.setInput(row.text, { fromHistory: row.history === true });
-            }
-            break;
-
-        case 'chatSuggestions':
-            if (window.Chat) Chat.setSuggestions((data || event.data.data)?.suggestions);
-            break;
-
-        case 'menuShow':
-            if (window.Menu) Menu.show(data || event.data.data);
-            break;
-
-        case 'menuSetTab':
-            if (window.Menu) Menu.setTab((data || event.data.data)?.tab);
-            break;
-
-        case 'menuUpdate':
-            if (window.Menu) Menu.update(data || event.data.data);
-            break;
-
-        case 'menuAlert':
-            if (window.Menu) Menu.showAlert((data || event.data.data)?.message, (data || event.data.data)?.type || 'error');
-            break;
-
-        case 'menuHide':
-            if (window.Menu) Menu.hide();
-            break;
-
-        case 'inventoryShow':
-            if (window.Panels) Panels.showInventory(data || event.data.data);
-            break;
-        case 'inventoryUpdate':
-            if (window.Panels) Panels.showInventory(data || event.data.data);
-            break;
-        case 'inventoryHide':
-            if (window.Panels) Panels.hideInventory();
-            break;
-        case 'inventoryTradeState':
-            if (window.Panels) Panels.showInventoryTrade(data || event.data.data || {});
-            break;
-        case 'inventoryTradeEnded':
-            if (window.Panels) Panels.hideInventoryTrade();
-            break;
-        case 'inventoryTradeCatalog':
-            if (window.Panels) Panels.showTradeAssetPicker(data || event.data.data || {});
-            break;
-        case 'shopShow':
-            if (window.Panels) Panels.showShop(data || event.data.data);
-            break;
-        case 'shopHide':
-            if (window.Panels) Panels.hideShop();
-            break;
-        case 'truckerLaptopOpen':
-            if (window.TruckerLaptop) TruckerLaptop.open(data || event.data.data);
-            break;
-        case 'shopBuyResult':
-            // [GUNSHOP FIX] Server answered the purchase; re-arm the buy button.
-            if (window.StoreUI) StoreUI.onBuyResult();
-            break;
-        case 'fishingShopShow':
-            if (window.Panels) Panels.showFishingShop(data || event.data.data);
-            break;
-        case 'fishingShopRefresh':
-            if (window.StoreUI) StoreUI.refreshItems(data || event.data.data);
-            break;
-        case 'fishingShopHide':
-            if (window.Panels) Panels.hideFishingShop();
-            break;
-        case 'atmShow':
-            if (window.AtmMachine) AtmMachine.open(data || event.data.data || {});
-            else if (window.Panels) Panels.showAtm(data || event.data.data);
-            break;
-        case 'atmHide':
-            if (window.AtmMachine) AtmMachine.close();
-            if (window.Panels) Panels.hideAtm();
-            break;
-        case 'atmUpdate':
-            if (window.AtmMachine) AtmMachine.update(data || event.data.data || {});
-            if (window.Panels && Panels.updateAtm) Panels.updateAtm(data || event.data.data);
-            break;
-        case 'mdcShow':
-            if (window.MdcTablet) MdcTablet.open(data || event.data.data);
-            else if (window.Panels) Panels.showMdc(data || event.data.data);
-            break;
-        case 'mdcRefresh':
-            if (window.MdcTablet) MdcTablet.refresh(data || event.data.data);
-            break;
-        case 'mdcUpdateCitizen':
-            if (window.MdcTablet) MdcTablet.updateCitizen((data || event.data.data)?.citizen);
-            break;
-        case 'mdcUpdateVehicles':
-            if (window.MdcTablet) MdcTablet.updateVehicles((data || event.data.data)?.vehicles);
-            break;
-        case 'mdcUpdate':
-            if (window.MdcTablet) MdcTablet.updateCitizen((data || event.data.data)?.lookup || (data || event.data.data)?.citizen);
-            else if (window.Panels) Panels.updateMdcLookup((data || event.data.data)?.lookup);
-            break;
-        case 'mdcHide':
-            if (window.MdcTablet) MdcTablet.hide();
-            else if (window.Panels) Panels.hideMdc();
-            break;
-        case 'dispatch112Show':
-            if (window.MdcTablet) MdcTablet.open112(data || event.data.data);
-            break;
-        case 'dispatch112Hide':
-            // This message is already the Lua acknowledgement. Do not post a
-            // second close callback or NUI focus will be cleared repeatedly.
-            if (window.MdcTablet) MdcTablet.close112(false);
-            break;
-        case 'ticketShow':
-            if (window.Panels) Panels.showTicket(data || event.data.data);
-            break;
-        case 'ticketHide':
-            if (window.Panels) Panels.hideTicket();
-            break;
-        case 'ticketReceiveShow':
-            if (window.Panels) Panels.showTicketReceive(data || event.data.data);
-            break;
-        case 'ticketReceiveHide':
-            if (window.Panels) Panels.hideTicketReceive();
-            break;
-        case 'serviceCallsShow':
-            if (window.Panels) Panels.showServiceCalls(data || event.data.data);
-            break;
-        case 'serviceCallsUpdate':
-            if (window.Panels) Panels.showServiceCalls(data || event.data.data);
-            break;
-        case 'serviceCallsHide':
-            if (window.Panels) Panels.hideServiceCalls();
-            break;
-        case 'jobsShow':
-            if (window.Panels) Panels.showJobsPanel(data || event.data.data);
-            break;
-        case 'jobsHide':
-            if (window.Panels) Panels.hideJobsPanel();
-            break;
-        case 'skillsShow':
-            if (window.Panels) Panels.showSkills(data || event.data.data);
-            break;
-        case 'skillsHide':
-            if (window.Panels) Panels.hideSkills();
-            break;
-        case 'helpShow':
-            if (window.Panels) Panels.showHelp(data || event.data.data);
-            break;
-        case 'helpHide':
-            if (window.Panels) Panels.hideHelp();
-            break;
-        case 'factionPanelShow':
-            if (window.FactionPanels) {
-                try { FactionPanels.showDashboard(data || event.data.data); }
-                catch (err) { console.error('[FactionPanels] showDashboard failed', err); post('factionPanelsClose'); }
-            } else {
-                console.error('[FactionPanels] factions.js not loaded');
-                post('factionPanelsClose');
-            }
-            break;
-        case 'factionPanelRefresh':
-            if (window.FactionPanels) {
-                try { FactionPanels.refreshDashboard(data || event.data.data); }
-                catch (err) { console.error('[FactionPanels] refreshDashboard failed', err); }
-            }
-            break;
-        case 'propertyManageRefresh':
-            if (window.PropertyUI) {
-                const payload = data || event.data.data || {};
-                PropertyUI.refreshManageView(payload.propertyId, payload.properties);
-            }
-            break;
-        case 'factionDirectoryShow':
-            if (window.FactionPanels) {
-                try { FactionPanels.showDirectory(data || event.data.data); }
-                catch (err) { console.error('[FactionPanels] showDirectory failed', err); post('factionPanelsClose'); }
-            } else {
-                console.error('[FactionPanels] factions.js not loaded');
-                post('factionPanelsClose');
-            }
-            break;
-        case 'factionPanelsHide':
-            if (window.FactionPanels) FactionPanels.hide();
-            document.body.classList.remove('faction-panels-open');
-            break;
-        case 'playerInteractionShow':
-            __btracePost(`playerInteractionShow PI=${!!window.PlayerInteraction}`);
-            if (window.PlayerInteraction) PlayerInteraction.show(data || event.data.data);
-            break;
-        case 'playerInteractionUpdate':
-            if (window.PlayerInteraction) PlayerInteraction.update(data || event.data.data);
-            break;
-        case 'playerInteractionHide':
-            if (window.PlayerInteraction) PlayerInteraction.hide();
-            break;
-        case 'playerInteractionPrompt':
-            __btracePost(`playerInteractionPrompt PI=${!!window.PlayerInteraction}`);
-            if (window.PlayerInteraction) PlayerInteraction.showPrompt(data || event.data.data);
-            break;
-        case 'battlepassShow':
-            if (window.Battlepass) Battlepass.show(data || event.data.data);
-            break;
-        case 'battlepassHide':
-            if (window.Battlepass) Battlepass.hide();
-            break;
-        case 'inventoryTradeInvite':
-            if (window.Panels && Panels.showTradeInvite) Panels.showTradeInvite(data || event.data.data);
-            break;
-        case 'inventoryTradeInviteHide':
-            if (window.Panels && Panels.hideTradeInvite) Panels.hideTradeInvite();
-            break;
-        case 'inventoryTradeInviteHold':
-            if (window.Panels && Panels.setTradeInviteHold) Panels.setTradeInviteHold(data || event.data.data);
-            break;
-        case 'factionBrowseInline':
-            if (window.FactionPanels) {
-                try {
-                    FactionPanels.showBrowseInline(data || event.data.data);
-                } catch (err) {
-                    console.error('[FactionPanels] showBrowseInline failed', err);
-                }
-            }
-            break;
-        case 'factionDirectoryDetail':
-            if (window.FactionPanels) {
-                try {
-                    FactionPanels.showDirectoryDetail(data || event.data.data);
-                } catch (err) {
-                    console.error('[FactionPanels] showDirectoryDetail failed', err);
-                }
-            }
-            break;
-        case 'businessPanelShow':
-            window.BusinessPanels?.showDashboard(data || event.data.data || {});
-            break;
-        case 'businessPanelHide':
-            window.BusinessPanels?.hide();
-            break;
-        case 'businessOwnerUpdate':
-            window.BusinessPanels?.updateOwnerPanel(data || event.data.data || {});
-            break;
-        case 'businessAdminUpdate':
-            window.BusinessPanels?.updateAdminPanel(data || event.data.data || {});
-            break;
-        case 'clanPanelShow':
-            if (window.ClanPanels) {
-                try {
-                    if (!ClanPanels.showDashboard(data || event.data.data)) {
-                        post('clanPanelsClose');
-                    }
-                } catch (err) {
-                    console.error('[ClanPanels] showDashboard failed', err);
-                    post('clanPanelsClose');
-                }
-            } else {
-                console.error('[ClanPanels] clans.js not loaded');
-                post('clanPanelsClose');
-            }
-            break;
-        case 'clanDirectoryShow':
-            if (window.ClanPanels) {
-                try {
-                    if (!ClanPanels.showDirectory(data || event.data.data)) {
-                        post('clanPanelsClose');
-                    }
-                } catch (err) {
-                    console.error('[ClanPanels] showDirectory failed', err);
-                    post('clanPanelsClose');
-                }
-            } else {
-                console.error('[ClanPanels] clans.js not loaded');
-                post('clanPanelsClose');
-            }
-            break;
-        case 'clanBrowseInline':
-            if (window.ClanPanels) {
-                try {
-                    ClanPanels.showBrowseInline(data || event.data.data);
-                } catch (err) {
-                    console.error('[ClanPanels] showBrowseInline failed', err);
-                }
-            }
-            break;
-        case 'clanProfileShow':
-            if (window.ClanPanels) {
-                try {
-                    ClanPanels.showClanProfile(data || event.data.data);
-                } catch (err) {
-                    console.error('[ClanPanels] showClanProfile failed', err);
-                }
-            }
-            break;
-        case 'clanPanelsHide':
-            if (window.ClanPanels) ClanPanels.hide();
-            document.body.classList.remove('clan-panels-open');
-            break;
-        case 'policeOrderShow':
-            if (window.Overlays) Overlays.showPoliceOrder(data || event.data.data);
-            break;
-        case 'policeOrderHide':
-            if (window.Overlays) Overlays.hidePoliceOrder();
-            break;
-        case 'announcementShow':
-            if (window.Overlays) Overlays.showAnnouncement(data || event.data.data);
-            break;
-        case 'announcementHide':
-            if (window.Overlays) Overlays.hideAnnouncement();
-            break;
-        case 'taxiMeterShow':
-            if (window.Overlays) Overlays.showTaxiMeter(data || event.data.data);
-            break;
-        case 'taxiMeterUpdate':
-            if (window.Overlays) Overlays.updateTaxiMeter(data || event.data.data);
-            break;
-        case 'taxiMeterHide':
-            if (window.Overlays) Overlays.hideTaxiMeter();
-            break;
-        case 'jobObjectiveShow':
-            if (window.Overlays) Overlays.showJobObjective(data || event.data.data);
-            break;
-        case 'jobObjectiveUpdate':
-            if (window.Overlays) Overlays.updateJobObjective(data || event.data.data);
-            break;
-        case 'jobObjectiveHide':
-            if (window.Overlays) Overlays.hideJobObjective();
-            break;
-        case 'fishingShow':
-            if (window.Fishing) Fishing.show(data || event.data.data);
-            break;
-        case 'fishingUpdate':
-            if (window.Fishing) Fishing.update(data || event.data.data);
-            break;
-        case 'fishingHide':
-            if (window.Fishing) Fishing.hide();
-            break;
-        case 'licenseTestShow':
-            if (window.LicenseTestHud) LicenseTestHud.show(data || event.data.data);
-            break;
-        case 'licenseTestUpdate':
-            if (window.LicenseTestHud) LicenseTestHud.update(data || event.data.data);
-            break;
-        case 'licenseTestHide':
-            if (window.LicenseTestHud) LicenseTestHud.hide();
-            break;
-        case 'licenseQuizShow':
-            if (window.LicenseQuiz) LicenseQuiz.show(data || event.data.data);
-            break;
-        case 'licenseQuizHide':
-            if (window.LicenseQuiz) LicenseQuiz.hide();
-            break;
-        case 'jobShiftShow':
-            if (window.JobShift) JobShift.show(data || event.data.data);
-            break;
-        case 'jobShiftHide':
-            if (window.JobShift) JobShift.hide();
-            break;
-        case 'jobSkillShow':
-            if (window.JobShift) JobShift.showSkill(data || event.data.data);
-            break;
-        case 'jobSkillHide':
-            if (window.JobShift) JobShift.hideSkill();
-            break;
-        case 'radarShow':
-            if (window.RadarHud) RadarHud.show(data || event.data.data);
-            break;
-        case 'radarUpdate':
-            if (window.RadarHud) RadarHud.update(data || event.data.data);
-            break;
-        case 'radarHide':
-            if (window.RadarHud) RadarHud.hide();
-            break;
-        case 'radarAlertShow':
-            if (window.RadarAlert) RadarAlert.show(data || event.data.data);
-            break;
-        case 'radarAlertHide':
-            if (window.RadarAlert) RadarAlert.hide();
-            break;
-        case 'courierShow':
-            if (window.Courier) Courier.show(data || event.data.data);
-            break;
-        case 'courierUpdate':
-            if (window.Courier) Courier.update(data || event.data.data);
-            break;
-        case 'courierHide':
-            if (window.Courier) Courier.hide();
-            break;
-        case 'garageShow':
-            if (window.Menu) {
-                Menu.show({ ...(data || event.data.data || {}), initialTab: 'vehicle', soloMode: 'vehicle' });
-            } else if (window.Panels) {
-                Panels.showGarage(data || event.data.data);
-            }
-            break;
-        case 'garageHide':
-            if (window.Panels) Panels.hideGarage();
-            break;
-        case 'fleetGarageShow':
-            if (window.Panels) Panels.showFleetGarage(data || event.data.data);
-            break;
-        case 'fleetGarageHide':
-            if (window.Panels) Panels.hideFleetGarage();
-            break;
-        case 'propertiesShow':
-            if (window.Panels) Panels.showProperties(data || event.data.data);
-            break;
-        case 'propertiesHide':
-            if (window.Panels) Panels.hideProperties();
-            break;
-        case 'propertyRenters':
-            if (window.PropertyUI) PropertyUI.updateRenters(
-                (data || event.data.data)?.propertyId,
-                (data || event.data.data)?.renters,
-            );
-            break;
-        case 'menuPropertyUpdate':
-            if (window.Menu) Menu.updateProperties(data || event.data.data);
-            break;
-        case 'emotesShow':
-            if (window.Panels) Panels.showEmotes();
-            break;
-        case 'emotesHide':
-            if (window.Panels) Panels.hideEmotes();
-            break;
-        case 'weaponAmmoUpdate':
-            if (window.HotbarUI) HotbarUI.renderWeaponAmmo(data || event.data.data);
-            break;
-        case 'emoteWheelShow':
-            if (window.HotbarUI) HotbarUI.showEmoteWheel((data || event.data.data)?.emotes || []);
-            break;
-        case 'emoteWheelHide':
-            if (window.HotbarUI) HotbarUI.hideEmoteWheel();
-            break;
-        case 'emoteWheelRelease':
-            if (window.HotbarUI) HotbarUI._releaseWheel();
-            break;
-        case 'emoteWheelSelect':
-            if (window.HotbarUI) HotbarUI.selectWheelFromGame(Number((data || event.data.data)?.index));
-            break;
-        case 'clothingShow':
-            if (window.Panels) Panels.showClothing(data || event.data.data);
-            break;
-        case 'wardrobeShow':
-            window.WardrobeUI?.show(data || event.data.data || {});
-            break;
-        case 'wardrobeUpdate':
-            window.WardrobeUI?.update(data || event.data.data || {});
-            break;
-        case 'wardrobeHide':
-            window.WardrobeUI?.hide();
-            break;
-        case 'clothingHide':
-            if (window.Panels) Panels.hideClothing();
-            break;
-
-        case 'phoneShow':
-            if (window.Phone) Phone.show(data || event.data.data);
-            break;
-        case 'phoneCaptureAvatar': {
-            // [AVATAR] Fetch the ped headshot from nui-img, convert to base64,
-            // and post back to Lua for permanent DB storage.
-            const av = data || event.data.data || {};
-            if (av.txd && av.characterId) {
-                const url = `https://nui-img/${av.txd}/${av.txd}`;
-                fetch(url)
-                    .then((r) => r.blob())
-                    .then((blob) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            post('phoneAvatarCaptured', { characterId: av.characterId, avatar: reader.result });
-                        };
-                        reader.readAsDataURL(blob);
-                    })
-                    .catch(() => {});
-            }
-            break;
-        }
-
-        // ═══ CASINO ═══
-        case 'casinoShow':
-            if (window.Casino) Casino.show(data || event.data.data);
-            break;
-        case 'casinoHide':
-            if (window.Casino) Casino.hide();
-            break;
-        case 'casinoBlackjackUpdate':
-            if (window.Casino) Casino.updateBlackjack(data || event.data.data);
-            break;
-        case 'casinoSlotsResult':
-            if (window.Casino) Casino.updateSlots(data || event.data.data);
-            break;
-        case 'casinoRouletteResult':
-            if (window.Casino) Casino.updateRoulette(data || event.data.data);
-            break;
-        case 'casinoWheelResult':
-            if (window.Casino) Casino.wheelResult(data || event.data.data);
-            break;
-        case 'casinoCashierUpdate':
-            if (window.Casino) Casino.cashierUpdate(data || event.data.data);
-            break;
-        case 'casinoBarUpdate':
-            if (window.Casino) Casino.barUpdate(data || event.data.data);
-            break;
-
-        // ═══ IMPOUND ═══
-        case 'impoundShow':
-            if (window.Impound) Impound.show(data || event.data.data);
-            break;
-        case 'impoundHide':
-            if (window.Impound) Impound.hide();
-            break;
-        case 'impoundUpdate':
-            if (window.Impound) Impound.update(data || event.data.data);
-            break;
-
-        // ═══ RACING ═══
-        case 'racingShow':
-            if (window.Racing) Racing.show(data || event.data.data);
-            break;
-        case 'racingHide':
-            if (window.Racing) Racing.hide();
-            break;
-        case 'racingHud':
-            if (window.Racing) Racing.showHud(data || event.data.data);
-            break;
-        case 'racingHudHide':
-            if (window.Racing) Racing.hideHud();
-            break;
-        case 'racingCountdown':
-            if (window.Racing) Racing.showCountdown((data || event.data.data)?.n);
-            break;
-        case 'racingGo':
-            if (window.Racing) Racing.showGo();
-            break;
-        case 'racingFinished':
-            if (window.Racing) Racing.showFinished(data || event.data.data);
-            break;
-
-        // ═══ DRUGS ═══
-        case 'drugsShow':
-            if (window.Drugs) Drugs.show(data || event.data.data);
-            break;
-        case 'drugsHide':
-            if (window.Drugs) Drugs.hide();
-            break;
-        case 'drugsUpdate':
-            if (window.Drugs) Drugs.update(data || event.data.data);
-            break;
-        case 'drugsBusy':
-            if (window.Drugs) Drugs.setBusy((data || event.data.data || {}).busy);
-            break;
-        case 'drugsProgress':
-            if (window.Drugs) Drugs.showProgress(data || event.data.data);
-            break;
-
-        // ═══ MARRIAGE ═══
-        case 'marriageProposal':
-            if (window.Marriage) Marriage.showProposal(data || event.data.data);
-            break;
-        case 'marriageHide':
-            if (window.Marriage) Marriage.hide();
-            break;
-
-        case 'phoneUpdate':
-            if (window.Phone) Phone.update(data || event.data.data);
-            break;
-        case 'phoneHide':
-            if (window.Phone) Phone.hide();
-            break;
-        case 'taxiUpdate':
-            if (window.Phone) Phone.updateTaxi(data || event.data.data);
-            break;
-        case 'taxiEstimate':
-            if (window.Phone) Phone.setTaxiEstimate(data || event.data.data);
-            break;
-        case 'taxiPickResult':
-            if (window.Phone) Phone.onTaxiPick(data || event.data.data);
-            break;
-        case 'documentsShow':
-            if (window.Panels) Panels.showDocuments(data || event.data.data);
-            break;
-        case 'documentsHide':
-            if (window.Panels) Panels.hideDocuments();
-            break;
-        case 'jobCenterShow':
-            if (window.Panels) Panels.showJobCenter(data || event.data.data);
-            break;
-        case 'jobCenterHide':
-            if (window.Panels) Panels.hideJobCenter();
-            break;
-        case 'craftingShow':
-            if (window.Panels) Panels.showCrafting(data || event.data.data);
-            break;
-        case 'craftingUpdate':
-            if (window.Panels) Panels.updateCrafting(data || event.data.data);
-            break;
-        case 'craftingHide':
-            if (window.Panels) Panels.hideCrafting();
-            break;
-        case 'dealershipShow':
-            if (window.Panels) Panels.showDealership(data || event.data.data);
-            break;
-        case 'dealershipUpdate':
-            if (window.Panels) Panels.updateDealership(data || event.data.data);
-            break;
-        case 'dealershipHide':
-            if (window.Panels) Panels.hideDealership();
-            break;
-        case 'appearanceShow':
-            showApp(false);
-            showHud(false);
-            $('#app')?.classList.add('hidden');
-            if (window.Panels) Panels.showAppearance(data || event.data.data);
-            break;
-        case 'appearanceUpdate':
-            if (window.Panels) Panels.updateAppearance(data || event.data.data);
-            break;
-        case 'appearanceCamera':
-            if (window.Panels) Panels.setAppearanceCamera((data || event.data.data)?.camera);
-            break;
-        case 'appearanceHide':
-            if (window.Panels) Panels.hideAppearance();
-            break;
-        case 'appearanceSaving':
-            if (window.Panels) Panels.setAppearanceSaving(true);
-            break;
-        case 'appearanceSaveFailed':
-            if (window.Panels) Panels.setAppearanceSaving(false);
-            break;
-
-        case 'authHide':
-            if (window.Panels) Panels.hideAuth();
-            showApp(true);
-            showHud(false);
-            if (window.App?.currentScreen !== 'loading' && typeof showScreen === 'function') {
-                showScreen('loading');
-                if (window.LoadingScreen) {
-                    LoadingScreen.start({ force: true, holdText: 'Authenticating account...' });
-                }
-            }
-            if (window.AuthLoading) AuthLoading._pending = false;
-            break;
-
-        case 'authError':
-            if (window.AuthLoading) AuthLoading.reset();
-            break;
-
-        case 'authAccounts':
-            if (window.AuthAccounts) AuthAccounts.update(data || event.data.data || {});
-            break;
-
-        case 'authCapturePortrait':
-            if (window.AuthAccounts) AuthAccounts.capturePortrait(data || event.data.data || {});
-            break;
-
-        case 'authAccountFill':
-            if (window.AuthAccounts) AuthAccounts.showForm(data || event.data.data || {});
-            break;
-
-        case 'authQuickLoginStart':
-            if (window.AuthLoading && !AuthLoading._pending) AuthLoading.beginSubmit();
-            break;
-
-        case 'authNeedsEmail':
-            if (window.AuthEmail) AuthEmail.onNeedsEmail(data || event.data.data || {});
-            break;
-
-        case 'authEmailError':
-            if (window.AuthEmail) AuthEmail.onError(data || event.data.data || {});
-            break;
-
-        case 'authEmailSaved':
-            if (window.AuthEmail) AuthEmail.onSaved();
-            break;
-
-        case 'hudEditToggle':
-            if (window.HudEditor) HudEditor.toggle();
-            break;
-
-        case 'notify':
-            notify(message, type, duration);
-            break;
-
-        case 'progress':
-            progressBar(label, duration);
-            break;
-
-        case 'fuelPumpShow':
-            if (window.FuelPump) FuelPump.show(data || event.data.data);
-            break;
-        case 'fuelPumpUpdate':
-            if (window.FuelPump) FuelPump.update(data || event.data.data);
-            break;
-        case 'fuelPumpHide':
-            if (window.FuelPump) FuelPump.hide();
-            break;
-
-        case 'worldTooltipsSync':
-            if (window.WorldTooltipLayer) WorldTooltipLayer.sync((data || event.data.data) || []);
-            break;
-    }
-});
-
-document.addEventListener('keydown', (e) => {
-    const key = String(e.key || '').toLowerCase();
-    if (!(e.ctrlKey || e.metaKey) || key !== 'a') return;
-    const tag = (e.target && e.target.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
-    e.preventDefault();
-}, true);
-
-// Universal ESC handler: close ANY visible gameplay modal. Each root maps to
-// its registered close callback (nui_bridge.lua) so focus always gets released.
-const MODAL_CLOSE_ACTIONS = {
-    '#menu': 'menuClose',
-    '#inventory': 'inventoryClose',
-    '#trade-window': 'inventoryTradeCancel',
-    '#store-forza': 'shopClose',
-    '#fishing-shop': 'fishingShopClose',
-    '#trucker-laptop': 'truckerLaptopClose',
-    '#jobcenter': 'jobCenterClose',
-    '#atm-modal': 'atmClose',
-    '#mdc': 'mdcClose',
-    '#dispatch-112-modal': 'close112Modal',
-    '#ticket': 'ticketClose',
-    '#ticket-receive': 'ticketReceiveClose',
-    '#servicecalls': 'serviceCallsClose',
-    '#jobs-panel': 'jobsClose',
-    '#skills': 'skillsClose',
-    '#help': 'helpClose',
-    '#faction-panel': 'factionPanelsClose',
-    '#faction-directory': 'factionPanelsClose',
-    '#clan-panel': 'clanPanelsClose',
-    '#clan-directory': 'clanPanelsClose',
-    '#business-panel': 'businessPanelsClose',
-    '#garage': 'garageClose',
-    '#fleet-garage': 'fleetGarageClose',
-    '#properties': 'propertiesClose',
-    '#emotes': 'emotesClose',
-    '#clothing': 'clothingClose',
-    '#wardrobe': 'wardrobeClose',
-    '#phone-device': 'phoneClose',
-    '#documents': 'documentsClose',
-    '#dealership': 'dealershipClose',
-    '#player-interaction': 'playerInteractionClose',
-    '#crafting': 'craftingClose',
-    '#battlepass-modal': 'battlepassClose',
-    '#license-quiz-panel': 'licenseQuizClose',
-};
-
-// Close character screens on ESC (universal — any modal)
-document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (['auth', 'loading', 'spawn'].includes(App.currentScreen)) return;
-
-    const passModal = $('#battlepass-modal');
-    if (passModal && !passModal.classList.contains('hidden')) {
-        e.preventDefault();
-        window.Battlepass?.close();
-        return;
-    }
-
-    // topmost visible modal wins (roots are z-ordered)
-    for (let i = GAMEPLAY_MODAL_ROOTS.length - 1; i >= 0; i--) {
-        const selector = GAMEPLAY_MODAL_ROOTS[i];
-        const root = $(selector);
-        if (!root || root.classList.contains('hidden')) continue;
-        const action = MODAL_CLOSE_ACTIONS[selector];
-        if (!action) continue;
-        e.preventDefault();
-        post(action);
-        return;
-    }
-
-    const app = $('#app');
-    if (app && !app.classList.contains('hidden')) {
-        post('close');
-    }
-});
-
-// Local/browser visual QA only; FiveM never supplies this query parameter.
-document.addEventListener('DOMContentLoaded', () => {
-    preloadEntryBackgrounds();
-    entryBackgroundLayers();
-    document.querySelectorAll('.auth-brand__logo, .panel-logo, .studio-logo').forEach(setBrandLogo);
-    const qa = new URLSearchParams(window.location.search).get('qa');
-    // Browser QA pages do not receive the FiveM handoff message.
-    if (qa) loadDeferredStyles(true);
-    if (qa === 'auth') {
-        showApp(true);
-        showScreen('auth');
-        window.Panels?.showAuth({
-            quickLogin: true,
-            accounts: [
-                { username: 'trencito', characterName: 'Trencito Blaze', level: 32, cash: 106209, bank: 5316, hasPassword: true },
-                { username: 'stefan', characterName: 'Stefan Ionescu', level: 12, cash: 18450, bank: 42100, hasPassword: true },
-                { username: 'tester', characterName: 'Alex Pop', level: 4, cash: 2350, bank: 8900, hasPassword: true },
-            ],
-        });
-    } else if (qa === 'spawn') {
-        showApp(true);
-        showScreen('spawn');
-        window.SpawnSelector?.show({ hasLastLocation: true });
-    } else if (qa === 'menu') {
-        window.Menu?.show({
-            id: 2, cid: 14, name: 'Trencito', rank: 'PLAYER', level: 2,
-            respectPoints: 37, respectRequired: 8, levelPrice: 5000,
-            cash: 106209, bank: 5316, premium: 0, playtime: '39H 41M',
-            lastLogin: 'TODAY', health: 100, armor: 0, hunger: 82, thirst: 74,
-            stress: 6, vehicleCount: 1, propertyCount: 0, homeLabel: 'None',
-            avatar: 'assets/logoblaze.svg?v=1', jobId: 'fisherman', job: 'Fisherman',
-            jobGradeLabel: 'Angler', jobSalary: 120, completedTasks: 17,
-            careerEarnings: 28400, combinedSkillLevels: 4,
-        });
-    } else if (qa === 'vehicles') {
-        window.Menu?.show({
-            id: 2, cid: 14, name: 'Trencito', rank: 'PLAYER', level: 12,
-            soloMode: 'vehicle', initialTab: 'vehicle',
-            cash: 106209, bank: 5316, premium: 0, playtime: '39H 41M',
-            health: 100, armor: 0, hunger: 82, thirst: 74, stress: 6,
-            vehicles: [
-                { id: 1, plate: 'B77XOD', model: 'elegy', fuel: 85, engine: 950, body: 910, stored: 1, garage: 'Central', odometer: 12504.3 },
-                { id: 2, plate: 'RO10AMG', model: 'baller', fuel: 32, engine: 450, body: 670, stored: 0, inWorld: true, isCurrentVehicle: true, odometer: 8231.8 },
-                { id: 3, plate: 'DR1FT', model: 'sultan', fuel: 62, engine: 820, body: 740, stored: 0, parked_x: 100, parked_y: 100, odometer: 3412.1 },
-            ],
-        });
-        window.Menu?.setTab('vehicle');
-    } else if (qa === 'inventory' || qa === 'inventory-trade' || qa === 'trade' || qa === 'inventory-empty') {
-        const isEmpty = qa === 'inventory-empty' || new URLSearchParams(window.location.search).get('nearby') === '0';
-        window.Panels?.showInventory({
-            cash: 106209,
-            weight: 15.2,
-            maxWeight: 30,
-            items: [
-                { id: 1, slot: 1, item: 'water', label: 'Bottled Water', count: 6, usable: true, icon: 'water_bottle' },
-                { id: 2, slot: 2, item: 'bread', label: 'Sandwich', count: 3, usable: true, icon: 'bread' },
-                { id: 3, slot: 3, item: 'phone', label: 'Smartphone', count: 1, usable: false, icon: 'phone' },
-                { id: 4, slot: 8, item: 'weapon_pistol', label: 'Pistol', count: 1, usable: false, icon: 'weaponlicense' },
-            ],
-            nearbyPlayers: isEmpty ? [] : [
-                { id: 2, name: 'Horja', distance: 1.2 },
-                { id: 45, name: 'Alexandru Popa', distance: 2.4 },
-            ],
-        });
-        if (qa === 'inventory-trade' || qa === 'trade') {
-            window.Panels?.showInventoryTrade({
-                active: true,
-                target: { id: 2, name: 'Horja' },
-                myOffer: [{ id: 1, item: 'water', label: 'Bottled Water', count: 1, icon: 'water_bottle' }],
-                theirOffer: [{ id: 11, item: 'bread', label: 'Sandwich', count: 2, icon: 'bread' }],
-                myAccepted: false,
-                theirAccepted: false,
-                countdown: 0,
-            });
-        }
-    } else if (qa === 'trade-invite') {
-        window.Panels?.showTradeInvite({
-            requesterId: 2,
-            requesterName: 'HORJA',
-            timeout: 30,
-        });
-    } else if (qa === 'interaction' || qa === 'interaction-prompt') {
-        window.PlayerInteraction?.showPrompt({
-            visible: true,
-            x: 50,
-            y: 45,
-            name: 'Alexandru M. (14)',
-            progress: 0,
-            key: 'G',
-        });
-        if (qa === 'interaction') {
-            setTimeout(() => {
-                window.PlayerInteraction?.show({
-                    target: {
-                        id: 45,
-                        name: 'Mihai Dobre',
-                        level: 12,
-                        faction: 'Civilian',
-                    },
-                    actions: [
-                        { id: 'trade', group: 'CIVILIAN', label: 'Cere Buletin' },
-                        { id: 'give_cash', group: 'CIVILIAN', label: 'Oferă Bani', input: { type: 'number', placeholder: '$ Sumă', min: 1, max: 50000 } },
-                        { id: 'show_id', group: 'CIVILIAN', label: 'Arată Buletinul' },
-                        { id: 'add_contact', group: 'CIVILIAN', label: 'Adaugă la Contacte' },
-                        { id: 'faction_invite', group: 'FACTION', label: 'Invită în Facțiune' },
-                        { id: 'cuff', group: 'POLICE', label: 'Încătușează', danger: true },
-                        { id: 'frisk', group: 'POLICE', label: 'Percheziționează' },
-                    ],
-                });
-            }, 400);
-        }
-    } else if (qa === 'battlepass' || qa === 'missions') {
-        window.Battlepass?.show();
-        if (qa === 'missions') {
-            window.Battlepass?.setTab('daily');
-        }
-    } else if (qa === 'faction') {
-        window.FactionPanels?.showDashboard({
-            faction: { id: 'police', label: 'Los Santos Police Department', description: 'Law enforcement and public safety.', type: 'law' },
-            grade: 5,
-            gradeLabel: 'Captain',
-            duty: true,
-            salary: 650,
-            memberCount: 12,
-            motd: 'Serve and protect.',
-            report: { current: 8, required: 15 },
-            members: [
-                { id: 1, name: 'Trencito', grade: 6, gradeLabel: 'Chief', online: true, duty: true },
-                { id: 2, name: 'Alexandru Popa', grade: 2, gradeLabel: 'Officer', online: true, duty: false },
-            ],
-            commands: [{ cmd: '/f [message]', desc: 'Faction radio' }, { cmd: '/mdc', desc: 'Open the department computer' }],
-        });
-    } else if (qa === 'factions') {
-        window.FactionPanels?.showDirectory({
-            factions: [
-                { id: 'police', label: 'Los Santos Police Department', factionType: 'law_enforcement', leader: 'Ștefan XODO', online: 15, total: 42, recruiting: true, description: 'Servim și protejăm orașul Los Santos.' },
-                { id: 'ems', label: 'Pillbox Medical (EMS)', factionType: 'ems', leader: 'Dr. Mihai', online: 8, total: 28, recruiting: true, description: 'Serviciu medical de urgență.' },
-                { id: 'grove', label: 'Grove Street Families', type: 'illegal', leader: 'Sweet Johnson', online: 12, total: 18, recruiting: false, description: 'Controlăm zona de sud a orașului.' },
-                { id: 'bennys', label: "Benny's Motorworks", factionType: 'mechanic', leader: 'Alexandru V.', online: 5, total: 15, recruiting: true, description: 'Service de tuning și reparații autorizat.' }
-            ]
-        });
-    } else if (qa === 'clan') {
-        window.ClanPanels?.showDashboard({
-            inClan: true,
-            clanId: 1,
-            name: 'Sunset Syndicate',
-            tag: 'SS',
-            tagColor: '#00ffcc',
-            tagStyle: 'brackets',
-            rank: 5,
-            rankLabel: 'Lider Suprem',
-            motd: 'Ședință sâmbătă la ora 21:00 la conac!',
-            description: 'Organizație privată de elită.',
-            memberCount: 12,
-            maxMembers: 25,
-            members: [
-                { characterId: 1, name: 'Ștefan XODO', rank: 5, rankLabel: 'Lider Suprem', online: true, serverId: 1, leader: true },
-                { characterId: 2, name: 'Alex Popescu', rank: 3, rankLabel: 'Locotenent', online: true, serverId: 14, leader: false },
-                { characterId: 3, name: 'Mihai Dobre', rank: 1, rankLabel: 'Recrut', online: false, serverId: null, leader: false }
-            ],
-            permissions: {
-                leader: true,
-                officer: true,
-                invite: true,
-                kick: true,
-                motd: true,
-                settings: true,
-                promote: true,
-                rankLabels: true,
-                warn: true,
-                dissolve: true,
-                leave: true
-            }
-        });
-    } else if (qa === 'clans') {
-        window.ClanPanels?.showDirectory({
-            clans: [
-                { id: 1, name: 'Sunset Syndicate', tag: 'SS', tagColor: '#00ffcc', tagStyle: 'brackets', leader: 'Ștefan XODO', online: 8, total: 12, maxMembers: 25, description: 'Organizație privată de elită.' },
-                { id: 2, name: 'Ghost Riders', tag: 'GR', tagColor: '#00ffcc', tagStyle: 'prefix_dot', leader: 'Kane', online: 4, total: 18, maxMembers: 25, description: 'Club de motocicliști și tuning.' },
-                { id: 3, name: 'Apex Predators', tag: 'APEX', tagColor: '#ff3366', tagStyle: 'brackets', leader: 'Viper', online: 10, total: 25, maxMembers: 25, description: 'Echipă competitivă.' }
-            ]
-        });
-    } else if (qa === 'vehiclehud') {
-        showApp(true);
-        $('#hud')?.classList.remove('hidden');
-        if (typeof Hud !== 'undefined') Hud.update({
-            inVehicle: true, speed: 141, rpm: 0.72, fuel: 63, engine: 870,
-            odometer: 12504.3, engineOn: true, locked: false, seatbelt: true,
-            vehicleClass: 7, showFuel: true, showOdometer: true,
-        });
-    } else if (qa === 'jobs') {
-        window.Panels?.showJobsPanel({
-            currentJob: { id: 'fisherman', label: 'Fisherman' },
-            currentJobLabel: 'Fisherman',
-            session: { jobId: 'fisherman', state: 'ACTIVE' },
-            jobs: [
-                { id: 'courier', label: 'Courier', salary: 110, description: 'Pick up packages and deliver them on foot.', progress: { level: 1, xp: 20, xpToNext: 100, completedTasks: 2 } },
-                { id: 'fisherman', label: 'Fisherman', salary: 120, description: 'Fish at coastal spots and sell your catch.', progress: { level: 4, xp: 72, xpToNext: 100, completedTasks: 17 } },
-                { id: 'garbage', label: 'Garbage Collector', salary: 130, description: 'Collect bins on city routes and unload at the depot.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
-                { id: 'mechanic', label: 'Roadside Mechanic', salary: 140, description: 'Respond to service calls and repair vehicles.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
-                { id: 'trucker', label: 'Trucker', salary: 150, description: 'Haul cargo across San Andreas.', progress: { level: 1, xp: 0, xpToNext: 100, completedTasks: 0 } },
-            ],
-        });
-    } else if (qa === 'properties' || qa === 'house' || qa === 'residences') {
-        window.Panels?.showProperties({
-            meta: {
-                rentMin: 50,
-                rentMax: 5000,
-                maxRentersMin: 1,
-                maxRentersMax: 10,
-                sellRefundPercent: 70,
-                interiors: [
-                    { id: 'motel', label: 'Motel Suite' },
-                    { id: 'standard', label: 'Standard House' },
-                    { id: 'luxury', label: 'Luxury Penthouse' },
-                ],
-            },
-            selectedId: 6,
-            properties: [
-                { id: 6, label: "Giovanni's Pizzeria", minimumLevel: 1, interior: 'motel', locked: true, forSale: true, price: 1, description: "[b]Cozy pizzeria suite[/b] with kitchen and private back office.", owner_character_id: null },
-                { id: 7, label: "Didion Dr", minimumLevel: 3, interior: 'standard', locked: true, forSale: true, price: 1, description: "Spacious suburban home in Vinewood hills.", owner_character_id: null },
-                { id: 8, label: "Milton Rd", minimumLevel: 3, interior: 'standard', locked: true, forSale: true, price: 1, description: "Modern residence with private driveway and garage.", owner_character_id: null },
-                { id: 9, label: "Milton Rd 2", minimumLevel: 3, interior: 'standard', locked: true, forSale: true, price: 1, description: "Adjacent property with expansive patio.", owner_character_id: null },
-                { id: 1, label: "LSIA Motel Room", minimumLevel: 1, interior: 'motel', locked: true, forSale: true, price: 32000, description: "Airport transit suite, great for starters.", owner_character_id: null },
-                { id: 2, label: "Vespucci Studio", minimumLevel: 1, interior: 'standard', locked: false, owned: true, access: true, price: 90000, description: "Beachfront apartment with direct ocean views.", owner_character_id: 14, ownerName: "Trencito Blaze" },
-                { id: 3, label: "Vinewood Luxury Penthouse", minimumLevel: 5, interior: 'luxury', locked: true, forSale: false, rentEnabled: true, rentPrice: 450, renterCount: 2, maxRenters: 4, price: 450000, description: "High-end penthouse overlooking the city.", owner_character_id: 99, ownerName: "Mayor Sterling" },
-            ],
-        });
-    }
-});
+    document.addEventListener('DOMContentLoaded', () => {
+        App.init();
+    });
+})();

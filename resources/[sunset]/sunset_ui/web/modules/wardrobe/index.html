@@ -1,0 +1,65 @@
+<div id="clothing" class="overlay-panel hidden">
+        <div class="overlay-panel__box">
+            <h2 id="clothing-title">Clothing</h2>
+            <p id="clothing-hint" style="color:#aaa;font-size:13px">$50 per change.</p>
+            <div id="clothing-options" class="clothing-options"></div>
+            <button type="button" class="panel-close" id="clothing-close">Close</button>
+        </div>
+    </div>
+
+    <!-- WARDROBE (Forza clothing store) -->
+    <div id="wardrobe" class="wardrobe-forza hidden" aria-hidden="true">
+        <div class="wr-vignette"></div>
+        <div class="wr-ui-layer">
+            <div class="wr-categories-panel">
+                <div class="wr-section-title">Wardrobe</div>
+                <div class="wr-cat-list" id="wardrobe-cat-list"></div>
+            </div>
+            <div class="wr-selection-panel">
+                <div>
+                    <div class="wr-section-title" style="margin-bottom:10px;color:var(--wr-text-muted);">Current Category</div>
+                    <div class="wr-active-cat-name" id="wardrobe-active-cat">Shirt / Jacket</div>
+                </div>
+                <div class="wr-slider-group">
+                    <div class="wr-slider-header"><span>Item Model</span><span style="color:var(--wr-accent);">Item ID</span></div>
+                    <div class="wr-slider-controls">
+                        <button type="button" class="wr-slider-btn" id="wardrobe-model-dec"><i class="ph-bold ph-caret-left"></i></button>
+                        <div class="wr-slider-value">
+                            <span id="wardrobe-val-model">0</span>
+                            <span class="wr-slider-max">/ <span id="wardrobe-max-model">0</span></span>
+                        </div>
+                        <button type="button" class="wr-slider-btn" id="wardrobe-model-inc"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                    <div class="wr-slider-track"><div class="wr-slider-fill" id="wardrobe-track-model"></div></div>
+                </div>
+                <div class="wr-slider-group">
+                    <div class="wr-slider-header"><span>Color Variant</span><span style="color:var(--wr-accent);">Texture</span></div>
+                    <div class="wr-slider-controls">
+                        <button type="button" class="wr-slider-btn" id="wardrobe-texture-dec"><i class="ph-bold ph-caret-left"></i></button>
+                        <div class="wr-slider-value">
+                            <span id="wardrobe-val-texture">0</span>
+                            <span class="wr-slider-max">/ <span id="wardrobe-max-texture">0</span></span>
+                        </div>
+                        <button type="button" class="wr-slider-btn" id="wardrobe-texture-inc"><i class="ph-bold ph-caret-right"></i></button>
+                    </div>
+                    <div class="wr-slider-track"><div class="wr-slider-fill" id="wardrobe-track-texture"></div></div>
+                </div>
+                <div class="wr-cart-summary">
+                    <span class="wr-price-label">Cart Total</span>
+                    <span class="wr-price-value" id="wardrobe-cart-price">$50</span>
+                    <button type="button" class="wr-btn-hold" id="wardrobe-buy" disabled>
+                        <div class="wr-btn-progress" id="wardrobe-buy-progress"></div>
+                        <div class="wr-btn-text" id="wardrobe-buy-text">
+                            <span class="wr-key-hint">ENTER</span> Pay
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="wr-cam-controls">
+            <div class="wr-cam-btn"><div class="wr-key">Q</div> / <div class="wr-key">E</div> Rotate</div>
+            <div class="wr-cam-btn"><div class="wr-key">SCROLL</div> Zoom</div>
+            <div class="wr-cam-btn"><div class="wr-key">ESC</div> Close</div>
+        </div>
+        <div class="wr-close-hint">Press ESC to close</div>
+    </div>

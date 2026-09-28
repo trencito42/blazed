@@ -1,0 +1,41 @@
+    <div id="license-test-panel" class="license-test-shell hidden state-driver" aria-live="polite" aria-hidden="true">
+        <div class="license-test-panel__body">
+            <div class="license-test__header">
+                <svg class="license-test__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                    <path d="M4 17h16M6 11l2-5h8l2 5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>
+                </svg>
+                <div class="license-test__title-wrap">
+                    <div class="license-test__title" id="license-test-title">License Test</div>
+                    <div class="license-test__meta" id="license-test-meta"></div>
+                </div>
+            </div>
+            <div class="license-test__message" id="license-test-message">Follow the examiner instructions.</div>
+            <div class="license-test__progress"><div class="license-test__progress-fill" id="license-test-progress"></div></div>
+        </div>
+    </div>
+
+    <div id="license-quiz-panel" class="hidden" aria-live="polite">
+        <div class="license-quiz-shell">
+            <header class="license-quiz-header">
+                <div>
+                    <h1 id="license-quiz-title">Theory Exam</h1>
+                    <p id="license-quiz-progress" class="license-quiz-progress">Question 1 / 4</p>
+                    <p id="license-quiz-meta" class="license-quiz-meta"></p>
+                </div>
+                <div class="license-quiz-timer-wrap">
+                    <span class="license-quiz-timer-label">TIME</span>
+                    <span id="license-quiz-timer" class="license-quiz-timer">10:00</span>
+                </div>
+                <button id="license-quiz-close" type="button" aria-label="Close">✕</button>
+            </header>
+            <p id="license-quiz-intro" class="license-quiz-intro"></p>
+            <div id="license-quiz-feedback" class="license-quiz-feedback hidden" aria-live="polite"></div>
+            <div id="license-quiz-question" class="license-quiz-question"></div>
+            <div id="license-quiz-options" class="license-quiz-options"></div>
+            <footer class="license-quiz-footer">
+                <button type="button" id="license-quiz-prev" class="license-quiz-btn ghost hidden">Back</button>
+                <button type="button" id="license-quiz-next" class="license-quiz-btn primary hidden">Next</button>
+                <button type="button" id="license-quiz-submit" class="license-quiz-btn primary hidden">Submit exam</button>
+            </footer>
+        </div>
+    </div>

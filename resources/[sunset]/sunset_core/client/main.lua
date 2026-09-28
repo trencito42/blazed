@@ -28,56 +28,48 @@ CreateThread(function()
     -- Keep the same preloaded background underneath the FiveM loadscreen.
     -- This prevents a world/black-frame flash while the independent NUIs swap.
     local uiDeadline = GetGameTimer() + 15000
-    while GetResourceState('sunset_ui') ~= 'started' and GetGameTimer() < uiDeadline do
+    while (GetResourceState('sunset_auth_ui') ~= 'started' and GetResourceState('sunset_ui') ~= 'started') and GetGameTimer() < uiDeadline do
         Wait(50)
     end
-    btrace('sunset_ui state=' .. tostring(GetResourceState('sunset_ui')))
+    btrace('auth_ui state=' .. tostring(GetResourceState('sunset_auth_ui')) .. ', sunset_ui state=' .. tostring(GetResourceState('sunset_ui')))
 
-    -- [HANDOFF FIX] Deterministic ready handshake instead of magic Wait(80)/Wait(380).
-    -- 1) Show handoff screen in sunset_ui (technical state, not a visible loading page)
-    -- 2) Wait for NUI to confirm it parsed (bootEpoch callback from app.js)
-    -- 3) Tell the loadscreen to freeze + fade (cheap: opacity only, no blur)
-    -- 4) Shutdown loading screen
-    -- Failsafe: if NUI never confirms within 8s, shut down anyway (never stuck).
+    -- [HANDOFF FIX] Deterministic ready handshake with sunset_auth_ui / sunset_ui.
+    -- 1) Wait for auth UI to render first frames (IsRendered / bootEpoch)
+    -- 2) Tell the loadscreen to freeze + fade
+    -- 3) Shutdown loading screen
     local handoffOk, handoffErr = pcall(function()
-        if GetResourceState('sunset_ui') == 'started' then
-            exports.sunset_ui:Show('handoff', {})
-            btrace('Show(handoff) done')
-            if nofx then
-                exports.sunset_ui:Send('bootNofx', {})
-            end
-            exports.sunset_ui:Send('preloadEntryBackground', { screen = 'auth' })
-
-            -- [READY HANDSHAKE] Wait for app.js to post bootEpoch (NUI parsed).
-            -- This replaces the old Wait(80) — we know the NUI is ready when
-            -- GetBootEpoch() returns a positive number.
-            local readyDeadline = GetGameTimer() + 8000
-            local nuiReady = false
-            while GetGameTimer() < readyDeadline do
-                local epochNow = exports.sunset_ui:GetBootEpoch()
-                if epochNow and tonumber(epochNow) and tonumber(epochNow) > 0 then
-                    epochOffset = tonumber(epochNow) - GetGameTimer()
-                    btrace(('epoch calibrated (offset=%d) — NUI ready'):format(epochOffset))
+        local readyDeadline = GetGameTimer() + 8000
+        local nuiReady = false
+        while GetGameTimer() < readyDeadline do
+            if GetResourceState('sunset_auth_ui') == 'started' then
+                local rendered = exports.sunset_auth_ui:IsRendered()
+                if rendered then
+                    btrace('sunset_auth_ui rendered confirmed')
                     nuiReady = true
                     break
                 end
-                Wait(25)
             end
-            if not nuiReady then
-                btrace('NUI ready timeout (8s) — proceeding with failsafe shutdown')
+            if GetResourceState('sunset_ui') == 'started' then
+                local epochNow = exports.sunset_ui:GetBootEpoch()
+                if epochNow and tonumber(epochNow) and tonumber(epochNow) > 0 then
+                    epochOffset = tonumber(epochNow) - GetGameTimer()
+                    btrace(('epoch calibrated (offset=%d) — sunset_ui ready'):format(epochOffset))
+                    nuiReady = true
+                    break
+                end
             end
-
-            btrace('SEND_LOADING_SCREEN_MESSAGE sunsetHandoff')
-            SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
-            if nofx then
-                SendLoadingScreenMessage(json.encode({ eventName = 'nofx' }))
-            end
-            -- Minimal wait for the loadscreen fade to begin (opacity transition
-            -- is 300ms; we only need the fade to START before shutdown).
-            Wait(120)
-        else
-            print('^1[sunset_core]^7 sunset_ui was not ready before loadscreen shutdown; login UI may need /fixlogin')
+            Wait(25)
         end
+        if not nuiReady then
+            btrace('NUI ready timeout (8s) — proceeding with failsafe shutdown')
+        end
+
+        btrace('SEND_LOADING_SCREEN_MESSAGE sunsetHandoff')
+        SendLoadingScreenMessage(json.encode({ eventName = 'sunsetHandoff' }))
+        if nofx then
+            SendLoadingScreenMessage(json.encode({ eventName = 'nofx' }))
+        end
+        Wait(120)
     end)
     if not handoffOk then
         print('^1[sunset_core]^7 loadscreen handoff failed: ' .. tostring(handoffErr))

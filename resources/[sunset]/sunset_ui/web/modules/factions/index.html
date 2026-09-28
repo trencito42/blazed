@@ -1,0 +1,238 @@
+<div id="faction-panel" class="premium-faction hidden">
+        <div class="premium-faction__wrapper">
+            <aside class="premium-faction__sidebar">
+                <div class="premium-faction__brand">
+                    <div class="premium-faction__brand-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <div class="premium-faction__brand-text">
+                        <h1 id="faction-panel-title">FACTION</h1>
+                        <span id="faction-panel-type">Organization</span>
+                    </div>
+                </div>
+                <nav class="premium-faction__nav" id="faction-tabs" aria-label="Faction sections">
+                    <button type="button" class="premium-faction__nav-item is-active" data-faction-tab="overview">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Dashboard
+                    </button>
+                    <button type="button" class="premium-faction__nav-item" data-faction-tab="roster">
+                        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Members
+                    </button>
+                    <button type="button" class="premium-faction__nav-item faction-tab--requests hidden" data-faction-tab="requests">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        Requests <span class="pf-req-badge hidden" id="faction-req-badge">0</span>
+                    </button>
+                    <button type="button" class="premium-faction__nav-item faction-tab--manage hidden" data-faction-tab="manage">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Management
+                    </button>
+                </nav>
+            </aside>
+            <div class="premium-faction__content">
+                <div class="premium-faction__tab is-active" data-faction-panel="overview">
+                    <div class="premium-faction__header">
+                        <h2>Dashboard</h2>
+                        <p>Faction information and statistics.</p>
+                    </div>
+                    <div class="premium-faction__stats">
+                        <div class="premium-faction__stat">
+                            <span class="premium-faction__stat-label">Your Rank</span>
+                            <span class="premium-faction__stat-value" id="faction-rank">—</span>
+                        </div>
+                        <div class="premium-faction__stat">
+                            <span class="premium-faction__stat-label">Members Online</span>
+                            <span class="premium-faction__stat-value"><span id="faction-online-count">0</span> / <span id="faction-member-count" style="color:var(--pf-text-muted);font-size:16px;">0</span></span>
+                        </div>
+                        <div class="premium-faction__stat" id="faction-bank-card">
+                            <span class="premium-faction__stat-label">Faction Vault</span>
+                            <span class="premium-faction__stat-value" id="faction-society-bank" style="color:var(--pf-success);">$0</span>
+                        </div>
+                        <div class="premium-faction__stat hidden" id="faction-fp-card">
+                            <span class="premium-faction__stat-label">Your FP (Punish)</span>
+                            <span class="premium-faction__stat-value" id="faction-my-fp" style="color:var(--pf-danger);">0</span>
+                        </div>
+                    </div>
+                    <div class="premium-faction__fp-note hidden" id="faction-fp-note">
+                        FP blocks joining any faction. It decays by 1 each payday; a leader can pardon you.
+                    </div>
+                    <div class="premium-faction__motd">
+                        <div class="premium-faction__motd-title">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            MESSAGE OF THE DAY (MOTD)
+                        </div>
+                        <div class="premium-faction__motd-text" id="faction-motd">No MOTD posted. Leaders use /fmotd.</div>
+                    </div>
+                    <div class="premium-faction__extras">
+                        <article class="premium-faction__card">
+                            <span>UNIT INTEL</span>
+                            <p id="faction-description">—</p>
+                            <small id="faction-depot">—</small>
+                        </article>
+                        <article class="premium-faction__card">
+                            <span>WEEKLY OBJECTIVE</span>
+                            <p><strong id="faction-report-value">0 / 0</strong></p>
+                            <div class="premium-faction__report-bar"><b id="faction-report-bar" style="width:0%"></b></div>
+                            <small>Shift: <span id="faction-duty">OFF SHIFT</span> · Pay: <span id="faction-salary">$0/HR</span></small>
+                        </article>
+                    </div>
+                    <div class="premium-faction__commands">
+                        <span class="premium-faction__stat-label">ACTIVE COMMANDS</span>
+                        <ul id="faction-commands"></ul>
+                    </div>
+                    <!-- [FP SYSTEM] Resignation request (clean exit path). -->
+                    <div class="premium-faction__resign hidden" id="faction-resign-box">
+                        <div class="premium-faction__panel-title">Resignation</div>
+                        <p class="pf-resign-hint">Instant leave (/leavefaction) costs <b>60 FP</b>. Submit a resignation instead: the leader can accept it <b>cleanly (no FP)</b> or with FP.</p>
+                        <form class="premium-faction__form-group" data-faction-action="resign">
+                            <input class="premium-faction__form-control" type="text" name="reason" maxlength="255" placeholder="Reason (optional)">
+                            <button type="submit" class="premium-faction__btn premium-faction__btn--warn">Submit Resignation</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="premium-faction__tab" data-faction-panel="roster">
+                    <div class="premium-faction__header">
+                        <h2>Members</h2>
+                        <p id="faction-roster-meta">All active members of the department.</p>
+                    </div>
+                    <div id="faction-roster" class="premium-faction__roster"></div>
+                </div>
+                <!-- [FP SYSTEM] Resignations board for leaders/managers. -->
+                <div class="premium-faction__tab" data-faction-panel="requests">
+                    <div class="premium-faction__header">
+                        <h2>Resignation Requests</h2>
+                        <p>Accept cleanly (no FP), accept with FP, or decline. Members under 14 days should usually leave with FP.</p>
+                    </div>
+                    <div id="faction-resignations" class="premium-faction__roster"></div>
+                </div>
+                <div class="premium-faction__tab" data-faction-panel="manage">
+                    <div class="premium-faction__header">
+                        <h2>Management</h2>
+                        <p>Leadership panel. Actions are irreversible.</p>
+                    </div>
+                    <div class="premium-faction__manage-grid">
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Member</div>
+                            <div class="premium-faction__form-group">
+                                <label class="premium-faction__form-label">Select member</label>
+                                <select class="premium-faction__form-control" id="faction-manage-select"></select>
+                                <div class="pf-member-info hidden" id="faction-manage-info"></div>
+                            </div>
+                            <div class="premium-faction__btn-group">
+                                <button type="button" class="premium-faction__btn premium-faction__btn--primary" id="faction-manage-promote">Promote</button>
+                                <button type="button" class="premium-faction__btn premium-faction__btn--secondary" id="faction-manage-demote">Demote</button>
+                            </div>
+                            <div class="premium-faction__btn-group" style="margin-top:8px;">
+                                <button type="button" class="premium-faction__btn premium-faction__btn--danger" id="faction-manage-kick" title="Remove without FP">Kick</button>
+                                <button type="button" class="premium-faction__btn premium-faction__btn--danger" id="faction-manage-kick-fp" title="Remove and apply 60 FP">Kick + FP</button>
+                            </div>
+                            <div class="premium-faction__btn-group" style="margin-top:8px;">
+                                <button type="button" class="premium-faction__btn premium-faction__btn--secondary" id="faction-manage-pardon" title="Clear the member's FP">Pardon FP</button>
+                            </div>
+                        </div>
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Faction Settings</div>
+                            <form class="premium-faction__form-group" data-faction-action="motd">
+                                <label class="premium-faction__form-label">Update MOTD</label>
+                                <textarea class="premium-faction__form-control" name="message" rows="3" maxlength="512" placeholder="Write the new message..."></textarea>
+                                <button type="submit" class="premium-faction__btn premium-faction__btn--primary">Save Message</button>
+                            </form>
+                        </div>
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Recruitment</div>
+                            <form data-faction-action="invite">
+                                <p style="font-size:12px;color:var(--pf-text-muted);margin:0 0 10px;">Invite online player by server ID (hold Z).</p>
+                                <input class="premium-faction__form-control" type="number" name="targetId" min="1" placeholder="Server ID (Z)" required>
+                                <button type="submit" class="premium-faction__btn premium-faction__btn--primary" style="margin-top:10px;">Send Invitation</button>
+                            </form>
+                        </div>
+                        <div class="premium-faction__panel">
+                            <div class="premium-faction__panel-title">Discipline</div>
+                            <form data-faction-action="warn">
+                                <div class="premium-faction__btn-group" style="flex-direction:column;">
+                                    <input class="premium-faction__form-control" type="number" name="targetId" min="1" placeholder="Server ID" required>
+                                    <input class="premium-faction__form-control" type="text" name="reason" maxlength="256" placeholder="Reason">
+                                    <button type="submit" class="premium-faction__btn premium-faction__btn--warn">Faction Warning (FW)</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="premium-faction__panel hidden" id="faction-rank-editor">
+                            <div class="premium-faction__panel-title">Rank Structure</div>
+                            <form id="faction-rank-names-form" class="premium-faction__rank-form"></form>
+                            <button type="button" class="premium-faction__btn premium-faction__btn--primary" id="faction-rank-save" style="margin-top:10px;">Save Grades</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="premium-faction__close-hint">PRESS ESC TO CLOSE</div>
+        </div>
+    </div>
+
+    <!-- FACTION DIRECTORY (/factions) -->
+    <div id="faction-directory" class="premium-factions-dir hidden" aria-hidden="true">
+        <div class="premium-factions-dir__wrapper">
+            <button type="button" class="premium-factions-dir__panel-close" id="faction-directory-close" aria-label="Close"><span>ESC</span> ✕</button>
+            <aside class="premium-factions-dir__sidebar">
+                <div class="premium-factions-dir__brand">
+                    <h1>Server <span>Factions</span></h1>
+                    <p>Lista oficială a organizațiilor</p>
+                </div>
+                <nav class="premium-factions-dir__nav" id="faction-dir-filters">
+                    <button type="button" class="premium-factions-dir__nav-item is-active" data-faction-filter="all">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Toate Facțiunile
+                    </button>
+                    <button type="button" class="premium-factions-dir__nav-item" data-faction-filter="legal">
+                        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Departamente Legale
+                    </button>
+                    <button type="button" class="premium-factions-dir__nav-item" data-faction-filter="illegal">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                        Mafii / Gang-uri
+                    </button>
+                    <button type="button" class="premium-factions-dir__nav-item" data-faction-filter="service">
+                        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                        Servicii / Afaceri
+                    </button>
+                </nav>
+            </aside>
+            <div class="premium-factions-dir__content">
+                <div class="premium-factions-dir__grid-wrap is-active">
+                    <div class="premium-factions-dir__header">
+                        <h2 id="faction-dir-title">Toate Facțiunile</h2>
+                        <p>Alege o organizație pentru a vedea detaliile sau pentru a aplica.</p>
+                    </div>
+                    <div class="premium-factions-dir__grid" id="faction-directory-list"></div>
+                </div>
+            </div>
+            <aside class="premium-factions-dir__modal" id="faction-directory-modal">
+                <button type="button" class="premium-factions-dir__modal-close" id="faction-directory-modal-close" aria-label="Close">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="premium-factions-dir__modal-banner" id="faction-dir-modal-icon"></div>
+                <h2 class="premium-factions-dir__modal-title" id="faction-dir-modal-title">—</h2>
+                <div class="premium-factions-dir__modal-desc" id="faction-dir-modal-desc">—</div>
+                <div class="premium-factions-dir__req-box">
+                    <div class="premium-factions-dir__req-title">Conducere</div>
+                    <ul class="premium-factions-dir__req-list" id="faction-dir-modal-leaders"></ul>
+                </div>
+                <div class="premium-factions-dir__req-box">
+                    <div class="premium-factions-dir__req-title">MOTD Public</div>
+                    <div class="premium-factions-dir__modal-motd" id="faction-dir-modal-motd">—</div>
+                </div>
+                <div class="premium-factions-dir__req-box" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+                    <div class="premium-factions-dir__req-title">Lista Membri</div>
+                    <div class="premium-factions-dir__modal-roster" id="faction-dir-modal-roster"></div>
+                </div>
+                <div class="premium-factions-dir__req-box">
+                    <div class="premium-factions-dir__req-title">Recrutare</div>
+                    <ul class="premium-factions-dir__req-list" id="faction-dir-modal-recruit"></ul>
+                </div>
+                <button type="button" class="premium-faction__btn premium-faction__btn--primary" id="faction-dir-modal-btn" style="margin-top:8px;">
+                    Trimite CV (Aplică)
+                </button>
+            </aside>
+            <div id="faction-directory-toast" class="premium-factions-dir__toast"></div>
+            <div class="premium-factions-dir__close-hint">APASĂ ESC PENTRU A ÎNCHIDE</div>
+        </div>
+    </div>

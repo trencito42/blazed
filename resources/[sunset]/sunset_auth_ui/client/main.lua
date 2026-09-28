@@ -7,6 +7,8 @@
 -- ═══════════════════════════════════════════════════════════════
 
 local authOpen = false
+local authRendered = false
+local authBootEpoch = 0
 
 local function send(action, data)
     SendNUIMessage({ action = action, data = data or {} })
@@ -20,17 +22,22 @@ exports('Show', function(screen, data)
     send('authShow', data)
 end)
 
+exports('Hide', function()
+    authOpen = false
+    SetNuiFocus(false, false)
+    send('authHide', {})
+end)
+
 exports('SetFocus', function(hasFocus, hasCursor)
     SetNuiFocus(hasFocus == true, hasCursor == true)
     if not hasFocus then authOpen = false end
 end)
 
 exports('IsAuthOpen', function() return authOpen end)
+exports('IsRendered', function() return authRendered end)
+exports('GetBootEpoch', function() return authBootEpoch end)
 
 -- ── Forward NUI callbacks to sunset_auth ──
--- Client events are cross-resource, so TriggerEvent('sunset:nui:<name>') here
--- is received by sunset_auth's existing AddEventHandler('sunset:nui:<name>').
--- This keeps ALL auth logic in sunset_auth (single source of truth).
 local FORWARDED = {
     'authReady',
     'authLogin',
@@ -47,4 +54,11 @@ for _, name in ipairs(FORWARDED) do
         cb('ok')
     end)
 end
+
+RegisterNUICallback('authRendered', function(data, cb)
+    authRendered = true
+    authBootEpoch = GetGameTimer()
+    TriggerEvent('sunset:auth:rendered', data)
+    cb('ok')
+end)
 

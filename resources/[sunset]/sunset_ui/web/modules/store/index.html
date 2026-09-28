@@ -1,0 +1,52 @@
+<div id="store-forza" class="store-forza hidden" aria-hidden="true">
+        <div class="st-vignette"></div>
+        <div class="st-ui-layer">
+            <div class="st-categories-panel">
+                <div class="st-section-title" id="store-title">24/7 Supermarket</div>
+                <div class="st-cat-list" id="store-cat-list"></div>
+            </div>
+            <div class="st-items-panel">
+                <div class="st-section-title" style="color:var(--st-text-muted);margin-bottom:15px;">Product Shelves</div>
+                <div class="st-items-grid" id="store-items-grid"></div>
+            </div>
+            <div class="st-checkout-panel">
+                <div id="store-checkout-content" style="display:none;flex-direction:column;height:100%;">
+                    <div class="st-preview-box">
+                        <div class="st-preview-icon" id="store-preview-icon"></div>
+                        <div class="st-preview-info">
+                            <div class="st-preview-name" id="store-preview-name">Item</div>
+                            <div class="st-preview-price" id="store-preview-price">$0 / each</div>
+                            <div class="st-preview-weight" id="store-preview-weight"></div>
+                        </div>
+                    </div>
+                    <div class="st-qty-group">
+                        <div class="st-qty-header"><span>Quantity</span> <span style="color:var(--st-accent);">Bulk Buy</span></div>
+                        <div class="st-qty-controls">
+                            <button type="button" class="st-qty-btn" id="store-qty-dec"><i class="ph-bold ph-minus"></i></button>
+                            <div class="st-qty-value" id="store-qty-value">1</div>
+                            <button type="button" class="st-qty-btn" id="store-qty-inc"><i class="ph-bold ph-plus"></i></button>
+                        </div>
+                        <div class="st-qty-quick">
+                            <button type="button" class="st-quick-btn" data-store-qty="5">+5</button>
+                            <button type="button" class="st-quick-btn" data-store-qty="10">+10</button>
+                            <button type="button" class="st-quick-btn" data-store-qty="50">+50</button>
+                            <button type="button" class="st-quick-btn" data-store-qty="9999">MAX</button>
+                        </div>
+                    </div>
+                    <div class="st-checkout-summary">
+                        <span class="st-total-label">Total Due</span>
+                        <div class="st-total-value"><span>$</span><div id="store-total-value">0</div></div>
+                        <button type="button" class="st-btn-hold" id="store-buy" disabled>
+                            <div class="st-btn-progress" id="store-buy-progress"></div>
+                            <div class="st-btn-text" id="store-buy-text"><span class="st-key-hint">ENTER</span> Pay</div>
+                        </button>
+                    </div>
+                </div>
+                <div id="store-checkout-empty" class="st-empty-state">
+                    <i class="ph-fill ph-shopping-cart"></i>
+                    <span>Select a product<br>from the shelf</span>
+                </div>
+            </div>
+        </div>
+        <div class="st-close-hint">Press ESC to close</div>
+    </div>

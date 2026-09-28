@@ -1,0 +1,88 @@
+<div id="dealership" class="dealership-forza hidden" aria-hidden="true">
+        <div class="dl-vignette"></div>
+        <button type="button" class="dl-admin-toggle hidden" id="dl-admin-toggle">Admin Panel</button>
+
+        <div class="dl-ui-layer">
+            <div class="dl-catalog-col">
+                <div class="dl-section-title" id="dl-category-title">Catalog</div>
+                <div class="dl-item-list" id="dl-vehicle-list"></div>
+            </div>
+
+            <div class="dl-stats-panel">
+                <div class="dl-section-title dl-section-title--compact">Stock Performance</div>
+
+                <div class="dl-stat-row">
+                    <div class="dl-stat-header"><span>Top Speed</span><span class="dl-stat-val" id="dl-stat-speed-val">—</span></div>
+                    <div class="dl-stat-track" id="dl-stat-speed"></div>
+                </div>
+                <div class="dl-stat-row">
+                    <div class="dl-stat-header"><span>Acceleration</span><span class="dl-stat-val" id="dl-stat-accel-val">—</span></div>
+                    <div class="dl-stat-track" id="dl-stat-accel"></div>
+                </div>
+                <div class="dl-stat-row">
+                    <div class="dl-stat-header"><span>Handling</span><span class="dl-stat-val" id="dl-stat-handling-val">—</span></div>
+                    <div class="dl-stat-track" id="dl-stat-handling"></div>
+                </div>
+
+                <p class="dl-stock-note" id="dl-stock-note" aria-hidden="true"></p>
+                <div class="dl-balance" id="dl-balance" aria-hidden="true"></div>
+
+                <div class="dl-price-display">
+                    <span class="dl-price-label" id="dl-price-label">Purchase Price</span>
+                    <span class="dl-price-value" id="dl-price">—</span>
+                </div>
+
+                <button type="button" class="dl-btn-hold" id="dl-btn-buy">
+                    <div class="dl-btn-progress" id="dl-buy-progress"></div>
+                    <div class="dl-btn-text" id="dl-buy-text"><span class="dl-key-hint">ENTER</span> Hold to Purchase</div>
+                </button>
+            </div>
+        </div>
+
+        <div class="dl-bottom-tools">
+            <div class="dl-color-row" id="dl-color-row">
+                <label for="dl-color">Paint</label>
+                <select id="dl-color">
+                    <option value="0">Black</option>
+                    <option value="111">White</option>
+                    <option value="27">Red</option>
+                    <option value="64">Blue</option>
+                    <option value="53">Green</option>
+                    <option value="88">Yellow</option>
+                    <option value="38">Orange</option>
+                    <option value="147">Carbon</option>
+                </select>
+            </div>
+            <button type="button" class="dl-btn-test" id="dl-btn-test">Test Drive</button>
+            <div class="dl-preview-controls">
+                <button type="button" id="dealership-rotate-left" title="Rotate left">◀</button>
+                <span>Rotate</span>
+                <button type="button" id="dealership-rotate-right" title="Rotate right">▶</button>
+            </div>
+        </div>
+        <p class="dl-close-hint">Press ESC to close</p>
+
+        <section class="dl-admin-panel hidden" id="dl-admin-panel">
+            <div class="dl-admin-head">
+                <strong>Dealership Admin</strong>
+                <button type="button" id="dealership-admin-new">+ New Vehicle</button>
+            </div>
+            <div class="dl-admin-grid">
+                <label>Spawn model<input id="dealer-model" maxlength="64" placeholder="sultan"></label>
+                <label>Display name<input id="dealer-label" maxlength="80" placeholder="Sultan"></label>
+                <label>Brand<input id="dealer-brand" maxlength="48" placeholder="Karin"></label>
+                <label>Category<input id="dealer-category" maxlength="32" placeholder="sport"></label>
+                <label>Price<input id="dealer-price" type="number" min="1" max="2000000000"></label>
+                <label>Stock<input id="dealer-stock" type="number" min="0" max="1000000"></label>
+                <label>Order<input id="dealer-order" type="number" min="0" max="9999"></label>
+            </div>
+            <div class="dl-admin-checks">
+                <label><input id="dealer-available" type="checkbox"> Available for sale</label>
+                <label><input id="dealer-testdrive" type="checkbox"> Test drive enabled</label>
+            </div>
+            <div class="dl-admin-actions">
+                <button type="button" id="dealership-admin-save">Save / Add</button>
+                <button type="button" id="dealership-admin-delete" class="danger">Delete Selected</button>
+            </div>
+        </section>
+    </div>

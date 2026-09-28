@@ -141,7 +141,11 @@ local DL_REFRESH_MS = 250
 
 local function trimPlate(value)
     value = tostring(value or '')
-    return (value:gsub('^%s+', ''):gsub('%s+    noclip = not noclip
+    return (value:gsub('^%s+', ''):gsub('%s+$', ''))
+end
+
+RegisterNetEvent('sunset:admin:toggleNoclip', function()
+    noclip = not noclip
     exports.sunset_ui:Notify(noclip and 'Noclip ON' or 'Noclip OFF', 'info')
 end)
 
@@ -615,8 +619,6 @@ CreateThread(function()
         { name = 'z', help = 'Z coordinate (when using x y z)' },
     })
 end)
-, ''))
-end
 
 local function vehicleModelLabel(model)
     local display = GetDisplayNameFromVehicleModel(model)

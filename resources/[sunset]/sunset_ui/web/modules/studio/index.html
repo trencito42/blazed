@@ -1,0 +1,27 @@
+<div id="appearance-studio" class="appearance-studio hidden">
+        <div class="studio-vignette"></div>
+        <div class="studio-preview-hud">
+            <span class="studio-preview-label">Live preview</span>
+            <span class="studio-preview-keys">A / D or ← → to rotate</span>
+        </div>
+        <aside class="studio-sidebar">
+            <img class="studio-logo" src="assets/logoblaze.svg?v=1" width="88" height="88" alt="blaze.mp">
+            <h2 class="studio-title">Character Look</h2>
+            <p class="studio-hint">Rotate with A/D or the ROTATE buttons. Camera stays fixed.</p>
+            <div class="studio-gender" id="appearance-gender">
+                <button type="button" class="studio-gender__btn is-active" data-gender="0">MALE</button>
+                <button type="button" class="studio-gender__btn" data-gender="1">FEMALE</button>
+            </div>
+            <div class="studio-controls" id="appearance-sliders"></div>
+            <div class="studio-rotate">
+                <button type="button" id="appearance-cam-full" class="is-active">FULL</button>
+                <button type="button" id="appearance-cam-face">FACE</button>
+                <button type="button" id="appearance-cam-feet">SHOES</button>
+            </div>
+            <div class="studio-rotate">
+                <button type="button" id="appearance-rot-left">◀ ROTATE</button>
+                <button type="button" id="appearance-rot-right">ROTATE ▶</button>
+            </div>
+            <button type="button" class="studio-save" id="appearance-save">CONFIRM & PLAY</button>
+        </aside>
+    </div>

@@ -1,0 +1,111 @@
+<div id="hud" class="hud hidden">
+        <div class="hud-tr premium-hud-tr hud-boot" data-hud-panel="tr">
+            <div class="premium-top-row">
+                <div class="premium-unskew voice-container">
+                    <div class="voice-icon" id="hud-voice-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </div>
+                    <div class="voice-range" id="hud-voice-range" title="Voice range">Normal · 3.0m</div>
+                </div>
+                <div class="premium-unskew time-date-container">
+                    <div class="time-display" id="hud-time">00:00</div>
+                    <div class="date-display" id="hud-date">—</div>
+                </div>
+            </div>
+            <div class="finance-panel">
+                <div class="premium-unskew money-row money-cash-row">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+                    <span id="hud-cash">$0</span>
+                </div>
+                <div class="premium-unskew money-row money-bank-row">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span id="hud-bank">$0</span>
+                </div>
+                <div class="premium-unskew vitals-panel">
+                    <div class="vital-row">
+                        <div class="vital-icon" style="color: var(--hud-health);">
+                            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        </div>
+                        <div class="vital-bar-bg"><div class="vital-bar-fill fill-health" id="hud-health" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="vital-row vital-row--armor" title="Armor">
+                        <div class="vital-icon" style="color: var(--hud-armor);">
+                            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <div class="vital-bar-bg"><div class="vital-bar-fill fill-armor" id="hud-armor" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="premium-unskew hud-wanted-premium" id="hud-wanted" aria-live="polite">
+                <div class="wanted-title">WANTED LEVEL</div>
+                <div class="wanted-row">
+                    <div class="wanted-stars" id="hud-wanted-stars" aria-label="Wanted level">
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg class="wanted-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    </div>
+                    <div class="wanted-timer hidden" id="hud-wanted-timer-wrap">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span id="hud-wanted-timer"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-bl premium-hud-bl hud-boot hud-boot--location" data-hud-panel="bl">
+            <div class="premium-unskew task-panel" id="hud-task-panel" aria-live="polite">
+                <div class="task-title" id="hud-task-title"></div>
+                <div class="task-desc" id="hud-task-desc"></div>
+                <div class="task-progress hidden" id="hud-task-progress-wrap">
+                    <div class="task-bar-bg"><div class="task-bar-fill" id="hud-task-bar" style="width: 0%;"></div></div>
+                    <span id="hud-task-progress-text"></span>
+                </div>
+            </div>
+            <div class="premium-unskew location-panel">
+                <div class="location-line">
+                    <span class="location-compass" id="hud-heading" aria-label="Compass heading">N</span>
+                    <span class="location-sep" aria-hidden="true"></span>
+                    <span class="loc-street" id="hud-street">—</span>
+                </div>
+                <div class="loc-zone" id="hud-zone">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span id="hud-zone-text">LOS SANTOS</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="premium-unskew hud-waypoint-widget hidden" id="hud-waypoint" aria-live="polite">
+            <div class="hud-waypoint-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"></path></svg>
+            </div>
+            <div class="hud-waypoint-body">
+                <span class="hud-waypoint-label">WAYPOINT</span>
+                <span class="hud-waypoint-distance" id="hud-waypoint-distance">—</span>
+            </div>
+        </div>
+
+        <div class="identity-container hud-player-identity" id="hud-identity">
+            <span class="identity-name" id="hud-identity-name">—</span>
+            <span class="identity-id" id="hud-identity-id">(0)</span>
+        </div>
+
+        <div class="hud-bottom-right hud-boot hud-boot--speed hidden" id="hud-speedo" data-hud-panel="speedo">
+            <div class="speedo-panel speedo-panel--forza">
+                <canvas id="forza-speedo-canvas" class="forza-speedo-canvas" width="450" height="450" aria-label="Vehicle speedometer"></canvas>
+            </div>
+        </div>
+
+        <div id="veh-hints" class="veh-hints" data-hud-panel="veh-hints" aria-hidden="true">
+            <div class="veh-hints__row" data-hint="engine"><span class="veh-hints__label">ENGINE OFF</span><span class="veh-hints__key">2</span></div>
+            <div class="veh-hints__row" data-hint="lock"><span class="veh-hints__label">UNLOCKED</span><span class="veh-hints__key">U</span></div>
+            <div class="veh-hints__row" data-hint="seatbelt"><span class="veh-hints__label">SEATBELT OFF</span><span class="veh-hints__key">K</span></div>
+            <div class="veh-hints__row" data-hint="lights"><span class="veh-hints__label">LIGHTS OFF</span><span class="veh-hints__key">H</span></div>
+        </div>
+
+        <div class="hud-editor-bar hidden" id="hud-editor-bar">
+            <span id="hud-editor-label">HUD Editor — click a panel</span>
+            <span class="hud-editor-hint">Arrows = move · Shift = fast · Enter = save · Backspace = reset · Esc = close</span>
+        </div>
+    </div>

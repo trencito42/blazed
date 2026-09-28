@@ -49,6 +49,7 @@ files {
     'web/js/*.js',
     'web/vendor/**/*',
     'web/assets/**/*',
+    'web/modules/**/*',
 }
 
 client_scripts {

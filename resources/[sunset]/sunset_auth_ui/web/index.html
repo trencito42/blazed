@@ -3,94 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>blaze.mp — Login</title>
-    <link rel="stylesheet" href="auth.css?v=2">
+    <title>blaze.mp — Authentication</title>
+    <link rel="stylesheet" href="auth.css?v=3">
 </head>
 <body>
     <div id="auth-screen" class="auth-screen">
         <div class="auth-bg"></div>
-        <div class="auth-container">
-            <div class="auth-brand">
-                <div class="auth-logo">BLAZE<span>.MP</span></div>
-                <div class="auth-tagline">RPG ROLEPLAY · LOS SANTOS</div>
+        <div class="auth-overlay"></div>
+
+        <div id="auth-panel" class="auth-container">
+            <header class="auth-header">
+                <div class="auth-subtitle">SECURITATE SUNSETMP</div>
+                <h1 class="auth-title" id="auth-main-title">Loghează-te</h1>
+            </header>
+
+            <div class="auth-form-slider" id="auth-form-slider">
+                <!-- Login Form -->
+                <div class="auth-form is-active" id="auth-form-login">
+                    <div class="auth-field">
+                        <label for="auth-user">NUME JUCĂTOR</label>
+                        <div class="auth-input-wrap">
+                            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <input type="text" id="auth-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Ex: Ștefan">
+                        </div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label for="auth-pass">PAROLĂ ACCES</label>
+                        <div class="auth-input-wrap">
+                            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <input type="password" id="auth-pass" maxlength="64" autocomplete="current-password" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <label class="auth-check">
+                        <input type="checkbox" id="auth-remember" checked>
+                        <span class="auth-check-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                        <span class="auth-check-label">Salvează contul pentru login rapid</span>
+                    </label>
+
+                    <button type="button" class="auth-btn auth-btn--primary" id="auth-login-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                        CONECTARE
+                    </button>
+
+                    <div class="auth-links">
+                        <button type="button" class="auth-link" id="auth-go-register">Nu ai cont? Creează unul →</button>
+                    </div>
+                </div>
+
+                <!-- Register Form -->
+                <div class="auth-form hidden" id="auth-form-register">
+                    <div class="auth-field">
+                        <label for="reg-user">NUME DORIT</label>
+                        <div class="auth-input-wrap">
+                            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <input type="text" id="reg-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Alege un username">
+                        </div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label for="reg-email">ADRESA EMAIL</label>
+                        <div class="auth-input-wrap">
+                            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            <input type="email" id="reg-email" maxlength="254" autocomplete="email" spellcheck="false" placeholder="adresa@email.com">
+                        </div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label for="reg-pass">PAROLĂ SECURĂ</label>
+                        <div class="auth-input-wrap">
+                            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <input type="password" id="reg-pass" maxlength="64" autocomplete="new-password" placeholder="Min 6 caractere">
+                        </div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label for="reg-pass2">CONFIRMĂ PAROLA</label>
+                        <div class="auth-input-wrap">
+                            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <input type="password" id="reg-pass2" maxlength="64" autocomplete="new-password" placeholder="Repetă parola">
+                        </div>
+                    </div>
+
+                    <label class="auth-check">
+                        <input type="checkbox" id="reg-remember" checked>
+                        <span class="auth-check-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                        <span class="auth-check-label">Salvează contul pentru login rapid</span>
+                    </label>
+
+                    <button type="button" class="auth-btn auth-btn--primary" id="auth-register-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                        ÎNREGISTRARE
+                    </button>
+
+                    <div class="auth-links">
+                        <button type="button" class="auth-link" id="auth-go-login">← Înapoi la Conectare</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Login -->
-            <div class="auth-form" id="auth-login">
-                <h2 class="auth-title">SIGN IN</h2>
-                <div class="auth-field">
-                    <label>USERNAME</label>
-                    <input type="text" id="auth-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Your username">
-                </div>
-                <div class="auth-field">
-                    <label>PASSWORD</label>
-                    <input type="password" id="auth-pass" autocomplete="current-password" placeholder="••••••••">
-                </div>
-                <label class="auth-check">
-                    <input type="checkbox" id="auth-remember" checked>
-                    <span>Save this account for quick login</span>
-                </label>
-                <button type="button" class="auth-btn" id="auth-login-btn">SIGN IN</button>
-                <div class="auth-links">
-                    <button type="button" class="auth-link" id="auth-go-register">No account? Create one →</button>
-                </div>
-            </div>
-
-            <!-- Register -->
-            <div class="auth-form hidden" id="auth-register">
-                <h2 class="auth-title">REGISTER</h2>
-                <div class="auth-field">
-                    <label>USERNAME</label>
-                    <input type="text" id="reg-user" maxlength="20" autocomplete="username" spellcheck="false" placeholder="Your username">
-                </div>
-                <div class="auth-field">
-                    <label>EMAIL</label>
-                    <input type="text" id="reg-email" maxlength="64" autocomplete="email" spellcheck="false" placeholder="you@email.com">
-                </div>
-                <div class="auth-field">
-                    <label>PASSWORD</label>
-                    <input type="password" id="reg-pass" autocomplete="new-password" placeholder="Min 6 characters">
-                </div>
-                <div class="auth-field">
-                    <label>CONFIRM PASSWORD</label>
-                    <input type="password" id="reg-pass2" autocomplete="new-password" placeholder="Repeat password">
-                </div>
-                <label class="auth-check">
-                    <input type="checkbox" id="reg-remember" checked>
-                    <span>Save this account for quick login</span>
-                </label>
-                <button type="button" class="auth-btn" id="auth-register-btn">CREATE ACCOUNT</button>
-                <div class="auth-links">
-                    <button type="button" class="auth-link" id="auth-go-login">← Back to sign in</button>
-                </div>
-            </div>
-
-            <!-- Email link (first login on a new account) -->
-            <div class="auth-form hidden" id="auth-email-form">
-                <h2 class="auth-title">LINK EMAIL</h2>
-                <div class="auth-field">
-                    <label>EMAIL</label>
-                    <input type="text" id="auth-email" maxlength="64" autocomplete="email" spellcheck="false" placeholder="you@email.com">
-                </div>
-                <button type="button" class="auth-btn" id="auth-email-btn">SAVE & CONTINUE</button>
-            </div>
-
-            <!-- Saved accounts -->
+            <!-- Saved Accounts / Quick Login -->
             <div class="auth-accounts hidden" id="auth-accounts">
-                <h3 class="auth-accounts-title">QUICK LOGIN — SELECT ACCOUNT</h3>
+                <div class="auth-divider"><span>LOGIN RAPID — SELECTEAZĂ CONT</span></div>
                 <div class="auth-accounts-list" id="auth-accounts-list"></div>
             </div>
 
-            <!-- Error -->
+            <!-- Error Banner -->
             <div class="auth-error hidden" id="auth-error"></div>
 
-            <!-- Loading -->
-            <div class="auth-loading hidden" id="auth-loading">
-                <div class="auth-spinner"></div>
-                <p>Connecting...</p>
+            <!-- Footer -->
+            <footer class="auth-footer">
+                <div class="auth-server-status"><span class="status-dot"></span> Server Online</div>
+                <div class="auth-version">blaze.mp · Sunset Core Edition</div>
+            </footer>
+        </div>
+
+        <!-- Email Link Modal -->
+        <div id="auth-email-modal" class="auth-modal-overlay hidden" role="dialog" aria-modal="true">
+            <div class="auth-modal-panel">
+                <div class="auth-subtitle">ACCOUNT SYNC</div>
+                <h2 class="auth-modal-title">Link your email</h2>
+                <p class="auth-modal-desc">Avem nevoie de o adresă de email pe contul <strong id="auth-email-username">tău</strong> pentru securitate și recuperare.</p>
+                
+                <div class="auth-field">
+                    <label for="auth-email-input">ADRESĂ EMAIL</label>
+                    <div class="auth-input-wrap">
+                        <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        <input type="email" id="auth-email-input" maxlength="254" autocomplete="email" spellcheck="false" placeholder="you@example.com">
+                    </div>
+                </div>
+
+                <div class="auth-error hidden" id="auth-email-error"></div>
+
+                <button type="button" class="auth-btn auth-btn--primary" id="auth-email-submit">SALVEAZĂ &amp; CONTINUĂ</button>
             </div>
         </div>
+
+        <!-- Loading Overlay -->
+        <div class="auth-loading-overlay hidden" id="auth-loading">
+            <div class="auth-spinner"></div>
+            <p id="auth-loading-text">Se conectează...</p>
+        </div>
     </div>
-    <script src="auth.js?v=2"></script>
+
+    <script src="auth.js?v=3"></script>
 </body>
 </html>
