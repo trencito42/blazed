@@ -74,10 +74,14 @@ local function spawnPlayer(char, spawnPosition)
     SetPedDefaultComponentVariation(ped)
     SetEntityCollision(ped, true, true)
 
-    if char.appearance and next(char.appearance) then
+    local app = char.appearance
+    if not app or not next(app) then
         if GetResourceState('sunset_appearance') == 'started' then
-            exports.sunset_appearance:ApplyAppearance(ped, char.appearance, char.gender)
+            app = exports.sunset_appearance:GetDefaultAppearance(char.gender or 0)
         end
+    end
+    if app and GetResourceState('sunset_appearance') == 'started' then
+        exports.sunset_appearance:ApplyAppearance(ped, app, char.gender or 0)
     end
 
     FreezeEntityPosition(ped, true)

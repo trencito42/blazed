@@ -191,7 +191,16 @@ CreateThread(function()
 end)
 
 AddEventHandler('sunset:client:appearanceRequired', function(char)
-    openEditor(char)
+    if char then
+        local def = SunsetAppearance.default(char.gender or 0)
+        char.appearance = def
+        CreateThread(function()
+            pcall(function()
+                Sunset.AwaitCallback('sunset:saveAppearance', def, char.gender or 0, char.id)
+            end)
+            TriggerEvent('sunset:client:spawnSelectionRequired', char)
+        end)
+    end
 end)
 
 AddEventHandler('sunset:nui:appearanceChange', function(data)
@@ -280,6 +289,7 @@ local function exportResolveTorso(ped, gender, topDrawable, topTexture)
 end
 
 exports('ApplyAppearance', ApplyAppearance)
+exports('GetDefaultAppearance', function(gender) return SunsetAppearance.default(gender or 0) end)
 exports('ResolveTorso', exportResolveTorso)
 exports('IsEditing', function() return editing end)
 

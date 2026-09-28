@@ -396,7 +396,7 @@ local function enter(source,id)
     SetPlayerRoutingBucket(source,SunsetProperties.BucketBase+prop.id)
     local entry=decodePos(prop.entry)
     Player(source).state:set('sunsetPropertyExit',entry,false)
-    TriggerClientEvent('sunset:client:propertyInterior',source,{id=prop.id,label=prop.label,interior=interior,entry=entry})
+    TriggerClientEvent('sunset:client:propertyInterior',source,{id=prop.id,label=prop.label,interior=interior,entry=entry,isOwnerOrRenter=accessible(char,prop)})
     return true,'Entering house...'
 end
 exports.sunset_core:RegisterCallback('sunset:enterProperty',enter)

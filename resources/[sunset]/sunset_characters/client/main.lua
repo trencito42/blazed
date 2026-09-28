@@ -70,8 +70,21 @@ end
 
 local function spawnCharacter(char)
     if not char.appearance or not next(char.appearance) then
-        TriggerEvent('sunset:client:appearanceRequired', char)
-        return
+        local def = nil
+        if GetResourceState('sunset_appearance') == 'started' then
+            def = exports.sunset_appearance:GetDefaultAppearance(char.gender or 0)
+        end
+        if not def and SunsetAppearance and SunsetAppearance.default then
+            def = SunsetAppearance.default(char.gender or 0)
+        end
+        if def then
+            char.appearance = def
+            CreateThread(function()
+                pcall(function()
+                    Sunset.AwaitCallback('sunset:saveAppearance', def, char.gender or 0, char.id)
+                end)
+            end)
+        end
     end
     showSpawnSelection(char)
 end

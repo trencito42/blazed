@@ -55,6 +55,18 @@ exports('IsPanelOpen', function()
     return propertiesPanelOpen
 end)
 
+exports('IsInsideProperty', function()
+    return insideProperty ~= nil
+end)
+
+exports('GetInsideProperty', function()
+    return insideProperty
+end)
+
+exports('CanAccessWardrobe', function()
+    return insideProperty ~= nil and insideProperty.isOwnerOrRenter == true
+end)
+
 AddEventHandler('sunset:world:propertyInteract', function(prop)
     if insideProperty then return end
     local rows = refreshProperties()
@@ -157,7 +169,11 @@ RegisterNetEvent('sunset:client:propertyInterior', function(data)
     SetEntityHeading(ped, data.interior.w or 0.0)
     DisplayRadar(false)
     DoScreenFadeIn(500)
-    exports.sunset_ui:Notify(('Inside %s — press E to exit. The radar is hidden indoors so it does not show the shared interior coordinates.'):format(data.label or 'house'), 'info', 6500)
+    local helpText = ('Inside %s — press E to exit.'):format(data.label or 'house')
+    if data.isOwnerOrRenter then
+        helpText = helpText .. ' Use /wardrobe to change clothes.'
+    end
+    exports.sunset_ui:Notify(helpText, 'info', 6500)
 end)
 
 RegisterNetEvent('sunset:client:propertyExited', function(data)

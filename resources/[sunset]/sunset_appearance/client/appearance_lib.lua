@@ -112,24 +112,24 @@ function SunsetAppearance.default(gender)
     return {
         version = 2,
         headBlend = {
-            shapeFirst = 0, shapeSecond = 0, shapeThird = 0,
-            skinFirst = 0, skinSecond = 0, skinThird = 0,
+            shapeFirst = isFemale and 21 or 0, shapeSecond = isFemale and 21 or 0, shapeThird = 0,
+            skinFirst = isFemale and 21 or 0, skinSecond = isFemale and 21 or 0, skinThird = 0,
             shapeMix = 0.5, skinMix = 0.5, thirdMix = 0.0,
         },
-        hair = { drawable = 0, texture = 0, color = 0, highlight = 0 },
+        hair = { drawable = 4, texture = 0, color = 0, highlight = 0 },
         overlays = {
             ['1'] = { index = 0, opacity = 0.0, color = 0 },
             ['2'] = { index = 0, opacity = 0.0, color = 0 },
         },
         components = {
             ['1'] = { drawable = 0, texture = 0 },
-            ['3'] = { drawable = isFemale and 14 or 15, texture = 0 },
-            ['4'] = { drawable = isFemale and 0 or 0, texture = 0 },
+            ['3'] = { drawable = 15, texture = 0 },
+            ['4'] = { drawable = 10, texture = 0 },
             ['5'] = { drawable = 0, texture = 0 },
             ['6'] = { drawable = 1, texture = 0 },
             ['7'] = { drawable = 0, texture = 0 },
-            ['8'] = { drawable = 15, texture = 0 },
-            ['11'] = { drawable = 15, texture = 0 },
+            ['8'] = { drawable = isFemale and 14 or 15, texture = 0 },
+            ['11'] = { drawable = 14, texture = 0 },
         },
         props = {
             ['0'] = { drawable = -1, texture = 0 },

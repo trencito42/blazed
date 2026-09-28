@@ -280,6 +280,40 @@ local function grantStarterItems(characterId)
     end
 end
 
+local function getDefaultAppearance(gender)
+    local isFemale = gender == 1
+    return {
+        version = 2,
+        headBlend = {
+            shapeFirst = isFemale and 21 or 0, shapeSecond = isFemale and 21 or 0, shapeThird = 0,
+            skinFirst = isFemale and 21 or 0, skinSecond = isFemale and 21 or 0, skinThird = 0,
+            shapeMix = 0.5, skinMix = 0.5, thirdMix = 0.0,
+        },
+        hair = { drawable = 4, texture = 0, color = 0, highlight = 0 },
+        overlays = {
+            ['1'] = { index = 0, opacity = 0.0, color = 0 },
+            ['2'] = { index = 0, opacity = 0.0, color = 0 },
+        },
+        components = {
+            ['1'] = { drawable = 0, texture = 0 },
+            ['3'] = { drawable = 15, texture = 0 },
+            ['4'] = { drawable = 10, texture = 0 },
+            ['5'] = { drawable = 0, texture = 0 },
+            ['6'] = { drawable = 1, texture = 0 },
+            ['7'] = { drawable = 0, texture = 0 },
+            ['8'] = { drawable = isFemale and 14 or 15, texture = 0 },
+            ['11'] = { drawable = 14, texture = 0 },
+        },
+        props = {
+            ['0'] = { drawable = -1, texture = 0 },
+            ['1'] = { drawable = -1, texture = 0 },
+            ['2'] = { drawable = -1, texture = 0 },
+            ['6'] = { drawable = -1, texture = 0 },
+            ['7'] = { drawable = -1, texture = 0 },
+        },
+    }
+end
+
 local function createDefaultAccountCharacter(player)
     local count = MySQL.scalar.await('SELECT COUNT(*) FROM characters WHERE player_id = ?', { player.id })
     if count >= Sunset.Config.MaxCharacters then
@@ -288,6 +322,7 @@ local function createDefaultAccountCharacter(player)
 
     local spawn = Sunset.Config.DefaultSpawn
     local accountName = player.name or 'Player'
+    local defaultApp = getDefaultAppearance(0)
     local charId = MySQL.insert.await([[
         INSERT INTO characters (player_id, slot, firstname, lastname, dateofbirth, gender, nationality, cash, bank, position, appearance)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -295,7 +330,7 @@ local function createDefaultAccountCharacter(player)
         player.id, 1, accountName, '', '1990-01-01', 0, 'American',
         Sunset.Config.StartingCash, Sunset.Config.StartingBank,
         json.encode({ x = spawn.x, y = spawn.y, z = spawn.z, w = spawn.w }),
-        json.encode({}),
+        json.encode(defaultApp),
     })
 
     grantStarterItems(charId)
@@ -460,7 +495,7 @@ RegisterCallback('sunset:createCharacter', function(source, data)
         data.gender, data.nationality,
         Sunset.Config.StartingCash, Sunset.Config.StartingBank,
         json.encode({ x = spawn.x, y = spawn.y, z = spawn.z, w = spawn.w }),
-        json.encode(data.appearance or {}),
+        json.encode((data.appearance and next(data.appearance)) and data.appearance or getDefaultAppearance(data.gender)),
     })
 
     grantStarterItems(charId)

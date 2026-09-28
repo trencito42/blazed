@@ -79,8 +79,35 @@ local function finishWardrobeOpen()
     exports.sunset_ui:SetFocus(true, true)
 end
 
+local isHouseWardrobe = false
+
+local function canOpenWardrobe()
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    for _, shop in ipairs(Sunset.ClothingShops or {}) do
+        if #(coords - shop) <= 15.0 then
+            return true, false
+        end
+    end
+
+    if GetResourceState('sunset_properties') == 'started' then
+        local okProp, inside = pcall(function() return exports.sunset_properties:IsInsideProperty() end)
+        if okProp and inside then
+            local okAccess, canAccess = pcall(function() return exports.sunset_properties:CanAccessWardrobe() end)
+            if okAccess and canAccess then
+                return true, true
+            else
+                return false, false, 'You must own or rent this house to use the wardrobe.'
+            end
+        end
+    end
+
+    return false, false, 'You must be at a clothing store or inside a house you own/rent to use the wardrobe.'
+end
+
 local function closeShop()
     if not inShop then return end
+    isHouseWardrobe = false
     wardrobePendingFocus = false
     restoreSnapshot()
     WardrobeShop.stopCamera()
@@ -96,7 +123,7 @@ local function closeShop()
     TriggerEvent('sunset:world:uiModalClose')
 end
 
-local function openWardrobe()
+local function openWardrobe(fromHouse)
     if inShop then return end
 
     -- [CLOTHING FIX B2] Shopping while in a faction uniform made the uniform
@@ -129,7 +156,7 @@ local function openWardrobe()
     local ok, err = pcall(function()
         previewAppearance = SunsetClothing.syncFromPed(savedSnapshot.appearance, PlayerPedId(), savedSnapshot.gender)
         activeCategory = 'top'
-        local catalog = SunsetClothing.buildCatalog(ped, previewAppearance, savedSnapshot.gender, activeCategory)
+        local catalog = SunsetClothing.buildCatalog(PlayerPedId(), previewAppearance, savedSnapshot.gender, activeCategory)
         if not catalog or not catalog.categories or #catalog.categories == 0 then
             print('[sunset_clothing] WARNING: openWardrobe catalog is missing categories!')
         end
@@ -138,6 +165,7 @@ local function openWardrobe()
 
         inShop = true
         shopType = 'clothing'
+        isHouseWardrobe = (fromHouse == true)
         lastWardrobeOpenAt = now
         wardrobePendingFocus = true
 
@@ -337,18 +365,28 @@ CreateThread(function()
             -- [CLOTHING FIX B3] Walk-away: leaving the shop zone while previewing
             -- restores the snapshot and closes (previously the preview stayed and
             -- the shop remained open far from any store).
-            local ped = PlayerPedId()
-            local coords = GetEntityCoords(ped)
-            local nearAny = false
-            local list = (shopType == 'barber') and Sunset.BarberShops or Sunset.ClothingShops
-            for _, shop in ipairs(list or {}) do
-                if #(coords - shop) <= 15.0 then nearAny = true break end
-            end
-            if not nearAny then
-                if shopType == 'barber' then
-                    closeBarberInternal()
-                else
+            if isHouseWardrobe then
+                local inside = false
+                if GetResourceState('sunset_properties') == 'started' then
+                    pcall(function() inside = exports.sunset_properties:IsInsideProperty() end)
+                end
+                if not inside then
                     closeShop()
+                end
+            else
+                local ped = PlayerPedId()
+                local coords = GetEntityCoords(ped)
+                local nearAny = false
+                local list = (shopType == 'barber') and Sunset.BarberShops or Sunset.ClothingShops
+                for _, shop in ipairs(list or {}) do
+                    if #(coords - shop) <= 15.0 then nearAny = true break end
+                end
+                if not nearAny then
+                    if shopType == 'barber' then
+                        closeBarberInternal()
+                    else
+                        closeShop()
+                    end
                 end
             end
             Wait(0)
@@ -356,6 +394,46 @@ CreateThread(function()
             Wait(400)
         end
     end
+end)
+
+RegisterCommand('wardrobe', function()
+    local allowed, fromHouse, msg = canOpenWardrobe()
+    if allowed then
+        openWardrobe(fromHouse)
+    else
+        notify(msg or 'You cannot open the wardrobe here.', 'error')
+    end
+end, false)
+
+RegisterCommand('clothes', function()
+    ExecuteCommand('wardrobe')
+end, false)
+
+RegisterCommand('skin', function()
+    ExecuteCommand('wardrobe')
+end, false)
+
+RegisterCommand('skins', function()
+    ExecuteCommand('wardrobe')
+end, false)
+
+exports('OpenWardrobe', function(fromHouse)
+    local allowed, house, msg = canOpenWardrobe()
+    if allowed then
+        openWardrobe(fromHouse or house)
+        return true
+    end
+    return false, msg
+end)
+
+exports('CanOpenWardrobe', canOpenWardrobe)
+
+CreateThread(function()
+    Wait(2000)
+    TriggerEvent('chat:addSuggestion', '/wardrobe', 'Deschide garderoba (la magazin de haine sau in casa ta/unde ai chirie)')
+    TriggerEvent('chat:addSuggestion', '/clothes', 'Deschide garderoba')
+    TriggerEvent('chat:addSuggestion', '/skin', 'Deschide garderoba')
+    TriggerEvent('chat:addSuggestion', '/skins', 'Deschide garderoba')
 end)
 
 RegisterCommand('closewardrobe', function()
