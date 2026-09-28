@@ -106,7 +106,7 @@
         },
         jobcenter: {
             html: 'modules/jobcenter/index.html',
-            css: ['css/panels.css'],
+            css: ['css/panels.css', 'css/jobcenter.css'],
             js: ['js/job_shift.js', 'js/job_icons.js', 'js/panels.js']
         },
         garage: {
