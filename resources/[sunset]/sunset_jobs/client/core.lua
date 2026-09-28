@@ -213,7 +213,7 @@ function JobClient.spawnVehicle(model, spawn, warp)
         -- before returning, otherwise registerVehicle fails with
         -- "player is not in the driver seat".
         local warpDeadline = GetGameTimer() + 3000
-        while GetPedInVehicle(PlayerPedId(), false) ~= veh and GetGameTimer() < warpDeadline do
+        while GetVehiclePedIsIn(PlayerPedId(), false) ~= veh and GetGameTimer() < warpDeadline do
             Wait(10)
         end
     end

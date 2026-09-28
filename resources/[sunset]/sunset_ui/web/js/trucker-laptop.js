@@ -111,14 +111,21 @@ const TruckerLaptop = {
     _selectCategory(catId) {
         if (!this._state) return;
         this._state.activeCategory = catId;
-        this._state.selectedRoute  = null;
         if (this._catList) {
             for (const btn of this._catList.querySelectorAll('.st-cat-item')) {
                 btn.classList.toggle('is-active', btn.dataset.cat === catId);
             }
         }
         this._renderRoutes(catId);
-        this._updateAcceptBtn();
+        const routes = (this._state?.routes || []).filter(
+            (r) => (r.category || 'general') === catId
+        );
+        if (routes.length > 0) {
+            this._selectRoute(routes[0]);
+        } else {
+            this._state.selectedRoute = null;
+            this._updateAcceptBtn();
+        }
     },
 
     // ── Routes ───────────────────────────────────────────────
@@ -155,6 +162,10 @@ const TruckerLaptop = {
                 </div>
             `;
             el.addEventListener('click', () => this._selectRoute(route));
+            el.addEventListener('dblclick', () => {
+                this._selectRoute(route);
+                this._acceptRoute();
+            });
             this._routeList.appendChild(el);
         }
     },

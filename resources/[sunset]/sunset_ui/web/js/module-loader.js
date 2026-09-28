@@ -96,7 +96,7 @@
         },
         trucker: {
             html: 'modules/trucker/index.html',
-            css: ['css/trucker-laptop.css'],
+            css: ['css/store-forza.css', 'css/trucker-laptop.css'],
             js: ['js/trucker-laptop.js']
         },
         fishing: {

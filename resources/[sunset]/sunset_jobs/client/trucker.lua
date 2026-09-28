@@ -50,6 +50,27 @@ local function getGroundCoords(cp)
     return cp
 end
 
+local currentTruckerCheckpoint = nil
+
+local function clearTruckerCheckpoint()
+    if currentTruckerCheckpoint then
+        DeleteCheckpoint(currentTruckerCheckpoint)
+        currentTruckerCheckpoint = nil
+    end
+end
+
+local function setTruckerCheckpoint(coords, r, g, b)
+    clearTruckerCheckpoint()
+    if not coords then return end
+    local pos = getGroundCoords(coords)
+    r = r or 46
+    g = g or 204
+    b = b or 113
+    -- Checkpoint Type 47 = tall cylinder with arrow pointing down
+    currentTruckerCheckpoint = CreateCheckpoint(47, pos.x, pos.y, pos.z, pos.x, pos.y, pos.z, 6.0, r, g, b, 180, 0)
+    SetCheckpointCylinderHeight(currentTruckerCheckpoint, 5.0, 5.0, 6.0)
+end
+
 local function drawTruckerMarker(coords, r, g, b)
     if not coords then return end
     local pos = getGroundCoords(coords)
@@ -222,6 +243,7 @@ local function startTrucker(selectedRouteIdx)
     SetBlipRoute(delivBlip, true)
     SetBlipRouteColour(delivBlip, 2)
     JC.setWaypoint(data.delivery)
+    setTruckerCheckpoint(delivery, 46, 204, 113)
     JC.showObjective('Deliver cargo', 'Follow the GPS to: ' .. (data.label or 'destination'), 30)
     JC.notify('Deliver to: ' .. (data.label or 'destination') .. '. Follow the map.', 'info', 8000)
 
@@ -257,6 +279,7 @@ local function startTrucker(selectedRouteIdx)
                                 SetBlipRoute(depBlip, true)
                                 SetBlipRouteColour(depBlip, 3)
                                 JC.setWaypoint(cfg.depot.coords)
+                                setTruckerCheckpoint(cfg.depot.coords, 52, 152, 219)
                                 JC.showObjective('Return the truck', 'Drive back to the depot', 90)
                                 local bonusStr = (result.bonusPct and result.bonusPct > 0)
                                     and (' (+%d%% rank bonus)'):format(result.bonusPct) or ''
@@ -284,6 +307,7 @@ local function startTrucker(selectedRouteIdx)
                         local ok, err3 = Sunset.AwaitCallback('sunset:jobs:trucker:returnDepot')
                         busy = false
                         if ok then
+                            clearTruckerCheckpoint()
                             JC.deleteVehicles()
                             SetWaypointOff()
                             break
@@ -316,6 +340,7 @@ RegisterCommand('truckroute', function()
             SetBlipRoute(delivBlip, true)
             SetBlipRouteColour(delivBlip, 2)
             JC.setWaypoint(d)
+            setTruckerCheckpoint(d, 46, 204, 113)
             JC.notify('GPS route refreshed to: ' .. (session.label or 'Destination'), 'success')
         end
     elseif stage == 'return_depot' and cfg and cfg.depot then
@@ -324,6 +349,7 @@ RegisterCommand('truckroute', function()
         SetBlipRoute(depBlip, true)
         SetBlipRouteColour(depBlip, 3)
         JC.setWaypoint(cfg.depot.coords)
+        setTruckerCheckpoint(cfg.depot.coords, 52, 152, 219)
         JC.notify('GPS route refreshed to Trucker Depot.', 'success')
     end
 end, false)
@@ -334,3 +360,15 @@ RegisterCommand('recovertrailer', function()
 end, false)
 
 TriggerEvent('chat:addSuggestion', '/recovertrailer', 'Right and reattach your assigned Trucker trailer')
+
+RegisterNetEvent('sunset:jobs:sessionEnded', function(jobId)
+    if jobId == 'trucker' or not jobId then
+        clearTruckerCheckpoint()
+    end
+end)
+
+AddEventHandler('onResourceStop', function(res)
+    if res == GetCurrentResourceName() then
+        clearTruckerCheckpoint()
+    end
+end)

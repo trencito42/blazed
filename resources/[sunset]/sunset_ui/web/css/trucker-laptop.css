@@ -1,3 +1,5 @@
+@import 'store-forza.css';
+
 /* Trucker Laptop — delivery route selector
    Reuses .store-forza CSS variables and base panel classes.
    Only trucker-specific overrides live here.

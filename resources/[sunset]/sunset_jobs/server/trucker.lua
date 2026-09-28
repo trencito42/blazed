@@ -113,7 +113,7 @@ end)
 exports.sunset_core:RegisterCallback('sunset:jobs:trucker:start', function(source, selectedRouteIdx)
     local cfg = Sunset.GetJobConfig('trucker')
     if not cfg or not cfg.routes or #cfg.routes == 0 then return nil, 'No routes configured' end
-    if not SunsetJobs_ValidateCoords(source, cfg.depot.coords, 20.0) then return nil, 'Go to the trucker depot to start work' end
+    if not SunsetJobs_ValidateCoords(source, cfg.depot.coords, 45.0) then return nil, 'Go to the trucker depot to start work' end
 
     local routeIdx
     if selectedRouteIdx and tonumber(selectedRouteIdx) then
