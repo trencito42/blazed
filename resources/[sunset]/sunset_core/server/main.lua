@@ -117,8 +117,20 @@ RegisterNetEvent('sunset:server:playerLoaded', function()
     end
 
     Sessions[source] = { license = license, authenticated = false }
+    -- Isolate the player from the open world while on the auth screen.
+    -- FiveM will not stream world geometry for bucket 9999, eliminating
+    -- the freeze that happens when ShutdownLoadingScreen() is called.
+    SetPlayerRoutingBucket(source, 9999)
     TriggerClientEvent('sunset:client:sessionReady', source, { license = license })
     Sunset.Debug('Session ready:', source)
+end)
+
+-- Moves the player back to the main routing bucket right before spawn
+-- streaming begins (called by sunset_spawn before streamSpawnArea).
+RegisterNetEvent('sunset:server:prepareSpawn', function()
+    local source = source
+    if not Sessions[source] or not Sessions[source].authenticated then return end
+    SetPlayerRoutingBucket(source, 0)
 end)
 
 local function completeAuthentication(source, accountId, username)

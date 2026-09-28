@@ -98,6 +98,11 @@ local function spawnPlayer(char, spawnPosition)
 
     FreezeEntityPosition(ped, true)
 
+    -- Move the player to the main routing bucket before streaming so that
+    -- world collision requests are fulfilled (they fail in the auth bucket 9999).
+    TriggerServerEvent('sunset:server:prepareSpawn')
+    Wait(150)
+
     local collisionLoaded = streamSpawnArea(ped, pos)
     if not collisionLoaded then
         local fallback = defaultPosition()
