@@ -162,7 +162,7 @@ Sunset.CommandUsage = {
     givegun = { usage = '/givegun [server id] [weapon] [ammo]', minArgs = 2 },
     setleader = { usage = '/setleader [server id] [faction]', minArgs = 2 },
     removeleader = { usage = '/removeleader [server id] [faction]', minArgs = 2 },
-    acreatehouse = { usage = '/acreatehouse [price] [interior] [min level] [name]', minArgs = 4 },
+    acreatehouse = { usage = '/acreatehouse [pret] [interior] [nivel minim] [nume]', minArgs = 4 },
     ahouseedit = { usage = '/ahouseedit [house id] [field] [value]', minArgs = 3 },
     astats = { usage = '/astats [server id]', minArgs = 1 },
     setstat = { usage = '/setstat [server id] [stat] [value]', minArgs = 3 },

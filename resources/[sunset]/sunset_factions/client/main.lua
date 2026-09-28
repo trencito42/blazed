@@ -243,15 +243,6 @@ RegisterCommand('quitgroup', function()
     leaveFactionCommand()
 end, false)
 
-local function forwardFactionChatCommand(channel, args)
-    local msg = table.concat(args or {}, ' ')
-    TriggerServerEvent('sunset:chat:runCommand', msg == '' and channel or (channel .. ' ' .. msg))
-end
-
-RegisterCommand('f', function(_, args) forwardFactionChatCommand('f', args) end, false)
-RegisterCommand('r', function(_, args) forwardFactionChatCommand('r', args) end, false)
-RegisterCommand('d', function(_, args) forwardFactionChatCommand('d', args) end, false)
-
 RegisterCommand('duty', function()
     if blocked() then return end
     local state, err = Sunset.AwaitCallback('sunset:toggleDuty')

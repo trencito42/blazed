@@ -955,16 +955,6 @@ function RunMotdCommand(source, args)
 end
 exports('RunMotdCommand', RunMotdCommand)
 
-RegisterCommand('clan', function(source)
-    if source == 0 then return end
-    TriggerClientEvent('sunset:clans:openDashboard', source)
-end, false)
-
-RegisterCommand('clans', function(source)
-    if source == 0 then return end
-    TriggerClientEvent('sunset:clans:openDirectory', source)
-end, false)
-
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     if GetResourceState('sunset_chat') == 'started' then

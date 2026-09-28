@@ -928,17 +928,6 @@ exports.sunset_core:RegisterCallback('sunset:policeRadarStop', function(source)
     return true
 end)
 
-local function radarCommand(source, args)
-    if source == 0 then return end
-    TriggerClientEvent('sunset:police:tryStartRadar', source, args[1])
-end
-RegisterCommand('startradar', radarCommand, false)
-RegisterCommand('setradar', radarCommand, false)
-RegisterCommand('radar', radarCommand, false)
-RegisterCommand('stopradar', function(source)
-    if source == 0 then return end
-    TriggerClientEvent('sunset:police:tryStopRadar', source)
-end, false)
 
 exports.sunset_core:RegisterCallback('sunset:policeRadarLock', function(source, targetNetworkId)
     local session = RadarSessions[source]

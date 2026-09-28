@@ -27,11 +27,10 @@ SunsetAdmin.Commands = {
     setleader = 4,
     giverpall = 4,
     setstat = 4,
-    createhouse = 4,
-    acreatehouse = 4,
     ahouseedit = 4,
 
     -- Admin rank 3+
+    acreatehouse = 3,
     respawncars = 3,
     givegun = 3,
     unban = 3,

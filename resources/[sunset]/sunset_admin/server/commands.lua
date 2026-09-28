@@ -1244,41 +1244,6 @@ registerServerCommand('givemoney', function(source, args)
     pcall(function() exports.sunset_admin:BroadcastStaff(('[ECONOMY] %s i-a dat $%s lui %s (#%d).'):format(adminName, Sunset.FormatNumber(amount), targetName, target)) end)
 end, false)
 
-registerServerCommand('createhouse', function(source, args)
-    if source ~= 0 and not requirePerm(source, 'createhouse') then return end
-    local level = tonumber(args[1])
-    local price = tonumber(args[2])
-    if not level or level < 1 or not price or price < 1 then
-        return notify(source, 'Usage: /createhouse [level] [pret]', 'error')
-    end
-
-    local ped = GetPlayerPed(source)
-    if not ped or ped == 0 then return end
-    local pos = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
-
-    local interiorKey = 'small_apartment'
-    if level >= 10 then interiorKey = 'mansion'
-    elseif level >= 5 then interiorKey = 'medium_house' end
-
-    local preset = SunsetProperties and SunsetProperties.Interiors and SunsetProperties.Interiors[interiorKey]
-    local intPos = preset and preset.coords or pos
-    local intHeading = preset and preset.coords and preset.coords.w or 0.0
-
-    local encodePos = function(c, h)
-        return json.encode({ x = c.x, y = c.y, z = c.z, h = h or 0.0 })
-    end
-
-    local label = ('Casa Level %d'):format(level)
-    local id = MySQL.insert.await([[
-        INSERT INTO properties (label, price, interior, entry, interior_pos, exit_pos, minimum_level, for_sale, enabled)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)
-    ]], { label, math.floor(price), interiorKey, encodePos(pos, heading), encodePos(intPos, intHeading), encodePos(pos, heading), math.floor(level) })
-
-    TriggerClientEvent('sunset:client:propertiesChanged', -1)
-    notify(source, ('Casa #%d "%s" a fost creata: $%d, nivel minim %d.'):format(id, label, math.floor(price), level), 'success')
-end, false)
-
 registerServerCommand('giverpall', function(source, args)
     if source ~= 0 and not requirePerm(source, 'giverpall') then return end
     local amount = tonumber(args[1])

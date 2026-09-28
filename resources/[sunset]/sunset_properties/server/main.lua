@@ -651,17 +651,25 @@ end)
 
 registerPropertyCommand('acreatehouse',function(source,args)
     if source==0 or not exports.sunset_admin:IsAdmin(source,SunsetProperties.AdminLevel) then return message(source,'Admin level 3 is required to create houses.','error') end
-    local price,interior,level=tonumber(args[1]),tostring(args[2] or ''),tonumber(args[3]); local preset=SunsetProperties.Interiors[interior]
-    if not price or price<1 or not preset or not level or level<1 then return message(source,'Usage: /acreatehouse [price] [interior] [minimum level] [name]. Use /houseinteriors first.','error') end
-    local label=table.concat(args,' ',4):sub(1,64)
-    if #label<3 then return message(source,'Add a clear house name after the minimum level.','error') end
-    local ped=GetPlayerPed(source)
-    if ped==0 then return message(source,'Your player position is unavailable. Try again after spawning.','error') end
-    local pos,heading=GetEntityCoords(ped),GetEntityHeading(ped)
-    local id=MySQL.insert.await([[INSERT INTO properties(label,price,interior,entry,interior_pos,exit_pos,minimum_level,for_sale,enabled)
-      VALUES(?,?,?,?,?,?,?,1,1)]],{label,math.floor(price),interior,encodePos(pos,heading),encodePos(preset.coords,preset.coords.w),encodePos(pos,heading),math.floor(level)})
-    TriggerClientEvent('sunset:client:propertiesChanged',-1)
-    message(source,('House #%d "%s" created: $%d, %s, level %d.'):format(id,label,price,interior,level),'success')
+    local price = tonumber(args[1])
+    local interior = tostring(args[2] or ''):lower()
+    local level = tonumber(args[3])
+    local preset = SunsetProperties.Interiors[interior]
+    if not price or price < 1 or not preset or not level or level < 1 then
+        local list = {}
+        for id in pairs(SunsetProperties.Interiors) do list[#list+1] = id end
+        table.sort(list)
+        return message(source, ('Usage: /acreatehouse [pret] [interior] [nivel minim] [nume]\nInterioare: %s'):format(table.concat(list, ', ')), 'error')
+    end
+    local label = table.concat(args, ' ', 4):sub(1, 64)
+    if #label < 3 then return message(source, 'Adauga un nume pentru casa dupa nivelul minim.', 'error') end
+    local ped = GetPlayerPed(source)
+    if ped == 0 then return message(source, 'Pozitia jucatorului indisponibila. Incearca din nou.', 'error') end
+    local pos, heading = GetEntityCoords(ped), GetEntityHeading(ped)
+    local id = MySQL.insert.await([[INSERT INTO properties(label,price,interior,entry,interior_pos,exit_pos,minimum_level,for_sale,enabled)
+      VALUES(?,?,?,?,?,?,?,1,1)]], {label, math.floor(price), interior, encodePos(pos, heading), encodePos(preset.coords, preset.coords.w), encodePos(pos, heading), math.floor(level)})
+    TriggerClientEvent('sunset:client:propertiesChanged', -1)
+    message(source, ('Casa #%d "%s" a fost creata: $%d, interior %s, level %d.'):format(id, label, price, interior, level), 'success')
 end)
 
 registerPropertyCommand('houseinteriors',function(source)
