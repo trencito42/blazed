@@ -219,6 +219,8 @@ local function completeAuthentication(source, accountId, username)
         premium = account and tonumber(account.premium_points) or 0,
         playtime = tonumber(player.playtime) or 0,
     })
+    TriggerEvent('sunset:server:authenticated', source, accountId)
+    TriggerEvent('sunset:server:playerReady', source, Players[source])
     Sunset.Debug('Player authenticated:', source, username)
     return true
 end

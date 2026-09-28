@@ -26,33 +26,21 @@ html, body {
     user-select: none;
 }
 
-.hidden { display: none !important; }
-
-#app:not(.hidden) .screen.hidden,
-#hud.hidden,
-.overlay-panel.hidden {
-    content-visibility: hidden;
+.hidden,
+[hidden] {
+    display: none !important;
 }
 
-/* ═══ APP ═══ */
-.app {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    background: #070504 url('../assets/bg_loading.webp?v=9') center / cover no-repeat;
-    opacity: 1;
-    filter: blur(0);
-    transform: scale(1);
-    transition: opacity var(--enter-duration, 500ms) ease,
-        filter var(--enter-duration, 500ms) ease,
-        transform var(--enter-duration, 500ms) ease;
-}
-
-.app.app--enter-game {
-    opacity: 0;
-    transform: scale(1.02);
+#ui-root {
+    width: 100%;
+    height: 100%;
     pointer-events: none;
 }
+
+#ui-root > * {
+    pointer-events: auto;
+}
+
 
 body.game-paused #hud,
 body.game-paused #job-objective,

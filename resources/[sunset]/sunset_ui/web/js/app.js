@@ -304,14 +304,24 @@
 
         onEnterGameplay() {
             this.isGameplayReady = true;
+            // Cleanly hide any remaining entry/loading/character screens
+            const appEl = document.getElementById('app');
+            if (appEl) {
+                appEl.classList.add('hidden');
+                appEl.style.display = 'none';
+            }
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+
             // Eagerly mount core essential gameplay modules: HUD and Chat
             if (window.ModuleLoader) {
-                ModuleLoader.ensure('hud');
+                ModuleLoader.ensure('hud').then(() => {
+                    if (window.HUD && typeof HUD.show === 'function') HUD.show({});
+                });
                 ModuleLoader.ensure('chat');
             }
         },
 
-        dispatchDirect(data) {
+        async dispatchDirect(data) {
             const action = data.action;
             const payload = data.data || {};
 
@@ -332,7 +342,46 @@
                 this.onEnterGameplay();
                 return;
             }
+            if (action === 'hide') {
+                const appEl = document.getElementById('app');
+                if (appEl) {
+                    appEl.classList.add('hidden');
+                    appEl.style.display = 'none';
+                }
+                document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+                return;
+            }
+            if (action === 'show') {
+                const screen = data.screen;
+                if (screen === 'characters' || screen === 'create' || screen === 'spawn') {
+                    if (window.ModuleLoader) {
+                        await ModuleLoader.ensure('characters');
+                        const appEl = document.getElementById('app');
+                        if (appEl) {
+                            appEl.classList.remove('hidden');
+                            appEl.style.display = '';
+                        }
+                        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+                        const screenEl = document.getElementById(`screen-${screen}`);
+                        if (screenEl) screenEl.classList.remove('hidden');
+
+                        if (screen === 'characters' && window.Characters && typeof Characters.init === 'function') {
+                            Characters.init(payload);
+                        } else if (screen === 'create' && window.Characters && typeof Characters.initCreate === 'function') {
+                            Characters.initCreate(payload);
+                        } else if (screen === 'spawn' && window.Spawn && typeof Spawn.init === 'function') {
+                            Spawn.init(payload);
+                        }
+                    }
+                } else if (screen === 'loading' || screen === 'handoff') {
+                    // Minimal loading placeholder if needed
+                }
+                return;
+            }
             if (action === 'showHud') {
+                if (window.ModuleLoader) {
+                    await ModuleLoader.ensure('hud');
+                }
                 if (window.HUD && typeof HUD.show === 'function') HUD.show(payload);
                 return;
             }

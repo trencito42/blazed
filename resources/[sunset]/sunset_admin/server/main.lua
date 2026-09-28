@@ -25,7 +25,7 @@ function loadAdmin(source)
 
     local level = 0
     local row = MySQL.single.await('SELECT level FROM admins WHERE license = ?', { license })
-    if row then level = row.level end
+    if row and row.level then level = tonumber(row.level) or 0 end
 
     local player = exports.sunset_core:GetPlayer(source)
     if player and player.account_id then
@@ -34,15 +34,19 @@ function loadAdmin(source)
             level = math.max(level, tonumber(account.admin_level))
         end
     elseif player and player.admin_level then
-        level = math.max(level, player.admin_level)
+        level = math.max(level, tonumber(player.admin_level) or 0)
     end
 
     if level > 0 then
         Admins[license] = level
         TriggerClientEvent('sunset:client:setAdmin', source, level)
-        print(('^2[SunsetAdmin]^7 %s loaded as level %d'):format(GetPlayerName(source), level))
+        print(('^2[SunsetAdmin]^7 %s (src %s) loaded as level %d'):format(GetPlayerName(source) or license, tostring(source), level))
+    else
+        Admins[license] = nil
+        TriggerClientEvent('sunset:client:setAdmin', source, 0)
     end
 end
+exports('RefreshAdmin', loadAdmin)
 
 AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     local src = source
@@ -92,6 +96,18 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
 end)
 
 RegisterNetEvent('sunset:server:playerLoaded', function()
+    loadAdmin(source)
+end)
+
+AddEventHandler('sunset:server:playerReady', function(src)
+    loadAdmin(src)
+end)
+
+AddEventHandler('sunset:server:authenticated', function(src)
+    loadAdmin(src)
+end)
+
+RegisterNetEvent('sunset:server:characterSpawned', function()
     loadAdmin(source)
 end)
 
