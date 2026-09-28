@@ -4,15 +4,15 @@ Custom framework: ~29 `sunset_*` resources under `resources/[sunset]/`, oxmysql 
 
 ## CRITICAL: deploy flow
 
-`scripts/remote-deploy.ps1` does NOT upload the working tree. It SSHes into the VPS and runs `/opt/blazed/deploy.sh`, which does **`git pull`/archive download from GitHub**. Therefore:
+`deploy.sh` does NOT preserve unpushed working-tree commits. It fetches/archive-downloads `trencito42/newrpg` by default. Therefore:
 
-**commit → `git push origin main` → `.\scripts\remote-deploy.ps1`**
+**commit → `git push origin main` → run `deploy.sh` as root**
 
 If you skip the push, the VPS silently keeps running old code and "verification" (logs, testdriver) tests the OLD build. This has bitten us before — always verify after deploy that the new commit hash is live:
 `ssh -i C:\Users\stefan\.ssh\sshxodo root@193.33.167.216 "cd /opt/blazed && git log --oneline -1"`
 
-- VPS: `root@193.33.167.216`, key `C:\Users\stefan\.ssh\sshxodo`, Docker Compose (`blazed-fivem-1`, `blazed-mariadb-1`), game port 30120.
-- DB creds live in container env: `docker exec blazed-mariadb-1 printenv | grep MARIADB`. Direct SQL: `docker exec blazed-mariadb-1 mariadb -usunset -p<PASS> sunsetmp -e "..."` (single quotes inside `-e` break through SSH — write the SQL with escaped double quotes or use a heredoc file).
+- VPS workspace: `/home/blipmade-rpg/htdocs/rpg.blipmade.com`, Docker Compose service `fivem`, game port 30120.
+- MySQL runs on the VPS host and credentials live in `.env`; there is no Compose MariaDB service.
 - After deploy, check health: `docker logs blazed-fivem-1 --since 3m | grep -i testdriver` → expect `all: 56 checks, 0 failed`.
 
 ## Static checks (run before every commit)

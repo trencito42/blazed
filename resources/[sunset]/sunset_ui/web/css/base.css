@@ -18,6 +18,37 @@ html, body {
 
 .hidden { display: none !important; }
 
+.transition-root {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: #07090d;
+    color: #f4f7fa;
+    pointer-events: auto;
+}
+
+.transition-spinner {
+    width: 42px;
+    height: 42px;
+    border: 3px solid rgba(255, 255, 255, 0.12);
+    border-top-color: #00ffcc;
+    border-radius: 50%;
+    animation: transition-spin 800ms linear infinite;
+}
+
+.transition-status {
+    font: 700 13px/1.2 var(--font-body);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+@keyframes transition-spin { to { transform: rotate(360deg); } }
+
 /* ═══ AMBIENT BACKGROUND ═══ */
 .ambient {
     position: fixed;

@@ -7,7 +7,8 @@
 -- ═══════════════════════════════════════════════════════════════
 
 local authOpen = false
-local authRendered = false
+local authDomReady = false
+local authVisibleRendered = false
 local authBootEpoch = 0
 
 local function send(action, data)
@@ -18,6 +19,7 @@ exports('Send', send)
 
 exports('Show', function(screen, data)
     authOpen = true
+    authVisibleRendered = false
     SetNuiFocus(true, true)
     send('authShow', data)
 end)
@@ -33,8 +35,11 @@ exports('SetFocus', function(hasFocus, hasCursor)
     if not hasFocus then authOpen = false end
 end)
 
-exports('IsAuthOpen', function() return authOpen end)
-exports('IsRendered', function() return authRendered end)
+exports('IsAuthOpen', function() return authOpen and authVisibleRendered end)
+exports('IsDomReady', function() return authDomReady end)
+exports('IsVisibleRendered', function() return authVisibleRendered end)
+-- Compatibility export: "rendered" now means an actually painted auth surface.
+exports('IsRendered', function() return authVisibleRendered end)
 exports('GetBootEpoch', function() return authBootEpoch end)
 
 -- ── Forward NUI callbacks to sunset_auth ──
@@ -55,10 +60,15 @@ for _, name in ipairs(FORWARDED) do
     end)
 end
 
-RegisterNUICallback('authRendered', function(data, cb)
-    authRendered = true
+RegisterNUICallback('authDomReady', function(data, cb)
+    authDomReady = true
     authBootEpoch = GetGameTimer()
-    TriggerEvent('sunset:auth:rendered', data)
+    TriggerEvent('sunset:auth:domReady', data)
     cb('ok')
 end)
 
+RegisterNUICallback('authVisibleRendered', function(data, cb)
+    authVisibleRendered = authOpen
+    TriggerEvent('sunset:auth:visibleRendered', data)
+    cb('ok')
+end)

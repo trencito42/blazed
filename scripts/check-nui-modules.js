@@ -77,18 +77,58 @@ if (!fs.existsSync(moduleLoaderPath)) {
         console.error('ERROR: Could not parse MODULE_REGISTRY from module-loader.js!');
         errors++;
     } else {
-        const modKeys = [...modMatch[1].matchAll(/([a-zA-Z0-9_]+)\s*:\s*\{/g)].map(m => m[1]);
+        const moduleDefs = [...modMatch[1].matchAll(/([a-zA-Z0-9_]+)\s*:\s*\{([\s\S]*?)\n\s*\}(?:,|$)/g)]
+            .map((match) => ({
+                name: match[1],
+                html: match[2].match(/html:\s*['"]([^'"]+)['"]/)?.[1] || null,
+                assets: [...match[2].matchAll(/['"]((?:css|js)\/[^'"]+)['"]/g)].map((asset) => asset[1]),
+            }));
+        const modKeys = moduleDefs.map((row) => row.name);
         console.log(`Registered modules in ModuleLoader (${modKeys.length}):`, modKeys.join(', '));
 
-        for (const mod of modKeys) {
-            const modDir = path.join(modulesDir, mod);
-            const modHtml = path.join(modDir, 'index.html');
-            if (!fs.existsSync(modHtml)) {
-                console.error(`ERROR: Module [${mod}] missing fragment index.html at ${modHtml}!`);
-                errors++;
+        for (const mod of moduleDefs) {
+            if (mod.html) {
+                const modHtml = path.join(uiWebDir, mod.html);
+                if (!fs.existsSync(modHtml)) {
+                    console.error(`ERROR: Module [${mod.name}] missing fragment at ${modHtml}!`);
+                    errors++;
+                }
+            }
+            for (const asset of mod.assets) {
+                const assetPath = path.join(uiWebDir, asset);
+                if (!fs.existsSync(assetPath)) {
+                    console.error(`ERROR: Module [${mod.name}] missing asset at ${assetPath}!`);
+                    errors++;
+                }
             }
         }
     }
+}
+
+// 4. Critical boot/auth contracts that previously passed syntax checks while
+// failing at runtime in CEF.
+const appJs = fs.readFileSync(path.join(uiWebDir, 'js', 'app.js'), 'utf8');
+const authJs = fs.readFileSync(path.join(authUiWebDir, 'auth.js'), 'utf8');
+if (!/post\(['"]bootEpoch['"],\s*\{\s*now:\s*Date\.now\(\)/.test(appJs)) {
+    console.error('ERROR: bootEpoch must post { now: Date.now() }.');
+    errors++;
+}
+if (!/passwordConfirm:\s*pass2/.test(authJs) || /confirmPassword:\s*pass2/.test(authJs)) {
+    console.error('ERROR: registration must use canonical passwordConfirm.');
+    errors++;
+}
+if (/post\(['"]authRendered['"]/.test(authJs)) {
+    console.error('ERROR: premature authRendered callback is forbidden.');
+    errors++;
+}
+if (/window\.HUD|\bHUD\./.test(appJs)) {
+    console.error('ERROR: HUD dispatcher must use the actual window.Hud export.');
+    errors++;
+}
+const chatFragment = fs.readFileSync(path.join(uiWebDir, 'modules', 'chat', 'index.html'), 'utf8');
+if (chatFragment.includes('v-menu-close-hint')) {
+    console.error('ERROR: chat fragment contains the vehicle-menu close hint.');
+    errors++;
 }
 
 // 3. Check sunset_auth_ui

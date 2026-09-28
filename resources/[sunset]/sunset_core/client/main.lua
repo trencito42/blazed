@@ -3,6 +3,48 @@ Sunset.Player = nil
 Sunset.Character = nil
 Sunset.Ready = false
 
+local BOOT_ORDER = {
+    LOADSCREEN = 1,
+    SESSION_REQUESTED = 2,
+    AUTH_BOOT = 3,
+    AUTH_FORM = 4,
+    AUTHENTICATING = 5,
+    CHARACTER_LOADING = 6,
+    SPAWNING = 7,
+    GAMEPLAY = 8,
+}
+local bootState = 'LOADSCREEN'
+
+function SetBootState(nextState, reason)
+    if not BOOT_ORDER[nextState] then return false end
+    local currentOrder = BOOT_ORDER[bootState] or 0
+    local nextOrder = BOOT_ORDER[nextState]
+    local authFailure = bootState == 'AUTHENTICATING' and nextState == 'AUTH_FORM'
+    if nextOrder < currentOrder and not authFailure then
+        print(('^3[BOOT]^7 rejected state %s -> %s (%s)'):format(bootState, nextState, tostring(reason or '')))
+        return false
+    end
+    if nextState == bootState then return true end
+    local previous = bootState
+    bootState = nextState
+    if GetConvar('sv_sunset_nuidebug', '0') == '1' then
+        print(('^5[BOOT]^7 state %s -> %s (%s)'):format(previous, nextState, tostring(reason or '')))
+    end
+    TriggerEvent('sunset:client:bootStateChanged', nextState, previous, reason)
+    return true
+end
+exports('SetBootState', SetBootState)
+exports('GetBootState', function() return bootState end)
+
+CreateThread(function()
+    while bootState ~= 'GAMEPLAY' do
+        DisableAllControlActions(0)
+        -- NUI receives keyboard/mouse independently; keep only push-to-talk alive.
+        EnableControlAction(0, 249, true)
+        Wait(0)
+    end
+end)
+
 -- Notify player ready on spawn
 CreateThread(function()
     while not NetworkIsPlayerActive(PlayerId()) do Wait(100) end
@@ -25,35 +67,37 @@ CreateThread(function()
     -- animations, filters and big backgrounds for freeze A/B testing.
     local nofx = GetConvar('sv_sunset_nofx', '0') == '1'
 
-    -- Keep the same preloaded background underneath the FiveM loadscreen.
-    -- This prevents a world/black-frame flash while the independent NUIs swap.
+    -- Wait only for the auth DOM host. DOM readiness does not authorize the
+    -- loadscreen handoff; an actually visible auth frame does.
     local uiDeadline = GetGameTimer() + 15000
     while (GetResourceState('sunset_auth_ui') ~= 'started' and GetResourceState('sunset_ui') ~= 'started') and GetGameTimer() < uiDeadline do
         Wait(50)
     end
     btrace('auth_ui state=' .. tostring(GetResourceState('sunset_auth_ui')) .. ', sunset_ui state=' .. tostring(GetResourceState('sunset_ui')))
 
-    -- [HANDOFF FIX] Deterministic ready handshake with sunset_auth_ui / sunset_ui.
-    -- 1) Wait for auth UI to render first frames (IsRendered / bootEpoch)
-    -- 2) Tell the loadscreen to freeze + fade
-    -- 3) Shutdown loading screen
+    local domDeadline = GetGameTimer() + 30000
+    while GetGameTimer() < domDeadline do
+        if GetResourceState('sunset_auth_ui') == 'started' and GetResourceState('sunset_auth') == 'started' then
+            local ok, ready = pcall(function() return exports.sunset_auth_ui:IsDomReady() end)
+            if ok and ready then break end
+        end
+        Wait(25)
+    end
+
+    SetBootState('SESSION_REQUESTED', 'auth DOM ready')
+    btrace('notifying server playerLoaded')
+    TriggerServerEvent('sunset:server:playerLoaded')
+
+    -- Auth decides between quick-login and the form. Keep the FiveM loadscreen
+    -- until either presentation has reached its final painted position.
     local handoffOk, handoffErr = pcall(function()
-        local readyDeadline = GetGameTimer() + 8000
+        local readyDeadline = GetGameTimer() + 12000
         local nuiReady = false
         while GetGameTimer() < readyDeadline do
             if GetResourceState('sunset_auth_ui') == 'started' then
-                local rendered = exports.sunset_auth_ui:IsRendered()
+                local rendered = exports.sunset_auth_ui:IsVisibleRendered()
                 if rendered then
-                    btrace('sunset_auth_ui rendered confirmed')
-                    nuiReady = true
-                    break
-                end
-            end
-            if GetResourceState('sunset_ui') == 'started' then
-                local epochNow = exports.sunset_ui:GetBootEpoch()
-                if epochNow and tonumber(epochNow) and tonumber(epochNow) > 0 then
-                    epochOffset = tonumber(epochNow) - GetGameTimer()
-                    btrace(('epoch calibrated (offset=%d) — sunset_ui ready'):format(epochOffset))
+                    btrace('sunset_auth_ui visible frame confirmed')
                     nuiReady = true
                     break
                 end
@@ -81,7 +125,7 @@ CreateThread(function()
     ShutdownLoadingScreen()
     btrace('ShutdownLoadingScreen RETURNED')
     DoScreenFadeIn(500)
-    btrace('fade-in started, notifying server playerLoaded')
+    btrace('fade-in started; auth owns the visible surface')
 
     -- [BOOT TRACE v2] 6) first responsive frame after shutdown: measure how
     -- long the main thread stays blocked between fade-in and the next frames.
@@ -102,7 +146,6 @@ CreateThread(function()
         end
     end)
 
-    TriggerServerEvent('sunset:server:playerLoaded')
 end)
 
 RegisterNetEvent('sunset:client:playerReady', function(data)

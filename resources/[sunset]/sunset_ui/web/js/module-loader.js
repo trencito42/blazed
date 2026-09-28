@@ -13,15 +13,23 @@
             css: ['css/chat.css', 'css/premium-chat.css'],
             js: ['js/chat_settings.js', 'js/chat.js']
         },
-        hud: {
+        hud_core: {
             html: 'modules/hud/index.html',
-            css: ['css/hud.css', 'css/premium-hud.css', 'css/radar.css', 'css/damage-indicators.css'],
-            js: ['js/forza_speedometer.js', 'js/hud.js', 'js/hud_editor.js', 'js/radar.js', 'js/damage-indicators.js']
+            css: ['css/hud.css', 'css/premium-hud.css'],
+            js: ['js/forza_speedometer.js', 'js/hud.js', 'js/hud_editor.js']
+        },
+        radar: {
+            css: ['css/radar.css'],
+            js: ['js/radar.js']
+        },
+        damage_indicators: {
+            css: ['css/damage-indicators.css'],
+            js: ['js/damage-indicators.js']
         },
         inventory: {
             html: 'modules/inventory/index.html',
             css: ['css/inventory-forza.css', 'css/quick-hotbar.css'],
-            js: ['js/hotbar.js', 'js/inventory-forza.js']
+            js: ['js/hotbar.js', 'js/inventory-forza.js', 'js/panels.js']
         },
         trade: {
             html: 'modules/trade/index.html',
@@ -166,7 +174,7 @@
         studio: {
             html: 'modules/studio/index.html',
             css: ['css/studio.css'],
-            js: ['js/appearance.js']
+            js: ['js/panels.js']
         },
         characters: {
             html: 'modules/characters/index.html',
@@ -198,7 +206,7 @@
             return Promise.resolve();
         }
 
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
@@ -207,9 +215,8 @@
                 resolve();
             };
             link.onerror = () => {
-                console.warn(`[ModuleLoader] Failed to load stylesheet: ${href}`);
-                loadedStylesheets.add(href);
-                resolve(); // resolve anyway so we don't permanently stall
+                link.remove();
+                reject(new Error(`Failed to load stylesheet ${href}`));
             };
             document.head.appendChild(link);
         });
@@ -268,29 +275,30 @@
                 }
 
                 // 2. Fetch and insert HTML fragment
+                let mountedWrapper = null;
                 if (def.html) {
-                    try {
-                        const res = await fetch(def.html);
-                        if (res.ok) {
-                            const htmlText = await res.text();
-                            const root = document.getElementById('ui-root');
-                            if (root && htmlText.trim()) {
-                                const wrapper = document.createElement('div');
-                                wrapper.id = `module-${name}`;
-                                wrapper.className = 'ui-module-container';
-                                wrapper.innerHTML = htmlText;
-                                root.appendChild(wrapper);
-                            }
-                        }
-                    } catch (fetchErr) {
-                        console.warn(`[ModuleLoader] Could not fetch HTML fragment for ${name}:`, fetchErr);
-                    }
+                    const res = await fetch(def.html);
+                    if (!res.ok) throw new Error(`Failed to fetch ${def.html} (${res.status})`);
+                    const htmlText = await res.text();
+                    const root = document.getElementById('ui-root');
+                    if (!root) throw new Error('UI mount root is missing');
+                    if (!htmlText.trim()) throw new Error(`Empty HTML fragment ${def.html}`);
+                    mountedWrapper = document.createElement('div');
+                    mountedWrapper.id = `module-${name}`;
+                    mountedWrapper.className = 'ui-module-container';
+                    mountedWrapper.innerHTML = htmlText;
+                    root.appendChild(mountedWrapper);
                 }
 
                 // 3. Load JS scripts sequentially
                 if (Array.isArray(def.js) && def.js.length > 0) {
                     await loadScriptsSequential(def.js);
                 }
+
+                // Dynamic scripts are loaded after DOMContentLoaded. Explicit
+                // lifecycle hooks replace listeners that can no longer fire.
+                if (name === 'chat') window.ChatSettings?.init?.();
+                if (name === 'hud_core') window.Hud?.init?.();
 
                 loadedModules.add(name);
                 const dt = Math.round(performance.now() - t0);
@@ -314,8 +322,10 @@
                 return true;
             } catch (err) {
                 console.error(`[ModuleLoader] Error mounting module [${name}]:`, err);
+                document.getElementById(`module-${name}`)?.remove();
+                pendingModuleQueues.delete(name);
                 if (window.App && typeof window.App.notify === 'function') {
-                    window.App.notify(`Failed to load ${name} interface.`, 'error');
+                    window.App.notify('An interface failed to load. Please reopen it or reconnect.', 'error');
                 }
                 return false;
             } finally {

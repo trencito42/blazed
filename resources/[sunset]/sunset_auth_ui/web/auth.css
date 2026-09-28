@@ -46,16 +46,23 @@ body {
     justify-content: flex-start;
     overflow: hidden;
     z-index: 100;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease-out;
 }
 
+.auth-screen.is-visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
 
 .auth-bg {
     position: absolute;
     inset: 0;
     background: url('background.webp') center / cover no-repeat, radial-gradient(circle at 70% 30%, #1a1a2e 0%, #07070a 100%);
-    filter: brightness(0.4) saturate(0.85);
-    transform: scale(1.02);
-    transition: transform 10s ease-out;
+    background-color: #07070a;
 }
 
 .auth-overlay {
@@ -79,13 +86,11 @@ body {
     padding: 50px 60px;
     overflow-y: auto;
     overflow-x: hidden;
-    transform: translateX(-40px);
     opacity: 0;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+    transition: opacity 140ms ease-out;
 }
 
 .auth-container.active {
-    transform: translateX(0);
     opacity: 1;
 }
 

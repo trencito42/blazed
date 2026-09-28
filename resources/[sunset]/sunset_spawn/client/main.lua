@@ -57,6 +57,7 @@ end
 
 local function spawnPlayer(char, spawnPosition)
     spawning = true
+    pcall(function() exports.sunset_core:SetBootState('SPAWNING', 'spawn started') end)
 
     local pos = resolvePosition(char, spawnPosition)
 
@@ -141,6 +142,10 @@ local function spawnPlayer(char, spawnPosition)
     TriggerEvent('sunset:client:characterFlowComplete')
     TriggerEvent('sunset:client:playerSpawned', char)
 end
+
+AddEventHandler('sunset:client:gameplayVisible', function()
+    pcall(function() exports.sunset_core:SetBootState('GAMEPLAY', 'transition hidden') end)
+end)
 
 AddEventHandler('sunset:client:spawnCharacter', function(char, spawnPosition)
     CreateThread(function()

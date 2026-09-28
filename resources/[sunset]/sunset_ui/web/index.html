@@ -14,6 +14,11 @@
     <!-- Dynamic UI Mount Point: Modules are loaded and injected on demand -->
     <div id="ui-root"></div>
 
+    <div id="transition-root" class="transition-root hidden" aria-hidden="true">
+        <div class="transition-spinner" aria-hidden="true"></div>
+        <div id="transition-status" class="transition-status">Loading character...</div>
+    </div>
+
     <!-- Global Persistent Shell Containers -->
     <div id="notifications-root" class="notifications-container" aria-live="polite"></div>
     <div id="progress-root" class="progress-container hidden">
@@ -26,7 +31,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/module-loader.js?v=2"></script>
-    <script src="js/app.js?v=2"></script>
+    <script src="js/module-loader.js?v=3"></script>
+    <script src="js/app.js?v=3"></script>
 </body>
 </html>

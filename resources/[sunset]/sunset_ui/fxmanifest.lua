@@ -67,4 +67,7 @@ exports {
     'ProgressBar',
     'SetFocus',
     'ReleaseFocusUnlessModal',
+    'ShowTransition',
+    'HideTransition',
+    'IsTransitionVisible',
 }

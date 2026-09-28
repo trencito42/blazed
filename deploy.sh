@@ -2,7 +2,7 @@
 # Deploy / update SunsetMP pe VPS (rulează din folderul serviciului Coolify)
 set -e
 
-REPO="${REPO:-https://github.com/trencito42/blazed}"
+REPO="${REPO:-https://github.com/trencito42/newrpg}"
 BRANCH="${BRANCH:-main}"
 DIR="$(pwd)"
 
@@ -141,18 +141,18 @@ if [ -f scripts/install-deps.sh ]; then
 fi
 
 docker compose build fivem
-docker compose up -d mariadb
-
 # Apply schema changes before the gameplay resource starts, so a newly added
 # resource never boots against missing tables.
 attempt=0
-mariadb_container="$(docker compose ps -q mariadb)"
-until [ -n "$mariadb_container" ] && [ "$(docker inspect -f '{{.State.Health.Status}}' "$mariadb_container" 2>/dev/null)" = "healthy" ]; do
-  attempt=$((attempt + 1))
-  if [ "$attempt" -ge 30 ]; then
-    echo "[deploy] MariaDB did not become ready in time" >&2
-    exit 1
-  fi
+until MYSQL_PWD="${MARIADB_PASSWORD}" mariadb-admin \
+  --host="${MARIADB_HOST:-127.0.0.1}" \
+  --user="${MARIADB_USER:-rpgblipmade}" \
+  --connect-timeout=3 ping --silent >/dev/null 2>&1; do
+    attempt=$((attempt + 1))
+    if [ "$attempt" -ge 30 ]; then
+        echo "[deploy] Host MySQL did not become ready in time" >&2
+        exit 1
+    fi
   sleep 2
 done
 

@@ -17,6 +17,7 @@ function post(action, data = {}) {
 const AuthUI = {
     mode: 'login', // 'login' | 'register'
     pendingSubmit: false,
+    visibleGeneration: 0,
 
     init() {
         // Form switches
@@ -71,19 +72,29 @@ const AuthUI = {
             post('authPickAccount', { username });
         });
 
-        // Ready notification & double rAF rendered confirmation
+        // DOM readiness is not visual readiness. Lua may safely send state now,
+        // but the loadscreen must remain until show() paints its final frame.
         post('authReady', {});
-
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                post('authRendered', { timestamp: performance.now() });
-            });
-        });
+        post('authDomReady', { now: Date.now() });
     },
 
-    show(data = {}) {
+    async waitForBackground() {
+        const bg = new Image();
+        bg.src = 'background.webp';
+        try {
+            if (typeof bg.decode === 'function') await bg.decode();
+        } catch (_) { /* CSS background fallback remains usable */ }
+    },
+
+    async show(data = {}) {
+        const generation = ++this.visibleGeneration;
+        await this.waitForBackground();
+        if (generation !== this.visibleGeneration) return;
         const screen = $('#auth-screen');
-        if (screen) screen.classList.remove('hidden');
+        if (screen) {
+            screen.classList.add('is-visible');
+            screen.setAttribute('aria-hidden', 'false');
+        }
         const panel = $('#auth-panel');
         if (panel) panel.classList.add('active');
         this.switchMode('login');
@@ -94,7 +105,17 @@ const AuthUI = {
             const rem = $('#auth-remember');
             if (rem) rem.checked = data.quickLogin !== false;
         }
+        if (data.presentation === 'quick-login') {
+            this.showLoading(true, data.loadingText || 'Signing in...');
+        } else {
+            this.showLoading(false);
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (generation !== this.visibleGeneration || !screen?.classList.contains('is-visible')) return;
+            post('authVisibleRendered', { now: Date.now(), presentation: data.presentation || 'form' });
+        }));
         setTimeout(() => {
+            if (data.presentation === 'quick-login') return;
             const active = document.activeElement;
             if (!active || active.tagName !== 'INPUT') {
                 $('#auth-user')?.focus({ preventScroll: true });
@@ -103,13 +124,18 @@ const AuthUI = {
     },
 
     hide() {
+        this.visibleGeneration += 1;
         const screen = $('#auth-screen');
-        if (screen) screen.classList.add('hidden');
+        if (screen) {
+            screen.classList.remove('is-visible');
+            screen.setAttribute('aria-hidden', 'true');
+        }
         const panel = $('#auth-panel');
         if (panel) panel.classList.remove('active');
         this.showLoading(false);
         this.hideError();
         this.hideEmailModal();
+        this.pendingSubmit = false;
     },
 
     switchMode(mode) {
@@ -201,7 +227,7 @@ const AuthUI = {
             username: user,
             email: email,
             password: pass,
-            confirmPassword: pass2,
+            passwordConfirm: pass2,
             rememberQuickLogin: $('#reg-remember')?.checked !== false,
         });
     },
@@ -311,8 +337,14 @@ window.addEventListener('message', (event) => {
         case 'authLoading':
             AuthUI.showLoading(payload.loading !== false, payload.text);
             break;
+        case 'authAccountFill':
+            AuthUI.showLoading(false);
+            AuthUI.pendingSubmit = false;
+            if ($('#auth-user')) $('#auth-user').value = payload.username || '';
+            $('#auth-pass')?.focus({ preventScroll: true });
+            break;
         case 'authSuccess':
-            AuthUI.hide();
+            AuthUI.showLoading(true, payload.text || 'Loading character...');
             break;
     }
 });

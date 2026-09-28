@@ -22,11 +22,23 @@
     }
     window.post = post;
 
+    function formatMoney(amount) {
+        if (amount === undefined || amount === null || Number.isNaN(Number(amount))) return '$0';
+        return '$' + Math.floor(Number(amount) || 0).toLocaleString('en-US');
+    }
+    window.formatMoney = formatMoney;
+
+    function notify(message, kind = 'info', duration = 4000) {
+        window.App?.notify?.(message, kind, duration);
+    }
+    window.notify = notify;
+
     const ACTION_MODULE_MAP = {
         // Chat
         chatMessage: 'chat',
-        chatOpen: 'chat',
-        chatClose: 'chat',
+        chatToggle: 'chat',
+        chatSetInput: 'chat',
+        chatSuggestions: 'chat',
         showChat: 'chat',
         hideChat: 'chat',
         chatSettings: 'chat',
@@ -36,18 +48,22 @@
         chatRemoveSuggestion: 'chat',
 
         // HUD & Speedometer
-        showHud: 'hud',
-        hideHud: 'hud',
-        hudUpdate: 'hud',
-        updateHud: 'hud',
-        speedometerUpdate: 'hud',
-        hudEditor: 'hud',
-        hudVoice: 'hud',
-        hudVitals: 'hud',
-        hudMoney: 'hud',
-        hudWanted: 'hud',
-        radarUpdate: 'hud',
-        damageIndicator: 'hud',
+        showHud: 'hud_core',
+        hideHud: 'hud_core',
+        hudChromeHide: 'hud_core',
+        updateHud: 'hud_core',
+        updateVehicleGauges: 'hud_core',
+        updateVoice: 'hud_core',
+        showTask: 'hud_core',
+        hideTask: 'hud_core',
+        vehicleHint: 'hud_core',
+        hudEditToggle: 'hud_core',
+        radarShow: 'radar',
+        radarUpdate: 'radar',
+        radarHide: 'radar',
+        radarAlertShow: 'radar',
+        radarAlertHide: 'radar',
+        damageTaken: 'damage_indicators',
 
         // Inventory & Hotbar
         inventoryShow: 'inventory',
@@ -151,6 +167,8 @@
         // Scoreboard
         scoreboardShow: 'scoreboard',
         scoreboardHide: 'scoreboard',
+        showScoreboard: 'scoreboard',
+        hideScoreboard: 'scoreboard',
 
         // Helpdesk
         helpdeskShow: 'helpdesk',
@@ -226,7 +244,7 @@
 
         init() {
             // Send boot epoch calibration to Lua
-            post('bootEpoch', { epoch: performance.now() });
+            post('bootEpoch', { now: Date.now() });
 
             // Global Escape key handler
             window.addEventListener('keydown', (e) => {
@@ -302,7 +320,31 @@
             if (this._progressTimeout) clearTimeout(this._progressTimeout);
         },
 
-        onEnterGameplay() {
+        nextFrame() {
+            return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+        },
+
+        idle() {
+            return new Promise((resolve) => {
+                if (typeof requestIdleCallback === 'function') requestIdleCallback(() => resolve(), { timeout: 200 });
+                else setTimeout(resolve, 16);
+            });
+        },
+
+        setTransition(visible, status) {
+            const root = document.getElementById('transition-root');
+            if (!root) return;
+            if (status) document.getElementById('transition-status').textContent = status;
+            root.classList.toggle('hidden', !visible);
+            root.setAttribute('aria-hidden', visible ? 'false' : 'true');
+            if (visible) {
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    post('transitionRendered', { now: Date.now() });
+                }));
+            }
+        },
+
+        async onEnterGameplay() {
             this.isGameplayReady = true;
             // Cleanly hide any remaining entry/loading/character screens
             const appEl = document.getElementById('app');
@@ -312,25 +354,38 @@
             }
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
 
-            // Eagerly mount core essential gameplay modules: HUD and Chat
+            // Stage the essential modules; never parse HUD and chat in one frame.
             if (window.ModuleLoader) {
-                ModuleLoader.ensure('hud').then(() => {
-                    if (window.HUD && typeof HUD.show === 'function') HUD.show({});
-                });
-                ModuleLoader.ensure('chat');
+                await ModuleLoader.ensure('hud_core');
+                document.getElementById('hud')?.classList.remove('hidden');
+                window.Hud?.init?.();
+                post('uiStageReady', { stage: 'hud', now: Date.now() });
+                await this.nextFrame();
+                await this.idle();
+                await ModuleLoader.ensure('chat');
+                post('uiStageReady', { stage: 'chat', now: Date.now() });
+                await this.nextFrame();
+            }
+            this.setTransition(false);
+            post('gameplayVisible', { now: Date.now() });
+            if (window.ModuleLoader) {
+                await this.idle();
+                ModuleLoader.preload('radar');
+                await this.nextFrame();
+                ModuleLoader.preload('damage_indicators');
             }
         },
 
         async dispatchDirect(data) {
             const action = data.action;
-            const payload = data.data || {};
+            const payload = data.data && typeof data.data === 'object' ? data.data : data;
 
             // Global shell actions
             if (action === 'notify' || action === 'notification') {
                 this.notify(payload.message || payload.text, payload.type || payload.kind, payload.duration || payload.dur);
                 return;
             }
-            if (action === 'progressBar') {
+            if (action === 'progressBar' || action === 'progress') {
                 this.progressBar(payload.label || payload.text, payload.duration || payload.dur);
                 return;
             }
@@ -338,11 +393,20 @@
                 this.cancelProgressBar();
                 return;
             }
+            if (action === 'transitionShow') {
+                this.setTransition(true, payload.text || payload.status || 'Loading character...');
+                return;
+            }
+            if (action === 'transitionHide') {
+                this.setTransition(false);
+                return;
+            }
             if (action === 'enterGameplay' || action === 'playerSpawned' || action === 'playerReady') {
                 this.onEnterGameplay();
                 return;
             }
             if (action === 'hide') {
+                this.currentScreen = 'gameplay';
                 const appEl = document.getElementById('app');
                 if (appEl) {
                     appEl.classList.add('hidden');
@@ -364,27 +428,88 @@
                         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
                         const screenEl = document.getElementById(`screen-${screen}`);
                         if (screenEl) screenEl.classList.remove('hidden');
+                        this.currentScreen = screen;
 
                         if (screen === 'characters' && window.Characters && typeof Characters.init === 'function') {
                             Characters.init(payload);
                         } else if (screen === 'create' && window.Characters && typeof Characters.initCreate === 'function') {
                             Characters.initCreate(payload);
-                        } else if (screen === 'spawn' && window.Spawn && typeof Spawn.init === 'function') {
-                            Spawn.init(payload);
+                        } else if (screen === 'spawn' && window.SpawnSelector && typeof SpawnSelector.show === 'function') {
+                            SpawnSelector.show(payload);
                         }
                     }
                 } else if (screen === 'loading' || screen === 'handoff') {
-                    // Minimal loading placeholder if needed
+                    this.setTransition(true, payload.holdText || payload.text || 'Loading character...');
                 }
                 return;
             }
             if (action === 'showHud') {
-                if (window.ModuleLoader) {
-                    await ModuleLoader.ensure('hud');
-                }
-                if (window.HUD && typeof HUD.show === 'function') HUD.show(payload);
+                document.getElementById('hud')?.classList.remove('hidden');
+                window.Hud?.init?.();
+                if (payload.layout) window.HudEditor?.apply?.(payload.layout);
+                window.Hud?.update?.(payload);
                 return;
             }
+
+            if (action === 'hideHud') {
+                document.getElementById('hud')?.classList.add('hidden');
+                return;
+            }
+            if (action === 'updateHud') { window.Hud?.update?.(payload); return; }
+            if (action === 'updateVehicleGauges') { window.ForzaSpeedometer?.updateGauges?.(payload); return; }
+            if (action === 'updateVoice') { window.Hud?.updateVoice?.(payload); return; }
+            if (action === 'showTask') { window.Hud?.showTask?.(payload); return; }
+            if (action === 'hideTask') { window.Hud?.hideTask?.(); return; }
+            if (action === 'vehicleHint') { window.Hud?.flashVehicleHint?.(payload); return; }
+            if (action === 'hudEditToggle') { window.HudEditor?.toggle?.(); return; }
+            if (action === 'hudChromeHide') {
+                document.body.classList.toggle('hud-chrome-hidden', !payload.show);
+                return;
+            }
+
+            if (action === 'chatToggle') { window.Chat?.toggle?.(payload.open, payload); return; }
+            if (action === 'chatMessage') { window.Chat?.add?.(payload); return; }
+            if (action === 'chatSetInput') {
+                window.Chat?.setInput?.(payload.text, { fromHistory: payload.history === true });
+                return;
+            }
+            if (action === 'chatSuggestions') { window.Chat?.setSuggestions?.(payload.suggestions); return; }
+            if (action === 'chatClear') { window.Chat?.clear?.(); return; }
+
+            if (action === 'radarShow') { window.RadarHud?.show?.(payload); return; }
+            if (action === 'radarUpdate') { window.RadarHud?.update?.(payload); return; }
+            if (action === 'radarHide') { window.RadarHud?.hide?.(); return; }
+            if (action === 'radarAlertShow') { window.RadarAlert?.show?.(payload); return; }
+            if (action === 'radarAlertHide') { window.RadarAlert?.hide?.(); return; }
+            if (action === 'damageTaken') {
+                window.DamageIndicators?.setActive?.(true);
+                window.DamageIndicators?.takeDamage?.(payload.amount, payload.type, payload.direction);
+                return;
+            }
+
+            if (action === 'showScoreboard') { window.Scoreboard?.show?.(payload); return; }
+            if (action === 'hideScoreboard') { window.Scoreboard?.hide?.(); return; }
+
+            if (action === 'menuShow') { window.Menu?.show?.(payload); return; }
+            if (action === 'menuSetTab') { window.Menu?.setTab?.(payload.tab); return; }
+            if (action === 'menuUpdate') { window.Menu?.update?.(payload); return; }
+            if (action === 'menuAlert') { window.Menu?.showAlert?.(payload.message, payload.type || 'error'); return; }
+            if (action === 'menuHide') { window.Menu?.hide?.(); return; }
+
+            if (action === 'phoneShow') { window.Phone?.show?.(payload); return; }
+            if (action === 'phoneUpdate') { window.Phone?.update?.(payload); return; }
+            if (action === 'phoneHide') { window.Phone?.hide?.(); return; }
+
+            if (action === 'inventoryShow') { window.Panels?.showInventory?.(payload); return; }
+            if (action === 'inventoryHide') { window.Panels?.hideInventory?.(); return; }
+            if (action === 'inventoryUpdate') { window.Panels?.showInventory?.(payload); return; }
+
+            if (action === 'appearanceShow') { window.Panels?.showAppearance?.(payload); return; }
+            if (action === 'appearanceUpdate') { window.Panels?.updateAppearance?.(payload); return; }
+            if (action === 'appearanceCamera') { window.Panels?.setAppearanceCamera?.(payload.mode); return; }
+            if (action === 'appearanceHide') { window.Panels?.hideAppearance?.(); return; }
+            if (action === 'appearanceSaving') { window.Panels?.setAppearanceSaving?.(true); return; }
+            if (action === 'appearanceSaveFailed') { window.Panels?.setAppearanceSaving?.(false); return; }
 
             // Legacy window handler routing
             const legacyEvent = new CustomEvent(`sunset:ui:${action}`, { detail: payload });
@@ -393,8 +518,6 @@
             // Directly invoke module functions if bound on window
             if (window.Chat && action.startsWith('chat') && typeof window.Chat[action] === 'function') {
                 window.Chat[action](payload);
-            } else if (window.HUD && action.startsWith('hud') && typeof window.HUD[action] === 'function') {
-                window.HUD[action](payload);
             } else if (window.Menu && action.startsWith('menu') && typeof window.Menu[action] === 'function') {
                 window.Menu[action](payload);
             } else if (window.Phone && action.startsWith('phone') && typeof window.Phone[action] === 'function') {

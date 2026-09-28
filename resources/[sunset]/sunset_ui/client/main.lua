@@ -1,6 +1,7 @@
 local isOpen = false
 local currentScreen = nil
 local focusOwner = nil
+local transitionVisible = false
 
 function Show(screen, data)
     isOpen = true
@@ -181,6 +182,41 @@ function Send(action, data)
 end
 exports('Send', Send)
 
+function ShowTransition(text)
+    transitionVisible = false
+    Send('transitionShow', { text = text or 'Loading character...' })
+end
+exports('ShowTransition', ShowTransition)
+
+function HideTransition()
+    transitionVisible = false
+    Send('transitionHide', {})
+end
+exports('HideTransition', HideTransition)
+
+function IsTransitionVisible()
+    return transitionVisible
+end
+exports('IsTransitionVisible', IsTransitionVisible)
+
+RegisterNUICallback('transitionRendered', function(_, cb)
+    transitionVisible = true
+    NuiDebugRecordCallback('transitionRendered')
+    cb('ok')
+end)
+
+RegisterNUICallback('uiStageReady', function(data, cb)
+    NuiDebugRecordCallback('uiStageReady:' .. tostring(data and data.stage or 'unknown'))
+    cb('ok')
+end)
+
+RegisterNUICallback('gameplayVisible', function(_, cb)
+    transitionVisible = false
+    NuiDebugRecordCallback('gameplayVisible')
+    TriggerEvent('sunset:client:gameplayVisible')
+    cb('ok')
+end)
+
 -- ═══════════════════════════════════════════════════════════════
 --  [BOOT TRACE v2] Epoch calibration bridge.
 --  The NUI (app.js) posts 'bootEpoch' with Date.now() when it parses;
@@ -325,4 +361,3 @@ RegisterCommand('cursor', function()
     focusOwner = nil
     Notify('Cursorul a fost resetat.', 'info')
 end, false)
-
