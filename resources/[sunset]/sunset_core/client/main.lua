@@ -119,6 +119,17 @@ CreateThread(function()
         print('^1[sunset_core]^7 loadscreen handoff failed: ' .. tostring(handoffErr))
     end
 
+    -- Park the ped in open ocean before handing rendering control to GTA.
+    -- When ShutdownLoadingScreen() fires, the engine streams the area around
+    -- the ped; ocean at (0,0,-100) has virtually no geometry, so the first-frame
+    -- stall is near-zero. sunset_spawn will relocate and stream the real spawn
+    -- position via streamSpawnArea() once the player selects a character.
+    local ped = PlayerPedId()
+    SetEntityCoordsNoOffset(ped, 0.0, 0.0, -100.0, false, false, false)
+    FreezeEntityPosition(ped, true)
+    SetEntityVisible(ped, false, false)
+    SetFocusPosAndVel(0.0, 0.0, -100.0, 0.0, 0.0, 0.0)
+
     btrace('ShutdownLoadingScreenNui (calling)')
     ShutdownLoadingScreenNui()
     btrace('ShutdownLoadingScreenNui RETURNED')
