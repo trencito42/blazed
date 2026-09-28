@@ -32,6 +32,8 @@ SunsetAdmin.Commands = {
     ahouseedit = 4,
 
     -- Admin rank 3+
+    announce = 3,
+    announcement = 3,
     respawncars = 3,
     givegun = 3,
     unban = 3,
@@ -39,6 +41,7 @@ SunsetAdmin.Commands = {
     setjob = 3,
     setfaction = 3,
     setclan = 3,
+    setjobstat = 3,
     givecar = 3,
     giveitem = 3,
     removeleader = 3,
@@ -114,6 +117,29 @@ SunsetAdmin.Commands = {
     givelicense = 1,
     agivelicense = 1,
     revokelicense = 1,
+}
+
+-- Commands accessible to helpers (level 1-3). Admins automatically pass.
+-- hasPerm() checks this table when IsAdmin fails.
+SunsetAdmin.HelperCommands = {
+    -- Helper level 1+: player support tools
+    reports  = 1,
+    cr       = 1,
+    heal     = 1,
+    revive   = 1,
+    afklist  = 1,
+    aduty    = 1,
+    coords   = 1,
+    history  = 1,
+    warn     = 1,
+    mute     = 1,
+    unmute   = 1,
+    kick     = 1,
+    -- Helper level 2+: advanced support
+    check    = 2,
+    astats   = 2,
+    freeze   = 2,
+    unfreeze = 2,
 }
 
 -- [SANCTIONS] Public/staff broadcast config (§3.5)

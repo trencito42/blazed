@@ -10,3 +10,8 @@ CREATE TABLE IF NOT EXISTS `helpers` (
     `granted_by` VARCHAR(64) DEFAULT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add ip column to bans for IP-ban support
+ALTER TABLE `bans`
+    ADD COLUMN IF NOT EXISTS `ip` VARCHAR(45) NULL DEFAULT NULL AFTER `license`,
+    ADD INDEX IF NOT EXISTS `idx_bans_ip` (`ip`);

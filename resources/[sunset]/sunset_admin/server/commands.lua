@@ -52,8 +52,13 @@ local function recordActionLog(source, cmd, args, allowed)
 end
 
 local function hasPerm(source, cmd)
-    local need = SunsetAdmin.Commands[cmd] or 99
-    return IsAdmin(source, need)
+    local adminNeed = SunsetAdmin.Commands[cmd]
+    if adminNeed and IsAdmin(source, adminNeed) then return true end
+    local helperNeed = SunsetAdmin.HelperCommands and SunsetAdmin.HelperCommands[cmd]
+    if helperNeed and IsHelper(source, helperNeed) then return true end
+    -- fallback: unknown command → treat as admin-only level 99
+    if not adminNeed and not helperNeed then return IsAdmin(source, 99) end
+    return false
 end
 
 local function notify(source, msg, type)
