@@ -1742,23 +1742,54 @@ end)
 
 -- ═══ REPORT & HELPME TICKETING SYSTEM ═══
 local ActiveReports = {}
+local ReportSeq = 0
+local LastReportTime = {}
+local ActivePlayerReports = {} -- [source] = report
+local ActiveNewbieQuestions = {} -- [source] = question
+local LastNewbAsk = {} -- [source] = os.time()
+
 -- [HELPDESK] expose the live ticket table to the helpdesk panel
 exports('GetActiveReports', function()
     local rows = {}
+    -- 1. Player reports (/report)
     for id, t in pairs(ActiveReports) do
+        local src = t.src or t.reporter
         rows[#rows + 1] = {
-            id = id, reporter = t.reporter, reporterName = t.reporterName,
-            target = t.target, targetName = t.targetName, reason = t.reason,
-            isHelpme = t.isHelpme == true, status = t.status,
-            handlerName = t.handlerName, createdAt = t.createdAt,
-            reporterOnline = GetPlayerName(t.reporter) ~= nil,
+            id = id,
+            reporter = src,
+            reporterName = t.name or t.reporterName or (src and GetPlayerName(src)) or ('Player %d'):format(src or 0),
+            target = t.target,
+            targetName = t.targetName,
+            reason = t.text or t.reason or '',
+            isHelpme = false,
+            status = t.status or 'open',
+            handlerName = t.handlerName,
+            createdAt = t.at or t.createdAt or os.time(),
+            reporterOnline = src and GetPlayerName(src) ~= nil,
         }
     end
-    table.sort(rows, function(a, b) return a.id > b.id end)
+
+    -- 2. Newbie questions (/n & /helpme)
+    for src, q in pairs(ActiveNewbieQuestions) do
+        local qId = q.id or src
+        rows[#rows + 1] = {
+            id = qId,
+            reporter = src,
+            reporterName = q.name or (src and GetPlayerName(src)) or ('Player %d'):format(src),
+            target = nil,
+            targetName = nil,
+            reason = q.text or '',
+            isHelpme = true,
+            status = q.status or 'open',
+            handlerName = q.handlerName,
+            createdAt = q.at or os.time(),
+            reporterOnline = src and GetPlayerName(src) ~= nil,
+        }
+    end
+
+    table.sort(rows, function(a, b) return (a.createdAt or 0) > (b.createdAt or 0) end)
     return rows
 end)
-local ReportSeq = 0
-local LastReportTime = {}
 
 local function broadcastStaff(msg, msgType)
     for _, id in ipairs(GetPlayers()) do
@@ -1768,13 +1799,6 @@ local function broadcastStaff(msg, msgType)
         end
     end
 end
-
--- ═══════════════════════════════════════════════════════════════
---  REPORTS & NEWBIE QUESTIONS
--- ═══════════════════════════════════════════════════════════════
-local ActivePlayerReports = {} -- [source] = { id = ticketId, src = source, name = reporterName, text = reportText, at = now }
-local ActiveNewbieQuestions = {} -- [source] = { src = source, name = name, text = text, at = now }
-local LastNewbAsk = {} -- [source] = os.time()
 
 registerServerCommand('report', function(source, args)
     if source == 0 then return end
@@ -1791,14 +1815,20 @@ registerServerCommand('report', function(source, args)
 
     ReportSeq = ReportSeq + 1
     local ticketId = ReportSeq
-    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
+    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or ('Player %d'):format(source)
 
     local report = {
         id = ticketId,
         src = source,
+        reporter = source,
         name = name,
+        reporterName = name,
         text = text,
+        reason = text,
         at = now,
+        createdAt = now,
+        status = 'open',
+        isHelpme = false,
     }
     ActivePlayerReports[source] = report
     ActiveReports[ticketId] = report
@@ -1836,31 +1866,128 @@ registerServerCommand('report', function(source, args)
     end
 end)
 
+registerServerCommand('ar', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'ar') then return end
+
+    local targetArg = tonumber(args[1])
+    if not targetArg then
+        return notify(source, 'Usage: /ar [player id sau report id]', 'error')
+    end
+
+    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+
+    -- Check newbie questions first
+    local foundQuestion = nil
+    if ActiveNewbieQuestions[targetArg] then
+        foundQuestion = ActiveNewbieQuestions[targetArg]
+    else
+        for src, q in pairs(ActiveNewbieQuestions) do
+            if q.id == targetArg or q.src == targetArg then
+                foundQuestion = q
+                break
+            end
+        end
+    end
+
+    if foundQuestion then
+        foundQuestion.status = 'claimed'
+        foundQuestion.handlerName = adminName
+        if GetPlayerName(foundQuestion.src) then
+            TriggerClientEvent('sunset:chat:system', foundQuestion.src,
+                ('%s (ID: %d) a preluat intrebarea ta. Poti primi raspunsul prin /an.'):format(adminName, source), 'info')
+        end
+        return notify(source, ('Ai preluat intrebarea lui %s (#%d).'):format(foundQuestion.name, foundQuestion.src), 'success')
+    end
+
+    -- Check reports
+    local report = ActivePlayerReports[targetArg] or ActiveReports[targetArg]
+    if not report then
+        for id, rep in pairs(ActiveReports) do
+            if rep.id == targetArg or rep.src == targetArg then
+                report = rep
+                break
+            end
+        end
+    end
+
+    if not report then
+        return notify(source, ('Nu a fost gasit niciun report/intrebare activa pentru ID %d.'):format(targetArg), 'error')
+    end
+
+    report.status = 'claimed'
+    report.handlerName = adminName
+
+    local targetSrc = report.src
+    if GetPlayerName(targetSrc) then
+        TriggerClientEvent('sunset:chat:system', targetSrc,
+            ('Adminul %s (ID: %d) a preluat report-ul tau. Se ocupa de problema ta.'):format(adminName, source), 'info')
+    end
+
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsAdmin(p, 1) then
+            TriggerClientEvent('sunset:chat:system', p,
+                ('Adminul %s a preluat report-ul lui %s (ID: %d).'):format(adminName, report.name, targetSrc), 'info')
+        end
+    end
+    notify(source, ('Ai preluat report-ul lui %s (#%d).'):format(report.name, targetSrc), 'success')
+end)
+
 registerServerCommand('cr', function(source, args)
     if source ~= 0 and not requirePerm(source, 'cr') then return end
 
     local targetArg = tonumber(args[1])
     if not targetArg then
-        return notify(source, 'Usage: /cr [player id] [motiv (optional)]', 'error')
+        return notify(source, 'Usage: /cr [player id sau report id] [motiv (optional)]', 'error')
     end
 
     local reason = table.concat(args, ' ', 2):gsub('^%s*(.-)%s*$', '%1')
     if reason == '' then reason = 'Rezolvat' end
 
-    local report = ActivePlayerReports[targetArg]
+    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+
+    -- Check if it is a newbie question
+    local foundQuestion = nil
+    if ActiveNewbieQuestions[targetArg] then
+        foundQuestion = ActiveNewbieQuestions[targetArg]
+    else
+        for src, q in pairs(ActiveNewbieQuestions) do
+            if q.id == targetArg or q.src == targetArg then
+                foundQuestion = q
+                break
+            end
+        end
+    end
+
+    if foundQuestion then
+        local qSrc = foundQuestion.src
+        ActiveNewbieQuestions[qSrc] = nil
+        if GetPlayerName(qSrc) then
+            TriggerClientEvent('sunset:chat:system', qSrc,
+                ('Intrebarea ta a fost inchisa de %s (ID: %d). Motiv: %s'):format(adminName, source, reason), 'info')
+        end
+        notify(source, ('Ai inchis intrebarea lui %s (#%d).'):format(foundQuestion.name, qSrc), 'success')
+        return
+    end
+
+    -- Check if it is a report
+    local report = ActivePlayerReports[targetArg] or ActiveReports[targetArg]
     if not report then
-        report = ActiveReports[targetArg]
+        for id, rep in pairs(ActiveReports) do
+            if rep.id == targetArg or rep.src == targetArg then
+                report = rep
+                break
+            end
+        end
     end
 
     if not report then
-        return notify(source, ('Nu a fost gasit niciun report activ pentru ID %d.'):format(targetArg), 'error')
+        return notify(source, ('Nu a fost gasit niciun report/intrebare activa pentru ID %d.'):format(targetArg), 'error')
     end
 
     local targetSrc = report.src
     ActivePlayerReports[targetSrc] = nil
     ActiveReports[report.id] = nil
-
-    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
 
     if GetPlayerName(targetSrc) then
         TriggerClientEvent('sunset:chat:system', targetSrc,
@@ -1913,11 +2040,20 @@ local function handleNewbieQuestion(source, args, cmdName)
     LastNewbAsk[source] = now
 
     local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or ('Player %d'):format(source)
+    ReportSeq = ReportSeq + 1
+    local qId = ReportSeq
     ActiveNewbieQuestions[source] = {
+        id = qId,
         src = source,
+        reporter = source,
         name = name,
+        reporterName = name,
         text = text,
+        reason = text,
         at = now,
+        createdAt = now,
+        status = 'open',
+        isHelpme = true,
     }
 
     notify(source, 'Intrebarea ta a fost trimisa catre echipa de helperi.', 'success')
@@ -1983,6 +2119,17 @@ local function handleNewbieAnswer(source, args)
     end
 
     local q = ActiveNewbieQuestions[targetId]
+    local qSrc = targetId
+    if not q then
+        for s, item in pairs(ActiveNewbieQuestions) do
+            if item.id == targetId or item.src == targetId then
+                q = item
+                qSrc = s
+                break
+            end
+        end
+    end
+
     if not q then
         return notify(source, ('Nu exista nicio intrebare activa pentru ID %d.'):format(targetId), 'error')
     end
@@ -1992,7 +2139,7 @@ local function handleNewbieAnswer(source, args)
         return notify(source, ('Usage: /an %d [raspuns helper]'):format(targetId), 'error')
     end
 
-    ActiveNewbieQuestions[targetId] = nil
+    ActiveNewbieQuestions[qSrc] = nil
 
     local staffName = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
     local isAdm = source ~= 0 and IsAdmin(source, 1)
@@ -2029,11 +2176,22 @@ registerServerCommand('nd', function(source, args)
     end
 
     local q = ActiveNewbieQuestions[targetId]
+    local qSrc = targetId
+    if not q then
+        for s, item in pairs(ActiveNewbieQuestions) do
+            if item.id == targetId or item.src == targetId then
+                q = item
+                qSrc = s
+                break
+            end
+        end
+    end
+
     if not q then
         return notify(source, ('Nu exista nicio intrebare activa pentru ID %d.'):format(targetId), 'error')
     end
 
-    ActiveNewbieQuestions[targetId] = nil
+    ActiveNewbieQuestions[qSrc] = nil
 
     local staffName = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
     local staffRole = (source ~= 0 and IsAdmin(source, 1)) and 'Admin' or 'Helper'

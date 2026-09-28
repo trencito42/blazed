@@ -285,7 +285,8 @@ Sunset.CommandUsage = {
     nr = { usage = '/nr [id] [raspuns] — raspunde la intrebarea unui incepator (staff)', minArgs = 1 },
     nd = { usage = '/nd [id] — sterge o intrebare de incepator (staff)', minArgs = 1 },
     report = { usage = '/report [mesaj] — trimite un tichet / report catre admini', minArgs = 1 },
-    cr = { usage = '/cr [server id] [motiv optional] — inchide un report (admin)', minArgs = 1 },
+    cr = { usage = '/cr [server id] [motiv optional] — inchide un report sau intrebare (staff)', minArgs = 1 },
+    ar = { usage = '/ar [server id] — preia un report sau intrebare (staff)', minArgs = 1 },
     reports = { usage = '/reports — vizualizeaza rapoartele active (admin)', minArgs = 0 },
     lc = { usage = '/lc [mesaj] — chat-ul liderilor si al adminilor', minArgs = 1 },
 }

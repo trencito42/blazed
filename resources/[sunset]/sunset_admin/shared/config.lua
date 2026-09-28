@@ -64,6 +64,7 @@ SunsetAdmin.Commands = {
     aduty = 1,
     a = 1,
     cr = 1,
+    ar = 1,
     kick = 1,
     mute = 1,
     warn = 1,
@@ -122,6 +123,7 @@ SunsetAdmin.HelperCommands = {
     -- Helper level 1+: player support tools
     reports  = 1,
     cr       = 1,
+    ar       = 1,
     heal     = 1,
     revive   = 1,
     afklist  = 1,
