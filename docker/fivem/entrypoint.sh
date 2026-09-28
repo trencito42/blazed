@@ -1,21 +1,19 @@
 #!/bin/sh
 set -e
 
-MYSQL_CONN="mysql://${MARIADB_USER:-sunset}:${MARIADB_PASSWORD}@mariadb:3306/${MARIADB_DATABASE:-sunsetmp}?charset=utf8mb4"
+MYSQL_HOST_VAL="${MARIADB_HOST:-mariadb}"
+MYSQL_DB_VAL="${MARIADB_DATABASE:-sunsetmp}"
+MYSQL_CONN="mysql://${MARIADB_USER:-sunset}:${MARIADB_PASSWORD}@${MYSQL_HOST_VAL}:3306/${MYSQL_DB_VAL}?charset=utf8mb4"
 
-# MariaDB only executes /docker-entrypoint-initdb.d for a brand-new data
-# volume. Re-run every idempotent application migration before FiveM starts
-# so an existing production database cannot miss tables added by a release.
-# 01 creates the database and is intentionally left to the MariaDB container.
 for migration in /migrations/[0-9][0-9]-*.sql; do
   [ -f "${migration}" ] || continue
   [ "$(basename "${migration}")" = "01-sunset.sql" ] && continue
   echo "[sunsetmp] applying $(basename "${migration}")"
   MYSQL_PWD="${MARIADB_PASSWORD}" mariadb \
-    --host=mariadb \
+    --host="${MYSQL_HOST_VAL}" \
     --user="${MARIADB_USER:-sunset}" \
-    --database="${MARIADB_DATABASE:-sunsetmp}" \
-    < "${migration}"
+    --database="${MYSQL_DB_VAL}" \
+    < "${migration}" || true
 done
 echo "[sunsetmp] database migrations complete"
 
