@@ -28,6 +28,48 @@
     }
     window.formatMoney = formatMoney;
 
+    const NOTIFY_META = {
+        info: {
+            label: 'NOTICE',
+            icon: '<circle cx="12" cy="12" r="9"/><path d="M12 8v1M12 11v5"/>',
+        },
+        success: {
+            label: 'CONFIRMED',
+            icon: '<path d="M5 12l5 5L19 7"/>',
+        },
+        warning: {
+            label: 'ATTENTION',
+            icon: '<path d="M12 3 2 21h20L12 3z"/><path d="M12 9v5M12 17h.01"/>',
+        },
+        error: {
+            label: 'ALERT',
+            icon: '<path d="M6 6l12 12M18 6L6 18"/>',
+        },
+    };
+
+    function normalizeNotifyType(type) {
+        const t = String(type || 'info').toLowerCase();
+        if (t === 'success' || t === 'ok') return 'success';
+        if (t === 'error' || t === 'danger' || t === 'alert') return 'error';
+        if (t === 'warning' || t === 'warn') return 'warning';
+        return 'info';
+    }
+
+    function notifyIconSvg(type) {
+        const meta = NOTIFY_META[type] || NOTIFY_META.info;
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'notification__icon');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.innerHTML = meta.icon;
+        return svg;
+    }
+
     function notify(message, kind = 'info', duration = 4000) {
         window.App?.notify?.(message, kind, duration);
     }
@@ -335,30 +377,44 @@
         },
 
         notify(message, kind = 'info', duration = 4000) {
-            const root = document.getElementById('notifications-root');
+            const root = document.getElementById('notifications') || document.getElementById('notifications-root');
             if (!root) return;
 
-            const toast = document.createElement('div');
-            toast.className = `notification-toast toast--${kind}`;
+            const safeType = normalizeNotifyType(kind);
+            const meta = NOTIFY_META[safeType];
 
-            const iconMap = {
-                success: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
-                error: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
-                warning: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
-                info: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
-            };
+            const el = document.createElement('div');
+            el.className = `notification notification--${safeType}`;
+            el.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
 
-            toast.innerHTML = `
-                <span class="toast-icon">${iconMap[kind] || iconMap.info}</span>
-                <span class="toast-message">${String(message || '')}</span>
-            `;
+            const wrap = document.createElement('div');
+            wrap.className = 'notification__wrap';
 
-            root.appendChild(toast);
+            const title = document.createElement('div');
+            title.className = 'notification__title';
+            title.textContent = meta.label;
 
+            const copy = document.createElement('div');
+            copy.className = 'notification__message';
+            copy.textContent = String(message ?? '');
+
+            wrap.append(title, copy);
+            el.append(notifyIconSvg(safeType), wrap);
+            root.appendChild(el);
+
+            const maxVisible = 5;
+            while (root.children.length > maxVisible) {
+                root.firstElementChild?.remove();
+            }
+
+            const timeoutMs = Math.max(1000, Number(duration) || 4000);
             setTimeout(() => {
-                toast.classList.add('toast--hiding');
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
+                el.classList.add('is-leaving');
+                setTimeout(() => el.remove(), 240);
+            }, timeoutMs);
+
+            // Alt-tab expiry stamp
+            el.dataset.expiresAt = String(Date.now() + timeoutMs);
         },
 
         progressBar(label, duration = 3000) {
@@ -841,6 +897,15 @@
         } else {
             App.dispatchDirect(data);
         }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        const now = Date.now();
+        document.querySelectorAll('.notification').forEach((el) => {
+            const exp = Number(el.dataset.expiresAt || 0);
+            if (exp && now > exp) el.remove();
+        });
     });
 
     document.addEventListener('DOMContentLoaded', () => {

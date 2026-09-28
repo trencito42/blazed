@@ -169,22 +169,115 @@
     background: rgba(255, 107, 74, 0.1);
 }
 
-/* ═══ NOTIFICATIONS — layout only; visual style in theme.css */
-.notifications {
+/* ═══ NOTIFICATIONS — Top-Right HUD Glass Toast Notifications ═══ */
+.notifications,
+.notifications-container {
     position: fixed;
-    top: var(--space-lg);
-    right: var(--space-lg);
-    z-index: 1000;
+    top: 250px;
+    right: 36px;
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 10px;
+    width: min(390px, 34vw);
     pointer-events: none;
+    z-index: 9999;
 }
 
 .notification {
-    max-width: 420px;
+    --notify-accent: #00ffcc;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 54px;
+    padding: 10px 16px;
+    background: rgba(14, 18, 24, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 3px solid var(--notify-accent);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 0, 0, 0.35);
+    color: #fff;
     pointer-events: none;
-    animation: notifyIn var(--duration-normal) var(--ease-spring);
+    opacity: 0;
+    transform: translateX(20px);
+    animation: sunset-notify-in 0.24s cubic-bezier(0.18, 0.8, 0.24, 1) both;
+}
+
+.notification.is-leaving {
+    animation: sunset-notify-out 0.22s ease-in both;
+}
+
+.notification__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: var(--notify-accent);
+    transition: color 0.2s;
+}
+
+.notification__wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.notification__title {
+    font-family: var(--font-display, 'Chakra Petch', sans-serif);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--notify-accent);
+    line-height: 1.1;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 12px rgba(0, 0, 0, 0.85);
+}
+
+.notification__message {
+    font-family: var(--font-display, 'Chakra Petch', sans-serif);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #ffffff;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 1),
+        0 4px 10px rgba(0, 0, 0, 0.8);
+}
+
+.notification--success { --notify-accent: #49e69d; }
+.notification--warning { --notify-accent: #ffcc00; }
+.notification--error { --notify-accent: #ff4f68; }
+.notification--info { --notify-accent: #00ffcc; }
+
+@keyframes sunset-notify-in {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes sunset-notify-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(36px);
+    }
 }
 
 /* ═══ PROGRESS ═══ */
