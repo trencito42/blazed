@@ -1,6 +1,9 @@
 local spawned = false
 local spawning = false
 
+local CIVILIAN_MALE = `a_m_m_bevhills_02`
+local CIVILIAN_FEMALE = `a_f_m_beach_01`
+
 local function validCoordinate(value)
     value = tonumber(value)
     return value and value == value and math.abs(value) < 10000.0
@@ -64,7 +67,13 @@ local function spawnPlayer(char, spawnPosition)
     DoScreenFadeOut(300)
     Wait(350)
 
-    local model = char.gender == 1 and `mp_f_freemode_01` or `mp_m_freemode_01`
+    local defaultCivModel = (char.gender == 1) and CIVILIAN_FEMALE or CIVILIAN_MALE
+    local rawModel = char.model or (char.metadata and (char.metadata.skin or char.metadata.model)) or defaultCivModel
+    local model = type(rawModel) == 'string' and GetHashKey(rawModel) or rawModel
+    if not IsModelInCdimage(model) or not IsModelValid(model) then
+        model = defaultCivModel
+    end
+
     RequestModel(model)
     while not HasModelLoaded(model) do Wait(10) end
 
@@ -75,14 +84,16 @@ local function spawnPlayer(char, spawnPosition)
     SetPedDefaultComponentVariation(ped)
     SetEntityCollision(ped, true, true)
 
-    local app = char.appearance
-    if not app or not next(app) then
-        if GetResourceState('sunset_appearance') == 'started' then
-            app = exports.sunset_appearance:GetDefaultAppearance(char.gender or 0)
+    if model == `mp_m_freemode_01` or model == `mp_f_freemode_01` then
+        local app = char.appearance
+        if not app or not next(app) then
+            if GetResourceState('sunset_appearance') == 'started' then
+                app = exports.sunset_appearance:GetDefaultAppearance(char.gender or 0)
+            end
         end
-    end
-    if app and GetResourceState('sunset_appearance') == 'started' then
-        exports.sunset_appearance:ApplyAppearance(ped, app, char.gender or 0)
+        if app and GetResourceState('sunset_appearance') == 'started' then
+            exports.sunset_appearance:ApplyAppearance(ped, app, char.gender or 0)
+        end
     end
 
     FreezeEntityPosition(ped, true)

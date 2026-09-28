@@ -20,6 +20,9 @@ local WEAPON_LABELS = {
 
 local FREEMODE_MALE = `mp_m_freemode_01`
 local FREEMODE_FEMALE = `mp_f_freemode_01`
+local CIVILIAN_MALE = `a_m_m_bevhills_02`
+local CIVILIAN_FEMALE = `a_f_m_beach_01`
+local preDutyModel = nil
 
 local function getChar()
     return exports.sunset_core:GetCharacter()
@@ -84,6 +87,10 @@ end
 
 local function freemodeModelFor(gender)
     return (gender == 1) and FREEMODE_FEMALE or FREEMODE_MALE
+end
+
+local function civilianModelFor(gender)
+    return (gender == 1) and CIVILIAN_FEMALE or CIVILIAN_MALE
 end
 
 local function restoreScreenIfFaded()
@@ -187,6 +194,9 @@ function ApplyFactionLoadout(factionId, grade, customSkin)
     -- not already uniformed (re-apply on grade change must not snapshot the
     -- uniform over itself).
     if not civilianSnapshot and GetResourceState('sunset_appearance') == 'started' then
+        if not preDutyModel then
+            preDutyModel = GetEntityModel(ped)
+        end
         local ok, snap = pcall(function()
             return exports.sunset_appearance:GetClothingSnapshot(ped)
         end)
@@ -244,6 +254,8 @@ CreateThread(function()
     Wait(2000)
     preloadPedModel(FREEMODE_MALE)
     preloadPedModel(FREEMODE_FEMALE)
+    preloadPedModel(CIVILIAN_MALE)
+    preloadPedModel(CIVILIAN_FEMALE)
     if Sunset.FactionSkins then
         for _, def in pairs(Sunset.FactionSkins) do
             preloadPedModel(def.defaultMale)
@@ -265,22 +277,24 @@ function ClearFactionLoadout()
     SetPedArmour(ped, 0)
 
     local gender = (char and char.gender) or 0
-    local freemodeModel = freemodeModelFor(gender)
+    local targetModel = preDutyModel or civilianModelFor(gender)
+    preDutyModel = nil
 
-    if GetEntityModel(ped) ~= freemodeModel then
-        switchPedModel(freemodeModel)
+    if GetEntityModel(ped) ~= targetModel then
+        switchPedModel(targetModel)
         ped = PlayerPedId()
     end
 
-    -- [CLOTHING FIX] Restore the exact pre-duty snapshot FIRST (includes
-    -- props: hats/glasses/watches survive duty now), then the persisted
-    -- appearance for head/hair/overlays. The snapshot is consumed so a later
-    -- duty cycle re-snapshots fresh civilian clothes.
-    local snap = civilianSnapshot
-    civilianSnapshot = nil
-    applySavedAppearance(ped, char, gender)
-    if snap and GetResourceState('sunset_appearance') == 'started' then
-        pcall(function() exports.sunset_appearance:ApplyClothingSnapshot(ped, snap) end)
+    if targetModel == FREEMODE_MALE or targetModel == FREEMODE_FEMALE then
+        local snap = civilianSnapshot
+        civilianSnapshot = nil
+        applySavedAppearance(ped, char, gender)
+        if snap and GetResourceState('sunset_appearance') == 'started' then
+            pcall(function() exports.sunset_appearance:ApplyClothingSnapshot(ped, snap) end)
+        end
+    else
+        civilianSnapshot = nil
+        SetPedDefaultComponentVariation(ped)
     end
     restoreScreenIfFaded()
 end

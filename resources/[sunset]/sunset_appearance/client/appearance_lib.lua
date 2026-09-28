@@ -407,6 +407,11 @@ function SunsetAppearance.ApplyClothingSnapshot(ped, snap)
 end
 
 function SunsetAppearance.apply(ped, appearance, gender)
+    local model = GetEntityModel(ped)
+    if model ~= `mp_m_freemode_01` and model ~= `mp_f_freemode_01` then
+        SetPedDefaultComponentVariation(ped)
+        return appearance
+    end
     appearance = SunsetAppearance.normalize(appearance, gender)
     local hb = appearance.headBlend
 
