@@ -1489,36 +1489,6 @@ registerServerCommand('anno', function(source, args)
     })
 end, false)
 
--- /announce [mesaj]  (/announcement alias)
-local function runAnnounce(source, args)
-    if source ~= 0 and not requirePerm(source, 'announce') then return end
-    local msg = table.concat(args, ' ')
-    if msg == '' then
-        notify(source, 'Usage: /announce [message]', 'error')
-        return
-    end
-    local from = 'SERVER'
-    if source ~= 0 then
-        from = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or 'Admin'
-    end
-    TriggerClientEvent('sunset:chat:message', -1, {
-        id = source,
-        name = from,
-        message = msg,
-        time = os.date('%H:%M:%S'),
-        type = 'announce',
-    })
-    TriggerClientEvent('sunset:ui:announcement', -1, {
-        badge = 'ANNOUNCEMENT',
-        message = msg,
-        meta = from,
-        duration = 6500,
-    })
-end
-
-registerServerCommand('announce', runAnnounce)
-registerServerCommand('announcement', runAnnounce)
-
 registerServerCommand('sett', function(source, args)
     if not requirePerm(source, 'sett') then return end
     local hour = tonumber(args[1])

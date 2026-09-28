@@ -342,17 +342,3 @@ end)
 exports('ApplyAllClothing', function(ped, appearance, gender)
     return SunsetClothing.applyAll(ped, appearance, gender)
 end)
-
-RegisterCommand('validateoutfit', function()
-    local ped = PlayerPedId()
-    local char = exports.sunset_core:GetCharacter()
-    if not char then return end
-    local ok, issues = SunsetClothing.validateOutfit(ped, char.appearance, char.gender or 0)
-    if ok then
-        print('[SunsetClothing] Outfit validation passed.')
-    else
-        for _, issue in ipairs(issues) do
-            print('[SunsetClothing] ' .. issue)
-        end
-    end
-end, false)

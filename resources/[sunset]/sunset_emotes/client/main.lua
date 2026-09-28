@@ -40,7 +40,7 @@ local function playEmote(name)
     playing = true
 end
 
-RegisterCommand('e', function(_, args)
+local function handleEmoteCmd(_, args)
     local name = args[1]
     if not name or name == '' then
         playEmote('wave')
@@ -51,7 +51,10 @@ RegisterCommand('e', function(_, args)
         return
     end
     playEmote(name)
-end, false)
+end
+
+RegisterCommand('emote', handleEmoteCmd, false)
+RegisterCommand('anim', handleEmoteCmd, false)
 
 RegisterCommand('emotes', function()
     if LocalPlayer.state.isCasinoSitting then

@@ -32,8 +32,6 @@ SunsetAdmin.Commands = {
     ahouseedit = 4,
 
     -- Admin rank 3+
-    announce = 3,
-    announcement = 3,
     respawncars = 3,
     givegun = 3,
     unban = 3,

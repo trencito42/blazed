@@ -17,19 +17,22 @@ function Sunset.CommandReply(source, message, kind)
 end
 
 function Sunset.CommandDenyAdmin(source, cmd)
-    local need = 99
-    local label = 'Admin'
-    if SunsetAdmin and SunsetAdmin.Commands then
-        need = SunsetAdmin.Commands[cmd] or 99
-        label = (SunsetAdmin.Levels and SunsetAdmin.Levels[need]) or ('Level ' .. need)
+    local need = 1
+    local okNeed, req = pcall(function()
+        return exports.sunset_admin:GetCommandRequiredLevel(cmd)
+    end)
+    if okNeed and req then
+        need = req
+    elseif SunsetAdmin and SunsetAdmin.Commands and SunsetAdmin.Commands[cmd] then
+        need = SunsetAdmin.Commands[cmd]
     end
     local level = 0
     local ok, lvl = pcall(function()
         return exports.sunset_admin:GetAdminLevel(source)
     end)
     if ok then level = tonumber(lvl) or 0 end
-    push(source, ('/%s requires %s (admin level %d). Your level: %d.'):format(
-        tostring(cmd or 'command'), label, need, level
+    push(source, ('Comanda /%s necesita Admin Level %d. Nivelul tau: %d.'):format(
+        tostring(cmd or 'comanda'), need, level
     ), 'error')
     return true
 end

@@ -268,9 +268,7 @@ function GetPlayerDisplayName(source)
             base = formatted
         end
     end
-    local sid = tonumber(source)
-    if not sid or sid <= 0 then return base end
-    return ('%s (%d)'):format(base, sid)
+    return base
 end
 exports('GetPlayerDisplayName', GetPlayerDisplayName)
 

@@ -718,7 +718,10 @@ const Chat = {
         const type = String(m.type || 'say').toLowerCase().replace(/[^a-z_]/g, '') || 'say';
         const time = this.formatTime(m);
         const id = Number(m.id) || 0;
-        const name = String(m.name || 'Player').trim();
+        const rawName = String(m.name || 'Player').trim();
+        const name = (window.SunsetPlayerIdentity?.stripServerId
+            ? window.SunsetPlayerIdentity.stripServerId(rawName)
+            : rawName.replace(/\s*\(\d+\)\s*$/, '')) || 'Player';
         const msg = String(m.message ?? '');
         const faction = String(m.factionLabel || '').trim();
         const rank = String(m.rank || '').trim();
@@ -730,24 +733,29 @@ const Chat = {
         }
 
         if (type === 'anno') {
-            return `${prefix}**( ${name} (${id}): (${msg}) )**`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}**( ${name}${sid}: (${msg}) )**`;
         }
 
         if (type === 'pm') {
             const role = m.role || 'Admin';
-            return `${prefix}** ${role} [${name}] (${id}): [${msg}] **`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}** ${role} [${name}]${sid}: [${msg}] **`;
         }
 
         if (type === 'pm_echo') {
-            return `${prefix}** PM trimis catre [${name}] (${id}): [${msg}] **`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}** PM trimis catre [${name}]${sid}: [${msg}] **`;
         }
 
         if (type === 'report') {
-            return `${prefix}[REPORT] [${name}] (${id}): ${msg}`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}[REPORT] [${name}]${sid}: ${msg}`;
         }
 
         if (type === 'newbie_q') {
-            return `${prefix}[QUESTION] [${name}] (${id}): ${msg}`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}[QUESTION] [${name}]${sid}: ${msg}`;
         }
 
         if (type === 'newbie_qa') {
@@ -756,17 +764,20 @@ const Chat = {
 
         if (type === 'admin_chat') {
             const lvl = m.adminLevel ? ` [L${m.adminLevel}]` : '';
-            return `${prefix}(( [ADMIN]${lvl} ${name} (${id}): ${msg} ))`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}(( [ADMIN]${lvl} ${name}${sid}: ${msg} ))`;
         }
 
         if (type === 'staff_chat') {
             const role = m.staffRole || 'Staff';
-            return `${prefix}(( [STAFF] ${role} ${name} (${id}): ${msg} ))`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}(( [STAFF] ${role} ${name}${sid}: ${msg} ))`;
         }
 
         if (type === 'leader_chat') {
             const title = m.leaderTitle || 'Leader';
-            return `${prefix}[LEADER] ${title} ${name} (${id}): ${msg}`;
+            const sid = id > 0 ? ` (${id})` : '';
+            return `${prefix}[LEADER] ${title} ${name}${sid}: ${msg}`;
         }
 
         if (type === 'announce') {

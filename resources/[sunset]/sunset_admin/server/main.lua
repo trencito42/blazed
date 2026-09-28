@@ -244,3 +244,9 @@ RegisterCommand('sunset_setowner', function(src, args)
     SetAdmin(license, 6, GetPlayerName(target), 'console')
     print(('Owner (Admin 6) set for %s (%s)'):format(GetPlayerName(target), license))
 end, true)
+
+function GetCommandRequiredLevel(cmd)
+    if not cmd then return nil end
+    return SunsetAdmin and SunsetAdmin.Commands and SunsetAdmin.Commands[cmd] or nil
+end
+exports('GetCommandRequiredLevel', GetCommandRequiredLevel)
