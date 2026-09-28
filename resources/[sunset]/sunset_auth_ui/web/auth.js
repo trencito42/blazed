@@ -82,6 +82,8 @@ const AuthUI = {
     },
 
     show(data = {}) {
+        const screen = $('#auth-screen');
+        if (screen) screen.classList.remove('hidden');
         const panel = $('#auth-panel');
         if (panel) panel.classList.add('active');
         this.switchMode('login');
@@ -101,6 +103,8 @@ const AuthUI = {
     },
 
     hide() {
+        const screen = $('#auth-screen');
+        if (screen) screen.classList.add('hidden');
         const panel = $('#auth-panel');
         if (panel) panel.classList.remove('active');
         this.showLoading(false);

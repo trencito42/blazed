@@ -28,10 +28,11 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
-    background: #000;
+    background: transparent !important;
 }
 
-.hidden {
+.hidden,
+[hidden] {
     display: none !important;
 }
 
@@ -46,6 +47,7 @@ body {
     overflow: hidden;
     z-index: 100;
 }
+
 
 .auth-bg {
     position: absolute;
