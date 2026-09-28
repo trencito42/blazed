@@ -4,6 +4,7 @@ local function openClanPanel()
         return exports.sunset_ui:Notify(err or 'Clan panel could not be opened.', 'error', 7000)
     end
     exports.sunset_ui:Send('clanPanelShow', data)
+    exports.sunset_ui:SetFocus(true, true)
 end
 
 local function openClanDirectory()
@@ -12,6 +13,7 @@ local function openClanDirectory()
         return exports.sunset_ui:Notify(err or 'Clan directory could not be opened.', 'error', 7000)
     end
     exports.sunset_ui:Send('clanDirectoryShow', { clans = data })
+    exports.sunset_ui:SetFocus(true, true)
 end
 
 RegisterCommand('clan', openClanPanel, false)

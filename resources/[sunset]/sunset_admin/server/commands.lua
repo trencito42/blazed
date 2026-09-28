@@ -1276,7 +1276,7 @@ registerServerCommand('createhouse', function(source, args)
     ]], { label, math.floor(price), interiorKey, encodePos(pos, heading), encodePos(intPos, intHeading), encodePos(pos, heading), math.floor(level) })
 
     TriggerClientEvent('sunset:client:propertiesChanged', -1)
-    notify(source, ('Casa #%d "%s" a fost creata: $%s, nivel minim %d.'):format(id, label, Sunset.FormatNumber(price), level), 'success')
+    notify(source, ('Casa #%d "%s" a fost creata: $%d, nivel minim %d.'):format(id, label, math.floor(price), level), 'success')
 end, false)
 
 registerServerCommand('giverpall', function(source, args)
@@ -1809,6 +1809,7 @@ end
 -- ═══════════════════════════════════════════════════════════════
 local ActivePlayerReports = {} -- [source] = { id = ticketId, src = source, name = reporterName, text = reportText, at = now }
 local ActiveNewbieQuestions = {} -- [source] = { src = source, name = name, text = text, at = now }
+local LastNewbAsk = {} -- [source] = os.time()
 
 registerServerCommand('report', function(source, args)
     if source == 0 then return end
@@ -1956,11 +1957,20 @@ local function handleNewbieQuestion(source, args, cmdName)
 
     notify(source, 'Intrebarea ta a fost trimisa catre echipa de helperi.', 'success')
 
+    -- Sent in DARK GREEN to asking player so they see their question confirmed in chat
+    TriggerClientEvent('sunset:chat:message', source, {
+        id = source,
+        name = name,
+        message = text,
+        time = os.date('%H:%M:%S'),
+        type = 'newbie_q',
+    })
+
     -- Sent in DARK GREEN to on-duty helpers and admins
     local dutyCount = 0
     for _, pid in ipairs(GetPlayers()) do
         local p = tonumber(pid)
-        if p and IsStaff(p) and (Player(p).state.helperDuty or Player(p).state.adminDuty) then
+        if p and p ~= source and IsStaff(p) and (Player(p).state.helperDuty or Player(p).state.adminDuty) then
             dutyCount = dutyCount + 1
             TriggerClientEvent('sunset:chat:message', p, {
                 id = source,
@@ -1974,7 +1984,7 @@ local function handleNewbieQuestion(source, args, cmdName)
     if dutyCount == 0 then
         for _, pid in ipairs(GetPlayers()) do
             local p = tonumber(pid)
-            if p and IsStaff(p) then
+            if p and p ~= source and IsStaff(p) then
                 TriggerClientEvent('sunset:chat:message', p, {
                     id = source,
                     name = name,
@@ -2040,6 +2050,7 @@ end
 
 registerServerCommand('an', handleNewbieAnswer)
 registerServerCommand('na', handleNewbieAnswer)
+registerServerCommand('nr', handleNewbieAnswer)
 
 registerServerCommand('nd', function(source, args)
     if source ~= 0 and not IsStaff(source) then

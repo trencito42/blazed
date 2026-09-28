@@ -151,6 +151,8 @@
         clanPanelShow: 'clans',
         clanPanelHide: 'clans',
         clanDirectoryShow: 'clans',
+        clanBrowseInline: 'clans',
+        clanProfileShow: 'clans',
         clanUpdate: 'clans',
         clanWarShow: 'clans',
 

@@ -61,6 +61,7 @@ end
 local function commandExists(cmd)
     if serverCommands[cmd] then return true end
     if adminRequired(cmd) then return true end
+    if SunsetAdmin and SunsetAdmin.ServerHandlers and SunsetAdmin.ServerHandlers[cmd] then return true end
     if Sunset.CommandUsage and Sunset.CommandUsage[cmd] then return true end
     if Sunset.ClientCommands and Sunset.ClientCommands[cmd] then return true end
     return false
@@ -215,12 +216,14 @@ RegisterNetEvent('sunset:chat:runCommand', function(line)
     cmd = cmd and string.lower(cmd) or ''
     if cmd == '' then return end
 
+    local args = parseArgs(rest)
+
     if not commandExists(cmd) then
+        if tryRunResourceCommand(src, cmd, args) then return end
+        if tryRunServerChatCommand(src, cmd, args) then return end
         TriggerClientEvent('sunset:chat:executeCommand', src, line)
         return
     end
-
-    local args = parseArgs(rest)
 
     local need = adminRequired(cmd)
     if need then
