@@ -112,14 +112,28 @@ local function sendStaffOnly(payload)
     end
 end
 
+local function checkMute(source)
+    if GetResourceState('sunset_admin') == 'started' then
+        local ok, isMuted, remainingMin, reason = pcall(function()
+            return exports.sunset_admin:IsMuted(source)
+        end)
+        if ok and isMuted then
+            TriggerClientEvent('sunset:chat:system', source, ('Ai mute pentru inca %d minute. Motiv: %s'):format(remainingMin or 1, reason or 'Sanctiune admin'), 'error')
+            return true
+        end
+    end
+    return false
+end
+
 RegisterNetEvent('sunset:chat:send', function(message, channel)
     local src = source
+    if checkMute(src) then return end
     channel = tostring(channel or 'all'):lower()
 
     -- [STAFF CHAT] /a or STAFF channel — staff-only, level 1+
     if channel == 'staff' then
-        local ok, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(src, 1) end)
-        if not ok or isAdmin ~= true then
+        local ok, isStaff = pcall(function() return exports.sunset_admin:IsStaff(src) end)
+        if not ok or isStaff ~= true then
             TriggerClientEvent('sunset:chat:system', src, 'Staff chat is for staff members only.', 'error')
             return
         end
@@ -130,16 +144,23 @@ RegisterNetEvent('sunset:chat:send', function(message, channel)
         message = cleanChatText(message, 256)
         if not message then return end
         local identity = chatIdentity(src)
-        local level = 0
-        pcall(function() level = exports.sunset_admin:GetAdminLevel(src) or 0 end)
-        sendStaffOnly({
-            id = src,
-            name = identity.name,
-            message = message,
-            time = os.date('%H:%M:%S'),
-            type = 'staff',
-            adminLevel = level,
-        })
+        local aLvl = exports.sunset_admin:GetAdminLevel(src) or 0
+        local hLvl = exports.sunset_admin:GetHelperLevel(src) or 0
+        local roleStr = aLvl > 0 and ('Admin Lvl %d'):format(aLvl) or ('Helper Lvl %d'):format(hLvl)
+
+        for _, id in ipairs(GetPlayers()) do
+            local pid = tonumber(id)
+            if pid and exports.sunset_admin:IsStaff(pid) then
+                TriggerClientEvent('sunset:chat:message', pid, {
+                    id = src,
+                    name = identity.name,
+                    message = message,
+                    time = os.date('%H:%M:%S'),
+                    type = 'staff_chat',
+                    staffRole = roleStr,
+                })
+            end
+        end
         return
     end
 
@@ -172,6 +193,7 @@ RegisterNetEvent('sunset:chat:send', function(message, channel)
 end)
 
 local function runMeCommand(source, args)
+    if checkMute(source) then return end
     local msg = cleanChatText(table.concat(args, ' '), 256)
     if not msg then return end
     local identity = chatIdentity(source)
@@ -188,7 +210,7 @@ local function runMeCommand(source, args)
     })
 end
 
--- /a [message] — staff chat shortcut (level 1+)
+-- /a [message] — admin chat (Admin Level 1+)
 RegisterCommand('a', function(source, args)
     if source == 0 then return end
     local ok, isAdmin = pcall(function() return exports.sunset_admin:IsAdmin(source, 1) end)
@@ -204,17 +226,111 @@ RegisterCommand('a', function(source, args)
     local identity = chatIdentity(source)
     local level = 0
     pcall(function() level = exports.sunset_admin:GetAdminLevel(source) or 0 end)
-    sendStaffOnly({
-        id = source,
-        name = identity.name,
-        message = msg,
-        time = os.date('%H:%M:%S'),
-        type = 'staff',
-        adminLevel = level,
-    })
+    for _, id in ipairs(GetPlayers()) do
+        local pid = tonumber(id)
+        if pid and exports.sunset_admin:IsAdmin(pid, 1) then
+            TriggerClientEvent('sunset:chat:message', pid, {
+                id = source,
+                name = identity.name,
+                message = msg,
+                time = os.date('%H:%M:%S'),
+                type = 'admin_chat',
+                adminLevel = level,
+            })
+        end
+    end
+end, false)
+
+-- /e [message] — admin & helper staff chat
+RegisterCommand('e', function(source, args)
+    if source == 0 then return end
+    local ok, isStaff = pcall(function() return exports.sunset_admin:IsStaff(source) end)
+    if not ok or isStaff ~= true then
+        TriggerClientEvent('sunset:chat:system', source, 'Comanda disponibila doar pentru staff (admini si helperi).', 'error')
+        return
+    end
+    local msg = cleanChatText(table.concat(args, ' '), 256)
+    if not msg then
+        TriggerClientEvent('sunset:chat:system', source, 'Usage: /e [message]', 'warning')
+        return
+    end
+    local identity = chatIdentity(source)
+    local aLvl = exports.sunset_admin:GetAdminLevel(source) or 0
+    local hLvl = exports.sunset_admin:GetHelperLevel(source) or 0
+    local roleStr = aLvl > 0 and ('Admin Lvl %d'):format(aLvl) or ('Helper Lvl %d'):format(hLvl)
+
+    for _, id in ipairs(GetPlayers()) do
+        local pid = tonumber(id)
+        if pid and exports.sunset_admin:IsStaff(pid) then
+            TriggerClientEvent('sunset:chat:message', pid, {
+                id = source,
+                name = identity.name,
+                message = msg,
+                time = os.date('%H:%M:%S'),
+                type = 'staff_chat',
+                staffRole = roleStr,
+            })
+        end
+    end
+end, false)
+
+-- /lc [message] — leader chat (Faction Leaders + Admins)
+RegisterCommand('lc', function(source, args)
+    if source == 0 then return end
+    local isLeader = false
+    local isAdmin = false
+    pcall(function()
+        if GetResourceState('sunset_factions') == 'started' then
+            isLeader = exports.sunset_factions:IsFactionLeader(source) == true
+        end
+        if GetResourceState('sunset_admin') == 'started' then
+            isAdmin = exports.sunset_admin:IsAdmin(source, 1) == true
+        end
+    end)
+    if not isLeader and not isAdmin then
+        TriggerClientEvent('sunset:chat:system', source, 'Nu ai acces la chat-ul liderilor (/lc).', 'error')
+        return
+    end
+    local msg = cleanChatText(table.concat(args, ' '), 256)
+    if not msg then
+        TriggerClientEvent('sunset:chat:system', source, 'Usage: /lc [message]', 'warning')
+        return
+    end
+    local identity = chatIdentity(source)
+    local title = 'Leader'
+    if isAdmin then
+        local aLvl = exports.sunset_admin:GetAdminLevel(source) or 0
+        title = ('Admin Lvl %d'):format(aLvl)
+    else
+        local char = exports.sunset_core:GetCharacter(source)
+        local fId = select(1, Sunset.GetCharacterFaction(char))
+        if fId and Sunset.Factions[fId] then
+            title = Sunset.Factions[fId].label or fId
+        end
+    end
+
+    for _, id in ipairs(GetPlayers()) do
+        local pid = tonumber(id)
+        local canSee = false
+        pcall(function()
+            if exports.sunset_admin:IsAdmin(pid, 1) then canSee = true
+            elseif exports.sunset_factions:IsFactionLeader(pid) then canSee = true end
+        end)
+        if canSee then
+            TriggerClientEvent('sunset:chat:message', pid, {
+                id = source,
+                name = identity.name,
+                message = msg,
+                time = os.date('%H:%M:%S'),
+                type = 'leader_chat',
+                leaderTitle = title,
+            })
+        end
+    end
 end, false)
 
 local function runDoCommand(source, args)
+    if checkMute(source) then return end
     local msg = cleanChatText(table.concat(args, ' '), 256)
     if not msg then return end
     local identity = chatIdentity(source)
@@ -319,12 +435,12 @@ exports.sunset_core:RegisterCallback('sunset:getChatChannels', function(source)
     return buildChatChannels(source)
 end)
 
--- /cc — staff chat wipe (level 2+). Clears every player's chat window.
+-- /cc — staff chat wipe (level 1+). Clears every player's chat window.
 RegisterCommand('cc', function(source, args)
     if source ~= 0 then
         local allowed = false
         if GetResourceState('sunset_admin') == 'started' then
-            local ok, res = pcall(function() return exports.sunset_admin:IsAdmin(source, 2) end)
+            local ok, res = pcall(function() return exports.sunset_admin:IsAdmin(source, 1) end)
             allowed = ok and res == true
         end
         if not allowed then
@@ -333,4 +449,6 @@ RegisterCommand('cc', function(source, args)
         end
     end
     TriggerClientEvent('sunset:chat:clear', -1)
+    local name = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    TriggerClientEvent('sunset:chat:system', -1, ('Chat-ul a fost curatat de catre %s.'):format(name), 'info')
 end, false)

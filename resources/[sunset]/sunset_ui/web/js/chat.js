@@ -291,6 +291,77 @@ const Chat = {
             };
         }
 
+        if (type === 'anno') {
+            return {
+                badge: { label: 'ANNOUNCEMENT', className: 'badge-error' },
+                author: null,
+                content: { html: `<span class="color-anno">**( ${esc(name)} (${id}): (${esc(msg)}) )**</span>`, className: '' },
+            };
+        }
+
+        if (type === 'pm' || type === 'pm_echo') {
+            const role = m.role || 'Admin';
+            const text = type === 'pm_echo'
+                ? `** PM trimis catre [${esc(name)}] (${id}): [${esc(msg)}] **`
+                : `** ${role} [${esc(name)}] (${id}): [${esc(msg)}] **`;
+            return {
+                badge: { label: 'PM', className: 'badge-pm' },
+                author: null,
+                content: { html: `<span class="color-pm">${text}</span>`, className: '' },
+            };
+        }
+
+        if (type === 'report') {
+            return {
+                badge: { label: 'REPORT', className: 'badge-error' },
+                author: { html: `[${esc(name)}] (${id}):`, className: 'color-error' },
+                content: { html: `<span class="color-error">${esc(msg)}</span>`, className: '' },
+            };
+        }
+
+        if (type === 'newbie_q') {
+            return {
+                badge: { label: 'QUESTION', className: 'badge-newbie-q' },
+                author: { html: `[${esc(name)}] (${id}):`, className: 'color-newbie-q' },
+                content: { html: `<span class="color-newbie-q">${esc(msg)}</span>`, className: '' },
+            };
+        }
+
+        if (type === 'newbie_qa') {
+            return {
+                badge: { label: 'HELP', className: 'badge-peace' },
+                author: null,
+                content: { html: `<span class="color-newbie-qa" style="white-space: pre-line;">${esc(msg)}</span>`, className: '' },
+            };
+        }
+
+        if (type === 'admin_chat') {
+            const lvl = m.adminLevel ? ` [L${m.adminLevel}]` : '';
+            return {
+                badge: { label: 'ADMIN', className: 'badge-admin' },
+                author: { html: `(( [ADMIN]${lvl} ${esc(name)} (${id}):`, className: 'color-admin' },
+                content: { html: `${esc(msg)} ))`, className: 'text-admin' },
+            };
+        }
+
+        if (type === 'staff_chat') {
+            const role = m.staffRole || 'Staff';
+            return {
+                badge: { label: 'STAFF', className: 'badge-staff' },
+                author: { html: `(( [STAFF] ${role} ${esc(name)} (${id}):`, className: 'color-staff' },
+                content: { html: `${esc(msg)} ))`, className: 'text-staff' },
+            };
+        }
+
+        if (type === 'leader_chat') {
+            const title = m.leaderTitle || 'Leader';
+            return {
+                badge: { label: 'LEADER', className: 'badge-leader' },
+                author: { html: `[LEADER] ${title} ${esc(name)} (${id}):`, className: 'color-leader' },
+                content: { html: esc(msg), className: 'text-leader' },
+            };
+        }
+
         if (type === 'announce') {
             const from = name || 'SERVER';
             const idPart = id > 0 ? ` (${id})` : '';
@@ -656,6 +727,46 @@ const Chat = {
         if (type === 'sms' || m.smsNotify) {
             const from = name || 'Unknown';
             return `${prefix}SMS from ${from}${id > 0 ? ` (${id})` : ''}: You got a new message.`;
+        }
+
+        if (type === 'anno') {
+            return `${prefix}**( ${name} (${id}): (${msg}) )**`;
+        }
+
+        if (type === 'pm') {
+            const role = m.role || 'Admin';
+            return `${prefix}** ${role} [${name}] (${id}): [${msg}] **`;
+        }
+
+        if (type === 'pm_echo') {
+            return `${prefix}** PM trimis catre [${name}] (${id}): [${msg}] **`;
+        }
+
+        if (type === 'report') {
+            return `${prefix}[REPORT] [${name}] (${id}): ${msg}`;
+        }
+
+        if (type === 'newbie_q') {
+            return `${prefix}[QUESTION] [${name}] (${id}): ${msg}`;
+        }
+
+        if (type === 'newbie_qa') {
+            return `${prefix}${msg}`;
+        }
+
+        if (type === 'admin_chat') {
+            const lvl = m.adminLevel ? ` [L${m.adminLevel}]` : '';
+            return `${prefix}(( [ADMIN]${lvl} ${name} (${id}): ${msg} ))`;
+        }
+
+        if (type === 'staff_chat') {
+            const role = m.staffRole || 'Staff';
+            return `${prefix}(( [STAFF] ${role} ${name} (${id}): ${msg} ))`;
+        }
+
+        if (type === 'leader_chat') {
+            const title = m.leaderTitle || 'Leader';
+            return `${prefix}[LEADER] ${title} ${name} (${id}): ${msg}`;
         }
 
         if (type === 'announce') {

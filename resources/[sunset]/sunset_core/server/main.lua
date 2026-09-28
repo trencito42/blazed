@@ -129,7 +129,7 @@ local function completeAuthentication(source, accountId, username)
     if not accountId or type(username) ~= 'string' or username == '' then return false end
 
     local account = MySQL.single.await(
-        'SELECT id, username, premium_points, admin_level FROM accounts WHERE id = ?',
+        'SELECT id, username, premium_points, admin_level, helper_level FROM accounts WHERE id = ?',
         { accountId }
     )
     if not account then return false end
@@ -206,6 +206,7 @@ local function completeAuthentication(source, accountId, username)
         name = username,
         premium_points = account and tonumber(account.premium_points) or 0,
         admin_level = account and tonumber(account.admin_level) or 0,
+        helper_level = account and tonumber(account.helper_level) or 0,
         playtime = tonumber(player.playtime) or 0,
         sessionStart = os.time(),
         character = nil,

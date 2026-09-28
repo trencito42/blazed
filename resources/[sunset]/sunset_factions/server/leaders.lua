@@ -57,7 +57,7 @@ local function sendFactionInfo(factionId, name, message, chatType)
 end
 
 local function handleSetLeader(source, args)
-    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 3) then
+    if source ~= 0 and not exports.sunset_admin:IsAdmin(source, 4) then
         exports.sunset_core:CommandDenyAdmin(source, 'setleader')
         return true
     end

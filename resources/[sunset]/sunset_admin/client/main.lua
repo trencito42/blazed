@@ -131,6 +131,52 @@ RegisterNetEvent('sunset:admin:revive', function()
     ClearPedBloodDamage(ped)
 end)
 
+RegisterNetEvent('sunset:admin:setHealth', function(hp)
+    local ped = PlayerPedId()
+    hp = tonumber(hp) or 200
+    if hp <= 100 and hp > 0 then
+        hp = 100 + hp
+    end
+    if hp > 200 then hp = 200 end
+    if hp < 100 then hp = 100 end
+    SetEntityHealth(ped, hp)
+end)
+
+RegisterNetEvent('sunset:admin:disarm', function()
+    local ped = PlayerPedId()
+    RemoveAllPedWeapons(ped, true)
+end)
+
+RegisterNetEvent('sunset:admin:enterClosestVehicle', function()
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local veh = GetClosestVehicle(coords.x, coords.y, coords.z, 15.0, 0, 70)
+    if veh == 0 or not DoesEntityExist(veh) then
+        local closest, closestDist = 0, 15.0
+        for _, candidate in ipairs(GetGamePool('CVehicle')) do
+            local dist = #(coords - GetEntityCoords(candidate))
+            if dist < closestDist then
+                closest = candidate
+                closestDist = dist
+            end
+        end
+        veh = closest
+    end
+    if veh ~= 0 and DoesEntityExist(veh) then
+        for seat = -1, GetVehicleMaxNumberOfPassengers(veh) - 1 do
+            if IsVehicleSeatFree(veh, seat) then
+                TaskWarpPedIntoVehicle(ped, veh, seat)
+                exports.sunset_ui:Notify('Teleportat in vehicul!', 'success')
+                return
+            end
+        end
+        TaskWarpPedIntoVehicle(ped, veh, -1)
+        exports.sunset_ui:Notify('Teleportat in vehicul!', 'success')
+    else
+        exports.sunset_ui:Notify('Nu exista niciun vehicul in apropiere.', 'error')
+    end
+end)
+
 -- ═══════════════════════════════════════════════════════════════
 --  SA-MP-style /dl vehicle debug labels
 --  Local entity diagnostics only; no DB queries and no work while disabled.

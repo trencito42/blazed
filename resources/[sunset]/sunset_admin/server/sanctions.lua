@@ -114,15 +114,18 @@ function Sanctions.warn(source, target, reason)
     end
 
     local prior = recentWarnCount(id.license)
-    broadcastStaff(('[SANCTION] %s warned %s (#%d): "%s" — %d warn(s) in the last 7 days'):format(
-        aName, id.name, target, reason, prior + 1))
+    local totalWarns = prior + 1
+    broadcastStaff(('[SANCTION] %s warned %s (#%d): "%s" — %d/3 warn(s)'):format(
+        aName, id.name, target, reason, totalWarns))
 
-    -- auto-escalation: 3rd warn in 7 days -> staff alert suggesting kick
-    if prior + 1 >= (SunsetAdmin.WarnsBeforeStaffAlert or 3) then
-        broadcastStaff(('[SANCTION] %s now has %d warns in 7 days — consider /kick or /ban. (/history %d)')
-            :format(id.name, prior + 1, target))
+    -- auto-escalation: 3/3 warns -> automatic account ban (7 days)
+    if totalWarns >= 3 then
+        local banReason = ('Acumulare 3/3 avertismente (ultimul: %s)'):format(reason)
+        broadcastPublic(('Player %s a primit ban pe cont (7 zile) pentru acumularea a 3/3 warns.'):format(id.name))
+        Sanctions.ban(source, target, 7 * 1440, banReason)
+        return { warns = totalWarns, reason = reason, banned = true }
     end
-    return { warns = prior + 1, reason = reason }
+    return { warns = totalWarns, reason = reason }
 end
 
 -- ── /history ───────────────────────────────────────────────────
@@ -211,10 +214,11 @@ function Sanctions.ban(source, target, durationMin, reason)
     local license = id.license
     if not license then return nil, 'Could not resolve the target license.' end
 
+    local ip = exports.sunset_admin:GetPlayerIP(target)
     local expiresAt = durationMin and (os.date('%Y-%m-%d %H:%M:%S', os.time() + durationMin * 60)) or nil
     local banId = MySQL.insert.await(
-        'INSERT INTO bans (license, reason, banned_by, expires_at) VALUES (?, ?, ?, ?)',
-        { license, reason, aName, expiresAt })
+        'INSERT INTO bans (license, ip, reason, banned_by, expires_at) VALUES (?, ?, ?, ?, ?)',
+        { license, ip, reason, aName, expiresAt })
 
     -- [BAN HARDENING] store hardware tokens so alt-account evasion via a new
     -- license still trips the connecting deferral (checked in main.lua).
@@ -243,6 +247,38 @@ function Sanctions.ban(source, target, durationMin, reason)
     broadcastStaff(('[SANCTION] %s banned %s (%s)%s: "%s"'):format(
         aName, id.name, tostring(license),
         durationMin and (' for ' .. durationMin .. ' min') or ' PERMANENTLY', reason))
+    return true
+end
+
+function Sanctions.banIP(source, target, reason)
+    local id = Sanctions.record('banip', target, source, reason, nil)
+    local aName = adminName(source)
+    local license = id.license
+    local ip = exports.sunset_admin:GetPlayerIP(target)
+
+    local banId = MySQL.insert.await(
+        'INSERT INTO bans (license, ip, reason, banned_by, expires_at) VALUES (?, ?, ?, ?, NULL)',
+        { license or '', ip, reason, aName })
+
+    pcall(function()
+        for i = 0, 4 do
+            local token = GetPlayerToken(target, i)
+            if token and token ~= '' then
+                MySQL.insert.await('INSERT IGNORE INTO ban_tokens (ban_id, token) VALUES (?, ?)',
+                    { banId, token })
+            end
+        end
+    end)
+
+    DropPlayer(target, ('IP Banned by %s: %s (permanent)'):format(aName, reason))
+
+    if (SunsetAdmin.Broadcast or {}).ban ~= false then
+        local showReason = ((SunsetAdmin.Broadcast or {}).showReason or {}).ban ~= false
+        local reasonPart = showReason and (': ' .. reason) or ''
+        broadcastPublic(('%s was permanently IP-banned by %s%s'):format(id.name, aName, reasonPart))
+    end
+    broadcastStaff(('[SANCTION] %s permanently IP-banned %s (IP: %s, %s): "%s"'):format(
+        aName, id.name, tostring(ip or 'unknown'), tostring(license), reason))
     return true
 end
 
@@ -280,4 +316,6 @@ Sanctions.DURATION_TOKENS = DURATION_TOKENS
 SunsetAdmin.Sanctions = Sanctions
 exports('RecordSanction', Sanctions.record)
 exports('BroadcastStaff', broadcastStaff)
+exports('BanIP', Sanctions.banIP)
+exports('BanPlayer', Sanctions.ban)
 print('^2[sunset_admin]^7 sanctions module online (warn/history/clearwarns/broadcasts)')

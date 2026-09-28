@@ -584,6 +584,75 @@ body.chat-ui-open .chat-msg,
 .chat-msg--command_warn { color: #ffd36a; font-weight: 700; }
 .chat-msg--command_info { color: #9fd4ff; font-weight: 600; }
 
+/* Admin announcement /anno - bright red */
+.chat-msg--anno,
+.color-anno {
+    color: #ff2a2a !important;
+    font-weight: 800 !important;
+    text-shadow: 0 0 6px rgba(255, 42, 42, 0.4), 1px 1px 0 #000, -1px -1px 0 #000 !important;
+}
+
+/* Staff PM /pm - yellow-orange */
+.chat-msg--pm,
+.chat-msg--pm_echo,
+.color-pm {
+    color: #ffaa00 !important;
+    font-weight: 700 !important;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000 !important;
+}
+.badge-pm {
+    color: #ffaa00;
+    border-color: rgba(255, 170, 0, 0.7);
+}
+
+/* Player report /report - red */
+.chat-msg--report {
+    color: #ff4d4d !important;
+    font-weight: 700 !important;
+}
+
+/* Newbie question /n /helpme - dark green */
+.chat-msg--newbie_q,
+.color-newbie-q {
+    color: #2e7d32 !important;
+    font-weight: 700 !important;
+}
+.badge-newbie-q {
+    color: #2e7d32;
+    border-color: rgba(46, 125, 50, 0.7);
+}
+
+/* Newbie QA broadcast /an - light green */
+.chat-msg--newbie_qa,
+.color-newbie-qa {
+    color: #55ff55 !important;
+    font-weight: 700 !important;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000 !important;
+}
+
+/* Admin chat /a */
+.chat-msg--admin_chat {
+    color: #ffa500 !important;
+    font-weight: 600 !important;
+}
+
+/* Staff chat /e */
+.chat-msg--staff_chat {
+    color: #38bdf8 !important;
+    font-weight: 600 !important;
+}
+
+/* Faction leader chat /lc */
+.chat-msg--leader_chat,
+.color-leader {
+    color: #c084fc !important;
+    font-weight: 600 !important;
+}
+.badge-leader {
+    color: #c084fc;
+    border-color: rgba(192, 132, 252, 0.7);
+}
+
 .chat-input-wrap {
     margin-top: 6px;
     pointer-events: auto !important;

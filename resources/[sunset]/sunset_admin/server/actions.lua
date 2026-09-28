@@ -513,11 +513,12 @@ end
 -- Sets a statebag flag so sunset_chat can inject the [HELPER] prefix.
 -- Off-duty helpers act silently (same perms, no visible prefix).
 local AdminDuty = {} -- [src] = true
+local HelperDuty = {} -- [src] = true
 
 function A.aduty(source, args)
     if source == 0 then return end
-    if not hasPerm(source, 1) then
-        notify(source, 'Staff only.', 'error')
+    if not IsAdmin(source, 1) then
+        notify(source, 'Doar administratorii pot folosi /aduty.', 'error')
         return
     end
     AdminDuty[source] = not AdminDuty[source] or nil
@@ -525,11 +526,43 @@ function A.aduty(source, args)
     pcall(function()
         Player(source).state:set('adminDuty', on, true)
     end)
+    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
     notify(source, on
-        and 'You are now ON DUTY as staff. [HELPER] prefix visible in chat.'
-        or 'You are now OFF DUTY. Chat prefix removed.', 'info')
+        and 'Te-ai pus ON DUTY ca admin. Primesti report-uri si avertizari.'
+        or 'Te-ai pus OFF DUTY ca admin.', 'info')
+    local dutyMsg = ('Admin %s este acum %s.'):format(name, on and 'ON DUTY' or 'OFF DUTY')
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsStaff(p) then
+            TriggerClientEvent('sunset:chat:system', p, dutyMsg, 'info')
+        end
+    end
     if GetResourceState('sunset_anticheat') == 'started' then
         pcall(function() exports.sunset_anticheat:MarkAdminAction(source, 'aduty') end)
+    end
+end
+
+function A.hduty(source, args)
+    if source == 0 then return end
+    if not IsHelper(source, 1) then
+        notify(source, 'Doar helperii pot folosi /hduty.', 'error')
+        return
+    end
+    HelperDuty[source] = not HelperDuty[source] or nil
+    local on = HelperDuty[source] == true
+    pcall(function()
+        Player(source).state:set('helperDuty', on, true)
+    end)
+    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
+    notify(source, on
+        and 'Te-ai pus ON DUTY ca helper. Primesti intrebarile jucatorilor.'
+        or 'Te-ai pus OFF DUTY ca helper.', 'info')
+    local dutyMsg = ('Helper %s este acum %s.'):format(name, on and 'ON DUTY' or 'OFF DUTY')
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsStaff(p) then
+            TriggerClientEvent('sunset:chat:system', p, dutyMsg, 'info')
+        end
     end
 end
 
@@ -537,8 +570,13 @@ exports('IsOnAdminDuty', function(src)
     return AdminDuty[tonumber(src or -1)] == true
 end)
 
+exports('IsOnHelperDuty', function(src)
+    return HelperDuty[tonumber(src or -1)] == true
+end)
+
 AddEventHandler('playerDropped', function()
     AdminDuty[tonumber(source)] = nil
+    HelperDuty[tonumber(source)] = nil
 end)
 
 -- ── registration (commands are registered here; requirePerm etc.
@@ -556,6 +594,7 @@ function A.init(env)
     registerServerCommand('unfreeze', function(source, args) A.unfreeze(source, args) end, false)
     registerServerCommand('slap', function(source, args) A.slap(source, args) end, false)
     registerServerCommand('pullout', function(source, args) A.pullout(source, args) end, false)
+    registerServerCommand('spec', function(source, args) A.spectate(source, args) end, false)
     registerServerCommand('spectate', function(source, args) A.spectate(source, args) end, false)
     registerServerCommand('tpcar', function(source, args) A.tpcar(source, args) end, false)
     registerServerCommand('bringcar', function(source, args) A.bringcar(source, args) end, false)
@@ -569,6 +608,7 @@ function A.init(env)
     registerServerCommand('gotoid', function(source, args) A.gotoid(source, args) end, false)
     registerServerCommand('setclan', function(source, args) A.setclan(source, args) end, false)
     registerServerCommand('aduty', function(source, args) A.aduty(source, args) end, false)
+    registerServerCommand('hduty', function(source, args) A.hduty(source, args) end, false)
 end
 
 SunsetAdmin.Actions = A

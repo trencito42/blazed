@@ -411,6 +411,38 @@ registerServerCommand('setjobstat', function(source, args)
     if source ~= target then notify(target, ('An administrator changed your %s %s to %d.'):format(Sunset.CivilianJobs[jobId].label, stat, value), 'info') end
 end, false)
 
+-- ── [SANCTIONS & MUTES] ─────────────────────────────────────────
+local MutedPlayers = {}   -- [license] = { expiresAt = timestamp, reason = string, by = string }
+local NMutedPlayers = {}  -- [license] = { expiresAt = timestamp, reason = string, by = string }
+
+local function isPlayerMuted(source)
+    local license = Sunset.GetIdentifier(source, 'license')
+    if not license or not MutedPlayers[license] then return false end
+    local row = MutedPlayers[license]
+    local now = os.time()
+    if now >= row.expiresAt then
+        MutedPlayers[license] = nil
+        return false
+    end
+    local remMin = math.ceil((row.expiresAt - now) / 60)
+    return true, remMin, row.reason
+end
+exports('IsMuted', isPlayerMuted)
+
+local function isPlayerNMuted(source)
+    local license = Sunset.GetIdentifier(source, 'license')
+    if not license or not NMutedPlayers[license] then return false end
+    local row = NMutedPlayers[license]
+    local now = os.time()
+    if now >= row.expiresAt then
+        NMutedPlayers[license] = nil
+        return false
+    end
+    local remMin = math.ceil((row.expiresAt - now) / 60)
+    return true, remMin, row.reason
+end
+exports('IsNMuted', isPlayerNMuted)
+
 -- /kick [id] [motiv]
 registerServerCommand('kick', function(source, args)
     if source ~= 0 and not requirePerm(source, 'kick') then return end
@@ -423,11 +455,11 @@ registerServerCommand('kick', function(source, args)
     if source ~= 0 then notify(source, 'Player kicked', 'success') end
 end, false)
 
--- /ban [id] [30m|1h|6h|12h|1d|3d|7d|14d|30d|perm] [reason]
+-- /ban [id] [durata] [motiv]
 -- Backward compatible: /ban [id] [reason] = permanent (old syntax).
 registerServerCommand('ban', function(source, args)
     if source ~= 0 and not requirePerm(source, 'ban') then return end
-    local target = getTarget(source, args[1], 'Usage: /ban [player id] [30m|6h|7d|30d|perm] [reason]')
+    local target = getTarget(source, args[1], 'Usage: /ban [player id] [durata (ex: 30m, 1d, 7d, perm)] [motiv]')
     if not target or not guardSelfTarget(source, target, args[1], 'ban') then return end
     local durationMin, reason = SunsetAdmin.Sanctions.parseBanArgs(args)
     local ok, err = SunsetAdmin.Sanctions.ban(source, target, durationMin, reason)
@@ -436,6 +468,21 @@ registerServerCommand('ban', function(source, args)
         return
     end
     if source ~= 0 then notify(source, durationMin and ('Player banned for %d min'):format(durationMin) or 'Player permanently banned', 'success') end
+end, false)
+
+-- /banip [id] [motiv] — admin da ban permanent playerilor pe IP
+registerServerCommand('banip', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'banip') then return end
+    local target = getTarget(source, args[1], 'Usage: /banip [player id] [motiv]')
+    if not target or not guardSelfTarget(source, target, args[1], 'banip') then return end
+    local reason = table.concat(args, ' ', 2):gsub('^%s*(.-)%s*$', '%1')
+    if reason == '' then reason = 'Permanent IP Ban' end
+    local ok, err = SunsetAdmin.Sanctions.banIP(source, target, reason)
+    if not ok then
+        notify(source, err or 'IP Ban failed', 'error')
+        return
+    end
+    if source ~= 0 then notify(source, 'Player permanently IP-banned', 'success') end
 end, false)
 
 registerServerCommand('tempban', function(source, args)
@@ -449,6 +496,124 @@ registerServerCommand('tempban', function(source, args)
     end
     SunsetAdmin.Sanctions.ban(source, target, durationMin, reason)
     if source ~= 0 then notify(source, ('Player banned for %d min'):format(durationMin), 'success') end
+end, false)
+
+-- /mute [id] [durata] [motiv] — admin ul da mute unui player
+registerServerCommand('mute', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'mute') then return end
+    local target = getTarget(source, args[1], 'Usage: /mute [player id] [durata in minute] [motiv]')
+    if not target or not guardSelfTarget(source, target, args[1], 'mute') then return end
+
+    local duration = tonumber(args[2])
+    local reason = table.concat(args, ' ', 3):gsub('^%s*(.-)%s*$', '%1')
+    if not duration or duration <= 0 or reason == '' then
+        return notify(source, 'Usage: /mute [player id] [durata in minute] [motiv]', 'error')
+    end
+
+    local license = Sunset.GetIdentifier(target, 'license')
+    if not license then return notify(source, 'Nu s-a putut rezolva licenta jucatorului.', 'error') end
+
+    local now = os.time()
+    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+
+    MutedPlayers[license] = {
+        expiresAt = now + (duration * 60),
+        reason = reason,
+        by = adminName,
+    }
+
+    SunsetAdmin.Sanctions.record('mute', target, source, reason, duration)
+
+    TriggerClientEvent('sunset:chat:system', target, ('Ai primit mute pentru %d minute de la %s. Motiv: %s'):format(duration, adminName, reason), 'error')
+    TriggerClientEvent('sunset:client:notify', target, ('Ai primit mute (%d min): %s'):format(duration, reason), 'error', 10000)
+
+    local alert = ('[MUTE] %s i-a dat mute lui %s (#%d) pentru %d minute. Motiv: %s'):format(adminName, targetName, target, duration, reason)
+    pcall(function() exports.sunset_admin:BroadcastStaff(alert) end)
+    TriggerClientEvent('sunset:chat:message', -1, {
+        id = 0, name = 'SANCTION', message = ('%s a primit mute pentru %d minute de la %s. Motiv: %s'):format(targetName, duration, adminName, reason), type = 'admin_action'
+    })
+    notify(source, ('I-ai dat mute lui %s pentru %d minute.'):format(targetName, duration), 'success')
+end, false)
+
+-- /unmute [id]
+registerServerCommand('unmute', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'mute') then return end
+    local target = getTarget(source, args[1], 'Usage: /unmute [player id]')
+    if not target then return end
+
+    local license = Sunset.GetIdentifier(target, 'license')
+    if not license or not MutedPlayers[license] then
+        return notify(source, 'Acest jucator nu are mute.', 'error')
+    end
+
+    MutedPlayers[license] = nil
+    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+
+    TriggerClientEvent('sunset:chat:system', target, ('Mute-ul tau a fost scos de catre %s.'):format(adminName), 'success')
+    notify(source, ('I-ai scos mute-ul lui %s.'):format(targetName), 'success')
+    pcall(function() exports.sunset_admin:BroadcastStaff(('[MUTE] %s i-a scos mute-ul lui %s.'):format(adminName, targetName)) end)
+end, false)
+
+-- /nmute [id] [motiv] [durata in minute] — da mute unui player de la chat-ul de incepatori (/n /helpme)
+registerServerCommand('nmute', function(source, args)
+    if source ~= 0 and not IsStaff(source) then
+        return notify(source, 'Comanda disponibila doar pentru staff (admini si helperi).', 'error')
+    end
+    local target = getTarget(source, args[1], 'Usage: /nmute [player id] [motiv] [durata in minute]')
+    if not target or not guardSelfTarget(source, target, args[1], 'nmute') then return end
+
+    local duration, reason
+    if tonumber(args[2]) then
+        duration = tonumber(args[2])
+        reason = table.concat(args, ' ', 3):gsub('^%s*(.-)%s*$', '%1')
+    elseif tonumber(args[#args]) then
+        duration = tonumber(args[#args])
+        local reasonParts = {}
+        for i = 2, #args - 1 do reasonParts[#reasonParts + 1] = args[i] end
+        reason = table.concat(reasonParts, ' '):gsub('^%s*(.-)%s*$', '%1')
+    end
+
+    if not duration or duration <= 0 or not reason or reason == '' then
+        return notify(source, 'Usage: /nmute [player id] [motiv] [durata in minute]', 'error')
+    end
+
+    local license = Sunset.GetIdentifier(target, 'license')
+    if not license then return notify(source, 'Nu s-a putut rezolva licenta jucatorului.', 'error') end
+
+    local now = os.time()
+    local staffName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+
+    NMutedPlayers[license] = {
+        expiresAt = now + (duration * 60),
+        reason = reason,
+        by = staffName,
+    }
+
+    TriggerClientEvent('sunset:chat:system', target, ('You are muted for asking questions for %d minutes. (Motiv: %s)'):format(duration, reason), 'error')
+    notify(source, ('I-ai dat mute de la /n lui %s pentru %d minute.'):format(targetName, duration), 'success')
+    pcall(function() exports.sunset_admin:BroadcastStaff(('[NMUTE] %s i-a dat mute de la /n lui %s (#%d) pentru %d min: "%s"'):format(staffName, targetName, target, duration, reason)) end)
+end, false)
+
+-- /unnmute [id]
+registerServerCommand('unnmute', function(source, args)
+    if source ~= 0 and not IsStaff(source) then return end
+    local target = getTarget(source, args[1], 'Usage: /unnmute [player id]')
+    if not target then return end
+
+    local license = Sunset.GetIdentifier(target, 'license')
+    if not license or not NMutedPlayers[license] then
+        return notify(source, 'Acest jucator nu are mute la chat-ul de incepatori.', 'error')
+    end
+
+    NMutedPlayers[license] = nil
+    local staffName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+
+    TriggerClientEvent('sunset:chat:system', target, ('Mute-ul de la /n a fost scos de catre %s.'):format(staffName), 'success')
+    notify(source, ('I-ai scos mute-ul de la /n lui %s.'):format(targetName), 'success')
 end, false)
 
 -- /warn [id] [reason] — level 1+, sanction row + broadcast + auto-escalation.
@@ -820,6 +985,505 @@ registerServerCommand('god', function(source)
     TriggerClientEvent('sunset:admin:toggleGod', source)
 end, false)
 
+-- ── Helper & Admin Teleportation / Movement ──────────────────────────
+local HelperGotoCooldown = {} -- [source] = timestamp
+
+registerServerCommand('goto', function(source, args)
+    if source == 0 then return end
+    if not IsStaff(source) then
+        return exports.sunset_core:CommandDenyAdmin(source, 'goto')
+    end
+
+    local isAdmin = IsAdmin(source, 1)
+    if not isAdmin then
+        -- Helper 3-minute delay check
+        local now = os.time()
+        local last = HelperGotoCooldown[source] or 0
+        if (now - last) < 180 then
+            local rem = 180 - (now - last)
+            return notify(source, ('Comanda /goto are un delay de 3 minute! Mai ai de asteptat %d secunde.'):format(rem), 'error')
+        end
+        HelperGotoCooldown[source] = now
+    end
+
+    local target = getTarget(source, args[1], 'Usage: /goto [player id]')
+    if not target or target == source then return end
+
+    local ped = GetPlayerPed(target)
+    if not ped or ped == 0 then return notify(source, 'Jucatorul tinta nu a fost gasit.', 'error') end
+
+    local coords = GetEntityCoords(ped)
+    SetPlayerRoutingBucket(source, GetPlayerRoutingBucket(target) or 0)
+    TriggerClientEvent('sunset:admin:teleport', source, coords.x, coords.y, coords.z)
+    notify(source, ('Te-ai teleportat la %s (ID %d).'):format(exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target), target), 'success')
+end, false)
+
+registerServerCommand('gethere', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'gethere') then return end
+    local target = getTarget(source, args[1], 'Usage: /gethere [player id]')
+    if not target or not guardSelfTarget(source, target, args[1], 'gethere') then return end
+
+    local ped = GetPlayerPed(source)
+    local coords = GetEntityCoords(ped)
+    SetPlayerRoutingBucket(target, GetPlayerRoutingBucket(source) or 0)
+    TriggerClientEvent('sunset:admin:teleport', target, coords.x, coords.y, coords.z)
+    markAnticheatTarget(target, 'gethere')
+    notify(source, ('L-ai teleportat pe %s la tine.'):format(exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)), 'success')
+    TriggerClientEvent('sunset:client:notify', target, 'Ai fost teleportat de catre un administrator.', 'info')
+end, false)
+
+registerServerCommand('spawncar', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'spawncar') then return end
+    local model = args[1] or 'sultan'
+    TriggerClientEvent('sunset:admin:spawnVehicle', source, model)
+    markAnticheatTarget(source, 'spawncar')
+end, false)
+
+local function findVehicleByArg(arg)
+    if not arg or arg == '' then return nil end
+    local num = tonumber(arg)
+    local upper = string.upper(tostring(arg)):gsub('%s+', '')
+
+    for _, veh in ipairs(GetAllVehicles()) do
+        if DoesEntityExist(veh) then
+            if num and (veh == num or NetworkGetNetworkIdFromEntity(veh) == num) then
+                return veh
+            end
+            local plate = GetVehicleNumberPlateText(veh)
+            if plate and string.upper(plate):gsub('%s+', '') == upper then
+                return veh
+            end
+        end
+    end
+    return nil
+end
+
+registerServerCommand('gotocar', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'gotocar') then return end
+    local arg = args[1]
+    if not arg then return notify(source, 'Usage: /gotocar [id vehicul / numar inmatriculare]', 'error') end
+
+    local veh = findVehicleByArg(arg)
+    if not veh then
+        return notify(source, ('Vehiculul cu ID/numar "%s" nu a fost gasit in lumea activa.'):format(arg), 'error')
+    end
+
+    local coords = GetEntityCoords(veh)
+    local bucket = GetEntityRoutingBucket(veh)
+    SetPlayerRoutingBucket(source, bucket)
+    TriggerClientEvent('sunset:admin:teleport', source, coords.x, coords.y, coords.z + 1.0)
+    notify(source, ('Te-ai teleportat la vehiculul [%s] (VW: %d).'):format(arg, bucket), 'success')
+end, false)
+
+registerServerCommand('getcar', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'getcar') then return end
+    local arg = args[1]
+    if not arg then return notify(source, 'Usage: /getcar [id vehicul / numar inmatriculare]', 'error') end
+
+    local veh = findVehicleByArg(arg)
+    if not veh then
+        return notify(source, ('Vehiculul cu ID/numar "%s" nu a fost gasit in lumea activa.'):format(arg), 'error')
+    end
+
+    local ped = GetPlayerPed(source)
+    local coords = GetEntityCoords(ped)
+    local bucket = GetPlayerRoutingBucket(source)
+    SetEntityRoutingBucket(veh, bucket)
+    SetEntityCoords(veh, coords.x + 2.0, coords.y + 2.0, coords.z, false, false, false, true)
+    notify(source, ('Ai adus vehiculul [%s] la tine.'):format(arg), 'success')
+end, false)
+
+registerServerCommand('fixveh', function(source, args)
+    handleRepairCar(source, args, 'fixveh')
+end, false)
+
+local AdminMarks = {}
+
+registerServerCommand('mark', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'mark') then return end
+    local ped = GetPlayerPed(source)
+    local coords = GetEntityCoords(ped)
+    local bucket = GetPlayerRoutingBucket(source) or 0
+    AdminMarks[source] = { coords = coords, bucket = bucket }
+    notify(source, ('Mark setat la pozitia curenta (VW: %d). Foloseste /gotomark pentru a reveni.'):format(bucket), 'success')
+end, false)
+
+registerServerCommand('gotomark', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'gotomark') then return end
+    local mark = AdminMarks[source]
+    if not mark then
+        return notify(source, 'Nu ai setat niciun mark. Foloseste /mark intai.', 'error')
+    end
+    SetPlayerRoutingBucket(source, mark.bucket)
+    TriggerClientEvent('sunset:admin:teleport', source, mark.coords.x, mark.coords.y, mark.coords.z)
+    notify(source, 'Te-ai teleportat la mark-ul setat.', 'success')
+end, false)
+
+registerServerCommand('disarm', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'disarm') then return end
+    local target = getTarget(source, args[1], 'Usage: /disarm [player id]')
+    if not target then return end
+
+    TriggerClientEvent('sunset:admin:disarm', target)
+    if GetResourceState('sunset_inventory') == 'started' then
+        pcall(function() exports.sunset_inventory:ClearWeapons(target) end)
+    end
+    notify(source, ('I-ai luat armele lui %s (ID %d).'):format(exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target), target), 'success')
+    TriggerClientEvent('sunset:client:notify', target, 'Un administrator ti-a confiscat armele.', 'warning')
+end, false)
+
+registerServerCommand('disarmarea', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'disarmarea') then return end
+    local radius = tonumber(args[1]) or 20.0
+    if radius > 200.0 then radius = 200.0 end
+    local ped = GetPlayerPed(source)
+    local coords = GetEntityCoords(ped)
+
+    local count = 0
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and p ~= source then
+            local tPed = GetPlayerPed(p)
+            if tPed and tPed ~= 0 then
+                local dist = #(coords - GetEntityCoords(tPed))
+                if dist <= radius then
+                    count = count + 1
+                    TriggerClientEvent('sunset:admin:disarm', p)
+                    if GetResourceState('sunset_inventory') == 'started' then
+                        pcall(function() exports.sunset_inventory:ClearWeapons(p) end)
+                    end
+                    TriggerClientEvent('sunset:client:notify', p, 'Un administrator a dezarmat zona.', 'warning')
+                end
+            end
+        end
+    end
+    notify(source, ('Ai dezarmat %d jucatori pe o raza de %.1f metri.'):format(count, radius), 'success')
+end, false)
+
+registerServerCommand('setvw', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'setvw') then return end
+    local target = getTarget(source, args[1], 'Usage: /setvw [player id] [virtual world id]')
+    if not target then return end
+
+    local vw = tonumber(args[2]) or 0
+    SetPlayerRoutingBucket(target, vw)
+    notify(source, ('Ai setat Virtual World-ul lui %s la %d.'):format(exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target), vw), 'success')
+    TriggerClientEvent('sunset:client:notify', target, ('Virtual World-ul tau a fost setat la %d de catre un admin.'):format(vw), 'info')
+end, false)
+
+registerServerCommand('sethp', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'sethp') then return end
+    local target = getTarget(source, args[1], 'Usage: /sethp [player id] [hp (0-200)]')
+    if not target then return end
+
+    local hp = tonumber(args[2]) or 200
+    if hp > 200 then hp = 200 end
+    if hp < 0 then hp = 0 end
+    TriggerClientEvent('sunset:admin:setHealth', target, hp)
+    notify(source, ('Ai setat HP-ul lui %s la %d.'):format(exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target), hp), 'success')
+    TriggerClientEvent('sunset:client:notify', target, ('HP-ul tau a fost setat la %d de catre un administrator.'):format(hp), 'info')
+end, false)
+
+registerServerCommand('sethparea', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'sethparea') then return end
+    local radius = tonumber(args[1]) or 20.0
+    local hp = tonumber(args[2]) or 200
+    if radius > 200.0 then radius = 200.0 end
+    local ped = GetPlayerPed(source)
+    local coords = GetEntityCoords(ped)
+
+    local count = 0
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p then
+            local tPed = GetPlayerPed(p)
+            if tPed and tPed ~= 0 then
+                local dist = #(coords - GetEntityCoords(tPed))
+                if dist <= radius then
+                    count = count + 1
+                    TriggerClientEvent('sunset:admin:setHealth', p, hp)
+                end
+            end
+        end
+    end
+    notify(source, ('Ai setat HP-ul la %d pentru %d jucatori pe o raza de %.1f metri.'):format(hp, count, radius), 'success')
+end, false)
+
+registerServerCommand('givemoney', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'givemoney') then return end
+    local target = getTarget(source, args[1], 'Usage: /givemoney [player id] [suma de bani]')
+    if not target then return end
+
+    local amount = tonumber(args[2])
+    if not amount or amount <= 0 then
+        return notify(source, 'Usage: /givemoney [player id] [suma de bani]', 'error')
+    end
+
+    local char = exports.sunset_core:GetCharacter(target)
+    if not char then return exports.sunset_core:CommandNoCharacter(source, target) end
+
+    exports.sunset_core:AddCash(target, amount)
+    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+
+    notify(source, ('I-ai dat $%s lui %s (ID %d).'):format(Sunset.FormatNumber(amount), targetName, target), 'success')
+    TriggerClientEvent('sunset:client:notify', target, ('Ai primit $%s de la administratorul %s.'):format(Sunset.FormatNumber(amount), adminName), 'success')
+    pcall(function() exports.sunset_admin:BroadcastStaff(('[ECONOMY] %s i-a dat $%s lui %s (#%d).'):format(adminName, Sunset.FormatNumber(amount), targetName, target)) end)
+end, false)
+
+registerServerCommand('createhouse', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'createhouse') then return end
+    local level = tonumber(args[1])
+    local price = tonumber(args[2])
+    if not level or level < 1 or not price or price < 1 then
+        return notify(source, 'Usage: /createhouse [level] [pret]', 'error')
+    end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped == 0 then return end
+    local pos = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+
+    local interiorKey = 'small_apartment'
+    if level >= 10 then interiorKey = 'mansion'
+    elseif level >= 5 then interiorKey = 'medium_house' end
+
+    local preset = SunsetProperties and SunsetProperties.Interiors and SunsetProperties.Interiors[interiorKey]
+    local intPos = preset and preset.coords or pos
+    local intHeading = preset and preset.coords and preset.coords.w or 0.0
+
+    local encodePos = function(c, h)
+        return json.encode({ x = c.x, y = c.y, z = c.z, h = h or 0.0 })
+    end
+
+    local label = ('Casa Level %d'):format(level)
+    local id = MySQL.insert.await([[
+        INSERT INTO properties (label, price, interior, entry, interior_pos, exit_pos, minimum_level, for_sale, enabled)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)
+    ]], { label, math.floor(price), interiorKey, encodePos(pos, heading), encodePos(intPos, intHeading), encodePos(pos, heading), math.floor(level) })
+
+    TriggerClientEvent('sunset:client:propertiesChanged', -1)
+    notify(source, ('Casa #%d "%s" a fost creata: $%s, nivel minim %d.'):format(id, label, Sunset.FormatNumber(price), level), 'success')
+end, false)
+
+registerServerCommand('giverpall', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'giverpall') then return end
+    local amount = tonumber(args[1])
+    if not amount or amount <= 0 then
+        return notify(source, 'Usage: /giverpall [suma RP]', 'error')
+    end
+
+    local adminName = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local count = 0
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p then
+            local char = exports.sunset_core:GetCharacter(p)
+            if char and char.id then
+                count = count + 1
+                char.respect_points = (char.respect_points or 0) + amount
+                MySQL.update.await('UPDATE characters SET respect_points = respect_points + ? WHERE id = ?', { amount, char.id })
+                TriggerClientEvent('sunset:client:notify', p, ('Ai primit %d Respect Points (RP) de la %s!'):format(amount, adminName), 'success')
+            end
+        end
+    end
+
+    TriggerClientEvent('sunset:chat:message', -1, {
+        id = 0,
+        name = 'SERVER',
+        message = ('Admin %s a acordat %d Respect Points tuturor jucatorilor online!'):format(adminName, amount),
+        time = os.date('%H:%M:%S'),
+        type = 'announce',
+    })
+    notify(source, ('Ai acordat %d RP catre %d jucatori online.'):format(amount, count), 'success')
+end, false)
+
+local RespawnCarsRunning = false
+
+registerServerCommand('respawncars', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'respawncars') then return end
+    if RespawnCarsRunning then
+        return notify(source, 'Un respawn de masini este deja in desfasurare.', 'error')
+    end
+    RespawnCarsRunning = true
+
+    TriggerClientEvent('sunset:chat:system', -1, 'Toate vehiculele neutilizate vor fi respawnate in 10 secunde!', 'warning')
+
+    SetTimeout(10000, function()
+        local count = 0
+        for _, veh in ipairs(GetAllVehicles()) do
+            if DoesEntityExist(veh) then
+                local occupied = false
+                for seat = -1, 6 do
+                    local occupant = GetPedInVehicleSeat(veh, seat)
+                    if occupant and occupant ~= 0 and IsPedAPlayer(occupant) then
+                        occupied = true
+                        break
+                    end
+                end
+                if not occupied then
+                    DeleteEntity(veh)
+                    count = count + 1
+                end
+            end
+        end
+        TriggerClientEvent('sunset:chat:system', -1, ('Toate vehiculele neocupate au fost respawnate (%d vehicule eliminate).'):format(count), 'info')
+        RespawnCarsRunning = false
+    end)
+end, false)
+
+registerServerCommand('entercar', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'entercar') then return end
+    TriggerClientEvent('sunset:admin:enterClosestVehicle', source)
+end, false)
+
+registerServerCommand('afklist', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'afklist') then return end
+    local list = {}
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p then
+            local isSleep = Player(p).state.sleeping or Player(p).state.isSleeping or Player(p).state.sleep
+            local isAfk = Player(p).state.afk or Player(p).state.isAfk
+            if isSleep or isAfk then
+                local name = exports.sunset_core:GetPlayerDisplayName(p) or GetPlayerName(p)
+                list[#list + 1] = ('[%d] %s (%s)'):format(p, name, isSleep and '/sleep' or 'AFK')
+            end
+        end
+    end
+    if #list == 0 then
+        notify(source, 'Nu exista niciun jucator pe /sleep sau AFK.', 'info')
+    else
+        notify(source, ('─── Jucatori pe /sleep sau AFK (%d) ───'):format(#list), 'info')
+        for _, line in ipairs(list) do
+            notify(source, line, 'info')
+        end
+    end
+end, false)
+
+registerServerCommand('togfind', function(source, args)
+    if source == 0 then return end
+    if not requirePerm(source, 'togfind') then return end
+    local current = Player(source).state.untraceable == true
+    local nextState = not current
+    Player(source).state:set('untraceable', nextState, true)
+    notify(source, nextState
+        and 'Modul untraceable a fost ACTIVAT. Nu mai poti fi urmarit de politisti, detectivi sau Hitmen.'
+        or 'Modul untraceable a fost DEZACTIVAT.', 'info')
+end, false)
+
+registerServerCommand('check', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'check') then return end
+    local target = getTarget(source, args[1], 'Usage: /check [player id]')
+    if not target then return end
+
+    local p = exports.sunset_core:GetPlayer(target)
+    local char = exports.sunset_core:GetCharacter(target)
+    local license = Sunset.GetIdentifier(target, 'license')
+
+    local name = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+    local aLvl = exports.sunset_admin:GetAdminLevel(target) or 0
+    local hLvl = exports.sunset_admin:GetHelperLevel(target) or 0
+    local isMuted, mRem = isPlayerMuted(target)
+    local isNMuted, nmRem = isPlayerNMuted(target)
+
+    local warns = 0
+    pcall(function()
+        warns = tonumber(MySQL.scalar.await('SELECT COUNT(*) FROM admin_sanctions WHERE action = "warn" AND target_license = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)', { license })) or 0
+    end)
+
+    notify(source, ('═══════════ STATISTICI JUCATOR: %s (ID %d) ═══════════'):format(name, target), 'info')
+    notify(source, ('Cont: #%s | Username: %s | Admin: Lvl %d | Helper: Lvl %d'):format(
+        p and tostring(p.account_id) or '?', p and tostring(p.username) or '?', aLvl, hLvl), 'info')
+    if char then
+        local jobName = (char.job and Sunset.CivilianJobs and Sunset.CivilianJobs[char.job]) and Sunset.CivilianJobs[char.job].label or (char.job or 'Somer')
+        local fId = select(1, Sunset.GetCharacterFaction(char))
+        local fName = (fId and Sunset.Factions and Sunset.Factions[fId]) and Sunset.Factions[fId].label or (fId or 'Civil')
+        notify(source, ('Caracter: %s %s (Lvl %d, %d RP)'):format(char.first_name or '', char.last_name or '', char.level or 1, char.respect_points or 0), 'info')
+        notify(source, ('Bani: $%s (Cash) | $%s (Banca) | BlazePoints: %s'):format(
+            Sunset.FormatNumber(char.cash or 0), Sunset.FormatNumber(char.bank or 0), Sunset.FormatNumber(char.premium_points or 0)), 'info')
+        notify(source, ('Factiune: %s | Job: %s'):format(fName, jobName), 'info')
+        notify(source, ('Ore jucate: %s | Paydays: %d'):format(
+            tostring(math.floor((p and p.playtime or 0) / 60)), char.paydays_received or 0), 'info')
+    end
+    notify(source, ('Warns: %d/3 | Mute: %s | NMute: %s | VW: %d | Ping: %d ms'):format(
+        warns,
+        isMuted and ('DA (%d min)'):format(mRem or 0) or 'NU',
+        isNMuted and ('DA (%d min)'):format(nmRem or 0) or 'NU',
+        GetPlayerRoutingBucket(target) or 0,
+        GetPlayerPing(target) or 0
+    ), 'info')
+    notify(source, '═══════════════════════════════════════════════════════', 'info')
+end, false)
+
+-- /pm [id] [text] — PM pentru toti adminii si helperii (culoare galbena spre portocaliu)
+registerServerCommand('pm', function(source, args)
+    if source ~= 0 and not IsStaff(source) then
+        return notify(source, 'Comanda /pm este disponibila doar pentru staff (admini si helperi).', 'error')
+    end
+
+    local target = getTarget(source, args[1], 'Usage: /pm [player id] [mesaj]')
+    if not target then return end
+
+    local msg = table.concat(args, ' ', 2):gsub('^%s*(.-)%s*$', '%1')
+    if msg == '' then
+        return notify(source, 'Usage: /pm [player id] [mesaj]', 'error')
+    end
+
+    local senderName = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local targetName = exports.sunset_core:GetPlayerDisplayName(target) or GetPlayerName(target)
+    local isAdm = source == 0 or IsAdmin(source, 1)
+    local role = isAdm and 'Admin' or 'Helper'
+
+    -- Target receives: ** Admin/Helper [Name] (ID): [msg] ** in yellow-orange
+    TriggerClientEvent('sunset:chat:message', target, {
+        id = source,
+        name = senderName,
+        message = msg,
+        role = role,
+        time = os.date('%H:%M:%S'),
+        type = 'pm',
+    })
+
+    -- Sender gets echo
+    if source ~= 0 then
+        TriggerClientEvent('sunset:chat:message', source, {
+            id = target,
+            name = targetName,
+            message = msg,
+            time = os.date('%H:%M:%S'),
+            type = 'pm_echo',
+        })
+    end
+end, false)
+
+-- /anno [text] — anunt admin pentru toti playerii pe chat: **( Nume_Admin (ID): (textul anno) )** rosu aprins
+registerServerCommand('anno', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'anno') then return end
+    local msg = table.concat(args, ' '):gsub('^%s*(.-)%s*$', '%1')
+    if msg == '' then
+        return notify(source, 'Usage: /anno [text anunt]', 'error')
+    end
+    local from = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+
+    TriggerClientEvent('sunset:chat:message', -1, {
+        id = source,
+        name = from,
+        message = msg,
+        time = os.date('%H:%M:%S'),
+        type = 'anno',
+    })
+end, false)
+
 -- /announce [mesaj]  (/announcement alias)
 local function runAnnounce(source, args)
     if source ~= 0 and not requirePerm(source, 'announce') then return end
@@ -942,6 +1606,49 @@ registerServerCommand('setadmin', function(source, args)
     end
     if source ~= 0 then notify(source, 'Admin set for account ' .. account.username, 'success') end
     announceStaffChange(source, account.username, level)
+end, false)
+
+-- /sethelper [id|username] [level 0-3] — doar admin level 6
+registerServerCommand('sethelper', function(source, args)
+    if source ~= 0 and not requirePerm(source, 'sethelper') then return end
+
+    local arg1 = args[1]
+    local level = tonumber(args[2]) or 1
+    if not arg1 then
+        notify(source ~= 0 and source or 0, 'Usage: /sethelper [id|username] [level (0-3)]', 'error')
+        return
+    end
+
+    local target = tonumber(arg1)
+    if target and GetPlayerName(target) then
+        local license = Sunset.GetIdentifier(target, 'license')
+        SetHelper(license, level, GetPlayerName(target), source == 0 and 'console' or GetPlayerName(source))
+        local title = (SunsetAdmin.HelperLevels and SunsetAdmin.HelperLevels[level]) or 'Helper Level ' .. level
+        if level > 0 then
+            notify(target, ('Nivelul tau de helper este acum %d (%s).'):format(level, title), 'success', 10000)
+        else
+            notify(target, 'Accesul tau de helper a fost revocat.', 'warning', 10000)
+        end
+        if source ~= 0 then notify(source, ('Helper level for %s set to %d (%s).'):format(GetPlayerName(target), level, title), 'success') end
+        return
+    end
+
+    local account = MySQL.single.await('SELECT id, username FROM accounts WHERE LOWER(username) = LOWER(?)', { arg1 })
+    if not account then
+        notify(source ~= 0 and source or 0, ('No account found for "%s".'):format(tostring(arg1 or '?')), 'error')
+        return
+    end
+
+    MySQL.update.await('UPDATE accounts SET helper_level = ? WHERE id = ?', { level, account.id })
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        local player = exports.sunset_core:GetPlayer(src)
+        if player and player.account_id == account.id then
+            player.helper_level = level
+            loadAdmin(src)
+        end
+    end
+    if source ~= 0 then notify(source, 'Helper set for account ' .. account.username, 'success') end
 end, false)
 
 -- /coords [v4] — client also registers /getpos and /pos for NUI chat
@@ -1122,308 +1829,283 @@ local function broadcastStaff(msg, msgType)
     end
 end
 
+-- ═══════════════════════════════════════════════════════════════
+--  REPORTS & NEWBIE QUESTIONS
+-- ═══════════════════════════════════════════════════════════════
+local ActivePlayerReports = {} -- [source] = { id = ticketId, src = source, name = reporterName, text = reportText, at = now }
+local ActiveNewbieQuestions = {} -- [source] = { src = source, name = name, text = text, at = now }
+
 registerServerCommand('report', function(source, args)
-    if source == 0 then return print('[SunsetAdmin] Console cannot report') end
-
-    local targetId = tonumber(args[1])
-    local reason = table.concat(args, ' ', 2)
-    reason = reason:gsub('^%s*(.-)%s*$', '%1')
-
-    if not targetId or reason == '' then
-        return notify(source, 'Usage: /report [player id] [reason]', 'error')
-    end
-
-    if targetId == source then
-        return notify(source, 'You cannot report yourself.', 'error')
-    end
-
-    if not isOnline(targetId) then
-        return notify(source, ('Player ID %d is not online.'):format(targetId), 'error')
+    if source == 0 then return end
+    local text = table.concat(args, ' '):gsub('^%s*(.-)%s*$', '%1')
+    if text == '' or #text < 3 then
+        return notify(source, 'Usage: /report [text]', 'error')
     end
 
     local now = os.time()
-    if now - (LastReportTime[source] or 0) < 30 then
-        return notify(source, ('Please wait %d seconds before filing another report.'):format(30 - (now - (LastReportTime[source] or 0))), 'error')
+    if now - (LastReportTime[source] or 0) < 15 then
+        return notify(source, ('Asteapta %d secunde inainte de a trimite un alt report.'):format(15 - (now - (LastReportTime[source] or 0))), 'error')
     end
     LastReportTime[source] = now
 
     ReportSeq = ReportSeq + 1
     local ticketId = ReportSeq
-    local reporterName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
-    local targetName = exports.sunset_core:GetPlayerDisplayName(targetId) or GetPlayerName(targetId)
+    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
 
-    ActiveReports[ticketId] = {
+    local report = {
         id = ticketId,
-        reporter = source,
-        reporterName = reporterName,
-        target = targetId,
-        targetName = targetName,
-        reason = reason,
-        isHelpme = false,
-        status = 'open',
-        handler = nil,
-        handlerName = nil,
-        createdAt = now,
+        src = source,
+        name = name,
+        text = text,
+        at = now,
     }
+    ActivePlayerReports[source] = report
+    ActiveReports[ticketId] = report
 
-    notify(source, ('Report #%d sent to online staff. Reason: "%s"'):format(ticketId, reason), 'success')
-    broadcastStaff(('^1[REPORT #%d]^7 %s (#%d) reported %s (#%d): %s (Use /ar %d)'):format(
-        ticketId, reporterName, source, targetName, targetId, reason, ticketId), 'warning')
-end)
+    notify(source, 'Report-ul tau a fost trimis catre administratorii online.', 'success')
 
-registerServerCommand('helpme', function(source, args)
-    if source == 0 then return print('[SunsetAdmin] Console cannot use helpme') end
-
-    local question = table.concat(args, ' ')
-    question = question:gsub('^%s*(.-)%s*$', '%1')
-
-    if question == '' then
-        return notify(source, 'Usage: /helpme [question]', 'error')
+    -- Sent in RED to all on-duty admins (or all admins if none on duty)
+    local sentCount = 0
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsAdmin(p, 1) and Player(p).state.adminDuty then
+            sentCount = sentCount + 1
+            TriggerClientEvent('sunset:chat:message', p, {
+                id = source,
+                name = name,
+                message = text,
+                time = os.date('%H:%M:%S'),
+                type = 'report',
+            })
+        end
     end
-
-    local now = os.time()
-    if now - (LastReportTime[source] or 0) < 20 then
-        return notify(source, ('Please wait %d seconds before asking another question.'):format(20 - (now - (LastReportTime[source] or 0))), 'error')
+    if sentCount == 0 then
+        for _, pid in ipairs(GetPlayers()) do
+            local p = tonumber(pid)
+            if p and IsAdmin(p, 1) then
+                TriggerClientEvent('sunset:chat:message', p, {
+                    id = source,
+                    name = name,
+                    message = text,
+                    time = os.date('%H:%M:%S'),
+                    type = 'report',
+                })
+            end
+        end
     end
-    LastReportTime[source] = now
-
-    ReportSeq = ReportSeq + 1
-    local ticketId = ReportSeq
-    local reporterName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
-
-    ActiveReports[ticketId] = {
-        id = ticketId,
-        reporter = source,
-        reporterName = reporterName,
-        target = nil,
-        targetName = nil,
-        reason = question,
-        isHelpme = true,
-        status = 'open',
-        handler = nil,
-        handlerName = nil,
-        createdAt = now,
-    }
-
-    notify(source, ('Helpme question #%d sent: "%s". Staff will reply shortly.'):format(ticketId, question), 'success')
-    broadcastStaff(('^2[HELPME #%d]^7 %s (#%d): %s (Use /ar %d)'):format(
-        ticketId, reporterName, source, question, ticketId), 'info')
-end)
-
-registerServerCommand('ar', function(source, args)
-    if not requirePerm(source, 'ar') then return end
-
-    local ticketId = tonumber(args[1])
-    if not ticketId then
-        return notify(source, 'Usage: /ar [ticket id]', 'error')
-    end
-
-    local ticket = ActiveReports[ticketId]
-    if not ticket then
-        return notify(source, ('Ticket #%d not found or already closed.'):format(ticketId), 'error')
-    end
-
-    if ticket.status == 'claimed' and ticket.handler ~= source then
-        return notify(source, ('Ticket #%d is already being handled by %s.'):format(ticketId, ticket.handlerName or 'another staff member'), 'error')
-    end
-
-    local staffName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
-    ticket.status = 'claimed'
-    ticket.handler = source
-    ticket.handlerName = staffName
-
-    notify(source, ('You accepted %s #%d from %s.'):format(ticket.isHelpme and 'question' or 'report', ticketId, ticket.reporterName), 'success')
-
-    if isOnline(ticket.reporter) then
-        notify(ticket.reporter, ('Staff member %s accepted your %s #%d and is now assisting you.'):format(
-            staffName, ticket.isHelpme and 'question' or 'report', ticketId), 'info')
-    end
-
-    broadcastStaff(('%s accepted %s #%d from %s.'):format(
-        staffName, ticket.isHelpme and 'helpme' or 'report', ticketId, ticket.reporterName), 'info')
 end)
 
 registerServerCommand('cr', function(source, args)
-    if not requirePerm(source, 'cr') then return end
+    if source ~= 0 and not requirePerm(source, 'cr') then return end
 
-    local ticketId = tonumber(args[1])
-    local replyMsg = table.concat(args, ' ', 2)
-    replyMsg = replyMsg:gsub('^%s*(.-)%s*$', '%1')
-
-    if not ticketId then
-        return notify(source, 'Usage: /cr [ticket id] [optional reply/reason]', 'error')
+    local targetArg = tonumber(args[1])
+    if not targetArg then
+        return notify(source, 'Usage: /cr [player id] [motiv (optional)]', 'error')
     end
 
-    local ticket = ActiveReports[ticketId]
-    if not ticket then
-        return notify(source, ('Ticket #%d not found or already closed.'):format(ticketId), 'error')
+    local reason = table.concat(args, ' ', 2):gsub('^%s*(.-)%s*$', '%1')
+    if reason == '' then reason = 'Rezolvat' end
+
+    local report = ActivePlayerReports[targetArg]
+    if not report then
+        report = ActiveReports[targetArg]
     end
 
-    local staffName = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source)
-    ActiveReports[ticketId] = nil
+    if not report then
+        return notify(source, ('Nu a fost gasit niciun report activ pentru ID %d.'):format(targetArg), 'error')
+    end
 
-    notify(source, ('Closed ticket #%d.'):format(ticketId), 'success')
+    local targetSrc = report.src
+    ActivePlayerReports[targetSrc] = nil
+    ActiveReports[report.id] = nil
 
-    if isOnline(ticket.reporter) then
-        local msg = ('Your %s #%d has been closed by %s.'):format(
-            ticket.isHelpme and 'question' or 'report', ticketId, staffName)
-        if replyMsg ~= '' then
-            msg = msg .. ' Note: ' .. replyMsg
+    local adminName = source == 0 and 'CONSOLE' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+
+    if GetPlayerName(targetSrc) then
+        TriggerClientEvent('sunset:chat:system', targetSrc,
+            ('Report-ul tau a fost inchis de Admin %s (ID: %d). Motiv: %s'):format(adminName, source, reason), 'info')
+    end
+
+    local staffAlert = ('Admin %s (ID: %d) a inchis report-ul lui %s (ID: %d). Motiv: %s'):format(
+        adminName, source, report.name, targetSrc, reason)
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsAdmin(p, 1) then
+            TriggerClientEvent('sunset:chat:system', p, staffAlert, 'warning')
         end
-        notify(ticket.reporter, msg, 'info')
     end
-
-    broadcastStaff(('%s closed %s #%d.'):format(
-        staffName, ticket.isHelpme and 'helpme' or 'report', ticketId), 'info')
+    notify(source, ('Ai inchis report-ul lui %s (#%d).'):format(report.name, targetSrc), 'success')
 end)
 
 registerServerCommand('reports', function(source, args)
-    if not requirePerm(source, 'reports') then return end
+    if source ~= 0 and not requirePerm(source, 'reports') then return end
 
     local count = 0
-    notify(source, '─── Active Reports & Questions ───', 'info')
-    for id, ticket in pairs(ActiveReports) do
+    notify(source, '─── Active Reports ───', 'info')
+    for src, rep in pairs(ActivePlayerReports) do
         count = count + 1
-        local typeLabel = ticket.isHelpme and 'HELPME' or 'REPORT'
-        local statusLabel = ticket.status == 'claimed' and ('[HANDLED by %s]'):format(ticket.handlerName or '?') or '[OPEN]'
-        if ticket.isHelpme then
-            notify(source, ('#%d [%s] %s %s (#%d): "%s"'):format(
-                id, typeLabel, statusLabel, ticket.reporterName, ticket.reporter, ticket.reason), 'info')
-        else
-            notify(source, ('#%d [%s] %s %s (#%d) -> %s (#%d): "%s"'):format(
-                id, typeLabel, statusLabel, ticket.reporterName, ticket.reporter, ticket.targetName or '?', ticket.target or 0, ticket.reason), 'warning')
-        end
+        notify(source, ('[%d] %s: "%s" (Inchide cu /cr %d [motiv])'):format(src, rep.name, rep.text, src), 'warning')
     end
     if count == 0 then
-        notify(source, 'There are currently no active reports or questions.', 'success')
-    else
-        notify(source, ('Total active: %d. Use /ar [id] to accept or /cr [id] [reason] to close.'):format(count), 'info')
+        notify(source, 'Nu exista rapoarte active.', 'success')
     end
 end)
 
--- ═══════════════════════════════════════════════════════════════
---  [SA-MP STYLE] /n — PUBLIC newb question channel.
---  The question AND the staff answer are broadcast to EVERY player
---  in the main chat (badge "QUESTION" / "ANSWER"), like SA-MP /n.
---  /n [question]            — any player, 20s cooldown
---  /na [question id] [text] — staff (level 1+); id optional = last
---                             unanswered question
---  /na alone (no args)      — prints the open question list (staff)
--- ═══════════════════════════════════════════════════════════════
-local NewbQuestions = {}  -- [qid] = { src, name, text, answered }
-local NewbSeq = 0
-local LastNewbAsk = {}
-
-local function publicLine(name, text, msgType, id)
-    TriggerClientEvent('sunset:chat:message', -1, {
-        id = id or 0,
-        name = name,
-        message = text,
-        time = os.date('%H:%M:%S'),
-        type = msgType,
-    })
-end
-
-registerServerCommand('n', function(source, args)
+local function handleNewbieQuestion(source, args, cmdName)
     if source == 0 then return end
-    local question = table.concat(args, ' '):gsub('^%s*(.-)%s*$', '%1')
-    if question == '' or #question < 3 then
-        return notify(source, 'Usage: /n [question] — asked publicly; staff answer with /na.', 'error')
-    end
-    if #question > 200 then
-        return notify(source, 'Question too long (max 200 characters).', 'error')
-    end
-    local now = os.time()
-    if now - (LastNewbAsk[source] or 0) < 20 then
-        return notify(source, ('Wait %d seconds before another question.'):format(20 - (now - (LastNewbAsk[source] or 0))), 'error')
-    end
-    LastNewbAsk[source] = now
-
-    NewbSeq = NewbSeq + 1
-    local qid = NewbSeq
-    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or ('Player %d'):format(source)
-    NewbQuestions[qid] = { src = source, name = name, text = question, answered = false, at = now }
-
-    publicLine(name, ('(%d) %s'):format(qid, question), 'newb_question', source)
-    broadcastStaff(('^3[NEWB #%d]^7 %s (#%d): %s — answer publicly with /na %d [text]'):format(
-        qid, name, source, question, qid), 'info')
-end)
-
-registerServerCommand('na', function(source, args)
-    if source == 0 then return end
-    if not requirePerm(source, 'na') then return end
-
-    -- /na with no args: list open questions
-    if not args[1] then
-        local open = 0
-        for qid, q in pairs(NewbQuestions) do
-            if not q.answered then
-                open = open + 1
-                notify(source, ('#%d %s (#%d): %s'):format(qid, q.name, q.src, q.text), 'info')
-            end
-        end
-        if open == 0 then notify(source, 'No unanswered /n questions.', 'success') end
+    local isNMuted, remaining = isPlayerNMuted(source)
+    if isNMuted then
+        TriggerClientEvent('sunset:chat:system', source,
+            ('You are muted for asking questions for %d minutes.'):format(remaining or 1), 'error')
         return
     end
 
-    -- /na [qid] [answer] — or /na [answer] (targets the most recent open question)
-    local qid = tonumber(args[1])
-    local answerStart = 2
-    if not qid then
-        -- no explicit id: find the most recent unanswered question
-        local best, bestAt = nil, -1
-        for id, q in pairs(NewbQuestions) do
-            if not q.answered and (q.at or 0) > bestAt then best, bestAt = id, q.at end
-        end
-        qid = best
-        answerStart = 1
-        if not qid then
-            return notify(source, 'No open question to answer. Usage: /na [question id] [answer]', 'error')
-        end
+    local text = table.concat(args, ' '):gsub('^%s*(.-)%s*$', '%1')
+    if text == '' or #text < 3 then
+        return notify(source, ('Usage: /%s [intrebare]'):format(cmdName), 'error')
     end
 
-    local q = NewbQuestions[qid]
+    local now = os.time()
+    if now - (LastNewbAsk[source] or 0) < 15 then
+        return notify(source, ('Asteapta %d secunde inainte de o noua intrebare.'):format(15 - (now - (LastNewbAsk[source] or 0))), 'error')
+    end
+    LastNewbAsk[source] = now
+
+    local name = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or ('Player %d'):format(source)
+    ActiveNewbieQuestions[source] = {
+        src = source,
+        name = name,
+        text = text,
+        at = now,
+    }
+
+    notify(source, 'Intrebarea ta a fost trimisa catre echipa de helperi.', 'success')
+
+    -- Sent in DARK GREEN to on-duty helpers and admins
+    local dutyCount = 0
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsStaff(p) and (Player(p).state.helperDuty or Player(p).state.adminDuty) then
+            dutyCount = dutyCount + 1
+            TriggerClientEvent('sunset:chat:message', p, {
+                id = source,
+                name = name,
+                message = text,
+                time = os.date('%H:%M:%S'),
+                type = 'newbie_q',
+            })
+        end
+    end
+    if dutyCount == 0 then
+        for _, pid in ipairs(GetPlayers()) do
+            local p = tonumber(pid)
+            if p and IsStaff(p) then
+                TriggerClientEvent('sunset:chat:message', p, {
+                    id = source,
+                    name = name,
+                    message = text,
+                    time = os.date('%H:%M:%S'),
+                    type = 'newbie_q',
+                })
+            end
+        end
+    end
+end
+
+registerServerCommand('n', function(source, args) handleNewbieQuestion(source, args, 'n') end)
+registerServerCommand('helpme', function(source, args) handleNewbieQuestion(source, args, 'helpme') end)
+
+local function handleNewbieAnswer(source, args)
+    if source ~= 0 and not IsStaff(source) then
+        return notify(source, 'Comanda disponibila doar pentru helperi si admini.', 'error')
+    end
+
+    local targetId = tonumber(args[1])
+    if not targetId then
+        local count = 0
+        notify(source, '─── Intrebari active de la jucatori ───', 'info')
+        for qSrc, q in pairs(ActiveNewbieQuestions) do
+            count = count + 1
+            notify(source, ('[%d] %s: "%s" (Raspunde cu /an %d [raspuns])'):format(qSrc, q.name, q.text, qSrc), 'info')
+        end
+        if count == 0 then notify(source, 'Nu exista nicio intrebare activa de la jucatori.', 'success') end
+        return
+    end
+
+    local q = ActiveNewbieQuestions[targetId]
     if not q then
-        return notify(source, ('Question #%d not found. Use /na to list open questions.'):format(qid), 'error')
-    end
-    if q.answered then
-        return notify(source, ('Question #%d was already answered.'):format(qid), 'warning')
+        return notify(source, ('Nu exista nicio intrebare activa pentru ID %d.'):format(targetId), 'error')
     end
 
-    local answer = table.concat(args, ' ', answerStart):gsub('^%s*(.-)%s*$', '%1')
+    local answer = table.concat(args, ' ', 2):gsub('^%s*(.-)%s*$', '%1')
     if answer == '' then
-        return notify(source, 'Usage: /na [question id] [answer]', 'error')
+        return notify(source, ('Usage: /an %d [raspuns helper]'):format(targetId), 'error')
     end
 
-    q.answered = true
-    q.answeredBy = exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source) or 'Staff'
+    ActiveNewbieQuestions[targetId] = nil
 
-    -- Public: question context + the answer, SA-MP style.
-    publicLine(q.name, ('(%d) %s'):format(qid, q.text), 'newb_question', q.src)
-    publicLine(q.answeredBy, ('(%d) %s'):format(qid, answer), 'newb_answer', source)
+    local staffName = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local isAdm = source ~= 0 and IsAdmin(source, 1)
+    local staffRole = isAdm and 'Admin' or 'Helper'
+
+    local formattedBroadcast = ('* Newbie %s (%d): %s\n* %s %s (%d): %s'):format(
+        q.name, q.src, q.text,
+        staffRole, staffName, source, answer
+    )
+
+    TriggerClientEvent('sunset:chat:message', -1, {
+        id = source,
+        name = staffName,
+        message = formattedBroadcast,
+        time = os.date('%H:%M:%S'),
+        type = 'newbie_qa',
+    })
+    notify(source, ('Ai raspuns la intrebarea lui %s.'):format(q.name), 'success')
+end
+
+registerServerCommand('an', handleNewbieAnswer)
+registerServerCommand('na', handleNewbieAnswer)
+
+registerServerCommand('nd', function(source, args)
+    if source ~= 0 and not IsStaff(source) then
+        return notify(source, 'Comanda disponibila doar pentru helperi si admini.', 'error')
+    end
+
+    local targetId = tonumber(args[1])
+    local reason = table.concat(args, ' ', 2):gsub('^%s*(.-)%s*$', '%1')
+    if not targetId or reason == '' then
+        return notify(source, 'Usage: /nd [id jucator] [motiv]', 'error')
+    end
+
+    local q = ActiveNewbieQuestions[targetId]
+    if not q then
+        return notify(source, ('Nu exista nicio intrebare activa pentru ID %d.'):format(targetId), 'error')
+    end
+
+    ActiveNewbieQuestions[targetId] = nil
+
+    local staffName = source == 0 and 'Server' or (exports.sunset_core:GetPlayerDisplayName(source) or GetPlayerName(source))
+    local staffRole = (source ~= 0 and IsAdmin(source, 1)) and 'Admin' or 'Helper'
+
     if GetPlayerName(q.src) then
-        notify(q.src, ('Your question was answered by %s: %s'):format(q.answeredBy, answer), 'success', 10000)
+        TriggerClientEvent('sunset:chat:system', q.src,
+            ('Intrebarea ta a fost stearsa de %s %s (ID: %d). Motiv: %s'):format(staffRole, staffName, source, reason), 'warning')
     end
-    -- auto-expire answered questions after 10 min to keep the table small
-    SetTimeout(600000, function()
-        local row = NewbQuestions[qid]
-        if row and row.answered then NewbQuestions[qid] = nil end
-    end)
-end)
 
--- prune stale unanswered questions after 30 min
-CreateThread(function()
-    while true do
-        Wait(300000)
-        local now = os.time()
-        for qid, q in pairs(NewbQuestions) do
-            if now - (q.at or 0) > 1800 then NewbQuestions[qid] = nil end
+    for _, pid in ipairs(GetPlayers()) do
+        local p = tonumber(pid)
+        if p and IsStaff(p) then
+            TriggerClientEvent('sunset:chat:system', p,
+                (('[ND] %s %s a sters intrebarea lui %s (#%d): "%s"'):format(staffRole, staffName, q.name, q.src, reason)), 'info')
         end
     end
+    notify(source, ('Ai sters intrebarea lui %s.'):format(q.name), 'success')
 end)
 
 AddEventHandler('playerDropped', function()
     LastNewbAsk[source] = nil
+    ActivePlayerReports[source] = nil
+    ActiveNewbieQuestions[source] = nil
 end)
 
 function ExecutePlayerCommand(source, name, args)
