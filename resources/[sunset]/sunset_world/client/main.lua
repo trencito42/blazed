@@ -122,7 +122,7 @@ CreateThread(function()
     local presets = Sunset.WorldBlips or {}
 
     for id, shop in pairs(Sunset.Shops or {}) do
-        addBlip(shop.coords, presets.shop or {}, shop.label, false)
+        addBlip(shop.coords, presets.shop or {}, shop.label, true)
         if id ~= 'twentyfour7' then
             zones[#zones + 1] = registerZone('shop:' .. id, shop.coords, shop.zoneRadius or 2.5,
                 '[E] ' .. shop.label, { 46, 204, 113 }, function()
@@ -132,7 +132,7 @@ CreateThread(function()
     end
 
     for i, atm in ipairs(Sunset.ATMs or {}) do
-        addBlip(atm, presets.atm or {}, 'ATM', false)
+        addBlip(atm, presets.atm or {}, 'ATM', true)
         zones[#zones + 1] = registerZone('atm:' .. i, atm, 2.0,
             '[E] ATM', { 52, 152, 219 }, function()
                 TriggerEvent('sunset:world:openAtm')
@@ -140,7 +140,7 @@ CreateThread(function()
     end
 
     for id, garage in pairs(Sunset.Garages or {}) do
-        addBlip(garage.store, presets.garage or {}, garage.label, false)
+        addBlip(garage.store, presets.garage or {}, garage.label, true)
         zones[#zones + 1] = registerZone('garage:' .. id, garage.store, 3.0,
             '[E] Store vehicle | /v', { 241, 196, 15 }, function()
                 TriggerEvent('sunset:world:garageStore', id)
@@ -148,7 +148,7 @@ CreateThread(function()
     end
 
     for i, shop in ipairs(Sunset.ClothingShops or {}) do
-        addBlip(shop, presets.clothing or {}, 'Clothing', false)
+        addBlip(shop, presets.clothing or {}, 'Clothing', true)
         zones[#zones + 1] = registerZone('clothing:' .. i, shop, 2.5,
             '[E] Clothing Store', { 199, 21, 133 }, function()
                 TriggerEvent('sunset:world:openClothing')
@@ -156,7 +156,7 @@ CreateThread(function()
     end
 
     for i, shop in ipairs(Sunset.BarberShops or {}) do
-        addBlip(shop, presets.barber or {}, 'Barber', false)
+        addBlip(shop, presets.barber or {}, 'Barber', true)
         zones[#zones + 1] = registerZone('barber:' .. i, shop, 2.5,
             '[E] Barber', { 199, 21, 133 }, function()
                 TriggerEvent('sunset:world:openBarber')
@@ -165,7 +165,7 @@ CreateThread(function()
 
     for id, center in pairs(Sunset.JobCenters or {}) do
         local preset = center.blip or presets.jobcenter or {}
-        addBlip(center.coords, preset, center.label, false)
+        addBlip(center.coords, preset, center.label, true)
         zones[#zones + 1] = registerZone('job:' .. id, center.coords, 2.5,
             '[E] ' .. center.label, { 255, 140, 0 }, function()
                 TriggerEvent('sunset:world:openJobCenter', id, center)
@@ -174,7 +174,7 @@ CreateThread(function()
 
     for i, station in ipairs(Sunset.GasStations or {}) do
         if station.coords then
-            addBlip(station.coords, presets.gas or { sprite = 361, color = 1, scale = 0.75 }, station.label or 'Gas Station', false)
+            addBlip(station.coords, presets.gas or { sprite = 361, color = 1, scale = 0.75 }, station.label or 'Gas Station', true)
         end
     end
 end)
@@ -184,7 +184,7 @@ AddEventHandler('sunset:world:registerFactionHQ', function(factionId, faction)
     local color = faction.marker or { 255, 140, 0 }
     local label = faction.label or factionId
     if faction.type ~= 'illegal' and faction.blip then
-        addBlip(faction.hq, faction.blip, label, false)
+        addBlip(faction.hq, faction.blip, label, true)
     end
     local hint = faction.hqHint or ('[E] ' .. label)
     zones[#zones + 1] = registerZone('faction:' .. factionId, faction.hq, faction.hqRadius or 3.5, hint, color, function()
@@ -195,7 +195,7 @@ end)
 AddEventHandler('sunset:world:registerFactionDepot', function(factionId, depot, faction)
     if not depot or not depot.coords then return end
     local color = faction and faction.marker or { 255, 200, 0 }
-    addBlip(depot.coords, { sprite = 326, color = 5, scale = 0.7 }, depot.label or 'Fleet Garage', false)
+    addBlip(depot.coords, { sprite = 326, color = 5, scale = 0.7 }, depot.label or 'Fleet Garage', true)
     local depotHint = '[E] ' .. (depot.label or 'Spawn fleet vehicle')
     if depot.vehicles and #depot.vehicles > 0 then
         depotHint = '[E] ' .. (depot.label or 'Fleet garage') .. ' — choose vehicle'
@@ -217,7 +217,7 @@ end)
 AddEventHandler('sunset:world:registerTaxiDepot', function(depot)
     if not depot or not depot.coords then return end
     local color = { 255, 200, 0 }
-    addBlip(depot.coords, { sprite = 198, color = 5, scale = 0.75 }, depot.label or 'Cab Depot', false)
+    addBlip(depot.coords, { sprite = 198, color = 5, scale = 0.75 }, depot.label or 'Cab Depot', true)
     zones[#zones + 1] = registerZone('taxi:depot', depot.coords, 3.0,
         '[E] Spawn cab', color, function()
             TriggerEvent('sunset:world:taxiDepot')
@@ -228,7 +228,7 @@ AddEventHandler('sunset:world:registerCraftingStation', function(stationId, stat
     if not station or not station.coords then return end
     local color = station.marker or { 200, 200, 200 }
     if station.blip then
-        addBlip(station.coords, station.blip, station.label or stationId, false)
+        addBlip(station.coords, station.blip, station.label or stationId, true)
     end
     zones[#zones + 1] = registerZone('craft:' .. stationId, station.coords, 2.0,
         '[E] ' .. (station.label or 'Craft'), color, function()
@@ -248,7 +248,7 @@ RegisterNetEvent('sunset:client:registerPropertyZones', function(properties)
         if type(entry) == 'string' then entry = json.decode(entry) end
         if not entry or not entry.x then goto continue end
         local coords = vector3(entry.x, entry.y, entry.z)
-        propertyBlips[#propertyBlips + 1] = addBlip(coords, preset, prop.label, false)
+        propertyBlips[#propertyBlips + 1] = addBlip(coords, preset, prop.label, true)
         propertyZones[#propertyZones + 1] = {
             id = prop.id,
             label = prop.label,

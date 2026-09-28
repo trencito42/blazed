@@ -32,8 +32,8 @@
     --text-muted: rgba(255, 245, 235, 0.35);
 
     /* Typography */
-    --font-display: 'Syne', sans-serif;
-    --font-body: 'Outfit', sans-serif;
+    --font-display: 'Chakra Petch', 'Rajdhani', sans-serif;
+    --font-body: 'Montserrat', 'Chakra Petch', sans-serif;
 
     /* Spacing */
     --space-xs: 4px;

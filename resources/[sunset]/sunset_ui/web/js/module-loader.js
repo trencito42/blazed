@@ -15,7 +15,7 @@
         },
         hud_core: {
             html: 'modules/hud/index.html',
-            css: ['css/hud.css', 'css/premium-hud.css'],
+            css: ['css/hud.css', 'css/premium-hud.css', 'css/premium-wanted.css'],
             js: ['js/forza_speedometer.js', 'js/hud.js', 'js/hud_editor.js']
         },
         radar: {

@@ -245,6 +245,7 @@ forward('helpdeskAction')
 -- Quest log panel (sunset_quests)
 forward('questLogClose')
 forward('questClaim')
+forward('questLogRendered')
 
 -- [AUDIT P8-07] battlepass.js posts these four callbacks but none were
 -- registered, so every fetch 404'd silently. Forward them (the real battlepass

@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>blaze.mp — UI Shell</title>
+    <!-- Fonts and icon glyphs are shell-level dependencies.  Dynamic modules
+         can be mounted at any time, so these must exist before module CSS. -->
+    <link rel="stylesheet" href="css/fonts.css?v=3">
+    <link rel="stylesheet" href="assets/phosphor/phosphor.css?v=3">
     <link rel="stylesheet" href="css/base.css?v=2">
-    <link rel="stylesheet" href="css/variables.css?v=2">
+    <link rel="stylesheet" href="css/variables.css?v=3">
     <link rel="stylesheet" href="css/_cef_overrides.css?v=2">
     <link rel="stylesheet" href="css/components.css?v=2">
     <link rel="stylesheet" href="css/animations.css?v=2">
@@ -31,7 +35,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/module-loader.js?v=3"></script>
-    <script src="js/app.js?v=3"></script>
+    <script src="js/module-loader.js?v=4"></script>
+    <script src="js/app.js?v=4"></script>
 </body>
 </html>

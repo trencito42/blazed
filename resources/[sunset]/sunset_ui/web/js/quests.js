@@ -98,6 +98,10 @@
             shell?.classList.add('active');
             shell?.setAttribute('aria-hidden', 'false');
             this.open = true;
+            const renderToken = Number(data?.renderToken || 0);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                post('questLogRendered', { renderToken });
+            }));
         },
 
         hide() {
@@ -106,21 +110,18 @@
             shell?.classList.remove('active');
             shell?.setAttribute('aria-hidden', 'true');
         },
-    };
 
-    window.addEventListener('message', (event) => {
-        const { action, data } = event.data || {};
-        if (action === 'questLogShow') QuestLog.show(data || event.data.data || {});
-        else if (action === 'questLogHide') QuestLog.hide();
-        else if (action === 'sessionForceClose') QuestLog.hide();
-    });
+        requestClose() {
+            if (this.open) post('questLogClose');
+        },
+    };
 
     // ESC closes while the panel owns focus.
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && QuestLog.open) {
             e.preventDefault();
             e.stopPropagation();
-            post('questLogClose');
+            QuestLog.requestClose();
         }
     });
 

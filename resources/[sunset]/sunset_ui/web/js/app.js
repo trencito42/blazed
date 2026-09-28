@@ -210,8 +210,8 @@
         licenseQuizHide: 'licenses',
 
         // Quests
-        questsShow: 'quests',
-        questsHide: 'quests',
+        questLogShow: 'quests',
+        questLogHide: 'quests',
 
         // Courier
         courierShow: 'courier',
@@ -486,6 +486,9 @@
                 window.DamageIndicators?.takeDamage?.(payload.amount, payload.type, payload.direction);
                 return;
             }
+
+            if (action === 'questLogShow') { window.QuestLog?.show?.(payload); return; }
+            if (action === 'questLogHide') { window.QuestLog?.hide?.(); return; }
 
             if (action === 'showScoreboard') { window.Scoreboard?.show?.(payload); return; }
             if (action === 'hideScoreboard') { window.Scoreboard?.hide?.(); return; }
