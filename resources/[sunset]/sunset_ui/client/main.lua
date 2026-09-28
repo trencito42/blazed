@@ -3,6 +3,10 @@ local currentScreen = nil
 local focusOwner = nil
 local transitionVisible = false
 
+local function nuiDebugEnabled()
+    return GetConvar('sv_sunset_nuidebug', '0') == '1'
+end
+
 function Show(screen, data)
     isOpen = true
     currentScreen = screen
@@ -52,12 +56,14 @@ function SetFocus(hasFocus, hasCursor, keepInput, owner)
     focusOwner = hasFocus and owner or nil
     SetNuiFocus(hasFocus, hasCursor == true)
     SetNuiFocusKeepInput(keepInput == true)
-    -- [BOOT TRACE v3] include a short traceback so we can identify WHO steals
-    -- focus (the 13s login-screen release bug).
-    local tb = debug.traceback('', 2):gsub('\n', ' | '):sub(1, 220)
-    -- NOTE: `os` is server-only; GetGameTimer() is the client-safe clock.
-    print(('^5[FOCUS %s]^7 ui: SetFocus(has=%s cursor=%s owner=%s) | %s'):format(
-        tostring(GetBootEpoch and GetBootEpoch() or GetGameTimer()), tostring(hasFocus), tostring(hasCursor == true), owner, tb))
+    if nuiDebugEnabled() then
+        -- [BOOT TRACE v3] include a short traceback so we can identify WHO steals
+        -- focus (the 13s login-screen release bug).
+        local tb = debug.traceback('', 2):gsub('\n', ' | '):sub(1, 220)
+        -- NOTE: `os` is server-only; GetGameTimer() is the client-safe clock.
+        print(('^5[FOCUS %s]^7 ui: SetFocus(has=%s cursor=%s owner=%s) | %s'):format(
+            tostring(GetBootEpoch and GetBootEpoch() or GetGameTimer()), tostring(hasFocus), tostring(hasCursor == true), owner, tb))
+    end
     return true
 end
 exports('SetFocus', SetFocus)
@@ -99,10 +105,6 @@ local NUI_DEBUG_CAP = 60
 local nuiMsgBuffer, nuiMsgHead, nuiMsgTotal = {}, 0, 0
 local nuiCbBuffer, nuiCbHead, nuiCbTotal = {}, 0, 0
 local nuiErrBuffer, nuiErrHead, nuiErrTotal = {}, 0, 0
-
-local function nuiDebugEnabled()
-    return GetConvar('sv_sunset_nuidebug', '0') == '1'
-end
 
 function NuiDebugRecordMessage(action)
     if not nuiDebugEnabled() then return end

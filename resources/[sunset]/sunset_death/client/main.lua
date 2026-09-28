@@ -240,6 +240,6 @@ RegisterCommand('112', function()
             area = zone,
             coords = { x = coords.x, y = coords.y, z = coords.z },
         })
-        exports.sunset_ui:SetFocus(true, true)
+        exports.sunset_ui:SetFocus(true, true, false, 'dispatch112')
     end
 end, false)

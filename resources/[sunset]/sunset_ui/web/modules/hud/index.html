@@ -109,3 +109,62 @@
             <span class="hud-editor-hint">Arrows = move · Shift = fast · Enter = save · Backspace = reset · Esc = close</span>
         </div>
     </div>
+
+    <!-- Persistent gameplay overlays live with the HUD so status messages
+         cannot arrive before their DOM exists. -->
+    <div id="server-announce" class="server-announce hidden" aria-live="assertive">
+        <div class="server-announce__inner"><div class="server-announce__stripe"></div><div class="server-announce__content">
+            <span class="server-announce__badge" id="server-announce-badge">ANNOUNCEMENT</span>
+            <p class="server-announce__msg" id="server-announce-msg"></p><span class="server-announce__meta" id="server-announce-meta"></span>
+        </div></div>
+    </div>
+    <div id="police-order" class="police-order hidden" aria-live="assertive">
+        <div class="police-order__inner"><div class="police-order__stripe"></div><div class="police-order__content">
+            <span class="police-order__badge">POLICE ORDER</span><p class="police-order__msg" id="police-order-msg"></p><span class="police-order__meta" id="police-order-meta"></span>
+        </div></div>
+    </div>
+    <div id="taxi-meter" class="taxi-meter hidden" data-hud-panel="taxi-meter">
+        <div class="taxi-meter__head"><span class="taxi-meter__label">TAXI METER</span><span class="taxi-meter__status" id="taxi-meter-status">IDLE</span></div>
+        <div class="taxi-meter__fare" id="taxi-meter-fare">$0</div>
+        <div class="taxi-meter__row"><span>Distance</span><strong id="taxi-meter-dist">0.0 km</strong></div>
+        <div class="taxi-meter__row"><span>Time</span><strong id="taxi-meter-time">00:00</strong></div>
+    </div>
+    <div id="world-tooltip-layer" aria-hidden="true"></div>
+
+    <div id="fuel-pump" class="fuel-pump-forza hidden" aria-hidden="true" aria-live="polite">
+        <div class="fp-info-panel"><div><div class="fp-label" id="fp-station-label">Gas Station</div><div class="fp-type" id="fp-pump-label"></div><div class="fp-car" id="fp-vehicle-name">Vehicle</div></div>
+            <div class="fp-type"><i class="ph-fill ph-drop"></i><span id="fp-fuel-type">Premium Gasoline 99</span></div>
+            <div class="fp-type"><i class="ph-fill ph-wallet"></i><span id="fp-price-line">$0 / Liter</span></div>
+            <div class="fp-type fp-owner-line"><i class="ph-fill ph-user-circle"></i><span id="fp-owner-name">Owner: State</span></div>
+        </div>
+        <div class="fp-counter-panel"><div class="fp-counter-group"><div class="fp-cg-label">Pump Volume</div><div class="fp-cg-value"><span id="fp-val-liters">00.00</span> <span class="fp-cg-unit">L</span></div></div>
+            <div class="fp-counter-group"><div class="fp-cg-label">Total Due</div><div class="fp-cg-value total">$ <span id="fp-val-price">00.00</span></div></div>
+        </div>
+        <div class="fp-action-panel"><div class="fp-tank-gauge"><div class="fp-tank-fill" id="fp-tank-fill"></div></div><div class="fp-pump-action">
+            <div class="fp-tank-pct"><span id="fp-tank-pct">0%</span><i class="ph-fill ph-gas-pump" id="fp-tank-icon"></i></div>
+            <button type="button" class="fp-btn-pump" id="fp-btn-pump" disabled><span class="fp-key-hint">SPACE</span> Press Pump</button>
+            <button type="button" class="fp-btn-checkout" id="fp-btn-checkout" disabled><span class="fp-key-hint">ENTER</span> Pay &amp; Close</button>
+        </div></div>
+    </div>
+
+    <div id="fishing-panel" class="fishing-shell hidden state-idle" aria-live="polite">
+        <svg class="fishing-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="fishing-frame__path" vector-effect="non-scaling-stroke" d="M5 .5 L99.5 .5 L99.5 95 L95 99.5 L.5 99.5 L.5 5 Z" /></svg>
+        <div class="fishing-panel__body"><div class="fishing__header"><div class="fishing__icon-slot" id="fishing-icon-slot"></div><div class="fishing__title-wrap">
+            <div class="fishing__title" id="fishing-title">Fishing</div><div class="fishing__bag" id="fishing-bag">Bag 0/2</div>
+        </div></div><div class="fishing__message" id="fishing-message">Press <span class="fishing__key">E</span> to cast</div><div class="fishing__progress"><div class="fishing__progress-fill" id="fishing-progress"></div></div></div>
+    </div>
+
+    <div id="radar-panel" class="radar-shell hidden state-scan" aria-live="polite"><div class="radar-panel__body">
+        <div class="radar__header"><div class="radar__title-wrap"><div class="radar__title" id="radar-title">Mobile Radar</div><div class="radar__meta" id="radar-meta"></div></div></div>
+        <div class="radar__message" id="radar-message"></div><div class="radar__stats">
+            <div class="radar__stat"><span class="radar__stat-label">Speed</span><span class="radar__stat-value" id="radar-speed">000</span></div>
+            <div class="radar__stat"><span class="radar__stat-label">Plate</span><span class="radar__stat-value" id="radar-plate">--------</span></div>
+            <div class="radar__stat"><span class="radar__stat-label">Driver</span><span class="radar__stat-value" id="radar-driver">—</span></div>
+        </div><div class="radar__progress"><div class="radar__progress-fill" id="radar-progress"></div></div><div class="radar__hits hidden" id="radar-hits"></div>
+    </div></div>
+    <div id="radar-alert-panel" class="radar-alert-shell hidden" aria-live="assertive"><div class="radar-alert__body">
+        <div class="radar-alert__header"><div class="radar-alert__title-wrap"><div class="radar-alert__title" id="radar-alert-title"></div><div class="radar-alert__meta" id="radar-alert-meta"></div></div><div class="radar-alert__badge" id="radar-alert-badge"></div></div>
+        <div class="radar-alert__message"><span class="radar-alert__speed-hero" id="radar-alert-speed"></span><span class="radar-alert__sub" id="radar-alert-sub"></span></div>
+        <div class="radar-alert__stats"><div class="radar-alert__stat"><span class="radar-alert__stat-label">Speed</span><span class="radar-alert__stat-value" id="radar-alert-stat-speed"></span></div><div class="radar-alert__stat"><span class="radar-alert__stat-label">Limit</span><span class="radar-alert__stat-value" id="radar-alert-stat-limit"></span></div><div class="radar-alert__stat"><span class="radar-alert__stat-label">Over</span><span class="radar-alert__stat-value" id="radar-alert-stat-over"></span></div><div class="radar-alert__stat"><span class="radar-alert__stat-label" id="radar-alert-stat-fine-label">Fine</span><span class="radar-alert__stat-value" id="radar-alert-stat-fine"></span></div></div>
+        <div class="radar-alert__progress"><div class="radar-alert__progress-fill" id="radar-alert-progress"></div></div>
+    </div></div>

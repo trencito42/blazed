@@ -34,7 +34,8 @@ function ReadCosmeticsFromVehicle(veh)
         mods.livery = GetVehicleLivery(veh)
     end
 
-    local paintType = math.max(0, math.min(5, math.floor(tonumber(GetVehicleModColor_1(veh)) or 0)))
+    local rawPaintType = (GetVehicleModColor_1(veh))
+    local paintType = math.max(0, math.min(5, math.floor(tonumber(rawPaintType) or 0)))
     local tyreSmoke = IsToggleModOn(veh, 20)
     local tr, tg, tb = GetVehicleTyreSmokeColor(veh)
 

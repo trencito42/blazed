@@ -5,6 +5,7 @@ const path = require('path');
 const repoRoot = path.join(__dirname, '..');
 const uiWebDir = path.join(repoRoot, 'resources', '[sunset]', 'sunset_ui', 'web');
 const authUiWebDir = path.join(repoRoot, 'resources', '[sunset]', 'sunset_auth_ui', 'web');
+const sunsetResourcesDir = path.join(repoRoot, 'resources', '[sunset]');
 
 console.log('--- Checking NUI Modular Architecture ---');
 let errors = 0;
@@ -129,6 +130,47 @@ const chatFragment = fs.readFileSync(path.join(uiWebDir, 'modules', 'chat', 'ind
 if (chatFragment.includes('v-menu-close-hint')) {
     console.error('ERROR: chat fragment contains the vehicle-menu close hint.');
     errors++;
+}
+
+// A dynamically loaded script cannot receive the message that triggered its
+// own load. Every literal action sent through exports.sunset_ui:Send must
+// therefore be known by the shell dispatcher, which replays queued messages.
+function walk(dir, extension, out = []) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full, extension, out);
+        else if (entry.name.endsWith(extension)) out.push(full);
+    }
+    return out;
+}
+const exportedActions = new Set();
+for (const luaFile of walk(sunsetResourcesDir, '.lua')) {
+    const source = fs.readFileSync(luaFile, 'utf8');
+    for (const match of source.matchAll(/exports\.sunset_ui:Send\s*\(\s*['"]([A-Za-z0-9_]+)['"]/g)) {
+        exportedActions.add(match[1]);
+    }
+}
+for (const action of [...exportedActions].sort()) {
+    const pattern = new RegExp(`['"]${action}['"]`);
+    if (!pattern.test(appJs)) {
+        console.error(`ERROR: NUI action ${action} is sent by Lua but unknown to app.js.`);
+        errors++;
+    }
+}
+
+const criticalDom = {
+    hud: ['server-announce', 'police-order', 'taxi-meter', 'world-tooltip-layer', 'fuel-pump', 'fishing-panel', 'radar-panel', 'radar-alert-panel'],
+    panels: ['ticket', 'servicecalls', 'jobs-panel', 'skills', 'help', 'documents', 'emotes', 'crafting'],
+    courier: ['courier-panel'],
+};
+for (const [moduleName, ids] of Object.entries(criticalDom)) {
+    const fragment = fs.readFileSync(path.join(uiWebDir, 'modules', moduleName, 'index.html'), 'utf8');
+    for (const id of ids) {
+        if (!new RegExp(`id=["']${id}["']`).test(fragment)) {
+            console.error(`ERROR: Module [${moduleName}] is missing required DOM id="${id}".`);
+            errors++;
+        }
+    }
 }
 
 // 3. Check sunset_auth_ui

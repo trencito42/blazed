@@ -7,6 +7,9 @@
 (function () {
     'use strict';
 
+    const MODULE_VERSION = '5';
+    const versioned = (url) => `${url}${url.includes('?') ? '&' : '?'}v=${MODULE_VERSION}`;
+
     const MODULE_REGISTRY = {
         chat: {
             html: 'modules/chat/index.html',
@@ -15,8 +18,8 @@
         },
         hud_core: {
             html: 'modules/hud/index.html',
-            css: ['css/hud.css', 'css/premium-hud.css', 'css/premium-wanted.css'],
-            js: ['js/forza_speedometer.js', 'js/hud.js', 'js/hud_editor.js']
+            css: ['css/hud.css', 'css/premium-hud.css', 'css/premium-wanted.css', 'css/gameplay_glass.css', 'css/world-tooltip.css', 'css/fuel_pump.css', 'css/fuel-pump-forza.css', 'css/fishing.css'],
+            js: ['js/forza_speedometer.js', 'js/hud.js', 'js/hud_editor.js', 'js/overlays.js', 'js/player_identity.js', 'js/world-tooltip.js', 'js/fuel_pump.js', 'js/job_icons.js', 'js/fishing.js']
         },
         radar: {
             css: ['css/radar.css'],
@@ -69,7 +72,7 @@
         properties: {
             html: 'modules/properties/index.html',
             css: ['css/premium-properties.css'],
-            js: ['js/properties-ui.js']
+            js: ['js/properties-ui.js', 'js/panels.js']
         },
         dealership: {
             html: 'modules/dealership/index.html',
@@ -104,7 +107,7 @@
         jobcenter: {
             html: 'modules/jobcenter/index.html',
             css: ['css/panels.css'],
-            js: ['js/job_shift.js', 'js/job_icons.js']
+            js: ['js/job_shift.js', 'js/job_icons.js', 'js/panels.js']
         },
         garage: {
             html: 'modules/garage/index.html',
@@ -117,7 +120,6 @@
             js: ['js/scoreboard.js']
         },
         helpdesk: {
-            html: 'modules/helpdesk/index.html',
             css: ['css/helpdesk.css'],
             js: ['js/helpdesk.js']
         },
@@ -209,7 +211,7 @@
         return new Promise((resolve, reject) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
-            link.href = href;
+            link.href = versioned(href);
             link.onload = () => {
                 loadedStylesheets.add(href);
                 resolve();
@@ -235,7 +237,7 @@
 
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = src;
+            script.src = versioned(src);
             script.async = false;
             script.onload = () => {
                 loadedScripts.add(src);
@@ -277,7 +279,7 @@
                 // 2. Fetch and insert HTML fragment
                 let mountedWrapper = null;
                 if (def.html) {
-                    const res = await fetch(def.html);
+                    const res = await fetch(versioned(def.html));
                     if (!res.ok) throw new Error(`Failed to fetch ${def.html} (${res.status})`);
                     const htmlText = await res.text();
                     const root = document.getElementById('ui-root');
@@ -299,6 +301,8 @@
                 // lifecycle hooks replace listeners that can no longer fire.
                 if (name === 'chat') window.ChatSettings?.init?.();
                 if (name === 'hud_core') window.Hud?.init?.();
+                if (name === 'mdc') window.MdcTablet?.init?.();
+                if (name === 'atm') window.AtmMachine?.init?.();
 
                 loadedModules.add(name);
                 const dt = Math.round(performance.now() - t0);

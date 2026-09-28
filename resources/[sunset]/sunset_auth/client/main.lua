@@ -387,7 +387,9 @@ AddEventHandler('sunset:client:characterFlowComplete', function()
         end
         if IsPedheadshotValid(handle) then
             local txd = GetPedheadshotTxdString(handle)
-            exports.sunset_ui:Send('authCapturePortrait', {
+            -- Account portraits belong to the dedicated auth document. Sending
+            -- this to sunset_ui after the modular split silently discarded it.
+            exports.sunset_auth_ui:Send('authCapturePortrait', {
                 username = authenticatedUsername,
                 characterName = (tostring(currentCharacter.firstname or '') .. ' ' .. tostring(currentCharacter.lastname or '')):gsub('%s+$', ''),
                 characterId = currentCharacter.id,

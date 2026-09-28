@@ -346,6 +346,22 @@ window.addEventListener('message', (event) => {
         case 'authSuccess':
             AuthUI.showLoading(true, payload.text || 'Loading character...');
             break;
+        case 'authCapturePortrait':
+            if (!payload.source || !payload.username) break;
+            fetch(payload.source).then((response) => response.blob()).then((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = () => post('authSavePortrait', {
+                    username: payload.username,
+                    characterName: payload.characterName,
+                    characterId: payload.characterId,
+                    level: payload.level,
+                    cash: payload.cash,
+                    bank: payload.bank,
+                    avatar: reader.result,
+                });
+                reader.readAsDataURL(blob);
+            }).catch(() => {});
+            break;
     }
 });
 

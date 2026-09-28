@@ -291,6 +291,16 @@ RegisterNUICallback('modalSuperseded', function(data, cb)
     cb('ok')
 end)
 
+-- Fail closed when a dynamic module cannot mount. A broken/missing HTML, CSS
+-- or JS asset must never strand the FiveM cursor over gameplay.
+RegisterNUICallback('uiModuleFailed', function(data, cb)
+    local moduleName = type(data) == 'table' and tostring(data.module or 'unknown') or 'unknown'
+    local action = type(data) == 'table' and tostring(data.action or 'unknown') or 'unknown'
+    print(('^1[NUI]^7 module load failed: module=%s action=%s; releasing focus'):format(moduleName, action))
+    SetFocus(false, false, false, 'force')
+    cb({ ok = true })
+end)
+
 RegisterNUICallback('hudEditSave', function(data, cb)
     TriggerEvent('sunset:nui:hudEditSave', data)
     cb('ok')
@@ -501,7 +511,11 @@ local function release112Focus()
         end)
         phoneStillOpen = ok and result == true
     end
-    SetFocus(phoneStillOpen, phoneStillOpen)
+    if phoneStillOpen then
+        SetFocus(true, true, false, 'phone')
+    else
+        SetFocus(false, false, false, 'force')
+    end
 end
 
 AddEventHandler('sunset:nui:close112Modal', function()

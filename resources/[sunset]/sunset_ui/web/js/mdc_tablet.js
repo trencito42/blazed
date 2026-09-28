@@ -43,6 +43,9 @@
         selectedViolationCode: null,
 
         init() {
+            if (this._initialized) return;
+            this._initialized = true;
+
             // Close button
             $('#mdc-tablet-close')?.addEventListener('click', () => this.close());
 
@@ -325,6 +328,7 @@
         },
 
         open(data = {}) {
+            this.init();
             this.officer = data.officer || {
                 department: 'police',
                 departmentLabel: 'Los Santos Police Department',
@@ -1208,6 +1212,7 @@
         // 112 AUTOMATED DISPATCHER MODAL
         // ======================================================================
         open112(data = {}) {
+            this.init();
             this.current112Data = data;
             const street = data.street || 'Current Location';
             const area = data.area || 'Los Santos';
@@ -1236,7 +1241,7 @@
             const loc = this.current112Data || {};
 
             post('submit112Call', {
-                category: this.selected112Category,
+                category: this.selected112Category || 'medical',
                 description: desc,
                 street: loc.street,
                 area: loc.area,
@@ -1248,5 +1253,10 @@
     };
 
     window.MdcTablet = MdcTablet;
-    document.addEventListener('DOMContentLoaded', () => MdcTablet.init());
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => MdcTablet.init());
+    } else {
+        MdcTablet.init();
+    }
 })();
+

@@ -51,6 +51,7 @@ local FORWARDED = {
     'authRemoveAccount',
     'authSetEmail',
     'authSetQuickLogin',
+    'authSavePortrait',
 }
 
 for _, name in ipairs(FORWARDED) do

@@ -11,9 +11,31 @@ if [ -f .env ]; then
 fi
 : "${MARIADB_PASSWORD:?MARIADB_PASSWORD must be provided by the deployment secret store}"
 
+use_compose_db=0
+if docker compose ps --status running mariadb >/dev/null 2>&1; then
+  use_compose_db=1
+fi
+
 db_exec() {
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb \
-    mariadb -N -B -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" "$@"
+  if [ "$use_compose_db" = "1" ]; then
+    docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb \
+      mariadb -N -B -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" "$@"
+  else
+    MYSQL_PWD="${MARIADB_PASSWORD}" mariadb -N -B \
+      -h"${MARIADB_HOST:-127.0.0.1}" -P"${MARIADB_PORT:-3306}" \
+      -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" "$@"
+  fi
+}
+
+db_import() {
+  if [ "$use_compose_db" = "1" ]; then
+    docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb \
+      mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}"
+  else
+    MYSQL_PWD="${MARIADB_PASSWORD}" mariadb \
+      -h"${MARIADB_HOST:-127.0.0.1}" -P"${MARIADB_PORT:-3306}" \
+      -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}"
+  fi
 }
 
 db_exec -e "CREATE TABLE IF NOT EXISTS schema_migrations (name VARCHAR(191) PRIMARY KEY, checksum CHAR(64) NOT NULL, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB"
@@ -44,7 +66,6 @@ for migration in sql/[0-9][0-9]-*.sql; do
     continue
   fi
   echo "[migrations] applying $base"
-  docker compose exec -T -e MYSQL_PWD="${MARIADB_PASSWORD}" mariadb \
-    mariadb -u"${MARIADB_USER:-sunset}" "${MARIADB_DATABASE:-sunsetmp}" < "$migration"
+  db_import < "$migration"
   db_exec -e "INSERT INTO schema_migrations (name, checksum) VALUES ('${base}', '${checksum}')"
 done
