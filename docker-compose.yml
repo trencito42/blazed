@@ -1,51 +1,19 @@
 services:
-  mariadb:
-    image: mariadb:11.4
-    restart: unless-stopped
-    environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}
-      MARIADB_USER: ${MARIADB_USER:-sunset}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD}
-    volumes:
-      - mariadb_data:/var/lib/mysql
-      - ./sql:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      start_period: 40s
-      interval: 10s
-      timeout: 5s
-      retries: 8
-    networks:
-      - sunsetmp
-
   fivem:
     build:
       context: ./docker/fivem
     restart: unless-stopped
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:30120/info.json | grep -q enhancedHostSupport"]
-      start_period: 120s
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    ports:
-      - "${FIVEM_PORT:-30120}:30120/tcp"
-      - "${FIVEM_PORT:-30120}:30120/udp"
-      - "${TXADMIN_PORT:-40120}:40120/tcp"
+    network_mode: host
     environment:
       LICENSE_KEY: ${LICENSE_KEY:?set LICENSE_KEY}
       NO_DEFAULT_CONFIG: "1"
       NO_LICENSE_KEY: "1"
       TXADMIN_ENABLE: ${TXADMIN_ENABLE:-0}
-      MARIADB_USER: ${MARIADB_USER:-sunset}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
-      MARIADB_DATABASE: ${MARIADB_DATABASE:-sunsetmp}
+      MARIADB_HOST: ${MARIADB_HOST:-127.0.0.1}
+      MARIADB_USER: ${MARIADB_USER:-rpgblipmade}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-rpgblipmade}
       DISCORD_WEBHOOK: ${DISCORD_WEBHOOK:-}
-      # DEV-ONLY test agent (MCP runtime bridge) — defaults locked/disabled
       TEST_AGENT_ENABLED: ${TEST_AGENT_ENABLED:-false}
       TEST_AGENT_TOKEN: ${TEST_AGENT_TOKEN:-}
       TEST_AGENT_NUIDEBUG: ${TEST_AGENT_NUIDEBUG:-0}
@@ -57,14 +25,7 @@ services:
       - fivem_config:/config
     tty: true
     stdin_open: true
-    networks:
-      - sunsetmp
-
-networks:
-  sunsetmp:
-    driver: bridge
 
 volumes:
-  mariadb_data:
   fivem_txdata:
   fivem_config:
